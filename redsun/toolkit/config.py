@@ -2,22 +2,80 @@ from pydantic.dataclasses import dataclass
 from typing import Union, Dict, Optional
 from enum import Enum
 
+class AcquisitionEngineTypesEnum(Enum):
+    """ Supported acquisition engine entities.
+
+    Acquisition engines are singleton objects that are instantiated within RedSun and operate
+    as workflow managers for the acquisition process. They are responsible for the orchestration
+    of the different hardware components currently loaded in RedSun. Accross the entire
+    module there can be only one active acquisition engine at a time, otherwise RedSun will 
+    raise an exception.
+
+    Parameters
+    ----------
+    EXENGINE : str
+        ExEngine: execution engine for microscopy control.\\
+        For more informations, refer to the `ExEngine documentation page<https://exengine.readthedocs.io/en/latest/index.html>`_
+    """
+    EXENGINE : str = 'exengine'
+
 class DetectorModelTypesEnum(Enum):
+    """ Supported detector types.
+    
+    Detectors are devices that are used to capture images or signals from the sample.
+
+    Parameters
+    ----------
+    AREA : str
+        Area detector (i.e. CCD, CMOS cameras).
+    LINE : str
+        Line detector (i.e. photodiode arrays).
+    POINT : str
+        Point detector (i.e. Avalanche Photodiode (APD) detector).
+    """
+
     AREA : str = 'area'
     LINE : str = 'line'
     POINT : str = 'point'
 
 class MotorModelTypesEnum(Enum):
+    """ Supported motor types.
+
+    Parameters
+    ----------
+    STEPPER : str
+        Stepper motor.
+    """
     STEPPER : str = 'stepper'
 
 class ScannerModelTypesEnum(Enum):
+    """ Supported scanner types.
+
+    Parameters
+    ----------
+    GALVO : str
+        Galvanometric scanner.
+    """
     GALVO : str = 'galvo'
 
 class ControllerTypesEnum(Enum):
+    """ Supported controller topology types.
+
+    Parameters
+    ----------
+    DEVICE : str
+        Device controllers are used to expose lower hardware devices of the same type (e.g. motors, detectors, etc.) with a unique interface to facilitate
+        the interaction with the acquisition engine and the upper layers. They do not provide computational capabilities other than the ones needed to interact with
+        the hardware (i.e. compute motor steps or update detector exposure time).
+    COMPUTATIONAL : str
+        Computational controllers provide computational resources or define workflows that are independent of specific hardware devices and can inform
+        the acquisition engine of a new workflow that can be injected into the acquisition process.
+    """
+
     DEVICE : str = 'device'
     COMPUTATIONAL : str = 'computational'
 
-@dataclass(frozen=True)
+@dataclass
 class ControllerInfo:
     """ Controller information class.
     """
@@ -26,6 +84,13 @@ class ControllerInfo:
     """
     Controller topology. Currently supported values are
     'device' and 'computational'.
+    """
+
+    supportedEngines : list = [
+        AcquisitionEngineTypesEnum.EXENGINE
+    ]
+    """ Supported acquisition engines list.
+    Defaults to ['exengine'].
     """
 
 @dataclass(frozen=True)
@@ -49,6 +114,12 @@ class DeviceModelInfo:
     """ Detector serial number. Optional for debugging purposes.
     """
 
+    supportedEngines : list = [
+        AcquisitionEngineTypesEnum.EXENGINE
+    ]
+    """ Supported acquisition engines list. Defaults to ['exengine'].
+    """
+
 @dataclass(frozen=True)
 class DetectorModelInfo(DeviceModelInfo):
     """ Detector model informations. """
@@ -58,8 +129,14 @@ class DetectorModelInfo(DeviceModelInfo):
     'area', 'line' and 'point'.
     """
 
-    pixelSize : float
+    pixelSize : float = None
     """ Detector pixel size in micrometers. If unknown, set to `None`.
+    Defaults to `None`.
+    """
+
+    exposureEGU : str = 'ms'
+    """ Engineering unit for exposure time, e.g. 'ms', 'μs'. 
+    Defaults to 'ms'.
     """
 
 @dataclass(frozen=True)
@@ -76,12 +153,14 @@ class LightModelInfo(DeviceModelInfo):
     """ Light source wavelength in nanometers.
     """
 
-    egu : str
-    """ Engineering unit for light source, .e.g. 'mW', 'W'.
+    powerEGU : str = 'mW'
+    """ Engineering unit for light source, .e.g. 'mW', 'μW'.
+    Defaults to 'mW'.
     """
 
-    minPower : Union[float, int]
+    minPower : Union[float, int] = 0
     """ Minimum light source power.
+    Defaults to 0.
     """
 
     maxPower : Union[float, int]
@@ -89,7 +168,7 @@ class LightModelInfo(DeviceModelInfo):
     """
 
     powerStep: Union[float, int]
-    """ Power increase/decrease step size.
+    """ Power increase/decrease minimum step size.
     """
 
 @dataclass(frozen=True)
@@ -102,8 +181,8 @@ class MotorModelInfo(DeviceModelInfo):
     'stepper'.
     """
 
-    egu : str = 'μm'
-    """ Engineering unit for motor, e.g. 'mm', 'um'.
+    motorEGU : str = 'μm'
+    """ Engineering unit for motor, e.g. 'mm', 'μm'.
     Defaults to 'μm'.
     """
 
@@ -132,29 +211,3 @@ class ScannerModelInfo(DeviceModelInfo):
     """ Supported scanner axes. Preferred to be a list of
     single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
-
-@dataclass
-class RedSunInstance:
-    detectors : Dict[str, DetectorModelInfo]
-    """ Detector model informations dictionary.
-    """
-
-    lights : Dict[str, LightModelInfo]
-    """ Light source model informations dictionary.
-    """
-
-    motors : Dict[str, MotorModelInfo]
-    """ Motor model informations dictionary.
-    """
-
-    scanners : Dict[str, ScannerModelInfo]
-    """ Scanner model informations dictionary.
-    """
-
-    def add_plugin_info(self, plugin_name: str, plugin_info: DeviceModelInfo):
-        """ Add plugin information to the corresponding dictionary.
-        """
-
-        # TODO: to implement
-        
-        ...
