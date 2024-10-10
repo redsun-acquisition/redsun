@@ -1,4 +1,4 @@
-from redsuntools.interface import Signal, VirtualBus
+from redsun.toolkit.virtualbus import Signal, VirtualBus
 from numpy import ndarray
 from typing import Union, Tuple, TYPE_CHECKING
 from types import MappingProxyType
