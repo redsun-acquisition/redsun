@@ -1,5 +1,4 @@
 import logging
-import pytest
 from redsun.toolkit.log import setup_logger, core_logger
 
 class MockPlugin:
