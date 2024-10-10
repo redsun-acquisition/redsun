@@ -20,6 +20,7 @@ license = {text = "BSD license"}
 dependencies = [
   "pydantic",
   "psygnal",
+  "exengine[micromanager]",
 ]
 
 [project.optional-dependencies]
