@@ -2,18 +2,18 @@ from pydantic.dataclasses import dataclass
 from typing import Union, Dict, Optional
 from enum import Enum
 
-class DetectorModelTypesEnum:
+class DetectorModelTypesEnum(Enum):
     AREA : str = 'area'
     LINE : str = 'line'
     POINT : str = 'point'
 
-class MotorModelTypesEnum:
+class MotorModelTypesEnum(Enum):
     STEPPER : str = 'stepper'
 
-class ScannerModelTypesEnum:
+class ScannerModelTypesEnum(Enum):
     GALVO : str = 'galvo'
 
-class ControllerTypesEnum:
+class ControllerTypesEnum(Enum):
     DEVICE : str = 'device'
     COMPUTATIONAL : str = 'computational'
 
