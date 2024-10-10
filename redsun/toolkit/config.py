@@ -1,5 +1,32 @@
 from pydantic.dataclasses import dataclass
 from typing import Union, Dict, Optional
+from enum import Enum
+
+class DetectorModelTypesEnum:
+    AREA : str = 'area'
+    LINE : str = 'line'
+    POINT : str = 'point'
+
+class MotorModelTypesEnum:
+    STEPPER : str = 'stepper'
+
+class ScannerModelTypesEnum:
+    GALVO : str = 'galvo'
+
+class ControllerTypesEnum:
+    DEVICE : str = 'device'
+    COMPUTATIONAL : str = 'computational'
+
+@dataclass(frozen=True)
+class ControllerInfo:
+    """ Controller information class.
+    """
+
+    topology : str = ControllerTypesEnum.DEVICE
+    """
+    Controller topology. Currently supported values are
+    'device' and 'computational'.
+    """
 
 @dataclass(frozen=True)
 class DeviceModelInfo:
@@ -26,9 +53,9 @@ class DeviceModelInfo:
 class DetectorModelInfo(DeviceModelInfo):
     """ Detector model informations. """
 
-    type : str = 'area'
+    type : str = DetectorModelTypesEnum.AREA
     """ Detector type. Currently supported values are
-    'area'.
+    'area', 'line' and 'point'.
     """
 
     pixelSize : float
@@ -49,8 +76,8 @@ class LightModelInfo(DeviceModelInfo):
     """ Light source wavelength in nanometers.
     """
 
-    powerUnit : str
-    """ Light source power unit, .e.g. 'mW', 'W'.
+    egu : str
+    """ Engineering unit for light source, .e.g. 'mW', 'W'.
     """
 
     minPower : Union[float, int]
@@ -70,13 +97,18 @@ class MotorModelInfo(DeviceModelInfo):
     """ Motor model informations.
     """
 
-    type : str = 'stepper'
+    type : str = MotorModelTypesEnum.STEPPER
     """ Motor type. Currently supported values are
     'stepper'.
     """
 
+    egu : str = 'μm'
+    """ Engineering unit for motor, e.g. 'mm', 'um'.
+    Defaults to 'μm'.
+    """
+
     axes : list
-    """ Supported motor axes. Preferred to be a list of
+    """ Supported motor axes. Suggestion is to be a list of
     single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
 
@@ -91,7 +123,7 @@ class ScannerModelInfo(DeviceModelInfo):
     """ Scanner model informations.
     """
 
-    type : str = 'galvo'
+    type : str = ScannerModelTypesEnum.GALVO
     """ Scanner type. Currently supported values are
     'galvo'.
     """
@@ -122,4 +154,7 @@ class RedSunInstance:
     def add_plugin_info(self, plugin_name: str, plugin_info: DeviceModelInfo):
         """ Add plugin information to the corresponding dictionary.
         """
+
+        # TODO: to implement
+        
         ...
