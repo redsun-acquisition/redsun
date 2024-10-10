@@ -18,6 +18,7 @@ classifiers = [
 ]
 license = {text = "BSD license"}
 dependencies = [
+  "pydantic",
   "psygnal",
 ]
 
