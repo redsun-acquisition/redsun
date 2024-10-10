@@ -18,7 +18,7 @@ classifiers = [
 ]
 license = {text = "BSD license"}
 dependencies = [
-  
+  "psygnal",
 ]
 
 [project.optional-dependencies]
