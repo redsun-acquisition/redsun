@@ -3,7 +3,7 @@ from psygnal import SignalInstance
 from functools import lru_cache
 from types import MappingProxyType
 from typing import Any, Dict, TYPE_CHECKING
-from redsuntools.log import setup_logger
+from redsun.toolkit.log import setup_logger
 
 if TYPE_CHECKING:
     from typing import Any, Tuple

@@ -1,4 +1,4 @@
-"""Top-level package for RedSun tools."""
+"""Top-level package for RedSun."""
 
 __author__ = """Jacopo Abramo"""
 __email__ = 'jacopo.abramo@gmail.com'

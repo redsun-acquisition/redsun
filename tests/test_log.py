@@ -1,6 +1,6 @@
 import logging
 import pytest
-from redsuntools.log import setup_logger, core_logger
+from redsun.toolkit.log import setup_logger, core_logger
 
 class MockPlugin:
     def __init__(self, instance_name: str = None) -> None:
