@@ -1,5 +1,5 @@
 from pydantic.dataclasses import dataclass
-from typing import Union, Dict, Optional
+from typing import Union, Dict, Optional, Tuple
 from enum import Enum
 
 class AcquisitionEngineTypes(str, Enum):
@@ -62,6 +62,16 @@ class MotorModelTypes(str, Enum):
     """
     STEPPER : str = 'stepper'
 
+class LightModelTypes(str, Enum):
+    """ Supported light source types.
+
+    Parameters
+    ----------
+    LASER : str
+        Laser light source.
+    """
+    LASER : str = 'laser'
+
 class ScannerModelTypes(str, Enum):
     """ Supported scanner types.
 
@@ -92,150 +102,130 @@ class ControllerTypes(str, Enum):
 @dataclass
 class ControllerInfo:
     """ Controller information class.
-    """
 
-    topology : str = ControllerTypes.DEVICE
-    """
-    Controller topology. Currently supported values are
-    'device' and 'computational'.
-    """
+    Parameters
+    ----------
 
-    supportedEngines : list = [
-        AcquisitionEngineTypes.EXENGINE
-    ]
-    """ Supported acquisition engines list.
-    Defaults to ['exengine'].
+    topology : ControllerTypes
+        Controller topology. Defaults to 'device'.
+    supportedEngines : list[AcquisitionEngineTypes]
+        Supported acquisition engines list. Defaults to ['exengine'].
     """
+    topology : ControllerTypes = ControllerTypes.DEVICE
+    supportedEngines : list[AcquisitionEngineTypes] = [AcquisitionEngineTypes.EXENGINE]
 
-@dataclass(frozen=True)
+@dataclass
 class DeviceModelInfo:
-    """ Base class for device model's information. """
-
+    """ Base class for device model's information. 
+    
+    Parameters
+    ----------
     modelName : str
-    """ Device model name. It is a unique identifier in the context of RedSun.
-    """
-
+        Device model name.
     modelParams : Dict[str, Union[str, int, float]]
-    """ Device model parameters dictionary. Used to store
-    start-up configuration parameters.
+        Device model parameters dictionary. Used to store start-up configuration parameters.
+    supportedEngines : list[AcquisitionEngineTypes]
+        Supported acquisition engines list. Defaults to ['exengine'].
+    vendor : Optional[str]
+        Detector vendor. Optional for debugging purposes. Defaults to 'N/A'.
+    serialNumber : Optional[str]
+        Detector serial number. Optional for debugging purposes. Defaults to 'N/A'.
     """
-
+    modelName : str
+    modelParams : Dict[str, Union[str, int, float]]
+    supportedEngines : list[AcquisitionEngineTypes] = [AcquisitionEngineTypes.EXENGINE]
     vendor : Optional[str] = "N/A"
-    """ Detector vendor. Optional for debugging purposes.
-    Defaults to 'N/A'.
-    """
-
     serialNumber : Optional[str] = "N/A"
-    """ Detector serial number. Optional for debugging purposes.
-    Defaults to 'N/A'.
-    """
+    
 
-    supportedEngines : list = [
-        AcquisitionEngineTypes.EXENGINE
-    ]
-    """ Supported acquisition engines list. Defaults to ['exengine'].
-    """
-
-@dataclass(frozen=True)
+@dataclass
 class DetectorModelInfo(DeviceModelInfo):
-    """ Detector model informations. """
-
+    """ Detector model informations. 
+    
+    Parameters
+    ----------
+    type : DetectorModelTypes
+        Detector type. Currently supported values are
+        'area', 'line' and 'point'. Defaults to 'area'.    
+    sensorSize: Tuple[int]
+        Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable
+        for 'line' and 'area' detectors. Defaults to `(1024, 1024)`.
+    pixelSize : Tuple[float]
+        Detector pixel size in micrometers: represents the 3D axis (Z, Y, X).
+        Defaults to `(1, 1, 1)`.
+    exposureEGU : str
+        Engineering unit for exposure time, e.g. 'ms', 'μs'. Defaults to 'ms'.
+    """
     type : str = DetectorModelTypes.AREA
-    """ Detector type. Currently supported values are
-    'area', 'line' and 'point'.
-    """
-
-    pixelSize : float = None
-    """ Detector pixel size in micrometers. If unknown, set to `None`.
-    Defaults to `None`.
-    """
-
-    pixelPhotometric : list[str] = [PixelPhotometricTypes.GRAY]
-    """ List of supported pixel photometrics (color types). Currently supported values are
-    'gray' and 'rgb'.
-    """
-
-    bitsPerPixel : set[int] = {8}
-    """ Set of supported bits per pixel. Defaults to [8].
-    Minimum value is 8; maximum value is 24.
-    """
-
+    sensorSize: Tuple[int, int] = (1024, 1024)
+    pixelSize : Tuple[float, float, float] = (1, 1, 1)
     exposureEGU : str = 'ms'
-    """ Engineering unit for exposure time, e.g. 'ms', 'μs'. 
-    Defaults to 'ms'.
-    """
 
-@dataclass(frozen=True)
+
+@dataclass
 class LightModelInfo(DeviceModelInfo):
     """ Light source model informations.
-    """
 
-    type : str = 'laser'
-    """ Light source type. Currently supported values are
-    'laser'.
-    """
-
+    Parameters
+    ----------
+    type : LightModelTypes
+        Light source type. Defaults to 'laser'.
     wavelength : int
-    """ Light source wavelength in nanometers.
-    """
-
-    powerEGU : str = 'mW'
-    """ Engineering unit for light source, .e.g. 'mW', 'μW'.
-    Defaults to 'mW'.
-    """
-
-    minPower : Union[float, int] = 0
-    """ Minimum light source power.
-    Defaults to 0.
-    """
-
+        Light source wavelength in nanometers.
+    powerEGU : str
+        Engineering unit for light source, .e.g. 'mW', 'μW'. Defaults to 'mW'.
+    minPower : Union[float, int]
+        Minimum light source power. Defaults to 0.
     maxPower : Union[float, int]
-    """ Maximum light source power. 
-    """
-
+        Maximum light source power.
     powerStep: Union[float, int]
-    """ Power increase/decrease minimum step size.
+        Power increase/decrease minimum step size.
     """
+    type : LightModelTypes = LightModelTypes.LASER
+    wavelength : int
+    powerEGU : str = 'mW'
+    minPower : Union[float, int] = 0
+    maxPower : Union[float, int]
+    powerStep: Union[float, int]
 
-@dataclass(frozen=True)
+@dataclass
 class MotorModelInfo(DeviceModelInfo):
     """ Motor model informations.
+
+    Parameters
+    ----------
+
+    type : MotorModelTypes
+        Motor type. Defaults to 'stepper'.
+    stepEGU : str
+        Engineering unit for steps, e.g. 'mm', 'μm'. Defaults to 'μm'.
+    axes : list[str]
+        Supported motor axes. Suggestion is to be a list of
+        single character, capital strings, e.g. ['X', 'Y', 'Z'].
+    returnHome : bool
+        If `True`, motor will return to home position
+        (defined as  the initial position the motor had at RedSun's startup)
+        after RedSun is closed. Defaults to `False`.
     """
 
     type : str = MotorModelTypes.STEPPER
-    """ Motor type. Currently supported values are
-    'stepper'.
-    """
-
     stepEGU : str = 'μm'
-    """ Engineering unit for steps, e.g. 'mm', 'μm'.
-    Defaults to 'μm'.
-    """
-
-    axes : list
-    """ Supported motor axes. Suggestion is to be a list of
-    single character, capital strings, e.g. ['X', 'Y', 'Z'].
-    """
-
+    axes : list[str]
     returnHome : bool = False
-    """ If `True`, motor will return to home position
-    (defined as  the initial position the motor had at RedSun's startup)
-    after RedSun is closed. Defaults to `False`.
-    """
 
-@dataclass(frozen=True)
+@dataclass
 class ScannerModelInfo(DeviceModelInfo):
     """ Scanner model informations.
-    """
 
-    type : str = ScannerModelTypes.GALVO
-    """ Scanner type. Currently supported values are
-    'galvo'.
-    """
+    Parameters
+    ----------
 
-    axes : list
-    """ Supported scanner axes. Preferred to be a list of
-    single character, capital strings, e.g. ['X', 'Y', 'Z'].
+    type : ScannerModelTypes
+        Scanner type. Defaults to 'galvo'.
+    axes : list[str]
+        Supported scanner axes. Suggestion is to be a list of
+        single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
-
+    type : ScannerModelTypes = ScannerModelTypes.GALVO
+    axes : list[str]
     # TODO: investigate what other parameters are needed for scanner
