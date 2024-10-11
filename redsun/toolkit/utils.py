@@ -26,6 +26,10 @@ def create_evented_model_info(cls_name: str,
     type
         New evented dataclass.
     """
+
+    # implementation provided by the following issue discussion:
+    # https://github.com/pyapp-kit/psygnal/issues/328
+
     cls_dict = {
         "__annotations__": type_dict,
     }
