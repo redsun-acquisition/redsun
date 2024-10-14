@@ -1,13 +1,11 @@
 from psygnal import evented
 from pydantic.dataclasses import dataclass
 
-def create_evented_model_info(cls_name: str, 
+def create_evented_dataclass(cls_name: str, 
                               original_cls : type,
                               types : dict,
                               values : dict) -> type:
-    """ Creates a new evented dataclass from the original dataclass.\\
-    Each model will create a new evented dataclass which is subclassed from the original model RedSun provides,\\
-    allowing to add new properties that can be exposed to the upper layers using `psygnal`.\\
+    """ Creates a new evented dataclass from the original provided one.\\
     For more information abount about evented dataclasses, see the `psygnal documentation <https://psygnal.readthedocs.io/en/latest/dataclasses/>`_.
 
     Parameters

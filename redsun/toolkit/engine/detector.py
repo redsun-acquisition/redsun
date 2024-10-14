@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from redsun.toolkit.utils import create_evented_model_info
+from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.config import (
     DetectorModelInfo,
     PixelPhotometricTypes
@@ -105,10 +105,10 @@ class DetectorModel(ABC):
             "offset" : offset,
             "shape" : shape if shape is not None else model_info.sensorSize
         }
-        FullModelInfo = create_evented_model_info(cls_name=cls_name,
-                                                  original_cls=DetectorModelInfo,
-                                                  types=types,
-                                                  values=values)
+        FullModelInfo = create_evented_dataclass(cls_name=cls_name,
+                                                original_cls=DetectorModelInfo,
+                                                types=types,
+                                                values=values)
         
         self._modelInfo = FullModelInfo(**asdict(model_info).update(values))
 
