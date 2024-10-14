@@ -61,7 +61,7 @@ class DetectorModel(ABC):
         - Detector serial number.       
     supportedEngines: list[AcquisitionEngineTypes]
         - Supported acquisition engines list.
-    type: DetectorModelTypes
+    category: DetectorModelTypes
         - Detector type.
     sensorSize: Tuple[int, int]
         - Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable for 'line' and 'area' detectors.
@@ -82,7 +82,8 @@ class DetectorModel(ABC):
     """
 
     @abstractmethod
-    def __init__(self, model_info: "DetectorModelInfo",
+    def __init__(self, 
+                model_info: "DetectorModelInfo",
                 exposure: "Union[int, float]",
                 pixel_photometric: "list[PixelPhotometricTypes]" = [PixelPhotometricTypes.GRAY],
                 bits_per_pixel: "set[int]" = {8},
@@ -133,8 +134,8 @@ class DetectorModel(ABC):
         return self._modelInfo.supportedEngines
 
     @property
-    def type(self) -> str:
-        return self._modelInfo.type
+    def category(self) -> str:
+        return self._modelInfo.category
 
     @property
     def sensorSize(self) -> Tuple[int, int]:
@@ -149,7 +150,7 @@ class DetectorModel(ABC):
         return self._modelInfo.exposureEGU
 
     @property
-    def pixelPhotometric(self) -> list[PixelPhotometricTypes]:
+    def pixelPhotometric(self) -> list["PixelPhotometricTypes"]:
         return self._modelInfo.pixelPhotometric
 
     @property
