@@ -11,7 +11,14 @@ if TYPE_CHECKING:
 __all__ = ['Signal', 'VirtualBus']
 
 class Signal(SignalInstance):
-    """ Small wrapper around `psygnal.SignalInstance` to provide an `info` and a `types` attribute.
+    """ Small wrapper around `psygnal.SignalInstance`.
+
+    Properties
+    ----------
+    types : Tuple[type, ...]
+        Tuple of data types carried by the signal.
+    info : str
+        Signal description.
     """
 
     def __init__(self, *argtypes: 'Any', info: str = "RedSun signal", **kwargs) -> None:
@@ -106,13 +113,4 @@ class VirtualBus(ABC):
     
     @property
     def signals(self) -> 'MappingProxyType[str, Signal]':
-        """ Returns a read-only dictionary with the registered `Signal` objects as attributes.
-
-
-        Returns
-        -------
-        MappingProxyType[str, Signal]
-            A read-only dictionary with the registered signals
-
-        """
         return MappingProxyType(self._signal_registry)
