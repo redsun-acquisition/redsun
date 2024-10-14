@@ -49,7 +49,7 @@ class MotorModel(ABC):
     """
     @abstractmethod
     def __init__(self,
-                model_info: "MotorModelInfo",):
+                model_info: "MotorModelInfo"):
         self._modelInfo = evented(model_info)
     
     @property
