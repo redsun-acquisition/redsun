@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from psygnal import evented
 from typing import TYPE_CHECKING
+from redsun.toolkit.utils import create_evented_dataclass
 
 if TYPE_CHECKING:
     from redsun.toolkit.config import MotorModelInfo
@@ -52,7 +52,8 @@ class MotorModel(ABC):
     @abstractmethod
     def __init__(self,
                 model_info: "MotorModelInfo"):
-        self._modelInfo = evented(model_info)
+        self._modelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
+                                                original_cls=type(model_info))
     
     @property
     def name(self) -> str:
