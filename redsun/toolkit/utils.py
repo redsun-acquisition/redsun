@@ -3,8 +3,8 @@ from pydantic.dataclasses import dataclass
 
 def create_evented_model_info(cls_name: str, 
                               original_cls : type,
-                              type_dict : dict,
-                              value_dict : dict) -> type:
+                              types : dict,
+                              values : dict) -> type:
     """ Creates a new evented dataclass from the original dataclass.\\
     Each model will create a new evented dataclass which is subclassed from the original model RedSun provides,\\
     allowing to add new properties that can be exposed to the upper layers using `psygnal`.\\
@@ -16,9 +16,9 @@ def create_evented_model_info(cls_name: str,
         Name of the new dataclass.
     original_cls : type
         Original dataclass.
-    type_dict : dict
+    types : dict
         Dictionary of type annotations.
-    value_dict : dict
+    values : dict
         Dictionary of default values.
 
     Returns
@@ -31,8 +31,8 @@ def create_evented_model_info(cls_name: str,
     # https://github.com/pyapp-kit/psygnal/issues/328
 
     cls_dict = {
-        "__annotations__": type_dict,
+        "__annotations__": types,
     }
-    cls_dict.update(value_dict)
+    cls_dict.update(values)
     cls = type(cls_name, (original_cls), cls_dict)
     return evented(dataclass(cls, frozen=True))
