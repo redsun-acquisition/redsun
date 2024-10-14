@@ -9,10 +9,10 @@ class MotorModel(ABC):
     """
     `MotorModel` abstract base class.
 
-    The `MotorModel` is the base class from which all detectors, regardless of the supported engine, must inherit.
-    It provides the basic information about the detector model and the properties exposable to the upper layers for user interaction.
+    The `MotorModel` is the base class from which all motors, regardless of the supported engine, must inherit.
+    It provides the basic information about the motor model and the properties exposable to the upper layers for user interaction.
 
-    It does **not** provide APIs for performing actions, which must be instead defined by the engine-specific detector classes.
+    It does **not** provide APIs for performing actions, which must be instead defined by the engine-specific motor classes.
 
     The `MotorModel` contains an extended, evented dataclass that allows the user to expose new properties to the upper layers using `psygnal`.
 
