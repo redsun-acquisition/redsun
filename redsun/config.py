@@ -1,15 +1,16 @@
 from pydantic.dataclasses import dataclass
 from pydantic import Field
 from typing import Dict, Optional, TYPE_CHECKING
-from redsun.toolkit.config import (
-    DetectorModelInfo,
-    LightModelInfo,
-    MotorModelInfo,
-    ScannerModelInfo
-)
 
 if TYPE_CHECKING:
-    from redsun.toolkit.config import AcquisitionEngineTypes
+    from redsun.toolkit.config import (
+        DetectorModelInfo,
+        LightModelInfo,
+        MotorModelInfo,
+        ScannerModelInfo,
+        AcquisitionEngineTypes
+    )
+
 
 @dataclass
 class RedSunInstanceInfo:
