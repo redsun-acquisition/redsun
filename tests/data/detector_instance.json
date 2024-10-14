@@ -1,0 +1,24 @@
+{
+    "engine" : "exengine",
+    "detectors" : {
+        "First mock detector" : {
+            "modelName" : "MockDetectorModel",
+            "modelParams" : {
+                "paramInt" : 1,
+                "paramStr" : "info",
+                "paramFloat" : 1.0
+
+            }
+        },
+        "Second mock detector" : {
+            "modelName" : "MockDetectorModel",
+            "modelParams" : {
+                "paramInt" : 2,
+                "paramStr" : "warning",
+                "paramFloat" : 2.0
+            },
+            "category" : "line",
+            "exposureEGU" : "s"
+        }
+    }
+}

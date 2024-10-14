@@ -1,0 +1,24 @@
+{
+    "engine" : "exengine",
+    "motors" : {
+        "Single axis motor" : {
+            "modelName" : "MockMotorModel",
+            "modelParams" : {
+                "paramInt" : 1,
+                "paramStr" : "info",
+                "paramFloat" : 1.0
+            },
+            "axes" : ["X"]
+        },
+        "Double axis motor" : {
+            "modelName" : "MockMotorModel",
+            "modelParams" : {
+                "paramInt" : 2,
+                "paramStr" : "warning",
+                "paramFloat" : 2.0
+            },
+            "axes" : ["X", "Y"],
+            "stepEGU" : "mm"
+        }
+    }
+}
