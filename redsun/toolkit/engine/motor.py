@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from redsun.toolkit.config import MotorModelInfo
 
+__all__ = ['MotorModel']
+
 class MotorModel(ABC):
     """
     `MotorModel` abstract base class.
