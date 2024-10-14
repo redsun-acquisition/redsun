@@ -1,13 +1,15 @@
 from pydantic.dataclasses import dataclass
 from pydantic import Field
-from typing import Dict, Optional
+from typing import Dict, Optional, TYPE_CHECKING
 from redsun.toolkit.config import (
     DetectorModelInfo,
     LightModelInfo,
     MotorModelInfo,
-    ScannerModelInfo,
-    AcquisitionEngineTypes,
+    ScannerModelInfo
 )
+
+if TYPE_CHECKING:
+    from redsun.toolkit.config import AcquisitionEngineTypes
 
 @dataclass
 class RedSunInstanceInfo:
@@ -20,7 +22,7 @@ class RedSunInstanceInfo:
     A minimal configuration should include the selected acquisition engine.
     """
 
-    engine : str = AcquisitionEngineTypes.EXENGINE
+    engine : "AcquisitionEngineTypes" = 'exengine'
     """ Acquisition engine selected for the current instance.
     Defaults to 'exengine'.
     """
