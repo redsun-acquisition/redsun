@@ -2,13 +2,13 @@ from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from redsun.toolkit.utils import create_evented_dataclass
-from redsun.toolkit.config import (
-    DetectorModelInfo,
-    PixelPhotometricTypes
-)
 
 if TYPE_CHECKING:
     from typing import Tuple, Union
+    from redsun.toolkit.config import (
+        DetectorModelInfo,
+        PixelPhotometricTypes
+    )
 
 __all__ = ['DetectorModel']
 
@@ -34,7 +34,7 @@ class DetectorModel(ABC):
     pixel_photometric: list[PixelPhotometricTypes]
         - List of supported pixel colors.
         - User defined.
-        - Defaults to `[PixelPhotometricTypes.GRAY]`.
+        - Defaults to `gray`.
     bits_per_pixel: set[int]
         - Set of supported values for pixel width in bits.
         - User defined.
@@ -85,7 +85,7 @@ class DetectorModel(ABC):
     def __init__(self, 
                 model_info: "DetectorModelInfo",
                 exposure: "Union[int, float]",
-                pixel_photometric: "list[PixelPhotometricTypes]" = [PixelPhotometricTypes.GRAY],
+                pixel_photometric: "list[PixelPhotometricTypes]" = 'gray',
                 bits_per_pixel: "set[int]" = {8},
                 binning : "list[int]" = [1],
                 offset: "Tuple[int, int]" = (0, 0),
@@ -107,7 +107,7 @@ class DetectorModel(ABC):
             "shape" : shape if shape is not None else model_info.sensorSize
         }
         FullModelInfo = create_evented_dataclass(cls_name=cls_name,
-                                                original_cls=DetectorModelInfo,
+                                                original_cls=type(model_info),
                                                 types=types,
                                                 values=values)
         
