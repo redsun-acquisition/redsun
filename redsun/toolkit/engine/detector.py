@@ -1,10 +1,13 @@
 from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
-from redsun.toolkit.config import PixelPhotometricTypes
+from dataclasses import asdict
 from redsun.toolkit.utils import create_evented_model_info
+from redsun.toolkit.config import (
+    DetectorModelInfo,
+    PixelPhotometricTypes
+)
 
 if TYPE_CHECKING:
-    from redsun.toolkit.config import DetectorModelInfo
     from typing import Tuple, Union
 
 class DetectorModel(ABC):
@@ -15,6 +18,8 @@ class DetectorModel(ABC):
     It provides the basic information about the detector model and the properties exposable to the upper layers for user interaction.
 
     It does **not** provide APIs for performing actions, which must be instead defined by the engine-specific detector classes.
+
+    The `DetectorModel` contains an extended, evented dataclass that allows the user to expose new properties to the upper layers using `psygnal`.
 
     Parameters
     ----------
@@ -83,85 +88,83 @@ class DetectorModel(ABC):
                 offset: "Tuple[int, int]" = (0, 0),
                 shape: "Tuple[int, int]" = None,) -> None:
 
-        # base device information
-        self._name = model_info.modelName
-        self._modelParams = model_info.modelParams
-        self._vendor = model_info.vendor
-        self._serialNumber = model_info.serialNumber
-        self._supportedEngines = model_info.supportedEngines
-
-        # detector-specific information
-        self._type = model_info.type
-        self._sensorSize = model_info.sensorSize
-        self._pixelSize = model_info.pixelSize
-        self._exposureEGU = model_info.exposureEGU
-
-        # user-defined information
-        self._pixelPhotometric = pixel_photometric
-        self._bitsPerPixel = bits_per_pixel
-        self._binning = binning
-        self._offset = offset
-        if shape is None:
-            self._shape = self._sensorSize
-        else:
-            self._shape = shape
-
+        cls_name = model_info.modelName + "Info"
+        types = {
+            "pixelPhotometric" : PixelPhotometricTypes,
+            "bitsPerPixel" : int,
+            "binning" : int,
+            "offset" : Tuple[int, int],
+            "shape" : Tuple[int, int]
+        }
+        values = {
+            "pixelPhotometric" : pixel_photometric,
+            "bitsPerPixel" : bits_per_pixel,
+            "binning" : binning,
+            "offset" : offset,
+            "shape" : shape if shape is not None else model_info.sensorSize
+        }
+        FullModelInfo = create_evented_model_info(cls_name=cls_name,
+                                                  original_cls=DetectorModelInfo,
+                                                  types=types,
+                                                  values=values)
+        
+        self._modelInfo = FullModelInfo(**asdict(model_info).update(values))
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._modelInfo.modelName
 
     @property
     def modelParams(self) -> dict:
-        return self._modelParams
+        return self._modelInfo.modelParams
 
     @property
     def vendor(self) -> str:
-        return self._vendor
+        return self._modelInfo.vendor
 
     @property
     def serialNumber(self) -> str:
-        return self._serialNumber
+        return self._modelInfo.serialNumber
 
     @property
     def supportedEngines(self) -> list[str]:
-        return self._supportedEngines
+        return self._modelInfo.supportedEngines
 
     @property
     def type(self) -> str:
-        return self._type
+        return self._modelInfo.type
 
     @property
     def sensorSize(self) -> Tuple[int, int]:
-        return self._sensorSize
+        return self._modelInfo.sensorSize
 
     @property
     def pixelSize(self) -> Tuple[float, float]:
-        return self._pixelSize
+        return self._modelInfo.pixelSize
 
     @property
     def exposureEGU(self) -> str:
-        return self._exposureEGU
+        return self._modelInfo.exposureEGU
 
     @property
     def pixelPhotometric(self) -> list[PixelPhotometricTypes]:
-        return self._pixelPhotometric
+        return self._modelInfo.pixelPhotometric
 
     @property
     def bitsPerPixel(self) -> set[int]:
-        return self._bitsPerPixel
+        return self._modelInfo.bitsPerPixel
     
     @property
     def binning(self) -> list[int]:
-        return self._binning
+        return self._modelInfo.binning
 
     @property
     def offset(self) -> Tuple[int, int]:
-        return self._offset
+        return self._modelInfo.offset
 
     @property
     def shape(self) -> Tuple[int, int]:
-        return self._shape
+        return self._modelInfo.shape
 
 
     
