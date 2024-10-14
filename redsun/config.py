@@ -1,4 +1,5 @@
 from pydantic.dataclasses import dataclass
+from pydantic import Field
 from typing import Dict, Optional
 from redsun.toolkit.config import (
     DetectorModelInfo,
@@ -24,22 +25,22 @@ class RedSunInstanceInfo:
     Defaults to 'exengine'.
     """
 
-    detectors : Optional[Dict[str, DetectorModelInfo]] = None
+    detectors : Optional[Dict[str, DetectorModelInfo]] = Field(default_factory=dict)
     """ Detector model informations dictionary.
     Defaults to None.
     """
 
-    lights : Optional[Dict[str, LightModelInfo]] = None
+    lights : Optional[Dict[str, LightModelInfo]] = Field(default_factory=dict)
     """ Light source model informations dictionary.
     Defaults to None.
     """
 
-    motors : Optional[Dict[str, MotorModelInfo]] = None
+    motors : Optional[Dict[str, MotorModelInfo]] = Field(default_factory=dict)
     """ Motor model informations dictionary.
     Defaults to None.
     """
 
-    scanners : Optional[Dict[str, ScannerModelInfo]] = None
+    scanners : Optional[Dict[str, ScannerModelInfo]] = Field(default_factory=dict)
     """ Scanner model informations dictionary.
     Defaults to None.
     """
