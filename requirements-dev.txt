@@ -9,3 +9,4 @@ twine==5.0.0
 ruff==0.3.5
 
 pytest==6.2.4
+pytest-qt==4.3.1
