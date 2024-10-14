@@ -10,6 +10,8 @@ from redsun.toolkit.config import (
 if TYPE_CHECKING:
     from typing import Tuple, Union
 
+__all__ = ['DetectorModel']
+
 class DetectorModel(ABC):
     """ 
     `DetectorModel` abstract base class.
