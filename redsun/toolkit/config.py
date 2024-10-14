@@ -1,4 +1,5 @@
 from pydantic.dataclasses import dataclass
+from pydantic import Field
 from typing import Union, Dict, Optional, Tuple
 from enum import Enum
 
@@ -83,7 +84,7 @@ class ScannerModelTypes(str, Enum):
     GALVO : str = 'galvo'
 
 class ControllerTypes(str, Enum):
-    """ Supported controller topology types.
+    """ Supported controller category types.
 
     Parameters
     ----------
@@ -106,13 +107,13 @@ class ControllerInfo:
     Parameters
     ----------
 
-    topology : ControllerTypes
-        Controller topology. Defaults to 'device'.
+    category : ControllerTypes
+        Controller category. Defaults to 'device'.
     supportedEngines : list[AcquisitionEngineTypes]
         Supported acquisition engines list. Defaults to ['exengine'].
     """
-    topology : ControllerTypes = ControllerTypes.DEVICE
-    supportedEngines : list[AcquisitionEngineTypes] = [AcquisitionEngineTypes.EXENGINE]
+    category : ControllerTypes = ControllerTypes.DEVICE
+    supportedEngines : list[AcquisitionEngineTypes] = Field(default_factory=lambda: [AcquisitionEngineTypes.EXENGINE])
 
 @dataclass
 class DeviceModelInfo:
@@ -133,7 +134,7 @@ class DeviceModelInfo:
     """
     modelName : str
     modelParams : Dict[str, Union[str, int, float]]
-    supportedEngines : list[AcquisitionEngineTypes] = [AcquisitionEngineTypes.EXENGINE]
+    supportedEngines : list[AcquisitionEngineTypes] = Field(default_factory=lambda:[AcquisitionEngineTypes.EXENGINE])
     vendor : Optional[str] = "N/A"
     serialNumber : Optional[str] = "N/A"
     
@@ -144,7 +145,7 @@ class DetectorModelInfo(DeviceModelInfo):
     
     Parameters
     ----------
-    type : DetectorModelTypes
+    category : DetectorModelTypes
         Detector type. Currently supported values are
         'area', 'line' and 'point'. Defaults to 'area'.    
     sensorSize: Tuple[int]
@@ -156,7 +157,7 @@ class DetectorModelInfo(DeviceModelInfo):
     exposureEGU : str
         Engineering unit for exposure time, e.g. 'ms', 'μs'. Defaults to 'ms'.
     """
-    type : str = DetectorModelTypes.AREA
+    category : str = DetectorModelTypes.AREA
     sensorSize: Tuple[int, int] = (1024, 1024)
     pixelSize : Tuple[float, float, float] = (1, 1, 1)
     exposureEGU : str = 'ms'
@@ -168,7 +169,7 @@ class LightModelInfo(DeviceModelInfo):
 
     Parameters
     ----------
-    type : LightModelTypes
+    category : LightModelTypes
         Light source type. Defaults to 'laser'.
     wavelength : int
         Light source wavelength in nanometers.
@@ -181,12 +182,13 @@ class LightModelInfo(DeviceModelInfo):
     powerStep: Union[float, int]
         Power increase/decrease minimum step size.
     """
-    type : LightModelTypes = LightModelTypes.LASER
     wavelength : int
-    powerEGU : str = 'mW'
-    minPower : Union[float, int] = 0
     maxPower : Union[float, int]
     powerStep: Union[float, int]
+
+    category : LightModelTypes = LightModelTypes.LASER
+    powerEGU : str = 'mW'
+    minPower : Union[float, int] = 0
 
 @dataclass
 class MotorModelInfo(DeviceModelInfo):
@@ -195,7 +197,7 @@ class MotorModelInfo(DeviceModelInfo):
     Parameters
     ----------
 
-    type : MotorModelTypes
+    category : MotorModelTypes
         Motor type. Defaults to 'stepper'.
     stepEGU : str
         Engineering unit for steps, e.g. 'mm', 'μm'. Defaults to 'μm'.
@@ -208,7 +210,7 @@ class MotorModelInfo(DeviceModelInfo):
         after RedSun is closed. Defaults to `False`.
     """
 
-    type : str = MotorModelTypes.STEPPER
+    category : str = MotorModelTypes.STEPPER
     stepEGU : str = 'μm'
     axes : list[str]
     returnHome : bool = False
@@ -220,12 +222,12 @@ class ScannerModelInfo(DeviceModelInfo):
     Parameters
     ----------
 
-    type : ScannerModelTypes
+    category : ScannerModelTypes
         Scanner type. Defaults to 'galvo'.
     axes : list[str]
         Supported scanner axes. Suggestion is to be a list of
         single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
-    type : ScannerModelTypes = ScannerModelTypes.GALVO
+    category : ScannerModelTypes = ScannerModelTypes.GALVO
     axes : list[str]
     # TODO: investigate what other parameters are needed for scanner
