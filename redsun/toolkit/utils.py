@@ -1,10 +1,12 @@
 from psygnal import evented
 from pydantic.dataclasses import dataclass
 
+__all__ = ['create_evented_dataclass']
+
 def create_evented_dataclass(cls_name: str, 
                               original_cls : type,
-                              types : dict,
-                              values : dict) -> type:
+                              types : dict = {},
+                              values : dict = {}) -> type:
     """ Creates a new evented dataclass from the original provided one.\\
     For more information abount about evented dataclasses, see the `psygnal documentation <https://psygnal.readthedocs.io/en/latest/dataclasses/>`_.
 
