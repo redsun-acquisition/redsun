@@ -182,13 +182,13 @@ class LightModelInfo(DeviceModelInfo):
     powerStep: Union[float, int]
         Power increase/decrease minimum step size.
     """
-    wavelength : int
-    maxPower : Union[float, int]
-    powerStep: Union[float, int]
-
+    
     category : LightModelTypes = LightModelTypes.LASER
+    wavelength : int = Field(default=None)
     powerEGU : str = 'mW'
-    minPower : Union[float, int] = 0
+    minPower : Union[float, int] = 0    
+    maxPower : Union[float, int] = Field(default=None)
+    powerStep: Union[float, int] = Field(default=None)
 
 @dataclass
 class MotorModelInfo(DeviceModelInfo):
@@ -212,7 +212,7 @@ class MotorModelInfo(DeviceModelInfo):
 
     category : str = MotorModelTypes.STEPPER
     stepEGU : str = 'μm'
-    axes : list[str]
+    axes : list[str] = Field(default_factory=list)
     returnHome : bool = False
 
 @dataclass
@@ -229,5 +229,5 @@ class ScannerModelInfo(DeviceModelInfo):
         single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
     category : ScannerModelTypes = ScannerModelTypes.GALVO
-    axes : list[str]
+    axes : list[str] = Field(default_factory=list)
     # TODO: investigate what other parameters are needed for scanner
