@@ -12,7 +12,7 @@ class AcquisitionEngineTypes(str, Enum):
     module there can be only one active acquisition engine at a time, otherwise RedSun will 
     raise an exception.
 
-    Parameters
+    Attributes
     ----------
     EXENGINE : str
         ExEngine: execution engine for microscopy control.\\
@@ -25,7 +25,7 @@ class DetectorModelTypes(str, Enum):
     
     Detectors are devices that are used to capture images or signals from the sample.
 
-    Parameters
+    Attributes
     ----------
     AREA : str
         Area detector (i.e. CCD, CMOS cameras).
@@ -34,7 +34,6 @@ class DetectorModelTypes(str, Enum):
     POINT : str
         Point detector (i.e. Avalanche Photodiode (APD) detector).
     """
-
     AREA : str = 'area'
     LINE : str = 'line'
     POINT : str = 'point'
@@ -42,21 +41,20 @@ class DetectorModelTypes(str, Enum):
 class PixelPhotometricTypes(str, Enum):
     """ Supported pixel photometric types.
 
-    Parameters
+    Attributes
     ----------
     GRAY : str
         Gray scale pixel.
     RGB : str
         RGB pixel.
     """
-
     GRAY : str = 'gray'
     RGB : str = 'rgb'
 
 class MotorModelTypes(str, Enum):
     """ Supported motor types.
 
-    Parameters
+    Attributes
     ----------
     STEPPER : str
         Stepper motor.
@@ -66,7 +64,7 @@ class MotorModelTypes(str, Enum):
 class LightModelTypes(str, Enum):
     """ Supported light source types.
 
-    Parameters
+    Attributes
     ----------
     LASER : str
         Laser light source.
@@ -76,7 +74,7 @@ class LightModelTypes(str, Enum):
 class ScannerModelTypes(str, Enum):
     """ Supported scanner types.
 
-    Parameters
+    Attributes
     ----------
     GALVO : str
         Galvanometric scanner.
@@ -86,7 +84,7 @@ class ScannerModelTypes(str, Enum):
 class ControllerTypes(str, Enum):
     """ Supported controller category types.
 
-    Parameters
+    Attributes
     ----------
     DEVICE : str
         Device controllers are used to expose lower hardware devices of the same type (e.g. motors, detectors, etc.) with a unique interface to facilitate
@@ -104,7 +102,7 @@ class ControllerTypes(str, Enum):
 class ControllerInfo:
     """ Controller information class.
 
-    Parameters
+    Attributes
     ----------
 
     category : ControllerTypes
@@ -119,7 +117,7 @@ class ControllerInfo:
 class DeviceModelInfo:
     """ Base class for device model's information. 
     
-    Parameters
+    Attributes
     ----------
     modelName : str
         Device model name.
@@ -143,7 +141,7 @@ class DeviceModelInfo:
 class DetectorModelInfo(DeviceModelInfo):
     """ Detector model informations. 
     
-    Parameters
+    Attributes
     ----------
     category : DetectorModelTypes
         Detector type. Currently supported values are
@@ -167,7 +165,7 @@ class DetectorModelInfo(DeviceModelInfo):
 class LightModelInfo(DeviceModelInfo):
     """ Light source model informations.
 
-    Parameters
+    Attributes
     ----------
     category : LightModelTypes
         Light source type. Defaults to 'laser'.
@@ -194,7 +192,7 @@ class LightModelInfo(DeviceModelInfo):
 class MotorModelInfo(DeviceModelInfo):
     """ Motor model informations.
 
-    Parameters
+    Attributes
     ----------
 
     category : MotorModelTypes
@@ -209,7 +207,6 @@ class MotorModelInfo(DeviceModelInfo):
         (defined as  the initial position the motor had at RedSun's startup)
         after RedSun is closed. Defaults to `False`.
     """
-
     category : str = MotorModelTypes.STEPPER
     stepEGU : str = 'μm'
     axes : list[str] = Field(default_factory=list)
@@ -219,7 +216,7 @@ class MotorModelInfo(DeviceModelInfo):
 class ScannerModelInfo(DeviceModelInfo):
     """ Scanner model informations.
 
-    Parameters
+    Attributes
     ----------
 
     category : ScannerModelTypes
