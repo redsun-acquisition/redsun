@@ -19,7 +19,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector):
     See `DetectorModel` for more information about initialization. \\
     See the ExEngine documentation for more information about the APIs.
     """
-
+    @abstractmethod
     def __init__(self,
                 name : "str",
                 model_info: "DetectorModelInfo", 
