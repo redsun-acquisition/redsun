@@ -1,12 +1,15 @@
 from psygnal import evented
 from pydantic.dataclasses import dataclass
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Optional, Dict, Any
 
 __all__ = ['create_evented_dataclass']
 
 def create_evented_dataclass(cls_name: str, 
                               original_cls : type,
-                              types : dict = {},
-                              values : dict = {}) -> type:
+                              types : "Optional[Dict[str, Any]]" = {},
+                              values : "Optional[Dict[str, Any]]" = {}) -> type:
     """ Creates a new evented dataclass from the original provided one.\\
     For more information abount about evented dataclasses, see the `psygnal documentation <https://psygnal.readthedocs.io/en/latest/dataclasses/>`_.
 
@@ -16,10 +19,10 @@ def create_evented_dataclass(cls_name: str,
         Name of the new dataclass.
     original_cls : type
         Original dataclass.
-    types : dict
-        Dictionary of type annotations.
-    values : dict
-        Dictionary of default values.
+    types : Optional[Dict[str, Any]]
+        Dictionary of type annotations. Defaults to an empty dictionary.
+    values : Optional[Dict[str, Any]]
+        Dictionary of default values. Defaults to an empty dictionary.
 
     Returns
     -------
