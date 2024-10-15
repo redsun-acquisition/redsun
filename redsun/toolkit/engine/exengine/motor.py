@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from redsun.toolkit.config import MotorModelInfo
 from redsun.toolkit.engine.motor import MotorModel
 from exengine.device_types import (
