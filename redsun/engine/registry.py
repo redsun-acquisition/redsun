@@ -48,10 +48,17 @@ class DeviceRegistry(ABC):
     ----------
     config_options: RedSunInstanceInfo
         RedSun instance configuration dataclass.
-
     virtual_bus : VirtualBus
         Module-local virtual bus.
+    module_bus : VirtualBus
+        Inter-module virtual bus.
     
+    Attributes
+    ----------
+    config : RedSunInstanceInfo
+        RedSun instance configuration dataclass.
+    virtual_bus : VirtualBus
+        Module-local virtual bus.
     module_bus : VirtualBus
         Inter-module virtual bus.
     
@@ -69,9 +76,9 @@ class DeviceRegistry(ABC):
 
     @abstractmethod
     def __init__(self, config_options: "RedSunInstanceInfo", virtual_bus: "VirtualBus", module_bus: "VirtualBus"):
-        self._config = config_options
-        self._virtual_bus = virtual_bus
-        self._module_bus = module_bus
+        self.config = config_options
+        self.virtual_bus = virtual_bus
+        self.module_bus = module_bus
     
     @abstractmethod
     def register_device(name: str, category: "DeviceTypes", device: "Any") -> None:
