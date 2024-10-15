@@ -2,12 +2,13 @@ from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from redsun.toolkit.utils import create_evented_dataclass
+from redsun.toolkit.config import PixelPhotometricTypes
 
 if TYPE_CHECKING:
     from typing import Tuple, Union
     from redsun.toolkit.config import (
         DetectorModelInfo,
-        PixelPhotometricTypes
+        AcquisitionEngineTypes
     )
 
 __all__ = ['DetectorModel']
@@ -25,6 +26,9 @@ class DetectorModel(ABC):
 
     Parameters
     ----------
+    name: str
+        - Detector instance unique identifier name.
+        - User defined.
     model_info: DetectorModelInfo
         - Detector model information dataclass.
         - Provided by RedSun configuration.
@@ -52,6 +56,8 @@ class DetectorModel(ABC):
     Properties
     ----------
     name: str
+        - Detector instance unique identifier name.
+    modelName: str
         - Detector model name.
     modelParams: dict
         - Detector model parameters dictionary.
@@ -80,9 +86,9 @@ class DetectorModel(ABC):
     shape: Tuple[int, int]
         - Detector shape (Y, X). Only applicable for 'line' and 'area' detectors.
     """
-
     @abstractmethod
-    def __init__(self, 
+    def __init__(self,
+                name : "str",
                 model_info: "DetectorModelInfo",
                 exposure: "Union[int, float]",
                 pixel_photometric: "list[PixelPhotometricTypes]" = 'gray',
@@ -93,6 +99,7 @@ class DetectorModel(ABC):
 
         cls_name = model_info.modelName + "Info"
         types = {
+            "name" : str,
             "pixelPhotometric" : PixelPhotometricTypes,
             "bitsPerPixel" : int,
             "binning" : int,
@@ -115,6 +122,10 @@ class DetectorModel(ABC):
 
     @property
     def name(self) -> str:
+        return self._modelInfo.name
+
+    @property
+    def modelName(self) -> str:
         return self._modelInfo.modelName
 
     @property
@@ -130,7 +141,7 @@ class DetectorModel(ABC):
         return self._modelInfo.serialNumber
 
     @property
-    def supportedEngines(self) -> list[str]:
+    def supportedEngines(self) -> "list[AcquisitionEngineTypes]":
         return self._modelInfo.supportedEngines
 
     @property
@@ -138,11 +149,11 @@ class DetectorModel(ABC):
         return self._modelInfo.category
 
     @property
-    def sensorSize(self) -> Tuple[int, int]:
+    def sensorSize(self) -> "Tuple[int, int]":
         return self._modelInfo.sensorSize
 
     @property
-    def pixelSize(self) -> Tuple[float, float]:
+    def pixelSize(self) -> "Tuple[float, float, float]":
         return self._modelInfo.pixelSize
 
     @property
@@ -150,7 +161,7 @@ class DetectorModel(ABC):
         return self._modelInfo.exposureEGU
 
     @property
-    def pixelPhotometric(self) -> list["PixelPhotometricTypes"]:
+    def pixelPhotometric(self) -> "list[PixelPhotometricTypes]":
         return self._modelInfo.pixelPhotometric
 
     @property
@@ -162,11 +173,11 @@ class DetectorModel(ABC):
         return self._modelInfo.binning
 
     @property
-    def offset(self) -> Tuple[int, int]:
+    def offset(self) -> "Tuple[int, int]":
         return self._modelInfo.offset
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> "Tuple[int, int]":
         return self._modelInfo.shape
 
 
