@@ -24,12 +24,15 @@ class MotorModel(ABC):
     ----------
     name : str
         - Motor unique identifier name.
+        - User defined.
     model_info: MotorModelInfo
         - Motor model information dataclass.
         - Provided by RedSun configuration.
     
     Properties
     ----------
+    name : str
+        - Motor instance unique identifier name.
     modelName: str
         - Motor model name.
     modelParams: dict
@@ -58,11 +61,17 @@ class MotorModel(ABC):
                 name : str,
                 model_info: "MotorModelInfo"):
         FullModelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
-                                                    original_cls=type(model_info))
+                                                    original_cls=type(model_info),
+                                                    types={"name": str},
+                                                    values={"name": name})
         self._modelInfo = FullModelInfo(**asdict(model_info))
     
     @property
     def name(self) -> str:
+        return self._modelInfo.name
+
+    @property
+    def modelName(self) -> str:
         return self._modelInfo.modelName
 
     @property
