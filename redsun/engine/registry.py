@@ -7,24 +7,7 @@ if TYPE_CHECKING:
     from redsun.config import RedSunInstanceInfo
     from typing import Any, Dict
 
-__all__ = ['DeviceTypes', 'DeviceRegistry']
-
-class DeviceTypes(str, Enum):
-    """ Supported device types in the device registry.
-    
-    Parameters
-    ----------
-    MOTOR : str
-        Motor device.
-    LIGHT : str
-        Light source device.
-    SCANNER : str
-        Scanner device.
-    """
-    DETECTOR : str = 'detector'
-    MOTOR : str = 'motor'
-    LIGHT : str = 'light'
-    SCANNER : str = 'scanner'
+__all__ = ['DeviceRegistry']
 
 class DeviceRegistry(ABC):
     """ `DeviceRegistry` abstract base class.
@@ -81,7 +64,7 @@ class DeviceRegistry(ABC):
         self.module_bus = module_bus
     
     @abstractmethod
-    def register_device(name: str, category: "DeviceTypes", device: "Any") -> None:
+    def register_device(name: str, device: "Any") -> None:
         """ Add a new device to the registry. 
         
         Child classes must implement this method to add a new device to the registry.
@@ -90,8 +73,6 @@ class DeviceRegistry(ABC):
         ----------
         name : str
             Device unique identifier.
-        category : DeviceTypes
-            Device type.
         device : Any
             Device instance \\
             The device instance must be coherent with the selected acquisition engine.\\
