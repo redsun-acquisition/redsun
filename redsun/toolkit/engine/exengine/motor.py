@@ -7,6 +7,11 @@ from exengine.device_types import (
 from exengine.backends.micromanager import MicroManagerSingleAxisStage as ExEngineMMSingleMotor
 from exengine.backends.micromanager import MicroManagerXYStage as ExEngineMMDoubleMotor
 
+__all__ = ['ExEngineSingleMotorModel', 
+           'ExEngineDoubleMotorModel', 
+           'ExEngineMMSingleMotorModel', 
+           'ExEngineMMDoubleMotorModel']
+
 class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
