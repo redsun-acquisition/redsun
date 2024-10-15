@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from typing import Tuple, TYPE_CHECKING
-from redsun.toolkit.engine import DetectorModel
+from redsun.toolkit.engine.detector import DetectorModel
 from exengine.device_types import Detector as ExEngineDetector
 from exengine.backends.micromanager import MicroManagerCamera as ExEngineMMCamera
 if TYPE_CHECKING:
