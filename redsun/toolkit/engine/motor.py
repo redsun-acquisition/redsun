@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 from redsun.toolkit.utils import create_evented_dataclass
 
 if TYPE_CHECKING:
+    from redsun.toolkit.config import AcquisitionEngineTypes
     from redsun.toolkit.config import MotorModelInfo
 
 __all__ = ['MotorModel']
@@ -20,13 +22,15 @@ class MotorModel(ABC):
 
     Parameters
     ----------
+    name : str
+        - Motor unique identifier name.
     model_info: MotorModelInfo
         - Motor model information dataclass.
         - Provided by RedSun configuration.
     
     Properties
     ----------
-    name: str
+    modelName: str
         - Motor model name.
     modelParams: dict
         - Motor model parameters dictionary.
@@ -45,15 +49,17 @@ class MotorModel(ABC):
     axes : list[str]
         - Motor axes.
     returnHome : bool
-        If `True`, motor will return to home position
+        - If `True`, motor will return to home position
         (defined as  the initial position the motor had at RedSun's startup)
         after RedSun is closed. Defaults to `False`.
     """
     @abstractmethod
     def __init__(self,
+                name : str,
                 model_info: "MotorModelInfo"):
-        self._modelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
-                                                original_cls=type(model_info))
+        FullModelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
+                                                    original_cls=type(model_info))
+        self._modelInfo = FullModelInfo(**asdict(model_info))
     
     @property
     def name(self) -> str:
@@ -72,7 +78,7 @@ class MotorModel(ABC):
         return self._modelInfo.serialNumber
 
     @property
-    def supportedEngines(self) -> list:
+    def supportedEngines(self) -> "list[AcquisitionEngineTypes]":
         return self._modelInfo.supportedEngines
     
     @property
@@ -88,7 +94,7 @@ class MotorModel(ABC):
         return self._modelInfo.stepSize
     
     @property
-    def axes(self) -> list:
+    def axes(self) -> list[str]:
         return self._modelInfo.axes
 
     @property
