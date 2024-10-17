@@ -1,99 +1,47 @@
-import logging
-from redsun.toolkit.log import setup_logger, core_logger
+from redsun.toolkit.log import get_logger, Loggable
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pytest import LogCaptureFixture
 
-class MockPlugin:
-    def __init__(self, instance_name: str = None) -> None:
-        self.logger = setup_logger(self, instance_name=instance_name)
+class MockLoggable(Loggable):
+
+    def __init__(self, name: str = "Test instance") -> None:
+        self.__name = name
+
+    @property
+    def name(self) -> str:
+        return self.__name
+
+def test_getter():
+    logger = get_logger()
+    assert logger.name == "redsun"
+
+def test_loggable(caplog: "LogCaptureFixture"):
+    obj = MockLoggable()
+    assert obj.name == "Test instance"
+
+    obj.info("Test info")
+    obj.debug("Test debug")
+    obj.warning("Test warning")
+    obj.error("Test error")
+    obj.critical("Test critical")
+    obj.exception("Test exception")
     
-    def call_info_logger(self, msg: str) -> None:
-        self.logger.info(msg)
+    assert len(caplog.handler.records) == 6
+    assert "Test info" in caplog.handler.records[0].msg
+    assert "Test debug" in caplog.handler.records[1].msg
+    assert "Test warning" in caplog.handler.records[2].msg
+    assert "Test error" in caplog.handler.records[3].msg
+    assert "Test critical" in caplog.handler.records[4].msg
+    assert "Test exception" in caplog.handler.records[5].msg
+
+    assert caplog.handler.records[0].clsname == "MockLoggable"
+    assert caplog.handler.records[0].uid == "Test instance"
+
+    assert caplog.handler.records[0].levelname == "INFO"
+    assert caplog.handler.records[1].levelname == "DEBUG"
+    assert caplog.handler.records[2].levelname == "WARNING"
+    assert caplog.handler.records[3].levelname == "ERROR"
+    assert caplog.handler.records[4].levelname == "CRITICAL"
+    assert caplog.handler.records[5].levelname == "ERROR"
     
-    def call_debug_logger(self, msg: str) -> None:
-        self.logger.debug(msg)
-    
-    def call_error_logger(self, msg: str) -> None:
-        self.logger.error(msg)
-    
-    def call_warning_logger(self, msg: str) -> None:
-        self.logger.warning(msg)
-    
-    def call_critical_logger(self, msg: str) -> None:
-        self.logger.critical(msg)
-    
-    def call_exception_logger(self, msg: str) -> None:
-        try:
-            raise Exception(msg)
-        except Exception as e:
-            self.logger.exception(e)
-
-def test_core_logger(caplog: "logging.LogRecord", enable_log_debug) -> None:
-    assert core_logger.name == 'redsun'
-
-    core_logger.info('Test info message')
-    core_logger.debug('Test debug message')
-    core_logger.error('Test error message')
-    core_logger.warning('Test warning message')
-    core_logger.critical('Test critical message')
-    try:
-        raise Exception('Test exception message')
-    except Exception as e:
-        core_logger.exception(e)
-    
-    assert "Test info message" in caplog.text
-    assert "Test debug message" in caplog.text
-    assert "Test error message" in caplog.text
-    assert "Test warning message" in caplog.text
-    assert "Test critical message" in caplog.text
-    assert "Test exception message" in caplog.text
-
-
-def test_plugin_logger(caplog: "logging.LogRecord", enable_log_debug) -> None:
-    plugin = MockPlugin()
-    plugin.call_info_logger('Test info message')
-
-    assert "Test info message" in caplog.text
-    assert "[MockPlugin]" in caplog.text
-
-    plugin.call_debug_logger('Test debug message')
-
-    assert "Test debug message" in caplog.text
-    assert "[MockPlugin]" in caplog.text
-
-    plugin.call_error_logger('Test error message')
-
-    assert "Test error message" in caplog.text
-    assert "[MockPlugin]" in caplog.text
-
-    plugin.call_warning_logger('Test warning message')
-
-    assert "Test warning message" in caplog.text
-
-    plugin.call_critical_logger('Test critical message')
-
-    assert "Test critical message" in caplog.text
-    assert "[MockPlugin]" in caplog.text
-
-    plugin.call_exception_logger('Test exception message')
-
-    assert "Test exception message" in caplog.text
-    assert "[MockPlugin]" in caplog.text
-
-def test_plugin_logger_instance(caplog: "logging.LogRecord", enable_log_debug) -> None:
-    plugin = MockPlugin('NewPlugin')
-    plugin.call_info_logger('Test info message')
-
-    assert "Test info message" in caplog.text
-    assert "[MockPlugin -> NewPlugin]" in caplog.text
-
-    plugin = MockPlugin('NewPlugin')
-    plugin.call_info_logger('Test info message')
-
-    assert "Test info message" in caplog.text
-    assert "[MockPlugin -> NewPlugin]" in caplog.text
-
-def test_plugin_name_instance(caplog: "logging.LogRecord", enable_log_debug):
-    plugin = MockPlugin('NewPlugin')
-    plugin.call_info_logger('Test info message')
-
-    assert "Test info message" in caplog.text
-    assert "[MockPlugin -> NewPlugin]" in caplog.text
