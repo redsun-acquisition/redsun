@@ -3,7 +3,7 @@ from psygnal import SignalInstance
 from functools import lru_cache
 from types import MappingProxyType
 from typing import Any, Dict, TYPE_CHECKING
-from redsun.toolkit.log import setup_logger
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Any, Tuple
@@ -34,7 +34,7 @@ class Signal(SignalInstance):
     def info(self) -> str:
         return self._info
 
-class VirtualBus(ABC):
+class VirtualBus(ABC, Loggable):
     """ VirtualBus base class.
 
     The VirtualBus is a mechanism to exchange data between different parts of the system. \\
@@ -54,7 +54,6 @@ class VirtualBus(ABC):
     def __init__(self) -> None:
         # pre-register signals added as attributes in the class definition
         self._signal_registry = {key : value for key, value in type(self).__dict__.items() if key.startswith('sig') and isinstance(value, Signal)}
-        self.__logger = setup_logger(self)
     
     def __setattr__(self, name: str, value: 'Any') -> None:
         """ Overloads `__setattr__` to allow registering new signals attributes.
@@ -71,7 +70,7 @@ class VirtualBus(ABC):
                 self._signal_registry[name] = value
                 super().__setattr__(name, value)
             else:
-                self.__logger.warning(f"Signal {name} already exists in {self.__class__.__name__}.")
+                self.warning(f"Signal {name} already exists in {self.__class__.__name__}.")
         else:
             super().__setattr__(name, value)
     
