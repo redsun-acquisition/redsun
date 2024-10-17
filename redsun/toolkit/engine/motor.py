@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 from redsun.toolkit.utils import create_evented_dataclass
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from redsun.toolkit.config import AcquisitionEngineTypes
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
 
 __all__ = ['MotorModel']
 
-class MotorModel(ABC):
+class MotorModel(ABC, Loggable):
     """
     `MotorModel` abstract base class.
 

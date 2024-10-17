@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 from redsun.toolkit.utils import create_evented_dataclass
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Union
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 
 __all__ = ['LightModel']
 
-class LightModel(ABC):
+class LightModel(ABC, Loggable):
 
     """ 
     `LightModel` abstract base class.

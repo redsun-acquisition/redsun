@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict
 from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.config import PixelPhotometricTypes
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Tuple, Union
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 
 __all__ = ['DetectorModel']
 
-class DetectorModel(ABC):
+class DetectorModel(ABC, Loggable):
     """ 
     `DetectorModel` abstract base class.
 
