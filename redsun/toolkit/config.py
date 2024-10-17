@@ -1,6 +1,6 @@
 from pydantic.dataclasses import dataclass
 from pydantic import Field
-from typing import Union, Dict, Optional, Tuple
+from typing import Union, Dict, Optional, Tuple, Any
 from enum import Enum
 
 class AcquisitionEngineTypes(str, Enum):
@@ -107,11 +107,18 @@ class ControllerInfo:
 
     category : ControllerTypes
         Controller category. Defaults to 'device'.
+    controllerName : str
+        Controller name.
     supportedEngines : list[AcquisitionEngineTypes]
         Supported acquisition engines list. Defaults to ['exengine'].
+    controllerParams : Dict[str, Any]
+        Controller parameters dictionary. Used to store start-up configuration parameters. \\
+        They are exposed to the upper layers to allow the user to configure the controller at runtime.
     """
     category : ControllerTypes = ControllerTypes.DEVICE
+    controllerName : str = Field(default=str())
     supportedEngines : list[AcquisitionEngineTypes] = Field(default_factory=lambda: [AcquisitionEngineTypes.EXENGINE])
+    controllerParams : Dict[str, Any] = Field(default_factory=dict)
 
 @dataclass
 class DeviceModelInfo:
