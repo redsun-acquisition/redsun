@@ -1,16 +1,13 @@
 from pydantic.dataclasses import dataclass
 from pydantic import Field
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing import Dict, Optional
-    from redsun.toolkit.config import (
+from redsun.toolkit.config import (
         DetectorModelInfo,
         LightModelInfo,
         MotorModelInfo,
         ScannerModelInfo,
         AcquisitionEngineTypes
     )
+from typing import Dict, Optional
 
 
 @dataclass
@@ -41,8 +38,7 @@ class RedSunInstanceInfo:
         Scanner model informations dictionary.
         Defaults to an empty dictionary.
     """
-
-    engine : "AcquisitionEngineTypes" = 'exengine'
+    engine : "AcquisitionEngineTypes" = Field(default=AcquisitionEngineTypes.EXENGINE)
     detectors : "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
     lights : "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
     motors : "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
