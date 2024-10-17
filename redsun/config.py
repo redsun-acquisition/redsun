@@ -38,7 +38,7 @@ class RedSunInstanceInfo:
         Scanner model informations dictionary.
         Defaults to an empty dictionary.
     """
-    engine : "AcquisitionEngineTypes" = Field(default=AcquisitionEngineTypes.EXENGINE)
+    engine : "AcquisitionEngineTypes" = AcquisitionEngineTypes.EXENGINE
     detectors : "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
     lights : "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
     motors : "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
