@@ -30,7 +30,6 @@ class ExEngineRegistry(DeviceRegistry):
 
     Parameters
     ----------
-
     config_options : RedSunInstanceInfo
         Configuration options for the RedSun instance.
     virtual_bus : VirtualBus
@@ -40,9 +39,10 @@ class ExEngineRegistry(DeviceRegistry):
     
     Properties
     ----------
-
-    detectors : Dict[str, Union[ExEngineDetectorModel, ExEngineMMCameraModel]]
+    detectors : `Dict[str, Union[ExEngineDetectorModel, ExEngineMMCameraModel]]` \\
         Dictionary containing all the registered ExEngine detectors.
+    motors : `Dict[str, Union[ExEngineSingleMotorModel, ExEngineDoubleMotorModel, ExEngineMMSingleMotorModel, ExEngineMMDoubleMotorModel]]` \\
+        Dictionary containing all the registered ExEngine motors.
     """
 
     _detectors : "Dict[str, DetectorModels]" = {}
