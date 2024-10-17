@@ -39,7 +39,7 @@ changelog = "https://github.com/jacopoabramo/redsun/blob/master/changelog.md"
 homepage = "https://github.com/jacopoabramo/redsun"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "redsun"}
 
 [tool.setuptools.package-data]
 "*" = ["*.*"]
