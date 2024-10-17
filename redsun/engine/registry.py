@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
-from enum import Enum
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from redsun.toolkit.virtualbus import VirtualBus
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 __all__ = ['DeviceRegistry']
 
-class DeviceRegistry(ABC):
+class DeviceRegistry(ABC, Loggable):
     """ `DeviceRegistry` abstract base class.
     
     The `DeviceRegistry` class is a singleton that stores all the devices currently
