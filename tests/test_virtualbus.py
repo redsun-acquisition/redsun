@@ -114,7 +114,7 @@ def test_virtual_bus_signal_creation():
 
     assert_equal(dest, ("stop", 42, np.array([1, 2, 3])))
 
-def test_virtual_bus_warning_signal_registration(caplog: "LogRecord", enable_log_debug):
+def test_virtual_bus_warning_signal_registration(caplog: "LogRecord"):
     """ Test the warning message when registering an existing signal.
     """
 
