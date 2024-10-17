@@ -33,6 +33,7 @@ class ClassFormatter(logging.Formatter):
         formatted = fmt % record.__dict__
         return formatted
 
+# TODO: this should be moved to a json file
 config = {
     "version": 1,
     "disable_existing_loggers": False,
