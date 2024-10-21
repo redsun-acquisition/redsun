@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 __all__ = ['DeviceRegistry']
 
 class DeviceRegistry(ABC, Loggable):
-    """ `DeviceRegistry` abstract base class.
+    """ `DeviceRegistry` abstract base class. Implements `Loggable` protocol.
     
     The `DeviceRegistry` class is a singleton that stores all the devices currently
     deployed within a RedSun hardware module. It provides access to the rest of the controller layer

@@ -12,7 +12,7 @@ __all__ = ['MotorModel']
 
 class MotorModel(ABC, Loggable):
     """
-    `MotorModel` abstract base class.
+    `MotorModel` abstract base class. Implements `Loggable` protocol.
 
     The `MotorModel` is the base class from which all motors, regardless of the supported engine, must inherit.
     It provides the basic information about the motor model and the properties exposable to the upper layers for user interaction.

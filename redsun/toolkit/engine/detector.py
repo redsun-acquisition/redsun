@@ -16,8 +16,8 @@ __all__ = ['DetectorModel']
 
 class DetectorModel(ABC, Loggable):
     """ 
-    `DetectorModel` abstract base class.
-
+    `DetectorModel` abstract base class. Implements `Loggable` protocol.
+    
     The `DetectorModel` is the base class from which all detectors, regardless of the supported engine, must inherit.
     It provides the basic information about the detector model and the properties exposable to the upper layers for user interaction.
 

@@ -15,8 +15,8 @@ __all__ = ['LightModel']
 
 class LightModel(ABC, Loggable):
 
-    """ 
-    `LightModel` abstract base class.
+    """
+    `LightModel` abstract base class. Implements `Loggable` protocol.
 
     The `LightModel` is the base class from which all light sources, regardless of the supported engine, must inherit.
     It provides the basic information about the light source model and the properties exposable to the upper layers for user interaction.
