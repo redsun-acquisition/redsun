@@ -4,7 +4,7 @@ from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from redsun.toolkit.virtualbus import VirtualBus
-    from redsun.config import RedSunInstanceInfo
+    from redsun.toolkit.config import RedSunInstanceInfo
     from typing import Any, Dict
 
 __all__ = ['DeviceRegistry']

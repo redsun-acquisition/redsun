@@ -7,7 +7,7 @@ from redsun.toolkit.engine import (
 
 if TYPE_CHECKING:
     from typing import Dict
-    from redsun.config import RedSunInstanceInfo
+    from redsun.toolkit.config import RedSunInstanceInfo
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.engine.exengine import (
         ExEngineDetectorModel,
