@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Union
 from redsun.toolkit.engine import (
-    DeviceRegistry,
+    EngineHandler,
     DetectorModel,
     MotorModel
 )
@@ -18,12 +18,12 @@ if TYPE_CHECKING:
         ExEngineMMDoubleMotorModel
     )
 
-__all__ = ['ExEngineRegistry']
+__all__ = ['ExEngineHandler']
 
 DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
 MotorModels = Union["ExEngineSingleMotorModel", "ExEngineDoubleMotorModel", "ExEngineMMSingleMotorModel", "ExEngineMMDoubleMotorModel"]
 
-class ExEngineRegistry(DeviceRegistry):
+class ExEngineHandler(EngineHandler):
     """ ExEngine device registry class.
 
     All models compatible with ExEngine are registered here at application startup.

@@ -7,23 +7,23 @@ if TYPE_CHECKING:
     from redsun.toolkit.config import RedSunInstanceInfo
     from typing import Any, Dict
 
-__all__ = ['DeviceRegistry']
+__all__ = ['EngineHandler']
 
-class DeviceRegistry(ABC, Loggable):
-    """ `DeviceRegistry` abstract base class. Implements `Loggable` protocol.
+class EngineHandler(ABC, Loggable):
+    """ `EngineHandler` abstract base class. Implements `Loggable` protocol.
     
-    The `DeviceRegistry` class is a singleton that stores all the devices currently
+    The `EngineHandler` class is a singleton that stores all the devices currently
     deployed within a RedSun hardware module. It provides access to the rest of the controller layer
     to information for each device, allowing for execution of atomic operations such as moving
     a motor or setting a light intensity.
 
-    At startup, the `DeviceRegistry` is populated with the devices defined in the configuration file. These
+    At startup, the `EngineHandler` is populated with the devices defined in the configuration file. These
     can be then accessed as read-only dictionaries, indexing the device by unique identifiers.
 
-    Each engine has its own dedicated `DeviceRegistry` instance, with common methods that are specialized
+    Each engine has its own dedicated `EngineHandler` instance, with common methods that are specialized
     for the specific engine type by using inheritance.
 
-    `DeviceRegistry` classes hold dictionaries that are used to group up devices by type and provide
+    `EngineHandler` classes hold dictionaries that are used to group up devices by type and provide
     a key-value access to specific devices the user wants to interact with. The types of devices
     the registry can provide depend on the engine capabilities to support that type of device.
 

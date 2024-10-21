@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 from redsun.toolkit.config import ControllerInfo
-from redsun.toolkit.engine import DeviceRegistry
+from redsun.toolkit.engine import EngineHandler
 from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.virtualbus import VirtualBus
 from redsun.toolkit.log import Loggable
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from typing import Any, Iterable, Generator, Union
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.config import ControllerInfo
-    from redsun.toolkit.engine import DeviceRegistry
+    from redsun.toolkit.engine import EngineHandler
 
 __all__ = ['DeviceController', 'ComputationalController']
 
@@ -20,7 +20,7 @@ class BaseController(ABC, Loggable):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : DeviceRegistry
+    dev_registry : EngineHandler
         Device registry API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
@@ -30,7 +30,7 @@ class BaseController(ABC, Loggable):
     @abstractmethod
     def __init__(self, 
                 ctrl_info: "ControllerInfo",
-                dev_registry: "DeviceRegistry",
+                dev_registry: "EngineHandler",
                 virtual_bus: "VirtualBus", 
                 module_bus: "VirtualBus") -> None:
         self._dev_registry = dev_registry
@@ -58,7 +58,7 @@ class DeviceController(BaseController):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : DeviceRegistry
+    dev_registry : EngineHandler
         Device registry API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
@@ -69,7 +69,7 @@ class DeviceController(BaseController):
     @abstractmethod
     def __init__(self, 
                  ctrl_info: ControllerInfo, 
-                 dev_registry: DeviceRegistry, 
+                 dev_registry: EngineHandler, 
                  virtual_bus: VirtualBus, 
                  module_bus: VirtualBus) -> None:
         super().__init__(ctrl_info, dev_registry, virtual_bus, module_bus)
@@ -83,7 +83,7 @@ class ComputationalController(BaseController):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : DeviceRegistry
+    dev_registry : EngineHandler
         Device registry API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
@@ -94,7 +94,7 @@ class ComputationalController(BaseController):
     @abstractmethod
     def __init__(self, 
                  ctrl_info: ControllerInfo, 
-                 dev_registry: DeviceRegistry, 
+                 dev_registry: EngineHandler, 
                  virtual_bus: VirtualBus, 
                  module_bus: VirtualBus) -> None:
         super().__init__(ctrl_info, dev_registry, virtual_bus, module_bus)
