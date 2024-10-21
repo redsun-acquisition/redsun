@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING, Union
+from redsun.toolkit.errors import UnsupportedDeviceType
 from redsun.toolkit.engine import (
     EngineHandler,
     DetectorModel,
     MotorModel
 )
+from exengine import ExecutionEngine
 
 if TYPE_CHECKING:
-    from typing import Dict
+    from typing import Dict, Any
     from redsun.toolkit.config import RedSunInstanceInfo
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.engine.exengine import (
@@ -24,7 +26,7 @@ DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
 MotorModels = Union["ExEngineSingleMotorModel", "ExEngineDoubleMotorModel", "ExEngineMMSingleMotorModel", "ExEngineMMDoubleMotorModel"]
 
 class ExEngineHandler(EngineHandler):
-    """ ExEngine device registry class.
+    """ ExEngine handler class.
 
     All models compatible with ExEngine are registered here at application startup.
 
@@ -53,6 +55,7 @@ class ExEngineHandler(EngineHandler):
                 virtual_bus: "VirtualBus", 
                 module_bus: "VirtualBus"):
         super().__init__(config_options, virtual_bus, module_bus)
+        self._engine = ExecutionEngine()
     
     def register_device(self, name: str, device: Union[MotorModels, DetectorModels]) -> None:
         if isinstance(device, DetectorModel):
@@ -62,6 +65,9 @@ class ExEngineHandler(EngineHandler):
         else:
             raise ValueError(f"Device of type {type(device)} not supported by ExEngine.")
     
+    def shutdown(self) -> None:
+        self._engine.shutdown()
+    
     @property
     def detectors(self) -> "Dict[str, DetectorModels]":
         return self._detectors
@@ -69,3 +75,15 @@ class ExEngineHandler(EngineHandler):
     @property
     def motors(self) -> "Dict[str, MotorModels]":
         return self._motors
+    
+    @property
+    def engine(self) -> ExecutionEngine:
+        return self._engine
+
+    @property
+    def lights(self) -> "Dict[str, Any]":
+        raise UnsupportedDeviceType("ExEngine", "Light")
+
+    @property
+    def scanners(self) -> "Dict[str, Any]":
+        raise UnsupportedDeviceType("ExEngine", "Scanner")
