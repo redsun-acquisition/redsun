@@ -6,7 +6,7 @@ from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.virtualbus import VirtualBus
 from redsun.toolkit.log import Loggable
 if TYPE_CHECKING:
-    from typing import Any, Iterable, Generator, Union
+    from typing import Any
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.config import ControllerInfo
     from redsun.toolkit.engine import EngineHandler
@@ -20,8 +20,8 @@ class BaseController(ABC, Loggable):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : EngineHandler
-        Device registry API.
+    handler : EngineHandler
+        Engine API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
     module_bus : VirtualBus
@@ -30,10 +30,10 @@ class BaseController(ABC, Loggable):
     @abstractmethod
     def __init__(self, 
                 ctrl_info: "ControllerInfo",
-                dev_registry: "EngineHandler",
+                handler: "EngineHandler",
                 virtual_bus: "VirtualBus", 
                 module_bus: "VirtualBus") -> None:
-        self._dev_registry = dev_registry
+        self._handler = handler
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         FullModelInfo = create_evented_dataclass(ctrl_info.controllerName + "Info", type(ctrl_info))
@@ -58,8 +58,8 @@ class DeviceController(BaseController):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : EngineHandler
-        Device registry API.
+    handler : EngineHandler
+        Engine API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
     module_bus : VirtualBus
@@ -69,10 +69,10 @@ class DeviceController(BaseController):
     @abstractmethod
     def __init__(self, 
                  ctrl_info: ControllerInfo, 
-                 dev_registry: EngineHandler, 
+                 handler: EngineHandler, 
                  virtual_bus: VirtualBus, 
                  module_bus: VirtualBus) -> None:
-        super().__init__(ctrl_info, dev_registry, virtual_bus, module_bus)
+        super().__init__(ctrl_info, handler, virtual_bus, module_bus)
     
     # TODO: add APIs...
 
@@ -83,8 +83,8 @@ class ComputationalController(BaseController):
     ----------
     ctrl_info : ControllerInfo
         Controller information dataclass.
-    dev_registry : EngineHandler
-        Device registry API.
+    handler : EngineHandler
+        Engine API.
     virtual_bus : VirtualBus
         Intra-module virtual bus.
     module_bus : VirtualBus
@@ -94,21 +94,8 @@ class ComputationalController(BaseController):
     @abstractmethod
     def __init__(self, 
                  ctrl_info: ControllerInfo, 
-                 dev_registry: EngineHandler, 
+                 handler: EngineHandler, 
                  virtual_bus: VirtualBus, 
                  module_bus: VirtualBus) -> None:
-        super().__init__(ctrl_info, dev_registry, virtual_bus, module_bus)
-    
-    @abstractmethod
-    def register_workflow(self, workflow: "Union[Iterable, Generator]") -> None:
-        """ Submits a new available workflow.
-
-        A workflow can be a generator or an iterable object constructed within the controller.
-
-        Parameters
-        ----------
-        workflow : Union[Iterable, Generator]
-            Workflow generator or iterable.
-        """
-        ...
+        super().__init__(ctrl_info, handler, virtual_bus, module_bus)
     
