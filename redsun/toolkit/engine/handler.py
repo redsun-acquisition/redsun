@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
+    from typing import Generator, Iterable, Union
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.config import RedSunInstanceInfo
     from typing import Any, Dict
@@ -47,15 +48,20 @@ class EngineHandler(ABC, Loggable):
     
     Properties
     ----------
+    engine : Any
+        Engine instance.
     detectors : Dict[str, Any]
         Detectors dictionary. Device class type is engine-specific and must inherit from `DetectorModel`.
-    Motors : Dict[str, Any]
+    motors : Dict[str, Any]
         Motors dictionary. Device class type is engine-specific and must inherit from `MotorModel`.
-    Lights : Dict[str, Any]
+    lights : Dict[str, Any]
         Lights dictionary. Device class type is engine-specific and must inherit from `LightModel`.
-    Scanners : Dict[str, Any]
+    scanners : Dict[str, Any]
         Scanners dictionary. Device class type is engine-specific and must inherit from `ScannerModel`.
+    workflows : Dict[str, Union[Generator, Iterable]]
+        Workflows dictionary.
     """
+    _workflows : Dict[str, "Union[Generator, Iterable]"] = {}
 
     @abstractmethod
     def __init__(self, config_options: "RedSunInstanceInfo", virtual_bus: "VirtualBus", module_bus: "VirtualBus"):
@@ -81,6 +87,33 @@ class EngineHandler(ABC, Loggable):
         ...
     
     @abstractmethod
+    def shutdown(self) -> None:
+        """ Perform a clean shutdown of the engine and all its devices.
+        """
+        ...
+    
+    def register_workflow(self, name: str, workflow: "Union[Generator, Iterable]") -> None:
+        """ Registers a new workflow in the handler.
+        
+        Parameters
+        ----------
+        name : str
+            Workflow unique identifier.
+        workflow : Union[Generator, Iterable]
+            Workflow to be registered.
+        """
+        self._workflows[name] = workflow
+    
+    @abstractmethod
+    @property
+    def engine(self) -> "Any":
+        """ Returns the engine instance.
+
+        The return type is determined by the specific engine implementation.
+        """
+        ...
+
+    @abstractmethod
     @property
     def detectors(self) -> "Dict[str, Any]":
         ...
@@ -99,3 +132,7 @@ class EngineHandler(ABC, Loggable):
     @property
     def scanners(self) -> "Dict[str, Any]":
         ...
+    
+    @property
+    def workflows(self) -> "Dict[str, Union[Generator, Iterable]]":
+        return self._workflows
