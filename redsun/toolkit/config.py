@@ -155,7 +155,7 @@ class DetectorModelInfo(DeviceModelInfo):
         'area', 'line' and 'point'. Defaults to 'area'.    
     sensorSize: Tuple[int]
         Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable
-        for 'line' and 'area' detectors. Defaults to `(1024, 1024)`.
+        for 'line' and 'area' detectors. Defaults to `(0, 0)`.
     pixelSize : Tuple[float]
         Detector pixel size in micrometers: represents the 3D axis (Z, Y, X).
         Defaults to `(1, 1, 1)`.
@@ -163,7 +163,7 @@ class DetectorModelInfo(DeviceModelInfo):
         Engineering unit for exposure time, e.g. 'ms', 'μs'. Defaults to 'ms'.
     """
     category : str = DetectorModelTypes.AREA
-    sensorSize: Tuple[int, int] = (1024, 1024)
+    sensorSize: Tuple[int, int] = (0, 0)
     pixelSize : Tuple[float, float, float] = (1, 1, 1)
     exposureEGU : str = 'ms'
 
@@ -235,3 +235,37 @@ class ScannerModelInfo(DeviceModelInfo):
     category : ScannerModelTypes = ScannerModelTypes.GALVO
     axes : list[str] = Field(default_factory=list)
     # TODO: investigate what other parameters are needed for scanner
+
+@dataclass
+class RedSunInstanceInfo:
+    """ RedSun instance configuration class.
+
+    This class is used to store the configuration of a running RedSun application;
+    it provides information about the hardware layout and the selected acquisition engine.
+    All hardware models must be coherent with the selected acquisition engine.
+
+    A minimal configuration should include the selected acquisition engine.
+
+    Attributes
+    ----------
+    engine : AcquisitionEngineTypes
+        Acquisition engine selected for the current instance.
+        Defaults to 'exengine'.
+    detectors : Optional[Dict[str, DetectorModelInfo]]
+        Detector model informations dictionary.
+        Defaults to an empty dictionary.
+    lights : Optional[Dict[str, LightModelInfo]]
+        Light source model informations dictionary.
+        Defaults to an empty dictionary.
+    motors : Optional[Dict[str, MotorModelInfo]]
+        Motor model informations dictionary.
+        Defaults to an empty dictionary.
+    scanners : Optional[Dict[str, ScannerModelInfo]]
+        Scanner model informations dictionary.
+        Defaults to an empty dictionary.
+    """
+    engine : "AcquisitionEngineTypes" = AcquisitionEngineTypes.EXENGINE
+    detectors : "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
+    lights : "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
+    motors : "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
+    scanners : "Optional[Dict[str, ScannerModelInfo]]" = Field(default_factory=dict)
