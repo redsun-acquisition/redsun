@@ -33,6 +33,9 @@ class BaseController(ABC, Loggable):
                 dev_registry: "DeviceRegistry",
                 virtual_bus: "VirtualBus", 
                 module_bus: "VirtualBus") -> None:
+        self._dev_registry = dev_registry
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
         FullModelInfo = create_evented_dataclass(ctrl_info.controllerName + "Info", type(ctrl_info))
         self._modelInfo = FullModelInfo(**ctrl_info.controllerParams)
 
