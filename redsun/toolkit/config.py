@@ -251,6 +251,9 @@ class RedSunInstanceInfo:
     engine : AcquisitionEngineTypes
         Acquisition engine selected for the current instance.
         Defaults to 'exengine'.
+    controllers : Optional[Dict[str, ControllerInfo]]
+        Controller informations dictionary.
+        Defaults to an empty dictionary.
     detectors : Optional[Dict[str, DetectorModelInfo]]
         Detector model informations dictionary.
         Defaults to an empty dictionary.
@@ -265,6 +268,7 @@ class RedSunInstanceInfo:
         Defaults to an empty dictionary.
     """
     engine : "AcquisitionEngineTypes" = AcquisitionEngineTypes.EXENGINE
+    controllers : "Optional[Dict[str, ControllerInfo]]" = Field(default_factory=dict)
     detectors : "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
     lights : "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
     motors : "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
