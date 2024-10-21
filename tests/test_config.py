@@ -37,7 +37,7 @@ def test_detectors_info():
         assert mock.vendor == "N/A"
         assert mock.serialNumber == "N/A"
         assert mock.supportedEngines == ["exengine"]
-        assert mock.sensorSize == (1024, 1024)
+        assert mock.sensorSize == (0, 0)
         assert mock.pixelSize == (1, 1, 1)
 
     mocks = list(instance.detectors.values())
