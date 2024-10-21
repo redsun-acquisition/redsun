@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Union
-from redsun.engine.registry import DeviceRegistry
 from redsun.toolkit.engine import (
+    DeviceRegistry,
     DetectorModel,
     MotorModel
 )
