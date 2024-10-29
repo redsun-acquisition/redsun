@@ -102,6 +102,9 @@ class EngineHandler(ABC, Loggable):
         workflow : Union[Generator, Iterable]
             Workflow to be registered.
         """
+        if type(workflow) not in (Generator, Iterable):
+            self.error(f"\"{name}\" workflow must be either a Generator or an Iterable. Skipping registration.")
+            return
         self._workflows[name] = workflow
     
     @abstractmethod
