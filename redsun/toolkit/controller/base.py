@@ -39,6 +39,15 @@ class BaseController(ABC, Loggable):
         FullModelInfo = create_evented_dataclass(ctrl_info.controllerName + "Info", type(ctrl_info))
         self._modelInfo = FullModelInfo(**ctrl_info.controllerParams)
 
+    def shutdown(self) -> None:
+        """ Shutdown the controller. Performs cleanup operations.
+        """
+        ...
+    
+    @property
+    def category(self) -> str:
+        return self._modelInfo.category
+
     @property
     def controllerName(self) -> str:
         return self._modelInfo.controllerName
