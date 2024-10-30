@@ -71,14 +71,14 @@ def test_virtual_bus_signal_creation():
     mock_bus.register_signal('sigDataSignal', str)
 
     assert hasattr(mock_bus, 'sigDataSignal')
-    assert type(mock_bus.sigDataSignal) == Signal
+    assert isinstance(mock_bus.sigDataSignal, Signal)
 
     assert hasattr(mock_bus, 'sigMyOtherSignal')
-    assert type(mock_bus.sigMyOtherSignal) == Signal
+    assert isinstance(mock_bus.sigMyOtherSignal, Signal)
 
     mock_bus.register_signal('sigDataSignal2', str, int, ndarray)
     assert hasattr(mock_bus, 'sigDataSignal2')
-    assert type(mock_bus.sigDataSignal2) == Signal
+    assert isinstance(mock_bus.sigDataSignal2, Signal)
 
     mock_bus.sigAttributeSignal = Signal(int)
     assert len(mock_bus.signals) == 4
@@ -141,7 +141,7 @@ def test_big_virtual_bus_construction():
     # just to make the range inclusive
     for i in range(1, 18 + 1):
         assert hasattr(mock_bus, f"sigSignal{i}")
-        assert type(getattr(mock_bus, f"sigSignal{i}")) == Signal
+        assert isinstance(getattr(mock_bus, f"sigSignal{i}"), Signal)
 
 def test_big_virtual_bus_signals():
     """ Test the signals in a `BigMockVirtualBus` instance. """

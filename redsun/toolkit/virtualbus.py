@@ -66,7 +66,7 @@ class VirtualBus(ABC, Loggable):
             value (`Any`): attribute value.
         """
         if name.startswith('sig') and isinstance(value, Signal):
-            if not hasattr(self, name) and not name in self._signal_registry:
+            if not hasattr(self, name) and name not in self._signal_registry:
                 self._signal_registry[name] = value
                 super().__setattr__(name, value)
             else:
