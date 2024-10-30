@@ -1,10 +1,17 @@
 import importlib
 import os
 import inspect
+import weakref
 from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
-    from redsun.toolkit.config import RedSunInstanceInfo
+    from redsun.toolkit.config import (
+        RedSunInstanceInfo,
+        ControllerInfo
+    )
+    from redsun.toolkit.controller import (
+        DeviceController,
+        ComputationalController
+    )
     from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.virtualbus import VirtualBus
     from typing import Union
@@ -59,9 +66,11 @@ def create_engine(info: "RedSunInstanceInfo",
         raise ValueError(f"Unknown engine: {info.engine}")
     return handler(info, virtual_bus, module_bus)
 
+# TODO: this factory should construct the controllers
+# based on the plugin information; hence it requires a dynamic
+# loading mechanism for the controllers
 class ControllerFactory:
-    """ Controller factory class. Contains references to the main objects required
-    to build up each controller.
+    """ Controller factory class.
 
     Parameters
     ----------
@@ -71,5 +80,24 @@ class ControllerFactory:
         Inter-module virtual bus.
     """
 
+    __controllers: weakref.WeakValueDictionary[str, "Union[DeviceController, ComputationalController]"] = weakref.WeakValueDictionary()
+
     def __init__(self, virtual_bus: "VirtualBus", module_bus: "VirtualBus") -> None:
-        pass
+        self.__virtual_bus = virtual_bus
+        self.__module_bus = module_bus
+    
+    def build(self, info: "ControllerInfo") -> "Union[DeviceController, ComputationalController]":
+        """ Build a controller based on the provided information. The created controller is stored
+        in the factory class with a weak reference for future access during application shutdown.
+
+        Parameters
+        ----------
+        info : ControllerInfo
+            Controller information dataclass.
+
+        Returns
+        -------
+        Union[DeviceController, ComputationalController]
+            Controller instance.
+        """
+        ...
