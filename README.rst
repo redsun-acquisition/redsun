@@ -19,7 +19,7 @@ RedSun
 Event-driven data acquisition software for scientific applications.
 
 
-* Free software: BSD-3 license
+* Free software: BSD 3-Clause license
 * Documentation: https://redsun.readthedocs.io.
 
 

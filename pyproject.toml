@@ -16,7 +16,7 @@ maintainers = [
 classifiers = [
 
 ]
-license = {text = "BSD-3 license"}
+license = {text = "BSD 3-Clause license"}
 dependencies = [
   "typing_extension",
   "pydantic",
