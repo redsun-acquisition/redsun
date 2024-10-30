@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redsun"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Event-driven data acquisition software for scientific applications."
 readme = "README.rst"
 authors = [
@@ -25,6 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qt = ["PyQt5"]
 dev = [
     "coverage",  # testing
     "mypy",  # linting
@@ -44,7 +45,8 @@ package-dir = {"" = "redsun"}
 [tool.setuptools.package-data]
 "*" = ["*.*"]
 
-
+[tool.setuptools.dynamic]
+version = {attr = "redsun.__version__"}
 
 
 # Mypy
