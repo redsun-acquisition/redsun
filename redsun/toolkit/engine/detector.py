@@ -7,13 +7,11 @@ from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Tuple, Union
-    from redsun.toolkit.config import (
-        DetectorModelInfo,
-        AcquisitionEngineTypes
-    )
+    from redsun.toolkit.config import DetectorModelInfo, AcquisitionEngineTypes
+
 
 class DetectorModel(ABC, Loggable):
-    """ 
+    """
     `DetectorModel` abstract base class. Implements `Loggable` protocol.
 
     The `DetectorModel` is the base class from which all detectors, regardless of the supported engine, must inherit.
@@ -47,11 +45,11 @@ class DetectorModel(ABC, Loggable):
         - User-defined.
         - Only applicable for 'line' and 'area' detectors. Defaults to `(0, 0)`.
     shape: Tuple[int, int]
-        - Detector shape at startup (Y, X). 
-        - User-defined. 
-        - If set to `None`, it defaults to the sensor size. 
+        - Detector shape at startup (Y, X).
+        - User-defined.
+        - If set to `None`, it defaults to the sensor size.
         - Only applicable for 'line' and 'area' detectors. Defaults to `None`.
-    
+
     Properties
     ----------
     name: str
@@ -63,7 +61,7 @@ class DetectorModel(ABC, Loggable):
     vendor: str
         - Detector vendor.
     serialNumber: str
-        - Detector serial number.       
+        - Detector serial number.
     supportedEngines: list[AcquisitionEngineTypes]
         - Supported acquisition engines list.
     category: DetectorModelTypes
@@ -85,38 +83,39 @@ class DetectorModel(ABC, Loggable):
     shape: Tuple[int, int]
         - Detector shape (Y, X). Only applicable for 'line' and 'area' detectors.
     """
-    @abstractmethod
-    def __init__(self,
-                name : "str",
-                model_info: "DetectorModelInfo",
-                exposure: "Union[int, float]",
-                pixel_photometric: "list[PixelPhotometricTypes]" = 'gray',
-                bits_per_pixel: "set[int]" = {8},
-                binning : "list[int]" = [1],
-                offset: "Tuple[int, int]" = (0, 0),
-                shape: "Tuple[int, int]" = None,) -> None:
 
+    @abstractmethod
+    def __init__(
+        self,
+        name: "str",
+        model_info: "DetectorModelInfo",
+        exposure: "Union[int, float]",
+        pixel_photometric: "list[PixelPhotometricTypes]" = "gray",
+        bits_per_pixel: "set[int]" = {8},
+        binning: "list[int]" = [1],
+        offset: "Tuple[int, int]" = (0, 0),
+        shape: "Tuple[int, int]" = None,
+    ) -> None:
         cls_name = model_info.modelName + "Info"
         types = {
-            "name" : str,
-            "pixelPhotometric" : PixelPhotometricTypes,
-            "bitsPerPixel" : int,
-            "binning" : int,
-            "offset" : Tuple[int, int],
-            "shape" : Tuple[int, int]
+            "name": str,
+            "pixelPhotometric": PixelPhotometricTypes,
+            "bitsPerPixel": int,
+            "binning": int,
+            "offset": Tuple[int, int],
+            "shape": Tuple[int, int],
         }
         values = {
-            "pixelPhotometric" : pixel_photometric,
-            "bitsPerPixel" : bits_per_pixel,
-            "binning" : binning,
-            "offset" : offset,
-            "shape" : shape if shape is not None else model_info.sensorSize
+            "pixelPhotometric": pixel_photometric,
+            "bitsPerPixel": bits_per_pixel,
+            "binning": binning,
+            "offset": offset,
+            "shape": shape if shape is not None else model_info.sensorSize,
         }
-        FullModelInfo = create_evented_dataclass(cls_name=cls_name,
-                                                original_cls=type(model_info),
-                                                types=types,
-                                                values=values)
-        
+        FullModelInfo = create_evented_dataclass(
+            cls_name=cls_name, original_cls=type(model_info), types=types, values=values
+        )
+
         self._modelInfo = FullModelInfo(**asdict(model_info).update(values))
 
     @property
@@ -166,7 +165,7 @@ class DetectorModel(ABC, Loggable):
     @property
     def bitsPerPixel(self) -> set[int]:
         return self._modelInfo.bitsPerPixel
-    
+
     @property
     def binning(self) -> list[int]:
         return self._modelInfo.binning
@@ -178,7 +177,3 @@ class DetectorModel(ABC, Loggable):
     @property
     def shape(self) -> "Tuple[int, int]":
         return self._modelInfo.shape
-
-
-    
-    

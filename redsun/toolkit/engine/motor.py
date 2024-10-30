@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from redsun.toolkit.config import AcquisitionEngineTypes
     from redsun.toolkit.config import MotorModelInfo
 
+
 class MotorModel(ABC, Loggable):
     """
     `MotorModel` abstract base class. Implements `Loggable` protocol.
@@ -27,7 +28,7 @@ class MotorModel(ABC, Loggable):
     model_info: MotorModelInfo
         - Motor model information dataclass.
         - Provided by RedSun configuration.
-    
+
     Properties
     ----------
     name : str
@@ -39,7 +40,7 @@ class MotorModel(ABC, Loggable):
     vendor: str
         - Motor vendor.
     serialNumber: str
-        - Motor serial number.       
+        - Motor serial number.
     supportedEngines: list[AcquisitionEngineTypes]
         - Supported acquisition engines list.
     category: DetectorModelTypes
@@ -55,16 +56,17 @@ class MotorModel(ABC, Loggable):
         (defined as  the initial position the motor had at RedSun's startup)
         after RedSun is closed. Defaults to `False`.
     """
+
     @abstractmethod
-    def __init__(self,
-                name : str,
-                model_info: "MotorModelInfo"):
-        FullModelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
-                                                    original_cls=type(model_info),
-                                                    types={"name": str},
-                                                    values={"name": name})
+    def __init__(self, name: str, model_info: "MotorModelInfo"):
+        FullModelInfo = create_evented_dataclass(
+            cls_name=model_info.modelName + "Info",
+            original_cls=type(model_info),
+            types={"name": str},
+            values={"name": name},
+        )
         self._modelInfo = FullModelInfo(**asdict(model_info))
-    
+
     @property
     def name(self) -> str:
         return self._modelInfo.name
@@ -76,11 +78,11 @@ class MotorModel(ABC, Loggable):
     @property
     def modelParams(self) -> dict:
         return self._modelInfo.modelParams
-    
+
     @property
     def vendor(self) -> str:
         return self._modelInfo.vendor
-    
+
     @property
     def serialNumber(self) -> str:
         return self._modelInfo.serialNumber
@@ -88,19 +90,19 @@ class MotorModel(ABC, Loggable):
     @property
     def supportedEngines(self) -> "list[AcquisitionEngineTypes]":
         return self._modelInfo.supportedEngines
-    
+
     @property
     def category(self) -> str:
         return self._modelInfo.category
-    
+
     @property
     def stepEGU(self) -> str:
         return self._modelInfo.stepEGU
-    
+
     @property
     def stepSize(self) -> float:
         return self._modelInfo.stepSize
-    
+
     @property
     def axes(self) -> list[str]:
         return self._modelInfo.axes

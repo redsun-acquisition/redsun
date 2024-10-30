@@ -8,16 +8,17 @@ import pytest
 if TYPE_CHECKING:
     from logging import LogRecord
 
-class MockVirtualBus(VirtualBus):
 
+class MockVirtualBus(VirtualBus):
     sigMyOtherSignal = Signal(int, info="My other signal")
 
     def __init__(self):
         super().__init__()
 
+
 class BigMockVirtualBus(VirtualBus):
-    """ A `VirtualBus` subclass with a lot of signals.
-    """
+    """A `VirtualBus` subclass with a lot of signals."""
+
     sigSignal1 = Signal(str)
     sigSignal2 = Signal(int)
     sigSignal3 = Signal(str, int)
@@ -39,7 +40,8 @@ class BigMockVirtualBus(VirtualBus):
 
     def __init__(self) -> None:
         super().__init__()
-    
+
+
 # Helper function to assert values considering NumPy arrays
 def assert_equal(dest, expected):
     if isinstance(dest, tuple) and any(isinstance(i, np.ndarray) for i in dest):
@@ -53,8 +55,7 @@ def assert_equal(dest, expected):
 
 
 def test_virtual_bus_signal_creation():
-    """ Test the creation of a `Signal` instance in a `VirtualBus` subclass.
-    """
+    """Test the creation of a `Signal` instance in a `VirtualBus` subclass."""
 
     dest = "start"
 
@@ -66,18 +67,20 @@ def test_virtual_bus_signal_creation():
 
     assert mock_bus.sigMyOtherSignal.types == (int,)
     assert mock_bus.sigMyOtherSignal.info == "My other signal"
-    assert mock_bus.signals == MappingProxyType({'sigMyOtherSignal': mock_bus.sigMyOtherSignal})
+    assert mock_bus.signals == MappingProxyType(
+        {"sigMyOtherSignal": mock_bus.sigMyOtherSignal}
+    )
 
-    mock_bus.register_signal('sigDataSignal', str)
+    mock_bus.register_signal("sigDataSignal", str)
 
-    assert hasattr(mock_bus, 'sigDataSignal')
+    assert hasattr(mock_bus, "sigDataSignal")
     assert isinstance(mock_bus.sigDataSignal, Signal)
 
-    assert hasattr(mock_bus, 'sigMyOtherSignal')
+    assert hasattr(mock_bus, "sigMyOtherSignal")
     assert isinstance(mock_bus.sigMyOtherSignal, Signal)
 
-    mock_bus.register_signal('sigDataSignal2', str, int, ndarray)
-    assert hasattr(mock_bus, 'sigDataSignal2')
+    mock_bus.register_signal("sigDataSignal2", str, int, ndarray)
+    assert hasattr(mock_bus, "sigDataSignal2")
     assert isinstance(mock_bus.sigDataSignal2, Signal)
 
     mock_bus.sigAttributeSignal = Signal(int)
@@ -114,43 +117,49 @@ def test_virtual_bus_signal_creation():
 
     assert_equal(dest, ("stop", 42, np.array([1, 2, 3])))
 
+
 def test_virtual_bus_warning_signal_registration(caplog: "LogRecord"):
-    """ Test the warning message when registering an existing signal.
-    """
+    """Test the warning message when registering an existing signal."""
 
     mock_bus = MockVirtualBus()
-    mock_bus.register_signal('sigMyOtherSignal', int)
+    mock_bus.register_signal("sigMyOtherSignal", int)
     assert "Signal sigMyOtherSignal already exists in MockVirtualBus." in caplog.text
 
+
 def test_virtual_bus_fail_signal_registration():
-    """ Tests the failure of registering a signal with an invalid name.
-    """
-    
+    """Tests the failure of registering a signal with an invalid name."""
+
     mock_bus = MockVirtualBus()
-    
+
     with pytest.raises(ValueError):
         mock_bus.register_signal("dataSignal", str)
 
+
 def test_big_virtual_bus_construction():
-    """ Test the construction of a `BigMockVirtualBus` instance. """
+    """Test the construction of a `BigMockVirtualBus` instance."""
 
     mock_bus = BigMockVirtualBus()
 
     # we have 18 signals numered from 1 to 18
-    # in the `BigMockVirtualBus` class; the + 1 is 
+    # in the `BigMockVirtualBus` class; the + 1 is
     # just to make the range inclusive
     for i in range(1, 18 + 1):
         assert hasattr(mock_bus, f"sigSignal{i}")
         assert isinstance(getattr(mock_bus, f"sigSignal{i}"), Signal)
 
+
 def test_big_virtual_bus_signals():
-    """ Test the signals in a `BigMockVirtualBus` instance. """
+    """Test the signals in a `BigMockVirtualBus` instance."""
 
     mock_bus = BigMockVirtualBus()
 
     dest = "start"
 
-    def my_slot(*data: Tuple[Union[str, int, float, dict, np.ndarray, list, object, tuple], ...]) -> None:
+    def my_slot(
+        *data: Tuple[
+            Union[str, int, float, dict, np.ndarray, list, object, tuple], ...
+        ],
+    ) -> None:
         nonlocal dest
         if len(data) == 1:
             dest = data[0]

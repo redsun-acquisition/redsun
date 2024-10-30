@@ -5,14 +5,16 @@ from redsun.toolkit.engine import EngineHandler
 from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.virtualbus import VirtualBus
 from redsun.toolkit.log import Loggable
+
 if TYPE_CHECKING:
     from typing import Any
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.config import ControllerInfo
     from redsun.toolkit.engine import EngineHandler
 
+
 class BaseController(ABC, Loggable):
-    """ Base controller class. Implements `Loggable` protocol.
+    """Base controller class. Implements `Loggable` protocol.
 
     Parameters
     ----------
@@ -25,23 +27,27 @@ class BaseController(ABC, Loggable):
     module_bus : VirtualBus
         Inter-module virtual bus.
     """
+
     @abstractmethod
-    def __init__(self, 
-                ctrl_info: "ControllerInfo",
-                handler: "EngineHandler",
-                virtual_bus: "VirtualBus", 
-                module_bus: "VirtualBus") -> None:
+    def __init__(
+        self,
+        ctrl_info: "ControllerInfo",
+        handler: "EngineHandler",
+        virtual_bus: "VirtualBus",
+        module_bus: "VirtualBus",
+    ) -> None:
         self._handler = handler
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        FullModelInfo = create_evented_dataclass(ctrl_info.controllerName + "Info", type(ctrl_info))
+        FullModelInfo = create_evented_dataclass(
+            ctrl_info.controllerName + "Info", type(ctrl_info)
+        )
         self._modelInfo = FullModelInfo(**ctrl_info.controllerParams)
 
     def shutdown(self) -> None:
-        """ Shutdown the controller. Performs cleanup operations.
-        """
+        """Shutdown the controller. Performs cleanup operations."""
         ...
-    
+
     @property
     def category(self) -> str:
         return self._modelInfo.category
@@ -58,8 +64,9 @@ class BaseController(ABC, Loggable):
     def controllerParams(self) -> "dict[str, Any]":
         return self._modelInfo.controllerParams
 
+
 class DeviceController(BaseController):
-    """ Device controller base class.
+    """Device controller base class.
 
     Parameters
     ----------
@@ -74,17 +81,20 @@ class DeviceController(BaseController):
     """
 
     @abstractmethod
-    def __init__(self, 
-                 ctrl_info: ControllerInfo, 
-                 handler: EngineHandler, 
-                 virtual_bus: VirtualBus, 
-                 module_bus: VirtualBus) -> None:
+    def __init__(
+        self,
+        ctrl_info: ControllerInfo,
+        handler: EngineHandler,
+        virtual_bus: VirtualBus,
+        module_bus: VirtualBus,
+    ) -> None:
         super().__init__(ctrl_info, handler, virtual_bus, module_bus)
-    
+
     # TODO: add APIs...
 
+
 class ComputationalController(BaseController):
-    """ Computational controller base class.
+    """Computational controller base class.
 
     Parameters
     ----------
@@ -99,10 +109,11 @@ class ComputationalController(BaseController):
     """
 
     @abstractmethod
-    def __init__(self, 
-                 ctrl_info: ControllerInfo, 
-                 handler: EngineHandler, 
-                 virtual_bus: VirtualBus, 
-                 module_bus: VirtualBus) -> None:
+    def __init__(
+        self,
+        ctrl_info: ControllerInfo,
+        handler: EngineHandler,
+        virtual_bus: VirtualBus,
+        module_bus: VirtualBus,
+    ) -> None:
         super().__init__(ctrl_info, handler, virtual_bus, module_bus)
-    

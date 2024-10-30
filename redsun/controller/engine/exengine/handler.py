@@ -1,10 +1,6 @@
 from typing import TYPE_CHECKING, Union
 from redsun.toolkit.errors import UnsupportedDeviceType
-from redsun.toolkit.engine import (
-    EngineHandler,
-    DetectorModel,
-    MotorModel
-)
+from redsun.toolkit.engine import EngineHandler, DetectorModel, MotorModel
 from exengine import ExecutionEngine
 
 if TYPE_CHECKING:
@@ -17,11 +13,17 @@ if TYPE_CHECKING:
         ExEngineSingleMotorModel,
         ExEngineDoubleMotorModel,
         ExEngineMMSingleMotorModel,
-        ExEngineMMDoubleMotorModel
+        ExEngineMMDoubleMotorModel,
     )
 
 DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
-MotorModels = Union["ExEngineSingleMotorModel", "ExEngineDoubleMotorModel", "ExEngineMMSingleMotorModel", "ExEngineMMDoubleMotorModel"]
+MotorModels = Union[
+    "ExEngineSingleMotorModel",
+    "ExEngineDoubleMotorModel",
+    "ExEngineMMSingleMotorModel",
+    "ExEngineMMDoubleMotorModel",
+]
+
 
 class ExEngineHandler(EngineHandler):
     """ ExEngine handler class.
@@ -45,35 +47,41 @@ class ExEngineHandler(EngineHandler):
         Dictionary containing all the registered ExEngine motors.
     """
 
-    _detectors : "Dict[str, DetectorModels]" = {}
-    _motors : "Dict[str, MotorModels]" = {}
+    _detectors: "Dict[str, DetectorModels]" = {}
+    _motors: "Dict[str, MotorModels]" = {}
 
-    def __init__(self, 
-                config_options: "RedSunInstanceInfo",
-                virtual_bus: "VirtualBus", 
-                module_bus: "VirtualBus"):
+    def __init__(
+        self,
+        config_options: "RedSunInstanceInfo",
+        virtual_bus: "VirtualBus",
+        module_bus: "VirtualBus",
+    ):
         super().__init__(config_options, virtual_bus, module_bus)
         self._engine = ExecutionEngine()
-    
-    def register_device(self, name: str, device: Union[MotorModels, DetectorModels]) -> None:
+
+    def register_device(
+        self, name: str, device: Union[MotorModels, DetectorModels]
+    ) -> None:
         if isinstance(device, DetectorModel):
             self._detectors[name] = device
         elif isinstance(device, MotorModel):
             self._motors[name] = device
         else:
-            raise ValueError(f"Device of type {type(device)} not supported by ExEngine.")
-    
+            raise ValueError(
+                f"Device of type {type(device)} not supported by ExEngine."
+            )
+
     def shutdown(self) -> None:
         self._engine.shutdown()
-    
+
     @property
     def detectors(self) -> "Dict[str, DetectorModels]":
         return self._detectors
-    
+
     @property
     def motors(self) -> "Dict[str, MotorModels]":
         return self._motors
-    
+
     @property
     def engine(self) -> ExecutionEngine:
         return self._engine

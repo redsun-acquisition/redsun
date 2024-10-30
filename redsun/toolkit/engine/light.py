@@ -6,13 +6,10 @@ from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Union
-    from redsun.toolkit.config import (
-        LightModelInfo,
-        LightModelTypes
-    )
+    from redsun.toolkit.config import LightModelInfo, LightModelTypes
+
 
 class LightModel(ABC, Loggable):
-
     """
     `LightModel` abstract base class. Implements `Loggable` protocol.
 
@@ -31,21 +28,22 @@ class LightModel(ABC, Loggable):
     model_info: LightModelInfo
         - Light source model information dataclass.
         - Provided by RedSun configuration.
-    
+
     Properties
     ----------
 
     """
+
     @abstractmethod
-    def __init__(self,
-                 name : str,
-                 model_info: "LightModelInfo") -> None:
-        FullModelInfo = create_evented_dataclass(cls_name=model_info.modelName + "Info",
-                                                    original_cls=type(model_info),
-                                                    types={"name" : str},
-                                                    values={"name" : name})
+    def __init__(self, name: str, model_info: "LightModelInfo") -> None:
+        FullModelInfo = create_evented_dataclass(
+            cls_name=model_info.modelName + "Info",
+            original_cls=type(model_info),
+            types={"name": str},
+            values={"name": name},
+        )
         self._modelInfo = FullModelInfo(**asdict(model_info))
-    
+
     @property
     def name(self) -> str:
         return self._modelInfo.name
@@ -61,19 +59,19 @@ class LightModel(ABC, Loggable):
     @property
     def vendor(self) -> str:
         return self._modelInfo.vendor
-    
+
     @property
     def serialNumber(self) -> str:
         return self._modelInfo.serialNumber
-    
+
     @property
     def supportedEngines(self) -> list:
         return self._modelInfo.supportedEngines
-    
+
     @property
     def category(self) -> "LightModelTypes":
         return self._modelInfo.category
-    
+
     @property
     def wavelength(self) -> int:
         return self._modelInfo.wavelength
@@ -85,11 +83,11 @@ class LightModel(ABC, Loggable):
     @property
     def minPower(self) -> Union[float, int]:
         return self._modelInfo.minPower
-    
+
     @property
     def maxPower(self) -> Union[float, int]:
         return self._modelInfo.maxPower
-    
+
     @property
     def powerStep(self) -> Union[float, int]:
         return self._modelInfo.powerStep

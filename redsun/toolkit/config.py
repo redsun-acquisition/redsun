@@ -3,6 +3,7 @@ from pydantic import Field
 from typing import Union, Dict, Optional, Tuple, Any
 from enum import Enum
 
+
 class AcquisitionEngineTypes(str, Enum):
     """ Supported acquisition engine entities.
 
@@ -18,11 +19,13 @@ class AcquisitionEngineTypes(str, Enum):
         ExEngine: execution engine for microscopy control.\\
         For more informations, refer to the `ExEngine documentation page<https://exengine.readthedocs.io/en/latest/index.html>`_
     """
-    EXENGINE : str = 'exengine'
+
+    EXENGINE: str = "exengine"
+
 
 class DetectorModelTypes(str, Enum):
-    """ Supported detector types.
-    
+    """Supported detector types.
+
     Detectors are devices that are used to capture images or signals from the sample.
 
     Attributes
@@ -34,12 +37,14 @@ class DetectorModelTypes(str, Enum):
     POINT : str
         Point detector (i.e. Avalanche Photodiode (APD) detector).
     """
-    AREA : str = 'area'
-    LINE : str = 'line'
-    POINT : str = 'point'
+
+    AREA: str = "area"
+    LINE: str = "line"
+    POINT: str = "point"
+
 
 class PixelPhotometricTypes(str, Enum):
-    """ Supported pixel photometric types.
+    """Supported pixel photometric types.
 
     Attributes
     ----------
@@ -48,41 +53,49 @@ class PixelPhotometricTypes(str, Enum):
     RGB : str
         RGB pixel.
     """
-    GRAY : str = 'gray'
-    RGB : str = 'rgb'
+
+    GRAY: str = "gray"
+    RGB: str = "rgb"
+
 
 class MotorModelTypes(str, Enum):
-    """ Supported motor types.
+    """Supported motor types.
 
     Attributes
     ----------
     STEPPER : str
         Stepper motor.
     """
-    STEPPER : str = 'stepper'
+
+    STEPPER: str = "stepper"
+
 
 class LightModelTypes(str, Enum):
-    """ Supported light source types.
+    """Supported light source types.
 
     Attributes
     ----------
     LASER : str
         Laser light source.
     """
-    LASER : str = 'laser'
+
+    LASER: str = "laser"
+
 
 class ScannerModelTypes(str, Enum):
-    """ Supported scanner types.
+    """Supported scanner types.
 
     Attributes
     ----------
     GALVO : str
         Galvanometric scanner.
     """
-    GALVO : str = 'galvo'
+
+    GALVO: str = "galvo"
+
 
 class ControllerTypes(str, Enum):
-    """ Supported controller category types.
+    """Supported controller category types.
 
     Attributes
     ----------
@@ -95,8 +108,9 @@ class ControllerTypes(str, Enum):
         the acquisition engine of a new workflow that can be injected into the acquisition process.
     """
 
-    DEVICE : str = 'device'
-    COMPUTATIONAL : str = 'computational'
+    DEVICE: str = "device"
+    COMPUTATIONAL: str = "computational"
+
 
 @dataclass
 class ControllerInfo:
@@ -115,15 +129,19 @@ class ControllerInfo:
         Controller parameters dictionary. Used to store start-up configuration parameters. \\
         They are exposed to the upper layers to allow the user to configure the controller at runtime.
     """
-    category : ControllerTypes = ControllerTypes.DEVICE
-    controllerName : str = Field(default=str())
-    supportedEngines : list[AcquisitionEngineTypes] = Field(default_factory=lambda: [AcquisitionEngineTypes.EXENGINE])
-    controllerParams : Dict[str, Any] = Field(default_factory=dict)
+
+    category: ControllerTypes = ControllerTypes.DEVICE
+    controllerName: str = Field(default=str())
+    supportedEngines: list[AcquisitionEngineTypes] = Field(
+        default_factory=lambda: [AcquisitionEngineTypes.EXENGINE]
+    )
+    controllerParams: Dict[str, Any] = Field(default_factory=dict)
+
 
 @dataclass
 class DeviceModelInfo:
-    """ Base class for device model's information. 
-    
+    """Base class for device model's information.
+
     Attributes
     ----------
     modelName : str
@@ -137,22 +155,25 @@ class DeviceModelInfo:
     serialNumber : Optional[str]
         Detector serial number. Optional for debugging purposes. Defaults to 'N/A'.
     """
-    modelName : str
-    modelParams : Dict[str, Union[str, int, float]]
-    supportedEngines : list[AcquisitionEngineTypes] = Field(default_factory=lambda:[AcquisitionEngineTypes.EXENGINE])
-    vendor : Optional[str] = "N/A"
-    serialNumber : Optional[str] = "N/A"
-    
+
+    modelName: str
+    modelParams: Dict[str, Union[str, int, float]]
+    supportedEngines: list[AcquisitionEngineTypes] = Field(
+        default_factory=lambda: [AcquisitionEngineTypes.EXENGINE]
+    )
+    vendor: Optional[str] = "N/A"
+    serialNumber: Optional[str] = "N/A"
+
 
 @dataclass
 class DetectorModelInfo(DeviceModelInfo):
-    """ Detector model informations. 
-    
+    """Detector model informations.
+
     Attributes
     ----------
     category : DetectorModelTypes
         Detector type. Currently supported values are
-        'area', 'line' and 'point'. Defaults to 'area'.    
+        'area', 'line' and 'point'. Defaults to 'area'.
     sensorSize: Tuple[int]
         Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable
         for 'line' and 'area' detectors. Defaults to `(0, 0)`.
@@ -162,15 +183,16 @@ class DetectorModelInfo(DeviceModelInfo):
     exposureEGU : str
         Engineering unit for exposure time, e.g. 'ms', 'μs'. Defaults to 'ms'.
     """
-    category : str = DetectorModelTypes.AREA
+
+    category: str = DetectorModelTypes.AREA
     sensorSize: Tuple[int, int] = (0, 0)
-    pixelSize : Tuple[float, float, float] = (1, 1, 1)
-    exposureEGU : str = 'ms'
+    pixelSize: Tuple[float, float, float] = (1, 1, 1)
+    exposureEGU: str = "ms"
 
 
 @dataclass
 class LightModelInfo(DeviceModelInfo):
-    """ Light source model informations.
+    """Light source model informations.
 
     Attributes
     ----------
@@ -187,17 +209,18 @@ class LightModelInfo(DeviceModelInfo):
     powerStep: Union[float, int]
         Power increase/decrease minimum step size.
     """
-    
-    category : LightModelTypes = LightModelTypes.LASER
-    wavelength : int = Field(default=None)
-    powerEGU : str = 'mW'
-    minPower : Union[float, int] = 0    
-    maxPower : Union[float, int] = Field(default=None)
+
+    category: LightModelTypes = LightModelTypes.LASER
+    wavelength: int = Field(default=None)
+    powerEGU: str = "mW"
+    minPower: Union[float, int] = 0
+    maxPower: Union[float, int] = Field(default=None)
     powerStep: Union[float, int] = Field(default=None)
+
 
 @dataclass
 class MotorModelInfo(DeviceModelInfo):
-    """ Motor model informations.
+    """Motor model informations.
 
     Attributes
     ----------
@@ -214,14 +237,16 @@ class MotorModelInfo(DeviceModelInfo):
         (defined as  the initial position the motor had at RedSun's startup)
         after RedSun is closed. Defaults to `False`.
     """
-    category : str = MotorModelTypes.STEPPER
-    stepEGU : str = 'μm'
-    axes : list[str] = Field(default_factory=list)
-    returnHome : bool = False
+
+    category: str = MotorModelTypes.STEPPER
+    stepEGU: str = "μm"
+    axes: list[str] = Field(default_factory=list)
+    returnHome: bool = False
+
 
 @dataclass
 class ScannerModelInfo(DeviceModelInfo):
-    """ Scanner model informations.
+    """Scanner model informations.
 
     Attributes
     ----------
@@ -232,13 +257,15 @@ class ScannerModelInfo(DeviceModelInfo):
         Supported scanner axes. Suggestion is to be a list of
         single character, capital strings, e.g. ['X', 'Y', 'Z'].
     """
-    category : ScannerModelTypes = ScannerModelTypes.GALVO
-    axes : list[str] = Field(default_factory=list)
+
+    category: ScannerModelTypes = ScannerModelTypes.GALVO
+    axes: list[str] = Field(default_factory=list)
     # TODO: investigate what other parameters are needed for scanner
+
 
 @dataclass
 class RedSunInstanceInfo:
-    """ RedSun instance configuration class.
+    """RedSun instance configuration class.
 
     This class is used to store the configuration of a running RedSun application;
     it provides information about the hardware layout and the selected acquisition engine.
@@ -267,9 +294,10 @@ class RedSunInstanceInfo:
         Scanner model informations dictionary.
         Defaults to an empty dictionary.
     """
-    engine : "AcquisitionEngineTypes" = AcquisitionEngineTypes.EXENGINE
-    controllers : "Optional[Dict[str, ControllerInfo]]" = Field(default_factory=dict)
-    detectors : "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
-    lights : "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
-    motors : "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
-    scanners : "Optional[Dict[str, ScannerModelInfo]]" = Field(default_factory=dict)
+
+    engine: "AcquisitionEngineTypes" = AcquisitionEngineTypes.EXENGINE
+    controllers: "Optional[Dict[str, ControllerInfo]]" = Field(default_factory=dict)
+    detectors: "Optional[Dict[str, DetectorModelInfo]]" = Field(default_factory=dict)
+    lights: "Optional[Dict[str, LightModelInfo]]" = Field(default_factory=dict)
+    motors: "Optional[Dict[str, MotorModelInfo]]" = Field(default_factory=dict)
+    scanners: "Optional[Dict[str, ScannerModelInfo]]" = Field(default_factory=dict)

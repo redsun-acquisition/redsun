@@ -3,16 +3,17 @@ import logging.config
 from typing import Protocol
 from typing_extensions import override
 
-__all__ = ['Loggable', 'get_logger']
+__all__ = ["Loggable", "get_logger"]
+
 
 class ClassFormatter(logging.Formatter):
-    """ Custom formatter for logging messages with class name and user-defined ID.
-    """
+    """Custom formatter for logging messages with class name and user-defined ID."""
+
     STD_FORMAT = "[%(asctime)s][%(levelname)s]"
 
     def __init__(self, datefmt: str) -> None:
         super().__init__(datefmt=datefmt)
-    
+
     @override
     def format(self, record: logging.LogRecord) -> str:
         fmt = self.STD_FORMAT
@@ -31,37 +32,33 @@ class ClassFormatter(logging.Formatter):
         formatted = fmt % record.__dict__
         return formatted
 
+
 # TODO: this should be moved to a json file
 config = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "simple": {
-            "()": lambda: ClassFormatter(datefmt="%d-%m-%y | %H:%M:%S")
-        }
+        "simple": {"()": lambda: ClassFormatter(datefmt="%d-%m-%y | %H:%M:%S")}
     },
     "handlers": {
-        "stdout": { 
+        "stdout": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
             "formatter": "simple",
-            "stream": "ext://sys.stdout"
+            "stream": "ext://sys.stdout",
         }
     },
     "loggers": {
-        "redsun": {
-            "level": "DEBUG",
-            "propagate": True,
-            "handlers": ["stdout"]
-        }
-    }
+        "redsun": {"level": "DEBUG", "propagate": True, "handlers": ["stdout"]}
+    },
 }
 
 # Set configuration
 logging.config.dictConfig(config)
 
 # Base logger for the entire system
-logger = logging.getLogger('redsun')
+logger = logging.getLogger("redsun")
+
 
 class Loggable(Protocol):
     """ Protocol to extend log records with the class name and the user defined ID.\\
@@ -76,14 +73,18 @@ class Loggable(Protocol):
     """
 
     def _extend(self, kwargs):
-        """ Enrich kwargs with class name and user-defined ID. 
+        """Enrich kwargs with class name and user-defined ID.
         :meta-private:
         """
-        kwargs['extra'] = {**kwargs.get('extra', {}), 'clsname': self.__clsname__, 'uid': self.name}
+        kwargs["extra"] = {
+            **kwargs.get("extra", {}),
+            "clsname": self.__clsname__,
+            "uid": self.name,
+        }
         return kwargs
 
     def info(self, msg: str, *args, **kwargs):
-        """ Log an info message in the core logger
+        """Log an info message in the core logger
 
         Parameters
         ----------
@@ -96,9 +97,9 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.info(msg, *args, **kwargs)
-    
+
     def debug(self, msg: str, *args, **kwargs):
-        """ Log a debug message in the core logger
+        """Log a debug message in the core logger
 
         Parameters
         ----------
@@ -111,9 +112,9 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.debug(msg, *args, **kwargs)
-    
+
     def warning(self, msg: str, *args, **kwargs):
-        """ Log a warning message in the core logger
+        """Log a warning message in the core logger
 
         Parameters
         ----------
@@ -126,9 +127,9 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.warning(msg, *args, **kwargs)
-    
+
     def error(self, msg: str, *args, **kwargs):
-        """ Log an error. message in the core logger
+        """Log an error. message in the core logger
 
         Parameters
         ----------
@@ -141,9 +142,9 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.error(msg, *args, **kwargs)
-    
+
     def critical(self, msg: str, *args, **kwargs):
-        """ Log a critical message in the core logger
+        """Log a critical message in the core logger
 
         Parameters
         ----------
@@ -156,9 +157,9 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.critical(msg, *args, **kwargs)
-    
+
     def exception(self, msg: str, *args, **kwargs):
-        """ Log an exception message in the core logger
+        """Log an exception message in the core logger
 
         Parameters
         ----------
@@ -169,21 +170,22 @@ class Loggable(Protocol):
         """
         self._extend(kwargs)
         logger.exception(msg, *args, **kwargs)
-    
+
     @property
     def __clsname__(self) -> str:
         # Private property, should not be
         # accessed by the user
         return self.__class__.__name__
-    
+
     @property
     def name(self) -> str:
         # This property should be implemented by
         # all model and controller classes by default
         return None
 
+
 def get_logger() -> logging.Logger:
-    """ Returns the core logger.
+    """Returns the core logger.
 
     Returns
     -------

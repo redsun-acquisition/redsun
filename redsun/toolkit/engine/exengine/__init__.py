@@ -6,14 +6,14 @@ from .motor import (
     ExEngineSingleMotorModel,
     ExEngineDoubleMotorModel,
     ExEngineMMSingleMotorModel,
-    ExEngineMMDoubleMotorModel
+    ExEngineMMDoubleMotorModel,
 )
 
 __all__ = [
-        'ExEngineDetectorModel',
-        'ExEngineMMCameraModel',
-        'ExEngineSingleMotorModel', 
-        'ExEngineDoubleMotorModel', 
-        'ExEngineMMSingleMotorModel', 
-        'ExEngineMMDoubleMotorModel'
-    ]
+    "ExEngineDetectorModel",
+    "ExEngineMMCameraModel",
+    "ExEngineSingleMotorModel",
+    "ExEngineDoubleMotorModel",
+    "ExEngineMMSingleMotorModel",
+    "ExEngineMMDoubleMotorModel",
+]

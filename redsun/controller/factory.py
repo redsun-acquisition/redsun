@@ -3,15 +3,10 @@ import os
 import inspect
 import weakref
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from redsun.toolkit.config import (
-        RedSunInstanceInfo,
-        ControllerInfo
-    )
-    from redsun.toolkit.controller import (
-        DeviceController,
-        ComputationalController
-    )
+    from redsun.toolkit.config import RedSunInstanceInfo, ControllerInfo
+    from redsun.toolkit.controller import DeviceController, ComputationalController
     from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.virtualbus import VirtualBus
     from typing import Union
@@ -26,7 +21,9 @@ ENGINE_PATH = os.path.join(os.path.dirname(__file__), "engine")
 for filename in os.listdir(ENGINE_PATH):
     # Only consider Python files (ignoring __init__.py or any non-handler files)
     if filename.endswith(".py") and filename not in ["__init__.py"]:
-        module_name = f"redsun.controller.engine.{filename[:-3]}"  # Module name without ".py"
+        module_name = (
+            f"redsun.controller.engine.{filename[:-3]}"  # Module name without ".py"
+        )
         module = importlib.import_module(module_name)  # Import the module
 
         # Iterate through all classes in the module
@@ -36,10 +33,11 @@ for filename in os.listdir(ENGINE_PATH):
                 # Add the class to the handlers dictionary
                 HANDLERS[filename[:-3].lower()] = obj
 
-def create_engine(info: "RedSunInstanceInfo", 
-                  virtual_bus: "VirtualBus", 
-                  module_bus: "VirtualBus") -> "EngineHandler":
-    """ Creates the proper engine handler based on the instance configuration.
+
+def create_engine(
+    info: "RedSunInstanceInfo", virtual_bus: "VirtualBus", module_bus: "VirtualBus"
+) -> "EngineHandler":
+    """Creates the proper engine handler based on the instance configuration.
 
     Parameters
     ----------
@@ -66,11 +64,12 @@ def create_engine(info: "RedSunInstanceInfo",
         raise ValueError(f"Unknown engine: {info.engine}")
     return handler(info, virtual_bus, module_bus)
 
+
 # TODO: this factory should construct the controllers
 # based on the plugin information; hence it requires a dynamic
 # loading mechanism for the controllers
 class ControllerFactory:
-    """ Controller factory class.
+    """Controller factory class.
 
     Parameters
     ----------
@@ -80,14 +79,18 @@ class ControllerFactory:
         Inter-module virtual bus.
     """
 
-    __controllers: weakref.WeakValueDictionary[str, "Union[DeviceController, ComputationalController]"] = weakref.WeakValueDictionary()
+    __controllers: weakref.WeakValueDictionary[
+        str, "Union[DeviceController, ComputationalController]"
+    ] = weakref.WeakValueDictionary()
 
     def __init__(self, virtual_bus: "VirtualBus", module_bus: "VirtualBus") -> None:
         self.__virtual_bus = virtual_bus
         self.__module_bus = module_bus
-    
-    def build(self, info: "ControllerInfo") -> "Union[DeviceController, ComputationalController]":
-        """ Build a controller based on the provided information. The created controller is stored
+
+    def build(
+        self, info: "ControllerInfo"
+    ) -> "Union[DeviceController, ComputationalController]":
+        """Build a controller based on the provided information. The created controller is stored
         in the factory class with a weak reference for future access during application shutdown.
 
         Parameters
