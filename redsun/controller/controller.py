@@ -12,12 +12,19 @@ class RedSunHardwareController(Loggable):
                  instance_info: "RedSunInstanceInfo",
                  virtual_bus: "VirtualBus",
                  module_bus: "VirtualBus") -> None:
-        self.virtual_bus = virtual_bus
-        self.module_bus = module_bus
-        self.handler = create_engine(instance_info.engine)(instance_info, virtual_bus, module_bus)
+        self.__virtual_bus = virtual_bus
+        self.__module_bus = module_bus
+        self.__handler = create_engine(instance_info.engine)(instance_info, virtual_bus, module_bus)
         self.info("{0} initialized.".format(self.handler.__class__.__name__))
+
+    @property
+    def virtual_bus(self):
+        return self.__virtual_bus
     
-    def add_plugin(self) -> None:
-        """ Add a new plugin to the currently running application.
-        """
-        ...
+    @property
+    def module_bus(self):
+        return self.__module_bus
+
+    @property
+    def handler(self):
+        return self.__handler
