@@ -11,8 +11,6 @@ if TYPE_CHECKING:
         PixelPhotometricTypes
     )
 
-__all__ = ["ExEngineDetectorModel", "ExEngineMMCameraModel"]
-
 class ExEngineDetectorModel(DetectorModel, ExEngineDetector):
     """ Detector model for ExEngine.
 

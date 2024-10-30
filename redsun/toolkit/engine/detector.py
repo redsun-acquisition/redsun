@@ -12,8 +12,6 @@ if TYPE_CHECKING:
         AcquisitionEngineTypes
     )
 
-__all__ = ['DetectorModel']
-
 class DetectorModel(ABC, Loggable):
     """ 
     `DetectorModel` abstract base class. Implements `Loggable` protocol.

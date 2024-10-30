@@ -11,8 +11,6 @@ if TYPE_CHECKING:
         LightModelTypes
     )
 
-__all__ = ['LightModel']
-
 class LightModel(ABC, Loggable):
 
     """

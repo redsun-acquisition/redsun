@@ -8,8 +8,6 @@ if TYPE_CHECKING:
     from redsun.toolkit.config import AcquisitionEngineTypes
     from redsun.toolkit.config import MotorModelInfo
 
-__all__ = ['MotorModel']
-
 class MotorModel(ABC, Loggable):
     """
     `MotorModel` abstract base class. Implements `Loggable` protocol.
