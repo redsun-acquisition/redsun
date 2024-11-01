@@ -1,3 +1,13 @@
+"""
+The `factory` module contains all the tooling necessary for the dynamic loading of controllers and models.
+
+RedSun operates by dynamically loading external plugins with different archetypes 
+(single or multiple controllers, single or multiple models, combination of controllers and models, etc.) 
+to create a unique running instance.
+
+This module operates within the RedSun core code and is not exposed to the toolkit or the user.
+"""
+
 import importlib
 import inspect
 import os
