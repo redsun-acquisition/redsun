@@ -38,7 +38,7 @@ for filename in os.listdir(ENGINE_PATH):
 def create_engine(
     info: "RedSunInstanceInfo", virtual_bus: "VirtualBus", module_bus: "VirtualBus"
 ) -> "EngineHandler":
-    """Creates the proper engine handler based on the instance configuration.
+    """Create the proper engine handler based on the instance configuration.
 
     Parameters
     ----------
@@ -91,8 +91,10 @@ class ControllerFactory:
     def build(
         self, info: "ControllerInfo"
     ) -> "Optional[Union[DeviceController, ComputationalController]]":
-        """Build a controller based on the provided information. The created controller is stored
-        in the factory class with a weak reference for future access during application shutdown.
+        """
+        Build a controller based on the provided information. 
+        
+        The created controller is stored in the factory class with a weak reference for future access during application shutdown.
 
         Parameters
         ----------
