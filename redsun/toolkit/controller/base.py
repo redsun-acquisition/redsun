@@ -1,3 +1,11 @@
+"""
+RedSun controller toolkit.
+
+This toolkit section provides RedSun developers with the necessary base classes to implement their own controllers.
+
+Two controller types are defined: `DeviceController` and `ComputationalController`.
+"""
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -52,18 +60,22 @@ class BaseController(ABC, Loggable):
 
     @property
     def category(self) -> str:
+        """Controller category."""
         return self._modelInfo.category  # type: ignore[no-any-return]
 
     @property
     def controllerName(self) -> str:
+        """Controller name. Represents the class which builds the controller instance."""
         return self._modelInfo.controllerName  # type: ignore[no-any-return]
 
     @property
     def supportedEngines(self) -> "List[str]":
+        """List of supported engines."""
         return self._modelInfo.supportedEngines  # type: ignore[no-any-return]
 
     @property
     def controllerParams(self) -> "Dict[str, Any]":
+        """Controller custom parameters dictionary."""
         return self._modelInfo.controllerParams  # type: ignore[no-any-return]
 
 
