@@ -26,12 +26,6 @@ dependencies = [
 
 [project.optional-dependencies]
 qt = ["PyQt5"]
-dev = [
-    "coverage",  # testing
-    "mypy",  # linting
-    "pytest",  # testing
-    "ruff"  # linting
-]
 
 [project.urls]
 
