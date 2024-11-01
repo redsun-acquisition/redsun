@@ -1,3 +1,5 @@
+"""Detector model abstract base class definition."""
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import TYPE_CHECKING
@@ -51,39 +53,6 @@ class DetectorModel(ABC, Loggable):
         - User-defined.
         - If set to `None`, it defaults to the sensor size.
         - Only applicable for 'line' and 'area' detectors. Defaults to `None`.
-
-    Properties
-    ----------
-    name: str
-        - Detector instance unique identifier name.
-    modelName: str
-        - Detector model name.
-    modelParams: dict
-        - Detector model parameters dictionary.
-    vendor: str
-        - Detector vendor.
-    serialNumber: str
-        - Detector serial number.
-    supportedEngines: list[AcquisitionEngineTypes]
-        - Supported acquisition engines list.
-    category: DetectorModelTypes
-        - Detector type.
-    sensorSize: Tuple[int, int]
-        - Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable for 'line' and 'area' detectors.
-    pixelSize: Tuple[float, float]
-        - Detector pixel size in micrometers: represents the 3D axis (Z, Y, X).
-    exposureEGU: str
-        - Detector exposure unit.
-    pixelPhotometric: list[PixelPhotometricTypes]
-        - List of supported pixel colors.
-    bitsPerPixel: set[int]
-        - Set of supported values for pixel width in bits.
-    binning: list[int]
-        - List of supported binning values.
-    offset: Tuple[int, int]
-        - Detector offset (Y, X). Only applicable for 'line' and 'area' detectors.
-    shape: Tuple[int, int]
-        - Detector shape (Y, X). Only applicable for 'line' and 'area' detectors.
     """
 
     @abstractmethod
@@ -126,60 +95,75 @@ class DetectorModel(ABC, Loggable):
 
     @property
     def name(self) -> str:
+        """Detector instance unique identifier name."""
         return self._modelInfo.name  # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
+        """Detector model name."""
         return self._modelInfo.modelName  # type: ignore[no-any-return]
 
     @property
     def modelParams(self) -> "Dict[str, Any]":
+        """Detector model parameters dictionary."""
         return self._modelInfo.modelParams  # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
+        """Detector vendor."""
         return self._modelInfo.vendor  # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
+        """Detector serial number."""
         return self._modelInfo.serialNumber  # type: ignore[no-any-return]
 
     @property
     def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        """Supported acquisition engines list."""
         return self._modelInfo.supportedEngines  # type: ignore[no-any-return]
 
     @property
     def category(self) -> str:
+        """Detector type."""
         return self._modelInfo.category  # type: ignore[no-any-return]
 
     @property
     def sensorSize(self) -> "Tuple[int, int]":
+        """Detector sensor size in pixels: represents the 2D axis (Y, X). Only applicable for 'line' and 'area' detectors."""
         return self._modelInfo.sensorSize  # type: ignore[no-any-return]
 
     @property
     def pixelSize(self) -> "Tuple[float, float, float]":
+        """Detector pixel size in micrometers: represents the 3D axis (Z, Y, X)."""
         return self._modelInfo.pixelSize  # type: ignore[no-any-return]
 
     @property
     def exposureEGU(self) -> str:
+        """Detector exposure unit."""
         return self._modelInfo.exposureEGU  # type: ignore[no-any-return]
 
     @property
     def pixelPhotometric(self) -> "List[PixelPhotometricTypes]":
+        """List of supported pixel colors."""
         return self._modelInfo.pixelPhotometric  # type: ignore[no-any-return]
 
     @property
     def bitsPerPixel(self) -> "Set[int]":
+        """Set of supported values for pixel width in bits."""
         return self._modelInfo.bitsPerPixel  # type: ignore[no-any-return]
 
     @property
     def binning(self) -> "List[int]":
+        """List of supported binning values."""
         return self._modelInfo.binning  # type: ignore[no-any-return]
 
     @property
     def offset(self) -> "Tuple[int, int]":
+        """Detector offset (Y, X). Only applicable for 'line' and 'area' detectors."""
         return self._modelInfo.offset  # type: ignore[no-any-return]
 
     @property
     def shape(self) -> "Tuple[int, int]":
+        """Detector shape (Y, X). Only applicable for 'line' and 'area' detectors."""
         return self._modelInfo.shape  # type: ignore[no-any-return]

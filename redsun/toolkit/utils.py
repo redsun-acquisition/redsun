@@ -1,3 +1,5 @@
+"""RedSun toolkit utilities."""
+
 from typing import TYPE_CHECKING
 
 from psygnal import evented
@@ -15,7 +17,9 @@ def create_evented_dataclass(
     types: "Optional[Dict[str, Any]]" = {},
     values: "Optional[Dict[str, Any]]" = {},
 ) -> type:
-    """ Creates a new evented dataclass from the original provided one.\\
+    """ 
+    Create a new evented dataclass from the original provided one.
+    
     For more information abount about evented dataclasses, see the `psygnal documentation <https://psygnal.readthedocs.io/en/latest/dataclasses/>`_.
 
     Parameters
@@ -34,7 +38,6 @@ def create_evented_dataclass(
     type
         New evented dataclass.
     """
-
     # implementation provided by the following issue discussion:
     # https://github.com/pyapp-kit/psygnal/issues/328
     types = types or {}

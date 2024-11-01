@@ -1,3 +1,5 @@
+# noqa: D104
+
 from .detector import (
     ExEngineDetectorModel,
     ExEngineMMCameraModel,

@@ -1,3 +1,5 @@
+"""RedSun configuration dataclasses and enums."""
+
 from enum import Enum
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -6,7 +8,8 @@ from pydantic.dataclasses import dataclass
 
 
 class AcquisitionEngineTypes(str, Enum):
-    """ Supported acquisition engine entities.
+    r""" 
+    Supported acquisition engine entities.
 
     Acquisition engines are singleton objects that are instantiated within RedSun and operate
     as workflow managers for the acquisition process. They are responsible for the orchestration
@@ -115,11 +118,10 @@ class ControllerTypes(str, Enum):
 
 @dataclass
 class ControllerInfo:
-    """ Controller information class.
+    """Controller information class.
 
     Attributes
     ----------
-
     category : ControllerTypes
         Controller category. Defaults to 'device'.
     controllerName : str
@@ -127,8 +129,8 @@ class ControllerInfo:
     supportedEngines : list[AcquisitionEngineTypes]
         Supported acquisition engines list. Defaults to ['exengine'].
     controllerParams : Dict[str, Any]
-        Controller parameters dictionary. Used to store start-up configuration parameters. \\
-        They are exposed to the upper layers to allow the user to configure the controller at runtime.
+        Controller parameters dictionary. Used to store start-up configuration parameters.
+        - They are exposed to the upper layers to allow the user to configure the controller at runtime.
     """
 
     category: ControllerTypes = ControllerTypes.DEVICE
@@ -225,7 +227,6 @@ class MotorModelInfo(DeviceModelInfo):
 
     Attributes
     ----------
-
     category : MotorModelTypes
         Motor type. Defaults to 'stepper'.
     stepEGU : str
@@ -251,7 +252,6 @@ class ScannerModelInfo(DeviceModelInfo):
 
     Attributes
     ----------
-
     category : ScannerModelTypes
         Scanner type. Defaults to 'galvo'.
     axes : list[str]

@@ -1,3 +1,5 @@
+"""ExEngine handler class."""
+
 from typing import TYPE_CHECKING, Union
 
 from exengine import ExecutionEngine
@@ -28,7 +30,8 @@ MotorModels = Union[
 
 
 class ExEngineHandler(EngineHandler):
-    """ ExEngine handler class.
+    r""" 
+    ExEngine handler class.
 
     All models compatible with ExEngine are registered here at application startup.
 
@@ -40,13 +43,6 @@ class ExEngineHandler(EngineHandler):
         The virtual bus instance for the RedSun instance.
     module_bus : VirtualBus
         The virtual bus instance for the module.
-    
-    Properties
-    ----------
-    detectors : `Dict[str, Union[ExEngineDetectorModel, ExEngineMMCameraModel]]` \\
-        Dictionary containing all the registered ExEngine detectors.
-    motors : `Dict[str, Union[ExEngineSingleMotorModel, ExEngineDoubleMotorModel, ExEngineMMSingleMotorModel, ExEngineMMDoubleMotorModel]]` \\
-        Dictionary containing all the registered ExEngine motors.
     """
 
     _detectors: "Dict[str, DetectorModels]" = {}
@@ -61,7 +57,7 @@ class ExEngineHandler(EngineHandler):
         super().__init__(config_options, virtual_bus, module_bus)
         self._engine = ExecutionEngine()
 
-    def register_device(
+    def register_device(  # noqa: D102
         self, name: str, device: Union[MotorModels, DetectorModels]
     ) -> None:
         if isinstance(device, DetectorModel):
@@ -73,25 +69,30 @@ class ExEngineHandler(EngineHandler):
                 f"Device of type {type(device)} not supported by ExEngine."
             )
 
-    def shutdown(self) -> None:
+    def shutdown(self) -> None:  # noqa: D102
         self._engine.shutdown()
 
     @property
     def detectors(self) -> "Dict[str, DetectorModels]":
+        """Dictionary containing all the registered ExEngine detectors."""
         return self._detectors
 
     @property
     def motors(self) -> "Dict[str, MotorModels]":
+        """Dictionary containing all the registered ExEngine motors."""
         return self._motors
 
     @property
     def engine(self) -> ExecutionEngine:
+        """Execution engine instance."""
         return self._engine
 
     @property
     def lights(self) -> "Dict[str, Any]":
+        """Dictionary containing all the registered ExEngine light sources."""
         raise UnsupportedDeviceType("ExEngine", "Light")
 
     @property
     def scanners(self) -> "Dict[str, Any]":
+        """Dictionary containing all the registered ExEngine scanners."""
         raise UnsupportedDeviceType("ExEngine", "Scanner")

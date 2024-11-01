@@ -1,3 +1,5 @@
+"""`EngineHandler` abstract base class."""
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -45,21 +47,6 @@ class EngineHandler(ABC, Loggable):
         Module-local virtual bus.
     module_bus : VirtualBus
         Inter-module virtual bus.
-
-    Properties
-    ----------
-    engine : Any
-        Engine instance.
-    detectors : Dict[str, Any]
-        Detectors dictionary. Device class type is engine-specific and must inherit from `DetectorModel`.
-    motors : Dict[str, Any]
-        Motors dictionary. Device class type is engine-specific and must inherit from `MotorModel`.
-    lights : Dict[str, Any]
-        Lights dictionary. Device class type is engine-specific and must inherit from `LightModel`.
-    scanners : Dict[str, Any]
-        Scanners dictionary. Device class type is engine-specific and must inherit from `ScannerModel`.
-    workflows : Dict[str, Union[Generator, Iterable]]
-        Workflows dictionary.
     """
 
     _workflows: Dict[str, "Union[Generator[Any, None, None], Iterable[Any]]"] = {}
@@ -77,7 +64,8 @@ class EngineHandler(ABC, Loggable):
 
     @abstractmethod
     def register_device(self, name: str, device: "Any") -> None:
-        """ Add a new device to the registry. 
+        """
+        Add a new device to the registry. 
         
         Child classes must implement this method to add a new device to the registry.
 
@@ -86,9 +74,9 @@ class EngineHandler(ABC, Loggable):
         name : str
             Device unique identifier.
         device : Any
-            Device instance \\
-            The device instance must be coherent with the selected acquisition engine.\\
-            This means that devices to be added to the registry must inherit from the correct device model class for the selected engine.
+            - Device instance
+            - The device instance must be coherent with the selected acquisition engine.
+            - This means that devices to be added to the registry must inherit from the correct device model class for the selected engine.
         """
         ...
 
@@ -100,7 +88,8 @@ class EngineHandler(ABC, Loggable):
     def register_workflow(
         self, name: str, workflow: "Union[Generator[Any, None, None], Iterable[Any]]"
     ) -> None:
-        """Registers a new workflow in the handler.
+        """
+        Register a new workflow in the handler.
 
         Parameters
         ----------
@@ -127,22 +116,31 @@ class EngineHandler(ABC, Loggable):
 
     @abstractmethod
     @property
-    def detectors(self) -> "Dict[str, Any]": ...
+    def detectors(self) -> "Dict[str, Any]": 
+        """Detectors dictionary. Device class type is engine-specific and must inherit from `DetectorModel`."""
+        ...
 
     @abstractmethod
     @property
-    def motors(self) -> "Dict[str, Any]": ...
+    def motors(self) -> "Dict[str, Any]": 
+        """Motors dictionary. Device class type is engine-specific and must inherit from `MotorModel`."""
+        ...
 
     @abstractmethod
     @property
-    def lights(self) -> "Dict[str, Any]": ...
+    def lights(self) -> "Dict[str, Any]": 
+        """Lights dictionary. Device class type is engine-specific and must inherit from `LightModel`."""
+        ...
 
     @abstractmethod
     @property
-    def scanners(self) -> "Dict[str, Any]": ...
+    def scanners(self) -> "Dict[str, Any]": 
+        """Scanners dictionary. Device class type is engine-specific and must inherit from `ScannerModel`."""
+        ...
 
     @property
     def workflows(
         self,
     ) -> "Dict[str, Union[Generator[Any, None, None], Iterable[Any]]]":
+        """Workflows dictionary."""
         return self._workflows

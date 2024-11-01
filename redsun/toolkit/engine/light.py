@@ -1,3 +1,5 @@
+"""Light source model abstract base class definition."""
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import TYPE_CHECKING
@@ -34,10 +36,6 @@ class LightModel(ABC, Loggable):
     model_info: LightModelInfo
         - Light source model information dataclass.
         - Provided by RedSun configuration.
-
-    Properties
-    ----------
-
     """
 
     @abstractmethod
@@ -52,48 +50,60 @@ class LightModel(ABC, Loggable):
 
     @property
     def name(self) -> str:
+        """Light source instance unique identifier name."""
         return self._modelInfo.name  # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
+        """Light source model name."""
         return self._modelInfo.modelName  # type: ignore[no-any-return]
 
     @property
     def modelParams(self) -> "Dict[str, Any]":
+        """Light source model parameters."""
         return self._modelInfo.modelParams  # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
+        """Light source vendor."""
         return self._modelInfo.vendor  # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
+        """Light source serial number."""
         return self._modelInfo.serialNumber  # type: ignore[no-any-return]
 
     @property
     def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        """List of supported acquisition engines."""
         return self._modelInfo.supportedEngines  # type: ignore[no-any-return]
 
     @property
     def category(self) -> "LightModelTypes":
+        """Light source type."""
         return self._modelInfo.category  # type: ignore[no-any-return]
 
     @property
     def wavelength(self) -> int:
+        """Light source wavelength."""
         return self._modelInfo.wavelength  # type: ignore[no-any-return]
 
     @property
     def powerEGU(self) -> str:
+        """Light source power EGU."""
         return self._modelInfo.powerEGU  # type: ignore[no-any-return]
 
     @property
     def minPower(self) -> "Union[float, int]":
+        """Minimum light source power, expressed in EGU."""
         return self._modelInfo.minPower  # type: ignore[no-any-return]
 
     @property
     def maxPower(self) -> "Union[float, int]":
+        """Maximum light source power, expressed in EGU."""
         return self._modelInfo.maxPower  # type: ignore[no-any-return]
 
     @property
     def powerStep(self) -> "Union[float, int]":
+        """Light source power step, expressed in EGU."""
         return self._modelInfo.powerStep  # type: ignore[no-any-return]

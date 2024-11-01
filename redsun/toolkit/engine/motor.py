@@ -1,4 +1,5 @@
-"""Motors are a category of hardware devices capable of moving objects in a controlled manner.
+"""
+Motors are a category of hardware devices capable of moving objects in a controlled manner.
 
 Belonging to this category fall devices such as stage axis, focusing units, generic stepper motors, and so on. 
 """

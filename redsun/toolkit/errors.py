@@ -1,3 +1,5 @@
+"""RedSun toolkit custom exceptions."""
+
 __all__ = ["UnsupportedDeviceType"]
 
 
@@ -10,4 +12,5 @@ class UnsupportedDeviceType(Exception):
         self.dev_type = dev_type
 
     def __str__(self) -> str:
+        """:meta-private:"""  # noqa: D400
         return "{} does not support '{}' models".format(self.engine, self.dev_type)

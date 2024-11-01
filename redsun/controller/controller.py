@@ -1,3 +1,4 @@
+# noqa: D100
 from typing import TYPE_CHECKING
 
 from redsun.controller.factory import create_engine
@@ -25,12 +26,19 @@ class RedSunHardwareController(Loggable):
 
     @property
     def virtual_bus(self) -> "VirtualBus":
+        """Inter-module virtual bus."""
         return self.__virtual_bus
 
     @property
     def module_bus(self) -> "VirtualBus":
+        """Inter-module virtual bus."""
         return self.__module_bus
 
     @property
     def handler(self) -> "EngineHandler":
+        """
+        Acquisition engine handler.
+        
+        The specific handler class is determined by the configuration.
+        """
         return self.__handler

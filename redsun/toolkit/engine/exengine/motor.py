@@ -1,3 +1,5 @@
+"""ExEngine motor model available for creating custom device interfaces with the RedSun Toolkit."""
+
 from exengine.backends.micromanager import (
     MicroManagerSingleAxisStage as ExEngineMMSingleMotor,
 )
@@ -13,7 +15,7 @@ from redsun.toolkit.config import MotorModelInfo
 from redsun.toolkit.engine.motor import MotorModel
 
 
-class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):  # type: ignore[misc]
+class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):  # type: ignore[misc]  # noqa: D101
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -23,7 +25,7 @@ class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):  # type: ignore
         )
 
 
-class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):  # type: ignore[misc]
+class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):  # type: ignore[misc]  # noqa: D101
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -33,13 +35,13 @@ class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):  # type: ignore
         )
 
 
-class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor):  # type: ignore[misc]
+class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor):  # type: ignore[misc]  # noqa: D101
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMSingleMotor.__init__(self, name)
 
 
-class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor):  # type: ignore[misc]
+class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor):  # type: ignore[misc]  # noqa: D101
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMDoubleMotor.__init__(self, name)
