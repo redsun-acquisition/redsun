@@ -1,3 +1,8 @@
+"""Motors are a category of hardware devices capable of moving objects in a controlled manner.
+
+Belonging to this category fall devices such as stage axis, focusing units, generic stepper motors, and so on. 
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import TYPE_CHECKING
@@ -8,7 +13,7 @@ from redsun.toolkit.utils import create_evented_dataclass
 if TYPE_CHECKING:
     from typing import Any, Dict, List
 
-    from redsun.toolkit.config import AcquisitionEngineTypes, MotorModelInfo
+    from redsun.toolkit.config import AcquisitionEngineTypes, MotorModelInfo, MotorModelTypes
 
 
 class MotorModel(ABC, Loggable):
@@ -33,24 +38,6 @@ class MotorModel(ABC, Loggable):
 
     Properties
     ----------
-    name : str
-        - Motor instance unique identifier name.
-    modelName: str
-        - Motor model name.
-    modelParams: dict
-        - Motor model parameters dictionary.
-    vendor: str
-        - Motor vendor.
-    serialNumber: str
-        - Motor serial number.
-    supportedEngines: list[AcquisitionEngineTypes]
-        - Supported acquisition engines list.
-    category: DetectorModelTypes
-        - Motor type.
-    stepEGU: str
-        - Motor step unit.
-    stepSize: float
-        - Motor step size.
     axes : list[str]
         - Motor axes.
     returnHome : bool
@@ -71,44 +58,59 @@ class MotorModel(ABC, Loggable):
 
     @property
     def name(self) -> str:
+        """Motor instance unique identifier name."""
         return self._modelInfo.name  # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
+        """Motor model name."""
         return self._modelInfo.modelName  # type: ignore[no-any-return]
 
     @property
     def modelParams(self) -> "Dict[str, Any]":
+        """Motor model parameters dictionary."""
         return self._modelInfo.modelParams  # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
+        """Motor vendor."""
         return self._modelInfo.vendor  # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
+        """Motor serial number."""
         return self._modelInfo.serialNumber  # type: ignore[no-any-return]
 
     @property
     def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        """Supported acquisition engines list."""
         return self._modelInfo.supportedEngines  # type: ignore[no-any-return]
 
     @property
-    def category(self) -> str:
+    def category(self) -> "MotorModelTypes":
+        """Motor type."""
         return self._modelInfo.category  # type: ignore[no-any-return]
 
     @property
     def stepEGU(self) -> str:
+        """Motor step unit."""
         return self._modelInfo.stepEGU  # type: ignore[no-any-return]
 
     @property
     def stepSize(self) -> float:
+        """Motor step size."""
         return self._modelInfo.stepSize  # type: ignore[no-any-return]
 
     @property
     def axes(self) -> "List[str]":
+        """Motor axes list."""
         return self._modelInfo.axes  # type: ignore[no-any-return]
 
     @property
     def returnHome(self) -> bool:
+        """
+        If `True`, motor will return to home position (defined as  the initial position the motor had at RedSun's startup) after RedSun is closed.
+        
+        Defaults to `False`.
+        """ 
         return self._modelInfo.returnHome  # type: ignore[no-any-return]
