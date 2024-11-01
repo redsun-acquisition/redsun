@@ -1,4 +1,3 @@
-# noqa: D100
 #!/usr/bin/env python
 #
 # redsun documentation build configuration file, created by
@@ -107,7 +106,7 @@ htmlhelp_basename = "redsundoc"
 
 # -- Options for LaTeX output ------------------------------------------
 
-latex_elements = { # type: ignore[var-annotated]
+latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
