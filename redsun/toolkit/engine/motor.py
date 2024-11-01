@@ -5,6 +5,7 @@ from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
+    from typing import List, Dict, Any
     from redsun.toolkit.config import AcquisitionEngineTypes
     from redsun.toolkit.config import MotorModelInfo
 
@@ -69,44 +70,44 @@ class MotorModel(ABC, Loggable):
 
     @property
     def name(self) -> str:
-        return self._modelInfo.name
+        return self._modelInfo.name # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
-        return self._modelInfo.modelName
+        return self._modelInfo.modelName # type: ignore[no-any-return]
 
     @property
-    def modelParams(self) -> dict:
-        return self._modelInfo.modelParams
+    def modelParams(self) -> "Dict[str, Any]":
+        return self._modelInfo.modelParams # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
-        return self._modelInfo.vendor
+        return self._modelInfo.vendor # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
-        return self._modelInfo.serialNumber
+        return self._modelInfo.serialNumber # type: ignore[no-any-return]
 
     @property
-    def supportedEngines(self) -> "list[AcquisitionEngineTypes]":
-        return self._modelInfo.supportedEngines
+    def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        return self._modelInfo.supportedEngines # type: ignore[no-any-return]
 
     @property
     def category(self) -> str:
-        return self._modelInfo.category
+        return self._modelInfo.category # type: ignore[no-any-return]
 
     @property
     def stepEGU(self) -> str:
-        return self._modelInfo.stepEGU
+        return self._modelInfo.stepEGU # type: ignore[no-any-return]
 
     @property
     def stepSize(self) -> float:
-        return self._modelInfo.stepSize
+        return self._modelInfo.stepSize # type: ignore[no-any-return]
 
     @property
-    def axes(self) -> list[str]:
-        return self._modelInfo.axes
+    def axes(self) -> "List[str]":
+        return self._modelInfo.axes # type: ignore[no-any-return]
 
     @property
     def returnHome(self) -> bool:
-        return self._modelInfo.returnHome
+        return self._modelInfo.returnHome # type: ignore[no-any-return]
