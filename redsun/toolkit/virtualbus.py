@@ -22,7 +22,7 @@ class Signal(SignalInstance):
         Signal description.
     """
 
-    def __init__(self, *argtypes: "Any", info: str = "RedSun signal", **kwargs) -> None:
+    def __init__(self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any") -> None:
         SignalInstance.__init__(self, signature=argtypes, **kwargs)
         self._info = info
 
@@ -84,7 +84,7 @@ class VirtualBus(ABC, Loggable):
         else:
             super().__setattr__(name, value)
 
-    def register_signal(self, name: str, *args, **kwargs) -> None:
+    def register_signal(self, name: str, *args: "Any", **kwargs: "Any") -> None:
         """ Creates a new `Signal` object with the given name and arguments,
         and stores it as class attribute.
 
