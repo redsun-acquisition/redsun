@@ -61,7 +61,7 @@ class EngineHandler(ABC, Loggable):
         Workflows dictionary.
     """
 
-    _workflows: Dict[str, "Union[Generator, Iterable]"] = {}
+    _workflows: Dict[str, "Union[Generator[Any, None, None], Iterable[Any]]"] = {}
 
     @abstractmethod
     def __init__(
@@ -75,7 +75,7 @@ class EngineHandler(ABC, Loggable):
         self.module_bus = module_bus
 
     @abstractmethod
-    def register_device(name: str, device: "Any") -> None:
+    def register_device(self, name: str, device: "Any") -> None:
         """ Add a new device to the registry. 
         
         Child classes must implement this method to add a new device to the registry.
@@ -97,7 +97,7 @@ class EngineHandler(ABC, Loggable):
         ...
 
     def register_workflow(
-        self, name: str, workflow: "Union[Generator, Iterable]"
+        self, name: str, workflow: "Union[Generator[Any, None, None], Iterable[Any]]"
     ) -> None:
         """Registers a new workflow in the handler.
 
@@ -141,5 +141,5 @@ class EngineHandler(ABC, Loggable):
     def scanners(self) -> "Dict[str, Any]": ...
 
     @property
-    def workflows(self) -> "Dict[str, Union[Generator, Iterable]]":
+    def workflows(self) -> "Dict[str, Union[Generator[Any, None, None], Iterable[Any]]]":
         return self._workflows
