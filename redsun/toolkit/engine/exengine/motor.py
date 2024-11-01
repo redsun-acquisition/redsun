@@ -10,7 +10,7 @@ from exengine.backends.micromanager import (
 from exengine.backends.micromanager import MicroManagerXYStage as ExEngineMMDoubleMotor
 
 
-class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):
+class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor): # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -20,7 +20,7 @@ class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):
         )
 
 
-class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):
+class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor): # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -30,13 +30,13 @@ class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):
         )
 
 
-class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor):
+class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor): # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMSingleMotor.__init__(self, name)
 
 
-class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor):
+class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor): # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMDoubleMotor.__init__(self, name)
