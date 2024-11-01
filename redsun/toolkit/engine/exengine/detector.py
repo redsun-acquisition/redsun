@@ -6,12 +6,12 @@ from exengine.backends.micromanager import MicroManagerCamera as ExEngineMMCamer
 from redsun.toolkit.config import PixelPhotometricTypes
 
 if TYPE_CHECKING:
-    import numpy as np
-    from typing import Union, Optional
+    import numpy.typing as npt
+    from typing import Union, Optional, Dict, Any
     from redsun.toolkit.config import DetectorModelInfo
 
 
-class ExEngineDetectorModel(DetectorModel, ExEngineDetector):
+class ExEngineDetectorModel(DetectorModel, ExEngineDetector): # type: ignore[misc]
     """ Detector model for ExEngine.
 
     See `DetectorModel` for more information about initialization. \\
@@ -62,7 +62,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector):
     def is_stopped(self) -> "bool": ...
 
     @abstractmethod
-    def pop_data(self, timeout : Optional[float] = None) -> "Tuple[np.ndarray, dict]":
+    def pop_data(self, timeout : Optional[float] = None) -> "Tuple[npt.NDArray[Any], Dict[str, Any]]":
         """
         Get the next image and metadata from the camera buffer. If timeout is None, this function will block until
         an image is available. If timeout is a number, this function will block for that many seconds before returning
@@ -71,7 +71,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector):
         ...
 
 
-class ExEngineMMCameraModel(DetectorModel, ExEngineMMCamera):
+class ExEngineMMCameraModel(DetectorModel, ExEngineMMCamera): # type: ignore[misc]
     def __init__(
         self,
         name: "str",
