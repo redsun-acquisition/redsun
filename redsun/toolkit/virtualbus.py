@@ -1,3 +1,15 @@
+"""
+The `VirtualBus` is a mechanism to exchange data between different parts of the system.
+
+The module contains two main classes: `Signal` and `VirtualBus`.
+
+The `Signal` class is a small wrapper around `psygnal.SignalInstance` that provides additional properties to access the signal data types and description.
+
+The `VirtualBus` class is a factory of singleton objects charged of exchanging information between different controllers via `Signals`.
+
+`VirtualBuses` can be inter-module or intra-module, and they can be used to emit notifications, as well as carry information to other plugins and/or different RedSun modules.
+"""
+
 from abc import ABC
 from functools import lru_cache
 from types import MappingProxyType
@@ -14,15 +26,7 @@ __all__ = ["Signal", "VirtualBus"]
 
 
 class Signal(SignalInstance):
-    """Small wrapper around `psygnal.SignalInstance`.
-
-    Properties
-    ----------
-    types : Tuple[type, ...]
-        Tuple of data types carried by the signal.
-    info : str
-        Signal description.
-    """
+    """Small wrapper around `psygnal.SignalInstance`."""
 
     def __init__(
         self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any"
@@ -33,12 +37,14 @@ class Signal(SignalInstance):
     @property
     @lru_cache
     def types(self) -> "Tuple[type, ...]":
+        """Tuple of data types carried by the signal."""
         return tuple(
             [param.annotation for param in self._signature.parameters.values()]
         )
 
     @property
     def info(self) -> str:
+        """Signal description."""
         return self._info
 
 
