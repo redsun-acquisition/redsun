@@ -7,7 +7,7 @@ from redsun.toolkit.virtualbus import VirtualBus
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Dict, Any, List
     from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.config import ControllerInfo
     from redsun.toolkit.engine import EngineHandler
@@ -50,19 +50,19 @@ class BaseController(ABC, Loggable):
 
     @property
     def category(self) -> str:
-        return self._modelInfo.category
+        return self._modelInfo.category # type: ignore[no-any-return]
 
     @property
     def controllerName(self) -> str:
-        return self._modelInfo.controllerName
+        return self._modelInfo.controllerName # type: ignore[no-any-return]
 
     @property
-    def supportedEngines(self) -> list[str]:
-        return self._modelInfo.supportedEngines
+    def supportedEngines(self) -> "List[str]":
+        return self._modelInfo.supportedEngines # type: ignore[no-any-return]
 
     @property
-    def controllerParams(self) -> "dict[str, Any]":
-        return self._modelInfo.controllerParams
+    def controllerParams(self) -> "Dict[str, Any]":
+        return self._modelInfo.controllerParams # type: ignore[no-any-return]
 
 
 class DeviceController(BaseController):
