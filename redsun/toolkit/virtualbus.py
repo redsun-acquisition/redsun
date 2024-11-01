@@ -43,18 +43,15 @@ class Signal(SignalInstance):
 
 
 class VirtualBus(ABC, Loggable):
-    """ VirtualBus base class.
+    """
+    
+    VirtualBus base class.
 
-    The VirtualBus is a mechanism to exchange data between different parts of the system. \\
-    They can be used to emit notifications, as well as carry information to other plugins and/or different RedSun modules. \\
-    VirtualBus' signals are implemented using the `psygnal` library; they can be dynamically registered as class attributes, \\
-    and accessed as a read-only dictionary.
+    The VirtualBus is a mechanism to exchange data between different parts of the system.
 
-    Attributes
-    ----------
+    They can be used to emit notifications, as well as carry information to other plugins and/or different RedSun modules.
 
-    signals : MappingProxyType[str, Signal]
-        A read-only dictionary with the registered signals.
+    VirtualBus' signals are implemented using the `psygnal` library; they can be dynamically registered as class attributes, and accessed as a read-only dictionary.
     """
 
     _signal_registry: Dict[str, Signal] = {}
@@ -68,9 +65,11 @@ class VirtualBus(ABC, Loggable):
         }
 
     def __setattr__(self, name: str, value: "Any") -> None:
-        """Overloads `__setattr__` to allow registering new signals attributes.
-        If the attribute name starts with 'sig' and the value is a `Signal` object, it will be added as
-        instance attribute and added to the signal registry.
+        """
+        Overload `__setattr__` to allow registering new signals attributes.
+        
+        If the attribute name starts with 'sig' and the value is a `Signal` object, it will be added as instance attribute and added to the signal registry.
+        
         Otherwise, it will be registered as a regular attribute.
 
         Args:
@@ -89,8 +88,9 @@ class VirtualBus(ABC, Loggable):
             super().__setattr__(name, value)
 
     def register_signal(self, name: str, *args: "Any", **kwargs: "Any") -> None:
-        """ Creates a new `Signal` object with the given name and arguments,
-        and stores it as class attribute.
+        r""" 
+        
+        Create a new `Signal` object with the given name and arguments, and stores it as class attribute.
 
         >>> channel.registerSignal('sigAcquisitionStarted', str)
         >>> # this will allow to access the signal as an attribute
@@ -126,4 +126,5 @@ class VirtualBus(ABC, Loggable):
 
     @property
     def signals(self) -> "MappingProxyType[str, Signal]":
+        """A read-only dictionary with the registered signals."""
         return MappingProxyType(self._signal_registry)
