@@ -48,7 +48,7 @@ version = {attr = "redsun.__version__"}
 
 [tool.mypy]
 files = "."
-exclude = ["docs", "tests"]
+extend-exclude = ["docs", "tests"]
 disable_error_code = ["import-untyped"]
 
 # Use strict defaults
@@ -67,7 +67,7 @@ disable_error_code = "attr-defined"
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["docs", "tests"]
+extend-exclude = ["docs", "tests"]
 
 [tool.ruff.lint]
 select = ["D"] # enable docstring checks
