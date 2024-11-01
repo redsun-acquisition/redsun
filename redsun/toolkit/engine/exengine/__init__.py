@@ -3,10 +3,10 @@ from .detector import (
     ExEngineMMCameraModel,
 )
 from .motor import (
-    ExEngineSingleMotorModel,
     ExEngineDoubleMotorModel,
-    ExEngineMMSingleMotorModel,
     ExEngineMMDoubleMotorModel,
+    ExEngineMMSingleMotorModel,
+    ExEngineSingleMotorModel,
 )
 
 __all__ = [

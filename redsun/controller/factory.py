@@ -1,15 +1,16 @@
 import importlib
-import os
 import inspect
+import os
 import weakref
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from redsun.toolkit.config import RedSunInstanceInfo, ControllerInfo
-    from redsun.toolkit.controller import DeviceController, ComputationalController
+    from typing import Optional, Union
+
+    from redsun.toolkit.config import ControllerInfo, RedSunInstanceInfo
+    from redsun.toolkit.controller import ComputationalController, DeviceController
     from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.virtualbus import VirtualBus
-    from typing import Union, Optional
 
 # Initialize an empty dictionary for the handlers
 HANDLERS = {}
@@ -62,7 +63,7 @@ def create_engine(
         handler = HANDLERS[info.engine]
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
-    return handler(info, virtual_bus, module_bus) # type: ignore[no-any-return]
+    return handler(info, virtual_bus, module_bus)  # type: ignore[no-any-return]
 
 
 # TODO: this factory should construct the controllers

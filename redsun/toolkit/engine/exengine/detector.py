@@ -1,17 +1,21 @@
 from abc import abstractmethod
-from typing import Tuple, TYPE_CHECKING
-from redsun.toolkit.engine.detector import DetectorModel
-from exengine.device_types import Detector as ExEngineDetector
+from typing import TYPE_CHECKING, Tuple
+
 from exengine.backends.micromanager import MicroManagerCamera as ExEngineMMCamera
+from exengine.device_types import Detector as ExEngineDetector
+
 from redsun.toolkit.config import PixelPhotometricTypes
+from redsun.toolkit.engine.detector import DetectorModel
 
 if TYPE_CHECKING:
+    from typing import Any, Dict, Optional, Union
+
     import numpy.typing as npt
-    from typing import Union, Optional, Dict, Any
+
     from redsun.toolkit.config import DetectorModelInfo
 
 
-class ExEngineDetectorModel(DetectorModel, ExEngineDetector): # type: ignore[misc]
+class ExEngineDetectorModel(DetectorModel, ExEngineDetector):  # type: ignore[misc]
     """ Detector model for ExEngine.
 
     See `DetectorModel` for more information about initialization. \\
@@ -43,7 +47,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector): # type: ignore[mis
         )
 
     @abstractmethod
-    def arm(self, frame_count : "Optional[int]" = None) -> None:
+    def arm(self, frame_count: "Optional[int]" = None) -> None:
         """
         Arms the device before an start command. This optional command validates all the current features for
         consistency and prepares the device for a fast start of the Acquisition. If not used explicitly,
@@ -62,7 +66,9 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector): # type: ignore[mis
     def is_stopped(self) -> "bool": ...
 
     @abstractmethod
-    def pop_data(self, timeout : Optional[float] = None) -> "Tuple[npt.NDArray[Any], Dict[str, Any]]":
+    def pop_data(
+        self, timeout: Optional[float] = None
+    ) -> "Tuple[npt.NDArray[Any], Dict[str, Any]]":
         """
         Get the next image and metadata from the camera buffer. If timeout is None, this function will block until
         an image is available. If timeout is a number, this function will block for that many seconds before returning
@@ -71,7 +77,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector): # type: ignore[mis
         ...
 
 
-class ExEngineMMCameraModel(DetectorModel, ExEngineMMCamera): # type: ignore[misc]
+class ExEngineMMCameraModel(DetectorModel, ExEngineMMCamera):  # type: ignore[misc]
     def __init__(
         self,
         name: "str",

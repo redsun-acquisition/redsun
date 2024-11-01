@@ -1,16 +1,19 @@
-from redsun.toolkit.config import MotorModelInfo
-from redsun.toolkit.engine.motor import MotorModel
-from exengine.device_types import (
-    TriggerableSingleAxisPositioner as ExEngineSingleMotor,
-    TriggerableDoubleAxisPositioner as ExEngineDoubleMotor,
-)
 from exengine.backends.micromanager import (
     MicroManagerSingleAxisStage as ExEngineMMSingleMotor,
 )
 from exengine.backends.micromanager import MicroManagerXYStage as ExEngineMMDoubleMotor
+from exengine.device_types import (
+    TriggerableDoubleAxisPositioner as ExEngineDoubleMotor,
+)
+from exengine.device_types import (
+    TriggerableSingleAxisPositioner as ExEngineSingleMotor,
+)
+
+from redsun.toolkit.config import MotorModelInfo
+from redsun.toolkit.engine.motor import MotorModel
 
 
-class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor): # type: ignore[misc]
+class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor):  # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -20,7 +23,7 @@ class ExEngineSingleMotorModel(MotorModel, ExEngineSingleMotor): # type: ignore[
         )
 
 
-class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor): # type: ignore[misc]
+class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor):  # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
 
@@ -30,13 +33,13 @@ class ExEngineDoubleMotorModel(MotorModel, ExEngineDoubleMotor): # type: ignore[
         )
 
 
-class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor): # type: ignore[misc]
+class ExEngineMMSingleMotorModel(MotorModel, ExEngineMMSingleMotor):  # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMSingleMotor.__init__(self, name)
 
 
-class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor): # type: ignore[misc]
+class ExEngineMMDoubleMotorModel(MotorModel, ExEngineMMDoubleMotor):  # type: ignore[misc]
     def __init__(self, name: str, model_info: MotorModelInfo):
         MotorModel.__init__(self, name, model_info)
         ExEngineMMDoubleMotor.__init__(self, name)

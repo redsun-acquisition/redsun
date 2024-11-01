@@ -1,9 +1,10 @@
-from psygnal import evented
-from pydantic.dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from psygnal import evented
+from pydantic.dataclasses import dataclass
+
 if TYPE_CHECKING:
-    from typing import Optional, Dict, Any
+    from typing import Any, Dict, Optional
 
 __all__ = ["create_evented_dataclass"]
 

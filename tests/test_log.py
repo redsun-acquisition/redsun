@@ -1,5 +1,6 @@
-from redsun.toolkit.log import get_logger, Loggable
 from typing import TYPE_CHECKING
+
+from redsun.toolkit.log import Loggable, get_logger
 
 if TYPE_CHECKING:
     from pytest import LogCaptureFixture

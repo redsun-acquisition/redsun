@@ -1,6 +1,6 @@
-from .handler import EngineHandler
 from .detector import DetectorModel
-from .motor import MotorModel
+from .handler import EngineHandler
 from .light import LightModel
+from .motor import MotorModel
 
 __all__ = ["EngineHandler", "DetectorModel", "MotorModel", "LightModel"]

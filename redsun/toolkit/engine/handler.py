@@ -1,12 +1,13 @@
-from typing import TYPE_CHECKING
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Generator, Iterable, Union
-    from redsun.toolkit.virtualbus import VirtualBus
+    from typing import Any, Dict, Generator, Iterable, Union
+
     from redsun.toolkit.config import RedSunInstanceInfo
-    from typing import Any, Dict
+    from redsun.toolkit.virtualbus import VirtualBus
 
 
 class EngineHandler(ABC, Loggable):
@@ -141,5 +142,7 @@ class EngineHandler(ABC, Loggable):
     def scanners(self) -> "Dict[str, Any]": ...
 
     @property
-    def workflows(self) -> "Dict[str, Union[Generator[Any, None, None], Iterable[Any]]]":
+    def workflows(
+        self,
+    ) -> "Dict[str, Union[Generator[Any, None, None], Iterable[Any]]]":
         return self._workflows

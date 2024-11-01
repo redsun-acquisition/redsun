@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
-from redsun.toolkit.log import Loggable
+
 from redsun.controller.factory import create_engine
+from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.config import RedSunInstanceInfo
+    from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.virtualbus import VirtualBus
 
 
@@ -19,9 +20,7 @@ class RedSunHardwareController(Loggable):
     ) -> None:
         self.__virtual_bus = virtual_bus
         self.__module_bus = module_bus
-        self.__handler = create_engine(
-            instance_info, virtual_bus, module_bus
-        )
+        self.__handler = create_engine(instance_info, virtual_bus, module_bus)
         self.info("{0} initialized.".format(self.handler.__class__.__name__))
 
     @property

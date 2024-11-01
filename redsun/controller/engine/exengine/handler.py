@@ -1,20 +1,22 @@
 from typing import TYPE_CHECKING, Union
-from redsun.toolkit.errors import UnsupportedDeviceType
-from redsun.toolkit.engine import EngineHandler, DetectorModel, MotorModel
+
 from exengine import ExecutionEngine
+from redsun.toolkit.engine import DetectorModel, EngineHandler, MotorModel
+from redsun.toolkit.errors import UnsupportedDeviceType
 
 if TYPE_CHECKING:
-    from typing import Dict, Any
+    from typing import Any, Dict
+
     from redsun.toolkit.config import RedSunInstanceInfo
-    from redsun.toolkit.virtualbus import VirtualBus
     from redsun.toolkit.engine.exengine import (
         ExEngineDetectorModel,
-        ExEngineMMCameraModel,
-        ExEngineSingleMotorModel,
         ExEngineDoubleMotorModel,
-        ExEngineMMSingleMotorModel,
+        ExEngineMMCameraModel,
         ExEngineMMDoubleMotorModel,
+        ExEngineMMSingleMotorModel,
+        ExEngineSingleMotorModel,
     )
+    from redsun.toolkit.virtualbus import VirtualBus
 
 DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
 MotorModels = Union[

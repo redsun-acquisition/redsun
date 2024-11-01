@@ -1,7 +1,8 @@
-from pydantic.dataclasses import dataclass
-from pydantic import Field
-from typing import Union, Dict, Optional, Tuple, Any
 from enum import Enum
+from typing import Any, Dict, Optional, Tuple, Union
+
+from pydantic import Field
+from pydantic.dataclasses import dataclass
 
 
 class AcquisitionEngineTypes(str, Enum):

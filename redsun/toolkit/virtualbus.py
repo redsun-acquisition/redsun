@@ -1,8 +1,10 @@
 from abc import ABC
-from psygnal import SignalInstance
 from functools import lru_cache
 from types import MappingProxyType
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
+
+from psygnal import SignalInstance
+
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
@@ -22,7 +24,9 @@ class Signal(SignalInstance):
         Signal description.
     """
 
-    def __init__(self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any") -> None:
+    def __init__(
+        self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any"
+    ) -> None:
         SignalInstance.__init__(self, signature=argtypes, **kwargs)
         self._info = info
 

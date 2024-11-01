@@ -1,9 +1,11 @@
-from redsun.toolkit.virtualbus import Signal, VirtualBus
-from numpy import ndarray
-from typing import Union, Tuple, TYPE_CHECKING
 from types import MappingProxyType
+from typing import TYPE_CHECKING, Tuple, Union
+
 import numpy as np
 import pytest
+from numpy import ndarray
+
+from redsun.toolkit.virtualbus import Signal, VirtualBus
 
 if TYPE_CHECKING:
     from logging import LogRecord

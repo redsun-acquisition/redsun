@@ -1,5 +1,6 @@
 import json
 import os
+
 from redsun.toolkit.config import RedSunInstanceInfo
 
 instance_config_path = "data"

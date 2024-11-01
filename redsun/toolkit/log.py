@@ -1,13 +1,16 @@
 import logging
 import logging.config
 from typing import Protocol
+
 from typing_extensions import override
 
 __all__ = ["Loggable", "get_logger"]
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Any, Dict, Union
+
 
 class ClassFormatter(logging.Formatter):
     """Custom formatter for logging messages with class name and user-defined ID."""

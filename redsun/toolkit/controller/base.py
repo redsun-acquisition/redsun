@@ -1,16 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+
 from redsun.toolkit.config import ControllerInfo
 from redsun.toolkit.engine import EngineHandler
+from redsun.toolkit.log import Loggable
 from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.virtualbus import VirtualBus
-from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Dict, Any, List
-    from redsun.toolkit.virtualbus import VirtualBus
+    from typing import Any, Dict, List
+
     from redsun.toolkit.config import ControllerInfo
     from redsun.toolkit.engine import EngineHandler
+    from redsun.toolkit.virtualbus import VirtualBus
 
 
 class BaseController(ABC, Loggable):
@@ -50,19 +52,19 @@ class BaseController(ABC, Loggable):
 
     @property
     def category(self) -> str:
-        return self._modelInfo.category # type: ignore[no-any-return]
+        return self._modelInfo.category  # type: ignore[no-any-return]
 
     @property
     def controllerName(self) -> str:
-        return self._modelInfo.controllerName # type: ignore[no-any-return]
+        return self._modelInfo.controllerName  # type: ignore[no-any-return]
 
     @property
     def supportedEngines(self) -> "List[str]":
-        return self._modelInfo.supportedEngines # type: ignore[no-any-return]
+        return self._modelInfo.supportedEngines  # type: ignore[no-any-return]
 
     @property
     def controllerParams(self) -> "Dict[str, Any]":
-        return self._modelInfo.controllerParams # type: ignore[no-any-return]
+        return self._modelInfo.controllerParams  # type: ignore[no-any-return]
 
 
 class DeviceController(BaseController):
