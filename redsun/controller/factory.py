@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from redsun.toolkit.controller import DeviceController, ComputationalController
     from redsun.toolkit.engine import EngineHandler
     from redsun.toolkit.virtualbus import VirtualBus
-    from typing import Union
+    from typing import Union, Optional
 
 # Initialize an empty dictionary for the handlers
 HANDLERS = {}
@@ -62,7 +62,7 @@ def create_engine(
         handler = HANDLERS[info.engine]
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
-    return handler(info, virtual_bus, module_bus)
+    return handler(info, virtual_bus, module_bus) # type: ignore[no-any-return]
 
 
 # TODO: this factory should construct the controllers
@@ -89,7 +89,7 @@ class ControllerFactory:
 
     def build(
         self, info: "ControllerInfo"
-    ) -> "Union[DeviceController, ComputationalController]":
+    ) -> "Optional[Union[DeviceController, ComputationalController]]":
         """Build a controller based on the provided information. The created controller is stored
         in the factory class with a weak reference for future access during application shutdown.
 
@@ -103,4 +103,4 @@ class ControllerFactory:
         Union[DeviceController, ComputationalController]
             Controller instance.
         """
-        ...
+        return None
