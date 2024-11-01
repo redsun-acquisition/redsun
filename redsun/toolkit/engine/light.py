@@ -5,8 +5,8 @@ from redsun.toolkit.utils import create_evented_dataclass
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Union
-    from redsun.toolkit.config import LightModelInfo, LightModelTypes
+    from typing import Union, List, Dict, Any
+    from redsun.toolkit.config import LightModelInfo, LightModelTypes, AcquisitionEngineTypes
 
 
 class LightModel(ABC, Loggable):
@@ -46,48 +46,48 @@ class LightModel(ABC, Loggable):
 
     @property
     def name(self) -> str:
-        return self._modelInfo.name
+        return self._modelInfo.name # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
-        return self._modelInfo.modelName
+        return self._modelInfo.modelName # type: ignore[no-any-return]
 
     @property
-    def modelParams(self) -> dict:
-        return self._modelInfo.modelParams
+    def modelParams(self) -> "Dict[str, Any]":
+        return self._modelInfo.modelParams # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
-        return self._modelInfo.vendor
+        return self._modelInfo.vendor # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
-        return self._modelInfo.serialNumber
+        return self._modelInfo.serialNumber # type: ignore[no-any-return]
 
     @property
-    def supportedEngines(self) -> list:
-        return self._modelInfo.supportedEngines
+    def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        return self._modelInfo.supportedEngines # type: ignore[no-any-return]
 
     @property
     def category(self) -> "LightModelTypes":
-        return self._modelInfo.category
+        return self._modelInfo.category # type: ignore[no-any-return]
 
     @property
     def wavelength(self) -> int:
-        return self._modelInfo.wavelength
+        return self._modelInfo.wavelength # type: ignore[no-any-return]
 
     @property
     def powerEGU(self) -> str:
-        return self._modelInfo.powerEGU
+        return self._modelInfo.powerEGU # type: ignore[no-any-return]
 
     @property
-    def minPower(self) -> Union[float, int]:
-        return self._modelInfo.minPower
+    def minPower(self) -> "Union[float, int]":
+        return self._modelInfo.minPower # type: ignore[no-any-return]
 
     @property
-    def maxPower(self) -> Union[float, int]:
-        return self._modelInfo.maxPower
+    def maxPower(self) -> "Union[float, int]":
+        return self._modelInfo.maxPower # type: ignore[no-any-return]
 
     @property
-    def powerStep(self) -> Union[float, int]:
-        return self._modelInfo.powerStep
+    def powerStep(self) -> "Union[float, int]":
+        return self._modelInfo.powerStep # type: ignore[no-any-return]
