@@ -36,10 +36,12 @@ def create_evented_dataclass(
 
     # implementation provided by the following issue discussion:
     # https://github.com/pyapp-kit/psygnal/issues/328
+    types = types or {}
+    values = values or {}
 
     cls_dict = {
         "__annotations__": types,
     }
     cls_dict.update(values)
-    cls = type(cls_name, (original_cls), cls_dict)
+    cls = type(cls_name, (original_cls,), cls_dict)
     return evented(dataclass(cls, frozen=True))
