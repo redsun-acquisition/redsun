@@ -69,5 +69,5 @@ disable_error_code = "attr-defined"
 target-version = "py310"
 
 [tool.ruff.format]
-indent-style = "tab
+indent-style = "tab"
 
