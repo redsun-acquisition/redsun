@@ -70,7 +70,7 @@ target-version = "py310"
 exclude = ["docs", "tests"]
 
 [tool.ruff.lint]
-select = ["D"]
+select = ["D"] # enable docstring checks
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
