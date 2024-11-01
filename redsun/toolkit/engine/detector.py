@@ -6,7 +6,7 @@ from redsun.toolkit.config import PixelPhotometricTypes
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Tuple, Union
+    from typing import Tuple, Union, Optional, Dict, Any, List, Set
     from redsun.toolkit.config import DetectorModelInfo, AcquisitionEngineTypes
 
 
@@ -90,11 +90,11 @@ class DetectorModel(ABC, Loggable):
         name: "str",
         model_info: "DetectorModelInfo",
         exposure: "Union[int, float]",
-        pixel_photometric: "list[PixelPhotometricTypes]" = "gray",
-        bits_per_pixel: "set[int]" = {8},
-        binning: "list[int]" = [1],
-        offset: "Tuple[int, int]" = (0, 0),
-        shape: "Tuple[int, int]" = None,
+        pixel_photometric: "Optional[list[PixelPhotometricTypes]]" = [PixelPhotometricTypes.GRAY],
+        bits_per_pixel: "Optional[set[int]]" = {8},
+        binning: "Optional[list[int]]" = [1],
+        offset: "Optional[Tuple[int, int]]" = (0, 0),
+        shape: "Optional[Tuple[int, int]]" = None,
     ) -> None:
         cls_name = model_info.modelName + "Info"
         types = {
@@ -116,64 +116,66 @@ class DetectorModel(ABC, Loggable):
             cls_name=cls_name, original_cls=type(model_info), types=types, values=values
         )
 
-        self._modelInfo = FullModelInfo(**asdict(model_info).update(values))
+        model_info_dict = asdict(model_info)
+        model_info_dict.update(values)
+        self._modelInfo = FullModelInfo(**model_info_dict)
 
     @property
     def name(self) -> str:
-        return self._modelInfo.name
+        return self._modelInfo.name # type: ignore[no-any-return]
 
     @property
     def modelName(self) -> str:
-        return self._modelInfo.modelName
+        return self._modelInfo.modelName # type: ignore[no-any-return]
 
     @property
-    def modelParams(self) -> dict:
-        return self._modelInfo.modelParams
+    def modelParams(self) -> "Dict[str, Any]":
+        return self._modelInfo.modelParams # type: ignore[no-any-return]
 
     @property
     def vendor(self) -> str:
-        return self._modelInfo.vendor
+        return self._modelInfo.vendor # type: ignore[no-any-return]
 
     @property
     def serialNumber(self) -> str:
-        return self._modelInfo.serialNumber
+        return self._modelInfo.serialNumber # type: ignore[no-any-return]
 
     @property
-    def supportedEngines(self) -> "list[AcquisitionEngineTypes]":
-        return self._modelInfo.supportedEngines
+    def supportedEngines(self) -> "List[AcquisitionEngineTypes]":
+        return self._modelInfo.supportedEngines # type: ignore[no-any-return]
 
     @property
     def category(self) -> str:
-        return self._modelInfo.category
+        return self._modelInfo.category # type: ignore[no-any-return]
 
     @property
     def sensorSize(self) -> "Tuple[int, int]":
-        return self._modelInfo.sensorSize
+        return self._modelInfo.sensorSize # type: ignore[no-any-return]
 
     @property
     def pixelSize(self) -> "Tuple[float, float, float]":
-        return self._modelInfo.pixelSize
+        return self._modelInfo.pixelSize # type: ignore[no-any-return]
 
     @property
     def exposureEGU(self) -> str:
-        return self._modelInfo.exposureEGU
+        return self._modelInfo.exposureEGU # type: ignore[no-any-return]
 
     @property
-    def pixelPhotometric(self) -> "list[PixelPhotometricTypes]":
-        return self._modelInfo.pixelPhotometric
+    def pixelPhotometric(self) -> "List[PixelPhotometricTypes]":
+        return self._modelInfo.pixelPhotometric # type: ignore[no-any-return]
 
     @property
-    def bitsPerPixel(self) -> set[int]:
-        return self._modelInfo.bitsPerPixel
+    def bitsPerPixel(self) -> "Set[int]":
+        return self._modelInfo.bitsPerPixel # type: ignore[no-any-return]
 
     @property
-    def binning(self) -> list[int]:
-        return self._modelInfo.binning
+    def binning(self) -> "List[int]":
+        return self._modelInfo.binning # type: ignore[no-any-return]
 
     @property
     def offset(self) -> "Tuple[int, int]":
-        return self._modelInfo.offset
+        return self._modelInfo.offset # type: ignore[no-any-return]
 
     @property
     def shape(self) -> "Tuple[int, int]":
-        return self._modelInfo.shape
+        return self._modelInfo.shape # type: ignore[no-any-return]
