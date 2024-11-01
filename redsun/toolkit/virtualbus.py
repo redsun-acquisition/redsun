@@ -50,7 +50,7 @@ class Signal(SignalInstance):
 
 class VirtualBus(ABC, Loggable):
     """
-    
+
     VirtualBus base class.
 
     The VirtualBus is a mechanism to exchange data between different parts of the system.
@@ -73,9 +73,9 @@ class VirtualBus(ABC, Loggable):
     def __setattr__(self, name: str, value: "Any") -> None:
         """
         Overload `__setattr__` to allow registering new signals attributes.
-        
+
         If the attribute name starts with 'sig' and the value is a `Signal` object, it will be added as instance attribute and added to the signal registry.
-        
+
         Otherwise, it will be registered as a regular attribute.
 
         Args:

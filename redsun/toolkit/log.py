@@ -1,7 +1,7 @@
 """
 RedSun logging module.
 
-In each RedSun instance, only one logger is created. 
+In each RedSun instance, only one logger is created.
 
 All classes implementing the `Logging` protocol can use the logger to log messages.
 """
@@ -75,11 +75,11 @@ logger = logging.getLogger("redsun")
 
 
 class Loggable(Protocol):
-    """ 
+    """
     Protocol to extend log records with the class name and the user defined ID.
-    
+
     Models and controllers can inherit from this class to have a consistent log format.
-    
+
     All methods allow to forward extra arguments to the logger calls as documented in the `logging` module.
 
     Properties
@@ -92,7 +92,7 @@ class Loggable(Protocol):
     def _extend(self, **kwargs: "Any") -> "Dict[str, Any]":
         """
         Enrich kwargs with class name and user-defined ID.
-        
+
         :meta-private:
         """
         kwargs["extra"] = {
@@ -200,7 +200,7 @@ class Loggable(Protocol):
     def __clsname__(self) -> str:
         """
         Class name.
-        
+
         :meta-private:
         """
         # Private property, should not be

@@ -1,7 +1,7 @@
 """
 Motors are a category of hardware devices capable of moving objects in a controlled manner.
 
-Belonging to this category fall devices such as stage axis, focusing units, generic stepper motors, and so on. 
+Belonging to this category fall devices such as stage axis, focusing units, generic stepper motors, and so on.
 """
 
 from abc import ABC, abstractmethod
@@ -14,7 +14,11 @@ from redsun.toolkit.utils import create_evented_dataclass
 if TYPE_CHECKING:
     from typing import Any, Dict, List
 
-    from redsun.toolkit.config import AcquisitionEngineTypes, MotorModelInfo, MotorModelTypes
+    from redsun.toolkit.config import (
+        AcquisitionEngineTypes,
+        MotorModelInfo,
+        MotorModelTypes,
+    )
 
 
 class MotorModel(ABC, Loggable):
@@ -111,7 +115,7 @@ class MotorModel(ABC, Loggable):
     def returnHome(self) -> bool:
         """
         If `True`, motor will return to home position (defined as  the initial position the motor had at RedSun's startup) after RedSun is closed.
-        
+
         Defaults to `False`.
-        """ 
+        """
         return self._modelInfo.returnHome  # type: ignore[no-any-return]

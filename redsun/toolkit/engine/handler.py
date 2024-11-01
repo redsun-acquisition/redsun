@@ -65,8 +65,8 @@ class EngineHandler(ABC, Loggable):
     @abstractmethod
     def register_device(self, name: str, device: "Any") -> None:
         """
-        Add a new device to the registry. 
-        
+        Add a new device to the registry.
+
         Child classes must implement this method to add a new device to the registry.
 
         Parameters
@@ -116,25 +116,25 @@ class EngineHandler(ABC, Loggable):
 
     @abstractmethod
     @property
-    def detectors(self) -> "Dict[str, Any]": 
+    def detectors(self) -> "Dict[str, Any]":
         """Detectors dictionary. Device class type is engine-specific and must inherit from `DetectorModel`."""
         ...
 
     @abstractmethod
     @property
-    def motors(self) -> "Dict[str, Any]": 
+    def motors(self) -> "Dict[str, Any]":
         """Motors dictionary. Device class type is engine-specific and must inherit from `MotorModel`."""
         ...
 
     @abstractmethod
     @property
-    def lights(self) -> "Dict[str, Any]": 
+    def lights(self) -> "Dict[str, Any]":
         """Lights dictionary. Device class type is engine-specific and must inherit from `LightModel`."""
         ...
 
     @abstractmethod
     @property
-    def scanners(self) -> "Dict[str, Any]": 
+    def scanners(self) -> "Dict[str, Any]":
         """Scanners dictionary. Device class type is engine-specific and must inherit from `ScannerModel`."""
         ...
 

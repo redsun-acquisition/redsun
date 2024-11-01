@@ -30,7 +30,7 @@ MotorModels = Union[
 
 
 class ExEngineHandler(EngineHandler):
-    r""" 
+    r"""
     ExEngine handler class.
 
     All models compatible with ExEngine are registered here at application startup.

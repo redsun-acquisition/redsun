@@ -17,9 +17,9 @@ def create_evented_dataclass(
     types: "Optional[Dict[str, Any]]" = {},
     values: "Optional[Dict[str, Any]]" = {},
 ) -> type:
-    """ 
+    """
     Create a new evented dataclass from the original provided one.
-    
+
     For more information abount about evented dataclasses, see the `psygnal documentation <https://psygnal.readthedocs.io/en/latest/dataclasses/>`_.
 
     Parameters

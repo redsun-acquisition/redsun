@@ -1,8 +1,8 @@
 """
 The `factory` module contains all the tooling necessary for the dynamic loading of controllers and models.
 
-RedSun operates by dynamically loading external plugins with different archetypes 
-(single or multiple controllers, single or multiple models, combination of controllers and models, etc.) 
+RedSun operates by dynamically loading external plugins with different archetypes
+(single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
 
 This module operates within the RedSun core code and is not exposed to the toolkit or the user.
@@ -102,8 +102,8 @@ class ControllerFactory:
         self, info: "ControllerInfo"
     ) -> "Optional[Union[DeviceController, ComputationalController]]":
         """
-        Build a controller based on the provided information. 
-        
+        Build a controller based on the provided information.
+
         The created controller is stored in the factory class with a weak reference for future access during application shutdown.
 
         Parameters

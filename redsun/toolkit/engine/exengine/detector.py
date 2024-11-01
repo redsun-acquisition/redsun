@@ -65,8 +65,7 @@ class ExEngineDetectorModel(DetectorModel, ExEngineDetector):  # type: ignore[mi
     @abstractmethod
     def pop_data(  # noqa: D102
         self, timeout: Optional[float] = None
-    ) -> "Tuple[npt.NDArray[Any], Dict[str, Any]]":
-        ...
+    ) -> "Tuple[npt.NDArray[Any], Dict[str, Any]]": ...
 
 
 class ExEngineMMCameraModel(DetectorModel, ExEngineMMCamera):  # type: ignore[misc]  # noqa: D101

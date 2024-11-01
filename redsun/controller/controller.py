@@ -38,7 +38,7 @@ class RedSunHardwareController(Loggable):
     def handler(self) -> "EngineHandler":
         """
         Acquisition engine handler.
-        
+
         The specific handler class is determined by the configuration.
         """
         return self.__handler
