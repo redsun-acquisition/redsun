@@ -1,3 +1,11 @@
+"""
+RedSun logging module.
+
+In each RedSun instance, only one logger is created. 
+
+All classes implementing the `Logging` protocol can use the logger to log messages.
+"""
+
 import logging
 import logging.config
 from typing import Protocol
@@ -67,8 +75,11 @@ logger = logging.getLogger("redsun")
 
 
 class Loggable(Protocol):
-    """ Protocol to extend log records with the class name and the user defined ID.\\
-    Models and controllers can inherit from this class to have a consistent log format.\\
+    """ 
+    Protocol to extend log records with the class name and the user defined ID.
+    
+    Models and controllers can inherit from this class to have a consistent log format.
+    
     All methods allow to forward extra arguments to the logger calls as documented in the `logging` module.
 
     Properties
@@ -79,7 +90,9 @@ class Loggable(Protocol):
     """
 
     def _extend(self, **kwargs: "Any") -> "Dict[str, Any]":
-        """Enrich kwargs with class name and user-defined ID.
+        """
+        Enrich kwargs with class name and user-defined ID.
+        
         :meta-private:
         """
         kwargs["extra"] = {
@@ -90,7 +103,8 @@ class Loggable(Protocol):
         return kwargs
 
     def info(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log an info message in the core logger
+        """
+        Log an info message in the core logger.
 
         Parameters
         ----------
@@ -105,7 +119,8 @@ class Loggable(Protocol):
         logger.info(msg, *args, **kwargs)
 
     def debug(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log a debug message in the core logger
+        """
+        Log a debug message in the core logger.
 
         Parameters
         ----------
@@ -120,7 +135,8 @@ class Loggable(Protocol):
         logger.debug(msg, *args, **kwargs)
 
     def warning(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log a warning message in the core logger
+        """
+        Log a warning message in the core logger.
 
         Parameters
         ----------
@@ -135,7 +151,8 @@ class Loggable(Protocol):
         logger.warning(msg, *args, **kwargs)
 
     def error(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log an error. message in the core logger
+        """
+        Log an error. message in the core logger.
 
         Parameters
         ----------
@@ -150,7 +167,8 @@ class Loggable(Protocol):
         logger.error(msg, *args, **kwargs)
 
     def critical(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log a critical message in the core logger
+        """
+        Log a critical message in the core logger.
 
         Parameters
         ----------
@@ -165,7 +183,8 @@ class Loggable(Protocol):
         logger.critical(msg, *args, **kwargs)
 
     def exception(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
-        """Log an exception message in the core logger
+        """
+        Log an exception message in the core logger.
 
         Parameters
         ----------
@@ -179,19 +198,26 @@ class Loggable(Protocol):
 
     @property
     def __clsname__(self) -> str:
+        """
+        Class name.
+        
+        :meta-private:
+        """
         # Private property, should not be
         # accessed by the user
         return self.__class__.__name__
 
     @property
     def name(self) -> "Union[str, None]":
+        """Class instance unique identifier."""
         # This property should be implemented by
         # all model and controller classes by default
         return None
 
 
 def get_logger() -> logging.Logger:
-    """Returns the core logger.
+    """
+    Return the core logger.
 
     Returns
     -------
