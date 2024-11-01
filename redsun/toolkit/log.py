@@ -5,6 +5,9 @@ from typing_extensions import override
 
 __all__ = ["Loggable", "get_logger"]
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Any, Dict, Union
 
 class ClassFormatter(logging.Formatter):
     """Custom formatter for logging messages with class name and user-defined ID."""
@@ -72,7 +75,7 @@ class Loggable(Protocol):
         This property should be provided by the models inheriting from this class.
     """
 
-    def _extend(self, kwargs):
+    def _extend(self, **kwargs: "Any") -> "Dict[str, Any]":
         """Enrich kwargs with class name and user-defined ID.
         :meta-private:
         """
@@ -83,7 +86,7 @@ class Loggable(Protocol):
         }
         return kwargs
 
-    def info(self, msg: str, *args, **kwargs):
+    def info(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log an info message in the core logger
 
         Parameters
@@ -95,10 +98,10 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.info`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.info(msg, *args, **kwargs)
 
-    def debug(self, msg: str, *args, **kwargs):
+    def debug(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log a debug message in the core logger
 
         Parameters
@@ -110,10 +113,10 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.debug`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.debug(msg, *args, **kwargs)
 
-    def warning(self, msg: str, *args, **kwargs):
+    def warning(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log a warning message in the core logger
 
         Parameters
@@ -125,10 +128,10 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.warning`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str, *args, **kwargs):
+    def error(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log an error. message in the core logger
 
         Parameters
@@ -140,10 +143,10 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.error`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str, *args, **kwargs):
+    def critical(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log a critical message in the core logger
 
         Parameters
@@ -155,10 +158,10 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.critical`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.critical(msg, *args, **kwargs)
 
-    def exception(self, msg: str, *args, **kwargs):
+    def exception(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
         """Log an exception message in the core logger
 
         Parameters
@@ -168,7 +171,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.exception`.
         """
-        self._extend(kwargs)
+        self._extend(**kwargs)
         logger.exception(msg, *args, **kwargs)
 
     @property
@@ -178,7 +181,7 @@ class Loggable(Protocol):
         return self.__class__.__name__
 
     @property
-    def name(self) -> str:
+    def name(self) -> "Union[str, None]":
         # This property should be implemented by
         # all model and controller classes by default
         return None
