@@ -8,42 +8,42 @@ from psygnal import SignalInstance
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-	from typing import Any, Tuple
+    from typing import Any, Tuple
 
 __all__ = ["Signal", "VirtualBus"]
 
 
 class Signal(SignalInstance):
-	"""Small wrapper around `psygnal.SignalInstance`.
+    """Small wrapper around `psygnal.SignalInstance`.
 
-	Properties
-	----------
-	types : Tuple[type, ...]
-	    Tuple of data types carried by the signal.
-	info : str
-	    Signal description.
-	"""
+    Properties
+    ----------
+    types : Tuple[type, ...]
+        Tuple of data types carried by the signal.
+    info : str
+        Signal description.
+    """
 
-	def __init__(
-		self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any"
-	) -> None:
-		SignalInstance.__init__(self, signature=argtypes, **kwargs)
-		self._info = info
+    def __init__(
+        self, *argtypes: "Any", info: str = "RedSun signal", **kwargs: "Any"
+    ) -> None:
+        SignalInstance.__init__(self, signature=argtypes, **kwargs)
+        self._info = info
 
-	@property
-	@lru_cache
-	def types(self) -> "Tuple[type, ...]":
-		return tuple(
-			[param.annotation for param in self._signature.parameters.values()]
-		)
+    @property
+    @lru_cache
+    def types(self) -> "Tuple[type, ...]":
+        return tuple(
+            [param.annotation for param in self._signature.parameters.values()]
+        )
 
-	@property
-	def info(self) -> str:
-		return self._info
+    @property
+    def info(self) -> str:
+        return self._info
 
 
 class VirtualBus(ABC, Loggable):
-	""" VirtualBus base class.
+    """ VirtualBus base class.
 
     The VirtualBus is a mechanism to exchange data between different parts of the system. \\
     They can be used to emit notifications, as well as carry information to other plugins and/or different RedSun modules. \\
@@ -57,39 +57,39 @@ class VirtualBus(ABC, Loggable):
         A read-only dictionary with the registered signals.
     """
 
-	_signal_registry: Dict[str, Signal] = {}
+    _signal_registry: Dict[str, Signal] = {}
 
-	def __init__(self) -> None:
-		# pre-register signals added as attributes in the class definition
-		self._signal_registry = {
-			key: value
-			for key, value in type(self).__dict__.items()
-			if key.startswith("sig") and isinstance(value, Signal)
-		}
+    def __init__(self) -> None:
+        # pre-register signals added as attributes in the class definition
+        self._signal_registry = {
+            key: value
+            for key, value in type(self).__dict__.items()
+            if key.startswith("sig") and isinstance(value, Signal)
+        }
 
-	def __setattr__(self, name: str, value: "Any") -> None:
-		"""Overloads `__setattr__` to allow registering new signals attributes.
-		If the attribute name starts with 'sig' and the value is a `Signal` object, it will be added as
-		instance attribute and added to the signal registry.
-		Otherwise, it will be registered as a regular attribute.
+    def __setattr__(self, name: str, value: "Any") -> None:
+        """Overloads `__setattr__` to allow registering new signals attributes.
+        If the attribute name starts with 'sig' and the value is a `Signal` object, it will be added as
+        instance attribute and added to the signal registry.
+        Otherwise, it will be registered as a regular attribute.
 
-		Args:
-		    name (`str`): attribute name.
-		    value (`Any`): attribute value.
-		"""
-		if name.startswith("sig") and isinstance(value, Signal):
-			if not hasattr(self, name) and name not in self._signal_registry:
-				self._signal_registry[name] = value
-				super().__setattr__(name, value)
-			else:
-				self.warning(
-					f"Signal {name} already exists in {self.__class__.__name__}."
-				)
-		else:
-			super().__setattr__(name, value)
+        Args:
+            name (`str`): attribute name.
+            value (`Any`): attribute value.
+        """
+        if name.startswith("sig") and isinstance(value, Signal):
+            if not hasattr(self, name) and name not in self._signal_registry:
+                self._signal_registry[name] = value
+                super().__setattr__(name, value)
+            else:
+                self.warning(
+                    f"Signal {name} already exists in {self.__class__.__name__}."
+                )
+        else:
+            super().__setattr__(name, value)
 
-	def register_signal(self, name: str, *args: "Any", **kwargs: "Any") -> None:
-		""" Creates a new `Signal` object with the given name and arguments,
+    def register_signal(self, name: str, *args: "Any", **kwargs: "Any") -> None:
+        """ Creates a new `Signal` object with the given name and arguments,
         and stores it as class attribute.
 
         >>> channel.registerSignal('sigAcquisitionStarted', str)
@@ -114,16 +114,16 @@ class VirtualBus(ABC, Loggable):
         ValueError
             If `name` does not start with 'sig' prefix.
         """
-		if not name.startswith("sig"):
-			raise ValueError("Signal name must start with 'sig' prefix.")
-		else:
-			if "info" in kwargs:
-				info = kwargs.pop("info")
-			else:
-				info = "RedSun signal"
-			signal = Signal(*args, info=info, **kwargs)
-		setattr(self, name, signal)
+        if not name.startswith("sig"):
+            raise ValueError("Signal name must start with 'sig' prefix.")
+        else:
+            if "info" in kwargs:
+                info = kwargs.pop("info")
+            else:
+                info = "RedSun signal"
+            signal = Signal(*args, info=info, **kwargs)
+        setattr(self, name, signal)
 
-	@property
-	def signals(self) -> "MappingProxyType[str, Signal]":
-		return MappingProxyType(self._signal_registry)
+    @property
+    def signals(self) -> "MappingProxyType[str, Signal]":
+        return MappingProxyType(self._signal_registry)
