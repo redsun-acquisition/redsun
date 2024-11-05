@@ -47,6 +47,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .ruff_cache/
+.nox/
 
 # Translations
 *.mo
@@ -108,4 +109,3 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
-
