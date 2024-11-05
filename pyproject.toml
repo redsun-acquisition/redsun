@@ -48,7 +48,7 @@ version = {attr = "redsun.__version__"}
 
 [tool.mypy]
 files = "."
-extend-exclude = ["docs", "tests", "noxfile.py"]
+exclude = ["docs", "tests", "noxfile.py"]
 disable_error_code = ["import-untyped"]
 
 # Use strict defaults
