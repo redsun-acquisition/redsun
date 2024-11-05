@@ -6,5 +6,5 @@ if TYPE_CHECKING:
 
 @nox.session(venv_backend="mamba", python=["3.9", "3.10", "3.11"])
 def lint(session: "Session") -> None:
-    session.conda_install("--file", "requirements-dev.txt")
+    session.conda_install("ruff")
     session.run("ruff", "check")
