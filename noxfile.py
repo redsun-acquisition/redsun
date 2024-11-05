@@ -16,17 +16,11 @@ def lint(session: "Session") -> None:
 @nox.session(venv_backend="mamba", python=python_versions)
 def mypy(session: "Session") -> None:
     requirements : "List[str]" = nox.project.load_toml("pyproject.toml")["project"]["dependencies"]
-    if session.python != "3.9":
-        # typing_extension is built-in from Python 3.10 onwards
-        requirements.remove("typing_extension")
     session.install(*requirements, "mypy")
     session.run("mypy", "redsun", "--disable-error-code=import-untyped")
 
 @nox.session(venv_backend="mamba", python=python_versions)
 def test(session: "Session") -> None:
     requirements : "List[str]" = nox.project.load_toml("pyproject.toml")["project"]["dependencies"]
-    if session.python != "3.9":
-        # typing_extension is built-in from Python 3.10 onwards
-        requirements.remove("typing_extension")
     session.install(*requirements, "pytest")
     session.run("pytest", "-v", "tests")
