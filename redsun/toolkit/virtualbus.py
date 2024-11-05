@@ -60,7 +60,7 @@ class VirtualBus(ABC, Loggable):
     VirtualBus' signals are implemented using the `psygnal` library; they can be dynamically registered as class attributes, and accessed as a read-only dictionary.
     """
 
-    _signal_registry: Dict[str, Signal] = {}
+    _signal_registry: "Dict[str, Signal]" = {}
 
     def __init__(self) -> None:
         # pre-register signals added as attributes in the class definition
