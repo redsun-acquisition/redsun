@@ -13,14 +13,14 @@ The `VirtualBus` class is a factory of singleton objects charged of exchanging i
 from abc import ABC
 from functools import lru_cache
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING
 
 from psygnal import SignalInstance
 
 from redsun.toolkit.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Any, Tuple
+    from typing import Any, Tuple, Dict
 
 __all__ = ["Signal", "VirtualBus"]
 
@@ -94,14 +94,14 @@ class VirtualBus(ABC, Loggable):
             super().__setattr__(name, value)
 
     def register_signal(self, name: str, *args: "Any", **kwargs: "Any") -> None:
-        r""" 
-        
+        r"""
+
         Create a new `Signal` object with the given name and arguments, and stores it as class attribute.
 
         >>> channel.registerSignal('sigAcquisitionStarted', str)
         >>> # this will allow to access the signal as an attribute
         >>> channel.sigAcquisitionStarted.connect(mySlot)
-        
+
         Signal names must start with 'sig' prefix.
 
         Parameters
@@ -114,7 +114,7 @@ class VirtualBus(ABC, Loggable):
             Additional arguments to pass to the `Signal` constructor: \\
             `info` (str): signal description. \\
             Other keyword arguments can be found in the `psygnal.SignalInstance` documentation.
-        
+
         Raises
         ------
         ValueError
