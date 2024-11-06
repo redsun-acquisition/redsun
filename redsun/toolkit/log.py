@@ -89,7 +89,7 @@ class Loggable(Protocol):
         This property should be provided by the models inheriting from this class.
     """
 
-    def _extend(self, **kwargs: "Any") -> "Dict[str, Any]":
+    def _extend(self, kwargs: "Dict[str, Any]") -> "Dict[str, Any]":
         """
         Enrich kwargs with class name and user-defined ID.
 
@@ -115,7 +115,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.info`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.info(msg, *args, **kwargs)
 
     def debug(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
@@ -131,7 +131,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.debug`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.debug(msg, *args, **kwargs)
 
     def warning(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
@@ -147,7 +147,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.warning`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.warning(msg, *args, **kwargs)
 
     def error(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
@@ -163,7 +163,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.error`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.error(msg, *args, **kwargs)
 
     def critical(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
@@ -179,7 +179,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.critical`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.critical(msg, *args, **kwargs)
 
     def exception(self, msg: str, *args: "Any", **kwargs: "Any") -> None:
@@ -193,7 +193,7 @@ class Loggable(Protocol):
         **kwargs : Any
             Additional keyword arguments for `logging.Logger.exception`.
         """
-        self._extend(**kwargs)
+        self._extend(kwargs)
         logger.exception(msg, *args, **kwargs)
 
     @property
