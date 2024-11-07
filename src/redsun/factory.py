@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
 
 # Initialize an empty dictionary for the handlers
-HANDLERS = {}
+HANDLERS : "dict[str, EngineHandler]" = {}
 
 # Define the base path for the engine directory
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "engine")
@@ -73,7 +73,7 @@ def create_engine(
         handler = HANDLERS[info.engine]
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
-    return handler(info, virtual_bus, module_bus)  # type: ignore[no-any-return]
+    return handler(info, virtual_bus, module_bus)
 
 
 # TODO: this factory should construct the controllers
