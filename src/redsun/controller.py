@@ -1,13 +1,13 @@
 # noqa: D100
 from typing import TYPE_CHECKING
 
-from redsun.controller.factory import create_engine
-from redsun.toolkit.log import Loggable
+from src.redsun.factory import create_engine
+from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from redsun.toolkit.config import RedSunInstanceInfo
-    from redsun.toolkit.engine import EngineHandler
-    from redsun.toolkit.virtualbus import VirtualBus
+    from sunflare.config import RedSunInstanceInfo
+    from sunflare.engine import EngineHandler
+    from sunflare.virtualbus import VirtualBus
 
 
 class RedSunHardwareController(Loggable):

@@ -3,14 +3,14 @@
 from typing import TYPE_CHECKING, Union
 
 from exengine import ExecutionEngine
-from redsun.toolkit.engine import DetectorModel, EngineHandler, MotorModel
-from redsun.toolkit.errors import UnsupportedDeviceType
+from sunflare.engine import DetectorModel, EngineHandler, MotorModel
+from sunflare.errors import UnsupportedDeviceType
 
 if TYPE_CHECKING:
     from typing import Any, Dict
 
-    from redsun.toolkit.config import RedSunInstanceInfo
-    from redsun.toolkit.engine.exengine import (
+    from sunflare.config import RedSunInstanceInfo
+    from sunflare.engine.exengine import (
         ExEngineDetectorModel,
         ExEngineDoubleMotorModel,
         ExEngineMMCameraModel,
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         ExEngineMMSingleMotorModel,
         ExEngineSingleMotorModel,
     )
-    from redsun.toolkit.virtualbus import VirtualBus
+    from sunflare.virtualbus import VirtualBus
 
 DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
 MotorModels = Union[

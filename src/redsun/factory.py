@@ -17,10 +17,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Optional, Union
 
-    from redsun.toolkit.config import ControllerInfo, RedSunInstanceInfo
-    from redsun.toolkit.controller import ComputationalController, DeviceController
-    from redsun.toolkit.engine import EngineHandler
-    from redsun.toolkit.virtualbus import VirtualBus
+    from sunflare.config import ControllerInfo, RedSunInstanceInfo
+    from sunflare.controller import ComputationalController, DeviceController
+    from sunflare.engine import EngineHandler
+    from sunflare.virtualbus import VirtualBus
 
 # Initialize an empty dictionary for the handlers
 HANDLERS = {}
