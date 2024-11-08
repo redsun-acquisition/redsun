@@ -40,7 +40,7 @@ package-dir = {"" = "src"}
 version = {attr = "redsun.__version__"}
 
 
-# Mypy
+# mypy
 # ----
 
 [tool.mypy]
