@@ -15,7 +15,7 @@ import weakref
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Optional, Union
+    from typing import Optional, Union, Type
 
     from sunflare.config import ControllerInfo, RedSunInstanceInfo
     from sunflare.controller import ComputationalController, DeviceController
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
 
 # Initialize an empty dictionary for the handlers
-HANDLERS : "dict[str, EngineHandler]" = {}
+HANDLERS: "dict[str, Type[EngineHandler]]" = {}
 
 # Define the base path for the engine directory
 ENGINE_PATH = os.path.join(os.path.dirname(__file__), "engine")
