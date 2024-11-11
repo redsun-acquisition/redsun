@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from sunflare.engine import EngineHandler
     from sunflare.virtualbus import VirtualBus
 
+__all__ = ["RedSunHardwareController"]
+
 
 class RedSunHardwareController(Loggable):
     """Main hardware controller."""
