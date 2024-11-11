@@ -87,6 +87,9 @@ def create_engine(
     ValueError
         If the engine type is not recognized.
     """
+    if len(_HANDLERS) == 0:
+        get_available_engines()
+
     try:
         handler = _HANDLERS[info.engine]
     except KeyError:
