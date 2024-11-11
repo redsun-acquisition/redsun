@@ -33,12 +33,14 @@ homepage = "https://github.com/jacopoabramo/redsun"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
-"*" = ["*.*"]
+"*" = ["*.typed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "redsun.__version__"}
-
 
 # mypy
 # ----
