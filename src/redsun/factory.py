@@ -22,27 +22,45 @@ if TYPE_CHECKING:
     from sunflare.engine import EngineHandler
     from sunflare.virtualbus import VirtualBus
 
+__all__ = ["get_available_engines", "create_engine", "ControllerFactory"]
+
 # Initialize an empty dictionary for the handlers
 HANDLERS: "dict[str, Type[EngineHandler]]" = {}
 
-# Define the base path for the engine directory
-ENGINE_PATH = os.path.join(os.path.dirname(__file__), "engine")
 
-# Dynamically load all engine handlers
-for filename in os.listdir(ENGINE_PATH):
-    # Only consider Python files (ignoring __init__.py or any non-handler files)
-    if filename.endswith(".py") and filename not in ["__init__.py"]:
-        module_name = (
-            f"redsun.controller.engine.{filename[:-3]}"  # Module name without ".py"
-        )
-        module = importlib.import_module(module_name)  # Import the module
+def get_available_engines() -> "dict[str, Type[EngineHandler]]":
+    """Get a dictionary of available engine handlers.
 
-        # Iterate through all classes in the module
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            # Check if the class is a subclass of EngineHandler (to ensure it's a valid handler)
-            if "EngineHandler" in [base.__name__ for base in obj.__bases__]:
-                # Add the class to the handlers dictionary
-                HANDLERS[filename[:-3].lower()] = obj
+    Returns
+    -------
+    dict[str, Type[EngineHandler]]
+        Dictionary of available engine handlers.
+    """
+    global HANDLERS
+
+    # base path for the engines directory
+    engines_path = os.path.join(os.path.dirname(__file__), "engine")
+
+    if len(HANDLERS) > 0:
+        return HANDLERS
+
+    # Dynamically load all engine handlers
+    for engine in os.listdir(engines_path):
+        for file in os.listdir(os.path.join(engines_path, engine)):
+            # Engine-specific handlers are stored in handler.py;
+            # each engine has its own handler.py file
+            if file == "handler.py":
+                module_name = f"redsun.engine.{engine}"
+                module = importlib.import_module(
+                    module_name, file[-3]
+                )  # Import the module
+
+                for _, obj in inspect.getmembers(module, inspect.isclass):
+                    # Check if the class is a subclass of EngineHandler (to ensure it's a valid handler)
+                    if "EngineHandler" in [base.__name__ for base in obj.__bases__]:
+                        # Add the class to the handlers dictionary
+                        HANDLERS[engine] = obj
+    return HANDLERS
 
 
 def create_engine(
