@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 __all__ = ["get_available_engines", "create_engine", "ControllerFactory"]
 
 # Initialize an empty dictionary for the handlers
-HANDLERS: "dict[str, Type[EngineHandler]]" = {}
+_HANDLERS: "dict[str, Type[EngineHandler]]" = {}
 
 
 def get_available_engines() -> "dict[str, Type[EngineHandler]]":
@@ -36,13 +36,13 @@ def get_available_engines() -> "dict[str, Type[EngineHandler]]":
     dict[str, Type[EngineHandler]]
         Dictionary of available engine handlers.
     """
-    global HANDLERS
+    global _HANDLERS
 
     # base path for the engines directory
     engines_path = os.path.join(os.path.dirname(__file__), "engine")
 
-    if len(HANDLERS) > 0:
-        return HANDLERS
+    if len(_HANDLERS) > 0:
+        return _HANDLERS
 
     # Dynamically load all engine handlers
     for engine in os.listdir(engines_path):
@@ -59,8 +59,8 @@ def get_available_engines() -> "dict[str, Type[EngineHandler]]":
                     # Check if the class is a subclass of EngineHandler (to ensure it's a valid handler)
                     if "EngineHandler" in [base.__name__ for base in obj.__bases__]:
                         # Add the class to the handlers dictionary
-                        HANDLERS[engine] = obj
-    return HANDLERS
+                        _HANDLERS[engine] = obj
+    return _HANDLERS
 
 
 def create_engine(
@@ -88,7 +88,7 @@ def create_engine(
         If the engine type is not recognized.
     """
     try:
-        handler = HANDLERS[info.engine]
+        handler = _HANDLERS[info.engine]
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
     return handler(info, virtual_bus, module_bus)
