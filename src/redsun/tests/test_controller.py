@@ -27,4 +27,6 @@ def test_controller_creation() -> None:
     assert isinstance(controller.module_bus, ModuleVirtualBus)
     assert isinstance(controller.handler, ExEngineHandler)
 
+    # engine needs to be shutdown
+    # for test to correctly finish
     controller.handler.shutdown()
