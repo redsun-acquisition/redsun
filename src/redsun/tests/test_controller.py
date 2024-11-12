@@ -1,6 +1,5 @@
 import json
 import os
-import pytest
 
 from redsun.engine.exengine import ExEngineHandler
 from redsun.controller import RedSunHardwareController
