@@ -12,7 +12,6 @@ from sunflare.config import RedSunInstanceInfo
 config_path = os.path.join(os.path.dirname(__file__), "data")
 
 
-@pytest.mark.skip(reason="Test passes but pytest hangs after completion")
 def test_controller_creation() -> None:
     """Test the creation of the main hardware controller."""
 
@@ -27,3 +26,5 @@ def test_controller_creation() -> None:
     assert isinstance(controller.virtual_bus, HardwareVirtualBus)
     assert isinstance(controller.module_bus, ModuleVirtualBus)
     assert isinstance(controller.handler, ExEngineHandler)
+
+    controller.handler.shutdown()
