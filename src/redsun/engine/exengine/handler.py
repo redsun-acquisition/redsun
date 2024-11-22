@@ -1,6 +1,6 @@
 """ExEngine handler class."""
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, TypeAlias
 
 from exengine import ExecutionEngine
 from sunflare.engine import DetectorModel, EngineHandler, MotorModel
@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     )
     from sunflare.virtualbus import VirtualBus
 
-DetectorModels = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
-MotorModels = Union[
+DetectorModels: TypeAlias = Union["ExEngineDetectorModel", "ExEngineMMCameraModel"]
+MotorModels: TypeAlias = Union[
     "ExEngineSingleMotorModel",
     "ExEngineDoubleMotorModel",
     "ExEngineMMSingleMotorModel",
