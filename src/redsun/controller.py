@@ -1,10 +1,12 @@
 # noqa: D100
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from redsun.factory import create_engine
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
+    from typing import Optional
+
     from sunflare.config import RedSunInstanceInfo
     from sunflare.engine import EngineHandler
     from sunflare.virtualbus import VirtualBus
@@ -12,8 +14,17 @@ if TYPE_CHECKING:
 __all__ = ["RedSunHardwareController"]
 
 
+@final
 class RedSunHardwareController(Loggable):
     """Main hardware controller."""
+
+    _instance: "Optional[RedSunHardwareController]" = None
+
+    def __new__(cls) -> "RedSunHardwareController":  # noqa: D102
+        # singleton pattern
+        if cls._instance is None:
+            cls._instance = object.__new__(cls)
+        return cls._instance
 
     def __init__(
         self,
