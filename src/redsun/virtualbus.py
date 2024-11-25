@@ -21,13 +21,7 @@ class HardwareVirtualBus(VirtualBus):
 
     _instance: "Optional[HardwareVirtualBus]" = None
 
-    def __new__(cls) -> "HardwareVirtualBus":
-        """
-        Singleton pattern.
-
-        Creates a new instance of the class if it does not exist.
-        Otherwise, returns the existing instance.
-        """
+    def __new__(cls) -> "HardwareVirtualBus": # noqa: D104
         # singleton pattern
         if cls._instance is None:
             cls._instance = object.__new__(cls)
