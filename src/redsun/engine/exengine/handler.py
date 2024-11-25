@@ -7,7 +7,7 @@ from sunflare.engine import DetectorModel, EngineHandler, MotorModel
 from sunflare.errors import UnsupportedDeviceType
 
 if TYPE_CHECKING:
-    from typing import Any, Dict
+    from typing import Any
 
     from sunflare.config import RedSunInstanceInfo
     from sunflare.engine.exengine import (
@@ -45,8 +45,8 @@ class ExEngineHandler(EngineHandler):
         The virtual bus instance for the module.
     """
 
-    _detectors: "Dict[str, DetectorModels]" = {}
-    _motors: "Dict[str, MotorModels]" = {}
+    _detectors: "dict[str, DetectorModels]" = {}
+    _motors: "dict[str, MotorModels]" = {}
 
     def __init__(
         self,
@@ -73,12 +73,12 @@ class ExEngineHandler(EngineHandler):
         self._engine.shutdown()
 
     @property
-    def detectors(self) -> "Dict[str, DetectorModels]":
+    def detectors(self) -> "dict[str, DetectorModels]":
         """Dictionary containing all the registered ExEngine detectors."""
         return self._detectors
 
     @property
-    def motors(self) -> "Dict[str, MotorModels]":
+    def motors(self) -> "dict[str, MotorModels]":
         """Dictionary containing all the registered ExEngine motors."""
         return self._motors
 
@@ -88,11 +88,11 @@ class ExEngineHandler(EngineHandler):
         return self._engine
 
     @property
-    def lights(self) -> "Dict[str, Any]":
+    def lights(self) -> "dict[str, Any]":
         """Dictionary containing all the registered ExEngine light sources."""
         raise UnsupportedDeviceType("ExEngine", "Light")
 
     @property
-    def scanners(self) -> "Dict[str, Any]":
+    def scanners(self) -> "dict[str, Any]":
         """Dictionary containing all the registered ExEngine scanners."""
         raise UnsupportedDeviceType("ExEngine", "Scanner")
