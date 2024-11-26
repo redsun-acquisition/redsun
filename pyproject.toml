@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -34,6 +34,7 @@ homepage = "https://github.com/jacopoabramo/redsun"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -41,8 +42,8 @@ where = ["src"]
 [tool.setuptools.package-data]
 "*" = ["*.typed"]
 
-[tool.setuptools.dynamic]
-version = {attr = "redsun.__version__"}
+[tool.setuptools_scm]
+write_to = "src/redsun/_version.py"
 
 # mypy
 # ----
