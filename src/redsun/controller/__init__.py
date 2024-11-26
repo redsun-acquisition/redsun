@@ -19,13 +19,14 @@ __all__ = ["RedSunHardwareController"]
 class RedSunHardwareController(Loggable):
     """Main hardware controller."""
 
-    _instance: "Optional[RedSunHardwareController]" = None
+    __instance: "Optional[RedSunHardwareController]" = None
 
-    def __new__(cls) -> "RedSunHardwareController":  # noqa: D102
-        # singleton pattern
-        if cls._instance is None:
-            cls._instance = object.__new__(cls)
-        return cls._instance
+    @classmethod
+    def instance(cls) -> "RedSunHardwareController":
+        """Return the instance of the controller."""
+        if cls.__instance is None:
+            raise RuntimeError("Controller has not been initialized.")
+        return cls.__instance
 
     def __init__(
         self,
