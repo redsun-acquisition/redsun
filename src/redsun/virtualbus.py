@@ -19,10 +19,11 @@ class HardwareVirtualBus(VirtualBus):
     See the `VirtualBus` class for API information.
     """
 
-    _instance: "Optional[HardwareVirtualBus]" = None
+    __instance: "Optional[HardwareVirtualBus]" = None
 
-    def __new__(cls) -> "HardwareVirtualBus": # noqa: D104
-        # singleton pattern
-        if cls._instance is None:
-            cls._instance = object.__new__(cls)
-        return cls._instance
+    @classmethod
+    def instance(cls) -> "HardwareVirtualBus":
+        """Return global HardwareVirtualBus singleton instance."""
+        if cls.__instance is None:
+            cls.__instance = cls()
+        return cls.__instance
