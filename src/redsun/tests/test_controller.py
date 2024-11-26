@@ -3,7 +3,7 @@ import os
 
 from redsun.engine.exengine import ExEngineHandler
 from redsun.controller import RedSunHardwareController
-from redsun.virtualbus import HardwareVirtualBus
+from redsun.controller.virtualbus import HardwareVirtualBus
 
 from sunflare.virtualbus import ModuleVirtualBus
 from sunflare.config import RedSunInstanceInfo

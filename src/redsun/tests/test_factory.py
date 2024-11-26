@@ -1,4 +1,4 @@
-from redsun.factory import get_available_engines
+from redsun.controller.factory import get_available_engines
 from redsun.engine.exengine import ExEngineHandler
 
 def test_handlers_dict() -> None:
