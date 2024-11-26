@@ -1,7 +1,8 @@
-# noqa: D100
+# noqa: D104
+
 from typing import TYPE_CHECKING, final
 
-from redsun.factory import create_engine
+from redsun.controller.factory import create_engine
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
