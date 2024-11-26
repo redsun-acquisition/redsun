@@ -38,7 +38,7 @@ def get_available_engines() -> "dict[str, Type[EngineHandler]]":
     global _HANDLERS
 
     # base path for the engines directory
-    engines_path = os.path.join(os.path.dirname(__file__), "engine")
+    engines_path = os.path.join(os.path.dirname(__file__), "..", "engine")
 
     if len(_HANDLERS) > 0:
         return _HANDLERS
