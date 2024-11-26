@@ -15,10 +15,9 @@ import weakref
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Optional, Union, Type
+    from typing import Type
 
-    from sunflare.config import ControllerInfo, RedSunInstanceInfo
-    from sunflare.controller import ComputationalController, DeviceController
+    from sunflare.config import RedSunInstanceInfo
     from sunflare.engine import EngineHandler
     from sunflare.virtualbus import VirtualBus
 
@@ -95,46 +94,3 @@ def create_engine(
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
     return handler(info, virtual_bus, module_bus)
-
-
-# TODO: this factory should construct the controllers
-# based on the plugin information; hence it requires a dynamic
-# loading mechanism for the controllers
-class ControllerFactory:
-    """Controller factory class.
-
-    Parameters
-    ----------
-    virtual_bus : VirtualBus
-        Intra-module virtual bus.
-    module_bus : VirtualBus
-        Inter-module virtual bus.
-    """
-
-    __controllers: weakref.WeakValueDictionary[
-        str, "Union[DeviceController, ComputationalController]"
-    ] = weakref.WeakValueDictionary()
-
-    def __init__(self, virtual_bus: "VirtualBus", module_bus: "VirtualBus") -> None:
-        self.__virtual_bus = virtual_bus
-        self.__module_bus = module_bus
-
-    def build(
-        self, info: "ControllerInfo"
-    ) -> "Optional[Union[DeviceController, ComputationalController]]":
-        """
-        Build a controller based on the provided information.
-
-        The created controller is stored in the factory class with a weak reference for future access during application shutdown.
-
-        Parameters
-        ----------
-        info : ControllerInfo
-            Controller information dataclass.
-
-        Returns
-        -------
-        Union[DeviceController, ComputationalController]
-            Controller instance.
-        """
-        return None
