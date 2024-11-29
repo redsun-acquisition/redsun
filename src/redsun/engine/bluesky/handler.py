@@ -61,7 +61,7 @@ class BlueskyHandler(EngineHandler):
         self._engine.stop()  # type: ignore[no-untyped-call]
 
     @classmethod
-    def instance(cls: "Type[BlueskyHandler]") -> "BlueskyHandler":
+    def instance(cls) -> "BlueskyHandler":
         """Return global BlueskyHandler singleton instance."""
         if cls.__instance is None:
             raise ValueError("BlueskyHandler instance not initialized.")
@@ -81,13 +81,3 @@ class BlueskyHandler(EngineHandler):
     def engine(self) -> RunEngine:
         """Execution engine instance."""
         return self._engine
-
-    @property
-    def lights(self) -> "dict[str, Any]":
-        """Dictionary containing all the registered ExEngine light sources."""
-        raise UnsupportedDeviceType("Bluesky", "Light")
-
-    @property
-    def scanners(self) -> "dict[str, Any]":
-        """Dictionary containing all the registered ExEngine scanners."""
-        raise UnsupportedDeviceType("Bluesky", "Scanner")
