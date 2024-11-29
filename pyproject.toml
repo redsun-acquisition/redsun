@@ -18,14 +18,12 @@ classifiers = [
 ]
 license = {text = "BSD 3-Clause license"}
 dependencies = [
-  # TODO: make these dependencies
-  # NEP 29 compliant
   "pyyaml",
-  "pydantic==2.9.2",
-  "psygnal==0.11.1",
-  "numpy==2.1.3",
-  "exengine[micromanager]",
 ]
+
+[project.optional-dependencies]
+bluesky = ["sunflare[bluesky]"]
+exengine = ["sunflare[exengine]"]
 
 [project.urls]
 
