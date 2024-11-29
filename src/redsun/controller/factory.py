@@ -11,13 +11,12 @@ This module operates within the RedSun core code and is not exposed to the toolk
 import importlib
 import inspect
 import os
-import weakref
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Type
 
-    from sunflare.config import RedSunInstanceInfo
+    from sunflare.config import RedSunInstanceInfo, AcquisitionEngineTypes
     from sunflare.engine import EngineHandler
     from sunflare.virtualbus import VirtualBus
 
@@ -94,3 +93,22 @@ def create_engine(
     except KeyError:
         raise ValueError(f"Unknown engine: {info.engine}")
     return handler(info, virtual_bus, module_bus)
+
+
+def get_engine_handler(engine: "AcquisitionEngineTypes") -> "Type[EngineHandler]":
+    """Get the engine handler class for a given engine.
+
+    Parameters
+    ----------
+    engine : str
+        Engine name.
+
+    Returns
+    -------
+    Type[EngineHandler]
+        Engine handler class.
+    """
+    if len(_HANDLERS) == 0:
+        get_available_engines()
+
+    return _HANDLERS[engine].instance()
