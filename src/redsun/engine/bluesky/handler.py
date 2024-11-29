@@ -7,7 +7,7 @@ from sunflare.engine import EngineHandler, DetectorModel, MotorModel
 from sunflare.errors import UnsupportedDeviceType
 
 if TYPE_CHECKING:
-    from typing import Any, Union
+    from typing import Any, Union, Optional, Type
 
     from sunflare.config import RedSunInstanceInfo
     from sunflare.engine.bluesky import BlueskyDetectorModel, BlueskyMotorModel
@@ -29,6 +29,8 @@ class BlueskyHandler(EngineHandler):
     module_bus : VirtualBus
         The virtual bus instance for the module.
     """
+
+    __instance: "Optional[BlueskyHandler]" = None
 
     _detectors: "dict[str, BlueskyDetectorModel]" = {}
     _motors: "dict[str, BlueskyMotorModel]" = {}
@@ -53,6 +55,17 @@ class BlueskyHandler(EngineHandler):
             raise ValueError(
                 f"Device of type {type(device)} not supported by ExEngine."
             )
+
+    def shutdown(self) -> None:
+        """Invoke "stop" method on the run engine."""
+        self._engine.stop()  # type: ignore[no-untyped-call]
+
+    @classmethod
+    def instance(cls: "Type[BlueskyHandler]") -> "BlueskyHandler":
+        """Return global BlueskyHandler singleton instance."""
+        if cls.__instance is None:
+            raise ValueError("BlueskyHandler instance not initialized.")
+        return cls.__instance
 
     @property
     def detectors(self) -> "dict[str, BlueskyDetectorModel]":
