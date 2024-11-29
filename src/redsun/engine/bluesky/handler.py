@@ -4,21 +4,21 @@ from typing import TYPE_CHECKING
 
 from bluesky.run_engine import RunEngine
 from sunflare.engine import EngineHandler, DetectorModel, MotorModel
-from sunflare.errors import UnsupportedDeviceType
+from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Any, Union, Optional, Type
+    from typing import Union, Optional
 
     from sunflare.config import RedSunInstanceInfo
     from sunflare.engine.bluesky import BlueskyDetectorModel, BlueskyMotorModel
     from sunflare.virtualbus import VirtualBus
 
 
-class BlueskyHandler(EngineHandler):
+class BlueskyHandler(EngineHandler[RunEngine], Loggable):
     r"""
-    ExEngine handler class.
+    Bluesky handler class.
 
-    All models compatible with ExEngine are registered here at application startup.
+    All models compatible with Bluesky are registered here at application startup.
 
     Parameters
     ----------
@@ -41,7 +41,9 @@ class BlueskyHandler(EngineHandler):
         virtual_bus: "VirtualBus",
         module_bus: "VirtualBus",
     ) -> None:
-        super().__init__(config_options, virtual_bus, module_bus)
+        self._config_options = config_options
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
 
     def register_device(  # noqa: D102
@@ -52,9 +54,7 @@ class BlueskyHandler(EngineHandler):
         elif isinstance(device, MotorModel):
             self._motors[name] = device
         else:
-            raise ValueError(
-                f"Device of type {type(device)} not supported by ExEngine."
-            )
+            raise ValueError(f"Device of type {type(device)} not supported by Bluesky.")
 
     def shutdown(self) -> None:
         """Invoke "stop" method on the run engine."""
