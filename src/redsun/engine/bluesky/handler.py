@@ -44,7 +44,10 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         BlueskyHandler.__instance = self
 
     def shutdown(self) -> None:
-        """Invoke "stop" method on the run engine."""
+        """Invoke "stop" method on the run engine.
+
+        "stop" marks it as successfull.
+        """
         self._engine.stop()  # type: ignore[no-untyped-call]
 
     @classmethod
