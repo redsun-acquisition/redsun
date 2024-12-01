@@ -1,4 +1,4 @@
-"""RedSun motor controller module."""
+"""RedSun motor controller protocols."""
 
 from abc import abstractmethod
 
@@ -16,11 +16,11 @@ class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
 
     @abstractmethod
-    def move(self, motor: str, value: AxisLocation[TA]) -> None:
+    def move(self, motor: str, value: AxisLocation[str, TA]) -> None:
         """Move the motor."""
         ...
 
     @abstractmethod
-    def location(self, motor: str) -> AxisLocation[TA]:
+    def location(self, motor: str) -> AxisLocation[str, TA]:
         """Get the motor location."""
         ...
