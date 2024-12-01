@@ -1,6 +1,6 @@
 """Stepper motor controller module."""
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias, Sequence
 
 from sunflare.controller.exengine import ExEngineController
 
@@ -28,15 +28,15 @@ class MotorController(ExEngineController):
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 
     def move(self, motor: str, value: AxisLocation[str, TA]) -> None:  # noqa: D102
-        # TODO: the API is too specific, needs to be adjusted
-        # in exengine
-        # if isinstance(value["axis"], Sequence):
-        #     # TODO: what happens if the motor has not X and Y axis?
-        #     x, y = (value["setpoint"][0], value["setpoint"][1])
-        #     self._registry.motors[motor].set_position(x, y)
-        # else:
-        #     self._registry.motors[motor].set_position(value["setpoint"])
-        raise NotImplementedError
+        # TODO: this is a typing hell due to the fact that ExEngine
+        # has a too strict distinction between single and double
+        # axis motors. This should be fixed in ExEngine.
+        if isinstance(value["axis"], Sequence):
+            # TODO: what happens if the motor has not X and Y axis?
+            x, y = (value["setpoint"][0], value["setpoint"][1])  # type: ignore
+            self._registry.motors[motor].set_position(x, y)  # type: ignore
+        else:
+            self._registry.motors[motor].set_position(value["setpoint"])  # type: ignore
 
     def location(self, motor: str) -> AxisLocation[str, TA]:  # noqa: D102
         # inherited docstring
