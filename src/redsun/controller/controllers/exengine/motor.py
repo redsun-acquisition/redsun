@@ -1,4 +1,6 @@
-"""Stepper motor controller module."""
+"""ExEngine motor controller module."""
+
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeAlias, Sequence
 
@@ -12,18 +14,18 @@ if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
     from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
 
-TA: TypeAlias = "Union[int, float, str]"
+TA: TypeAlias = Union[int, float, str]
 
 
 class MotorController(ExEngineController):
-    """Stepper motor controller class."""
+    """Motor controller class."""
 
     def __init__(
         self,
-        ctrl_info: "ControllerInfo",
-        registry: "ExEngineDeviceRegistry",
-        virtual_bus: "VirtualBus",
-        module_bus: "VirtualBus",
+        ctrl_info: ControllerInfo,
+        registry: ExEngineDeviceRegistry,
+        virtual_bus: VirtualBus,
+        module_bus: VirtualBus,
     ) -> None:
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 

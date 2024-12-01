@@ -1,4 +1,12 @@
-"""Motor controller module. It provides a basic protocol to interface with motorized devices."""
+r"""Motor controller module. It provides a basic protocol to interface with motorized devices.
+
+Motor controllers are the direct link between the respective models and the user interface. \
+Signals emitted from the UI are captured by the controller, and are appropriately \
+translated into commands that the motor can execute. Usually when a workflow is running, \
+this connection is disabled to prevent accidental user input from interfering with the workflow execution.
+"""
+
+from __future__ import annotations
 
 from abc import abstractmethod
 
@@ -9,7 +17,7 @@ from sunflare.types import AxisLocation
 if TYPE_CHECKING:
     from typing import Union
 
-TA: TypeAlias = "Union[int, float, str]"
+TA: TypeAlias = Union[int, float, str]
 
 
 class MotorControllerProtocol(Protocol):
