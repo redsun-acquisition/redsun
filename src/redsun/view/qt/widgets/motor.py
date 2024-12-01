@@ -20,6 +20,45 @@ if TYPE_CHECKING:
     from sunflare.config import MotorModelInfo
     from sunflare.virtualbus import VirtualBus
 
+__all__ = ["StepperMotorWidget"]
+
+_sigStepUp_description = """
+Emitted when the user clicks the up button for a stepper motor axis.
+
+Parameters
+----------
+motor : str
+    Motor name.
+axis : str
+    Motor axis.
+"""
+
+_sigStepDown_description = """
+Emitted when the user clicks the down button for a stepper motor axis.
+
+Parameters
+----------
+motor : str
+    Motor name.
+axis : str
+    Motor axis.
+"""
+
+_sigStepSizeChanged_description = """
+Emitted when the user changes the step size for a stepper motor axis.
+The new value is transmitted after being validated by the widget.
+If the input is invalid, the signal is not emitted.
+
+Parameters
+----------
+motor : str
+    Motor name.
+axis : str
+    Motor axis.
+step_size : float
+    New step size.
+"""
+
 
 class StepperMotorWidget(BaseWidget, Loggable):
     """Qt stepper motor widget.
@@ -43,12 +82,11 @@ class StepperMotorWidget(BaseWidget, Loggable):
         The inter-module virtual bus instance.
     """
 
-    # TODO: these need to be documented with
-    # the description field in the Signal class;
-    # but first the virtual bus needs to be reworked
-    sigStepUp: Signal = Signal(str, str)
-    sigStepDown: Signal = Signal(str, str)
-    sigStepSizeChanged: Signal = Signal(str, str, float)
+    sigStepUp: Signal = Signal(str, str, description=_sigStepUp_description)
+    sigStepDown: Signal = Signal(str, str, description=_sigStepDown_description)
+    sigStepSizeChanged: Signal = Signal(
+        str, str, float, description=_sigStepSizeChanged_description
+    )
 
     def __init__(
         self,
