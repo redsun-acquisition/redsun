@@ -1,4 +1,4 @@
-"""RedSun motor controller protocols."""
+"""Motor controller module. It provides a basic protocol to interface with motorized devices."""
 
 from abc import abstractmethod
 
