@@ -30,7 +30,8 @@ class MotorController(ExEngineController):
     def move(self, motor: str, value: AxisLocation[str, TA]) -> None:  # noqa: D102
         # TODO: this is a typing hell due to the fact that ExEngine
         # has a too strict distinction between single and double
-        # axis motors. This should be fixed in ExEngine.
+        # axis motors. The call will be correct because the
+        # proper motor is created elsewhere, but it's best to fix this in ExEngine.
         if isinstance(value["axis"], Sequence):
             # TODO: what happens if the motor has not X and Y axis?
             x, y = (value["setpoint"][0], value["setpoint"][1])  # type: ignore
