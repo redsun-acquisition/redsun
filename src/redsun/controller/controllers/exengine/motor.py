@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 TA: TypeAlias = "Union[int, float, str]"
 
 
-class StepperController(ExEngineController):
+class MotorController(ExEngineController):
     """Stepper motor controller class."""
 
     def __init__(
@@ -27,7 +27,7 @@ class StepperController(ExEngineController):
     ) -> None:
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 
-    def move(self, motor: str, value: AxisLocation[TA, str]) -> None:  # noqa: D102
+    def move(self, motor: str, value: AxisLocation[str, TA]) -> None:  # noqa: D102
         # TODO: the API is too specific, needs to be adjusted
         # in exengine
         # if isinstance(value["axis"], Sequence):
@@ -38,7 +38,7 @@ class StepperController(ExEngineController):
         #     self._registry.motors[motor].set_position(value["setpoint"])
         raise NotImplementedError
 
-    def location(self, motor: str) -> AxisLocation[TA, str]:  # noqa: D102
+    def location(self, motor: str) -> AxisLocation[str, TA]:  # noqa: D102
         # inherited docstring
         position = self._registry.motors[motor].get_position()
         axis = self._registry.motors[motor].axes

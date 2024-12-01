@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 TA: TypeAlias = "Union[int, float, str]"
 
 
-class StepperController(BlueskyController, MotorControllerProtocol):
+class MotorController(BlueskyController, MotorControllerProtocol):
     """Bluesky' stepper motor controller class."""
 
     def __init__(
@@ -29,11 +29,11 @@ class StepperController(BlueskyController, MotorControllerProtocol):
     ) -> None:
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 
-    def move(self, motor: str, value: AxisLocation[TA]) -> None:  # noqa: D102
+    def move(self, motor: str, value: AxisLocation[str, TA]) -> None:  # noqa: D102
         # inherited docstring
         self._registry.motors[motor].set(value)
 
-    def location(self, motor: str) -> AxisLocation[TA]:  # noqa: D102
+    def location(self, motor: str) -> AxisLocation[str, TA]:  # noqa: D102
         # inherited docstring
         return self._registry.motors[motor].locate()
 
