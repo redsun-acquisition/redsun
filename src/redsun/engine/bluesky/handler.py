@@ -32,9 +32,6 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
 
     __instance: "Optional[BlueskyHandler]" = None
 
-    _detectors: "dict[str, BlueskyDetectorModel]" = {}
-    _motors: "dict[str, BlueskyMotorModel]" = {}
-
     def __init__(
         self,
         config_options: "RedSunInstanceInfo",
@@ -46,16 +43,6 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         self._module_bus = module_bus
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
 
-    def register_device(  # noqa: D102
-        self, name: str, device: "Union[BlueskyDetectorModel, BlueskyMotorModel]"
-    ) -> None:
-        if isinstance(device, DetectorModel):
-            self._detectors[name] = device
-        elif isinstance(device, MotorModel):
-            self._motors[name] = device
-        else:
-            raise ValueError(f"Device of type {type(device)} not supported by Bluesky.")
-
     def shutdown(self) -> None:
         """Invoke "stop" method on the run engine."""
         self._engine.stop()  # type: ignore[no-untyped-call]
@@ -66,16 +53,6 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         if cls.__instance is None:
             raise ValueError("BlueskyHandler instance not initialized.")
         return cls.__instance
-
-    @property
-    def detectors(self) -> "dict[str, BlueskyDetectorModel]":
-        """Dictionary containing all the registered ExEngine detectors."""
-        return self._detectors
-
-    @property
-    def motors(self) -> "dict[str, BlueskyMotorModel]":
-        """Dictionary containing all the registered ExEngine motors."""
-        return self._motors
 
     @property
     def engine(self) -> RunEngine:
