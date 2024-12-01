@@ -42,6 +42,7 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
+        BlueskyHandler.__instance = self
 
     def shutdown(self) -> None:
         """Invoke "stop" method on the run engine."""

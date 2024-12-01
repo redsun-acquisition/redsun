@@ -40,6 +40,7 @@ class ExEngineHandler(EngineHandler[ExecutionEngine]):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._engine = ExecutionEngine()
+        ExEngineHandler.__instance = self
 
     def shutdown(self) -> None:  # noqa: D102
         self._engine.shutdown()
