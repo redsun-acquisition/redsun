@@ -1,7 +1,6 @@
 import json
 import os
 
-from redsun.engine.exengine import ExEngineHandler
 from redsun.controller import RedSunHardwareController
 from redsun.controller.virtualbus import HardwareVirtualBus
 
@@ -24,8 +23,3 @@ def test_controller_creation() -> None:
 
     assert isinstance(controller.virtual_bus, HardwareVirtualBus)
     assert isinstance(controller.module_bus, ModuleVirtualBus)
-    assert isinstance(controller.handler, ExEngineHandler)
-
-    # engine needs to be shutdown
-    # for test to correctly finish
-    controller.handler.shutdown()
