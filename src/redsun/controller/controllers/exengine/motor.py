@@ -1,6 +1,6 @@
 """Stepper motor controller module."""
 
-from typing import TYPE_CHECKING, TypeAlias, Sequence
+from typing import TYPE_CHECKING, TypeAlias
 
 from sunflare.controller.exengine import ExEngineController
 
