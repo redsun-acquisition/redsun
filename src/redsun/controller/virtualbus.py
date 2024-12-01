@@ -22,9 +22,6 @@ class HardwareVirtualBus(VirtualBus):
     See the `VirtualBus` class for API information.
     """
 
-    # TODO: these need to be documented with
-    # the description field in the Signal class;
-    # but first the virtual bus needs to be reworked
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
 
