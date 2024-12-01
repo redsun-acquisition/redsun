@@ -1,6 +1,6 @@
 """Bluesky handler class."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from bluesky.run_engine import RunEngine
 from sunflare.engine import EngineHandler
@@ -9,10 +9,12 @@ from sunflare.log import Loggable
 if TYPE_CHECKING:
     from typing import Optional
 
+    from sunflare.types import Workflow
     from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
 
+@final
 class BlueskyHandler(EngineHandler[RunEngine], Loggable):
     r"""
     Bluesky handler class.
@@ -30,6 +32,7 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
     """
 
     __instance: "Optional[BlueskyHandler]" = None
+    _workflows: dict[str, "Workflow"] = {}
 
     def __init__(
         self,
@@ -50,6 +53,13 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         """
         self._engine.stop()  # type: ignore[no-untyped-call]
 
+    def register_workflows(self, name: str, workflow: "Workflow") -> None:
+        """Register a workflow with the handler."""
+        if not name in self._workflows.keys():
+            self._workflows[name] = workflow
+        else:
+            self.error(f"Workflow {name} already registered. Aborted.")
+
     @classmethod
     def instance(cls) -> "BlueskyHandler":
         """Return global BlueskyHandler singleton instance."""
@@ -61,3 +71,8 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
     def engine(self) -> RunEngine:
         """Execution engine instance."""
         return self._engine
+
+    @property
+    def workflows(self) -> dict[str, "Workflow"]:
+        """Workflow dictionary."""
+        return self._workflows

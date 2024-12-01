@@ -1,18 +1,21 @@
 """ExEngine handler module."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
 from exengine import ExecutionEngine
 from sunflare.engine import EngineHandler
+from sunflare.log import Loggable
 
 if TYPE_CHECKING:
     from typing import Optional
 
+    from sunflare.types import Workflow
     from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
 
-class ExEngineHandler(EngineHandler[ExecutionEngine]):
+@final
+class ExEngineHandler(EngineHandler[ExecutionEngine], Loggable):
     r"""
     ExEngine handler class.
 
@@ -29,6 +32,7 @@ class ExEngineHandler(EngineHandler[ExecutionEngine]):
     """
 
     __instance: "Optional[ExEngineHandler]" = None
+    _workflows: dict[str, "Workflow"] = {}
 
     def __init__(
         self,
@@ -45,6 +49,12 @@ class ExEngineHandler(EngineHandler[ExecutionEngine]):
     def shutdown(self) -> None:  # noqa: D102
         self._engine.shutdown()
 
+    def register_workflows(self, name: str, workflow: "Workflow") -> None:  # noqa: D102
+        if not name in self._workflows.keys():
+            self._workflows[name] = workflow
+        else:
+            self.error(f"Workflow {name} already registered. Aborted.")
+
     @classmethod
     def instance(cls) -> "ExEngineHandler":
         """Return global ExEngineHandler singleton instance."""
@@ -56,3 +66,8 @@ class ExEngineHandler(EngineHandler[ExecutionEngine]):
     def engine(self) -> ExecutionEngine:
         """Execution engine instance."""
         return self._engine
+
+    @property
+    def workflows(self) -> "dict[str, Workflow]":
+        """Return registered workflows."""
+        return self._workflows
