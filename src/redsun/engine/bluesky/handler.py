@@ -3,14 +3,13 @@
 from typing import TYPE_CHECKING
 
 from bluesky.run_engine import RunEngine
-from sunflare.engine import EngineHandler, DetectorModel, MotorModel
+from sunflare.engine import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Union, Optional
+    from typing import Optional
 
     from sunflare.config import RedSunInstanceInfo
-    from sunflare.engine.bluesky import BlueskyDetectorModel, BlueskyMotorModel
     from sunflare.virtualbus import VirtualBus
 
 
