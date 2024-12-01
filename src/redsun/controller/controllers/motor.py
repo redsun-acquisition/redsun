@@ -2,23 +2,25 @@
 
 from abc import abstractmethod
 
-from typing import Protocol, TypeVar, Generic, TYPE_CHECKING
+from typing import Protocol, TypeAlias, TYPE_CHECKING
+
+from sunflare.types import AxisLocation
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Union
 
-T = TypeVar("T", bound=dict[str, "Any"])
+TA: TypeAlias = "Union[int, float, str]"
 
 
-class MotorControllerProtocol(Protocol, Generic[T]):
+class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
 
     @abstractmethod
-    def move(self, motor: str, value: T) -> None:
+    def move(self, motor: str, value: AxisLocation[TA]) -> None:
         """Move the motor."""
         ...
 
     @abstractmethod
-    def location(self, motor: str) -> T:
+    def location(self, motor: str) -> AxisLocation[TA]:
         """Get the motor location."""
         ...

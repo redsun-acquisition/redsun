@@ -9,16 +9,16 @@ from redsun.controller.controllers.motor import MotorControllerProtocol
 if TYPE_CHECKING:
     from typing import Union
 
+    from sunflare.types import AxisLocation
     from sunflare.config import ControllerInfo
     from sunflare.virtualbus import VirtualBus
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 
+TA: TypeAlias = "Union[int, float, str]"
 
-PositionType: TypeAlias = "dict[str, Union[int, float, str]]"
 
-
-class StepperController(BlueskyController, MotorControllerProtocol[PositionType]):
-    """Stepper motor controller class."""
+class StepperController(BlueskyController, MotorControllerProtocol):
+    """Bluesky' stepper motor controller class."""
 
     def __init__(
         self,
@@ -29,22 +29,26 @@ class StepperController(BlueskyController, MotorControllerProtocol[PositionType]
     ) -> None:
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 
-    def move(self, motor: str, value: PositionType) -> None:
-        """Move the stepper motor."""
-        ...
+    def move(self, motor: str, value: AxisLocation[TA]) -> None:  # noqa: D102
+        # inherited docstring
+        self._registry.motors[motor].set(value)
 
-    def location(self, motor: str) -> PositionType:
-        """Get the stepper motor location."""
-        return dict()
+    def location(self, motor: str) -> AxisLocation[TA]:  # noqa: D102
+        # inherited docstring
+        return self._registry.motors[motor].locate()
 
     def registration_phase(self) -> None:  # noqa: D102
         # inherited docstring
+        # TODO: implement
         ...
 
     def connection_phase(self) -> None:  # noqa: D102
         # inherited docstring
+        # TODO: implement
         ...
 
     def shutdown(self) -> None:  # noqa: D102
         # inherited docstring
-        ...
+        for motor in self._registry.motors.values():
+            if hasattr(motor, "shutdown"):
+                motor.shutdown()
