@@ -1,5 +1,7 @@
 """Bluesky handler class."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, final
 
 from bluesky.run_engine import RunEngine
@@ -7,7 +9,7 @@ from sunflare.engine import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Optional
+    from typing import Optional, ClassVar
 
     from sunflare.types import Workflow
     from sunflare.config import RedSunInstanceInfo
@@ -31,18 +33,18 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         The virtual bus instance for the module.
     """
 
-    __instance: "Optional[BlueskyHandler]" = None
-    _workflows: dict[str, "Workflow"] = {}
+    __instance: ClassVar[Optional[BlueskyHandler]] = None
 
     def __init__(
         self,
-        config_options: "RedSunInstanceInfo",
-        virtual_bus: "VirtualBus",
-        module_bus: "VirtualBus",
+        config_options: RedSunInstanceInfo,
+        virtual_bus: VirtualBus,
+        module_bus: VirtualBus,
     ) -> None:
         self._config_options = config_options
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
+        self._workflows: dict[str, Workflow] = {}
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
         BlueskyHandler.__instance = self
 
@@ -53,7 +55,7 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         """
         self._engine.stop()  # type: ignore[no-untyped-call]
 
-    def register_workflows(self, name: str, workflow: "Workflow") -> None:
+    def register_workflows(self, name: str, workflow: Workflow) -> None:
         """Register a workflow with the handler."""
         if not name in self._workflows.keys():
             self._workflows[name] = workflow
@@ -61,7 +63,7 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
             self.error(f"Workflow {name} already registered. Aborted.")
 
     @classmethod
-    def instance(cls) -> "BlueskyHandler":
+    def instance(cls) -> BlueskyHandler:
         """Return global BlueskyHandler singleton instance."""
         if cls.__instance is None:
             raise ValueError("BlueskyHandler instance not initialized.")
@@ -73,6 +75,6 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         return self._engine
 
     @property
-    def workflows(self) -> dict[str, "Workflow"]:
+    def workflows(self) -> dict[str, Workflow]:
         """Workflow dictionary."""
         return self._workflows
