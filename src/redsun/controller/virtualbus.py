@@ -30,9 +30,8 @@ class HardwareVirtualBus(VirtualBus):
 
     __instance: ClassVar[Optional[HardwareVirtualBus]] = None
 
-    @classmethod
-    def instance(cls) -> HardwareVirtualBus:
-        """Return global HardwareVirtualBus singleton instance."""
+    def __new__(cls) -> HardwareVirtualBus:  # noqa: D102
         if cls.__instance is None:
-            cls.__instance = cls()
+            cls.__instance = super(HardwareVirtualBus, cls).__new__(cls)
+
         return cls.__instance
