@@ -17,11 +17,16 @@ from sunflare.types import AxisLocation
 if TYPE_CHECKING:
     from typing import Union
 
-TA: TypeAlias = Union[int, float, str]
+    from redsun.controller.virtualbus import HardwareVirtualBus
+
+TA: TypeAlias = Union[int, float]
 
 
 class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
+
+    _virtual_bus: HardwareVirtualBus
+    _current_locations: dict[str, AxisLocation[str, TA]]
 
     @abstractmethod
     def move(self, motor: str, value: AxisLocation[str, TA]) -> None:
@@ -29,6 +34,11 @@ class MotorControllerProtocol(Protocol):
         ...
 
     @abstractmethod
-    def location(self, motor: str) -> AxisLocation[str, TA]:
-        """Get the motor location."""
+    def location(self, motor: str) -> None:
+        """Get the motor location.
+
+        The motor location is not returned directly,
+        but instead is kept cached in the `__current_locations` dictionary.
+        A signal may be emitted to notify the UI of the new location.
+        """
         ...

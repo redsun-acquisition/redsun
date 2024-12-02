@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sunflare.view.qt import BaseWidget
-from sunflare.virtualbus import Signal
+from sunflare.virtualbus import Signal, slot
 from sunflare.log import Loggable
 
 from qtpy import QtWidgets
@@ -21,43 +21,6 @@ if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
 
 __all__ = ["StepperMotorWidget"]
-
-_sigStepUp_description = """
-Emitted when the user clicks the up button for a stepper motor axis.
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-"""
-
-_sigStepDown_description = """
-Emitted when the user clicks the down button for a stepper motor axis.
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-"""
-
-_sigStepSizeChanged_description = """
-Emitted when the user changes the step size for a stepper motor axis.
-The new value is transmitted after being validated by the widget.
-If the input is invalid, the signal is not emitted.
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-step_size : float
-    New step size.
-"""
 
 
 class StepperMotorWidget(BaseWidget, Loggable):
@@ -82,11 +45,14 @@ class StepperMotorWidget(BaseWidget, Loggable):
         The inter-module virtual bus instance.
     """
 
-    sigStepUp: Signal = Signal(str, str, description=_sigStepUp_description)
-    sigStepDown: Signal = Signal(str, str, description=_sigStepDown_description)
-    sigStepSizeChanged: Signal = Signal(
-        str, str, float, description=_sigStepSizeChanged_description
-    )
+    # redefining the virtual
+    # bus only for type
+    # hinting purposes
+    _virtual_bus: HardwareVirtualBus
+
+    sigStepUp: Signal = Signal(str, str)
+    sigStepDown: Signal = Signal(str, str)
+    sigStepSizeChanged: Signal = Signal(str, str, float)
 
     def __init__(
         self,
@@ -95,6 +61,7 @@ class StepperMotorWidget(BaseWidget, Loggable):
         module_bus: VirtualBus,
     ) -> None:
         super().__init__(virtual_bus, module_bus)
+        self._motors_info = motors_info
 
         self.grid = QtWidgets.QGridLayout()
         self.setLayout(self.grid)
@@ -107,10 +74,13 @@ class StepperMotorWidget(BaseWidget, Loggable):
         float_regex = QRegularExpression(r"^[-+]?\d*\.?\d+$")
         self.validator = QRegularExpressionValidator(float_regex)
 
-        for num_motor, (name, info) in enumerate(motors_info.items()):
+        # iterate over the motor models and create a group
+        # widget for each one; axis are grouped in the rows of each group
+        for num_motor, (name, info) in enumerate(self._motors_info.items()):
             self.groups[name] = QtWidgets.QGroupBox(name)
             self.groups[name].setAlignment(Qt.AlignmentFlag.AlignHCenter)
             for ax in info.axes:
+                # widgets setup
                 self.labels["label:{}:{}".format(name, ax)] = QtWidgets.QLabel(
                     f"<strong>{ax}</strong>"
                 )
@@ -143,6 +113,7 @@ class StepperMotorWidget(BaseWidget, Loggable):
                     lambda *_, name=name, axis=ax: self._validate_and_notify(name, axis)
                 )
 
+                # grid layout
                 self.grid.addWidget(
                     self.labels["label:{}:{}".format(name, ax)], num_motor, 0
                 )
@@ -163,6 +134,7 @@ class StepperMotorWidget(BaseWidget, Loggable):
                     self.labels["step_egu:{}:{}".format(name, ax)], num_motor, 6
                 )
 
+    @slot
     def _validate_and_notify(self, name: str, axis: str) -> None:
         """Validate the new step size value and notify the virtual bus when input is accepted.
 
@@ -196,3 +168,14 @@ class StepperMotorWidget(BaseWidget, Loggable):
         if state == QRegularExpressionValidator.State.Acceptable:
             self.debug(f"Step size changed: {name}, {axis}, {input}")
             self.sigStepSizeChanged.emit(name, axis, float(input))
+
+    def registration_phase(self) -> None:  # noqa: D102
+        # inherited docstring
+        # no registration needed; all signals are already
+        # built-in in the virtual bus
+        ...
+
+    def connection_phase(self) -> None:  # noqa: D102
+        self.sigStepUp.connect(self._virtual_bus.sigStepperStepUp)
+        self.sigStepDown.connect(self._virtual_bus.sigStepperStepDown)
+        self.sigStepSizeChanged.connect(self._virtual_bus.sigStepSizeChanged)
