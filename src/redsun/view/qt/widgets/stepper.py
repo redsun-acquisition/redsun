@@ -1,4 +1,20 @@
-"""Qt motor widget module."""
+"""Qt stepper widget module.
+
+Although the motor model is the same accross all types of motorized devices RedSun can accomodate,
+the user interface is adapted to the specific needs of each device category for easier code management
+and better user experience.
+
+Each stepper motor is categorized in a QGroupBox, and each axis is assigned to a row in the group.
+Row positioning is determined by the configuration file, .e.g.:
+
+.. code-block:: yaml
+
+    motors:
+        My Motor:
+            - axes: ["X", "Y", "Z"]
+
+With this configuration, the axis will be shown in the declared order (so X will be the first row, Y the second, and Z the third).
+"""
 
 from __future__ import annotations
 
