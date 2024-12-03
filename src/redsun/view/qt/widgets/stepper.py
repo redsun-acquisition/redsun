@@ -146,7 +146,7 @@ class StepperMotorWidget(BaseWidget, Loggable):
                     self.labels["step_egu:{}:{}".format(name, ax)], num_motor, 6
                 )
 
-    @slot
+    @slot(private=True)
     def _validate_and_notify(self, name: str, axis: str) -> None:
         """Validate the new step size value and notify the virtual bus when input is accepted.
 
