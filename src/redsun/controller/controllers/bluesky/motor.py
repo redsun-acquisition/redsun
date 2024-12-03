@@ -53,10 +53,9 @@ class MotorController(BlueskyController):
 
     def connection_phase(self) -> None:  # noqa: D102
         # inherited docstring
-        # outgoing
         self.sigMoveDone.connect(self._virtual_bus.sigMoveDone)
-        # ingoing
         self._virtual_bus.sigStepperStepUp.connect(self.move_up)
+        self._virtual_bus.sigStepperStepDown.connect(self.move_down)
 
     def shutdown(self) -> None:  # noqa: D102
         # inherited docstring
