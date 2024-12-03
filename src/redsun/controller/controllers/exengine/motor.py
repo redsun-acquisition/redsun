@@ -45,14 +45,16 @@ class MotorController(ExEngineController):
     Signals
     -------
     sigMoveDone : Signal(str, MotorModelTypes, AxisLocation[Union[int, float]])
-        Emitted when a motor has finished moving. Carries:
-        - motor name (str);
-        - motor model category (MotorModelTypes);
+        Emitted when a motor has finished moving.
+        Carries:
+        - motor name;
+        - motor model category;
         - motor location (AxisLocation[Union[int, float]]).
     sigLocation : Signal(str, AxisLocation[Union[int, float]])
-        Emitted when a motor location is requested. Carries:
-        - motor name (str);
-        - motor location (AxisLocation[Union[int, float]]).
+        Emitted when a motor location is requested.
+        Carries:
+        - motor name;
+        - motor location.
     """
 
     _virtual_bus: HardwareVirtualBus

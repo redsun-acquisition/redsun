@@ -22,7 +22,38 @@ TA: TypeAlias = Union[int, float]
 
 
 class MotorController(BlueskyController):
-    """Motor controller class."""
+    """Motor controller class.
+
+    Parameters
+    ----------
+    ctrl_info : ControllerInfo
+        Controller information.
+    registry : ExEngineDeviceRegistry
+        Device registry for ExEngine models.
+    virtual_bus : HardwareVirtualBus
+        Virtual bus for the main module (hardware control).
+    module_bus : VirtualBus
+        Inter-module virtual bus.
+
+    Attributes
+    ----------
+    current_locations : dict[str, AxisLocation[Union[int, float]]]
+        Dictionary of current motor locations.
+
+    Signals
+    -------
+    sigMoveDone : Signal(str, MotorModelTypes, AxisLocation[Union[int, float]])
+        Emitted when a motor has finished moving.
+        Carries:
+        - motor name;
+        - motor model category;
+        - motor location (AxisLocation[Union[int, float]]).
+    sigLocation : Signal(str, AxisLocation[Union[int, float]])
+        Emitted when a motor location is requested.
+        Carries:
+        - motor name;
+        - motor location.
+    """
 
     _virtual_bus: HardwareVirtualBus
 
