@@ -24,7 +24,7 @@ __all__ = ["StepperMotorWidget"]
 
 
 class StepperMotorWidget(BaseWidget, Loggable):
-    """Qt stepper motor widget.
+    r"""Qt stepper motor widget.
 
     The widget groups each motor into a QGroupBox, and each axis of the motor has its own row.
 
@@ -43,6 +43,18 @@ class StepperMotorWidget(BaseWidget, Loggable):
         The virtual bus instance for the RedSun instance.
     module_bus : VirtualBus
         The inter-module virtual bus instance.
+    
+    Signals
+    -------
+    sigStepUp : Signal(str, str)
+        `psygnal.Signal` emitted when the user clicks the "+" button. \
+        Carries: motor name, axis.
+    sigStepDown : Signal(str, str)
+        `psygnal.Signal` emitted when the user clicks the "-" button. \
+        Carries: motor name, axis.
+    sigStepSizeChanged : Signal(str, str, float)
+        `psygnal.Signal` emitted when the user changes the step size. \
+        Carries: motor name, axis, new step size.
     """
 
     # redefining the virtual
@@ -137,6 +149,8 @@ class StepperMotorWidget(BaseWidget, Loggable):
     @slot
     def _validate_and_notify(self, name: str, axis: str) -> None:
         """Validate the new step size value and notify the virtual bus when input is accepted.
+
+        Private slot not exposed to the user.
 
         Parameters
         ----------
