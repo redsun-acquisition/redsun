@@ -53,6 +53,19 @@ class MotorController(BlueskyController):
         Carries:
         - motor name;
         - motor location.
+
+    Slots
+    -----
+    move_up : str, str
+        Move the motor in the positive direction.
+        Expects:
+        - motor name;
+        - axis name.
+    move_down : str, str
+        Move the motor in the negative direction.
+        Expects:
+        - motor name;
+        - axis name.
     """
 
     _virtual_bus: HardwareVirtualBus
