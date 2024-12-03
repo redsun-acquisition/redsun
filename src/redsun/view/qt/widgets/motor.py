@@ -192,4 +192,4 @@ class StepperMotorWidget(BaseWidget, Loggable):
     def connection_phase(self) -> None:  # noqa: D102
         self.sigStepUp.connect(self._virtual_bus.sigStepperStepUp)
         self.sigStepDown.connect(self._virtual_bus.sigStepperStepDown)
-        self.sigStepSizeChanged.connect(self._virtual_bus.sigStepSizeChanged)
+        self.sigStepSizeChanged.connect(self._virtual_bus.sigStepperStepSizeChanged)

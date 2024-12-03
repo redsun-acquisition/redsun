@@ -19,66 +19,31 @@ TA: TypeAlias = Union[int, float, str]
 
 @final
 class HardwareVirtualBus(VirtualBus):
-    """
+    r"""
     Hardware virtual bus.
 
     All plugins within RedSun have access to this bus to expose signals for interfacing with upper layers.
     See the `VirtualBus` class for API information.
+
+    Signals
+    -------
+    sigStepperStep: Signal(str, str)
+        Emitted when the user clicks the up button for a stepper motor axis.
+        Carries: motor name, axis.
+        Source: `StepperMotorWidget`.
+    sigStepperStepDown: Signal(str, str)
+        Emitted when the user clicks the down button for a stepper motor axis.
+        Carries: motor name, axis.
+        Source: `StepperMotorWidget`.
+    sigStepperStepSizeChanged: Signal(str, str, float)
+        Emitted when the user changes the step size for a stepper motor axis.
+        Carries: motor name, axis, new step size.
+        Source: `StepperMotorWidget`.
     """
 
-    sigStepperStepUp: Signal = Signal(
-        str,
-        str,
-        description="""
-Emitted when the user clicks the up button for a stepper motor axis.
-
-Source: StepperMotorWidget
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-""",
-    )
-    sigStepperStepDown: Signal = Signal(
-        str,
-        str,
-        description="""
-Emitted when the user clicks the down button for a stepper motor axis.
-
-Source: StepperMotorWidget
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-""",
-    )
-    sigStepSizeChanged: Signal = Signal(
-        str,
-        str,
-        float,
-        description="""
-Emitted when the user changes the step size for a stepper motor axis.
-The new value is transmitted after being validated by the widget.
-If the input is invalid, the signal is not emitted.
-
-Source: StepperMotorWidget
-
-Parameters
-----------
-motor : str
-    Motor name.
-axis : str
-    Motor axis.
-step_size : float
-    New step size.
-""",
-    )
+    sigStepperStepUp: Signal = Signal(str, str)
+    sigStepperStepDown: Signal = Signal(str, str)
+    sigStepperStepSizeChanged: Signal = Signal(str, str, float)
     sigMoveDone: Signal = Signal(str, MotorModelTypes, AxisLocation[TA])
 
     __instance: ClassVar[Optional[HardwareVirtualBus]] = None
