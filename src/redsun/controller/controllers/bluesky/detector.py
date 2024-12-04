@@ -12,15 +12,14 @@ from sunflare.controller.bluesky import BlueskyController
 from sunflare.config import ControllerInfo
 from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 from sunflare.log import Loggable
+from sunflare.types import Buffer
 
 from redsun.controller.virtualbus import HardwareVirtualBus
 
 if TYPE_CHECKING:
-    from typing import Sequence, Any, Tuple, TypeAlias
+    from typing import Sequence, Any, Tuple
 
     import numpy.typing as npt
-
-Buffer: TypeAlias = dict[str, Tuple[npt.NDArray[Any], dict[str, Any]]]
 
 
 class DetectorController(BlueskyController, Loggable):

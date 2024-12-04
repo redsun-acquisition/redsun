@@ -11,15 +11,14 @@ from sunflare.virtualbus import Signal, VirtualBus
 from sunflare.controller.exengine import ExEngineController
 from sunflare.config import ControllerInfo
 from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
+from sunflare.types import Buffer
 
 from redsun.controller.virtualbus import HardwareVirtualBus
 
 if TYPE_CHECKING:
-    from typing import Sequence, Any, Tuple, TypeAlias
+    from typing import Sequence, Any, Tuple
 
     import numpy.typing as npt
-
-Buffer: TypeAlias = dict[str, Tuple[npt.NDArray[Any], dict[str, Any]]]
 
 
 class DetectorController(ExEngineController):
