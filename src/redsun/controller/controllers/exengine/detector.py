@@ -11,12 +11,13 @@ from sunflare.virtualbus import Signal, VirtualBus
 from sunflare.controller.exengine import ExEngineController
 from sunflare.config import ControllerInfo
 from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
-from sunflare.types import Buffer
 
 from redsun.controller.virtualbus import HardwareVirtualBus
 
 if TYPE_CHECKING:
     from typing import Sequence, Any, Tuple
+
+    from sunflare.types import Buffer
 
     import numpy.typing as npt
 
@@ -26,7 +27,7 @@ class DetectorController(ExEngineController):
 
     _virtual_bus: HardwareVirtualBus
 
-    sigImage: Signal = Signal(Buffer)
+    sigNewImage: Signal = Signal(Buffer)
 
     def __init__(
         self,
@@ -47,7 +48,7 @@ class DetectorController(ExEngineController):
             self._registry.detectors[det].arm(1)
             self._registry.detectors[det].start()
             self._buffer[det] = self._registry.detectors[det].pop_data()
-        self.sigImage.emit(self._buffer)
+        self.sigNewImage.emit(self._buffer)
 
     def live(self, detectors: Sequence[str], toggled: bool) -> None:
         """Launch a series of detectors for live acquisition.
@@ -74,6 +75,15 @@ class DetectorController(ExEngineController):
                 # wait for all threads to finish
                 future.result()
 
+    def registration_phase(self) -> None:  # noqa: D102
+        # inherited docstring
+        # nothing to do
+        ...
+
+    def connection_phase(self) -> None:  # noqa: D102
+        # inherited docstring
+        self._virtual_bus
+
     def _background_collector(self, detector: str) -> None:
         """Collect data in the background.
 
@@ -93,5 +103,11 @@ class DetectorController(ExEngineController):
 
         while self._live.is_set():
             buf[detector] = det.pop_data()
-            self.sigImage.emit(buf)
+
+            # TODO: throttling in this manner won't work,
+            # because the signal will emit once per detector
+            # and this will effectively prevent multi-channel transmission;
+            # needs to be reworked together with the threading
+            # mechanism that controls the detectors
+            self.sigNewImage.emit(buf)
         det.stop()

@@ -1,0 +1,51 @@
+"""Qt detector widget module."""
+
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+from qtpy.QtWidgets import QVBoxLayout
+
+from ndv import NDViewer
+
+from sunflare.view.qt import BaseWidget
+from sunflare.virtualbus import VirtualBus, slot
+
+if TYPE_CHECKING:
+    from redsun.controller.virtualbus import HardwareVirtualBus
+
+    from sunflare.types import Buffer
+
+
+class ImageViewWidget(BaseWidget):
+    """Image viewer widget.
+
+    Wraps the NDViewer widget to display images.
+    """
+
+    _virtual_bus: HardwareVirtualBus
+
+    def __init__(self, virtual_bus: HardwareVirtualBus, module_bus: VirtualBus) -> None:
+        super().__init__(virtual_bus, module_bus)
+        layout = QVBoxLayout()
+        self._viewer = NDViewer()
+        layout.addWidget(self._viewer)
+        self.setLayout(layout)
+
+    def registration_phase(self) -> None:  # noqa: D102
+        # inherited docstring
+        # nothing to do
+        ...
+
+    def connection_phase(self) -> None:  # noqa: D102
+        self._virtual_bus.sigNewImage.connect(self.update_image)
+
+    @slot
+    def update_image(self, image: Buffer) -> None:
+        """Update the image displayed in the viewer.
+
+        Parameters
+        ----------
+        image : Buffer
+            Dictionary containing all registered detectors and their data/metadata.
+        """
+        self._viewer.set_data(image)

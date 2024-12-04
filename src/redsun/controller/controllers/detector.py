@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 class DetectorControllerProtocol(Protocol):
     """Detector controller protocol."""
 
-    sigImage: Signal
+    sigNewImage: Signal
 
     @abstractmethod
     def snap(self, detectors: Sequence[str]) -> None:

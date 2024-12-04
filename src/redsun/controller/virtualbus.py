@@ -6,11 +6,13 @@ from typing import final, TYPE_CHECKING, TypeAlias
 
 from sunflare.virtualbus import VirtualBus
 from sunflare.virtualbus import Signal
-from sunflare.types import AxisLocation
-from sunflare.config import MotorModelTypes
 
 if TYPE_CHECKING:
     from typing import Optional, ClassVar, Union
+
+    from sunflare.types import AxisLocation
+    from sunflare.config import MotorModelTypes
+    from sunflare.types import Buffer
 
 __all__ = ["HardwareVirtualBus"]
 
@@ -39,12 +41,20 @@ class HardwareVirtualBus(VirtualBus):
         Emitted when the user changes the step size for a stepper motor axis.
         Carries: motor name, axis, new step size.
         Source: `StepperMotorWidget`.
+    sigMoveDone: Signal(str, MotorModelTypes, AxisLocation[TA])
+        TODO: document this signal.
+        Source: `MotorController`.
+    sigNewImage: Signal(Buffer)
+        Emitted when a new image is available.
+        Carries: image buffer.
+        Source: `DetectorController`.
     """
 
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
     sigMoveDone: Signal = Signal(str, MotorModelTypes, AxisLocation[TA])
+    sigNewImage: Signal = Signal(Buffer)
 
     __instance: ClassVar[Optional[HardwareVirtualBus]] = None
 
