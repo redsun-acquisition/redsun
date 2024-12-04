@@ -26,10 +26,10 @@ class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
 
     _virtual_bus: HardwareVirtualBus
-    _current_locations: dict[str, AxisLocation[str, TA]]
+    _current_locations: dict[str, AxisLocation[TA]]
 
     @abstractmethod
-    def move(self, motor: str, value: AxisLocation[str, TA]) -> None:
+    def move(self, motor: str, value: AxisLocation[TA]) -> None:
         """Move the motor."""
         ...
 
