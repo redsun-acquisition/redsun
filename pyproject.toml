@@ -19,6 +19,7 @@ classifiers = [
 license = {text = "BSD 3-Clause license"}
 dependencies = [
   "pyyaml",
+  "ndv[pyqt,vispy]"
 ]
 
 [project.optional-dependencies]
