@@ -1,4 +1,4 @@
-"""Qt detector widget module."""
+"""Qt image viewer widget module."""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -20,6 +20,13 @@ class ImageViewWidget(BaseWidget):
     """Image viewer widget.
 
     Wraps the NDViewer widget to display images.
+
+    Parameters
+    ----------
+    virtual_bus : HardwareVirtualBus
+        The virtual bus instance for the RedSun instance.
+    module_bus : VirtualBus
+        The inter-module virtual bus instance.
     """
 
     _virtual_bus: HardwareVirtualBus
