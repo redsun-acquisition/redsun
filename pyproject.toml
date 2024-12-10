@@ -19,12 +19,18 @@ classifiers = [
 license = {text = "BSD 3-Clause license"}
 dependencies = [
   "pyyaml",
-  "ndv[pyqt,vispy]"
+  "ndv[pyqt,vispy]",
+  "sunflare",
 ]
 
 [project.optional-dependencies]
 bluesky = ["sunflare[bluesky]"]
 exengine = ["sunflare[exengine]"]
+dev = [
+  "nox",
+  "pre-commit",
+  "pytest",
+]
 
 [project.urls]
 

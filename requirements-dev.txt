@@ -1,6 +1,0 @@
-nox==2024.10.9
-sphinx==7.2.6
-ruff==0.7.1
-pre-commit==4.0.1
-
-pytest
