@@ -2,7 +2,7 @@
 
 Event-driven, unopinionated data acquisition in Python.
 
-> [WARNING!]
+> [!WARNING]
 > This project is still in alpha stage and very unstable. Use at your own risk.
 
 ## Installation
