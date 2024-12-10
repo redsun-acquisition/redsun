@@ -8,107 +8,125 @@ to create a unique running instance.
 This module operates within the RedSun core code and is not exposed to the toolkit or the user.
 """
 
-# import importlib
-# import inspect
-# import os
-# from typing import TYPE_CHECKING
+from __future__ import annotations
 
-# if TYPE_CHECKING:
-#     from typing import Type
+from typing import TYPE_CHECKING, TypeAlias
 
-#     from sunflare.config import RedSunInstanceInfo, AcquisitionEngineTypes
-#     from sunflare.engine import EngineHandler
-#     from sunflare.virtualbus import VirtualBus
+if TYPE_CHECKING:
+    from typing import Union, Type
 
-# __all__ = ["get_available_engines", "create_engine", "ControllerFactory"]
+    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.engine.bluesky import BlueskyHandler
+    from redsun.engine.exengine import ExEngineHandler
 
-# # Initialize an empty dictionary for the handlers
-# _HANDLERS: "dict[str, Type[EngineHandler]]" = {}
+    from sunflare.virtualbus import ModuleVirtualBus
+    from sunflare.config import AcquisitionEngineTypes, RedSunInstanceInfo, ControllerInfo
+    from sunflare.controller.bluesky import BlueskyController
+    from sunflare.controller.exengine import ExEngineController
+    from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
+    from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
 
+RegistryFactoryType: TypeAlias = Union[Type[BlueskyDeviceRegistry], Type[ExEngineDeviceRegistry]]
+RegistryBuildType: TypeAlias = Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
 
-# def get_available_engines() -> "dict[str, Type[EngineHandler]]":
-#     """Get a dictionary of available engine handlers.
+EngineFactoryType: TypeAlias = Union[Type[BlueskyHandler], Type[ExEngineHandler]]
+EngineBuildType: TypeAlias = Union[BlueskyHandler, ExEngineHandler]
 
-#     Returns
-#     -------
-#     dict[str, Type[EngineHandler]]
-#         Dictionary of available engine handlers.
-#     """
-#     global _HANDLERS
-
-#     # base path for the engines directory
-#     engines_path = os.path.join(os.path.dirname(__file__), "..", "engine")
-
-#     if len(_HANDLERS) > 0:
-#         return _HANDLERS
-
-#     # Dynamically load all engine handlers
-#     for engine in os.listdir(engines_path):
-#         for file in os.listdir(os.path.join(engines_path, engine)):
-#             # Engine-specific handlers are stored in handler.py;
-#             # each engine has its own handler.py file
-#             if file == "handler.py":
-#                 module_name = f"redsun.engine.{engine}"
-#                 module = importlib.import_module(
-#                     module_name, file[-3]
-#                 )  # Import the module
-
-#                 for _, obj in inspect.getmembers(module, inspect.isclass):
-#                     # Check if the class is a subclass of EngineHandler (to ensure it's a valid handler)
-#                     if "EngineHandler" in [base.__name__ for base in obj.__bases__]:
-#                         # Add the class to the handlers dictionary
-#                         _HANDLERS[engine] = obj
-#     return _HANDLERS
+ControllerFactoryType: TypeAlias = Union[Type[BlueskyController], Type[ExEngineController]]
+ControllerBuildType: TypeAlias = Union[BlueskyController, ExEngineController]
 
 
-# def create_engine(
-#     info: "RedSunInstanceInfo", virtual_bus: "VirtualBus", module_bus: "VirtualBus"
-# ) -> "EngineHandler":
-#     """Create the proper engine handler based on the instance configuration.
+class RegistryFactory:
+    """Device registry factory."""
 
-#     Parameters
-#     ----------
-#     info : RedSunInstanceInfo
-#         RedSun instance configuration dataclass.
-#     virtual_bus : VirtualBus
-#         Intra-module virtual bus.
-#     module_bus : VirtualBus
-#         Inter-module virtual bus.
+    def __init__(
+        self,
+        engine: AcquisitionEngineTypes,
+        virtual_bus: HardwareVirtualBus,
+        module_bus: ModuleVirtualBus,
+    ) -> None:
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
+        self.__registry_factory: RegistryFactoryType
+        if engine == AcquisitionEngineTypes.BLUESKY:
+            self.__registry_factory = BlueskyDeviceRegistry
+        elif engine == AcquisitionEngineTypes.EXENGINE:
+            self.__registry_factory = ExEngineDeviceRegistry
+        else:
+            raise ValueError(f"Invalid engine: {engine}")
+    
+    @property
+    def factory(self) -> RegistryFactoryType:
+        """Get the registry factory."""
+        return self.__registry_factory
 
-#     Returns
-#     -------
-#     EngineHandler
-#         Engine handler instance. The `EngineHandler` abstract class provides the API interface for all engine handlers.
+    def build(self, config: RedSunInstanceInfo) -> RegistryBuildType:
+        """Build the registry."""
+        return self.__registry_factory(config, self._virtual_bus, self._module_bus)
 
-#     Raises
-#     ------
-#     ValueError
-#         If the engine type is not recognized.
-#     """
-#     if len(_HANDLERS) == 0:
-#         get_available_engines()
+class EngineFactory:
+    """Engine factory."""
 
-#     try:
-#         handler = _HANDLERS[info.engine]
-#     except KeyError:
-#         raise ValueError(f"Unknown engine: {info.engine}")
-#     return handler(info, virtual_bus, module_bus)
+    def __init__(
+        self,
+        engine: AcquisitionEngineTypes,
+        virtual_bus: HardwareVirtualBus,
+        module_bus: ModuleVirtualBus,
+    ) -> None:
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
+        self.__engine_factory: EngineFactoryType
+        if engine == AcquisitionEngineTypes.BLUESKY:
+            self.__engine_factory = BlueskyHandler
+        elif engine == AcquisitionEngineTypes.EXENGINE:
+            self.__engine_factory = ExEngineHandler
+        else:
+            raise ValueError(f"Invalid engine: {engine}")
+    
+    @property
+    def factory(self) -> EngineFactoryType:
+        """Get the registry factory."""
+        return self.__engine_factory
+
+    def build(self, config: RedSunInstanceInfo) -> EngineBuildType:
+        """Build the registry."""
+        return self.__engine_factory(config, self._virtual_bus, self._module_bus)
 
 
-# def get_engine_handler(engine: "AcquisitionEngineTypes") -> "Type[EngineHandler]":
-#     """Get the engine handler class for a given engine.
+class ControllerFactory:
+    """Controller factory.
 
-#     Parameters
-#     ----------
-#     engine : str
-#         Engine name.
+    Parameters
+    ----------
+    virtual_bus : HardwareVirtualBus
+        Hardware virtual bus.
+    module_bus : ModuleVirtualBus
+        Module virtual bus.
+    """
 
-#     Returns
-#     -------
-#     Type[EngineHandler]
-#         Engine handler class.
-#     """
-#     if len(_HANDLERS) == 0:
-#         get_available_engines()
+    def __init__(
+        self,
+        engine: AcquisitionEngineTypes,
+        virtual_bus: HardwareVirtualBus,
+        module_bus: ModuleVirtualBus,
+    ) -> None:
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
+        self.__controller_factor: ControllerFactoryType
+        if engine == AcquisitionEngineTypes.BLUESKY:
+            self.__controller_factor = BlueskyController
+        elif engine == AcquisitionEngineTypes.EXENGINE:
+            self.__controller_factor = ExEngineController
+        else:
+            raise ValueError(f"Invalid engine: {engine}")
 
-#     return _HANDLERS[engine].instance()
+    @property
+    def factory(self) -> ControllerFactoryType:
+        """Get the controller factory."""
+        return self.__controller_factor
+
+    def build(self, info: ControllerInfo, registry: RegistryBuildType) -> ControllerBuildType:
+        """Build the controller."""
+        controller = self.__controller_factor(info, registry, self._virtual_bus, self._module_bus) # type: ignore
+        controller.registration_phase()
+        return controller
