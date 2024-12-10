@@ -20,19 +20,27 @@ if TYPE_CHECKING:
     from redsun.engine.exengine import ExEngineHandler
 
     from sunflare.virtualbus import ModuleVirtualBus
-    from sunflare.config import AcquisitionEngineTypes, RedSunInstanceInfo, ControllerInfo
+    from sunflare.config import (
+        AcquisitionEngineTypes,
+        RedSunInstanceInfo,
+        ControllerInfo,
+    )
     from sunflare.controller.bluesky import BlueskyController
     from sunflare.controller.exengine import ExEngineController
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
     from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
 
-RegistryFactoryType: TypeAlias = Union[Type[BlueskyDeviceRegistry], Type[ExEngineDeviceRegistry]]
+RegistryFactoryType: TypeAlias = Union[
+    Type[BlueskyDeviceRegistry], Type[ExEngineDeviceRegistry]
+]
 RegistryBuildType: TypeAlias = Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
 
 EngineFactoryType: TypeAlias = Union[Type[BlueskyHandler], Type[ExEngineHandler]]
 EngineBuildType: TypeAlias = Union[BlueskyHandler, ExEngineHandler]
 
-ControllerFactoryType: TypeAlias = Union[Type[BlueskyController], Type[ExEngineController]]
+ControllerFactoryType: TypeAlias = Union[
+    Type[BlueskyController], Type[ExEngineController]
+]
 ControllerBuildType: TypeAlias = Union[BlueskyController, ExEngineController]
 
 
@@ -54,7 +62,7 @@ class RegistryFactory:
             self.__registry_factory = ExEngineDeviceRegistry
         else:
             raise ValueError(f"Invalid engine: {engine}")
-    
+
     @property
     def factory(self) -> RegistryFactoryType:
         """Get the registry factory."""
@@ -63,6 +71,7 @@ class RegistryFactory:
     def build(self, config: RedSunInstanceInfo) -> RegistryBuildType:
         """Build the registry."""
         return self.__registry_factory(config, self._virtual_bus, self._module_bus)
+
 
 class EngineFactory:
     """Engine factory."""
@@ -82,7 +91,7 @@ class EngineFactory:
             self.__engine_factory = ExEngineHandler
         else:
             raise ValueError(f"Invalid engine: {engine}")
-    
+
     @property
     def factory(self) -> EngineFactoryType:
         """Get the registry factory."""
@@ -125,8 +134,12 @@ class ControllerFactory:
         """Get the controller factory."""
         return self.__controller_factor
 
-    def build(self, info: ControllerInfo, registry: RegistryBuildType) -> ControllerBuildType:
+    def build(
+        self, info: ControllerInfo, registry: RegistryBuildType
+    ) -> ControllerBuildType:
         """Build the controller."""
-        controller = self.__controller_factor(info, registry, self._virtual_bus, self._module_bus)  
+        controller = self.__controller_factor(
+            info, registry, self._virtual_bus, self._module_bus
+        )  # type: ignore
         controller.registration_phase()
         return controller
