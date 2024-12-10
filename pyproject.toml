@@ -31,6 +31,8 @@ dev = [
   "nox",
   "pre-commit",
   "pytest",
+  "mypy",
+  "ruff"
 ]
 
 [project.urls]
