@@ -43,6 +43,8 @@ ControllerFactoryType: TypeAlias = Union[
 ]
 ControllerBuildType: TypeAlias = Union[BlueskyController, ExEngineController]
 
+__all__ = ["RegistryFactory", "EngineFactory", "ControllerFactory"]
+
 
 class RegistryFactory:
     """Device registry factory."""
@@ -139,7 +141,10 @@ class ControllerFactory:
     ) -> ControllerBuildType:
         """Build the controller."""
         controller = self.__controller_factor(
-            info, registry, self._virtual_bus, self._module_bus
-        )  # type: ignore
+            info,
+            registry,  # type: ignore
+            self._virtual_bus,
+            self._module_bus,
+        )
         controller.registration_phase()
         return controller
