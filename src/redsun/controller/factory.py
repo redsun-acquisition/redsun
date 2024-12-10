@@ -127,6 +127,6 @@ class ControllerFactory:
 
     def build(self, info: ControllerInfo, registry: RegistryBuildType) -> ControllerBuildType:
         """Build the controller."""
-        controller = self.__controller_factor(info, registry, self._virtual_bus, self._module_bus) # type: ignore
+        controller = self.__controller_factor(info, registry, self._virtual_bus, self._module_bus)  
         controller.registration_phase()
         return controller
