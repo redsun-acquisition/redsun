@@ -6,6 +6,8 @@ from sunflare.log import Loggable
 
 from typing import TYPE_CHECKING
 
+from redsun.controller.factory import RegistryFactory, EngineFactory, ControllerFactory
+
 if TYPE_CHECKING:
     from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import ModuleVirtualBus
@@ -38,4 +40,8 @@ class RedsunMainHardwareController(Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
 
-        self.__controller_factor = None
+        self._engine_factory = EngineFactory(config.engine, virtual_bus, module_bus)
+        self._registry_factory = RegistryFactory(config.engine, virtual_bus, module_bus)
+        self._controller_factory = ControllerFactory(
+            config.engine, virtual_bus, module_bus
+        )
