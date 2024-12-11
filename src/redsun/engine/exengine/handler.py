@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, final
 
 from exengine import ExecutionEngine
-from sunflare.engine import EngineHandler
+from sunflare.engine.handler import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:

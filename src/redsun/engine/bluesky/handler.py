@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, final
 
 from bluesky.run_engine import RunEngine
-from sunflare.engine import EngineHandler
+from sunflare.engine.handler import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
