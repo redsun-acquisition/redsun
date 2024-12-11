@@ -27,7 +27,9 @@ dependencies = [
   "ndv[pyqt,vispy]",
   "pyqtgraph",
   "sunflare",
+  "importlib_metadata; python_version < '3.10'"
 ]
+requires-python = ">=3.9"
 
 [project.optional-dependencies]
 bluesky = ["sunflare[bluesky]"]
@@ -42,9 +44,9 @@ dev = [
 
 [project.urls]
 
-bugs = "https://github.com/jacopoabramo/redsun/issues"
-changelog = "https://github.com/jacopoabramo/redsun/blob/master/changelog.md"
-homepage = "https://github.com/jacopoabramo/redsun"
+bugs = "https://github.com/redsun-acquisition/redsun/issues"
+changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"
+homepage = "https://github.com/redsun-acquisition/redsun"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
