@@ -13,10 +13,12 @@ if TYPE_CHECKING:
     from sunflare.types import AxisLocation
     from sunflare.config import MotorModelTypes
     from sunflare.types import Buffer
+    from sunflare.engine import DetectorModel, MotorModel
 
 __all__ = ["HardwareVirtualBus"]
 
 TA: TypeAlias = Union[int, float, str]
+Registry: TypeAlias = dict[str, Union[DetectorModel, MotorModel]]
 
 
 @final
@@ -29,6 +31,10 @@ class HardwareVirtualBus(VirtualBus):
 
     Signals
     -------
+    sigNewDevices: Signal(str, dict[str, Union[DetectorModel, MotorModel]])
+        Emitted when a new group of device plugins is loaded.
+        Carries: the device group to which the plugins belong (i.e. "motors"), dictionary of plugins (key: plugin name, value: plugin instance).
+        Source: `PluginManager`.
     sigStepperStep: Signal(str, str)
         Emitted when the user clicks the up button for a stepper motor axis.
         Carries: motor name, axis.
@@ -50,6 +56,7 @@ class HardwareVirtualBus(VirtualBus):
         Source: `DetectorController`.
     """
 
+    sigNewDevices: Signal = Signal(str, Registry)
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
