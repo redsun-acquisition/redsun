@@ -1,5 +1,7 @@
 """ExEngine handler module."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, final
 
 from exengine import ExecutionEngine
@@ -7,10 +9,7 @@ from sunflare.engine.handler import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Optional
-
     from sunflare.types import Workflow
-    from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
 
@@ -31,20 +30,16 @@ class ExEngineHandler(EngineHandler[ExecutionEngine], Loggable):
         The virtual bus instance for the module.
     """
 
-    __instance: "Optional[ExEngineHandler]" = None
-    _workflows: dict[str, "Workflow"] = {}
+    _workflows: dict[str, Workflow] = {}
 
     def __init__(
         self,
-        config_options: "RedSunInstanceInfo",
-        virtual_bus: "VirtualBus",
-        module_bus: "VirtualBus",
+        virtual_bus: VirtualBus,
+        module_bus: VirtualBus,
     ):
-        self._config_options = config_options
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._engine = ExecutionEngine()
-        ExEngineHandler.__instance = self
 
     def shutdown(self) -> None:  # noqa: D102
         self._engine.shutdown()
@@ -54,13 +49,6 @@ class ExEngineHandler(EngineHandler[ExecutionEngine], Loggable):
             self._workflows[name] = workflow
         else:
             self.error(f"Workflow {name} already registered. Aborted.")
-
-    @classmethod
-    def instance(cls) -> "ExEngineHandler":
-        """Return global ExEngineHandler singleton instance."""
-        if cls.__instance is None:
-            raise ValueError("BlueskyHandler instance not initialized.")
-        return cls.__instance
 
     @property
     def engine(self) -> ExecutionEngine:

@@ -9,19 +9,14 @@ from sunflare.engine.handler import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from typing import Optional, ClassVar
-
     from sunflare.types import Workflow
-    from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
 
 @final
 class BlueskyHandler(EngineHandler[RunEngine], Loggable):
-    r"""
+    """
     Bluesky handler class.
-
-    All models compatible with Bluesky are registered here at application startup.
 
     Parameters
     ----------
@@ -33,20 +28,15 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
         The virtual bus instance for the module.
     """
 
-    __instance: ClassVar[Optional[BlueskyHandler]] = None
-
     def __init__(
         self,
-        config_options: RedSunInstanceInfo,
         virtual_bus: VirtualBus,
         module_bus: VirtualBus,
     ) -> None:
-        self._config_options = config_options
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._workflows: dict[str, Workflow] = {}
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
-        BlueskyHandler.__instance = self
 
     def shutdown(self) -> None:
         """Invoke "stop" method on the run engine.
@@ -61,13 +51,6 @@ class BlueskyHandler(EngineHandler[RunEngine], Loggable):
             self._workflows[name] = workflow
         else:
             self.error(f"Workflow {name} already registered. Aborted.")
-
-    @classmethod
-    def instance(cls) -> BlueskyHandler:
-        """Return global BlueskyHandler singleton instance."""
-        if cls.__instance is None:
-            raise ValueError("BlueskyHandler instance not initialized.")
-        return cls.__instance
 
     @property
     def engine(self) -> RunEngine:
