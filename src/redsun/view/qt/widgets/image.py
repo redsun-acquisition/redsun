@@ -34,7 +34,7 @@ class ImageViewWidget(BaseWidget):
     def __init__(self, virtual_bus: HardwareVirtualBus, module_bus: VirtualBus) -> None:
         super().__init__(virtual_bus, module_bus)
         layout = QVBoxLayout()
-        self._viewer = NDViewer()
+        self._viewer = NDViewer(None)
         layout.addWidget(self._viewer)
         self.setLayout(layout)
 
