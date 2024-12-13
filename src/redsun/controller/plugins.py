@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from sunflare.virtualbus import Signal
 
@@ -14,11 +14,10 @@ else:
     from importlib.metadata import entry_points
 
 if TYPE_CHECKING:
-    from typing import Type, Union, TypeAlias
+    from typing import Type, Union, TypeAlias, Any, Literal, Sequence, Tuple
 
     from sunflare.virtualbus import ModuleVirtualBus
     from sunflare.config import (
-        RedSunInstanceInfo,
         DetectorModelInfo,
         MotorModelInfo,
     )
@@ -26,10 +25,12 @@ if TYPE_CHECKING:
 
     from redsun.controller.virtualbus import HardwareVirtualBus
 
-C = TypeVar("C", bound=Union[DetectorModelInfo, MotorModelInfo])
-M = TypeVar("M", bound=Union[DetectorModel, MotorModel])
+ModelInfoTypes: TypeAlias = Union[Type[DetectorModelInfo], Type[MotorModelInfo]]
+ModelTypes: TypeAlias = Union[Type[DetectorModel], Type[MotorModel]]
 
-Registry: TypeAlias = dict[str, Union[DetectorModel, MotorModel]]
+Registry: TypeAlias = dict[
+    Literal["motors", "detectors"], list[Tuple[str, ModelInfoTypes, ModelTypes]]
+]
 
 
 class PluginManager:
@@ -39,8 +40,6 @@ class PluginManager:
 
     Parameters
     ----------
-    config : RedSunInstanceInfo
-        RedSun instance configuration.
     virtual_bus : HardwareVirtualBus
         Hardware virtual bus.
     module_bus : ModuleVirtualBus
@@ -51,11 +50,9 @@ class PluginManager:
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
     ):
-        self._config = config
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._namespace = "redsun.plugins"
@@ -67,62 +64,49 @@ class PluginManager:
     def connection_phase(self) -> None:  # noqa: D102
         self.sigNewDevices.connect(self._virtual_bus.sigNewDevices)
 
-    def build_models(
-        self,
-        group: str,
-        config_class: Type[C],
-        input: dict[str, dict[str, str]],
-        *,
-        _: Type[M],  # this is to avoid a mypy error
-    ) -> None:
-        """Build models from the given configuration.
-
-        Redsun provides entry points for plugins of the following groups:
-
-        - motors;
-        - detectors;
-
-        Each model expects two classes: one for configuration and one for the actual device model.
-        The manager will inspect the given input configuration and:
-
-        - build the configuration class;
-        - build the device model class;
-        - emit a signal with the built models.
-
-        The DeviceRegistry will store the built models for access to the other controllers.
+    def load_plugins(
+        self, config: dict[str, Any], groups: Sequence[Literal["motors", "detectors"]]
+    ) -> Registry:  # noqa: D102
+        """Load plugins from the given configuration.
 
         Parameters
         ----------
-        group : str
-            Entry point group name (e.g. 'motors').
-        config_class : Type[C]
-            Configuration class type.
-        input : dict[str, dict[str, str]]
-            Input configuration dictionary.
-        """
-        registry: dict[str, M] = {}
-        plugins = entry_points(group=".".join([self._namespace, group]))
-        config_plugins = [ep for ep in plugins if "_config" in ep.name]
-        model_plugins = [ep for ep in plugins if "_config" not in ep.name]
-        for cfg_ep, model_ep in zip(config_plugins, model_plugins):
-            cfg_cls = cfg_ep.value.split(":")[
-                1
-            ]  # Retrieve the name of the config builder
-            bld_cls = cfg_cls[:-4]  # Retrieve the name of the actual device model
-            cfg_builder: Type[C] = cfg_ep.load()
-            if not issubclass(cfg_builder, config_class):
-                raise TypeError(
-                    f"Loaded config builder {cfg_builder} is not a subclass of {config_class}"
-                )
-            for device_name, values in input.items():
-                if values["model_name"] == bld_cls:
-                    cfg = cfg_builder(**values)  # type: ignore[arg-type]
-                    registry[device_name] = model_ep.load()(device_name, cfg)
-                    break
-            input.pop(
-                device_name
-            )  # Pop the found device from the input to speed up the search
+        config : dict[str, Any]
+            Configuration dictionary.
+        groups : Sequence[Literal["motors", "detectors"]]
+            List of groups to load plugins from.
 
-        # The built models are stored in the currently
-        # active device registry.
-        self.sigNewDevices.emit(group, registry)
+        Returns
+        -------
+        Registry
+            A dictionary containing the loaded plugins classes.
+        """
+        registry: Registry = {group: [] for group in groups}
+        for group in groups:
+            input: dict[str, Any] = config[group]
+            plugins = entry_points(group=".".join([self._namespace, group]))
+            config_plugins = [ep for ep in plugins if "_config" in ep.name]
+            model_plugins = [ep for ep in plugins if "_config" not in ep.name]
+            for cfg_ep, model_ep in zip(config_plugins, model_plugins):
+                # Retrieve the name of the config builder
+                cfg_cls = cfg_ep.value.split(":")[1]
+                # Retrieve the name of the actual device model
+                bld_cls = cfg_cls[:-4]
+                cfg_builder = cfg_ep.load()
+                if not all(
+                    [
+                        issubclass(cfg_builder, cfg_type)
+                        for cfg_type in [DetectorModelInfo, MotorModelInfo]
+                    ]
+                ):
+                    raise TypeError(
+                        f"Loaded model info {cfg_builder} is not a subclass of any recognized model info class"
+                    )
+                for device_name, values in input.items():
+                    if values["model_name"] == bld_cls:
+                        builder = model_ep.load()
+                        registry[group].append((device_name, cfg_builder, builder))
+                        break
+                # pop the found device from the input to speed up the search
+                input.pop(device_name)
+        return registry
