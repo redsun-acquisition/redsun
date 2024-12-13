@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sunflare.virtualbus import Signal
+from sunflare.log import get_logger
 
 import sys
+import yaml
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
@@ -14,23 +16,16 @@ else:
     from importlib.metadata import entry_points
 
 if TYPE_CHECKING:
-    from typing import Type, Union, TypeAlias, Any, Literal, Sequence, Tuple
+    from typing import Any, Optional
 
     from sunflare.virtualbus import ModuleVirtualBus
     from sunflare.config import (
         DetectorModelInfo,
         MotorModelInfo,
     )
-    from sunflare.engine import DetectorModel, MotorModel
 
+    from redsun.common.types import Registry, RedSunConfigInfo
     from redsun.controller.virtualbus import HardwareVirtualBus
-
-ModelInfoTypes: TypeAlias = Union[Type[DetectorModelInfo], Type[MotorModelInfo]]
-ModelTypes: TypeAlias = Union[Type[DetectorModel], Type[MotorModel]]
-
-Registry: TypeAlias = dict[
-    Literal["motors", "detectors"], list[Tuple[str, ModelInfoTypes, ModelTypes]]
-]
 
 
 class PluginManager:
@@ -57,29 +52,91 @@ class PluginManager:
         self._module_bus = module_bus
         self._namespace = "redsun.plugins"
 
-    def registration_phase(self) -> None:  # noqa: D102
-        # nothing to do here
-        ...
+    @staticmethod
+    def load_and_check_yaml(config_path: str) -> Optional[RedSunConfigInfo]:
+        """Check the configuration file.
 
-    def connection_phase(self) -> None:  # noqa: D102
-        self.sigNewDevices.connect(self._virtual_bus.sigNewDevices)
+        If an error occurs, the function logs the error and returns an empty dictionary.
 
-    def load_plugins(
-        self, config: dict[str, Any], groups: Sequence[Literal["motors", "detectors"]]
-    ) -> Registry:  # noqa: D102
+        Parameters
+        ----------
+        config_path : str
+            Path to the configuration file.
+
+        Returns
+        -------
+        Tuple[dict[str, Any], list[str]]
+            A tuple containing:
+            - The configuration dictionary.
+            - A list of plugin groups to check.
+        """
+        logger = get_logger()
+
+        config: Optional[RedSunConfigInfo]
+        try:
+            with open(config_path, "r") as file:
+                config = yaml.safe_load(file)
+            # check that config has "engine" and "frontend" keys
+            if config is not None and not all(
+                [key in config.keys() for key in ["engine", "frontend"]]
+            ):
+                logger.error(
+                    "Configuration file does not specify an engine or a frontend."
+                )
+                config = None
+        except yaml.YAMLError as e:
+            logger.exception(f"Error parsing configuration file: {e}")
+            config = None
+        except FileNotFoundError:
+            logger.error(f"Configuration file not found: {config_path}")
+            config = None
+        return config
+
+    def load_startup_configuration(self, config: RedSunConfigInfo) -> Registry:
+        """Load the startup configuration.
+
+        Parameters
+        ----------
+        config : RedSunConfigInfo
+            Configuration dictionary.
+
+        Returns
+        -------
+        Registry
+            A dictionary containing the loaded plugins classes.
+            - keys: group names (i.e. "motors", "detectors")
+            - values: list of tuples containing:
+                - device name
+                - model info class
+                - model class
+        """
+        groups = [
+            group for group in config.keys() if group not in ["engine", "frontend"]
+        ]
+
+        # TODO: load_plugins expects a dictionary, but the config is a TypedDict;
+        #       this should be fixed in the future, or accept it as it is
+        return self.load_plugins(config, groups)  # type: ignore
+
+    def load_plugins(self, config: dict[str, Any], groups: list[str]) -> Registry:  # noqa: D102
         """Load plugins from the given configuration.
 
         Parameters
         ----------
         config : dict[str, Any]
             Configuration dictionary.
-        groups : Sequence[Literal["motors", "detectors"]]
+        groups : list[str]
             List of groups to load plugins from.
 
         Returns
         -------
         Registry
             A dictionary containing the loaded plugins classes.
+            - keys: group names (i.e. "motors", "detectors")
+            - values: list of tuples containing:
+                - device name
+                - model info class
+                - model class
         """
         registry: Registry = {group: [] for group in groups}
         for group in groups:
