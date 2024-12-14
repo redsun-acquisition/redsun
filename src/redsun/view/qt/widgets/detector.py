@@ -9,6 +9,8 @@ from sunflare.virtualbus import VirtualBus
 from qtpy import QtWidgets
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from redsun.controller.virtualbus import HardwareVirtualBus
 
     from sunflare.config import DetectorModelInfo
@@ -43,8 +45,10 @@ class DetectorSettingsWidget(BaseWidget):
         detectors_info: dict[str, DetectorModelInfo],
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(virtual_bus, module_bus)
+        super().__init__(virtual_bus, module_bus, *args, **kwargs)
         self._detectors_info = detectors_info
 
         self.tab = QtWidgets.QTabWidget()

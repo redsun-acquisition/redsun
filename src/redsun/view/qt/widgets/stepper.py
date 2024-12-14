@@ -87,8 +87,10 @@ class StepperMotorWidget(BaseWidget, Loggable):
         motors_info: dict[str, MotorModelInfo],
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
-        super().__init__(virtual_bus, module_bus)
+        super().__init__(virtual_bus, module_bus, *args, **kwargs)
         self._motors_info = motors_info
 
         self.grid = QtWidgets.QGridLayout()
