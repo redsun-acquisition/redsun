@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sunflare.virtualbus import Signal
 from sunflare.log import get_logger
 
 import sys
@@ -18,39 +17,19 @@ else:
 if TYPE_CHECKING:
     from typing import Any, Optional
 
-    from sunflare.virtualbus import ModuleVirtualBus
     from sunflare.config import (
         DetectorModelInfo,
         MotorModelInfo,
     )
 
     from redsun.common.types import Registry, RedSunConfigInfo
-    from redsun.controller.virtualbus import HardwareVirtualBus
 
 
 class PluginManager:
     """Plugin manager class.
 
     This manager uses `importlib.metadata` to discover and load Redsun-compatible plugins.
-
-    Parameters
-    ----------
-    virtual_bus : HardwareVirtualBus
-        Hardware virtual bus.
-    module_bus : ModuleVirtualBus
-        Module virtual bus.
     """
-
-    sigNewDevices: Signal = Signal(str, Registry)
-
-    def __init__(
-        self,
-        virtual_bus: HardwareVirtualBus,
-        module_bus: ModuleVirtualBus,
-    ):
-        self._virtual_bus = virtual_bus
-        self._module_bus = module_bus
-        self._namespace = "redsun.plugins"
 
     @staticmethod
     def load_and_check_yaml(config_path: str) -> Optional[RedSunConfigInfo]:
@@ -92,7 +71,8 @@ class PluginManager:
             config = None
         return config
 
-    def load_startup_configuration(self, config: RedSunConfigInfo) -> Registry:
+    @staticmethod
+    def load_startup_configuration(config: RedSunConfigInfo) -> Registry:
         """Load the startup configuration.
 
         Parameters
@@ -116,9 +96,10 @@ class PluginManager:
 
         # TODO: load_plugins expects a dictionary, but the config is a TypedDict;
         #       this should be fixed in the future, or accept it as it is
-        return self.load_plugins(config, groups)  # type: ignore
+        return PluginManager.load_plugins(config, groups)  # type: ignore
 
-    def load_plugins(self, config: dict[str, Any], groups: list[str]) -> Registry:  # noqa: D102
+    @staticmethod
+    def load_plugins(config: dict[str, Any], groups: list[str]) -> Registry:
         """Load plugins from the given configuration.
 
         Parameters
@@ -141,7 +122,7 @@ class PluginManager:
         registry: Registry = {group: [] for group in groups}
         for group in groups:
             input: dict[str, Any] = config[group]
-            plugins = entry_points(group=".".join([self._namespace, group]))
+            plugins = entry_points(group=".".join(["redsun.plugins", group]))
             config_plugins = [ep for ep in plugins if "_config" in ep.name]
             model_plugins = [ep for ep in plugins if "_config" not in ep.name]
             for cfg_ep, model_ep in zip(config_plugins, model_plugins):
