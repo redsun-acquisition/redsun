@@ -1,65 +1,49 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "redsun"
 dynamic = ["version"]
 description = "Event-driven data acquisition software for scientific applications."
-readme = "README.rst"
-authors = [
-  {name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com"}
-]
-maintainers = [
-  {name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com"}
-]
+readme = "README.md"
+authors = [{ name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com" }]
+maintainers = [{ name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com" }]
 classifiers = [
-
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12"
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
-license = {text = "BSD 3-Clause license"}
+license = { text = "BSD 3-Clause license" }
 dependencies = [
-  "pyyaml",
-  "ndv[pyqt,vispy]",
-  "pyqtgraph",
-  "sunflare",
-  "importlib_metadata; python_version < '3.10'"
+    "pyyaml",
+    "ndv[pyqt,vispy]",
+    "pyqtgraph",
+    "sunflare",
+    "importlib_metadata; python_version < '3.10'",
 ]
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
 bluesky = ["sunflare[bluesky]"]
 exengine = ["sunflare[exengine]"]
-dev = [
-  "nox",
-  "pre-commit",
-  "pytest",
-  "mypy",
-  "ruff"
-]
+dev = ["nox", "pre-commit", "pytest", "mypy", "ruff"]
 
 [project.urls]
-
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
 changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"
 homepage = "https://github.com/redsun-acquisition/redsun"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-include-package-data = true
+[project.scripts]
+redsun = "redsun.__main__:main_cli"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.package-data]
-"*" = ["*.typed"]
-
-[tool.setuptools_scm]
-write_to = "src/redsun/_version.py"
+[tool.hatch.build.targets.wheel]
+packages = ["src/redsun"]
 
 # mypy
 # ----
@@ -92,6 +76,3 @@ select = ["D"] # enable docstring checks
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
-
-[project.scripts]
-redsun = "redsun.__main__:main_cli"
