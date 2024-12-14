@@ -10,26 +10,30 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Union, Type
+    from typing import Union, Type, Any, TypeAlias
 
     from redsun.controller.virtualbus import HardwareVirtualBus
     from redsun.engine.bluesky import BlueskyHandler
     from redsun.engine.exengine import ExEngineHandler
+    from redsun.common.types import RedSunConfigInfo
 
     from sunflare.virtualbus import ModuleVirtualBus
     from sunflare.config import (
         AcquisitionEngineTypes,
-        RedSunInstanceInfo,
         ControllerInfo,
+        MotorModelInfo,
+        DetectorModelInfo,
     )
     from sunflare.controller.bluesky import BlueskyController
     from sunflare.controller.exengine import ExEngineController
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
     from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
+    from sunflare.engine import MotorModel, DetectorModel
 
+# TODO: so many types; how to simplify?
 RegistryFactoryType: TypeAlias = Union[
     Type[BlueskyDeviceRegistry], Type[ExEngineDeviceRegistry]
 ]
@@ -47,7 +51,19 @@ __all__ = ["RegistryFactory", "EngineFactory", "ControllerFactory"]
 
 
 class RegistryFactory:
-    """Device registry factory."""
+    """Device registry factory.
+
+    This factory builds the device registry based on the selected acquisition engine.
+
+    Parameters
+    ----------
+    engine : AcquisitionEngineTypes
+        Selected acquisition engine.
+    virtual_bus : HardwareVirtualBus
+        Hardware control virtual bus.
+    module_bus : ModuleVirtualBus
+        Module virtual bus.
+    """
 
     def __init__(
         self,
@@ -65,18 +81,25 @@ class RegistryFactory:
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
-    @property
-    def factory(self) -> RegistryFactoryType:
-        """Get the registry factory."""
-        return self.__registry_factory
-
-    def build(self, config: RedSunInstanceInfo) -> RegistryBuildType:
+    def build(self) -> RegistryBuildType:
         """Build the registry."""
-        return self.__registry_factory(config, self._virtual_bus, self._module_bus)
+        return self.__registry_factory(self._virtual_bus, self._module_bus)
 
 
 class EngineFactory:
-    """Engine factory."""
+    """Engine factory.
+
+    This factory is responsible to build the engine handler objects based on the selected acquisition engine.
+
+    Parameters
+    ----------
+    engine : AcquisitionEngineTypes
+        Selected acquisition engine.
+    virtual_bus : HardwareVirtualBus
+        Hardware control virtual bus.
+    module_bus : ModuleVirtualBus
+        Module virtual bus.
+    """
 
     def __init__(
         self,
@@ -94,14 +117,100 @@ class EngineFactory:
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
-    @property
-    def factory(self) -> EngineFactoryType:
-        """Get the registry factory."""
-        return self.__engine_factory
-
-    def build(self, config: RedSunInstanceInfo) -> EngineBuildType:
+    def build(self) -> EngineBuildType:
         """Build the registry."""
-        return self.__engine_factory(config, self._virtual_bus, self._module_bus)
+        return self.__engine_factory(self._virtual_bus, self._module_bus)
+
+
+# TODO: a single factory model method should be enough
+class ModelFactory:
+    """Model factory.
+
+    This factory is responsible to build the model information objects related
+    to each hardware model.
+
+    Models are separated from interactions with the virtual buses, which passes
+    through the hardware controllers; hence they don't need to be aware of the buses.
+
+    Parameters
+    ----------
+    config : RedSunConfigInfo
+        Configuration dictionary.
+    """
+
+    def __init__(self, config: RedSunConfigInfo) -> None:
+        self._config = config
+
+    def build_motor(
+        self,
+        name: str,
+        info_dict: dict[str, Any],
+        model_info_cls: Type[MotorModelInfo],
+        model_cls: Type[MotorModel],
+    ) -> MotorModel:
+        """Build the motor model.
+
+        Before building the model, the factory should build the model information. This will provide
+        the necessary validation checks and ensure that the model is coherent.
+
+        Parameters
+        ----------
+        name : str
+            Model name.
+        model_info : ModelInfoTypes
+            Model information.
+        """
+        # TODO: building the model info object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown by pydantic
+        model_info_obj = model_info_cls(**info_dict)
+
+        # TODO: building the model object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown during the initialization
+        #       of the model object
+        model_obj = model_cls(name, model_info_obj)
+        return model_obj
+
+    def build_detector(
+        self,
+        name: str,
+        info_dict: dict[str, Any],
+        model_info_cls: Type[DetectorModelInfo],
+        model_cls: Type[DetectorModel],
+    ) -> DetectorModel:
+        """Build the detector model.
+
+        Before building the model, the factory should build the model information. This will provide
+        the necessary validation checks and ensure that the model is coherent.
+
+        Parameters
+        ----------
+        name : str
+            Model name.
+        info_dict : dict[str, Any]
+            Model information extracted from the main configuration.
+        model_info_cls : Type[DetectorModelInfo]
+            Model-specific information class.
+        model_cls : Type[DetectorModel]
+            Model-specific class.
+
+        Returns
+        -------
+        DetectorModel
+            The built detector model.
+        """
+        # TODO: building the model info object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown by pydantic
+        model_info_obj = model_info_cls(**info_dict)
+
+        # TODO: building the model object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown during the initialization
+        #       of the model object
+        model_obj = model_cls(name, model_info_obj)
+        return model_obj
 
 
 class ControllerFactory:
@@ -117,34 +226,50 @@ class ControllerFactory:
 
     def __init__(
         self,
-        engine: AcquisitionEngineTypes,
+        config: RedSunConfigInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
     ) -> None:
+        self._config = config
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self.__controller_factor: ControllerFactoryType
-        if engine == AcquisitionEngineTypes.BLUESKY:
-            self.__controller_factor = BlueskyController
-        elif engine == AcquisitionEngineTypes.EXENGINE:
-            self.__controller_factor = ExEngineController
-        else:
-            raise ValueError(f"Invalid engine: {engine}")
-
-    @property
-    def factory(self) -> ControllerFactoryType:
-        """Get the controller factory."""
-        return self.__controller_factor
 
     def build(
-        self, info: ControllerInfo, registry: RegistryBuildType
+        self,
+        name: str,  # TODO: use "name" parameter to distinguish controllers
+        info_dict: dict[str, Any],
+        ctrl_info_cls: Type[ControllerInfo],
+        ctrl_cls: ControllerFactoryType,
+        registry_obj: RegistryBuildType,
     ) -> ControllerBuildType:
-        """Build the controller."""
-        controller = self.__controller_factor(
-            info,
-            registry,  # type: ignore
+        """Build the controller.
+
+        Parameters
+        ----------
+        name : str
+            Controller name. Currently not used.
+        info_dict : dict[str, Any]
+            Controller information extracted from the main configuration.
+        ctrl_info_cls : Type[ControllerInfo]
+            Controller information class.
+        """
+        # TODO: building the controller info object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown by pydantic
+        ctrl_info_obj = ctrl_info_cls(**info_dict)
+
+        # TODO: building the controller object
+        #       should be wrapped in a try-except block
+        #       to catch any exception thrown during the initialization
+        #       of the model object
+        # TODO: registry_obj causes a type error due to the fact that
+        #       the controller class is specific to each engine;
+        #       this is a problem rooted in the different engine design
+        #       and should be addressed in the future
+        ctrl_obj = ctrl_cls(
+            ctrl_info_obj,
+            registry_obj,  # type: ignore[arg-type]
             self._virtual_bus,
             self._module_bus,
         )
-        controller.registration_phase()
-        return controller
+        return ctrl_obj
