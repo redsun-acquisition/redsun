@@ -58,6 +58,3 @@ class RedSunConfigInfo(TypedDict):
     motors: Optional[dict[str, dict[str, Any]]]
     detectors: Optional[dict[str, dict[str, Any]]]
     controllers: Optional[dict[str, dict[str, Any]]]
-
-
-__all__ = ["Registry"]
