@@ -1,5 +1,5 @@
 """
-The `factory` module contains all the tooling necessary for the dynamic loading of controllers and models.
+The `factory` module contains all the tooling necessary for the dynamic building of internal components of RedSun.
 
 RedSun operates by dynamically loading external plugins with different archetypes
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
