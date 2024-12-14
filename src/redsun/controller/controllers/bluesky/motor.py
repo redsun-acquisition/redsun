@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TypeAlias, Union
 
 from sunflare.controller.bluesky import BlueskyController
 from sunflare.virtualbus import Signal, slot
 from sunflare.config import MotorModelTypes
 
-if TYPE_CHECKING:
-    from typing import Union
+from sunflare.types import AxisLocation
+from sunflare.config import ControllerInfo
+from sunflare.virtualbus import VirtualBus
+from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 
-    from sunflare.types import AxisLocation
-    from sunflare.config import ControllerInfo
-    from sunflare.virtualbus import VirtualBus
-    from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-
-    from redsun.controller.virtualbus import HardwareVirtualBus
+from redsun.controller.virtualbus import HardwareVirtualBus
 
 TA: TypeAlias = Union[int, float]
 

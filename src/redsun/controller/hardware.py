@@ -189,26 +189,18 @@ class RedsunMainHardwareController(Loggable):
             registry.get("controllers", []),
         )
         controllers_params = self._config.get("controllers", {})
-        for controller in controllers:
-            ctrl_name, ctrl_info_cls, ctrl_cls = controller
-            # TODO: the "Optional" type for models and controllers causes a mypy error;
-            #       decide whether to keep it as it is or not
+        for controller_tuple in controllers:
+            ctrl_name, ctrl_info_cls, ctrl_cls = controller_tuple
             params = controllers_params.get(ctrl_name, {})  # type: ignore[union-attr]
 
-            # TODO: add a try-except block to catch
-            #       any exception thrown during the initialization
-            # TODO: ctrl_cls causes a mypy error due to
-            #       the division between ExEngine and Bluesky controllers; decision needed
-            controller = self._controller_factory.build(  # type: ignore[assignment]
+            controller = self._controller_factory.build(
                 name=ctrl_name,
                 info_dict=params,
                 ctrl_info_cls=ctrl_info_cls,
-                ctrl_cls=ctrl_cls,  # type: ignore[arg-type]
+                ctrl_cls=ctrl_cls,
                 registry_obj=device_registry,
             )
-            # TODO: mypy error due to to the division between
-            #       ExEngine and Bluesky controllers; decision needed
-            self._controllers[ctrl_name] = controller  # type: ignore[assignment]
+            self._controllers[ctrl_name] = controller
 
         # build engine handler
         # TODO: add a try-except block to catch

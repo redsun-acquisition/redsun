@@ -255,7 +255,7 @@ class ControllerFactory:
         #       and should be addressed in the future
         ctrl_obj = ctrl_cls(
             ctrl_info_obj,
-            registry_obj,  # type: ignore[arg-type]
+            registry_obj,
             self._virtual_bus,
             self._module_bus,
         )
