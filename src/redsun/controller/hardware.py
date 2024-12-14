@@ -19,14 +19,11 @@ if TYPE_CHECKING:
     from sunflare.virtualbus import ModuleVirtualBus
 
     from redsun.engine.bluesky import BlueskyHandler
-    from redsun.engine.exengine import ExEngineHandler
     from redsun.controller.virtualbus import HardwareVirtualBus
     from redsun.common.types import Registry, RedSunConfigInfo
 
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-    from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
     from sunflare.controller.bluesky import BlueskyController
-    from sunflare.controller.exengine import ExEngineController
     from sunflare.engine import DetectorModel, MotorModel
     from sunflare.config import (
         DetectorModelInfo,
@@ -67,9 +64,9 @@ class RedsunMainHardwareController(Loggable):
         self._module_bus = module_bus
 
         # weak references
-        self._device_registry: Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
-        self._controllers: dict[str, Union[BlueskyController, ExEngineController]]
-        self._handler: Union[BlueskyHandler, ExEngineHandler]
+        self._device_registry: BlueskyDeviceRegistry
+        self._controllers: dict[str, BlueskyController]
+        self._handler: BlueskyHandler
 
         self._engine_factory = EngineFactory(config["engine"], virtual_bus, module_bus)
         self._registry_factory = RegistryFactory(
@@ -91,19 +88,17 @@ class RedsunMainHardwareController(Loggable):
     @property
     def device_registry(
         self,
-    ) -> Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]:
+    ) -> BlueskyDeviceRegistry:
         """The device registry."""
         return self._device_registry
 
     @property
-    def controllers(
-        self,
-    ) -> dict[str, Union[BlueskyController, ExEngineController]]:
+    def controllers(self) -> dict[str, BlueskyController]:
         """The built controllers."""
         return self._controllers
 
     @property
-    def handler(self) -> Union[BlueskyHandler, ExEngineHandler]:
+    def handler(self) -> BlueskyHandler:
         """The engine handler."""
         return self._handler
 
@@ -188,7 +183,7 @@ class RedsunMainHardwareController(Loggable):
                 Tuple[
                     str,
                     Type[ControllerInfo],
-                    Union[BlueskyController, ExEngineController],
+                    Type[BlueskyController],
                 ]
             ],
             registry.get("controllers", []),

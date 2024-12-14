@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from typing import final, TYPE_CHECKING, TypeAlias
+from typing import final, TypeAlias, Union, Optional, ClassVar, Union
 
 from sunflare.virtualbus import VirtualBus
 from sunflare.virtualbus import Signal
-
-if TYPE_CHECKING:
-    from typing import Optional, ClassVar, Union
-
-    from sunflare.types import AxisLocation
-    from sunflare.config import MotorModelTypes
-    from sunflare.types import Buffer
-    from sunflare.engine import DetectorModel, MotorModel
+from sunflare.types import AxisLocation
+from sunflare.config import MotorModelTypes
+from sunflare.types import Buffer
+from sunflare.engine import DetectorModel, MotorModel
 
 __all__ = ["HardwareVirtualBus"]
 

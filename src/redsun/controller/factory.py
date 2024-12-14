@@ -10,42 +10,33 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Union, Type, Any, TypeAlias
 
-if TYPE_CHECKING:
-    from typing import Union, Type, Any, TypeAlias
+from redsun.controller.virtualbus import HardwareVirtualBus
+from redsun.common.types import RedSunConfigInfo
+from redsun.engine.bluesky import BlueskyHandler
 
-    from redsun.controller.virtualbus import HardwareVirtualBus
-    from redsun.engine.bluesky import BlueskyHandler
-    from redsun.engine.exengine import ExEngineHandler
-    from redsun.common.types import RedSunConfigInfo
-
-    from sunflare.virtualbus import ModuleVirtualBus
-    from sunflare.config import (
-        AcquisitionEngineTypes,
-        ControllerInfo,
-        MotorModelInfo,
-        DetectorModelInfo,
-    )
-    from sunflare.controller.bluesky import BlueskyController
-    from sunflare.controller.exengine import ExEngineController
-    from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-    from sunflare.engine.exengine.registry import ExEngineDeviceRegistry
-    from sunflare.engine import MotorModel, DetectorModel
+from sunflare.virtualbus import ModuleVirtualBus
+from sunflare.config import (
+    AcquisitionEngineTypes,
+    ControllerInfo,
+    MotorModelInfo,
+    DetectorModelInfo,
+)
+from sunflare.controller.bluesky import BlueskyController
+from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
+from sunflare.engine import MotorModel, DetectorModel
+from sunflare.config import ControllerInfo, MotorModelInfo, DetectorModelInfo
 
 # TODO: so many types; how to simplify?
-RegistryFactoryType: TypeAlias = Union[
-    Type[BlueskyDeviceRegistry], Type[ExEngineDeviceRegistry]
-]
-RegistryBuildType: TypeAlias = Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
+RegistryFactoryType: TypeAlias = Union[Type[BlueskyDeviceRegistry]]
+RegistryBuildType: TypeAlias = Union[BlueskyDeviceRegistry]
 
-EngineFactoryType: TypeAlias = Union[Type[BlueskyHandler], Type[ExEngineHandler]]
-EngineBuildType: TypeAlias = Union[BlueskyHandler, ExEngineHandler]
+EngineFactoryType: TypeAlias = Union[Type[BlueskyHandler]]
+EngineBuildType: TypeAlias = Union[BlueskyHandler]
 
-ControllerFactoryType: TypeAlias = Union[
-    Type[BlueskyController], Type[ExEngineController]
-]
-ControllerBuildType: TypeAlias = Union[BlueskyController, ExEngineController]
+ControllerFactoryType: TypeAlias = Union[Type[BlueskyController]]
+ControllerBuildType: TypeAlias = Union[BlueskyController]
 
 __all__ = ["RegistryFactory", "EngineFactory", "ControllerFactory"]
 
@@ -76,8 +67,6 @@ class RegistryFactory:
         self.__registry_factory: RegistryFactoryType
         if engine == AcquisitionEngineTypes.BLUESKY:
             self.__registry_factory = BlueskyDeviceRegistry
-        elif engine == AcquisitionEngineTypes.EXENGINE:
-            self.__registry_factory = ExEngineDeviceRegistry
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
@@ -112,8 +101,6 @@ class EngineFactory:
         self.__engine_factory: EngineFactoryType
         if engine == AcquisitionEngineTypes.BLUESKY:
             self.__engine_factory = BlueskyHandler
-        elif engine == AcquisitionEngineTypes.EXENGINE:
-            self.__engine_factory = ExEngineHandler
         else:
             raise ValueError(f"Invalid engine: {engine}")
 

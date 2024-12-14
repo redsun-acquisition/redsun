@@ -1,19 +1,18 @@
 # noqa: D100
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
-if TYPE_CHECKING:
-    from typing import Union, Type, TypeAlias, Tuple, Any, Optional
-    from sunflare.controller.bluesky import BlueskyController
-    from sunflare.controller.exengine import ExEngineController
-    from sunflare.engine import DetectorModel, MotorModel
-    from sunflare.config import (
-        DetectorModelInfo,
-        MotorModelInfo,
-        ControllerInfo,
-        AcquisitionEngineTypes,
-        FrontendTypes,
-    )
+
+from typing import Union, Type, TypeAlias, Tuple, Any, Optional
+from sunflare.controller.bluesky import BlueskyController
+from sunflare.engine import DetectorModel, MotorModel
+from sunflare.config import (
+    DetectorModelInfo,
+    MotorModelInfo,
+    ControllerInfo,
+    AcquisitionEngineTypes,
+    FrontendTypes,
+)
 
 InfoTypes: TypeAlias = Union[
     Type[DetectorModelInfo], Type[MotorModelInfo], Type[ControllerInfo]
@@ -22,7 +21,6 @@ BuildTypes: TypeAlias = Union[
     Type[DetectorModel],
     Type[MotorModel],
     Type[BlueskyController],
-    Type[ExEngineController],
 ]
 
 Registry: TypeAlias = dict[str, list[Tuple[str, InfoTypes, BuildTypes]]]

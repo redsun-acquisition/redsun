@@ -28,7 +28,6 @@ requires-python = ">=3.9"
 
 [project.optional-dependencies]
 bluesky = ["sunflare[bluesky]"]
-exengine = ["sunflare[exengine]"]
 dev = ["nox", "pre-commit", "pytest", "mypy", "ruff"]
 
 [project.urls]

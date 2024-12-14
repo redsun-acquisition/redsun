@@ -28,8 +28,8 @@ class MotorController(BlueskyController):
     ----------
     ctrl_info : ControllerInfo
         Controller information.
-    registry : ExEngineDeviceRegistry
-        Device registry for ExEngine models.
+    registry : BlueskyDeviceRegistry
+        Device registry for Bluesky models.
     virtual_bus : HardwareVirtualBus
         Virtual bus for the main module (hardware control).
     module_bus : VirtualBus
