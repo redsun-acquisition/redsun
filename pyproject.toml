@@ -92,3 +92,6 @@ select = ["D"] # enable docstring checks
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[project.scripts]
+redsun = "redsun.__main__:main_cli"

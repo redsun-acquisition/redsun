@@ -12,7 +12,7 @@ from redsun.view import build_view_layer
 class RedSunArgs(argparse.Namespace):
     """Type hints for command line arguments."""
 
-    config_file: str
+    config: str
 
 
 def parse_args() -> RedSunArgs:
@@ -63,6 +63,11 @@ def main(input_config: str) -> None:
     build_view_layer(main_controller)
 
 
-if __name__ == "__main__":
+def main_cli() -> None:
+    """Command line entry point for the RedSun application."""
     args = parse_args()
-    main(args.config_file)
+    main(args.config)
+
+
+if __name__ == "__main__":
+    main_cli()
