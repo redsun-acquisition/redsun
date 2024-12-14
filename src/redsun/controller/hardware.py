@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import weakref
-
 from sunflare.log import Loggable
 
 from typing import TYPE_CHECKING, cast
@@ -42,9 +40,10 @@ class RedsunMainHardwareController(Loggable):
 
     The main controller builds all the hardware controllers that are listed in the configuration.
 
-    It keeps hold of the following weak references:
+    It keeps hold of the following references:
 
     - the device registry;
+    - the engine handler;
     - the built controllers.
 
     Parameters
@@ -68,13 +67,9 @@ class RedsunMainHardwareController(Loggable):
         self._module_bus = module_bus
 
         # weak references
-        self._device_registry: weakref.ReferenceType[
-            Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
-        ]
-        self._controllers: weakref.WeakValueDictionary[
-            str, Union[BlueskyController, ExEngineController]
-        ]
-        self._handler: weakref.ReferenceType[Union[BlueskyHandler, ExEngineHandler]]
+        self._device_registry: Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]
+        self._controllers: dict[str, Union[BlueskyController, ExEngineController]]
+        self._handler: Union[BlueskyHandler, ExEngineHandler]
 
         self._engine_factory = EngineFactory(config["engine"], virtual_bus, module_bus)
         self._registry_factory = RegistryFactory(
@@ -84,21 +79,31 @@ class RedsunMainHardwareController(Loggable):
         self._controller_factory = ControllerFactory(config, virtual_bus, module_bus)
 
     @property
+    def virtual_bus(self) -> HardwareVirtualBus:
+        """Hardware virtual bus."""
+        return self._virtual_bus
+
+    @property
+    def module_bus(self) -> ModuleVirtualBus:
+        """Module virtual bus."""
+        return self._module_bus
+
+    @property
     def device_registry(
         self,
-    ) -> weakref.ReferenceType[Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]]:
+    ) -> Union[BlueskyDeviceRegistry, ExEngineDeviceRegistry]:
         """The device registry."""
         return self._device_registry
 
     @property
     def controllers(
         self,
-    ) -> weakref.WeakValueDictionary[str, Union[BlueskyController, ExEngineController]]:
+    ) -> dict[str, Union[BlueskyController, ExEngineController]]:
         """The built controllers."""
         return self._controllers
 
     @property
-    def handler(self) -> weakref.ReferenceType[Union[BlueskyHandler, ExEngineHandler]]:
+    def handler(self) -> Union[BlueskyHandler, ExEngineHandler]:
         """The engine handler."""
         return self._handler
 
@@ -127,7 +132,7 @@ class RedsunMainHardwareController(Loggable):
         """
         # build device registry
         device_registry = self._registry_factory.build()
-        self._device_registry = weakref.ref(device_registry)
+        self._device_registry = device_registry
 
         # build motors
         motors = cast(
@@ -208,13 +213,13 @@ class RedsunMainHardwareController(Loggable):
             )
             # TODO: mypy error due to to the division between
             #       ExEngine and Bluesky controllers; decision needed
-            self._controllers[ctrl_name] = weakref.ref(controller)  # type: ignore[assignment]
+            self._controllers[ctrl_name] = controller  # type: ignore[assignment]
 
         # build engine handler
         # TODO: add a try-except block to catch
         #       any exception thrown during the initialization
         handler = self._engine_factory.build()
-        self._handler = weakref.ref(handler)
+        self._handler = handler
 
         # register signals
         for ctrl in self._controllers.values():
