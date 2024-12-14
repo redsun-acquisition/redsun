@@ -181,7 +181,7 @@ class StepperMotorWidget(BaseWidget, Loggable):
         # can't do much for type hinting here since the validator returns
         # a non-annotated tuple of unknown types
         value: Tuple[QRegularExpressionValidator.State, Any, Any] = (
-            self.validator.validate(input, 0)  # type: ignore[assignment]
+            self.validator.validate(input, 0)
         )
         state = value[0]
 
