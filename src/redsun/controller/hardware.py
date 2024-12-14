@@ -97,6 +97,11 @@ class RedsunMainHardwareController(Loggable):
         """The built controllers."""
         return self._controllers
 
+    @property
+    def handler(self) -> weakref.ReferenceType[Union[BlueskyHandler, ExEngineHandler]]:
+        """The engine handler."""
+        return self._handler
+
     def build_layer(self, registry: Registry) -> None:
         """Build the controller layer.
 
