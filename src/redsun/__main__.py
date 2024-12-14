@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 from sunflare.virtualbus import ModuleVirtualBus
 from redsun.controller import PluginManager, HardwareVirtualBus, build_controller_layer
@@ -23,10 +24,21 @@ def parse_args() -> RedSunArgs:
     RedSunArgs
         Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description="RedSun application")
-    parser.add_argument(
-        "-c", "--config", type=str, help="Absolute path to the YAML configuration file"
+    parser = argparse.ArgumentParser(
+        description="RedSun: event-driven data acquisition system"
     )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        help="Absolute path to the YAML configuration file",
+        required=True,
+    )
+
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+
     args: RedSunArgs = parser.parse_args(namespace=RedSunArgs())
     return args
 
