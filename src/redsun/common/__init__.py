@@ -1,4 +1,4 @@
 # noqa: D104
-from .types import RedSunConfigInfo
+from .types import RedSunConfigInfo, Registry
 
-__all__ = ["RedSunConfigInfo"]
+__all__ = ["RedSunConfigInfo", "Registry"]

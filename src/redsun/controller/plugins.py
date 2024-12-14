@@ -22,7 +22,7 @@ if TYPE_CHECKING:
         MotorModelInfo,
     )
 
-    from redsun.common.types import Registry, RedSunConfigInfo
+    from redsun.common import Registry, RedSunConfigInfo
 
 
 class PluginManager:
