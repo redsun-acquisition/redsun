@@ -58,11 +58,3 @@ class HardwareVirtualBus(VirtualBus):
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
     sigMoveDone: Signal = Signal(str, MotorModelTypes, AxisLocation[TA])
     sigNewImage: Signal = Signal(Buffer)
-
-    __instance: ClassVar[Optional[HardwareVirtualBus]] = None
-
-    def __new__(cls) -> HardwareVirtualBus:  # noqa: D102
-        if cls.__instance is None:
-            cls.__instance = super(HardwareVirtualBus, cls).__new__(cls)
-
-        return cls.__instance
