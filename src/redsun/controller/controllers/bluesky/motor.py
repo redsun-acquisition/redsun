@@ -13,7 +13,7 @@ from sunflare.config import ControllerInfo
 from sunflare.virtualbus import VirtualBus
 from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 
-from redsun.controller.virtualbus import HardwareVirtualBus
+from redsun.virtual import HardwareVirtualBus
 
 TA: TypeAlias = Union[int, float]
 

@@ -11,7 +11,7 @@ This module operates within the RedSun core code and is not exposed to the toolk
 from __future__ import annotations
 
 from typing import Type, Any, TYPE_CHECKING
-from redsun.controller.virtualbus import HardwareVirtualBus
+from redsun.virtual import HardwareVirtualBus
 from redsun.common.types import RedSunConfigInfo
 from redsun.engine.bluesky import BlueskyHandler
 from sunflare.virtualbus import ModuleVirtualBus

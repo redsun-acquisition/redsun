@@ -17,7 +17,7 @@ from sunflare.types import AxisLocation
 if TYPE_CHECKING:
     from typing import Union
 
-    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.virtual import HardwareVirtualBus
 
 TA: TypeAlias = Union[int, float]
 

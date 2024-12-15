@@ -11,7 +11,7 @@ from qtpy import QtWidgets
 if TYPE_CHECKING:
     from typing import Any
 
-    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.virtual import HardwareVirtualBus
 
     from sunflare.config import DetectorModelInfo
     from sunflare.virtualbus import VirtualBus

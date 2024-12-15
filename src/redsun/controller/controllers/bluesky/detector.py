@@ -14,7 +14,7 @@ from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 from sunflare.log import Loggable
 from sunflare.types import Buffer
 
-from redsun.controller.virtualbus import HardwareVirtualBus
+from redsun.virtual import HardwareVirtualBus
 
 if TYPE_CHECKING:
     from typing import Sequence, Any, Tuple

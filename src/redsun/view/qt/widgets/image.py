@@ -11,7 +11,7 @@ from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus, slot
 
 if TYPE_CHECKING:
-    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.virtual import HardwareVirtualBus
 
     from sunflare.types import Buffer
 

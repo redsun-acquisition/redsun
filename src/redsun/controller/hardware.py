@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing import Type, Tuple
     from sunflare.virtualbus import ModuleVirtualBus
     from redsun.engine.bluesky import BlueskyHandler
-    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.virtual import HardwareVirtualBus
     from redsun.common.types import Registry, RedSunConfigInfo
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
     from sunflare.controller.bluesky import BlueskyController

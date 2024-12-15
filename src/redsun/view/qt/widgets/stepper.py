@@ -31,7 +31,7 @@ from qtpy.QtCore import Qt, QRegularExpression
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
-    from redsun.controller.virtualbus import HardwareVirtualBus
+    from redsun.virtual import HardwareVirtualBus
 
     from sunflare.config import MotorModelInfo
     from sunflare.virtualbus import VirtualBus
