@@ -10,33 +10,22 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import Union, Type, Any, TypeAlias
-
+from typing import Type, Any, TYPE_CHECKING
 from redsun.controller.virtualbus import HardwareVirtualBus
 from redsun.common.types import RedSunConfigInfo
 from redsun.engine.bluesky import BlueskyHandler
-
 from sunflare.virtualbus import ModuleVirtualBus
-from sunflare.config import (
-    AcquisitionEngineTypes,
-    ControllerInfo,
-    MotorModelInfo,
-    DetectorModelInfo,
-)
+from sunflare.config import AcquisitionEngineTypes
 from sunflare.controller.bluesky import BlueskyController
 from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-from sunflare.engine import MotorModel, DetectorModel
-from sunflare.config import ControllerInfo, MotorModelInfo, DetectorModelInfo
 
-# TODO: so many types; how to simplify?
-RegistryFactoryType: TypeAlias = Union[Type[BlueskyDeviceRegistry]]
-RegistryBuildType: TypeAlias = Union[BlueskyDeviceRegistry]
-
-EngineFactoryType: TypeAlias = Union[Type[BlueskyHandler]]
-EngineBuildType: TypeAlias = Union[BlueskyHandler]
-
-ControllerFactoryType: TypeAlias = Union[Type[BlueskyController]]
-ControllerBuildType: TypeAlias = Union[BlueskyController]
+if TYPE_CHECKING:
+    from sunflare.config import (
+        ControllerInfo,
+        MotorModelInfo,
+        DetectorModelInfo,
+    )
+    from sunflare.engine import MotorModel, DetectorModel
 
 __all__ = ["RegistryFactory", "EngineFactory", "ControllerFactory"]
 
@@ -64,13 +53,13 @@ class RegistryFactory:
     ) -> None:
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self.__registry_factory: RegistryFactoryType
+        self.__registry_factory: Type[BlueskyDeviceRegistry]
         if engine == AcquisitionEngineTypes.BLUESKY:
             self.__registry_factory = BlueskyDeviceRegistry
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
-    def build(self) -> RegistryBuildType:
+    def build(self) -> BlueskyDeviceRegistry:
         """Build the registry."""
         return self.__registry_factory(self._virtual_bus, self._module_bus)
 
@@ -98,13 +87,13 @@ class EngineFactory:
     ) -> None:
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self.__engine_factory: EngineFactoryType
+        self.__engine_factory: Type[BlueskyHandler]
         if engine == AcquisitionEngineTypes.BLUESKY:
             self.__engine_factory = BlueskyHandler
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
-    def build(self) -> EngineBuildType:
+    def build(self) -> BlueskyHandler:
         """Build the registry."""
         return self.__engine_factory(self._virtual_bus, self._module_bus)
 
@@ -226,9 +215,9 @@ class ControllerFactory:
         name: str,  # TODO: use "name" parameter to distinguish controllers
         info_dict: dict[str, Any],
         ctrl_info_cls: Type[ControllerInfo],
-        ctrl_cls: ControllerFactoryType,
-        registry_obj: RegistryBuildType,
-    ) -> ControllerBuildType:
+        ctrl_cls: Type[BlueskyController],
+        registry_obj: BlueskyDeviceRegistry,
+    ) -> BlueskyController:
         """Build the controller.
 
         Parameters
