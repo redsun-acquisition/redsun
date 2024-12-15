@@ -1,9 +1,8 @@
 # noqa: D100
 
-from typing import TypedDict
+from __future__ import annotations
 
-
-from typing import Union, Type, TypeAlias, Tuple, Any, Optional
+from typing import Union, Type, TypeAlias, Tuple, Any, Optional, TypedDict
 from sunflare.controller.bluesky import BlueskyController
 from sunflare.engine import DetectorModel, MotorModel
 from sunflare.config import (
