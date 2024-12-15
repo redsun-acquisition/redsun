@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from sunflare.log import Loggable
-
 from typing import TYPE_CHECKING, cast
 
 from redsun.controller.factory import (
@@ -14,14 +13,11 @@ from redsun.controller.factory import (
 )
 
 if TYPE_CHECKING:
-    from typing import Type, Tuple, Union
-
+    from typing import Type, Tuple
     from sunflare.virtualbus import ModuleVirtualBus
-
     from redsun.engine.bluesky import BlueskyHandler
     from redsun.controller.virtualbus import HardwareVirtualBus
     from redsun.common.types import Registry, RedSunConfigInfo
-
     from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
     from sunflare.controller.bluesky import BlueskyController
     from sunflare.engine import DetectorModel, MotorModel
@@ -149,8 +145,6 @@ class RedsunMainHardwareController(Loggable):
                 model_info_cls=motor_info_cls,
                 model_cls=motor_model_cls,
             )
-            # TODO: mypy error due to to the division between
-            #       ExEngine and Bluesky models; decision needed
             device_registry.motors[motor_name] = motor_model  # type: ignore[assignment]
 
         # build detectors
