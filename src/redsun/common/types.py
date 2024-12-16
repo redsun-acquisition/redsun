@@ -29,6 +29,8 @@ Registry: TypeAlias = dict[str, list[Tuple[str, InfoTypes, BuildTypes]]]
 #       dump to file via pydantic the configuration information. This may be a better
 #       approach and more coherent with the plugin-driven architecture.
 # TODO: which types should be used for the dictionary fields?
+# TODO: maybe this approach makes sense
+#       https://techoverflow.net/2024/09/25/pydantic-how-to-load-store-model-in-yaml-file-minimal-example/
 class RedSunConfigInfo(TypedDict):
     """Typed dictionary for RedSun configuration.
 
