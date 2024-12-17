@@ -7,13 +7,14 @@ from qtpy.QtCore import Qt
 
 from .widgets import StepperMotorWidget, DetectorSettingsWidget
 
+from redsun.view.qt.widgets import ImageViewWidget
+
+from sunflare.config import MotorModelTypes
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sunflare.config import MotorModelTypes
-
     from redsun.controller.hardware import RedsunMainHardwareController
-    from redsun.view.qt.widgets import ImageViewWidget
 
 
 class RedSunMainWindow(QMainWindow):
