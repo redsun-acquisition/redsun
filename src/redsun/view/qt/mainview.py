@@ -75,6 +75,8 @@ class RedSunMainWindow(QMainWindow):
         # set dock widgets; the detector settings are on the top-left;
         # the stepper motor settings are below the detector settings;
         # the image viewer is set as the central widget;
+        # TODO: give freedom to the user to choose the layout
+        #       of the dock widgets
         if self._image_viewer is not None:
             self.setCentralWidget(self._image_viewer)
         if detector_widget is not None:
