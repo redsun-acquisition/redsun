@@ -42,6 +42,12 @@ class DetectorController(BlueskyController, Loggable):
         self._executor = ThreadPoolExecutor(max_workers=len(registry.detectors))
         self._futures: list[Future[None]] = []
 
+    def registration_phase(self) -> None:  # noqa: D102
+        ...
+
+    def connection_phase(self) -> None:  # noqa: D102
+        ...
+
     def snap(self, detectors: Sequence[str]) -> None:
         """Take a snapshot from a series of detectors.
 
