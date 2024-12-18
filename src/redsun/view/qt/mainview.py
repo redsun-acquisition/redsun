@@ -45,9 +45,9 @@ class RedSunMainWindow(QMainWindow):
         # build the device widgets
         registry = self._controller.device_registry
         motors_info = {
-            motor.name: motor._model_info
+            motor.name: motor.model_info
             for motor in registry.motors.values()
-            if motor._model_info.category == MotorModelTypes.STEPPER
+            if motor.model_info.category == MotorModelTypes.STEPPER
         }
         if motors_info:
             stepper_widget = StepperMotorWidget(
@@ -58,7 +58,7 @@ class RedSunMainWindow(QMainWindow):
         # TODO: the model info should provide a flag to indicate
         #       if the detector is supposed to be added to the GUI
         detectors_info = {
-            detector.name: detector._model_info
+            detector.name: detector.model_info
             for detector in registry.detectors.values()
         }
         if detectors_info:
