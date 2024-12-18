@@ -93,12 +93,6 @@ class DetectorSettingsWidget(BaseWidget):
                 "readonly": True,
             },
             {
-                "name": "Supported Engines",
-                "type": "list",
-                "value": detector_info.supported_engines[0],
-                "readonly": True,
-            },
-            {
                 "name": "Vendor",
                 "type": "str",
                 "value": detector_info.vendor,
