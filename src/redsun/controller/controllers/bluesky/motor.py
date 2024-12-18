@@ -13,7 +13,7 @@ from sunflare.virtualbus import VirtualBus
 
 from redsun.virtual import HardwareVirtualBus
 
-TA: TypeAlias = Union[float, str]
+TA: TypeAlias = Union[float, int, str]
 
 
 class MotorController(BlueskyController):
@@ -32,18 +32,18 @@ class MotorController(BlueskyController):
 
     Attributes
     ----------
-    current_locations : dict[str, AxisLocation[Union[int, float]]]
+    current_locations : dict[str, AxisLocation[Union[int, float, str]]]
         Dictionary of current motor locations.
 
     Signals
     -------
-    sigMoveDone : Signal(str, MotorModelTypes, AxisLocation[Union[int, float]])
+    sigMoveDone : Signal(str, MotorModelTypes, AxisLocation[Union[int, float, str]])
         Emitted when a motor has finished moving.
         Carries:
         - motor name;
         - motor model category;
-        - motor location (AxisLocation[Union[int, float]]).
-    sigLocation : Signal(str, AxisLocation[Union[int, float]])
+        - motor location (AxisLocation[Union[int, float, str]]).
+    sigLocation : Signal(str, AxisLocation[Union[int, float, str]])
         Emitted when a motor location is requested.
         Carries:
         - motor name;
