@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from typing import TypeAlias, Union
 
+from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 from sunflare.controller.bluesky import BlueskyController
 from sunflare.virtualbus import Signal, slot
-from sunflare.config import MotorModelTypes
-
+from sunflare.config import MotorModelTypes, ControllerInfo
 from sunflare.types import AxisLocation
-from sunflare.config import ControllerInfo
 from sunflare.virtualbus import VirtualBus
-from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
 
 from redsun.virtual import HardwareVirtualBus
 
-TA: TypeAlias = Union[int, float]
+TA: TypeAlias = Union[float, str]
 
 
 class MotorController(BlueskyController):
@@ -117,9 +115,12 @@ class MotorController(BlueskyController):
         axis : str
             Motor axis along which movement occurs.
         """
-        step_size = self._registry.motors[motor].step_size
+        step_size = self._registry.motors[motor].model_info.step_size
         current = self.location(motor)["axis"][axis]
-        self.move(motor, AxisLocation(axis={axis: current + step_size}))
+        if isinstance(current, (int, float)):
+            self.move(motor, AxisLocation(axis={axis: current + step_size}))
+        else:
+            self.move(motor, AxisLocation(axis={axis: current}))
 
     @slot
     def move_down(self, motor: str, axis: str) -> None:
@@ -134,6 +135,9 @@ class MotorController(BlueskyController):
         axis : str
             Motor axis along which movement occurs.
         """
-        step_size = self._registry.motors[motor].step_size
+        step_size = self._registry.motors[motor].model_info.step_size
         current = self.location(motor)["axis"][axis]
-        self.move(motor, AxisLocation(axis={axis: current - step_size}))
+        if isinstance(current, (int, float)):
+            self.move(motor, AxisLocation(axis={axis: current - step_size}))
+        else:
+            self.move(motor, AxisLocation(axis={axis: current}))
