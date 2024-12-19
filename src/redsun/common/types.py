@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Union, Type, TypeAlias, Tuple, Any, Optional, TypedDict
-from sunflare.controller.bluesky import BlueskyController
+from sunflare.controller import BaseController
 from sunflare.engine import DetectorModel, MotorModel
 from sunflare.config import (
     DetectorModelInfo,
@@ -19,7 +19,7 @@ InfoTypes: TypeAlias = Union[
 BuildTypes: TypeAlias = Union[
     Type[DetectorModel],
     Type[MotorModel],
-    Type[BlueskyController],
+    Type[BaseController],
 ]
 
 Registry: TypeAlias = dict[str, list[Tuple[str, InfoTypes, BuildTypes]]]

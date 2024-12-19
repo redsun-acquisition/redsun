@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 from redsun.controller.factory import (
     RegistryFactory,
-    EngineFactory,
+    HandlerFactory,
     ModelFactory,
     ControllerFactory,
 )
@@ -20,7 +20,8 @@ if TYPE_CHECKING:
     from redsun.common.types import Registry, RedSunConfigInfo
     from sunflare.engine.registry import DeviceRegistry
     from sunflare.controller import BaseController
-    from sunflare.engine import DetectorModel, MotorModel
+    from sunflare.engine.detector import DetectorProtocol
+    from sunflare.engine.motor import MotorProtocol
     from sunflare.config import (
         DetectorModelInfo,
         MotorModelInfo,
@@ -64,7 +65,7 @@ class RedsunMainHardwareController(Loggable):
         self._controllers: dict[str, BaseController]
         self._handler: BlueskyHandler
 
-        self._engine_factory = EngineFactory(config["engine"], virtual_bus, module_bus)
+        self._engine_factory = HandlerFactory(config["engine"], virtual_bus, module_bus)
         self._registry_factory = RegistryFactory(
             config["engine"], virtual_bus, module_bus
         )
@@ -127,7 +128,7 @@ class RedsunMainHardwareController(Loggable):
 
         # build motors
         motors = cast(
-            list[Tuple[str, Type[MotorModelInfo], Type[MotorModel]]],
+            list[Tuple[str, Type[MotorModelInfo], Type[MotorProtocol]]],
             registry.get("motors", []),
         )
         motors_params = self._config.get("motors", {})
@@ -149,7 +150,7 @@ class RedsunMainHardwareController(Loggable):
 
         # build detectors
         detectors = cast(
-            list[Tuple[str, Type[DetectorModelInfo], Type[DetectorModel]]],
+            list[Tuple[str, Type[DetectorModelInfo], Type[DetectorProtocol]]],
             registry.get("detectors", []),
         )
         detectors_params = self._config.get("detectors", {})

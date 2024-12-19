@@ -1,9 +1,14 @@
 """
-The `factory` module contains all the tooling necessary for the dynamic building of internal components of RedSun.
+The ``factory`` module contains all the tooling necessary for the dynamic building of internal components of RedSun.
 
 RedSun operates by dynamically loading external plugins with different archetypes
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
+
+Each factory selects the correct type of object to build based on the ``engine`` field of the configuration file.
+
+This mechanism allows for selecting an engine different from the default Bluesky ``RunEngine``;
+but the new engine should still implement the same public API.
 
 This module operates within the RedSun core code and is not exposed to the toolkit or the user.
 """
@@ -25,15 +30,14 @@ if TYPE_CHECKING:
         MotorModelInfo,
         DetectorModelInfo,
     )
-    from sunflare.engine import MotorModel, DetectorModel
+    from sunflare.engine.motor import MotorProtocol
+    from sunflare.engine.detector import DetectorProtocol
 
-__all__ = ["RegistryFactory", "EngineFactory", "ControllerFactory"]
+__all__ = ["RegistryFactory", "HandlerFactory", "ControllerFactory"]
 
 
 class RegistryFactory:
     """Device registry factory.
-
-    This factory builds the device registry based on the selected acquisition engine.
 
     Parameters
     ----------
@@ -68,10 +72,8 @@ class RegistryFactory:
         return self.__registry_factory(self._virtual_bus, self._module_bus)
 
 
-class EngineFactory:
-    """Engine factory.
-
-    This factory is responsible to build the engine handler objects based on the selected acquisition engine.
+class HandlerFactory:
+    """Engine handler factory.
 
     Parameters
     ----------
@@ -126,8 +128,8 @@ class ModelFactory:
         name: str,
         info_dict: dict[str, Any],
         model_info_cls: Type[MotorModelInfo],
-        model_cls: Type[MotorModel],
-    ) -> MotorModel:
+        model_cls: Type[MotorProtocol],
+    ) -> MotorProtocol:
         """Build the motor model.
 
         Before building the model, the factory should build the model information. This will provide
@@ -157,8 +159,8 @@ class ModelFactory:
         name: str,
         info_dict: dict[str, Any],
         model_info_cls: Type[DetectorModelInfo],
-        model_cls: Type[DetectorModel],
-    ) -> DetectorModel:
+        model_cls: Type[DetectorProtocol],
+    ) -> DetectorProtocol:
         """Build the detector model.
 
         Before building the model, the factory should build the model information. This will provide
