@@ -18,10 +18,9 @@ classifiers = [
 ]
 license = { text = "BSD 3-Clause license" }
 dependencies = [
-    "pyyaml",
+    "sunflare",
     "ndv[pyqt,vispy]",
     "pyqtgraph",
-    "sunflare",
     "importlib_metadata; python_version < '3.10'",
 ]
 requires-python = ">=3.9"
