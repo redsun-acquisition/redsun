@@ -12,7 +12,7 @@ from abc import abstractmethod
 
 from typing import Protocol, TypeAlias, TYPE_CHECKING
 
-from sunflare.types import AxisLocation
+from sunflare.types import Location
 
 if TYPE_CHECKING:
     from typing import Union
@@ -26,10 +26,10 @@ class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
 
     _virtual_bus: HardwareVirtualBus
-    _current_locations: dict[str, AxisLocation[TA]]
+    _current_locations: dict[str, Location[TA]]
 
     @abstractmethod
-    def move(self, motor: str, value: AxisLocation[TA]) -> None:
+    def move(self, motor: str, value: Location[TA]) -> None:
         """Move the motor."""
         ...
 
