@@ -16,8 +16,8 @@ from redsun.common.types import RedSunConfigInfo
 from redsun.engine.bluesky import BlueskyHandler
 from sunflare.virtualbus import ModuleVirtualBus
 from sunflare.config import AcquisitionEngineTypes
-from sunflare.controller.bluesky import BlueskyController
-from sunflare.engine.bluesky.registry import DeviceRegistry
+from sunflare.controller import BaseController
+from sunflare.engine import DeviceRegistry
 
 if TYPE_CHECKING:
     from sunflare.config import (
@@ -54,6 +54,10 @@ class RegistryFactory:
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self.__registry_factory: Type[DeviceRegistry]
+
+        # although we're committing to the bluesky message protocol,
+        # other engines implementing the same interface could be supported
+        # in the future, so we still keep the registry factory as a generic class
         if engine == AcquisitionEngineTypes.BLUESKY:
             self.__registry_factory = DeviceRegistry
         else:
@@ -215,9 +219,9 @@ class ControllerFactory:
         name: str,  # TODO: use "name" parameter to distinguish controllers
         info_dict: dict[str, Any],
         ctrl_info_cls: Type[ControllerInfo],
-        ctrl_cls: Type[BlueskyController],
+        ctrl_cls: Type[BaseController],
         registry_obj: DeviceRegistry,
-    ) -> BlueskyController:
+    ) -> BaseController:
         """Build the controller.
 
         Parameters

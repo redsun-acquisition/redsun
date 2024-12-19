@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @final
-class BlueskyHandler(EngineHandler[RunEngine], Loggable):
+class BlueskyHandler(EngineHandler, Loggable):
     """
     Bluesky handler class.
 
