@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from redsun.engine.bluesky import BlueskyHandler
     from redsun.virtual import HardwareVirtualBus
     from redsun.common.types import Registry, RedSunConfigInfo
-    from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-    from sunflare.controller.bluesky import BlueskyController
+    from sunflare.engine.registry import DeviceRegistry
+    from sunflare.controller import BaseController
     from sunflare.engine import DetectorModel, MotorModel
     from sunflare.config import (
         DetectorModelInfo,
@@ -60,8 +60,8 @@ class RedsunMainHardwareController(Loggable):
         self._module_bus = module_bus
 
         # weak references
-        self._device_registry: BlueskyDeviceRegistry
-        self._controllers: dict[str, BlueskyController]
+        self._device_registry: DeviceRegistry
+        self._controllers: dict[str, BaseController]
         self._handler: BlueskyHandler
 
         self._engine_factory = EngineFactory(config["engine"], virtual_bus, module_bus)
@@ -84,12 +84,12 @@ class RedsunMainHardwareController(Loggable):
     @property
     def device_registry(
         self,
-    ) -> BlueskyDeviceRegistry:
+    ) -> DeviceRegistry:
         """The device registry."""
         return self._device_registry
 
     @property
-    def controllers(self) -> dict[str, BlueskyController]:
+    def controllers(self) -> dict[str, BaseController]:
         """The built controllers."""
         return self._controllers
 
@@ -145,7 +145,7 @@ class RedsunMainHardwareController(Loggable):
                 model_info_cls=motor_info_cls,
                 model_cls=motor_model_cls,
             )
-            device_registry.motors[motor_name] = motor_model  # type: ignore[assignment]
+            device_registry.motors[motor_name] = motor_model
 
         # build detectors
         detectors = cast(
@@ -167,9 +167,7 @@ class RedsunMainHardwareController(Loggable):
                 model_info_cls=det_info_cls,
                 model_cls=det_model_cls,
             )
-            # TODO: mypy error due to to the division between
-            #       ExEngine and Bluesky models; decision needed
-            device_registry.detectors[det_name] = detector_model  # type: ignore[assignment]
+            device_registry.detectors[det_name] = detector_model
 
         # build controllers
         controllers = cast(
@@ -177,7 +175,7 @@ class RedsunMainHardwareController(Loggable):
                 Tuple[
                     str,
                     Type[ControllerInfo],
-                    Type[BlueskyController],
+                    Type[BaseController],
                 ]
             ],
             registry.get("controllers", []),

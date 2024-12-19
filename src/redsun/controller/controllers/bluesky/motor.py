@@ -4,26 +4,27 @@ from __future__ import annotations
 
 from typing import TypeAlias, Union
 
-from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
-from sunflare.controller.bluesky import BlueskyController
+from sunflare.engine.registry import DeviceRegistry
+from sunflare.controller import BaseController
 from sunflare.virtualbus import Signal, slot
 from sunflare.config import MotorModelTypes, ControllerInfo
 from sunflare.types import AxisLocation
 from sunflare.virtualbus import VirtualBus
+from sunflare.log import Loggable
 
 from redsun.virtual import HardwareVirtualBus
 
 TA: TypeAlias = Union[float, int, str]
 
 
-class MotorController(BlueskyController):
+class MotorController(BaseController, Loggable):
     """Motor controller class.
 
     Parameters
     ----------
     ctrl_info : ControllerInfo
         Controller information.
-    registry : BlueskyDeviceRegistry
+    registry : DeviceRegistry
         Device registry for Bluesky models.
     virtual_bus : HardwareVirtualBus
         Virtual bus for the main module (hardware control).
@@ -71,7 +72,7 @@ class MotorController(BlueskyController):
     def __init__(
         self,
         ctrl_info: ControllerInfo,
-        registry: BlueskyDeviceRegistry,
+        registry: DeviceRegistry,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
     ) -> None:

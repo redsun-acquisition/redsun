@@ -17,7 +17,7 @@ from redsun.engine.bluesky import BlueskyHandler
 from sunflare.virtualbus import ModuleVirtualBus
 from sunflare.config import AcquisitionEngineTypes
 from sunflare.controller.bluesky import BlueskyController
-from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
+from sunflare.engine.bluesky.registry import DeviceRegistry
 
 if TYPE_CHECKING:
     from sunflare.config import (
@@ -53,13 +53,13 @@ class RegistryFactory:
     ) -> None:
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self.__registry_factory: Type[BlueskyDeviceRegistry]
+        self.__registry_factory: Type[DeviceRegistry]
         if engine == AcquisitionEngineTypes.BLUESKY:
-            self.__registry_factory = BlueskyDeviceRegistry
+            self.__registry_factory = DeviceRegistry
         else:
             raise ValueError(f"Invalid engine: {engine}")
 
-    def build(self) -> BlueskyDeviceRegistry:
+    def build(self) -> DeviceRegistry:
         """Build the registry."""
         return self.__registry_factory(self._virtual_bus, self._module_bus)
 
@@ -216,7 +216,7 @@ class ControllerFactory:
         info_dict: dict[str, Any],
         ctrl_info_cls: Type[ControllerInfo],
         ctrl_cls: Type[BlueskyController],
-        registry_obj: BlueskyDeviceRegistry,
+        registry_obj: DeviceRegistry,
     ) -> BlueskyController:
         """Build the controller.
 

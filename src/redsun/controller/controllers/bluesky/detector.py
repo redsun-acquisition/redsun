@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor, Future
 from typing import TYPE_CHECKING
 
 from sunflare.virtualbus import Signal, VirtualBus
-from sunflare.controller.bluesky import BlueskyController
+from sunflare.controller import BaseController
 from sunflare.config import ControllerInfo
-from sunflare.engine.bluesky.registry import BlueskyDeviceRegistry
+from sunflare.engine.registry import DeviceRegistry
 from sunflare.log import Loggable
 from sunflare.types import Buffer
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
 
 
-class DetectorController(BlueskyController, Loggable):
+class DetectorController(BaseController, Loggable):
     """Detector controller protocol."""
 
     _virtual_bus: HardwareVirtualBus
@@ -32,7 +32,7 @@ class DetectorController(BlueskyController, Loggable):
     def __init__(
         self,
         ctrl_info: ControllerInfo,
-        registry: BlueskyDeviceRegistry,
+        registry: DeviceRegistry,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
     ) -> None:
