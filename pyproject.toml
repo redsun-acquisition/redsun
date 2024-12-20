@@ -26,8 +26,20 @@ dependencies = [
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
-bluesky = ["sunflare[bluesky]"]
-dev = ["nox", "pre-commit", "pytest", "mypy", "ruff"]
+docs = [
+    "sphinx",
+    "pydata-sphinx-theme",
+    "myst-parser",
+    "sphinx-autodoc2"
+]
+dev = [
+  "nox",
+  "ruff",
+  "pre-commit",
+  "pytest",
+  "mypy"
+]
+
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
