@@ -8,7 +8,6 @@ from sunflare.engine.registry import DeviceRegistry
 from sunflare.controller import BaseController
 from sunflare.virtualbus import Signal, slot
 from sunflare.config import MotorModelTypes, ControllerInfo
-from sunflare.types import Location
 from sunflare.virtualbus import VirtualBus
 from sunflare.log import Loggable
 
