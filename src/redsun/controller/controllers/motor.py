@@ -10,35 +10,28 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
-from typing import Protocol, TypeAlias, TYPE_CHECKING
-
-from sunflare.types import Location
+from typing import Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Union
+    from typing import Union, Optional
 
     from redsun.virtual import HardwareVirtualBus
-
-TA: TypeAlias = Union[int, float]
 
 
 class MotorControllerProtocol(Protocol):
     """Motor controller protocol."""
 
     _virtual_bus: HardwareVirtualBus
-    _current_locations: dict[str, Location[TA]]
+    _current_locations: dict[str, Union[int, float, str]]
 
     @abstractmethod
-    def move(self, motor: str, value: Location[TA]) -> None:
+    def move(
+        self, motor: str, value: Union[int, float, str], axis: Optional[str] = None
+    ) -> None:
         """Move the motor."""
         ...
 
     @abstractmethod
-    def location(self, motor: str) -> None:
-        """Get the motor location.
-
-        The motor location is not returned directly,
-        but instead is kept cached in the `__current_locations` dictionary.
-        A signal may be emitted to notify the UI of the new location.
-        """
+    def location(self, motor: str) -> Union[int, float, str]:
+        """Get the motor location."""
         ...

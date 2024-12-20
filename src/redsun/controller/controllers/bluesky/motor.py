@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import Union, Optional
 
 from sunflare.engine.registry import DeviceRegistry
 from sunflare.controller import BaseController
@@ -12,12 +12,11 @@ from sunflare.types import Location
 from sunflare.virtualbus import VirtualBus
 from sunflare.log import Loggable
 
+from redsun.controller.controllers.motor import MotorControllerProtocol
 from redsun.virtual import HardwareVirtualBus
 
-TA: TypeAlias = Union[float, int, str]
 
-
-class MotorController(BaseController, Loggable):
+class MotorController(BaseController, MotorControllerProtocol, Loggable):
     """Motor controller class.
 
     Parameters
@@ -33,13 +32,13 @@ class MotorController(BaseController, Loggable):
 
     Signals
     -------
-    sigMoveDone : Signal(str, MotorModelTypes, dict[str, Location[Union[int, float, str]]])
+    sigMoveDone : Signal(str, MotorModelTypes, Location[Union[int, float, str]])
         Emitted when a motor has finished moving.
         Carries:
         - motor name;
         - motor model category;
-        - motor location (dict[str, Location[Union[int, float, str]]]).
-    sigLocation : Signal(str, dict[str, Location[Union[int, float, str]]])
+        - motor location (Location[Union[int, float, str]]).
+    sigLocation : Signal(str, Location[Union[int, float, str]])
         Emitted when a motor location is requested.
         Carries:
         - motor name;
@@ -61,8 +60,10 @@ class MotorController(BaseController, Loggable):
 
     _virtual_bus: HardwareVirtualBus
 
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, dict[str, Location[TA]])
-    sigLocation: Signal = Signal(str, dict[str, Location[TA]])
+    # mypy complains but it works, check the psygnal issue
+    # https://github.com/pyapp-kit/psygnal/issues/347
+    sigMoveDone: Signal = Signal(str, MotorModelTypes, Union[int, float, str])  # type: ignore[arg-type]
+    sigLocation: Signal = Signal(str, Union[int, float, str])  # type: ignore[arg-type]
 
     def __init__(
         self,
@@ -73,13 +74,15 @@ class MotorController(BaseController, Loggable):
     ) -> None:
         super().__init__(ctrl_info, registry, virtual_bus, module_bus)
 
-    def move(self, motor: str, value: dict[str, Location[TA]]) -> None:  # noqa: D102
+    def move(  # noqa: D102
+        self, motor: str, value: Union[int, float, str], axis: Optional[str] = None
+    ) -> None:
         # inherited docstring
-        self._registry.motors[motor].set(value)
+        self._registry.motors[motor].set(value, axis=axis)
 
-    def location(self, motor: str) -> dict[str, Location[TA]]:  # noqa: D102
+    def location(self, motor: str) -> Union[int, float, str]:  # noqa: D102
         # inherited docstring
-        return self._registry.motors[motor].locate()
+        return self._registry.motors[motor].locate()["setpoint"]
 
     def registration_phase(self) -> None:  # noqa: D102
         # inherited docstring
@@ -113,26 +116,10 @@ class MotorController(BaseController, Loggable):
         """
         step_size = self._registry.motors[motor].model_info.step_size
         current = self.location(motor)
-        if isinstance(current[axis]["setpoint"], (int, float)):
-            self.move(
-                motor,
-                {
-                    axis: Location(
-                        setpoint=current[axis]["setpoint"] + step_size,  # type: ignore[operator]
-                        readback=current[axis]["setpoint"],
-                    )
-                },
-            )
+        if isinstance(current, (int, float)):
+            self.move(motor, current + step_size, axis=axis)
         else:
-            self.move(
-                motor,
-                {
-                    axis: Location(
-                        setpoint=current[axis]["setpoint"],
-                        readback=current[axis]["setpoint"],
-                    )
-                },
-            )
+            self.move(motor, current, axis=axis)
 
     @slot
     def move_down(self, motor: str, axis: str) -> None:
@@ -149,23 +136,7 @@ class MotorController(BaseController, Loggable):
         """
         step_size = self._registry.motors[motor].model_info.step_size
         current = self.location(motor)
-        if isinstance(current[axis]["setpoint"], (int, float)):
-            self.move(
-                motor,
-                {
-                    axis: Location(
-                        setpoint=current[axis]["setpoint"] - step_size,  # type: ignore[operator]
-                        readback=current[axis]["setpoint"],
-                    )
-                },
-            )
+        if isinstance(current, (int, float)):
+            self.move(motor, current - step_size, axis=axis)
         else:
-            self.move(
-                motor,
-                {
-                    axis: Location(
-                        setpoint=current[axis]["setpoint"],
-                        readback=current[axis]["setpoint"],
-                    )
-                },
-            )
+            self.move(motor, current, axis=axis)

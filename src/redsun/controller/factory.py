@@ -128,8 +128,8 @@ class ModelFactory:
         name: str,
         info_dict: dict[str, Any],
         model_info_cls: Type[MotorModelInfo],
-        model_cls: Type[MotorProtocol],
-    ) -> MotorProtocol:
+        model_cls: Type[MotorProtocol[MotorModelInfo]],
+    ) -> MotorProtocol[MotorModelInfo]:
         """Build the motor model.
 
         Before building the model, the factory should build the model information. This will provide
@@ -159,8 +159,8 @@ class ModelFactory:
         name: str,
         info_dict: dict[str, Any],
         model_info_cls: Type[DetectorModelInfo],
-        model_cls: Type[DetectorProtocol],
-    ) -> DetectorProtocol:
+        model_cls: Type[DetectorProtocol[DetectorModelInfo]],
+    ) -> DetectorProtocol[DetectorModelInfo]:
         """Build the detector model.
 
         Before building the model, the factory should build the model information. This will provide

@@ -7,14 +7,16 @@ from typing import final, TypeAlias, Union
 from sunflare.virtualbus import VirtualBus
 from sunflare.virtualbus import Signal
 from sunflare.types import Location
-from sunflare.config import MotorModelTypes
+from sunflare.config import MotorModelTypes, MotorModelInfo, DetectorModelInfo
 from sunflare.types import Buffer
 from sunflare.engine import DetectorModel, MotorModel
 
 __all__ = ["HardwareVirtualBus"]
 
 TA: TypeAlias = Union[int, float, str]
-Registry: TypeAlias = dict[str, Union[DetectorModel, MotorModel]]
+Registry: TypeAlias = dict[
+    str, Union[DetectorModel[DetectorModelInfo], MotorModel[MotorModelInfo]]
+]
 
 
 @final
@@ -43,7 +45,7 @@ class HardwareVirtualBus(VirtualBus):
         Emitted when the user changes the step size for a stepper motor axis.
         Carries: motor name, axis, new step size.
         Source: `StepperMotorWidget`.
-    sigMoveDone: Signal(str, MotorModelTypes, dict[str, Location[TA]])
+    sigMoveDone: Signal(str, MotorModelTypes, Union[int, float, str])
         TODO: document this signal.
         Source: `MotorController`.
     sigNewImage: Signal(Buffer)
@@ -56,5 +58,8 @@ class HardwareVirtualBus(VirtualBus):
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, dict[str, Location[TA]])
+
+    # mypy complains but it works, check the psygnal issue
+    # https://github.com/pyapp-kit/psygnal/issues/347
+    sigMoveDone: Signal = Signal(str, MotorModelTypes, Union[int, float, str])  # type: ignore[arg-type]
     sigNewImage: Signal = Signal(Buffer)

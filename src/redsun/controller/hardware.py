@@ -128,7 +128,7 @@ class RedsunMainHardwareController(Loggable):
 
         # build motors
         motors = cast(
-            list[Tuple[str, Type[MotorModelInfo], Type[MotorProtocol]]],
+            list[Tuple[str, Type[MotorModelInfo], Type[MotorProtocol[MotorModelInfo]]]],
             registry.get("motors", []),
         )
         motors_params = self._config.get("motors", {})
@@ -150,7 +150,13 @@ class RedsunMainHardwareController(Loggable):
 
         # build detectors
         detectors = cast(
-            list[Tuple[str, Type[DetectorModelInfo], Type[DetectorProtocol]]],
+            list[
+                Tuple[
+                    str,
+                    Type[DetectorModelInfo],
+                    Type[DetectorProtocol[DetectorModelInfo]],
+                ]
+            ],
             registry.get("detectors", []),
         )
         detectors_params = self._config.get("detectors", {})
