@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import final, TypeAlias, Union, Optional, ClassVar, Union
+from typing import final, TypeAlias, Union
 
 from sunflare.virtualbus import VirtualBus
 from sunflare.virtualbus import Signal
@@ -43,7 +43,7 @@ class HardwareVirtualBus(VirtualBus):
         Emitted when the user changes the step size for a stepper motor axis.
         Carries: motor name, axis, new step size.
         Source: `StepperMotorWidget`.
-    sigMoveDone: Signal(str, MotorModelTypes, Location[TA])
+    sigMoveDone: Signal(str, MotorModelTypes, dict[str, Location[TA]])
         TODO: document this signal.
         Source: `MotorController`.
     sigNewImage: Signal(Buffer)
@@ -56,5 +56,5 @@ class HardwareVirtualBus(VirtualBus):
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, Location[TA])
+    sigMoveDone: Signal = Signal(str, MotorModelTypes, dict[str, Location[TA]])
     sigNewImage: Signal = Signal(Buffer)
