@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union, cast
+from typing import TypeAlias, Union
 
 from sunflare.engine.registry import DeviceRegistry
 from sunflare.controller import BaseController
