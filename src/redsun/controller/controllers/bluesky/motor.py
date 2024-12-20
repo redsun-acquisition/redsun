@@ -11,11 +11,10 @@ from sunflare.config import MotorModelTypes, ControllerInfo
 from sunflare.virtualbus import VirtualBus
 from sunflare.log import Loggable
 
-from redsun.controller.controllers.motor import MotorControllerProtocol
 from redsun.virtual import HardwareVirtualBus
 
 
-class MotorController(BaseController, MotorControllerProtocol, Loggable):
+class MotorController(BaseController, Loggable):
     """Motor controller class.
 
     Parameters
