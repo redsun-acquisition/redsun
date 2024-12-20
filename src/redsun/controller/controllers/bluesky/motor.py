@@ -59,10 +59,8 @@ class MotorController(BaseController, MotorControllerProtocol, Loggable):
 
     _virtual_bus: HardwareVirtualBus
 
-    # mypy complains but it works, check the psygnal issue
-    # https://github.com/pyapp-kit/psygnal/issues/347
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, Union[int, float, str])  # type: ignore[arg-type]
-    sigLocation: Signal = Signal(str, Union[int, float, str])  # type: ignore[arg-type]
+    sigMoveDone: Signal = Signal(str, MotorModelTypes, object)
+    sigLocation: Signal = Signal(str, object)
 
     def __init__(
         self,

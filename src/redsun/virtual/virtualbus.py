@@ -58,8 +58,5 @@ class HardwareVirtualBus(VirtualBus):
     sigStepperStepUp: Signal = Signal(str, str)
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
-
-    # mypy complains but it works, check the psygnal issue
-    # https://github.com/pyapp-kit/psygnal/issues/347
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, Union[int, float, str])  # type: ignore[arg-type]
+    sigMoveDone: Signal = Signal(str, MotorModelTypes, object)
     sigNewImage: Signal = Signal(Buffer)
