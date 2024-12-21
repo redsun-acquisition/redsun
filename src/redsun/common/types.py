@@ -17,8 +17,8 @@ InfoTypes: TypeAlias = Union[
     Type[DetectorModelInfo], Type[MotorModelInfo], Type[ControllerInfo]
 ]
 BuildTypes: TypeAlias = Union[
-    Type[DetectorModel],
-    Type[MotorModel],
+    Type[DetectorModel[DetectorModelInfo]],
+    Type[MotorModel[MotorModelInfo]],
     Type[BaseController],
 ]
 
@@ -40,15 +40,15 @@ class RedSunConfigInfo(TypedDict):
 
     Parameters
     ----------
-    engine : AcquisitionEngineTypes
+    engine : ``sunflare.config.AcquisitionEngineTypes``
         Selected acquisition engine.
-    frontend : FrontendTypes
+    frontend : ``sunflare.config.FrontendTypes``
         Selected frontend.
-    motors : dict[str, MotorModelInfo]
+    motors : ``dict[str, sunflare.config.MotorModelInfo]``
         Dictionary containing motor models information.
-    detectors : dict[str, DetectorModelInfo]
+    detectors : ``dict[str, sunflare.config.DetectorModelInfo]``
         Dictionary containing detector models information.
-    controllers : dict[str, ControllerInfo]
+    controllers : ``dict[str, sunflare.config.ControllerInfo]``
         Dictionary containing controller information.
     """
 
