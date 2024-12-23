@@ -1,22 +1,21 @@
 """Qt detector settings widget module."""
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
+from qtpy import QtWidgets
 from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus
-
-from qtpy import QtWidgets
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from redsun.virtual import HardwareVirtualBus
-
+    from pyqtgraph.parametertree import Parameter, ParameterTree
     from sunflare.config import DetectorModelInfo
     from sunflare.virtualbus import VirtualBus
 
-    from pyqtgraph.parametertree import Parameter, ParameterTree
+    from redsun.virtual import HardwareVirtualBus
 
 
 class DetectorSettingsWidget(BaseWidget):

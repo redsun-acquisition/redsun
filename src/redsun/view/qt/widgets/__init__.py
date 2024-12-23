@@ -1,6 +1,6 @@
 # noqa: D104
+from .detector import DetectorSettingsWidget
 from .image import ImageViewWidget
 from .stepper import StepperMotorWidget
-from .detector import DetectorSettingsWidget
 
 __all__ = ["ImageViewWidget", "StepperMotorWidget", "DetectorSettingsWidget"]

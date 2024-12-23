@@ -20,21 +20,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from qtpy import QtWidgets
+from qtpy.QtCore import QRegularExpression, Qt
+from qtpy.QtGui import QRegularExpressionValidator
+from sunflare.log import Loggable
 from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import Signal, slot
-from sunflare.log import Loggable
-
-from qtpy import QtWidgets
-from qtpy.QtGui import QRegularExpressionValidator
-from qtpy.QtCore import Qt, QRegularExpression
 
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
-    from redsun.virtual import HardwareVirtualBus
-
     from sunflare.config import MotorModelInfo
     from sunflare.virtualbus import VirtualBus
+
+    from redsun.virtual import HardwareVirtualBus
 
 __all__ = ["StepperMotorWidget"]
 

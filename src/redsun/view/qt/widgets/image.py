@@ -1,19 +1,16 @@
 """Qt image viewer widget module."""
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
-from qtpy.QtWidgets import QVBoxLayout
+from typing import TYPE_CHECKING, Any
 
 from ndv import NDViewer
-
+from qtpy.QtWidgets import QVBoxLayout
 from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus, slot
 
 if TYPE_CHECKING:
     from redsun.virtual import HardwareVirtualBus
-
-    from sunflare.types import Buffer
 
 
 class ImageViewWidget(BaseWidget):
@@ -47,12 +44,12 @@ class ImageViewWidget(BaseWidget):
         self._virtual_bus.sigNewImage.connect(self.update_image)
 
     @slot
-    def update_image(self, image: Buffer) -> None:
+    def update_image(self, image: Any) -> None:
         """Update the image displayed in the viewer.
 
         Parameters
         ----------
-        image : Buffer
+        image : Any
             Dictionary containing all registered detectors and their data/metadata.
         """
         self._viewer.set_data(image)

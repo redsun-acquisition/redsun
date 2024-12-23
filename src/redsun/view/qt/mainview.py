@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from qtpy.QtWidgets import QMainWindow, QDockWidget
-from qtpy.QtCore import Qt
+from typing import TYPE_CHECKING
 
-from .widgets import StepperMotorWidget, DetectorSettingsWidget
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QDockWidget, QMainWindow
+from sunflare.config import MotorModelTypes
 
 from redsun.view.qt.widgets import ImageViewWidget
 
-from sunflare.config import MotorModelTypes
-
-from typing import TYPE_CHECKING
+from .widgets import DetectorSettingsWidget, StepperMotorWidget
 
 if TYPE_CHECKING:
     from redsun.controller.hardware import RedsunMainHardwareController
@@ -43,10 +42,10 @@ class RedSunMainWindow(QMainWindow):
     def build_view(self) -> None:
         """Build the main view window."""
         # build the device widgets
-        registry = self._controller.device_registry
+        handler = self._controller.handler
         motors_info = {
             motor.name: motor.model_info
-            for motor in registry.motors.values()
+            for motor in handler.motors.values()
             if motor.model_info.category == MotorModelTypes.STEPPER
         }
         if motors_info:
@@ -59,7 +58,7 @@ class RedSunMainWindow(QMainWindow):
         #       if the detector is supposed to be added to the GUI
         detectors_info = {
             detector.name: detector.model_info
-            for detector in registry.detectors.values()
+            for detector in handler.detectors.values()
         }
         if detectors_info:
             detector_widget = DetectorSettingsWidget(

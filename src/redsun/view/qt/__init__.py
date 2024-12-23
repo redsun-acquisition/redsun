@@ -1,12 +1,12 @@
 # noqa: D104
 import sys
-
-from .mainview import RedSunMainWindow
-from redsun.controller.hardware import RedsunMainHardwareController
-
 from typing import NoReturn
 
 from qtpy.QtWidgets import QApplication
+
+from redsun.controller.hardware import RedsunMainHardwareController
+
+from .mainview import RedSunMainWindow
 
 __all__ = ["RedSunMainWindow"]
 

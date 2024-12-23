@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import final, TypeAlias, Union
+from typing import TypeAlias, Union, final
 
-from sunflare.virtualbus import VirtualBus
-from sunflare.virtualbus import Signal
-from sunflare.config import MotorModelTypes, MotorModelInfo, DetectorModelInfo
-from sunflare.types import Buffer
+from sunflare.config import DetectorModelInfo, MotorModelInfo, MotorModelTypes
 from sunflare.engine import DetectorModel, MotorModel
+from sunflare.virtualbus import Signal, VirtualBus
 
 __all__ = ["HardwareVirtualBus"]
 
@@ -47,7 +45,8 @@ class HardwareVirtualBus(VirtualBus):
     sigMoveDone: Signal(str, MotorModelTypes, Union[int, float, str])
         - TODO: document this signal.
         - `Source`: ``MotorController``.
-    sigNewImage: Signal(Buffer)
+    sigNewImage: Signal(...)
+        - TODO: type to be defined yet.
         - Emitted when a new image is available.
         - `Carries`: image buffer.
         - `Source`: ``DetectorController``.
@@ -58,4 +57,4 @@ class HardwareVirtualBus(VirtualBus):
     sigStepperStepDown: Signal = Signal(str, str)
     sigStepperStepSizeChanged: Signal = Signal(str, str, float)
     sigMoveDone: Signal = Signal(str, MotorModelTypes, object)
-    sigNewImage: Signal = Signal(Buffer)
+    sigNewImage: Signal = Signal()

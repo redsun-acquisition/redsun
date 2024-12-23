@@ -2,31 +2,24 @@
 
 from __future__ import annotations
 
-from sunflare.log import Loggable
 from typing import TYPE_CHECKING, cast
 
-from redsun.controller.factory import (
-    RegistryFactory,
-    HandlerFactory,
-    ModelFactory,
-    ControllerFactory,
-)
+from sunflare.log import Loggable
+
+from redsun.controller.factory import ControllerFactory, HandlerFactory, ModelFactory
 
 if TYPE_CHECKING:
-    from typing import Type, Tuple
-    from sunflare.virtualbus import ModuleVirtualBus
-    from redsun.engine.bluesky import BlueskyHandler
-    from redsun.virtual import HardwareVirtualBus
-    from redsun.common.types import Registry, RedSunConfigInfo
-    from sunflare.engine.registry import DeviceRegistry
+    from typing import Tuple, Type
+
+    from sunflare.config import ControllerInfo, DetectorModelInfo, MotorModelInfo
     from sunflare.controller import BaseController
     from sunflare.engine.detector import DetectorProtocol
     from sunflare.engine.motor import MotorProtocol
-    from sunflare.config import (
-        DetectorModelInfo,
-        MotorModelInfo,
-        ControllerInfo,
-    )
+    from sunflare.virtualbus import ModuleVirtualBus
+
+    from redsun.common.types import RedSunConfigInfo, Registry
+    from redsun.engine.bluesky import BlueskyHandler
+    from redsun.virtual import HardwareVirtualBus
 
 
 class RedsunMainHardwareController(Loggable):
@@ -60,15 +53,10 @@ class RedsunMainHardwareController(Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
 
-        # weak references
-        self._device_registry: DeviceRegistry
         self._controllers: dict[str, BaseController]
         self._handler: BlueskyHandler
 
         self._engine_factory = HandlerFactory(config["engine"], virtual_bus, module_bus)
-        self._registry_factory = RegistryFactory(
-            config["engine"], virtual_bus, module_bus
-        )
         self._model_factory = ModelFactory(config)
         self._controller_factory = ControllerFactory(config, virtual_bus, module_bus)
 
@@ -81,13 +69,6 @@ class RedsunMainHardwareController(Loggable):
     def module_bus(self) -> ModuleVirtualBus:
         """Module virtual bus."""
         return self._module_bus
-
-    @property
-    def device_registry(
-        self,
-    ) -> DeviceRegistry:
-        """The device registry."""
-        return self._device_registry
 
     @property
     def controllers(self) -> dict[str, BaseController]:
@@ -104,10 +85,9 @@ class RedsunMainHardwareController(Loggable):
 
         The method builds the full controller layer in a bottom-up fashion:
 
-        - build the device registry;
         - build the device models;
-        - build the controllers;
         - build the engine handler;
+        - build the controllers;
         - build the storage backend (currently not implemented).
 
         After all objects are build, the registration phase occurs and all signals that are intended to be
@@ -122,9 +102,10 @@ class RedsunMainHardwareController(Loggable):
         registry : Registry
             Device registry loaded at startup.
         """
-        # build device registry
-        device_registry = self._registry_factory.build()
-        self._device_registry = device_registry
+        # build engine handler
+        # TODO: add a try-except block to catch
+        #       any exception thrown during the initialization
+        self._handler = self._engine_factory.build()
 
         # build motors
         motors = cast(
@@ -146,7 +127,7 @@ class RedsunMainHardwareController(Loggable):
                 model_info_cls=motor_info_cls,
                 model_cls=motor_model_cls,
             )
-            device_registry.motors[motor_name] = motor_model
+            self._handler.motors[motor_name] = motor_model
 
         # build detectors
         detectors = cast(
@@ -174,7 +155,7 @@ class RedsunMainHardwareController(Loggable):
                 model_info_cls=det_info_cls,
                 model_cls=det_model_cls,
             )
-            device_registry.detectors[det_name] = detector_model
+            self._handler.detectors[det_name] = detector_model
 
         # build controllers
         controllers = cast(
@@ -193,19 +174,9 @@ class RedsunMainHardwareController(Loggable):
             params = controllers_params.get(ctrl_name, {})  # type: ignore[union-attr]
 
             controller = self._controller_factory.build(
-                name=ctrl_name,
-                info_dict=params,
-                ctrl_info_cls=ctrl_info_cls,
-                ctrl_cls=ctrl_cls,
-                registry_obj=device_registry,
+                ctrl_name, params, self._handler, ctrl_info_cls, ctrl_cls
             )
             self._controllers[ctrl_name] = controller
-
-        # build engine handler
-        # TODO: add a try-except block to catch
-        #       any exception thrown during the initialization
-        handler = self._engine_factory.build()
-        self._handler = handler
 
         # register signals
         for ctrl in self._controllers.values():

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Union, Optional
+from typing import Optional, Union
 
-from sunflare.engine.registry import DeviceRegistry
+from sunflare.config import ControllerInfo, MotorModelTypes
 from sunflare.controller import BaseController
-from sunflare.virtualbus import Signal, slot
-from sunflare.config import MotorModelTypes, ControllerInfo
-from sunflare.virtualbus import VirtualBus
 from sunflare.log import Loggable
+from sunflare.virtualbus import Signal, VirtualBus, slot
 
+from redsun.engine.bluesky.handler import BlueskyHandler
 from redsun.virtual import HardwareVirtualBus
 
 
@@ -64,21 +63,21 @@ class MotorController(BaseController, Loggable):
     def __init__(
         self,
         ctrl_info: ControllerInfo,
-        registry: DeviceRegistry,
+        handler: BlueskyHandler,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
     ) -> None:
-        super().__init__(ctrl_info, registry, virtual_bus, module_bus)
+        super().__init__(ctrl_info, handler, virtual_bus, module_bus)
 
     def move(  # noqa: D102
         self, motor: str, value: Union[int, float, str], axis: Optional[str] = None
     ) -> None:
         # inherited docstring
-        self._registry.motors[motor].set(value, axis=axis)
+        self._handler.motors[motor].set(value, axis=axis)
 
     def location(self, motor: str) -> Union[int, float, str]:  # noqa: D102
         # inherited docstring
-        return self._registry.motors[motor].locate()["setpoint"]
+        return self._handler.motors[motor].locate()["setpoint"]
 
     def registration_phase(self) -> None:  # noqa: D102
         # inherited docstring
@@ -93,7 +92,7 @@ class MotorController(BaseController, Loggable):
 
     def shutdown(self) -> None:  # noqa: D102
         # inherited docstring
-        for motor in self._registry.motors.values():
+        for motor in self._handler.motors.values():
             if hasattr(motor, "shutdown"):
                 motor.shutdown()
 
@@ -110,7 +109,7 @@ class MotorController(BaseController, Loggable):
         axis : str
             Motor axis along which movement occurs.
         """
-        step_size = self._registry.motors[motor].model_info.step_size
+        step_size = self._handler.motors[motor].model_info.step_size
         current = self.location(motor)
         if isinstance(current, (int, float)):
             self.move(motor, current + step_size, axis=axis)
@@ -130,7 +129,7 @@ class MotorController(BaseController, Loggable):
         axis : str
             Motor axis along which movement occurs.
         """
-        step_size = self._registry.motors[motor].model_info.step_size
+        step_size = self._handler.motors[motor].model_info.step_size
         current = self.location(motor)
         if isinstance(current, (int, float)):
             self.move(motor, current - step_size, axis=axis)

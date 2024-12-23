@@ -5,15 +5,21 @@ This module implements the handler for the standard Bluesky engine.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, final, Any
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, final
 
 from bluesky.run_engine import RunEngine
 from bluesky.utils import MsgGenerator
+from sunflare.config import DetectorModelInfo, MotorModelInfo
+from sunflare.engine.detector import DetectorProtocol
 from sunflare.engine.handler import EngineHandler
+from sunflare.engine.motor import MotorProtocol
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
+
+Motor = MotorProtocol[MotorModelInfo]
+Detector = DetectorProtocol[DetectorModelInfo]
 
 
 @final
@@ -39,6 +45,8 @@ class BlueskyHandler(EngineHandler, Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._plans: dict[str, MsgGenerator[Any]] = {}
+        self._motors: dict[str, Motor] = {}
+        self._detectors: dict[str, Detector] = {}
 
         # TODO: there should be a way to pass
         #       custom metadata to the engine via
@@ -59,6 +67,27 @@ class BlueskyHandler(EngineHandler, Loggable):
         else:
             self.error(f"Workflow {name} already registered. Aborted.")
 
+    def load_device(self, name: str, device: Union[Motor, Detector]) -> None:  # noqa: D102
+        if isinstance(device, MotorProtocol):
+            self._motors[name] = device
+        elif isinstance(device, DetectorProtocol):
+            self._detectors[name] = device
+        else:
+            raise ValueError(f"Invalid device type: {type(device)}")
+
+    def subscribe(  # noqa: D102
+        self,
+        func: Callable[
+            [Literal["all", "start", "descriptor", "event", "stop"], dict[str, Any]],
+            None,
+        ],
+        name: Optional[Literal["all", "start", "descriptor", "event", "stop"]] = "all",
+    ) -> int:
+        return self._engine.subscribe(func, name)  # type: ignore
+
+    def unsubscribe(self, token: int) -> None:  # noqa: D102
+        return self._engine.unsubscribe(token)  # type: ignore
+
     @property
     def engine(self) -> RunEngine:
         """Execution engine instance."""
@@ -68,3 +97,13 @@ class BlueskyHandler(EngineHandler, Loggable):
     def plans(self) -> dict[str, MsgGenerator[Any]]:
         """Workflow dictionary."""
         return self._plans
+
+    @property
+    def detectors(self) -> dict[str, Detector]:
+        """Detectors dictionary."""
+        return self._detectors
+
+    @property
+    def motors(self) -> dict[str, Motor]:
+        """Motors dictionary."""
+        return self._motors

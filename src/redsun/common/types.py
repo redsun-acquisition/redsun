@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Union, Type, TypeAlias, Tuple, Any, Optional, TypedDict
+from typing import Any, Optional, Tuple, Type, TypeAlias, TypedDict, Union
+
+from sunflare.config import (
+    AcquisitionEngineTypes,
+    ControllerInfo,
+    DetectorModelInfo,
+    FrontendTypes,
+    MotorModelInfo,
+)
 from sunflare.controller import BaseController
 from sunflare.engine import DetectorModel, MotorModel
-from sunflare.config import (
-    DetectorModelInfo,
-    MotorModelInfo,
-    ControllerInfo,
-    AcquisitionEngineTypes,
-    FrontendTypes,
-)
 
 InfoTypes: TypeAlias = Union[
     Type[DetectorModelInfo], Type[MotorModelInfo], Type[ControllerInfo]

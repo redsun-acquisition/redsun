@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
-from sunflare.log import get_logger
-
-import sys
 import yaml
+from sunflare.log import get_logger
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
@@ -17,12 +16,9 @@ else:
 if TYPE_CHECKING:
     from typing import Any, Optional
 
-    from sunflare.config import (
-        DetectorModelInfo,
-        MotorModelInfo,
-    )
+    from sunflare.config import DetectorModelInfo, MotorModelInfo
 
-    from redsun.common import Registry, RedSunConfigInfo
+    from redsun.common import RedSunConfigInfo, Registry
 
 
 class PluginManager:

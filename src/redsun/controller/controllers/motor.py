@@ -9,11 +9,10 @@ this connection is disabled to prevent accidental user input from interfering wi
 from __future__ import annotations
 
 from abc import abstractmethod
-
-from typing import Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from typing import Union, Optional
+    from typing import Optional, Union
 
     from redsun.virtual import HardwareVirtualBus
 

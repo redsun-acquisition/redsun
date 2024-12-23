@@ -6,9 +6,10 @@ import argparse
 import sys
 
 from sunflare.virtualbus import ModuleVirtualBus
-from redsun.virtual import HardwareVirtualBus, PluginManager
+
 from redsun.controller import build_controller_layer
 from redsun.view import build_view_layer
+from redsun.virtual import HardwareVirtualBus, PluginManager
 
 
 class RedSunArgs(argparse.Namespace):
