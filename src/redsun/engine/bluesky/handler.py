@@ -1,4 +1,7 @@
-"""Bluesky handler class."""
+"""```bluesky.handler```.
+
+This module implements the handler for the standard Bluesky engine.
+"""
 
 from __future__ import annotations
 
