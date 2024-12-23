@@ -36,6 +36,10 @@ class BlueskyHandler(EngineHandler, Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._plans: dict[str, MsgGenerator[Any]] = {}
+
+        # TODO: there should be a way to pass
+        #       custom metadata to the engine via
+        #       either the config or the constructor
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
 
     def shutdown(self) -> None:
