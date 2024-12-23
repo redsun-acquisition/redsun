@@ -17,7 +17,7 @@ The philosophy of RedSun is to:
 ## Contents
 
 ```{toctree}
-:maxdepth: 2
+:maxdepth: 1
 
 getting_started/index
 api/index
