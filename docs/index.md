@@ -11,7 +11,7 @@ It leverages the [Bluesky] ecosystem to provide a flexible, hardware-agnostic an
 The philosophy of RedSun is to:
 
 - not "reinvent the wheel", but rather "ship the tools to build the wheel";
-- being extensible and modular: pick only the tools you need to get the job done;
+- be extensible and modular: pick only the tools you need to get the job done;
 - give the control of your data (and metadata) to you: you decide what is what.
 
 ## Contents
