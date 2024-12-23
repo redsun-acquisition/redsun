@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, final, Any
 
 from bluesky.run_engine import RunEngine
+from bluesky.utils import MsgGenerator
 from sunflare.engine.handler import EngineHandler
 from sunflare.log import Loggable
 
 if TYPE_CHECKING:
-    from sunflare.types import Workflow
     from sunflare.virtualbus import VirtualBus
 
 
@@ -35,7 +35,7 @@ class BlueskyHandler(EngineHandler, Loggable):
     ) -> None:
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self._workflows: dict[str, Workflow] = {}
+        self._plans: dict[str, MsgGenerator[Any]] = {}
         self._engine = RunEngine()  # type: ignore[no-untyped-call]
 
     def shutdown(self) -> None:
@@ -45,10 +45,10 @@ class BlueskyHandler(EngineHandler, Loggable):
         """
         self._engine.stop()  # type: ignore[no-untyped-call]
 
-    def register_workflows(self, name: str, workflow: Workflow) -> None:
+    def register_plan(self, name: str, plan: MsgGenerator[Any]) -> None:
         """Register a workflow with the handler."""
-        if not name in self._workflows.keys():
-            self._workflows[name] = workflow
+        if not name in self._plans.keys():
+            self._plans[name] = plan
         else:
             self.error(f"Workflow {name} already registered. Aborted.")
 
@@ -58,6 +58,6 @@ class BlueskyHandler(EngineHandler, Loggable):
         return self._engine
 
     @property
-    def workflows(self) -> dict[str, Workflow]:
+    def plans(self) -> dict[str, MsgGenerator[Any]]:
         """Workflow dictionary."""
-        return self._workflows
+        return self._plans
