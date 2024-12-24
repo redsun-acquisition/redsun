@@ -1,4 +1,3 @@
-# noqa: D104
 from .plugins import PluginManager
 from .virtualbus import HardwareVirtualBus
 

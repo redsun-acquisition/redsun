@@ -1,4 +1,3 @@
-# noqa: D104
 import sys
 from typing import NoReturn
 

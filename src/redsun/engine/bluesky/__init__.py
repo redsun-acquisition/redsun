@@ -1,4 +1,4 @@
-# noqa: D100, D104
+# noqa: D100
 try:
     from .handler import BlueskyHandler
 except ImportError:
