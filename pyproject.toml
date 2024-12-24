@@ -79,7 +79,7 @@ target-version = "py39"
 extend-exclude = ["docs", "tests", "noxfile.py"]
 
 [tool.ruff.lint]
-extend-select = ["D", "TC004"]
+extend-select = ["D"]
 ignore = ["D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.pydocstyle]
