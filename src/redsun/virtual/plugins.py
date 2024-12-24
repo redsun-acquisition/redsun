@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from typing import Any, Union, Type, Tuple
 
-import yaml
+from sunflare.config import (
+    RedSunInstanceInfo,
+    DetectorModelInfo,
+    MotorModelInfo,
+    ControllerInfo,
+)
+from sunflare.engine import DetectorModel, MotorModel
+from sunflare.controller import BaseController
+
 from sunflare.log import get_logger
 
 if sys.version_info < (3, 10):
@@ -13,12 +21,12 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import entry_points
 
-if TYPE_CHECKING:
-    from typing import Any, Optional
-
-    from sunflare.config import DetectorModelInfo, MotorModelInfo
-
-    from redsun.common import RedSunConfigInfo, Registry
+InfoTypes = Union[Type[DetectorModelInfo], Type[MotorModelInfo], Type[ControllerInfo]]
+Types = Union[
+    Type[DetectorModel[DetectorModelInfo]],
+    Type[MotorModel[MotorModelInfo]],
+    Type[BaseController],
+]
 
 
 class PluginManager:
@@ -28,119 +36,105 @@ class PluginManager:
     """
 
     @staticmethod
-    def load_and_check_yaml(config_path: str) -> Optional[RedSunConfigInfo]:
-        """Check the configuration file.
+    def load_configuration(
+        config_path: str,
+    ) -> Tuple[RedSunInstanceInfo, dict[str, Types]]:
+        """Load the configuration from a YAML file.
 
-        If an error occurs, the function logs the error and returns an empty dictionary.
+        The manager will load the configuration from the input YAML file.
+        It will then load the information models and device models for each group.
+        The information models are built here; the actual device models are built in the factory.
 
         Parameters
         ----------
-        config_path : str
-            Path to the configuration file.
+        config_path : ``str``
+            Path to the YAML file.
 
         Returns
         -------
-        Tuple[dict[str, Any], list[str]]
-            A tuple containing:
-            - The configuration dictionary.
-            - A list of plugin groups to check.
+        Tuple[RedSunInstanceInfo, dict[str, Types]]
+            RedSun instance configuration and device models.
         """
         logger = get_logger()
-
-        config: Optional[RedSunConfigInfo]
-        try:
-            with open(config_path, "r") as file:
-                config = yaml.safe_load(file)
-            # check that config has "engine" and "frontend" keys
-            if config is not None and not all(
-                [key in config.keys() for key in ["engine", "frontend"]]
-            ):
-                logger.error(
-                    "Configuration file does not specify an engine or a frontend."
-                )
-                config = None
-        except yaml.YAMLError as e:
-            logger.exception(f"Error parsing configuration file: {e}")
-            config = None
-        except FileNotFoundError:
-            logger.error(f"Configuration file not found: {config_path}")
-            config = None
-        return config
-
-    @staticmethod
-    def load_startup_configuration(config: RedSunConfigInfo) -> Registry:
-        """Load the startup configuration.
-
-        Parameters
-        ----------
-        config : RedSunConfigInfo
-            Configuration dictionary.
-
-        Returns
-        -------
-        Registry
-            A dictionary containing the loaded plugins classes.
-            - keys: group names (i.e. "motors", "detectors")
-            - values: list of tuples containing:
-                - device name
-                - model info class
-                - model class
-        """
+        config = RedSunInstanceInfo.load_yaml(config_path)
         groups = [
             group for group in config.keys() if group not in ["engine", "frontend"]
         ]
 
-        # TODO: load_plugins expects a dictionary, but the config is a TypedDict;
-        #       this should be fixed in the future, or accept it as it is
-        return PluginManager.load_plugins(config, groups)  # type: ignore
+        config_groups: dict[str, dict[str, InfoTypes]] = {group: {} for group in groups}
+        model_groups: dict[str, dict[str, Types]] = {group: {} for group in groups}
 
-    @staticmethod
-    def load_plugins(config: dict[str, Any], groups: list[str]) -> Registry:
-        """Load plugins from the given configuration.
-
-        Parameters
-        ----------
-        config : dict[str, Any]
-            Configuration dictionary.
-        groups : list[str]
-            List of groups to load plugins from.
-
-        Returns
-        -------
-        Registry
-            A dictionary containing the loaded plugins classes.
-            - keys: group names (i.e. "motors", "detectors")
-            - values: list of tuples containing:
-                - device name
-                - model info class
-                - model class
-        """
-        registry: Registry = {group: [] for group in groups}
         for group in groups:
+            # get the configuration for the current group;
+            # the key is the device name; the value is the device configuration
             input: dict[str, Any] = config[group]
+
+            # get the entry points for the current group
             plugins = entry_points(group=".".join(["redsun.plugins", group]))
-            config_plugins = [ep for ep in plugins if "_config" in ep.name]
+            info_plugins = [ep for ep in plugins if "_config" in ep.name]
             model_plugins = [ep for ep in plugins if "_config" not in ep.name]
-            for cfg_ep, model_ep in zip(config_plugins, model_plugins):
-                # Retrieve the name of the config builder
-                cfg_cls = cfg_ep.value.split(":")[1]
+
+            # the two lists must have the same length
+            if len(info_plugins) != len(model_plugins):
+                # find the model plugins that do not have a
+                # corresponding info plugin and remove them
+                missing_plugins = [
+                    ep
+                    for ep in model_plugins
+                    if ep.name not in [ep.name for ep in info_plugins]
+                ]
+                for missing_plugin in missing_plugins:
+                    model_plugins.remove(missing_plugin)
+                logger.error(
+                    f"The following models do not have a corresponding information model: {missing_plugins}. They will not be loaded."
+                )
+
+            # the information models are built here;
+            # the actual device models are built in the factory
+            for info_ep, model_ep in zip(info_plugins, model_plugins):
+                # Retrieve the name of the information model
+                info_cls = info_ep.value.split(":")[1]
                 # Retrieve the name of the actual device model
-                bld_cls = cfg_cls[:-4]
-                cfg_builder = cfg_ep.load()
-                if not all(
-                    [
-                        issubclass(cfg_builder, cfg_type)
-                        for cfg_type in [DetectorModelInfo, MotorModelInfo]
-                    ]
-                ):
-                    raise TypeError(
-                        f"Loaded model info {cfg_builder} is not a subclass of any recognized model info class"
+                build_cls = info_cls[:-4]
+                try:
+                    info_builder = info_ep.load()
+                    if not all(
+                        [issubclass(info_builder, info_type) for info_type in InfoTypes]
+                    ):
+                        raise TypeError(
+                            f"Loaded model info {info_cls} is not a subclass "
+                            f"of any recognized model info class. "
+                            f"Plugin will not be loaded."
+                        )
+                except TypeError as e:
+                    # the information model is not a subclass of any recognized model info class
+                    # log the error and skip the plugin
+                    logger.error(e)
+                    continue
+                except Exception as e:
+                    # something went wrong while loading the plugin;
+                    # log the error and skip the plugin
+                    logger.error(
+                        f"Failed to load information model {info_ep.name}: {e}. Plugin will not be loaded."
                     )
+                    continue
+
+                # inspect the current device configuration
                 for device_name, values in input.items():
-                    if values["model_name"] == bld_cls:
-                        builder = model_ep.load()
-                        registry[group].append((device_name, cfg_builder, builder))
+                    if values["model_name"] == build_cls:
+                        # build the information model
+                        information = info_builder(**values)
+
+                        # load the device model
+                        constructor = model_ep.load()
+
+                        config_groups[group][device_name] = information
+                        model_groups[group][device_name] = constructor
                         break
                 # pop the found device from the input to speed up the search
                 input.pop(device_name)
-        return registry
+
+        # build configuration
+        config = RedSunInstanceInfo(**config_groups)
+
+        return config, model_groups
