@@ -7,9 +7,9 @@ import sys
 
 from sunflare.virtualbus import ModuleVirtualBus
 
-from redsun.controller import build_controller_layer
+from redsun.controller import PluginManager, build_controller_layer
 from redsun.view import build_view_layer
-from redsun.virtual import HardwareVirtualBus, PluginManager
+from redsun.virtual import HardwareVirtualBus
 
 
 class RedSunArgs(argparse.Namespace):
@@ -53,28 +53,24 @@ def main(input_config: str) -> None:
     input_config : str
         Path to the configuration file.
     """
-    # load configuration
-    config = PluginManager.load_and_check_yaml(input_config)
-
-    # TODO: handle the case where config is None
-    if config is None:
-        return
-
     # virtual layer
     module_bus = ModuleVirtualBus()
     hardware_bus = HardwareVirtualBus()
-    plugin_manager = PluginManager()
 
     # get the startup configuration
-    registry = plugin_manager.load_startup_configuration(config)
+    config, types_groups = PluginManager.load_configuration(input_config)
+
+    models = {group: types_groups.get(group, {}) for group in ["detectors", "motors"]}
+    controllers = types_groups.get("controllers", {})
+    widgets = types_groups.get("widgets", {})
 
     # build the controller layer
-    main_controller = build_controller_layer(config, registry, hardware_bus, module_bus)
+    build_controller_layer(config, models, controllers, hardware_bus, module_bus)
 
     # build the view layer;
     # the app starts here and
-    # there is no return until the app is closed
-    build_view_layer(main_controller)
+    # there is no return until it's closed
+    build_view_layer(config, widgets)
 
 
 def main_cli() -> None:

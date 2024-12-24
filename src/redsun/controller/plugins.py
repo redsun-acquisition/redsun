@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Union, Type, Tuple
+from typing import Any, Tuple, Type, Union
 
 from sunflare.config import (
-    RedSunInstanceInfo,
+    ControllerInfo,
     DetectorModelInfo,
     MotorModelInfo,
-    ControllerInfo,
+    RedSunInstanceInfo,
 )
-from sunflare.engine import DetectorModel, MotorModel
 from sunflare.controller import BaseController
-
+from sunflare.engine import DetectorModel, MotorModel
 from sunflare.log import get_logger
 
 if sys.version_info < (3, 10):
@@ -52,8 +51,8 @@ class PluginManager:
 
         Returns
         -------
-        Tuple[RedSunInstanceInfo, dict[str, Types]]
-            RedSun instance configuration and device models.
+        Tuple[RedSunInstanceInfo, dict[str, Types], dict[str, Type[BaseController]]
+            RedSun instance configuration and class types to build.
         """
         logger = get_logger()
         config = RedSunInstanceInfo.load_yaml(config_path)
@@ -62,7 +61,7 @@ class PluginManager:
         ]
 
         config_groups: dict[str, dict[str, InfoTypes]] = {group: {} for group in groups}
-        model_groups: dict[str, dict[str, Types]] = {group: {} for group in groups}
+        types_groups: dict[str, dict[str, Types]] = {group: {} for group in groups}
 
         for group in groups:
             # get the configuration for the current group;
@@ -129,7 +128,7 @@ class PluginManager:
                         constructor = model_ep.load()
 
                         config_groups[group][device_name] = information
-                        model_groups[group][device_name] = constructor
+                        types_groups[group][device_name] = constructor
                         break
                 # pop the found device from the input to speed up the search
                 input.pop(device_name)
@@ -137,4 +136,4 @@ class PluginManager:
         # build configuration
         config = RedSunInstanceInfo(**config_groups)
 
-        return config, model_groups
+        return config, types_groups

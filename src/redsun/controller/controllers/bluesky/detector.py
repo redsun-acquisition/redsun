@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
-from bluesky.protocols import Reading
-from sunflare.config import ControllerInfo
 from sunflare.controller import BaseController
 from sunflare.log import Loggable
 from sunflare.virtualbus import Signal, VirtualBus
 
-from redsun.engine.bluesky import BlueskyHandler
-from redsun.virtual import HardwareVirtualBus
+if TYPE_CHECKING:
+    from collections import OrderedDict
+
+    from bluesky.protocols import Reading
+    from sunflare.config import ControllerInfo
+
+    from redsun.engine.bluesky import BlueskyHandler
+    from redsun.virtual import HardwareVirtualBus
 
 
 class DetectorController(BaseController, Loggable):

@@ -1,16 +1,18 @@
 import sys
-from typing import NoReturn
+from typing import NoReturn, Type
 
 from qtpy.QtWidgets import QApplication
-
-from redsun.controller.hardware import RedsunMainHardwareController
+from sunflare.config import RedSunInstanceInfo
+from sunflare.view.qt import BaseWidget
 
 from .mainview import RedSunMainWindow
 
-__all__ = ["RedSunMainWindow"]
+__all__ = ["build_view_layer"]
 
 
-def build_view_layer(controller: RedsunMainHardwareController) -> NoReturn:
+def build_view_layer(
+    config: RedSunInstanceInfo, widgets: dict[str, Type[BaseWidget]]
+) -> NoReturn:
     """Build the view layer.
 
     This function is dual-purpose: it creates the main QApplication that will run the GUI, and it also
@@ -26,7 +28,7 @@ def build_view_layer(controller: RedsunMainHardwareController) -> NoReturn:
         RedSun main hardware controller.
     """
     app = QApplication([])
-    view = RedSunMainWindow(controller)
+    view = RedSunMainWindow(config, widgets)
     view.build_view()
     view.show()
     sys.exit(app.exec())

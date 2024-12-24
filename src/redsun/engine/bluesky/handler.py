@@ -11,10 +11,11 @@ from sunflare.engine.motor import MotorProtocol
 from sunflare.log import Loggable
 
 from bluesky.run_engine import RunEngine
-from bluesky.utils import MsgGenerator
 
 if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
+
+    from bluesky.utils import MsgGenerator
 
 Motor = MotorProtocol[MotorModelInfo]
 Detector = DetectorProtocol[DetectorModelInfo]
@@ -60,7 +61,7 @@ class BlueskyHandler(EngineHandler, Loggable):
 
     def register_plan(self, name: str, plan: MsgGenerator[Any]) -> None:
         """Register a workflow with the handler."""
-        if not name in self._plans.keys():
+        if name not in self._plans.keys():
             self._plans[name] = plan
         else:
             self.error(f"Workflow {name} already registered. Aborted.")

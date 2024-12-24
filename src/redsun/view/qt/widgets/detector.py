@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from qtpy import QtWidgets
 from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus
+from pyqtgraph.parametertree import Parameter, ParameterTree
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from pyqtgraph.parametertree import Parameter, ParameterTree
     from sunflare.config import DetectorModelInfo
     from sunflare.virtualbus import VirtualBus
 

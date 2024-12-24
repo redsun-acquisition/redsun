@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
-from sunflare.config import ControllerInfo, MotorModelTypes
 from sunflare.controller import BaseController
 from sunflare.log import Loggable
 from sunflare.virtualbus import Signal, VirtualBus, slot
 
-from redsun.engine.bluesky.handler import BlueskyHandler
-from redsun.virtual import HardwareVirtualBus
+if TYPE_CHECKING:
+    from sunflare.config import ControllerInfo
+    from redsun.engine.bluesky.handler import BlueskyHandler
+    from redsun.virtual import HardwareVirtualBus
 
 
 class MotorController(BaseController, Loggable):
@@ -29,12 +30,6 @@ class MotorController(BaseController, Loggable):
 
     Signals
     -------
-    sigMoveDone : Signal(str, MotorModelTypes, Location[Union[int, float, str]])
-        Emitted when a motor has finished moving.
-        Carries:
-        - motor name;
-        - motor model category;
-        - motor location (Location[Union[int, float, str]]).
     sigLocation : Signal(str, Location[Union[int, float, str]])
         Emitted when a motor location is requested.
         Carries:
@@ -57,7 +52,6 @@ class MotorController(BaseController, Loggable):
 
     _virtual_bus: HardwareVirtualBus
 
-    sigMoveDone: Signal = Signal(str, MotorModelTypes, object)
     sigLocation: Signal = Signal(str, object)
 
     def __init__(
@@ -86,7 +80,6 @@ class MotorController(BaseController, Loggable):
 
     def connection_phase(self) -> None:  # noqa: D102
         # inherited docstring
-        self.sigMoveDone.connect(self._virtual_bus.sigMoveDone)
         self._virtual_bus.sigStepperStepUp.connect(self.move_up)
         self._virtual_bus.sigStepperStepDown.connect(self.move_down)
 
