@@ -79,7 +79,7 @@ target-version = "py39"
 extend-exclude = ["docs", "tests", "noxfile.py"]
 
 [tool.ruff.lint]
-select = ["D"] # enable docstring checks
+select = ["E4", "E7", "E9", "F", "D", "TC"]
 ignore = ["D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.pydocstyle]
