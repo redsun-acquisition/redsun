@@ -32,9 +32,8 @@ docs = [
     "myst-parser"
 ]
 dev = [
-  "nox",
   "ruff",
-  "pre-commit",
+  "pytest-cov",
   "pytest",
   "mypy"
 ]

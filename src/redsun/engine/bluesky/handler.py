@@ -1,19 +1,17 @@
-"""```bluesky.handler```.
-
-This module implements the handler for the standard Bluesky engine.
-"""
+"""Module implementing the handler for the standard Bluesky engine."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, final
 
-from bluesky.run_engine import RunEngine
-from bluesky.utils import MsgGenerator
 from sunflare.config import DetectorModelInfo, MotorModelInfo
 from sunflare.engine.detector import DetectorProtocol
 from sunflare.engine.handler import EngineHandler
 from sunflare.engine.motor import MotorProtocol
 from sunflare.log import Loggable
+
+from bluesky.run_engine import RunEngine
+from bluesky.utils import MsgGenerator
 
 if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus

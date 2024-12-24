@@ -1,4 +1,4 @@
-# noqa: D100
+"""Custom types for RedSun."""
 
 from __future__ import annotations
 
