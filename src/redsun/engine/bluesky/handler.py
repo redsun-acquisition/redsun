@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, final
 
-from sunflare.config import DetectorModelInfo, MotorModelInfo
+from sunflare.config import DetectorModelInfo, MotorModelInfo, RedSunInstanceInfo
 from sunflare.engine.detector import DetectorProtocol
 from sunflare.engine.handler import EngineHandler
 from sunflare.engine.motor import MotorProtocol
@@ -15,7 +15,7 @@ from bluesky.run_engine import RunEngine
 if TYPE_CHECKING:
     from sunflare.virtualbus import VirtualBus
 
-    from bluesky.utils import MsgGenerator
+    from bluesky.utils import DuringTask, MsgGenerator
 
 Motor = MotorProtocol[MotorModelInfo]
 Detector = DetectorProtocol[DetectorModelInfo]
@@ -28,19 +28,25 @@ class BlueskyHandler(EngineHandler, Loggable):
 
     Parameters
     ----------
-    config_options : RedSunInstanceInfo
+    config : RedSunInstanceInfo
         Configuration options for the RedSun instance.
     virtual_bus : VirtualBus
         The virtual bus instance for the RedSun instance.
     module_bus : VirtualBus
         The virtual bus instance for the module.
+    during_task : DuringTask
+        The DuringTask object. For more information,
+        see :class:`~sunflare.engine.handler.EngineHandler`.
     """
 
     def __init__(
         self,
+        config: RedSunInstanceInfo,
         virtual_bus: VirtualBus,
         module_bus: VirtualBus,
+        during_task: DuringTask,
     ) -> None:
+        self._config = config
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
         self._plans: dict[str, MsgGenerator[Any]] = {}
@@ -50,7 +56,7 @@ class BlueskyHandler(EngineHandler, Loggable):
         # TODO: there should be a way to pass
         #       custom metadata to the engine via
         #       either the config or the constructor
-        self._engine = RunEngine()  # type: ignore[no-untyped-call]
+        self._engine = RunEngine(during_task=during_task)  # type: ignore[no-untyped-call]
 
     def shutdown(self) -> None:
         """Invoke "stop" method on the run engine.
