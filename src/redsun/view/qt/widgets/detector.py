@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets
 from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus
-from pyqtgraph.parametertree import Parameter, ParameterTree
 
 if TYPE_CHECKING:
     from typing import Any
