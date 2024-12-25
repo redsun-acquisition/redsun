@@ -10,6 +10,7 @@ from sunflare.virtualbus import Signal, VirtualBus, slot
 
 if TYPE_CHECKING:
     from sunflare.config import ControllerInfo
+
     from redsun.engine.bluesky.handler import BlueskyHandler
     from redsun.virtual import HardwareVirtualBus
 

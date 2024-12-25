@@ -12,7 +12,7 @@ from sunflare.virtualbus import VirtualBus
 if TYPE_CHECKING:
     from typing import Any
 
-    from sunflare.config import DetectorModelInfo
+    from sunflare.config import DetectorModelInfo, RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -41,20 +41,20 @@ class DetectorSettingsWidget(BaseWidget):
 
     def __init__(
         self,
-        detectors_info: dict[str, DetectorModelInfo],
+        config: RedSunInstanceInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        super().__init__(virtual_bus, module_bus, *args, **kwargs)
-        self._detectors_info = detectors_info
+        super().__init__(config, virtual_bus, module_bus, *args, **kwargs)
+        self._detectors_info = config.detectors
 
         self.tab = QtWidgets.QTabWidget()
 
         layout = QtWidgets.QVBoxLayout()
 
-        for detector_name, detector_info in detectors_info.items():
+        for detector_name, detector_info in self._detectors_info.items():
             tree = self.build_params(detector_info)
             self.tab.addTab(tree, detector_name)
 

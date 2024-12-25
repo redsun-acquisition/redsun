@@ -30,7 +30,7 @@ from sunflare.virtualbus import Signal, slot
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
-    from sunflare.config import MotorModelInfo
+    from sunflare.config import RedSunInstanceInfo
     from sunflare.virtualbus import VirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -83,14 +83,14 @@ class StepperMotorWidget(BaseWidget, Loggable):
 
     def __init__(
         self,
-        motors_info: dict[str, MotorModelInfo],
+        config: RedSunInstanceInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        super().__init__(virtual_bus, module_bus, *args, **kwargs)
-        self._motors_info = motors_info
+        super().__init__(config, virtual_bus, module_bus, *args, **kwargs)
+        self._motors_info = config.motors
 
         self.grid = QtWidgets.QGridLayout()
         self.setLayout(self.grid)

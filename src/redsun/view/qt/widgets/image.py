@@ -10,6 +10,8 @@ from sunflare.view.qt import BaseWidget
 from sunflare.virtualbus import VirtualBus, slot
 
 if TYPE_CHECKING:
+    from sunflare.config import RedSunInstanceInfo
+
     from redsun.virtual import HardwareVirtualBus
 
 
@@ -28,8 +30,13 @@ class ImageViewWidget(BaseWidget):
 
     _virtual_bus: HardwareVirtualBus
 
-    def __init__(self, virtual_bus: HardwareVirtualBus, module_bus: VirtualBus) -> None:
-        super().__init__(virtual_bus, module_bus)
+    def __init__(
+        self,
+        config: RedSunInstanceInfo,
+        virtual_bus: HardwareVirtualBus,
+        module_bus: VirtualBus,
+    ) -> None:
+        super().__init__(config, virtual_bus, module_bus)
         layout = QVBoxLayout()
         self._viewer = NDViewer(None)
         layout.addWidget(self._viewer)

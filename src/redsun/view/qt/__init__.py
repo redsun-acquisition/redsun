@@ -1,9 +1,12 @@
 import sys
-from typing import NoReturn, Tuple, Type
+from typing import NoReturn, Type
 
 from qtpy.QtWidgets import QApplication
 from sunflare.config import RedSunInstanceInfo
 from sunflare.view.qt import BaseWidget
+from sunflare.virtualbus import ModuleVirtualBus
+
+from redsun.virtual import HardwareVirtualBus
 
 from .mainview import RedSunMainWindow
 from .utils import ProcessEventsDuringTask
@@ -13,13 +16,17 @@ __all__ = [
     "build_view_layer",
     "launch_app",
     "create_app",
+    "BaseWidget",
     "ProcessEventsDuringTask",
 ]
 
 
 def build_view_layer(
-    config: RedSunInstanceInfo, widgets: dict[str, Type[BaseWidget]]
-) -> Tuple[QApplication, RedSunMainWindow]:
+    config: RedSunInstanceInfo,
+    widgets: dict[str, Type[BaseWidget]],
+    virtual_bus: HardwareVirtualBus,
+    module_bus: ModuleVirtualBus,
+) -> RedSunMainWindow:
     """Build the view layer.
 
     Creates the main application that will run the GUI, and the main window (which will also, in
@@ -35,7 +42,7 @@ def build_view_layer(
     widgets : dict[str, Type[BaseWidget]]
         The built widgets.
     """
-    view = RedSunMainWindow(config, widgets)
+    view = RedSunMainWindow(virtual_bus, module_bus, config, widgets)
     view.build_view()
     return view
 

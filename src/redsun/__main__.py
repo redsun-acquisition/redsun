@@ -8,7 +8,7 @@ import sys
 from sunflare.virtualbus import ModuleVirtualBus
 
 from redsun.controller import PluginManager, RedSunMainHardwareController
-from redsun.view import build_view_layer, launch_app
+from redsun.view import build_view_layer, create_app, launch_app
 from redsun.virtual import HardwareVirtualBus
 
 
@@ -53,28 +53,31 @@ def main(input_config: str) -> None:
     input_config : str
         Path to the configuration file.
     """
+    # create the application
+    app = create_app()
+
     # virtual layer
     module_bus = ModuleVirtualBus()
     hardware_bus = HardwareVirtualBus()
 
     # get the startup configuration
-    config, types_groups = PluginManager.load_configuration(input_config)
-
-    models = {group: types_groups.get(group, {}) for group in ["detectors", "motors"]}
-    controllers = types_groups.get("controllers", {})
-    widgets = types_groups.get("widgets", {})
+    config, types_groups, widgets = PluginManager.load_configuration(input_config)
 
     # build the controller layer
     controller = RedSunMainHardwareController(
-        config, models, controllers, hardware_bus, module_bus
+        config, hardware_bus, module_bus, types_groups
     )
 
-    # build the view layer;
-    # the app starts here and
-    # there is no return until it's closed
-    app, view = build_view_layer(config, widgets)
+    # build the view layer
+    view = build_view_layer(config, widgets, hardware_bus, module_bus)
+
+    # connect the controller and the view to the virtual layer
     controller.connect_to_virtual()
     view.connect_to_virtual()
+
+    # launch the application;
+    # the app starts here and
+    # there is no return until it's closed
     launch_app(app, view)
 
 

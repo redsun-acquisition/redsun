@@ -5,9 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, final
 
 from sunflare.config import DetectorModelInfo, MotorModelInfo, RedSunInstanceInfo
-from sunflare.engine.detector import DetectorProtocol
-from sunflare.engine.handler import EngineHandler
-from sunflare.engine.motor import MotorProtocol
+from sunflare.engine import DetectorModel, EngineHandler, MotorModel
 from sunflare.log import Loggable
 
 from bluesky.run_engine import RunEngine
@@ -17,8 +15,8 @@ if TYPE_CHECKING:
 
     from bluesky.utils import DuringTask, MsgGenerator
 
-Motor = MotorProtocol[MotorModelInfo]
-Detector = DetectorProtocol[DetectorModelInfo]
+Motor = MotorModel[MotorModelInfo]
+Detector = DetectorModel[DetectorModelInfo]
 
 
 @final
@@ -73,9 +71,9 @@ class BlueskyHandler(EngineHandler, Loggable):
             self.error(f"Workflow {name} already registered. Aborted.")
 
     def load_device(self, name: str, device: Union[Motor, Detector]) -> None:  # noqa: D102
-        if isinstance(device, MotorProtocol):
+        if isinstance(device, MotorModel):
             self._motors[name] = device
-        elif isinstance(device, DetectorProtocol):
+        elif isinstance(device, DetectorModel):
             self._detectors[name] = device
         else:
             raise ValueError(f"Invalid device type: {type(device)}")

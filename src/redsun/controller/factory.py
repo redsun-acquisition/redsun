@@ -13,19 +13,20 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Type
 
-from sunflare.config import AcquisitionEngineTypes
+from sunflare.config import AcquisitionEngineTypes, FrontendTypes, RedSunInstanceInfo
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
     import logging
 
+    from bluesky.utils import DuringTask
     from sunflare.config import ControllerInfo, DetectorModelInfo, MotorModelInfo
     from sunflare.controller import BaseController
     from sunflare.engine import EngineHandler
-    from sunflare.engine.detector import DetectorProtocol
-    from sunflare.engine.motor import MotorProtocol
+    from sunflare.engine.detector import DetectorModel
+    from sunflare.engine.motor import MotorModel
     from sunflare.virtualbus import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -41,7 +42,7 @@ class Factory:
     @classmethod
     def build_handler(
         cls,
-        engine: AcquisitionEngineTypes,
+        config: RedSunInstanceInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
     ) -> EngineHandler:
@@ -66,48 +67,82 @@ class Factory:
         RuntimeError
             If the selected engine is not supported or if the handler could not be built.
         """
-        if engine == AcquisitionEngineTypes.BLUESKY:
+        during_task: DuringTask
+        if config.frontend == FrontendTypes.QT:
+            from redsun.view.qt import ProcessEventsDuringTask
+
+            during_task = ProcessEventsDuringTask()
+        else:
+            raise RuntimeError(f"Unsupported frontend: {config.frontend}")
+
+        if config.engine == AcquisitionEngineTypes.BLUESKY:
             try:
                 from redsun.engine.bluesky import BlueskyHandler
 
-                return BlueskyHandler(virtual_bus, module_bus)
+                return BlueskyHandler(config, virtual_bus, module_bus, during_task)
             except Exception as e:
-                raise RuntimeError(f"Failed to build handler for engine {engine}: {e}")
+                raise RuntimeError(
+                    f"Failed to build handler for engine {config.engine}: {e}"
+                )
         else:
-            raise RuntimeError(f"Unsupported engine: {engine}")
+            raise RuntimeError(f"Unsupported engine: {config.engine}")
 
     @classmethod
-    def build_model(
+    def build_motor(
         cls,
         name: str,
-        model_class: Union[
-            Type[MotorProtocol[MotorModelInfo]],
-            Type[DetectorProtocol[DetectorModelInfo]],
-        ],
-        model_info: MotorModelInfo | DetectorModelInfo,
-    ) -> Optional[
-        Union[MotorProtocol[MotorModelInfo], DetectorProtocol[DetectorModelInfo]]
-    ]:
-        """Build the model.
+        motor_class: Type[MotorModel[MotorModelInfo]],
+        motor_info: MotorModelInfo,
+    ) -> Optional[MotorModel[MotorModelInfo]]:
+        """Build the motor model.
 
         Parameters
         ----------
         name: ``str``
-            The name of the model.
-        model_class: ``Union[Type[MotorProtocol[MotorModelInfo]], Type[DetectorProtocol[DetectorModelInfo]]]``
-            The class of the model.
-        model_info: ``Union[MotorModelInfo, DetectorModelInfo]``
-            The model information.
+            The name of the motor.
+        motor_class: ``Type[MotorModel[MotorModelInfo]]``
+            The class of the motor.
+        motor_info: ``MotorModelInfo``
+            The motor information.
 
         Returns
         -------
-        ``Optional[Union[MotorProtocol[MotorModelInfo], DetectorProtocol[DetectorModelInfo]]]``
-            The built model. ``None`` if the model could not be built.
+        ``Optional[MotorModel[MotorModelInfo]]``
+            The built motor model. ``None`` if the model could not be built.
         """
         try:
-            return model_class(name, model_info)
+            return motor_class(name, motor_info)
         except Exception as e:
-            cls._logger.exception(f"Failed to build model {name}: {e}")
+            cls._logger.exception(f"Failed to build motor {name}: {e}")
+            return None
+
+    @classmethod
+    def build_detector(
+        cls,
+        name: str,
+        detector_class: Type[DetectorModel[DetectorModelInfo]],
+        detector_info: DetectorModelInfo,
+    ) -> Optional[DetectorModel[DetectorModelInfo]]:
+        """Build the detector model.
+
+        Parameters
+        ----------
+        name: ``str``
+            The name of the detector.
+        detector_class: ``Type[DetectorProtocol[DetectorModelInfo]]``
+            The class of the detector.
+        detector_info: ``DetectorModelInfo``
+            The detector information.
+
+        Returns
+        -------
+        ``Optional[DetectorProtocol[DetectorModelInfo]]``
+            The built detector model. ``None`` if the model could not be built.
+        """
+        try:
+            return detector_class(name, detector_info)
+        except Exception as e:
+            cls._logger.exception(f"Failed to build detector {name}: {e}")
             return None
 
     @classmethod

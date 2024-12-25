@@ -52,7 +52,7 @@ class RedSunMainWindow(QMainWindow):
         self._controller_widgets: dict[str, BaseWidget] = {}
 
         # custom widgets (need to be built)
-        # TODO: build them; API not yet defined
+        # TODO: build them; API
         self._widgets = widgets
 
     def build_view(self) -> None:
@@ -66,20 +66,19 @@ class RedSunMainWindow(QMainWindow):
         }
         if motors_info:
             self._device_widgets["StepperMotor"] = StepperMotorWidget(
-                motors_info, self._virtual_bus, self._module_bus
+                self._config, self._virtual_bus, self._module_bus
             )
 
         # TODO: the model info should provide a flag to indicate
         #       if the detector is supposed to be added to the GUI
-        detectors_info = {name: info for name, info in self._config.detectors.items()}
-        if detectors_info:
+        if self._config.detectors:
             self._device_widgets["DetectorSettings"] = DetectorSettingsWidget(
-                detectors_info,
+                self._config,
                 self._virtual_bus,
                 self._module_bus,
             )
             self._device_widgets["ImageView"] = ImageViewWidget(
-                self._virtual_bus, self._module_bus
+                self._config, self._virtual_bus, self._module_bus
             )
 
         # set dock widgets; the detector settings are on the top-left;
@@ -114,5 +113,6 @@ class RedSunMainWindow(QMainWindow):
         for widget in self._controller_widgets.values():
             widget.connection_phase()
 
-        for widget in self._widgets.values():
-            widget.connection_phase()
+        # TODO: to implement
+        # for widget in self._widgets.values():
+        #     widget.connection_phase()

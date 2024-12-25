@@ -3,29 +3,26 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, Tuple, Type, Union
-
-from sunflare.config import (
-    ControllerInfo,
-    DetectorModelInfo,
-    MotorModelInfo,
-    RedSunInstanceInfo,
-)
-from sunflare.controller import BaseController
-from sunflare.engine import DetectorModel, MotorModel
-from sunflare.log import get_logger
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, get_args
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
 else:
     from importlib.metadata import entry_points
 
-InfoTypes = Union[Type[DetectorModelInfo], Type[MotorModelInfo], Type[ControllerInfo]]
-Types = Union[
-    Type[DetectorModel[DetectorModelInfo]],
-    Type[MotorModel[MotorModelInfo]],
-    Type[BaseController],
-]
+from sunflare.config import (
+    AcquisitionEngineTypes,
+    DetectorModelInfo,
+    FrontendTypes,
+    MotorModelInfo,
+    RedSunInstanceInfo,
+)
+from sunflare.log import get_logger
+
+from redsun.common import BACKEND_GROUPS, Backend, InfoBackend
+
+if TYPE_CHECKING:
+    from redsun.view import BaseWidget
 
 
 class PluginManager:
@@ -37,7 +34,7 @@ class PluginManager:
     @staticmethod
     def load_configuration(
         config_path: str,
-    ) -> Tuple[RedSunInstanceInfo, dict[str, Types]]:
+    ) -> Tuple[RedSunInstanceInfo, Backend, dict[str, Type[BaseWidget]]]:
         """Load the configuration from a YAML file.
 
         The manager will load the configuration from the input YAML file.
@@ -54,14 +51,82 @@ class PluginManager:
         Tuple[RedSunInstanceInfo, dict[str, Types], dict[str, Type[BaseController]]
             RedSun instance configuration and class types to build.
         """
-        logger = get_logger()
-        config = RedSunInstanceInfo.load_yaml(config_path)
-        groups = [
-            group for group in config.keys() if group not in ["engine", "frontend"]
-        ]
+        config_groups = InfoBackend(detectors={}, motors={}, controllers={})
+        types_groups = Backend(detectors={}, motors={}, controllers={})
 
-        config_groups: dict[str, dict[str, InfoTypes]] = {group: {} for group in groups}
-        types_groups: dict[str, dict[str, Types]] = {group: {} for group in groups}
+        config = RedSunInstanceInfo.load_yaml(config_path)
+        widgets_config: list[str] = config.pop("widgets")
+
+        engine = AcquisitionEngineTypes(config.pop("engine"))
+        frontend = FrontendTypes(config.pop("frontend"))
+
+        # load the backend configuration
+        types_groups, config_groups = PluginManager.load_backend(config)
+
+        # load the frontend configuration
+        frontend_types: dict[str, Type[BaseWidget]]
+        if widgets_config:
+            frontend_types = PluginManager.load_frontend(widgets_config)
+        else:
+            frontend_types = {}
+
+        # build configuration
+        output_config = RedSunInstanceInfo(
+            engine=engine, frontend=frontend, **config_groups
+        )
+
+        return output_config, types_groups, frontend_types
+
+    @staticmethod
+    def load_frontend(config: list[str]) -> dict[str, Type[BaseWidget]]:
+        """Load the frontend configuration.
+
+        Parameters
+        ----------
+        config : ``list[str]``
+            List of widget class names.
+
+        Returns
+        -------
+        ``dict[str, Type[BaseWidget]]``
+            Frontend configuration.
+        """
+        # Get the entry points for the current group.
+        # Plugins not found will be tagged with None
+        plugins = entry_points(group="redsun.plugins.widgets")
+        widgets: dict[str, Optional[Type[BaseWidget]]] = {
+            widget_name: next(
+                (ep.load() for ep in plugins if ep.name == widget_name), None
+            )
+            for widget_name in config
+        }
+
+        # Remove all entries with None values
+        filtered_widgets: dict[str, Type[BaseWidget]] = {
+            key: value for key, value in widgets.items() if value is not None
+        }
+
+        return filtered_widgets
+
+    @staticmethod
+    def load_backend(config: dict[str, Any]) -> Tuple[Backend, InfoBackend]:
+        """Load the backend configuration.
+
+        Parameters
+        ----------
+        config : ``dict[str, Any]``
+            Configuration dictionary.
+
+        Returns
+        -------
+        Backend
+            Backend configuration.
+        """
+        logger = get_logger()
+
+        groups: list[BACKEND_GROUPS] = list(get_args(BACKEND_GROUPS))
+        config_groups = InfoBackend(detectors={}, motors={}, controllers={})
+        types_groups = Backend(detectors={}, motors={}, controllers={})
 
         for group in groups:
             # get the configuration for the current group;
@@ -98,7 +163,10 @@ class PluginManager:
                 try:
                     info_builder = info_ep.load()
                     if not all(
-                        [issubclass(info_builder, info_type) for info_type in InfoTypes]
+                        [
+                            issubclass(info_builder, info_type)
+                            for info_type in [DetectorModelInfo, MotorModelInfo]
+                        ]
                     ):
                         raise TypeError(
                             f"Loaded model info {info_cls} is not a subclass "
@@ -132,8 +200,4 @@ class PluginManager:
                         break
                 # pop the found device from the input to speed up the search
                 input.pop(device_name)
-
-        # build configuration
-        config = RedSunInstanceInfo(**config_groups)
-
-        return config, types_groups
+        return types_groups, config_groups
