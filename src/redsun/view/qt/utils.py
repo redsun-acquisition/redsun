@@ -15,7 +15,7 @@ class ProcessEventsDuringTask(DuringTask):
         """Keep processing events until the blocking event is out of the "waiting" state.
 
         In the default implementation, blocking_event.wait() prevents
-        the Qt loop to correctly process events events. They solve this
+        the Qt loop to correctly process events. They solve this
         by using a remote kicker that "kicks" the loop.
 
         This implementation simply calls processEvents() every 30ms.
