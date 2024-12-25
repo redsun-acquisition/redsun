@@ -6,16 +6,14 @@ import sys
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     Optional,
     Tuple,
     Type,
-    get_args,
-    Literal,
     TypedDict,
+    get_args,
 )
 
-from sunflare.controller import BaseController
-from sunflare.engine import DetectorModel, MotorModel
 
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
@@ -24,15 +22,17 @@ else:
 
 from sunflare.config import (
     AcquisitionEngineTypes,
-    FrontendTypes,
-    DetectorModelInfo,
-    MotorModelInfo,
     ControllerInfo,
+    DetectorModelInfo,
+    FrontendTypes,
+    MotorModelInfo,
     RedSunInstanceInfo,
 )
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
+    from sunflare.engine import DetectorModel, MotorModel
+    from sunflare.controller import BaseController
     from redsun.view import BaseWidget
 
 
