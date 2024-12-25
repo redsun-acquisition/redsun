@@ -25,13 +25,13 @@ from qtpy.QtCore import QRegularExpression, Qt
 from qtpy.QtGui import QRegularExpressionValidator
 from sunflare.log import Loggable
 from sunflare.view.qt import BaseWidget
-from sunflare.virtualbus import Signal, slot
+from sunflare.virtual import Signal, slot
 
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
     from sunflare.config import RedSunInstanceInfo
-    from sunflare.virtualbus import VirtualBus
+    from sunflare.virtual import VirtualBus
 
     from redsun.virtual import HardwareVirtualBus
 

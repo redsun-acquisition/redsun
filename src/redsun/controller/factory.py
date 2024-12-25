@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from sunflare.engine import EngineHandler
     from sunflare.engine.detector import DetectorModel
     from sunflare.engine.motor import MotorModel
-    from sunflare.virtualbus import ModuleVirtualBus
+    from sunflare.virtual import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from sunflare.controller import BaseController
 from sunflare.log import Loggable
-from sunflare.virtualbus import Signal, VirtualBus, slot
+from sunflare.virtual import Signal, VirtualBus, slot
 
 if TYPE_CHECKING:
     from sunflare.config import ControllerInfo

@@ -11,7 +11,7 @@ from sunflare.log import Loggable
 from bluesky.run_engine import RunEngine
 
 if TYPE_CHECKING:
-    from sunflare.virtualbus import VirtualBus
+    from sunflare.virtual import VirtualBus
 
     from bluesky.utils import DuringTask, MsgGenerator
 

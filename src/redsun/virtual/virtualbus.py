@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import final
 
-from sunflare.virtualbus import Signal, VirtualBus
+from sunflare.virtual import Signal, VirtualBus
 
 __all__ = ["HardwareVirtualBus"]
 

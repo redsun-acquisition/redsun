@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from ndv import NDViewer
 from qtpy.QtWidgets import QVBoxLayout
 from sunflare.view.qt import BaseWidget
-from sunflare.virtualbus import VirtualBus, slot
+from sunflare.virtual import VirtualBus, slot
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunInstanceInfo

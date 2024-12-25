@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from sunflare.virtualbus import ModuleVirtualBus
+from sunflare.virtual import ModuleVirtualBus
 
 from redsun.controller import PluginManager, RedSunMainHardwareController
 from redsun.view import build_view_layer, create_app, launch_app

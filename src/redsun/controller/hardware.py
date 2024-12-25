@@ -11,7 +11,7 @@ from redsun.controller.factory import Factory
 if TYPE_CHECKING:
     from sunflare.config import RedSunInstanceInfo
     from sunflare.controller import BaseController
-    from sunflare.virtualbus import ModuleVirtualBus
+    from sunflare.virtual import ModuleVirtualBus
 
     from redsun.common import Backend
     from redsun.virtual import HardwareVirtualBus

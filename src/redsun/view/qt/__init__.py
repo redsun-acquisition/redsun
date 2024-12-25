@@ -4,7 +4,7 @@ from typing import NoReturn, Type
 from qtpy.QtWidgets import QApplication
 from sunflare.config import RedSunInstanceInfo
 from sunflare.view.qt import BaseWidget
-from sunflare.virtualbus import ModuleVirtualBus
+from sunflare.virtual import ModuleVirtualBus
 
 from redsun.virtual import HardwareVirtualBus
 

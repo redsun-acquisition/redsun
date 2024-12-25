@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 
 from sunflare.controller import BaseController
 from sunflare.log import Loggable
-from sunflare.virtualbus import Signal, VirtualBus
+from sunflare.virtual import Signal, VirtualBus
 
 if TYPE_CHECKING:
     from collections import OrderedDict
