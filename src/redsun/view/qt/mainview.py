@@ -52,6 +52,7 @@ class RedSunMainWindow(QMainWindow):
         self._controller_widgets: dict[str, BaseWidget] = {}
 
         # custom widgets (need to be built)
+        # TODO: build them; API not yet defined
         self._widgets = widgets
 
     def build_view(self) -> None:
@@ -64,10 +65,9 @@ class RedSunMainWindow(QMainWindow):
             if info.category == MotorModelTypes.STEPPER
         }
         if motors_info:
-            stepper_widget = StepperMotorWidget(
+            self._device_widgets["StepperMotor"] = StepperMotorWidget(
                 motors_info, self._virtual_bus, self._module_bus
             )
-            stepper_widget.registration_phase()
 
         # TODO: the model info should provide a flag to indicate
         #       if the detector is supposed to be added to the GUI
@@ -78,7 +78,6 @@ class RedSunMainWindow(QMainWindow):
                 self._virtual_bus,
                 self._module_bus,
             )
-            self._device_widgets["ImageView"].registration_phase()
             self._device_widgets["ImageView"] = ImageViewWidget(
                 self._virtual_bus, self._module_bus
             )
@@ -95,16 +94,25 @@ class RedSunMainWindow(QMainWindow):
             dock.setWidget(self._device_widgets["DetectorSettings"])
             self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
         if "ImageView" in self._device_widgets.keys():
-            dock = QDockWidget("Image Viewer", parent=self)
-            dock.setWidget(self._device_widgets["ImageView"])
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-        if stepper_widget is not None:
+            self.setCentralWidget(self._device_widgets["ImageView"])
+        if "StepperMotor" in self._device_widgets.keys():
             dock = QDockWidget("Stepper Motor", parent=self)
-            dock.setWidget(stepper_widget)
+            dock.setWidget(self._device_widgets["StepperMotor"])
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
-        # after all the widgets are built, connect them to the virtual bus
+        # after all the widgets are built, register the signals
+        for widget in self._device_widgets.values():
+            widget.registration_phase()
+
+        self.setWindowState(Qt.WindowState.WindowMaximized)
+
+    def connect_to_virtual(self) -> None:
+        """Connect the view to the virtual layer."""
         for widget in self._device_widgets.values():
             widget.connection_phase()
 
-        self.setWindowState(Qt.WindowState.WindowMaximized)
+        for widget in self._controller_widgets.values():
+            widget.connection_phase()
+
+        for widget in self._widgets.values():
+            widget.connection_phase()

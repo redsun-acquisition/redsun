@@ -1,4 +1,4 @@
-from .hardware import build_controller_layer
+from .hardware import RedSunMainHardwareController
 from .plugins import PluginManager
 
-__all__ = ["build_controller_layer", "PluginManager"]
+__all__ = ["RedSunMainHardwareController", "PluginManager"]
