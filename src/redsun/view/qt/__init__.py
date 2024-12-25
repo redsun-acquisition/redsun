@@ -1,12 +1,20 @@
 import sys
-from typing import NoReturn, Type, Tuple
+from typing import NoReturn, Tuple, Type
 
 from qtpy.QtWidgets import QApplication
 from sunflare.config import RedSunInstanceInfo
 from sunflare.view.qt import BaseWidget
-from .mainview import RedSunMainWindow
 
-__all__ = ["RedSunMainWindow", "build_view_layer", "launch_app"]
+from .mainview import RedSunMainWindow
+from .utils import ProcessEventsDuringTask
+
+__all__ = [
+    "RedSunMainWindow",
+    "build_view_layer",
+    "launch_app",
+    "create_app",
+    "ProcessEventsDuringTask",
+]
 
 
 def build_view_layer(
@@ -27,10 +35,14 @@ def build_view_layer(
     widgets : dict[str, Type[BaseWidget]]
         The built widgets.
     """
-    app = QApplication([])
     view = RedSunMainWindow(config, widgets)
     view.build_view()
-    return app, view
+    return view
+
+
+def create_app() -> QApplication:
+    """Create the main application."""
+    return QApplication([])
 
 
 def launch_app(app: QApplication, view: RedSunMainWindow) -> NoReturn:
@@ -42,8 +54,6 @@ def launch_app(app: QApplication, view: RedSunMainWindow) -> NoReturn:
         The main application.
     view : RedSunMainWindow
         The main window.
-    controller : RedSunMainHardwareController
-        The main hardware controller.
     """
     view.show()
     sys.exit(app.exec())
