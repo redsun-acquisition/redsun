@@ -1,6 +1,6 @@
 # Virtual module
 
 ```{eval-rst}
-.. automodule:: redsun.virtual.virtualbus
+.. automodule:: redsun.virtual
     :members:
 ```
