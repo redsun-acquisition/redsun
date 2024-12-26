@@ -78,13 +78,12 @@ disable_error_code = "attr-defined"
 target-version = "py39"
 extend-exclude = ["docs", "tests", "noxfile.py"]
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 extend-select = ["D"]
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
-
-[tool.isort]
-line_length = 88 # https://pycqa.github.io/isort/docs/configuration/black_compatibility.html
-multi_line_output = 3 # https://pycqa.github.io/isort/docs/configuration/multi_line_output_modes.html#3-vertical-hanging-indent
