@@ -7,6 +7,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    NamedTuple,
     Optional,
     Tuple,
     Type,
@@ -72,8 +73,26 @@ class Backend(TypedDict):
     controllers: dict[str, Type[BaseController]]
 
 
+class Plugin(NamedTuple):
+    """A named tuple representing the elements required to identify and load a plugin.
+
+    Parameters
+    ----------
+    name : ``str``
+        The name of the plugin.
+    info : ``Type[object]``
+        The information class for the plugin.
+    base_class : ``Type[object]``
+        The base class for the plugin.
+    """
+
+    name: str
+    info: Type[object]
+    base_class: Type[object]
+
+
 #: Plugin group names for the backend.
-BACKEND_GROUPS = Literal["detectors", "motors", "controllers"]
+MODEL_GROUPS = Literal["detectors", "motors"]
 
 
 class PluginManager:
@@ -102,11 +121,16 @@ class PluginManager:
         Tuple[RedSunInstanceInfo, dict[str, Types], dict[str, Type[BaseController]]
             RedSun instance configuration and class types to build.
         """
+        widgets_config: list[str]
         config_groups = InfoBackend(detectors={}, motors={}, controllers={})
         types_groups = Backend(detectors={}, motors={}, controllers={})
 
         config = RedSunInstanceInfo.load_yaml(config_path)
-        widgets_config: list[str] = config.pop("widgets")
+        try:
+            widgets_config = config.pop("widgets")
+        except KeyError:
+            # no widgets configuration found
+            widgets_config = []
 
         engine = AcquisitionEngineTypes(config.pop("engine"))
         frontend = FrontendTypes(config.pop("frontend"))
@@ -173,82 +197,100 @@ class PluginManager:
         Backend
             Backend configuration.
         """
-        logger = get_logger()
-
-        groups: list[BACKEND_GROUPS] = list(get_args(BACKEND_GROUPS))
+        groups: list[MODEL_GROUPS] = list(get_args(MODEL_GROUPS))
         config_groups = InfoBackend(detectors={}, motors={}, controllers={})
         types_groups = Backend(detectors={}, motors={}, controllers={})
 
         for group in groups:
-            # get the configuration for the current group;
-            # the key is the device name; the value is the device configuration
-            input: dict[str, Any] = config[group]
+            # if the group is not in
+            # the configuration, skip it
+            if group not in config:
+                continue
 
-            # get the entry points for the current group
-            plugins = entry_points(group=".".join(["redsun.plugins", group]))
-            info_plugins = [ep for ep in plugins if "_config" in ep.name]
-            model_plugins = [ep for ep in plugins if "_config" not in ep.name]
+            loaded_plugins = PluginManager.load_model_plugins(group)
 
-            # the two lists must have the same length
-            if len(info_plugins) != len(model_plugins):
-                # find the model plugins that do not have a
-                # corresponding info plugin and remove them
-                missing_plugins = [
-                    ep
-                    for ep in model_plugins
-                    if ep.name not in [ep.name for ep in info_plugins]
-                ]
-                for missing_plugin in missing_plugins:
-                    model_plugins.remove(missing_plugin)
-                logger.error(
-                    f"The following models do not have a corresponding information model: {missing_plugins}. They will not be loaded."
-                )
-
-            # the information models are built here;
-            # the actual device models are built in the factory
-            for info_ep, model_ep in zip(info_plugins, model_plugins):
-                # Retrieve the name of the information model
-                info_cls = info_ep.value.split(":")[1]
-                # Retrieve the name of the actual device model
-                build_cls = info_cls[:-4]
-                try:
-                    info_builder = info_ep.load()
-                    if not all(
-                        [
-                            issubclass(info_builder, info_type)
-                            for info_type in [DetectorModelInfo, MotorModelInfo]
-                        ]
-                    ):
-                        raise TypeError(
-                            f"Loaded model info {info_cls} is not a subclass "
-                            f"of any recognized model info class. "
-                            f"Plugin will not be loaded."
-                        )
-                except TypeError as e:
-                    # the information model is not a subclass of any recognized model info class
-                    # log the error and skip the plugin
-                    logger.error(e)
+            for device_name, model_config in config[group].items():
+                if model_config["model_name"] not in loaded_plugins:
                     continue
-                except Exception as e:
-                    # something went wrong while loading the plugin;
-                    # log the error and skip the plugin
-                    logger.error(
-                        f"Failed to load information model {info_ep.name}: {e}. Plugin will not be loaded."
-                    )
-                    continue
+                builder = loaded_plugins[model_config["model_name"]].info
+                model = loaded_plugins[model_config["model_name"]].base_class
 
-                # inspect the current device configuration
-                for device_name, values in input.items():
-                    if values["model_name"] == build_cls:
-                        # build the information model
-                        information = info_builder(**values)
+                # these types are correct so we can safely ignore the type checker
+                config_groups[group][device_name] = builder(**model_config)  # type: ignore
+                types_groups[group][device_name] = model  # type: ignore
 
-                        # load the device model
-                        constructor = model_ep.load()
-
-                        config_groups[group][device_name] = information
-                        types_groups[group][device_name] = constructor
-                        break
-                # pop the found device from the input to speed up the search
-                input.pop(device_name)
         return types_groups, config_groups
+
+    @staticmethod
+    def load_model_plugins(group: MODEL_GROUPS) -> dict[str, Plugin]:
+        """Load the plugins.
+
+        Parameters
+        ----------
+        config : ``dict[str, Any]``
+            The configuration dictionary.
+
+        Returns
+        -------
+        ``Tuple[dict[str, Any], dict[str, Any]]``
+            The configuration and model classes.
+        """
+        logger = get_logger()
+
+        output_plugins: dict[str, Plugin] = {}
+
+        # get the entry points for the current group
+        plugin_group = f"redsun.plugins.{group}"
+        info_plugins = entry_points(group=f"{plugin_group}.config")
+        model_plugins = entry_points(group=plugin_group)
+
+        # the two lists must have the same length
+        if len(info_plugins) != len(model_plugins):
+            # find the model plugins that do not have a
+            # corresponding info plugin and remove them
+            missing_plugins = [
+                ep
+                for ep in model_plugins
+                if ep.name not in [ep.name for ep in info_plugins]
+            ]
+            for missing_plugin in missing_plugins:
+                model_plugins.remove(missing_plugin)
+            logger.error(
+                f"The following models do not have a corresponding information model: {missing_plugins}. They will not be loaded."
+            )
+
+        for info_ep in info_plugins:
+            # find the corresponding model plugin; they match by the value of "ep.name"
+            model_ep = next(
+                (ep for ep in model_plugins if ep.name == info_ep.name), None
+            )
+
+            # if the model plugin is not found, skip the info plugin
+            if model_ep is None:
+                continue
+            try:
+                info_builder = info_ep.load()
+                if not any(
+                    [
+                        issubclass(info_builder, info_type)
+                        for info_type in [DetectorModelInfo, MotorModelInfo]
+                    ]
+                ):
+                    raise TypeError(
+                        f"Loaded model info {info_ep.name} is not a subclass "
+                        f"of any recognized model info class. "
+                        f"Plugin will not be loaded."
+                    )
+            except TypeError as e:
+                # the information model is not a subclass of any recognized model info class
+                # log the error and skip the plugin
+                logger.error(e)
+                continue
+            base_class = model_ep.load()
+            # the model key is the last part of the value
+            model_key = model_ep.value.split(":")[-1]
+            output_plugins[model_key] = Plugin(
+                name=model_key, info=info_builder, base_class=base_class
+            )
+
+        return output_plugins
