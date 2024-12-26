@@ -14,7 +14,6 @@ from typing import (
     get_args,
 )
 
-
 if sys.version_info < (3, 10):
     from importlib_metadata import entry_points
 else:
@@ -31,8 +30,9 @@ from sunflare.config import (
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
-    from sunflare.engine import DetectorModel, MotorModel
     from sunflare.controller import BaseController
+    from sunflare.engine import DetectorModel, MotorModel
+
     from redsun.view import BaseWidget
 
 

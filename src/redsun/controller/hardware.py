@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sunflare.controller import BaseController
     from sunflare.virtual import ModuleVirtualBus
 
-    from redsun.common import Backend
+    from redsun.controller.plugins import Backend
     from redsun.virtual import HardwareVirtualBus
 
 
