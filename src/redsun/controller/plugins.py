@@ -97,7 +97,7 @@ class Plugin(NamedTuple):
 
 
 #: Plugin group names for the backend.
-MODEL_GROUPS = Literal["detectors", "motors"]
+MODEL_GROUPS = Literal["detectors", "motors", "controllers"]
 
 
 class PluginManager:
@@ -212,22 +212,29 @@ class PluginManager:
             if group not in config:
                 continue
 
-            loaded_plugins = PluginManager.load_model_plugins(group)
+            # the key for the class name is either "model_name" for models
+            # or "controller_name" for controllers; it's made so
+            # we can more easily recognize the type of plugin
+            class_name_key = (
+                "model_name" if group != "controllers" else "controller_name"
+            )
 
-            for device_name, model_config in config[group].items():
-                if model_config["model_name"] not in loaded_plugins:
+            loaded_plugins = PluginManager.load_backend_plugins(group)
+
+            for plugin_id, plugin_config in config[group].items():
+                if plugin_config[class_name_key] not in loaded_plugins:
                     continue
-                builder = loaded_plugins[model_config["model_name"]].info
-                model = loaded_plugins[model_config["model_name"]].base_class
+                builder = loaded_plugins[plugin_config[class_name_key]].info
+                model = loaded_plugins[plugin_config[class_name_key]].base_class
 
                 # these types are correct so we can safely ignore the type checker
-                config_groups[group][device_name] = builder(**model_config)  # type: ignore
-                types_groups[group][device_name] = model  # type: ignore
+                config_groups[group][plugin_id] = builder(**plugin_config)  # type: ignore
+                types_groups[group][plugin_id] = model  # type: ignore
 
         return types_groups, config_groups
 
     @staticmethod
-    def load_model_plugins(group: MODEL_GROUPS) -> dict[str, Plugin]:
+    def load_backend_plugins(group: MODEL_GROUPS) -> dict[str, Plugin]:
         """Load the plugins.
 
         Parameters
@@ -249,49 +256,45 @@ class PluginManager:
         info_plugins: list[EntryPoint] = list(
             entry_points(group=f"{plugin_group}.config")
         )
-        model_plugins: list[EntryPoint] = list(entry_points(group=plugin_group))
+        plugins: list[EntryPoint] = list(entry_points(group=plugin_group))
 
         # the two lists must have the same length
-        if len(info_plugins) != len(model_plugins):
+        if len(info_plugins) != len(plugins):
             # find the model plugins that do not have a
             # corresponding info plugin and remove them
             missing_plugins = [
-                ep
-                for ep in model_plugins
-                if ep.name not in [ep.name for ep in info_plugins]
+                ep for ep in plugins if ep.name not in [ep.name for ep in info_plugins]
             ]
             for missing_plugin in missing_plugins:
-                model_plugins.remove(missing_plugin)
+                plugins.remove(missing_plugin)
             missing_plugins_values = [ep.value for ep in missing_plugins]
-            logger.error(
-                f"The following models do not have a corresponding information model: {missing_plugins_values}. They will not be loaded."
+            logger.warning(
+                f"The following classes do not have a corresponding information model: {missing_plugins_values}. They will not be loaded."
             )
 
         for info_ep in info_plugins:
             # find the corresponding model plugin; they match by the value of "ep.name"
-            model_ep = next(
-                (ep for ep in model_plugins if ep.name == info_ep.name), None
-            )
+            plugin_ep = next((ep for ep in plugins if ep.name == info_ep.name), None)
 
             # if the model plugin is not found, skip the info plugin
-            if model_ep is None:
+            if plugin_ep is None:
                 continue
             info_builder = info_ep.load()
             if not any(
                 [
                     issubclass(info_builder, info_type)
-                    for info_type in [DetectorModelInfo, MotorModelInfo]
+                    for info_type in [DetectorModelInfo, MotorModelInfo, ControllerInfo]
                 ]
             ):
-                logger.error(
+                logger.warning(
                     f"Loaded model info {info_ep.value} is not a subclass "
                     f"of any recognized model info class. "
                     f"Plugin will not be loaded."
                 )
                 continue
-            base_class = model_ep.load()
+            base_class = plugin_ep.load()
             # the model key is the last part of the value
-            model_key = model_ep.value.split(":")[-1]
+            model_key = plugin_ep.value.split(":")[-1]
             output_plugins[model_key] = Plugin(
                 name=model_key, info=info_builder, base_class=base_class
             )

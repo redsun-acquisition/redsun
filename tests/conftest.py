@@ -5,7 +5,14 @@ from typing import Callable
 from importlib.metadata import EntryPoint
 from pathlib import Path
 
-from mocks import MockMotor, MockMotorInfo, MockDetector, MockDetectorInfo, NonDerivedMotorInfo
+from mocks import (
+    MockMotor, 
+    MockMotorInfo, 
+    MockDetector, 
+    MockDetectorInfo,
+    MockController,
+    MockControllerInfo,
+)
 
 @pytest.fixture
 def config_path() -> Path:
@@ -66,3 +73,29 @@ def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
         return plugins
     
     return mocked_motor_entry_points
+
+@pytest.fixture
+def mock_controller_entry_points() -> Callable[[str], list[EntryPoint]]:
+
+    def mocked_controller_entry_points(group: str) -> list[EntryPoint]:
+        plugins = []
+
+        if group == "redsun.plugins.controllers.config":
+            info_ep = EntryPoint(
+                name="controller",
+                value="mock_controller:MockControllerInfo",
+                group="redsun.plugins.controllers.config",
+            )
+            info_ep.load = MagicMock(return_value=MockControllerInfo) # type: ignore
+            plugins.append(info_ep)
+        if group == "redsun.plugins.controllers":
+            model_ep = EntryPoint(
+                name="controller",
+                value="mock_controller:MockController",
+                group="redsun.plugins.controllers",
+            )
+            model_ep.load = MagicMock(return_value=MockController) # type: ignore
+            plugins.append(model_ep)
+        
+        return plugins
+    return mocked_controller_entry_points

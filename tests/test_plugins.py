@@ -59,6 +59,22 @@ def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Ca
         assert len(types_groups["detectors"]) == 2
         assert ["iSCAT channel", "TIRF channel"] == list(types_groups["detectors"].keys())
 
+def test_load_controller_plugins(config_path: Path, mock_controller_entry_points: Callable[[str], list[EntryPoint]]) -> None:
+    # Create a mock that returns our function
+    mock_ep = MagicMock(side_effect=mock_controller_entry_points)
+
+    # Need to patch where entry_points is imported, not where it's defined
+    with patch('redsun.controller.plugins.entry_points', mock_ep):
+
+        # Then test through the plugin manager
+        config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_controller_config.yaml"))
+
+        assert isinstance(config, RedSunInstanceInfo)
+        assert len(config.controllers) == 1
+        assert len(config.motors) == 0
+        assert len(types_groups["controllers"]) == 1
+        assert ["Mock Controller"] == list(types_groups["controllers"].keys())
+
 @pytest.mark.parametrize("mock_entry_points", [mocked_motor_mismatched_entry_points, mocked_motor_missing_entry_points, mocked_motor_non_derived_info_entry_points])
 def test_errors_plugin_loading(config_path: Path, mock_entry_points: Callable[[str], list[EntryPoint]]) -> None:
     # Create a mock that returns our function
