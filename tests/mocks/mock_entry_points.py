@@ -1,3 +1,5 @@
+"""Entry points used to test error conditions."""
+
 import sys
 from unittest.mock import MagicMock
 
