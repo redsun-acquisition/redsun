@@ -276,23 +276,18 @@ class PluginManager:
             # if the model plugin is not found, skip the info plugin
             if model_ep is None:
                 continue
-            try:
-                info_builder = info_ep.load()
-                if not any(
-                    [
-                        issubclass(info_builder, info_type)
-                        for info_type in [DetectorModelInfo, MotorModelInfo]
-                    ]
-                ):
-                    raise TypeError(
-                        f"Loaded model info {info_ep.value} is not a subclass "
-                        f"of any recognized model info class. "
-                        f"Plugin will not be loaded."
-                    )
-            except TypeError as e:
-                # the information model is not a subclass of any recognized model info class
-                # log the error and skip the plugin
-                logger.error(e)
+            info_builder = info_ep.load()
+            if not any(
+                [
+                    issubclass(info_builder, info_type)
+                    for info_type in [DetectorModelInfo, MotorModelInfo]
+                ]
+            ):
+                logger.error(
+                    f"Loaded model info {info_ep.value} is not a subclass "
+                    f"of any recognized model info class. "
+                    f"Plugin will not be loaded."
+                )
                 continue
             base_class = model_ep.load()
             # the model key is the last part of the value
