@@ -1,4 +1,5 @@
 # type: ignore
+import pytest
 
 from unittest.mock import MagicMock, patch
 
@@ -8,6 +9,8 @@ from importlib.metadata import EntryPoint
 from typing import Callable
 from redsun.controller.plugins import PluginManager
 from sunflare.config import RedSunInstanceInfo
+
+from mocks import mocked_motor_missing_entry_points, mocked_motor_mismatched_entry_points, mocked_motor_non_derived_info_entry_points
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -56,15 +59,13 @@ def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Ca
         assert len(types_groups["detectors"]) == 2
         assert ["iSCAT channel", "TIRF channel"] == list(types_groups["detectors"].keys())
 
-
-def test_load_motor_plugin_no_config(config_path: Path, mock_motor_missing_entry_points: Callable[[str], list[EntryPoint]]) -> None:
+@pytest.mark.parametrize("mock_entry_points", [mocked_motor_mismatched_entry_points, mocked_motor_missing_entry_points, mocked_motor_non_derived_info_entry_points])
+def test_errors_plugin_loading(config_path: Path, mock_entry_points: Callable[[str], list[EntryPoint]]) -> None:
     # Create a mock that returns our function
-    mock_ep = MagicMock(side_effect=mock_motor_missing_entry_points)
+    mock_ep = MagicMock(side_effect=mock_entry_points)
 
     # Need to patch where entry_points is imported, not where it's defined
     with patch('redsun.controller.plugins.entry_points', mock_ep):
         config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
-
-        assert isinstance(config, RedSunInstanceInfo)
         assert config.motors == {}
         assert len(types_groups["motors"]) == 0

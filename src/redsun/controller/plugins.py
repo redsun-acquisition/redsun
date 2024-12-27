@@ -246,8 +246,10 @@ class PluginManager:
 
         # get the entry points for the current group
         plugin_group = f"redsun.plugins.{group}"
-        info_plugins: list[EntryPoint] = entry_points(group=f"{plugin_group}.config")
-        model_plugins: list[EntryPoint] = entry_points(group=plugin_group)
+        info_plugins: list[EntryPoint] = list(
+            entry_points(group=f"{plugin_group}.config")
+        )
+        model_plugins: list[EntryPoint] = list(entry_points(group=plugin_group))
 
         # the two lists must have the same length
         if len(info_plugins) != len(model_plugins):
@@ -260,8 +262,9 @@ class PluginManager:
             ]
             for missing_plugin in missing_plugins:
                 model_plugins.remove(missing_plugin)
+            missing_plugins_values = [ep.value for ep in missing_plugins]
             logger.error(
-                f"The following models do not have a corresponding information model: {missing_plugins}. They will not be loaded."
+                f"The following models do not have a corresponding information model: {missing_plugins_values}. They will not be loaded."
             )
 
         for info_ep in info_plugins:
@@ -282,7 +285,7 @@ class PluginManager:
                     ]
                 ):
                     raise TypeError(
-                        f"Loaded model info {info_ep.name} is not a subclass "
+                        f"Loaded model info {info_ep.value} is not a subclass "
                         f"of any recognized model info class. "
                         f"Plugin will not be loaded."
                     )

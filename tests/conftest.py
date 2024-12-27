@@ -5,7 +5,7 @@ from typing import Callable
 from importlib.metadata import EntryPoint
 from pathlib import Path
 
-from mocks import MockMotor, MockMotorInfo, MockDetector, MockDetectorInfo
+from mocks import MockMotor, MockMotorInfo, MockDetector, MockDetectorInfo, NonDerivedMotorInfo
 
 @pytest.fixture
 def config_path() -> Path:
@@ -66,20 +66,3 @@ def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
         return plugins
     
     return mocked_motor_entry_points
-
-@pytest.fixture
-def mock_motor_missing_entry_points() -> Callable[[str], list[EntryPoint]]:
-    """Motor defined without config entry point."""
-    def mocked_motor_missing_entry_points(group: str) -> list[EntryPoint]:
-        plugins = []
-
-        if group == "redsun.plugins.motors":
-            model_ep = EntryPoint(
-                name="motor",
-                value="mock_motor:MockMotor",
-                group="redsun.plugins.motors",
-            )
-            model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
-            plugins.append(model_ep)
-        return plugins
-    return mocked_motor_missing_entry_points
