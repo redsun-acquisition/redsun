@@ -237,8 +237,8 @@ class PluginManager:
 
         Returns
         -------
-        ``Tuple[dict[str, Any], dict[str, Any]]``
-            The configuration and model classes.
+        ``dict[str, Plugin]``
+            The plugin configuration and base classes.
         """
         logger = get_logger()
 
