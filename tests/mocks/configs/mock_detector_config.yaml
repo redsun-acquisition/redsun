@@ -1,0 +1,34 @@
+engine: bluesky
+frontend: qt
+detectors:
+  iSCAT channel:
+    model_name: MockDetector
+    axes:
+      - X
+    sensor_size:
+      - 1280
+      - 864
+    pixel_size:
+      - 17.5
+      - 17.5
+      - 17.5
+    exposure_egu: us
+    integer: 42
+    floating: 3.14
+    string: "Hello, World!"
+  TIRF channel:
+    model_name: MockDetector
+    axes:
+      - X
+      - Y
+    sensor_size: 
+      - 2400
+      - 2048
+    pixel_size: 
+      - 17.5
+      - 17.5
+      - 17.5
+    exposure_egu: ms
+    integer: 314
+    floating: 4.2
+    string: "Goodbye, World!"

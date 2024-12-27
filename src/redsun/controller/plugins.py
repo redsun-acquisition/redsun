@@ -15,7 +15,7 @@ from typing import (
     get_args,
 )
 
-if sys.version_info < (3, 10):
+if sys.version_info < (3, 10):  # pragma: no cover
     from importlib_metadata import entry_points
 else:
     from importlib.metadata import entry_points
@@ -31,6 +31,11 @@ from sunflare.config import (
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
+    if sys.version_info < (3, 10):
+        from importlib_metadata import EntryPoint
+    else:
+        from importlib.metadata import EntryPoint
+
     from sunflare.controller import BaseController
     from sunflare.engine import DetectorModel, MotorModel
 
@@ -241,8 +246,8 @@ class PluginManager:
 
         # get the entry points for the current group
         plugin_group = f"redsun.plugins.{group}"
-        info_plugins = entry_points(group=f"{plugin_group}.config")
-        model_plugins = entry_points(group=plugin_group)
+        info_plugins: list[EntryPoint] = entry_points(group=f"{plugin_group}.config")
+        model_plugins: list[EntryPoint] = entry_points(group=plugin_group)
 
         # the two lists must have the same length
         if len(info_plugins) != len(model_plugins):

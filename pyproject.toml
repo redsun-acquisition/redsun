@@ -87,3 +87,15 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+# https://coverage.readthedocs.io/en/latest/config.html
+[tool.coverage.report]
+exclude_lines = [
+    "@abstractmethod",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "class .*Protocol",
+    "except ImportError",
+    "except PackageNotFoundError",
+    "raise NotImplementedError()",
+]
