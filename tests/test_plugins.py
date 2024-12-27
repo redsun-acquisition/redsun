@@ -10,7 +10,14 @@ from typing import Callable
 from redsun.controller.plugins import PluginManager
 from sunflare.config import RedSunInstanceInfo
 
-from mocks import mocked_motor_missing_entry_points, mocked_motor_mismatched_entry_points, mocked_motor_non_derived_info_entry_points
+from mocks import (
+    mocked_motor_missing_entry_points, 
+    mocked_motor_mismatched_entry_points, 
+    mocked_motor_non_derived_info_entry_points,
+    mocked_ctrl_non_derived_info_entry_points,
+    mocked_ctrl_non_derived_entry_points,
+    mocked_ctrl_mismatched_entry_points
+)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -75,7 +82,16 @@ def test_load_controller_plugins(config_path: Path, mock_controller_entry_points
         assert len(types_groups["controllers"]) == 1
         assert ["Mock Controller"] == list(types_groups["controllers"].keys())
 
-@pytest.mark.parametrize("mock_entry_points", [mocked_motor_mismatched_entry_points, mocked_motor_missing_entry_points, mocked_motor_non_derived_info_entry_points])
+mocked_error_entry_points = [
+    mocked_motor_mismatched_entry_points,
+    mocked_motor_missing_entry_points,
+    mocked_motor_non_derived_info_entry_points,
+    mocked_ctrl_non_derived_info_entry_points,
+    mocked_ctrl_non_derived_entry_points,
+    mocked_ctrl_mismatched_entry_points
+]
+
+@pytest.mark.parametrize("mock_entry_points", mocked_error_entry_points)
 def test_errors_plugin_loading(config_path: Path, mock_entry_points: Callable[[str], list[EntryPoint]]) -> None:
     # Create a mock that returns our function
     mock_ep = MagicMock(side_effect=mock_entry_points)

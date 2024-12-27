@@ -34,3 +34,29 @@ class MockController(BaseController):
 
     def connection_phase(self) -> None:
         ...
+
+class NonDerivedControllerInfo:
+    """Non-derived controller information model."""
+    string: str
+    integer: int
+    floating: float
+    boolean: bool
+    events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
+
+class NonDerivedController(BaseController):
+
+    def __init__(self, 
+                ctrl_info: MockControllerInfo, 
+                handler: EngineHandler, 
+                virtual_bus: VirtualBus, 
+                module_bus: ModuleVirtualBus):
+            ...
+        
+    def shutdown(self) -> None:
+        ...
+
+    def registration_phase(self) -> None:
+        ...
+
+    def connection_phase(self) -> None:
+        ...
