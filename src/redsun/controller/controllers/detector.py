@@ -53,6 +53,11 @@ class DetectorController(BaseController, Loggable):
         super().__init__(ctrl_info, handler, virtual_bus, module_bus)
         self._buffer: dict[str, OrderedDict[str, Reading[Any]]] = {}
 
+    def shutdown(self) -> None:  # noqa: D102
+        for detector in self._handler.detectors:
+            if hasattr(detector, "shutdown"):
+                detector.shutdown()
+
     def registration_phase(self) -> None:  # noqa: D102
         ...
 
