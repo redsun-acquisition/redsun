@@ -127,7 +127,7 @@ class MotorController(ControllerProtocol, Loggable):
         """
         self._motors[motor].step_size[axis] = step_size
 
-    def location(self, motor: str) -> Union[int, float]:  # noqa: D102
+    def location(self, motor: str) -> Union[int, float]:
         """Get the current motor location.
 
         Parameters
