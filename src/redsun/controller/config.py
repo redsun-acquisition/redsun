@@ -49,7 +49,7 @@ class MotorControllerInfo(ControllerInfo):
         self, _: Attribute[list[str]], value: Optional[list[str]]
     ) -> None:
         if value is not None and not all(isinstance(model, str) for model in value):
-            raise ValueError("All models must be strings.")
+            raise ValueError("The content of the list must be strings.")
 
 
 @define
@@ -58,20 +58,28 @@ class DetectorControllerInfo(ControllerInfo):
 
     Attributes
     ----------
-    detectors: ``list[str]``, optional
-        List of detectors to be used. The values of the list correspont to the
+    models: ``list[str]``, optional
+        List of models to be used. The values of the list correspont to the
         names of the detectors that are to be registered to the controller.
     """
 
-    detectors: Optional[list[str]] = field(
+    models: Optional[list[str]] = field(
         default=None,
     )
 
-    @detectors.validator
+    # begin: non-public attributes
+    egus: Optional[dict[str, str]] = field(
+        init=False,
+        default=None,
+    )
+    # end: non-public attributes
+    events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
+
+    @models.validator
     def _validate_detectors(
         self, _: Attribute[list[str]], value: Optional[list[str]]
     ) -> None:
         if value is not None and not all(
             isinstance(detector, str) for detector in value
         ):
-            raise ValueError("All detectors must be strings.")
+            raise ValueError("The content of the list must be strings.")

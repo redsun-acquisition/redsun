@@ -5,17 +5,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ndv import NDViewer
-from qtpy.QtWidgets import QVBoxLayout
-from sunflare.view.qt import BaseWidget
-from sunflare.virtual import VirtualBus, slot
+from qtpy.QtWidgets import QVBoxLayout, QWidget
+from sunflare.view import WidgetProtocol
+from sunflare.virtual import slot
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
+    from sunflare.virtual import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
 
 
-class ImageViewWidget(BaseWidget):
+class ImageViewWidget(QWidget, WidgetProtocol):
     """Image viewer widget.
 
     Wraps the NDViewer widget to display images.
@@ -34,9 +35,12 @@ class ImageViewWidget(BaseWidget):
         self,
         config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
-        module_bus: VirtualBus,
+        module_bus: ModuleVirtualBus,
     ) -> None:
-        super().__init__(config, virtual_bus, module_bus)
+        super().__init__()
+        self._config = config
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
         layout = QVBoxLayout()
         self._viewer = NDViewer(None)
         layout.addWidget(self._viewer)

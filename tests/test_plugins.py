@@ -36,19 +36,19 @@ def test_load_motor_plugins(config_path: Path, mock_motor_entry_points: Callable
         assert ["Single axis motor", "Double axis motor"] == list(types_groups["motors"].keys())
 
         # check config for single axis motor
-        assert config.motors["Single axis motor"].model_name == "MockMotor"
-        assert config.motors["Single axis motor"].axes == ["X"]
-        assert config.motors["Single axis motor"].integer == 42
-        assert config.motors["Single axis motor"].floating == 3.14
-        assert config.motors["Single axis motor"].string == "Hello, World!"
+        assert config.models["Single axis motor"].model_name == "MockMotor"
+        assert config.models["Single axis motor"].axes == ["X"]
+        assert config.models["Single axis motor"].integer == 42
+        assert config.models["Single axis motor"].floating == 3.14
+        assert config.models["Single axis motor"].string == "Hello, World!"
 
         # check config for double axis motor
-        assert config.motors["Double axis motor"].model_name == "MockMotor"
-        assert config.motors["Double axis motor"].axes == ["X", "Y"]
-        assert config.motors["Double axis motor"].step_egu == "mm"
-        assert config.motors["Double axis motor"].integer == 314
-        assert config.motors["Double axis motor"].floating == 4.2
-        assert config.motors["Double axis motor"].string == "Goodbye, World!"
+        assert config.models["Double axis motor"].model_name == "MockMotor"
+        assert config.models["Double axis motor"].axes == ["X", "Y"]
+        assert config.models["Double axis motor"].step_egu == "mm"
+        assert config.models["Double axis motor"].integer == 314
+        assert config.models["Double axis motor"].floating == 4.2
+        assert config.models["Double axis motor"].string == "Goodbye, World!"
 
 def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Callable[[str], list[EntryPoint]]) -> None:
     # Create a mock that returns our function

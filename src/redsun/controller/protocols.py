@@ -165,3 +165,9 @@ class DetectorModel(Protocol, ModelProtocol):
             )
         """
         ...
+
+    @property
+    @abstractmethod
+    def egu(self) -> str:
+        """Engineering unit for exposure time."""
+        ...

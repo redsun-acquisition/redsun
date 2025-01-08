@@ -91,7 +91,7 @@ class MockDetector:
         return self.model_info.string
 
 
-class OtherDetector(DetectorModel[MockDetectorInfo]):
+class OtherDetector(ModelProtocol):
     def __init__(self, name: str, model_info: MockDetectorInfo) -> None:
         super().__init__(name, model_info)
 

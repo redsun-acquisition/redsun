@@ -1,10 +1,6 @@
-"""Qt stepper widget module.
+"""Qt motor widget module.
 
-Although the motor model is the same accross all types of motorized devices RedSun can accomodate,
-the user interface is adapted to the specific needs of each device category for easier code management
-and better user experience.
-
-Each stepper motor is categorized in a QGroupBox, and each axis is assigned to a row in the group.
+Each motor is categorized in a QGroupBox, and each axis is assigned to a row in the group.
 Row positioning is determined by the configuration file, .e.g.:
 
 .. code-block:: yaml
@@ -24,14 +20,14 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QRegularExpression, Qt
 from qtpy.QtGui import QRegularExpressionValidator
 from sunflare.log import Loggable
-from sunflare.view.qt import BaseWidget
+from sunflare.view import WidgetProtocol
 from sunflare.virtual import Signal, slot
 
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
     from sunflare.config import RedSunSessionInfo
-    from sunflare.virtual import VirtualBus
+    from sunflare.virtual import ModuleVirtualBus
 
     from redsun.controller.config import MotorControllerInfo
     from redsun.virtual import HardwareVirtualBus
@@ -39,7 +35,7 @@ if TYPE_CHECKING:
 __all__ = ["MotorWidget"]
 
 
-class MotorWidget(BaseWidget, Loggable):
+class MotorWidget(QtWidgets.QWidget, Loggable, WidgetProtocol):
     r"""Qt stepper motor widget.
 
     The widget groups each motor into a QGroupBox, and each axis of the motor has its own row.
@@ -60,8 +56,8 @@ class MotorWidget(BaseWidget, Loggable):
     module_bus : VirtualBus
         The inter-module virtual bus instance.
     
-    Signals
-    -------
+    Attributes
+    ----------
     sigStep : Signal(str, str, str)
         - Emitted when the user clicks the "+" or "-" button. \
         - Carries: motor name, axis, direction ("north" or "south").
@@ -71,9 +67,6 @@ class MotorWidget(BaseWidget, Loggable):
         Carries: motor name, axis, new step size.
     """
 
-    # redefining the virtual
-    # bus only for type
-    # hinting purposes
     _virtual_bus: HardwareVirtualBus
 
     sigStep: Signal = Signal(str, str, str)
@@ -83,11 +76,14 @@ class MotorWidget(BaseWidget, Loggable):
         self,
         config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
-        module_bus: VirtualBus,
+        module_bus: ModuleVirtualBus,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        super().__init__(config, virtual_bus, module_bus, *args, **kwargs)
+        super().__init__(*args, **kwargs)
+        self._config = config
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
 
         self._motors_info: dict[str, Any] = {}
         ctrl_info: MotorControllerInfo = config.controllers["MotorController"]  # type: ignore
@@ -131,13 +127,17 @@ class MotorWidget(BaseWidget, Loggable):
                 self.labels["pos:{}:{}".format(name, ax)].setTextFormat(
                     Qt.TextFormat.RichText
                 )
-                self.buttons["up:{}:{}".format(name, ax)] = QtWidgets.QPushButton("+")
-                self.buttons["down:{}:{}".format(name, ax)] = QtWidgets.QPushButton("-")
+                self.buttons["north:{}:{}".format(name, ax)] = QtWidgets.QPushButton(
+                    "+"
+                )
+                self.buttons["south:{}:{}".format(name, ax)] = QtWidgets.QPushButton(
+                    "-"
+                )
                 self.lineEdits["step:{}:{}".format(name, ax)] = QtWidgets.QLineEdit(
                     str(info.step_size)
                 )
                 self.labels["step_egu:{}:{}".format(name, ax)] = QtWidgets.QLabel(
-                    str(" {}".format(info.step_egu))
+                    str(" {}".format(info["step_egu"]))
                 )
 
                 # signal connection

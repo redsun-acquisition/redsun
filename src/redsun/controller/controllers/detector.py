@@ -15,15 +15,14 @@ from redsun.controller.protocols import DetectorModel
 
 if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator
-    from sunflare.config import ControllerInfo
-    from sunflare.engine.handler import EventName
+    from sunflare.engine.handler import EngineHandler, EventName
 
-    from redsun.engine.bluesky import BlueskyHandler
+    from redsun.controller.config import DetectorControllerInfo
     from redsun.virtual import HardwareVirtualBus
 
 
 class DetectorController(ControllerProtocol, Loggable):
-    """Detector controller protocol.
+    """Detector controller class.
 
     Parameters
     ----------
@@ -42,15 +41,14 @@ class DetectorController(ControllerProtocol, Loggable):
         Signal emitted when new data is available from a detector.
     """
 
-    _handler: BlueskyHandler
     _virtual_bus: HardwareVirtualBus
 
-    sigImage: Signal = Signal(dict[str, NDArray[Any]])
+    sigNewImage: Signal = Signal(dict[str, NDArray[Any]])
 
     def __init__(
         self,
-        ctrl_info: ControllerInfo,
-        handler: BlueskyHandler,
+        ctrl_info: DetectorControllerInfo,
+        handler: EngineHandler,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
     ) -> None:
@@ -59,10 +57,24 @@ class DetectorController(ControllerProtocol, Loggable):
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
 
+        # get a list of models to be used;
+        # if none are specified, use all available models
+        models: Optional[list[str]] = self._ctrl_info.models
+        if models is None:
+            models = [
+                name
+                for name in handler.models
+                if isinstance(handler.models[name], DetectorModel)
+            ]
+
         self._detectors: dict[str, DetectorModel] = {
-            name: detector
-            for name, detector in self._handler.models.items()
-            if isinstance(detector, DetectorModel)
+            name: cast(DetectorModel, handler.models[name]) for name in models
+        }
+
+        # update the controller info with the available models
+        self._ctrl_info.models = models
+        self._ctrl_info.egus = {
+            name: detector.egu for name, detector in self._detectors.items()
         }
 
         def snap_plan(detectors: list[DetectorModel]) -> MsgGenerator[Any]:
@@ -72,6 +84,12 @@ class DetectorController(ControllerProtocol, Loggable):
             ----------
             detectors : list[DetectorModel]
                 List of detectors to take snapshots from
+
+            Returns
+            -------
+            MsgGenerator[Any]
+                The ``count`` plan generator with the input
+                detectors and the number of snapshots to take set to 1.
             """
             yield from count(detectors, num=1)
 
@@ -85,6 +103,13 @@ class DetectorController(ControllerProtocol, Loggable):
             ----------
             detectors : list[DetectorModel]
                 List of detectors to launch for live acquisition
+
+            Returns
+            -------
+            MsgGenerator[Any]
+                The ``count`` plan generator with the input detectors,
+                the number of snapshots to take set to ``None`` and
+                the delay between snapshots set to 0.033 seconds.
             """
             yield from count(detectors, num=None, delay=0.033)
 
@@ -113,7 +138,7 @@ class DetectorController(ControllerProtocol, Loggable):
         ...
 
     def connection_phase(self) -> None:  # noqa: D102
-        ...
+        self._virtual_bus.sigNewImage.connect(self.sigNewImage)
 
     def snap(self, detectors: list[str]) -> None:
         """Take a snapshot from a series of detectors.
@@ -174,8 +199,8 @@ class DetectorController(ControllerProtocol, Loggable):
 
         Notes
         -----
-        Emits the `sigImage` signal with the data from the document.
+        Emits the `sigNewImage` signal with the data from the document.
         The data is expected to be a dictionary with the keys being the detector names
         and the values being the data arrays.
         """
-        self.sigImage.emit(document["data"])
+        self.sigNewImage.emit(document["data"])

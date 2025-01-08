@@ -6,19 +6,19 @@ from typing import TYPE_CHECKING
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets
-from sunflare.view.qt import BaseWidget
-from sunflare.virtual import VirtualBus
+from sunflare.view import WidgetProtocol
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from sunflare.config import DetectorModelInfo, RedSunSessionInfo
-    from sunflare.virtual import VirtualBus
+    from sunflare.config import RedSunSessionInfo, ModelInfo
+    from sunflare.virtual import ModuleVirtualBus
 
+    from redsun.controller.config import DetectorControllerInfo
     from redsun.virtual import HardwareVirtualBus
 
 
-class DetectorSettingsWidget(BaseWidget):
+class DetectorWidget(QtWidgets.QWidget, WidgetProtocol):
     """Detector settings widget class.
 
     Imports all detector configuration settings from the constructor and builds the widget based on the pydantic model's informations.
@@ -29,6 +29,8 @@ class DetectorSettingsWidget(BaseWidget):
 
     Parameters
     ----------
+    config: RedSunSessionInfo
+        Configuration options for the RedSun session.
     detectors_info: dict[str, DetectorModelInfo]
         Dictionary of currently available detector models.
     virtual_bus : HardwareVirtualBus
@@ -43,12 +45,24 @@ class DetectorSettingsWidget(BaseWidget):
         self,
         config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
-        module_bus: VirtualBus,
+        module_bus: ModuleVirtualBus,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        super().__init__(config, virtual_bus, module_bus, *args, **kwargs)
-        self._detectors_info = config.detectors
+        super().__init__(*args, **kwargs)
+        self._config = config
+        self._virtual_bus = virtual_bus
+        self._module_bus = module_bus
+
+        self._detectors_info: dict[str, Any] = {}
+        ctrl_info: DetectorControllerInfo = config.controllers["DetectorController"]  # type: ignore
+        if ctrl_info.models is not None:
+            self._detectors_info = {
+                name: {
+                    "exposure_egu": ctrl_info.egus,
+                }
+                for name in ctrl_info.models
+            }
 
         self.tab = QtWidgets.QTabWidget()
 
@@ -71,7 +85,7 @@ class DetectorSettingsWidget(BaseWidget):
 
     # TODO: parameter grouping needs review
     # TODO: generalize for all parameter groups
-    def build_params(self, detector_info: DetectorModelInfo) -> ParameterTree:
+    def build_params(self, detector_info: ModelInfo) -> ParameterTree:
         """Build a parameter tree for the detector settings.
 
         Parameters
@@ -102,28 +116,6 @@ class DetectorSettingsWidget(BaseWidget):
                 "type": "str",
                 "value": detector_info.serial_number,
                 "readonly": True,
-            },
-            {
-                "name": "Category",
-                "type": "str",
-                "value": detector_info.category,
-                "readonly": True,
-            },
-            {
-                "name": "Sensor Size",
-                "type": "str",
-                "value": str(detector_info.sensor_size),
-                "readonly": True,
-            },
-            {
-                "name": "Pixel Size",
-                "type": "str",
-                "value": str(detector_info.pixel_size),
-            },
-            {
-                "name": "Exposure EGU",
-                "type": "str",
-                "value": detector_info.exposure_egu,
             },
         ]
         parameter = Parameter.create(

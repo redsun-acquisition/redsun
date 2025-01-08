@@ -64,7 +64,8 @@ class BlueskyHandler(EngineHandler, Loggable):
 
         "stop" marks it as successfull.
         """
-        self._engine.stop()  # type: ignore[no-untyped-call]
+        if self._engine.state != "idle":
+            self._engine.stop()  # type: ignore[no-untyped-call]
 
     def register_plan(
         self, controller: str, name: str, plan: partial[MsgGenerator[Any]]
