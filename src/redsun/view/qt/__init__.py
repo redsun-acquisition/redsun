@@ -2,7 +2,7 @@ import sys
 from typing import NoReturn, Type
 
 from qtpy.QtWidgets import QApplication
-from sunflare.config import RedSunInstanceInfo
+from sunflare.config import RedSunSessionInfo
 from sunflare.view.qt import BaseWidget
 from sunflare.virtual import ModuleVirtualBus
 
@@ -22,7 +22,7 @@ __all__ = [
 
 
 def build_view_layer(
-    config: RedSunInstanceInfo,
+    config: RedSunSessionInfo,
     widgets: dict[str, Type[BaseWidget]],
     virtual_bus: HardwareVirtualBus,
     module_bus: ModuleVirtualBus,
@@ -37,7 +37,7 @@ def build_view_layer(
 
     Parameters
     ----------
-    config : RedSunInstanceInfo
+    config : RedSunSessionInfo
         RedSun configuration.
     widgets : dict[str, Type[BaseWidget]]
         The built widgets.

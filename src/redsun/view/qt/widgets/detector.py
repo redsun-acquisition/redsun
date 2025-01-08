@@ -12,7 +12,7 @@ from sunflare.virtual import VirtualBus
 if TYPE_CHECKING:
     from typing import Any
 
-    from sunflare.config import DetectorModelInfo, RedSunInstanceInfo
+    from sunflare.config import DetectorModelInfo, RedSunSessionInfo
     from sunflare.virtual import VirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -41,7 +41,7 @@ class DetectorSettingsWidget(BaseWidget):
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
         *args: Any,

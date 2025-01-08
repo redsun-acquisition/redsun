@@ -4,8 +4,9 @@ from typing import Any, ClassVar
 
 from collections import OrderedDict
 
-from sunflare.config import DetectorModelInfo
-from sunflare.engine import DetectorModel, Status
+from sunflare.config import ModelInfo
+from sunflare.engine import Status
+from sunflare.model import ModelProtocol
 
 from bluesky.protocols import Reading
 from event_model.documents.event_descriptor import DataKey
@@ -13,7 +14,7 @@ from event_model.documents.event_descriptor import DataKey
 from psygnal import SignalGroupDescriptor
 
 
-class MockDetectorInfo(DetectorModelInfo):
+class MockDetectorInfo(ModelInfo):
     """Mock motor model information."""
 
     integer: int
@@ -21,9 +22,10 @@ class MockDetectorInfo(DetectorModelInfo):
     string: str
     events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 
-class MockDetector(DetectorModel[MockDetectorInfo]):
+class MockDetector:
     def __init__(self, name: str, model_info: MockDetectorInfo) -> None:
-        super().__init__(name, model_info)
+        self.name = name
+        self.model_info = model_info
 
     def stage(self) -> Status:
         raise NotImplementedError(

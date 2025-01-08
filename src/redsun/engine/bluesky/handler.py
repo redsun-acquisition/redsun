@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, final
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, final
 
-from sunflare.config import DetectorModelInfo, MotorModelInfo, RedSunInstanceInfo
-from sunflare.engine import DetectorModel, EngineHandler, MotorModel
+from sunflare.engine import EngineHandler
 from sunflare.log import Loggable
 
 from bluesky.run_engine import RunEngine
+from bluesky.utils import PlanHalt
 
 if TYPE_CHECKING:
-    from sunflare.virtual import VirtualBus
+    from functools import partial
+
+    from sunflare.config import RedSunSessionInfo
+    from sunflare.model import ModelProtocol
+    from sunflare.virtual import ModuleVirtualBus
 
     from bluesky.utils import DuringTask, MsgGenerator
-
-Motor = MotorModel[MotorModelInfo]
-Detector = DetectorModel[DetectorModelInfo]
+    from redsun.virtual import HardwareVirtualBus
 
 
 @final
@@ -26,12 +28,12 @@ class BlueskyHandler(EngineHandler, Loggable):
 
     Parameters
     ----------
-    config : RedSunInstanceInfo
-        Configuration options for the RedSun instance.
+    config : RedSunSessionInfo
+        Configuration options for the RedSun session.
     virtual_bus : VirtualBus
-        The virtual bus instance for the RedSun instance.
+        Reference to the virtual bus.
     module_bus : VirtualBus
-        The virtual bus instance for the module.
+        Reference to the module bus.
     during_task : DuringTask
         The DuringTask object. For more information,
         see :class:`~sunflare.engine.handler.EngineHandler`.
@@ -39,21 +41,22 @@ class BlueskyHandler(EngineHandler, Loggable):
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
-        virtual_bus: VirtualBus,
-        module_bus: VirtualBus,
+        config: RedSunSessionInfo,
+        virtual_bus: HardwareVirtualBus,
+        module_bus: ModuleVirtualBus,
         during_task: DuringTask,
     ) -> None:
         self._config = config
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self._plans: dict[str, MsgGenerator[Any]] = {}
-        self._motors: dict[str, Motor] = {}
-        self._detectors: dict[str, Detector] = {}
+        self._plans: dict[str, dict[str, partial[MsgGenerator[Any]]]] = {}
+        self._models: dict[str, ModelProtocol] = {}
 
         # TODO: there should be a way to pass
-        #       custom metadata to the engine via
-        #       either the config or the constructor
+        #       custom metadata to the engine;
+        #       the config should be enough
+        # Bluesky's not fully typed;
+        # so we need to ignore the type checking
         self._engine = RunEngine(during_task=during_task)  # type: ignore[no-untyped-call]
 
     def shutdown(self) -> None:
@@ -63,20 +66,27 @@ class BlueskyHandler(EngineHandler, Loggable):
         """
         self._engine.stop()  # type: ignore[no-untyped-call]
 
-    def register_plan(self, name: str, plan: MsgGenerator[Any]) -> None:
-        """Register a workflow with the handler."""
-        if name not in self._plans.keys():
-            self._plans[name] = plan
-        else:
-            self.error(f"Workflow {name} already registered. Aborted.")
+    def register_plan(
+        self, controller: str, name: str, plan: partial[MsgGenerator[Any]]
+    ) -> None:
+        """Register a workflow with the handler.
 
-    def load_device(self, name: str, device: Union[Motor, Detector]) -> None:  # noqa: D102
-        if isinstance(device, MotorModel):
-            self._motors[name] = device
-        elif isinstance(device, DetectorModel):
-            self._detectors[name] = device
+        Parameters
+        ----------
+        controller : str
+            The name of the controller.
+        name : str
+            The name of the plan.
+        plan : partial[MsgGenerator[Any]]
+            The plan to register.
+        """
+        if controller not in self._plans.keys():
+            self._plans[controller] = {name: plan}
         else:
-            raise ValueError(f"Invalid device type: {type(device)}")
+            self._plans[controller][name] = plan
+
+    def load_model(self, name: str, model: ModelProtocol) -> None:  # noqa: D102
+        self._models[name] = model
 
     def subscribe(  # noqa: D102
         self,
@@ -91,22 +101,39 @@ class BlueskyHandler(EngineHandler, Loggable):
     def unsubscribe(self, token: int) -> None:  # noqa: D102
         return self._engine.unsubscribe(token)  # type: ignore
 
+    def execute(self, controller: str, name: str) -> None:
+        """Execute a plan.
+
+        Parameters
+        ----------
+        controller : str
+            The name of the controller.
+        name : str
+            The name of the plan.
+        """
+        try:
+            self.debug(f"Executing plan {name} from controller {controller}")
+            plan = self._plans[controller][name]
+            self._engine(plan)
+        except PlanHalt:
+            self.debug(f"Plan {name} from controller {controller} halted")
+            pass
+
+    def halt(self) -> None:
+        """Halt the current plan."""
+        self._engine.halt()  # type: ignore[no-untyped-call]
+
     @property
     def engine(self) -> RunEngine:
         """Execution engine instance."""
         return self._engine
 
     @property
-    def plans(self) -> dict[str, MsgGenerator[Any]]:
-        """Workflow dictionary."""
+    def plans(self) -> dict[str, dict[str, partial[MsgGenerator[Any]]]]:
+        """Plans dictionary."""
         return self._plans
 
     @property
-    def detectors(self) -> dict[str, Detector]:
-        """Detectors dictionary."""
-        return self._detectors
-
-    @property
-    def motors(self) -> dict[str, Motor]:
-        """Motors dictionary."""
-        return self._motors
+    def models(self) -> dict[str, ModelProtocol]:
+        """Model dictionary."""
+        return self._models

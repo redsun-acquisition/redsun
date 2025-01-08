@@ -10,7 +10,7 @@ from sunflare.view.qt import BaseWidget
 from sunflare.virtual import VirtualBus, slot
 
 if TYPE_CHECKING:
-    from sunflare.config import RedSunInstanceInfo
+    from sunflare.config import RedSunSessionInfo
 
     from redsun.virtual import HardwareVirtualBus
 
@@ -32,7 +32,7 @@ class ImageViewWidget(BaseWidget):
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
     ) -> None:

@@ -15,18 +15,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Type
 
-from sunflare.config import AcquisitionEngineTypes, FrontendTypes, RedSunInstanceInfo
+from sunflare.config import AcquisitionEngineTypes, FrontendTypes, RedSunSessionInfo
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
     import logging
 
     from bluesky.utils import DuringTask
-    from sunflare.config import ControllerInfo, DetectorModelInfo, MotorModelInfo
-    from sunflare.controller import BaseController
+    from sunflare.config import ControllerInfo, ModelInfo
+    from sunflare.controller import ControllerProtocol
     from sunflare.engine import EngineHandler
-    from sunflare.engine.detector import DetectorModel
-    from sunflare.engine.motor import MotorModel
+    from sunflare.model import ModelProtocol
     from sunflare.virtual import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -42,7 +41,7 @@ class Factory:
     @classmethod
     def build_handler(
         cls,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
     ) -> EngineHandler:
@@ -50,8 +49,8 @@ class Factory:
 
         Parameters
         ----------
-        engine: ``AcquisitionEngineTypes``
-            Selected acquisition engine.
+        config: ``RedSunSessionInfo``
+            Configuration options for the RedSun session.
         virtual_bus: ``HardwareVirtualBus``
             Hardware control virtual bus.
         module_bus: ``ModuleVirtualBus``
@@ -88,41 +87,12 @@ class Factory:
             raise RuntimeError(f"Unsupported engine: {config.engine}")
 
     @classmethod
-    def build_motor(
+    def build_model(
         cls,
         name: str,
-        motor_class: Type[MotorModel[MotorModelInfo]],
-        motor_info: MotorModelInfo,
-    ) -> Optional[MotorModel[MotorModelInfo]]:
-        """Build the motor model.
-
-        Parameters
-        ----------
-        name: ``str``
-            The name of the motor.
-        motor_class: ``Type[MotorModel[MotorModelInfo]]``
-            The class of the motor.
-        motor_info: ``MotorModelInfo``
-            The motor information.
-
-        Returns
-        -------
-        ``Optional[MotorModel[MotorModelInfo]]``
-            The built motor model. ``None`` if the model could not be built.
-        """
-        try:
-            return motor_class(name, motor_info)
-        except Exception as e:
-            cls._logger.exception(f"Failed to build motor {name}: {e}")
-            return None
-
-    @classmethod
-    def build_detector(
-        cls,
-        name: str,
-        detector_class: Type[DetectorModel[DetectorModelInfo]],
-        detector_info: DetectorModelInfo,
-    ) -> Optional[DetectorModel[DetectorModelInfo]]:
+        model_class: Type[ModelProtocol],
+        model_info: ModelInfo,
+    ) -> Optional[ModelProtocol]:
         """Build the detector model.
 
         Parameters
@@ -140,7 +110,7 @@ class Factory:
             The built detector model. ``None`` if the model could not be built.
         """
         try:
-            return detector_class(name, detector_info)
+            return model_class(name, model_info)
         except Exception as e:
             cls._logger.exception(f"Failed to build detector {name}: {e}")
             return None
@@ -150,11 +120,11 @@ class Factory:
         cls,
         name: str,
         ctrl_info: ControllerInfo,
-        ctrl_class: Type[BaseController],
+        ctrl_class: Type[ControllerProtocol],
         handler: EngineHandler,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
-    ) -> Optional[BaseController]:
+    ) -> Optional[ControllerProtocol]:
         """Build the controller.
 
         Parameters

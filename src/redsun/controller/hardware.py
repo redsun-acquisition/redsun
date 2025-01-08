@@ -9,8 +9,8 @@ from sunflare.log import Loggable
 from redsun.controller.factory import Factory
 
 if TYPE_CHECKING:
-    from sunflare.config import RedSunInstanceInfo
-    from sunflare.controller import BaseController
+    from sunflare.config import RedSunSessionInfo
+    from sunflare.controller import ControllerProtocol
     from sunflare.virtual import ModuleVirtualBus
 
     from redsun.controller.plugins import Backend
@@ -22,7 +22,7 @@ class RedSunMainHardwareController(Loggable):
 
     Parameters
     ----------
-    config : RedSunInstanceInfo
+    config : RedSunSessionInfo
         RedSun configuration.
     virtual_bus : HardwareVirtualBus
         Hardware virtual bus.
@@ -34,7 +34,7 @@ class RedSunMainHardwareController(Loggable):
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
         classes: Backend,
@@ -43,7 +43,7 @@ class RedSunMainHardwareController(Loggable):
         self.virtual_bus = virtual_bus
         self.module_bus = module_bus
         self.classes = classes
-        self.controllers: dict[str, BaseController] = {}
+        self.controllers: dict[str, ControllerProtocol] = {}
 
     def build_layer(self) -> None:
         """Build the controller layer.
@@ -64,31 +64,20 @@ class RedSunMainHardwareController(Loggable):
         """
         handler = Factory.build_handler(self.config, self.virtual_bus, self.module_bus)
 
-        motors_info = self.config.motors
-        detectors_info = self.config.detectors
+        models_info = self.config.models
         controllers_info = self.config.controllers
 
-        # build motors
-        for motor_name, motor_info in motors_info.items():
-            motor_class = self.classes["motors"][motor_name]
-            motor_obj = Factory.build_motor(
-                name=motor_name,
-                motor_class=motor_class,
-                motor_info=motor_info,
+        # build models
+        for model_name, model_info in models_info.items():
+            model_class = self.classes["models"][model_name]
+            model_obj = Factory.build_model(
+                name=model_name,
+                model_class=model_class,
+                model_info=model_info,
             )
-            if motor_obj is None:
+            if model_obj is None:
                 continue
-            handler.motors[motor_name] = motor_obj
-
-        # build detectors
-        for det_name, det_info in detectors_info.items():
-            detector_class = self.classes["detectors"][det_name]
-            detector_model = Factory.build_detector(
-                name=det_name, detector_class=detector_class, detector_info=det_info
-            )
-            if detector_model is None:
-                continue
-            handler.detectors[det_name] = detector_model
+            handler.models[model_name] = model_obj
 
         # build controllers
         for ctrl_name, ctrl_info in controllers_info.items():

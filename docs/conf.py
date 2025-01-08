@@ -40,5 +40,6 @@ source_suffix = {
 }
 
 napoleon_google_docstring = False
+napoleon_custom_sections = ['Signals']
 napoleon_numpy_docstring = True
 autodoc_typehints = 'description'

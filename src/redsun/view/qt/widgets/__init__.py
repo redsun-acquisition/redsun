@@ -1,5 +1,5 @@
 from .detector import DetectorSettingsWidget
 from .image import ImageViewWidget
-from .stepper import StepperMotorWidget
+from .motor import MotorWidget
 
-__all__ = ["ImageViewWidget", "StepperMotorWidget", "DetectorSettingsWidget"]
+__all__ = ["ImageViewWidget", "MotorWidget", "DetectorSettingsWidget"]

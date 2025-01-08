@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING, Type
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QDockWidget, QMainWindow
-from sunflare.config import MotorModelTypes
 
 from redsun.view.qt.widgets import ImageViewWidget
 
-from .widgets import DetectorSettingsWidget, StepperMotorWidget
+from .widgets import DetectorSettingsWidget, MotorWidget
 
 if TYPE_CHECKING:
-    from sunflare.config import RedSunInstanceInfo
+    from sunflare.config import RedSunSessionInfo
     from sunflare.view.qt import BaseWidget
     from sunflare.virtual import ModuleVirtualBus
 
@@ -33,7 +32,7 @@ class RedSunMainWindow(QMainWindow):
         self,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         widgets: dict[str, Type[BaseWidget]],
     ) -> None:
         super().__init__()
@@ -59,19 +58,12 @@ class RedSunMainWindow(QMainWindow):
         """Build the main view window."""
         # build the device widgets
 
-        motors_info = {
-            name: info
-            for name, info in self._config.motors.items()
-            if info.category == MotorModelTypes.STEPPER
-        }
-        if motors_info:
-            self._device_widgets["StepperMotor"] = StepperMotorWidget(
+        if self._config.controllers["MotorController"] is not None:
+            self._device_widgets["StepperMotor"] = MotorWidget(
                 self._config, self._virtual_bus, self._module_bus
             )
 
-        # TODO: the model info should provide a flag to indicate
-        #       if the detector is supposed to be added to the GUI
-        if self._config.detectors:
+        if self._config.controllers["DetectorController"] is not None:
             self._device_widgets["DetectorSettings"] = DetectorSettingsWidget(
                 self._config,
                 self._virtual_bus,

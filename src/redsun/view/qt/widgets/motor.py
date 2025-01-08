@@ -30,15 +30,16 @@ from sunflare.virtual import Signal, slot
 if TYPE_CHECKING:
     from typing import Any, Tuple
 
-    from sunflare.config import RedSunInstanceInfo
+    from sunflare.config import RedSunSessionInfo
     from sunflare.virtual import VirtualBus
 
+    from redsun.controller.config import MotorControllerInfo
     from redsun.virtual import HardwareVirtualBus
 
-__all__ = ["StepperMotorWidget"]
+__all__ = ["MotorWidget"]
 
 
-class StepperMotorWidget(BaseWidget, Loggable):
+class MotorWidget(BaseWidget, Loggable):
     r"""Qt stepper motor widget.
 
     The widget groups each motor into a QGroupBox, and each axis of the motor has its own row.
@@ -61,12 +62,10 @@ class StepperMotorWidget(BaseWidget, Loggable):
     
     Signals
     -------
-    sigStepUp : Signal(str, str)
-        `psygnal.Signal` emitted when the user clicks the "+" button. \
-        Carries: motor name, axis.
+    sigStep : Signal(str, str, str)
+        - Emitted when the user clicks the "+" or "-" button. \
+        - Carries: motor name, axis, direction ("north" or "south").
     sigStepDown : Signal(str, str)
-        `psygnal.Signal` emitted when the user clicks the "-" button. \
-        Carries: motor name, axis.
     sigStepSizeChanged : Signal(str, str, float)
         `psygnal.Signal` emitted when the user changes the step size. \
         Carries: motor name, axis, new step size.
@@ -77,20 +76,30 @@ class StepperMotorWidget(BaseWidget, Loggable):
     # hinting purposes
     _virtual_bus: HardwareVirtualBus
 
-    sigStepUp: Signal = Signal(str, str)
-    sigStepDown: Signal = Signal(str, str)
+    sigStep: Signal = Signal(str, str, str)
     sigStepSizeChanged: Signal = Signal(str, str, float)
 
     def __init__(
         self,
-        config: RedSunInstanceInfo,
+        config: RedSunSessionInfo,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(config, virtual_bus, module_bus, *args, **kwargs)
-        self._motors_info = config.motors
+
+        self._motors_info: dict[str, Any] = {}
+        ctrl_info: MotorControllerInfo = config.controllers["MotorController"]  # type: ignore
+        if ctrl_info.models is not None:
+            self._motors_info = {
+                name: {
+                    "axes": ctrl_info.axes,
+                    "step_size": ctrl_info.step_sizes,
+                    "step_egu": ctrl_info.egu,
+                }
+                for name in ctrl_info.models
+            }
 
         self.grid = QtWidgets.QGridLayout()
         self.setLayout(self.grid)
@@ -132,11 +141,11 @@ class StepperMotorWidget(BaseWidget, Loggable):
                 )
 
                 # signal connection
-                self.buttons["up:{}:{}".format(name, ax)].clicked.connect(
-                    lambda *_, axis=ax: self.sigStepUp.emit(name, axis)
+                self.buttons["north:{}:{}".format(name, ax)].clicked.connect(
+                    lambda *_, axis=ax: self.sigStep.emit(name, axis, "north")
                 )
-                self.buttons["down:{}:{}".format(name, ax)].clicked.connect(
-                    lambda *_, axis=ax: self.sigStepDown.emit(name, axis)
+                self.buttons["south:{}:{}".format(name, ax)].clicked.connect(
+                    lambda *_, axis=ax: self.sigStep.emit(name, axis, "south")
                 )
                 self.lineEdits["step:{}:{}".format(name, ax)].textEdited.connect(
                     lambda *_, name=name, axis=ax: self._validate_and_notify(name, axis)
@@ -150,10 +159,10 @@ class StepperMotorWidget(BaseWidget, Loggable):
                     self.labels["pos:{}:{}".format(name, ax)], num_motor, 1
                 )
                 self.grid.addWidget(
-                    self.buttons["up:{}:{}".format(name, ax)], num_motor, 2
+                    self.buttons["north:{}:{}".format(name, ax)], num_motor, 2
                 )
                 self.grid.addWidget(
-                    self.buttons["down:{}:{}".format(name, ax)], num_motor, 3
+                    self.buttons["south:{}:{}".format(name, ax)], num_motor, 3
                 )
                 self.grid.addWidget(QtWidgets.QLabel("Step"), num_motor, 4)
                 self.grid.addWidget(
@@ -207,6 +216,5 @@ class StepperMotorWidget(BaseWidget, Loggable):
         ...
 
     def connection_phase(self) -> None:  # noqa: D102
-        self.sigStepUp.connect(self._virtual_bus.sigStepperStepUp)
-        self.sigStepDown.connect(self._virtual_bus.sigStepperStepDown)
-        self.sigStepSizeChanged.connect(self._virtual_bus.sigStepperStepSizeChanged)
+        self.sigStep.connect(self._virtual_bus.sigStep)
+        self.sigStepSizeChanged.connect(self._virtual_bus.sigStepSizeChanged)

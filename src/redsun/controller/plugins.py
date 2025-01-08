@@ -23,10 +23,9 @@ else:
 from sunflare.config import (
     AcquisitionEngineTypes,
     ControllerInfo,
-    DetectorModelInfo,
     FrontendTypes,
-    MotorModelInfo,
-    RedSunInstanceInfo,
+    ModelInfo,
+    RedSunSessionInfo,
 )
 from sunflare.log import get_logger
 
@@ -36,27 +35,26 @@ if TYPE_CHECKING:
     else:
         from importlib.metadata import EntryPoint
 
-    from sunflare.controller import BaseController
-    from sunflare.engine import DetectorModel, MotorModel
+    from sunflare.controller import ControllerProtocol
+    from sunflare.model import ModelProtocol
 
     from redsun.view import BaseWidget
 
 
 class InfoBackend(TypedDict):
-    """Support typed dictionary for backend information models.
+    """A support typed dictionary for backend information models.
 
     Parameters
     ----------
     detectors : ``dict[str, DetectorModelInfo]``
         Dictionary of detector information models.
-    motors : ``dict[str, MotorModelInfo]``
-        Dictionary of motor information models.
+    models : ``dict[str, ModelInfo]``
+        Dictionary of model informations.
     controllers : ``dict[str, ControllerInfo]``
-        Dictionary of controller information models.
+        Dictionary of controller informations.
     """
 
-    detectors: dict[str, DetectorModelInfo]
-    motors: dict[str, MotorModelInfo]
+    models: dict[str, ModelInfo]
     controllers: dict[str, ControllerInfo]
 
 
@@ -65,17 +63,14 @@ class Backend(TypedDict):
 
     Parameters
     ----------
-    detectors : ``dict[str, Type[DetectorModel[DetectorModelInfo]]]``
-        Dictionary of detector device models.
-    motors : ``dict[str, Type[MotorModel[MotorModelInfo]]]``
-        Dictionary of motor device models.
-    controllers : ``dict[str, Type[BaseController]``
+    models : ``dict[str, Type[ModelProtocol]``
+        Dictionary of base models.
+    controllers : ``dict[str, Type[ControllerProtocol]``
         Dictionary of base controllers.
     """
 
-    detectors: dict[str, Type[DetectorModel[DetectorModelInfo]]]
-    motors: dict[str, Type[MotorModel[MotorModelInfo]]]
-    controllers: dict[str, Type[BaseController]]
+    models: dict[str, Type[ModelProtocol]]
+    controllers: dict[str, Type[ControllerProtocol]]
 
 
 class Plugin(NamedTuple):
@@ -97,7 +92,7 @@ class Plugin(NamedTuple):
 
 
 #: Plugin group names for the backend.
-MODEL_GROUPS = Literal["detectors", "motors", "controllers"]
+PLUGIN_GROUPS = Literal["models", "controllers"]
 
 
 class PluginManager:
@@ -109,7 +104,7 @@ class PluginManager:
     @staticmethod
     def load_configuration(
         config_path: str,
-    ) -> Tuple[RedSunInstanceInfo, Backend, dict[str, Type[BaseWidget]]]:
+    ) -> Tuple[RedSunSessionInfo, Backend, dict[str, Type[BaseWidget]]]:
         """Load the configuration from a YAML file.
 
         The manager will load the configuration from the input YAML file.
@@ -123,14 +118,12 @@ class PluginManager:
 
         Returns
         -------
-        Tuple[RedSunInstanceInfo, dict[str, Types], dict[str, Type[BaseController]]
+        Tuple[RedSunSessionInfo, dict[str, Types], dict[str, Type[BaseController]]
             RedSun instance configuration and class types to build.
         """
         widgets_config: list[str]
-        config_groups = InfoBackend(detectors={}, motors={}, controllers={})
-        types_groups = Backend(detectors={}, motors={}, controllers={})
 
-        config = RedSunInstanceInfo.load_yaml(config_path)
+        config = RedSunSessionInfo.load_yaml(config_path)
         try:
             widgets_config = config.pop("widgets")
         except KeyError:
@@ -151,7 +144,7 @@ class PluginManager:
             frontend_types = {}
 
         # build configuration
-        output_config = RedSunInstanceInfo(
+        output_config = RedSunSessionInfo(
             engine=engine, frontend=frontend, **config_groups
         )
 
@@ -202,9 +195,9 @@ class PluginManager:
         Backend
             Backend configuration.
         """
-        groups: list[MODEL_GROUPS] = list(get_args(MODEL_GROUPS))
-        config_groups = InfoBackend(detectors={}, motors={}, controllers={})
-        types_groups = Backend(detectors={}, motors={}, controllers={})
+        groups: list[PLUGIN_GROUPS] = list(get_args(PLUGIN_GROUPS))
+        config_groups = InfoBackend(models={}, controllers={})
+        types_groups = Backend(models={}, controllers={})
 
         for group in groups:
             # if the group is not in
@@ -234,7 +227,7 @@ class PluginManager:
         return types_groups, config_groups
 
     @staticmethod
-    def load_backend_plugins(group: MODEL_GROUPS) -> dict[str, Plugin]:
+    def load_backend_plugins(group: PLUGIN_GROUPS) -> dict[str, Plugin]:
         """Load the plugins.
 
         Parameters
@@ -283,7 +276,7 @@ class PluginManager:
             if not any(
                 [
                     issubclass(info_builder, info_type)
-                    for info_type in [DetectorModelInfo, MotorModelInfo, ControllerInfo]
+                    for info_type in [ModelInfo, ControllerInfo]
                 ]
             ):
                 logger.warning(

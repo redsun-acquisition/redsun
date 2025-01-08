@@ -8,7 +8,7 @@ from pathlib import Path
 from importlib.metadata import EntryPoint
 from typing import Callable
 from redsun.controller.plugins import PluginManager
-from sunflare.config import RedSunInstanceInfo
+from sunflare.config import RedSunSessionInfo
 
 from mocks import (
     mocked_motor_missing_entry_points, 
@@ -31,7 +31,7 @@ def test_load_motor_plugins(config_path: Path, mock_motor_entry_points: Callable
         # Then test through the plugin manager
         config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
 
-        assert isinstance(config, RedSunInstanceInfo)
+        assert isinstance(config, RedSunSessionInfo)
         assert len(types_groups["motors"]) == 2
         assert ["Single axis motor", "Double axis motor"] == list(types_groups["motors"].keys())
 
@@ -60,9 +60,8 @@ def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Ca
         # Then test through the plugin manager
         config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_detector_config.yaml"))
 
-        assert isinstance(config, RedSunInstanceInfo)
-        assert len(config.detectors) == 2
-        assert len(config.motors) == 0
+        assert isinstance(config, RedSunSessionInfo)
+        assert len(config.models) == 2
         assert len(types_groups["detectors"]) == 2
         assert ["iSCAT channel", "TIRF channel"] == list(types_groups["detectors"].keys())
 
@@ -76,9 +75,9 @@ def test_load_controller_plugins(config_path: Path, mock_controller_entry_points
         # Then test through the plugin manager
         config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_controller_config.yaml"))
 
-        assert isinstance(config, RedSunInstanceInfo)
+        assert isinstance(config, RedSunSessionInfo)
         assert len(config.controllers) == 1
-        assert len(config.motors) == 0
+        assert len(config.models) == 0
         assert len(types_groups["controllers"]) == 1
         assert ["Mock Controller"] == list(types_groups["controllers"].keys())
 
