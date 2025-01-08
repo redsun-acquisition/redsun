@@ -18,7 +18,7 @@ class HardwareVirtualBus(VirtualBus):
     All plugins within RedSun have access to this bus to expose signals for interfacing with upper layers.
     See the `VirtualBus` class for API information.
 
-    Signals
+    Attributes
     ----------
     sigStepperStep: ``Signal(str, str, str)``
         - Emitted when the user clicks the up button for a stepper motor axis.
@@ -28,9 +28,9 @@ class HardwareVirtualBus(VirtualBus):
         - Emitted when the user changes the step size for a stepper motor axis.
         - `Carries`: motor name, axis, new step size.
         - `Source`: ``MotorWidget``.
-    sigNewImage: Signal(dict[str, NDArray[Any]])
+    sigNewImage: ``Signal(dict[str, NDArray[Any]])``
         - Emitted when a new image is available.
-        - `Carries`: image data.
+        - `Carries`: dictionary with keys being the detector names and values the image arrays.
         - `Source`: ``DetectorController``.
     """
 
