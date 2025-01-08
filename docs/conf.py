@@ -15,7 +15,6 @@ sys.path.insert(0, str(Path('..', 'src').resolve()))
 project = 'RedSun'
 copyright = '2024, Jacopo Abramo'
 author = 'Jacopo Abramo'
-release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
