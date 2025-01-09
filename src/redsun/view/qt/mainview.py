@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QDockWidget, QMainWindow
@@ -13,7 +13,7 @@ from .widgets import DetectorWidget, MotorWidget
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
-    from sunflare.view import WidgetProtocol
+    from sunflare.view.qt import BaseQtWidget
     from sunflare.virtual import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
@@ -33,7 +33,7 @@ class RedSunMainWindow(QMainWindow):
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
         config: RedSunSessionInfo,
-        widgets: dict[str, Type[WidgetProtocol]],
+        widgets: dict[str, type[BaseQtWidget]],
     ) -> None:
         super().__init__()
         self.setWindowTitle("RedSun")
@@ -45,10 +45,10 @@ class RedSunMainWindow(QMainWindow):
         self._image_viewer: ImageViewWidget
 
         # device widgets: left side of the main window
-        self._device_widgets: dict[str, WidgetProtocol] = {}
+        self._device_widgets: dict[str, BaseQtWidget] = {}
 
         # controller widgets: right side of the main window
-        self._controller_widgets: dict[str, WidgetProtocol] = {}
+        self._controller_widgets: dict[str, BaseQtWidget] = {}
 
         # custom widgets (need to be built)
         # TODO: build them; API

@@ -1,4 +1,4 @@
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Tuple
 
 from attrs import Attribute, define, field
 from psygnal import SignalGroupDescriptor
@@ -29,17 +29,14 @@ class MotorControllerInfo(ControllerInfo):
     )
 
     # begin: non-public attributes
-    axes: Optional[dict[str, list[str]]] = field(
+    axes: dict[str, list[str]] = field(
         init=False,
-        default=None,
     )
-    step_sizes: Optional[dict[str, dict[str, float]]] = field(
+    step_sizes: dict[str, dict[str, float]] = field(
         init=False,
-        default=None,
     )
-    egu: Optional[dict[str, str]] = field(
+    egu: dict[str, str] = field(
         init=False,
-        default=None,
     )
     # end: non-public attributes
     events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
@@ -68,10 +65,10 @@ class DetectorControllerInfo(ControllerInfo):
     )
 
     # begin: non-public attributes
-    egus: Optional[dict[str, str]] = field(
-        init=False,
-        default=None,
-    )
+    sensor_shapes: dict[str, Tuple[int, int]] = field(init=False)
+    rois: dict[str, Tuple[int, int, int, int]] = field(init=False)
+    exposures: dict[str, float] = field(init=False)
+    egus: dict[str, str] = field(init=False)
     # end: non-public attributes
     events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 

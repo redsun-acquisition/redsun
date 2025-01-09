@@ -5,18 +5,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ndv import NDViewer
-from qtpy.QtWidgets import QVBoxLayout, QWidget
-from sunflare.view import WidgetProtocol
+from qtpy.QtWidgets import QVBoxLayout
+from sunflare.view.qt import BaseQtWidget
 from sunflare.virtual import slot
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from sunflare.config import RedSunSessionInfo
     from sunflare.virtual import ModuleVirtualBus
 
     from redsun.virtual import HardwareVirtualBus
 
 
-class ImageViewWidget(QWidget, WidgetProtocol):
+class ImageViewWidget(BaseQtWidget):
     """Image viewer widget.
 
     Wraps the NDViewer widget to display images.
@@ -37,10 +39,7 @@ class ImageViewWidget(QWidget, WidgetProtocol):
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
     ) -> None:
-        super().__init__()
-        self._config = config
-        self._virtual_bus = virtual_bus
-        self._module_bus = module_bus
+        super().__init__(config, virtual_bus, module_bus)
         layout = QVBoxLayout()
         self._viewer = NDViewer(None)
         layout.addWidget(self._viewer)
@@ -55,12 +54,12 @@ class ImageViewWidget(QWidget, WidgetProtocol):
         self._virtual_bus.sigNewImage.connect(self.update_image)
 
     @slot
-    def update_image(self, image: Any) -> None:
+    def update_image(self, image: dict[str, NDArray[Any]]) -> None:
         """Update the image displayed in the viewer.
 
         Parameters
         ----------
-        image : Any
-            Dictionary containing all registered detectors and their data/metadata.
+        image : dict[str, NDArray[Any]]
+            Dictionary with the detector names as keys and the read images as values.
         """
         self._viewer.set_data(image)

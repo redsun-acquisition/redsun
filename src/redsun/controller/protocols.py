@@ -7,11 +7,13 @@ must implement the protocols defined in this module.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Optional, Protocol, Union, runtime_checkable
+from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 
 from sunflare.model import ModelProtocol
 
 if TYPE_CHECKING:
+    from typing import Tuple, Union
+
     from bluesky.protocols import Location, Reading
     from event_model.documents.event_descriptor import DataKey
     from sunflare.engine import Status
@@ -168,6 +170,41 @@ class DetectorModel(Protocol, ModelProtocol):
 
     @property
     @abstractmethod
+    def exposure(self) -> float:
+        """Exposure time for the detector.
+
+        Unit measure is defined by the ``egu`` property.
+        """
+        ...
+
+    @property
+    @abstractmethod
     def egu(self) -> str:
         """Engineering unit for exposure time."""
+        ...
+
+    @property
+    @abstractmethod
+    def sensor_shape(self) -> Tuple[int, int]:
+        """Shape of the detector sensor.
+
+        Indexed as:
+
+        - width: int
+        - height: int
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def roi(self) -> Tuple[int, int, int, int]:
+        """Region of interest for the detector.
+
+        Formatted as:
+
+        - x0: int
+        - y0: int
+        - width: int
+        - height: int
+        """
         ...

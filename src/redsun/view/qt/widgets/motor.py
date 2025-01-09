@@ -19,8 +19,7 @@ from typing import TYPE_CHECKING
 from qtpy import QtWidgets
 from qtpy.QtCore import QRegularExpression, Qt
 from qtpy.QtGui import QRegularExpressionValidator
-from sunflare.log import Loggable
-from sunflare.view import WidgetProtocol
+from sunflare.view.qt import BaseQtWidget
 from sunflare.virtual import Signal, slot
 
 if TYPE_CHECKING:
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
 __all__ = ["MotorWidget"]
 
 
-class MotorWidget(QtWidgets.QWidget, Loggable, WidgetProtocol):
+class MotorWidget(BaseQtWidget):
     r"""Qt stepper motor widget.
 
     The widget groups each motor into a QGroupBox, and each axis of the motor has its own row.
@@ -206,7 +205,6 @@ class MotorWidget(QtWidgets.QWidget, Loggable, WidgetProtocol):
 
         # only emit when input is acceptable, discarding intermediate state
         if state == QRegularExpressionValidator.State.Acceptable:
-            self.debug(f"Step size changed: {name}, {axis}, {input}")
             self.sigStepSizeChanged.emit(name, axis, float(input))
 
     def registration_phase(self) -> None:  # noqa: D102

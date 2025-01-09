@@ -10,7 +10,6 @@ from typing import (
     NamedTuple,
     Optional,
     Tuple,
-    Type,
     TypedDict,
     get_args,
 )
@@ -37,8 +36,7 @@ if TYPE_CHECKING:
 
     from sunflare.controller import ControllerProtocol
     from sunflare.model import ModelProtocol
-
-    from redsun.view import BaseWidget
+    from sunflare.view import WidgetProtocol
 
 
 class InfoBackend(TypedDict):
@@ -63,14 +61,14 @@ class Backend(TypedDict):
 
     Parameters
     ----------
-    models : ``dict[str, Type[ModelProtocol]``
+    models : ``dict[str, type[ModelProtocol]``
         Dictionary of base models.
-    controllers : ``dict[str, Type[ControllerProtocol]``
+    controllers : ``dict[str, type[ControllerProtocol]``
         Dictionary of base controllers.
     """
 
-    models: dict[str, Type[ModelProtocol]]
-    controllers: dict[str, Type[ControllerProtocol]]
+    models: dict[str, type[ModelProtocol]]
+    controllers: dict[str, type[ControllerProtocol]]
 
 
 class Plugin(NamedTuple):
@@ -80,15 +78,15 @@ class Plugin(NamedTuple):
     ----------
     name : ``str``
         The name of the plugin.
-    info : ``Type[object]``
+    info : ``type[object]``
         The information class for the plugin.
-    base_class : ``Type[object]``
+    base_class : ``type[object]``
         The base class for the plugin.
     """
 
     name: str
-    info: Type[object]
-    base_class: Type[object]
+    info: type[object]
+    base_class: type[object]
 
 
 #: Plugin group names for the backend.
@@ -104,7 +102,7 @@ class PluginManager:
     @staticmethod
     def load_configuration(
         config_path: str,
-    ) -> Tuple[RedSunSessionInfo, Backend, dict[str, Type[BaseWidget]]]:
+    ) -> Tuple[RedSunSessionInfo, Backend, dict[str, type[WidgetProtocol]]]:
         """Load the configuration from a YAML file.
 
         The manager will load the configuration from the input YAML file.
@@ -118,7 +116,7 @@ class PluginManager:
 
         Returns
         -------
-        Tuple[RedSunSessionInfo, dict[str, Types], dict[str, Type[BaseController]]
+        Tuple[RedSunSessionInfo, dict[str, Types], dict[str, type[BaseController]]
             RedSun instance configuration and class types to build.
         """
         widgets_config: list[str]
@@ -137,7 +135,7 @@ class PluginManager:
         types_groups, config_groups = PluginManager.load_backend(config)
 
         # load the frontend configuration
-        frontend_types: dict[str, Type[BaseWidget]]
+        frontend_types: dict[str, type[WidgetProtocol]]
         if widgets_config:
             frontend_types = PluginManager.load_frontend(widgets_config)
         else:
@@ -151,7 +149,7 @@ class PluginManager:
         return output_config, types_groups, frontend_types
 
     @staticmethod
-    def load_frontend(config: list[str]) -> dict[str, Type[BaseWidget]]:
+    def load_frontend(config: list[str]) -> dict[str, type[WidgetProtocol]]:
         """Load the frontend configuration.
 
         Parameters
@@ -161,13 +159,13 @@ class PluginManager:
 
         Returns
         -------
-        ``dict[str, Type[BaseWidget]]``
+        ``dict[str, type[WidgetProtocol]]``
             Frontend configuration.
         """
         # Get the entry points for the current group.
         # Plugins not found will be tagged with None
         plugins = entry_points(group="redsun.plugins.widgets")
-        widgets: dict[str, Optional[Type[BaseWidget]]] = {
+        widgets: dict[str, Optional[type[WidgetProtocol]]] = {
             widget_name: next(
                 (ep.load() for ep in plugins if ep.name == widget_name), None
             )
@@ -175,7 +173,7 @@ class PluginManager:
         }
 
         # Remove all entries with None values
-        filtered_widgets: dict[str, Type[BaseWidget]] = {
+        filtered_widgets: dict[str, type[WidgetProtocol]] = {
             key: value for key, value in widgets.items() if value is not None
         }
 
@@ -220,9 +218,11 @@ class PluginManager:
                 builder = loaded_plugins[plugin_config[class_name_key]].info
                 model = loaded_plugins[plugin_config[class_name_key]].base_class
 
-                # these types are correct so we can safely ignore the type checker
-                config_groups[group][plugin_id] = builder(**plugin_config)  # type: ignore
-                types_groups[group][plugin_id] = model  # type: ignore
+                # type checker complains about the assignment because
+                # it doesn't discern between type[object] and type[ModelInfo] or type[ControllerInfo];
+                # the assignment is correct, so we ignore the warning
+                config_groups[group][plugin_id] = builder(**plugin_config)  # type: ignore[assignment]
+                types_groups[group][plugin_id] = model  # type: ignore[assignment]
 
         return types_groups, config_groups
 

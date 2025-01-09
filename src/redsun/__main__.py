@@ -13,7 +13,7 @@ from redsun.virtual import HardwareVirtualBus
 
 
 class RedSunArgs(argparse.Namespace):
-    """Type hints for command line arguments."""
+    """type hints for command line arguments."""
 
     config: str
 

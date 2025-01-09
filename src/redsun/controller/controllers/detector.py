@@ -73,6 +73,15 @@ class DetectorController(ControllerProtocol, Loggable):
 
         # update the controller info with the available models
         self._ctrl_info.models = models
+        self._ctrl_info.rois = {
+            name: detector.roi for name, detector in self._detectors.items()
+        }
+        self._ctrl_info.sensor_shapes = {
+            name: detector.sensor_shape for name, detector in self._detectors.items()
+        }
+        self._ctrl_info.exposures = {
+            name: detector.exposure for name, detector in self._detectors.items()
+        }
         self._ctrl_info.egus = {
             name: detector.egu for name, detector in self._detectors.items()
         }

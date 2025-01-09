@@ -13,7 +13,7 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from sunflare.config import AcquisitionEngineTypes, FrontendTypes, RedSunSessionInfo
 from sunflare.log import get_logger
@@ -90,7 +90,7 @@ class Factory:
     def build_model(
         cls,
         name: str,
-        model_class: Type[ModelProtocol],
+        model_class: type[ModelProtocol],
         model_info: ModelInfo,
     ) -> Optional[ModelProtocol]:
         """Build the detector model.
@@ -99,7 +99,7 @@ class Factory:
         ----------
         name: ``str``
             The name of the detector.
-        detector_class: ``Type[DetectorProtocol[DetectorModelInfo]]``
+        detector_class: ``type[DetectorProtocol[DetectorModelInfo]]``
             The class of the detector.
         detector_info: ``DetectorModelInfo``
             The detector information.
@@ -120,7 +120,7 @@ class Factory:
         cls,
         name: str,
         ctrl_info: ControllerInfo,
-        ctrl_class: Type[ControllerProtocol],
+        ctrl_class: type[ControllerProtocol],
         handler: EngineHandler,
         virtual_bus: HardwareVirtualBus,
         module_bus: ModuleVirtualBus,
@@ -133,7 +133,7 @@ class Factory:
             The name of the controller.
         ctrl_info: ``ControllerInfo``
             The controller information.
-        ctrl_class: ``Type[BaseController]``
+        ctrl_class: ``type[BaseController]``
             The class of the controller.
         handler: ``EngineHandler``
             The handler.
