@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from redsun.virtual import HardwareVirtualBus
 
 
-class DetectorWidget(BaseQtWidget):
+class DetectorSettingsWidget(BaseQtWidget):
     """Detector settings widget class.
 
     Imports all detector configuration settings from the constructor and builds the widget based on the pydantic model's informations.
@@ -69,7 +69,7 @@ class DetectorWidget(BaseQtWidget):
         }
 
         for model_name, model_info in models_info.items():
-            tree = self.build_parameter_tree(model_info)
+            tree = self.build_params(model_info)
             self.tab.addTab(tree, model_name)
 
         layout.addWidget(self.tab)
@@ -82,34 +82,6 @@ class DetectorWidget(BaseQtWidget):
     def connection_phase(self) -> None:  # noqa: D102
         # nothing to do here... for now
         ...
-
-    def build_parameter_tree(self, detector_info: ModelInfo) -> None:
-        """Build parameter tree."""
-        base_params = [
-            {
-                "name": "Model name",
-                "type": "str",
-                "value": detector_info.model_name,
-                "readonly": True,
-            },
-            {
-                "name": "Vendor",
-                "type": "str",
-                "value": detector_info.vendor,
-                "readonly": True,
-            },
-            {
-                "name": "Serial number",
-                "type": "str",
-                "value": detector_info.serial_number,
-                "readonly": True,
-            },
-        ]
-        parameter = Parameter.create(
-            name="Detector parameters", type="group", children=base_params
-        )
-        tree = ParameterTree()
-        tree.setParameters(parameter, showTop=True)
 
     # TODO: parameter grouping needs review
     # TODO: generalize for all parameter groups

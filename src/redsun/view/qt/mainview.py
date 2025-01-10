@@ -9,7 +9,7 @@ from qtpy.QtWidgets import QDockWidget, QMainWindow
 
 from redsun.view.qt.widgets import ImageViewWidget
 
-from .widgets import DetectorWidget, MotorWidget
+from .widgets import DetectorSettingsWidget, MotorWidget
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
@@ -64,7 +64,7 @@ class RedSunMainWindow(QMainWindow):
             )
 
         if self._config.controllers["DetectorController"] is not None:
-            self._device_widgets["DetectorSettings"] = DetectorWidget(
+            self._device_widgets["DetectorSettings"] = DetectorSettingsWidget(
                 self._config,
                 self._virtual_bus,
                 self._module_bus,
