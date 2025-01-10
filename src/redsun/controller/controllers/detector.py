@@ -10,19 +10,19 @@ from numpy.typing import NDArray
 from sunflare.controller import ControllerProtocol
 from sunflare.log import Loggable
 from sunflare.virtual import Signal, VirtualBus
-
-from redsun.controller.protocols import DetectorModel
+from sunflare.config import DetectorInfo
+from sunflare.model import DetectorModelProtocol
 
 if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator
     from sunflare.engine.handler import EngineHandler, EventName
 
-    from redsun.controller.config import DetectorControllerInfo
+    from redsun.controller.config import DetectorSettingsControllerInfo
     from redsun.virtual import HardwareVirtualBus
 
 
-class DetectorController(ControllerProtocol, Loggable):
-    """Detector controller class.
+class DetectorSettingsController(ControllerProtocol, Loggable):
+    """Detector settings controller class.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ class DetectorController(ControllerProtocol, Loggable):
 
     def __init__(
         self,
-        ctrl_info: DetectorControllerInfo,
+        ctrl_info: DetectorSettingsControllerInfo,
         handler: EngineHandler,
         virtual_bus: HardwareVirtualBus,
         module_bus: VirtualBus,
@@ -64,29 +64,31 @@ class DetectorController(ControllerProtocol, Loggable):
             models = [
                 name
                 for name in handler.models
-                if isinstance(handler.models[name], DetectorModel)
+                if isinstance(handler.models[name], DetectorModelProtocol)
             ]
 
-        self._detectors: dict[str, DetectorModel] = {
-            name: cast(DetectorModel, handler.models[name]) for name in models
+        self._detectors: dict[str, DetectorModelProtocol] = {
+            name: cast(DetectorModelProtocol, handler.models[name]) for name in models
         }
 
-        # update the controller info with the available models
+        # get the model information for each detector
+        # and store it in the controller information;
+        model_infos: dict[str, DetectorInfo] = {
+            name: cast(DetectorInfo, detector.model_info)
+            for name, detector in self._detectors.items()
+        }
         self._ctrl_info.models = models
-        self._ctrl_info.rois = {
-            name: detector.roi for name, detector in self._detectors.items()
+        self._ctrl_info.egus = {
+            name: model_info.egu for name, model_info in model_infos.items()
         }
         self._ctrl_info.sensor_shapes = {
-            name: detector.sensor_shape for name, detector in self._detectors.items()
+            name: model_info.sensor_shape for name, model_info in model_infos.items()
         }
         self._ctrl_info.exposures = {
-            name: detector.exposure for name, detector in self._detectors.items()
-        }
-        self._ctrl_info.egus = {
-            name: detector.egu for name, detector in self._detectors.items()
+            name: model_info.exposure for name, model_info in model_infos.items()
         }
 
-        def snap_plan(detectors: list[DetectorModel]) -> MsgGenerator[Any]:
+        def snap_plan(detectors: list[DetectorModelProtocol]) -> MsgGenerator[Any]:
             """Take a snapshot from a series of detectors.
 
             Parameters
@@ -102,7 +104,7 @@ class DetectorController(ControllerProtocol, Loggable):
             """
             yield from count(detectors, num=1)
 
-        def live_plan(detectors: list[DetectorModel]) -> MsgGenerator[Any]:
+        def live_plan(detectors: list[DetectorModelProtocol]) -> MsgGenerator[Any]:
             """Launch a series of detectors for live acquisition.
 
             The frame rate is kept fixed at 30 fps; for detectors with slower acquisition rates,

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sunflare.config import ModelInfo, RedSunSessionInfo
     from sunflare.virtual import ModuleVirtualBus
 
-    from redsun.controller.config import DetectorControllerInfo
+    from redsun.controller.config import DetectorSettingsControllerInfo
     from redsun.virtual import HardwareVirtualBus
 
 
@@ -53,8 +53,8 @@ class DetectorSettingsWidget(BaseQtWidget):
         self._config = config
         self._virtual_bus = virtual_bus
         self._module_bus = module_bus
-        self._detectors_info: DetectorControllerInfo = config.controllers[
-            "DetectorController"
+        self._detectors_info: DetectorSettingsControllerInfo = config.controllers[
+            "DetectorSettingsController"
         ]  # type: ignore
 
         self.tab = QtWidgets.QTabWidget()

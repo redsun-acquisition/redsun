@@ -31,7 +31,7 @@ class HardwareVirtualBus(VirtualBus):
     sigNewImage: ``Signal(dict[str, NDArray[Any]])``
         - Emitted when a new image is available.
         - `Carries`: dictionary with keys being the detector names and values the image arrays.
-        - `Source`: ``DetectorController``.
+        - `Source`: ``DetectorSettingsController``.
     """
 
     sigStep: Signal = Signal(str, str, str)

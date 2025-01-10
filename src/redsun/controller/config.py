@@ -29,7 +29,7 @@ class MotorControllerInfo(ControllerInfo):
     )
 
     # begin: non-public attributes
-    axes: dict[str, list[str]] = field(
+    axis: dict[str, list[str]] = field(
         init=False,
     )
     step_sizes: dict[str, dict[str, float]] = field(
@@ -50,7 +50,7 @@ class MotorControllerInfo(ControllerInfo):
 
 
 @define
-class DetectorControllerInfo(ControllerInfo):
+class DetectorSettingsControllerInfo(ControllerInfo):
     """Detector controller information model.
 
     Attributes

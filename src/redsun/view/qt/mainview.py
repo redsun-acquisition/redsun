@@ -63,7 +63,7 @@ class RedSunMainWindow(QMainWindow):
                 self._config, self._virtual_bus, self._module_bus
             )
 
-        if self._config.controllers["DetectorController"] is not None:
+        if self._config.controllers["DetectorSettingsController"] is not None:
             self._device_widgets["DetectorSettings"] = DetectorSettingsWidget(
                 self._config,
                 self._virtual_bus,

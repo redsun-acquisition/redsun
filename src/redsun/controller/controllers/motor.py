@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Union, cast
 from sunflare.controller import ControllerProtocol
 from sunflare.log import Loggable
 from sunflare.virtual import Signal, slot
-
-from redsun.controller.protocols import MotorModel
+from sunflare.model import MotorModelProtocol
+from sunflare.config import MotorInfo
 
 if TYPE_CHECKING:
     from typing import Optional
@@ -69,21 +69,25 @@ class MotorController(ControllerProtocol, Loggable):
             models = [
                 name
                 for name in handler.models
-                if isinstance(handler.models[name], MotorModel)
+                if isinstance(handler.models[name], MotorModelProtocol)
             ]
 
-        self._motors: dict[str, MotorModel] = {
-            name: cast(MotorModel, handler.models[name]) for name in models
+        self._motors: dict[str, MotorModelProtocol] = {
+            name: cast(MotorModelProtocol, handler.models[name]) for name in models
+        }
+
+        model_infos: dict[str, MotorInfo] = {
+            name: cast(MotorInfo, motor.model_info)
+            for name, motor in self._motors.items()
         }
 
         # update the controller info with the available models
         self._ctrl_info.models = models
-        self._ctrl_info.axes = {
-            name: motor.axis for name, motor in self._motors.items()
-        }
+        self._ctrl_info.axis = {name: motor.axis for name, motor in model_infos.items()}
         self._ctrl_info.step_sizes = {
-            name: motor.step_size for name, motor in self._motors.items()
+            name: motor.step_size for name, motor in model_infos.items()
         }
+        self._ctrl_info.egu = {name: motor.egu for name, motor in model_infos.items()}
 
     @slot
     def on_move_rel(self, motor: str, axis: str, direction: str) -> None:
@@ -101,7 +105,8 @@ class MotorController(ControllerProtocol, Loggable):
             Movement direction ("north", or "south").
         """
         obj = self._motors[motor]
-        new_value = self._ops[direction](self.location(motor), obj.step_size[axis])
+        info = cast(MotorInfo, obj.model_info)
+        new_value = self._ops[direction](self.location(motor), info.step_size[axis])
         status = obj.set(new_value, axis)
 
         # wait for the operation to complete
@@ -125,7 +130,8 @@ class MotorController(ControllerProtocol, Loggable):
         step_size : float
             New step size.
         """
-        self._motors[motor].step_size[axis] = step_size
+        info = cast(MotorInfo, self._motors[motor].model_info)
+        info.step_size[axis] = step_size
 
     def location(self, motor: str) -> Union[int, float]:
         """Get the current motor location.
