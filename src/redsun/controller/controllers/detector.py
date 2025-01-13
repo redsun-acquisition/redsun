@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 
 from bluesky.plans import count
 from numpy.typing import NDArray
+from sunflare.config import DetectorInfo
 from sunflare.controller import ControllerProtocol
 from sunflare.log import Loggable
-from sunflare.virtual import Signal, VirtualBus
-from sunflare.config import DetectorInfo
 from sunflare.model import DetectorModelProtocol
+from sunflare.virtual import Signal, VirtualBus
 
 if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator

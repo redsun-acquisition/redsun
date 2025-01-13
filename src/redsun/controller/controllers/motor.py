@@ -5,11 +5,11 @@ from __future__ import annotations
 from operator import add, sub
 from typing import TYPE_CHECKING, Union, cast
 
+from sunflare.config import MotorInfo
 from sunflare.controller import ControllerProtocol
 from sunflare.log import Loggable
-from sunflare.virtual import Signal, slot
 from sunflare.model import MotorModelProtocol
-from sunflare.config import MotorInfo
+from sunflare.virtual import Signal, slot
 
 if TYPE_CHECKING:
     from typing import Optional

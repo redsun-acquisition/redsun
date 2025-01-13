@@ -11,7 +11,6 @@ from sunflare.virtual import slot
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-
     from sunflare.config import RedSunSessionInfo
     from sunflare.virtual import ModuleVirtualBus
 
