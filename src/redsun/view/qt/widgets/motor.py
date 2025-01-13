@@ -89,7 +89,7 @@ class MotorWidget(BaseQtWidget):
         if ctrl_info.models is not None:
             self._motors_info = {
                 name: {
-                    "axes": ctrl_info.axes,
+                    "axes": ctrl_info.axis,
                     "step_size": ctrl_info.step_sizes,
                     "step_egu": ctrl_info.egu,
                 }
