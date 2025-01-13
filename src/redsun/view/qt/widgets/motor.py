@@ -89,7 +89,7 @@ class MotorWidget(BaseQtWidget):
         if ctrl_info.models is not None:
             self._motors_info = {
                 name: {
-                    "axes": ctrl_info.axis,
+                    "axis": ctrl_info.axis,
                     "step_size": ctrl_info.step_sizes,
                     "step_egu": ctrl_info.egu,
                 }
@@ -112,7 +112,7 @@ class MotorWidget(BaseQtWidget):
         for num_motor, (name, info) in enumerate(self._motors_info.items()):
             self.groups[name] = QtWidgets.QGroupBox(name)
             self.groups[name].setAlignment(Qt.AlignmentFlag.AlignHCenter)
-            for ax in info.axes:
+            for ax in info["axis"]:
                 # widgets setup
                 self.labels["label:{}:{}".format(name, ax)] = QtWidgets.QLabel(
                     f"<strong>{ax}</strong>"
