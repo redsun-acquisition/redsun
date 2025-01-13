@@ -2,20 +2,37 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets
+from sunflare.config import (
+    BoolParameter,
+    DetectorInfo,
+    FloatParameter,
+    IntParameter,
+    ListParameter,
+)
 from sunflare.view.qt import BaseQtWidget
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from sunflare.config import ModelInfo, RedSunSessionInfo
+    from sunflare.config import RedSunSessionInfo
     from sunflare.virtual import ModuleVirtualBus
 
     from redsun.controller.config import DetectorSettingsControllerInfo
     from redsun.virtual import HardwareVirtualBus
+
+__all__ = ["DetectorSettingsWidget"]
+
+VALID_PREFIXES = ["s"]
+TYPE_MAP = {
+    FloatParameter: "float",
+    IntParameter: "int",
+    BoolParameter: "bool",
+    ListParameter: "list",
+}
 
 
 class DetectorSettingsWidget(BaseQtWidget):
@@ -64,7 +81,7 @@ class DetectorSettingsWidget(BaseQtWidget):
         # the content of _detectors_info.models is ensured to be
         # not None; we can skip type checking
         models_info = {
-            model: self._config.models[model]
+            model: cast(DetectorInfo, self._config.models[model])
             for model in self._detectors_info.models  # type: ignore[union-attr]
         }
 
@@ -85,7 +102,7 @@ class DetectorSettingsWidget(BaseQtWidget):
 
     # TODO: parameter grouping needs review
     # TODO: generalize for all parameter groups
-    def build_params(self, detector_info: ModelInfo) -> ParameterTree:
+    def build_params(self, detector_info: DetectorInfo) -> ParameterTree:
         """Build a parameter tree for the detector settings.
 
         Parameters
@@ -98,9 +115,10 @@ class DetectorSettingsWidget(BaseQtWidget):
         ParameterTree
             The parameter tree for the detector settings.
         """
-        params = [
+        tree = ParameterTree()
+        infos = [
             {
-                "name": "Model Name",
+                "name": "Model name",
                 "type": "str",
                 "value": detector_info.model_name,
                 "readonly": True,
@@ -112,15 +130,28 @@ class DetectorSettingsWidget(BaseQtWidget):
                 "readonly": True,
             },
             {
-                "name": "Serial Number",
+                "name": "Serial number",
                 "type": "str",
                 "value": detector_info.serial_number,
                 "readonly": True,
             },
+            # TODO: add detector_info.pixel_size
         ]
-        parameter = Parameter.create(
-            name="Detector parameters", type="group", children=params
+        info_param = Parameter.create(
+            name="Detector information", type="group", children=infos
         )
-        tree = ParameterTree()
-        tree.setParameters(parameter, showTop=True)
+        tree.addParameters(info_param, showTop=True)
+        if detector_info.triggers is not None:
+            triggers = [
+                {
+                    "name": "Triggers",
+                    "type": TYPE_MAP[type(detector_info.triggers)],
+                    "value": detector_info.triggers.default,
+                    "values": detector_info.triggers.options,
+                }
+            ]
+            trigger_param = Parameter.create(
+                name="Timings", type="group", values=triggers
+            )
+            tree.addParameters(trigger_param, showTop=True)
         return tree
