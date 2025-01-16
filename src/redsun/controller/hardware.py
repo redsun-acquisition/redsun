@@ -9,9 +9,9 @@ from sunflare.log import Loggable
 from redsun.controller.factory import Factory
 
 if TYPE_CHECKING:
-    from sunflare.model import ModelProtocol
     from sunflare.config import RedSunSessionInfo
     from sunflare.controller import ControllerProtocol
+    from sunflare.model import ModelProtocol
     from sunflare.virtual import VirtualBus
 
     from redsun.controller.plugins import Backend

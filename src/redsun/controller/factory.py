@@ -13,7 +13,7 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Mapping
+from typing import TYPE_CHECKING, Mapping, Optional
 
 from sunflare.log import get_logger
 
