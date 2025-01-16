@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-license = { text = "BSD 3-Clause license" }
+license = { text = "Apache-2.0" }
 dependencies = [
     "sunflare",
     "ndv[pyqt,vispy]",
