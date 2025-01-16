@@ -85,7 +85,6 @@ class Factory:
         -------
         ``Optional[BaseController]``
             The built controller. ``None`` if the controller could not be built.
-
         """
         try:
             return ctrl_class(ctrl_info, models, virtual_bus)
