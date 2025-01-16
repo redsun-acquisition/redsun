@@ -5,11 +5,10 @@ from __future__ import annotations
 import argparse
 import sys
 
-from sunflare.virtual import ModuleVirtualBus
+from sunflare.virtual import VirtualBus
 
 from redsun.controller import PluginManager, RedSunMainHardwareController
 from redsun.view import build_view_layer, create_app, launch_app
-from redsun.virtual import HardwareVirtualBus
 
 
 class RedSunArgs(argparse.Namespace):
@@ -57,19 +56,16 @@ def main(input_config: str) -> None:
     app = create_app()
 
     # virtual layer
-    module_bus = ModuleVirtualBus()
-    hardware_bus = HardwareVirtualBus()
+    virtual_bus = VirtualBus()
 
     # get the startup configuration
     config, types_groups, widgets = PluginManager.load_configuration(input_config)
 
     # build the controller layer
-    controller = RedSunMainHardwareController(
-        config, hardware_bus, module_bus, types_groups
-    )
+    controller = RedSunMainHardwareController(config, virtual_bus, types_groups)
 
     # build the view layer
-    view = build_view_layer(config, widgets, hardware_bus, module_bus)
+    view = build_view_layer(config, widgets, virtual_bus)
 
     # connect the controller and the view to the virtual layer
     controller.connect_to_virtual()

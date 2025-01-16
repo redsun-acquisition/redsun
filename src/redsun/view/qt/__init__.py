@@ -5,9 +5,7 @@ from qtpy.QtWidgets import QApplication
 from sunflare.config import RedSunSessionInfo
 from sunflare.view import WidgetProtocol
 from sunflare.view.qt import BaseQtWidget
-from sunflare.virtual import ModuleVirtualBus
-
-from redsun.virtual import HardwareVirtualBus
+from sunflare.virtual import VirtualBus
 
 from .mainview import RedSunMainWindow
 from .utils import ProcessEventsDuringTask
@@ -24,8 +22,7 @@ __all__ = [
 def build_view_layer(
     config: RedSunSessionInfo,
     widgets: dict[str, type[WidgetProtocol]],
-    virtual_bus: HardwareVirtualBus,
-    module_bus: ModuleVirtualBus,
+    virtual_bus: VirtualBus,
 ) -> RedSunMainWindow:
     """Build the view layer.
 
@@ -45,7 +42,7 @@ def build_view_layer(
     # cast to make type checker happy; the assumption is that
     # build_view_layer is selected based on the frontend type
     qt_widgets = cast(dict[str, type[BaseQtWidget]], widgets)
-    view = RedSunMainWindow(virtual_bus, module_bus, config, qt_widgets)
+    view = RedSunMainWindow(virtual_bus, config, qt_widgets)
     view.build_view()
     return view
 

@@ -9,12 +9,12 @@ from sunflare.log import Loggable
 from redsun.controller.factory import Factory
 
 if TYPE_CHECKING:
+    from sunflare.model import ModelProtocol
     from sunflare.config import RedSunSessionInfo
     from sunflare.controller import ControllerProtocol
-    from sunflare.virtual import ModuleVirtualBus
+    from sunflare.virtual import VirtualBus
 
     from redsun.controller.plugins import Backend
-    from redsun.virtual import HardwareVirtualBus
 
 
 class RedSunMainHardwareController(Loggable):
@@ -35,14 +35,13 @@ class RedSunMainHardwareController(Loggable):
     def __init__(
         self,
         config: RedSunSessionInfo,
-        virtual_bus: HardwareVirtualBus,
-        module_bus: ModuleVirtualBus,
+        virtual_bus: VirtualBus,
         classes: Backend,
     ):
         self.config = config
         self.virtual_bus = virtual_bus
-        self.module_bus = module_bus
         self.classes = classes
+        self.models: dict[str, ModelProtocol] = {}
         self.controllers: dict[str, ControllerProtocol] = {}
 
     def build_layer(self) -> None:
@@ -62,8 +61,6 @@ class RedSunMainHardwareController(Loggable):
         file is not correct. The error caused by the creation of that specific object is logged,
         the creation is skipped, and the process continues with the next object.
         """
-        handler = Factory.build_handler(self.config, self.virtual_bus, self.module_bus)
-
         models_info = self.config.models
         controllers_info = self.config.controllers
 
@@ -77,7 +74,7 @@ class RedSunMainHardwareController(Loggable):
             )
             if model_obj is None:
                 continue
-            handler.models[model_name] = model_obj
+            self.models[model_name] = model_obj
 
         # build controllers
         for ctrl_name, ctrl_info in controllers_info.items():
@@ -86,9 +83,8 @@ class RedSunMainHardwareController(Loggable):
                 name=ctrl_name,
                 ctrl_info=ctrl_info,
                 ctrl_class=ctrl_class,
-                handler=handler,
+                models=self.models,
                 virtual_bus=self.virtual_bus,
-                module_bus=self.module_bus,
             )
             if controller is None:
                 continue

@@ -14,9 +14,7 @@ from .widgets import DetectorSettingsWidget, MotorWidget
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
     from sunflare.view.qt import BaseQtWidget
-    from sunflare.virtual import ModuleVirtualBus
-
-    from redsun.virtual import HardwareVirtualBus
+    from sunflare.virtual import VirtualBus
 
 
 class RedSunMainWindow(QMainWindow):
@@ -30,8 +28,7 @@ class RedSunMainWindow(QMainWindow):
 
     def __init__(
         self,
-        virtual_bus: HardwareVirtualBus,
-        module_bus: ModuleVirtualBus,
+        virtual_bus: VirtualBus,
         config: RedSunSessionInfo,
         widgets: dict[str, type[BaseQtWidget]],
     ) -> None:
@@ -39,7 +36,6 @@ class RedSunMainWindow(QMainWindow):
         self.setWindowTitle("RedSun")
         self._config = config
         self._virtual_bus = virtual_bus
-        self._module_bus = module_bus
 
         # image widget: center of the main window
         self._image_viewer: ImageViewWidget
@@ -60,17 +56,15 @@ class RedSunMainWindow(QMainWindow):
 
         if self._config.controllers["MotorController"] is not None:
             self._device_widgets["StepperMotor"] = MotorWidget(
-                self._config, self._virtual_bus, self._module_bus
+                self._config, self._virtual_bus
             )
 
         if self._config.controllers["DetectorSettingsController"] is not None:
             self._device_widgets["DetectorSettings"] = DetectorSettingsWidget(
-                self._config,
-                self._virtual_bus,
-                self._module_bus,
+                self._config, self._virtual_bus
             )
             self._device_widgets["ImageView"] = ImageViewWidget(
-                self._config, self._virtual_bus, self._module_bus
+                self._config, self._virtual_bus
             )
 
         # set dock widgets; the detector settings are on the top-left;

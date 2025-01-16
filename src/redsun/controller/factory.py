@@ -13,22 +13,17 @@ This module operates within the RedSun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Mapping
 
-from sunflare.config import AcquisitionEngineTypes, FrontendTypes, RedSunSessionInfo
 from sunflare.log import get_logger
 
 if TYPE_CHECKING:
     import logging
 
-    from bluesky.utils import DuringTask
     from sunflare.config import ControllerInfo, ModelInfo
     from sunflare.controller import ControllerProtocol
-    from sunflare.engine import EngineHandler
     from sunflare.model import ModelProtocol
-    from sunflare.virtual import ModuleVirtualBus
-
-    from redsun.virtual import HardwareVirtualBus
+    from sunflare.virtual import VirtualBus
 
 __all__ = ["Factory"]
 
@@ -37,54 +32,6 @@ class Factory:
     """Factory base class."""
 
     _logger: logging.Logger = get_logger()
-
-    @classmethod
-    def build_handler(
-        cls,
-        config: RedSunSessionInfo,
-        virtual_bus: HardwareVirtualBus,
-        module_bus: ModuleVirtualBus,
-    ) -> EngineHandler:
-        """Build the handler.
-
-        Parameters
-        ----------
-        config: ``RedSunSessionInfo``
-            Configuration options for the RedSun session.
-        virtual_bus: ``HardwareVirtualBus``
-            Hardware control virtual bus.
-        module_bus: ``ModuleVirtualBus``
-            Module virtual bus.
-
-        Returns
-        -------
-        ``EngineHandler``
-            The built handler. Specific type depends on the selected engine.
-
-        Raises
-        ------
-        RuntimeError
-            If the selected engine is not supported or if the handler could not be built.
-        """
-        during_task: DuringTask
-        if config.frontend == FrontendTypes.QT:
-            from redsun.view.qt import ProcessEventsDuringTask
-
-            during_task = ProcessEventsDuringTask()
-        else:
-            raise RuntimeError(f"Unsupported frontend: {config.frontend}")
-
-        if config.engine == AcquisitionEngineTypes.BLUESKY:
-            try:
-                from redsun.engine.bluesky import BlueskyHandler
-
-                return BlueskyHandler(config, virtual_bus, module_bus, during_task)
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to build handler for engine {config.engine}: {e}"
-                )
-        else:
-            raise RuntimeError(f"Unsupported engine: {config.engine}")
 
     @classmethod
     def build_model(
@@ -121,9 +68,8 @@ class Factory:
         name: str,
         ctrl_info: ControllerInfo,
         ctrl_class: type[ControllerProtocol],
-        handler: EngineHandler,
-        virtual_bus: HardwareVirtualBus,
-        module_bus: ModuleVirtualBus,
+        models: Mapping[str, ModelProtocol],
+        virtual_bus: VirtualBus,
     ) -> Optional[ControllerProtocol]:
         """Build the controller.
 
@@ -132,15 +78,13 @@ class Factory:
         name: ``str``
             The name of the controller.
         ctrl_info: ``ControllerInfo``
-            The controller information.
+            Controller information container.
         ctrl_class: ``type[BaseController]``
-            The class of the controller.
-        handler: ``EngineHandler``
-            The handler.
-        virtual_bus: ``HardwareVirtualBus``
+            Controller class.
+        models: ``Mapping[str, ModelProtocol]``
+            Mapping of model names to model instances.
+        virtual_bus: :class:`sunflare.virtual.VirtualBus`
             Hardware control virtual bus.
-        module_bus: ``ModuleVirtualBus``
-            Module virtual bus.
 
         Returns
         -------
@@ -152,7 +96,7 @@ class Factory:
         The ``name`` parameter is currently not used.
         """
         try:
-            return ctrl_class(ctrl_info, handler, virtual_bus, module_bus)
+            return ctrl_class(ctrl_info, models, virtual_bus)
         except Exception as e:
             cls._logger.exception(f"Failed to build controller {name}: {e}")
             return None
