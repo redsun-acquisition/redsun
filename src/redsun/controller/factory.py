@@ -72,8 +72,6 @@ class Factory:
 
         Parameters
         ----------
-        name: ``str``
-            The name of the controller.
         ctrl_info: ``ControllerInfo``
             Controller information container.
         ctrl_class: ``type[BaseController]``
@@ -88,9 +86,6 @@ class Factory:
         ``Optional[BaseController]``
             The built controller. ``None`` if the controller could not be built.
 
-        Notes
-        -----
-        The ``name`` parameter is currently not used.
         """
         try:
             return ctrl_class(ctrl_info, models, virtual_bus)
