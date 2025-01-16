@@ -26,7 +26,7 @@ __all__ = ["Factory"]
 
 
 class Factory:
-    """Factory base class."""
+    """Internal factory  class."""
 
     _logger: logging.Logger = get_logger()
 
