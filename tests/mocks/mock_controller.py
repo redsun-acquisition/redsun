@@ -1,11 +1,14 @@
 from typing import ClassVar
 
+from attrs import define
+
 from sunflare.config import ControllerInfo
-from sunflare.controller import BaseController
-from sunflare.engine import EngineHandler
-from sunflare.virtual import VirtualBus, ModuleVirtualBus
+from sunflare.controller import ControllerProtocol
+from sunflare.model import ModelProtocol
+from sunflare.virtual import VirtualBus
 from psygnal import SignalGroupDescriptor
 
+@define(kw_only=True)
 class MockControllerInfo(ControllerInfo):
     """Mock controller information model."""
     string: str
@@ -15,16 +18,17 @@ class MockControllerInfo(ControllerInfo):
     events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 
 
-class MockController(BaseController):
+class MockController(ControllerProtocol):
 
     _ctrl_info: MockControllerInfo
 
     def __init__(self, 
                 ctrl_info: MockControllerInfo, 
-                handler: EngineHandler, 
-                virtual_bus: VirtualBus, 
-                module_bus: ModuleVirtualBus):
-        super().__init__(ctrl_info, handler, virtual_bus, module_bus)
+                models: dict[str, ModelProtocol],
+                virtual_bus: VirtualBus):
+        self._ctrl_info = ctrl_info
+        self._models = models
+        self._virtual_bus = virtual_bus
 
     def shutdown(self) -> None:
         ...
@@ -43,13 +47,12 @@ class NonDerivedControllerInfo:
     boolean: bool
     events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 
-class NonDerivedController(BaseController):
+class NonDerivedController:
 
     def __init__(self, 
                 ctrl_info: MockControllerInfo, 
-                handler: EngineHandler, 
-                virtual_bus: VirtualBus, 
-                module_bus: ModuleVirtualBus):
+                models: dict[str, ModelProtocol],
+                virtual_bus: VirtualBus):
             ...
         
     def shutdown(self) -> None:

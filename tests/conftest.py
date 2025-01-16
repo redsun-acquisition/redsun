@@ -24,20 +24,20 @@ def mock_detector_entry_points() -> Callable[[str], list[EntryPoint]]:
     def mocked_detector_entry_points(group: str) -> list[EntryPoint]:
         plugins = []
 
-        if group == "redsun.plugins.detectors.config":
+        if group == "redsun.plugins.models.config":
             info_ep = EntryPoint(
                 name="detector",
                 value="mock_detector:MockDetectorInfo",
-                group="redsun.plugins.detectors.config",
+                group="redsun.plugins.models.config",
             )
             info_ep.load = MagicMock(return_value=MockDetectorInfo) # type: ignore
             plugins.append(info_ep)
 
-        if group == "redsun.plugins.detectors":
+        if group == "redsun.plugins.models":
             model_ep = EntryPoint(
                 name="detector",
                 value="mock_detector:MockDetector",
-                group="redsun.plugins.detectors",
+                group="redsun.plugins.models",
             )
             model_ep.load = MagicMock(return_value=MockDetector) # type: ignore
             plugins.append(model_ep)
@@ -52,20 +52,20 @@ def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
     def mocked_motor_entry_points(group: str) -> list[EntryPoint]:
         plugins = []
 
-        if group == "redsun.plugins.motors.config":
+        if group == "redsun.plugins.models.config":
             info_ep = EntryPoint(
                 name="motor",
                 value="mock_motor:MockMotorInfo",
-                group="redsun.plugins.motors.config",
+                group="redsun.plugins.models.config",
             )
             info_ep.load = MagicMock(return_value=MockMotorInfo) # type: ignore
             plugins.append(info_ep)
 
-        if group == "redsun.plugins.motors":
+        if group == "redsun.plugins.models":
             model_ep = EntryPoint(
                 name="motor", 
                 value="mock_motor:MockMotor", 
-                group="redsun.plugins.motors"
+                group="redsun.plugins.models"
             )
             model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
             plugins.append(model_ep)

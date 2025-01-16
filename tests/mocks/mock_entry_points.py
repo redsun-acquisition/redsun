@@ -16,11 +16,11 @@ else:
 def mocked_motor_missing_entry_points(group: str) -> list[EntryPoint]:
     plugins = []
 
-    if group == "redsun.plugins.motors":
+    if group == "redsun.plugins.models":
         model_ep = EntryPoint(
             name="motor",
             value="mock_motor:MockMotor",
-            group="redsun.plugins.motors",
+            group="redsun.plugins.models",
         )
         model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
         plugins.append(model_ep)
@@ -28,38 +28,38 @@ def mocked_motor_missing_entry_points(group: str) -> list[EntryPoint]:
 
 def mocked_motor_mismatched_entry_points(group: str) -> list[EntryPoint]:
     plugins = []
-    if group == "redsun.plugins.motors.config":
+    if group == "redsun.plugins.models.config":
         info_ep = EntryPoint(
             name="motor_config",
             value="mock_motor:MockMotorInfo",
-            group="redsun.plugins.motors.config",
+            group="redsun.plugins.models.config",
         )
         plugins.append(info_ep)
-    if group == "redsun.plugins.motors":
+    if group == "redsun.plugins.models":
         model_ep = EntryPoint(
             name="motor",
             value="mock_motor:MockMotor",
-            group="redsun.plugins.motors",
+            group="redsun.plugins.models",
         )
         plugins.append(model_ep)
     return plugins
 
 def mocked_motor_non_derived_info_entry_points(group: str) -> list[EntryPoint]:
     plugins = []
-    if group == "redsun.plugins.motors.config":
+    if group == "redsun.plugins.models.config":
         info_ep = EntryPoint(
             name="motor",
             value="mock_motor:NonDerivedDetectorInfo",
-            group="redsun.plugins.motors.config",
+            group="redsun.plugins.models.config",
         )
         info_ep.load = MagicMock(return_value=NonDerivedMotorInfo) # type: ignore
         plugins.append(info_ep)
 
-    if group == "redsun.plugins.motors":
+    if group == "redsun.plugins.models":
         model_ep = EntryPoint(
             name="motor",
             value="mock_motor:MockMotor",
-            group="redsun.plugins.motors",
+            group="redsun.plugins.models",
         )
         model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
         plugins.append(model_ep)

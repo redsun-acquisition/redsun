@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from attrs import define
+
 from collections import OrderedDict
 
-from sunflare.config import ModelInfo
+from sunflare.config import DetectorInfo
 from sunflare.engine import Status
 from sunflare.model import ModelProtocol
 
@@ -13,8 +15,8 @@ from event_model.documents.event_descriptor import DataKey
 
 from psygnal import SignalGroupDescriptor
 
-
-class MockDetectorInfo(ModelInfo):
+@define(kw_only=True)
+class MockDetectorInfo(DetectorInfo):
     """Mock motor model information."""
 
     integer: int

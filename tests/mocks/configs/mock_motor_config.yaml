@@ -1,19 +1,25 @@
 engine: bluesky
 frontend: qt
-motors:
+models:
   Single axis motor:
     model_name: MockMotor
-    axes:
+    axis:
       - X
+    step_size: 
+      X: 0.1
+    egu: mm
     integer: 42
     floating: 3.14
     string: "Hello, World!"
   Double axis motor:
     model_name: MockMotor
-    axes:
+    axis:
       - X
       - Y
-    step_egu: mm
+    step_size: 
+      X: 0.1
+      Y: 0.2
+    egu: mm
     integer: 314
     floating: 4.2
     string: "Goodbye, World!"

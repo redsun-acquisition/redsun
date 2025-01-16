@@ -203,26 +203,32 @@ class PluginManager:
             if group not in config:
                 continue
 
-            # the key for the class name is either "model_name" for models
-            # or "controller_name" for controllers; it's made so
-            # we can more easily recognize the type of plugin
-            class_name_key = (
-                "model_name" if group != "controllers" else "controller_name"
-            )
-
             loaded_plugins = PluginManager.load_backend_plugins(group)
 
+            # if the plugin is a model, we use the "model_name" key
+            # to correctily recognize the builder; otherwise,
+            # if the plugin is a controller, it will be recognized
+            # from the key "plugin_id" in the configuration
+            class_name_key = "model_name" if group == "models" else ""
+
             for plugin_id, plugin_config in config[group].items():
-                if plugin_config[class_name_key] not in loaded_plugins:
-                    continue
-                builder = loaded_plugins[plugin_config[class_name_key]].info
-                model = loaded_plugins[plugin_config[class_name_key]].base_class
+                if group == "controllers":
+                    class_name_key = plugin_id
+                    info = loaded_plugins[plugin_id].info
+                    base_class = loaded_plugins[plugin_id].base_class
+                else:  # group == "models"
+                    if plugin_config[class_name_key] not in loaded_plugins:
+                        continue
+                    info = loaded_plugins[plugin_config[class_name_key]].info
+                    base_class = loaded_plugins[
+                        plugin_config[class_name_key]
+                    ].base_class
 
                 # type checker complains about the assignment because
                 # it doesn't discern between type[object] and type[ModelInfo] or type[ControllerInfo];
                 # the assignment is correct, so we ignore the warning
-                config_groups[group][plugin_id] = builder(**plugin_config)  # type: ignore[assignment]
-                types_groups[group][plugin_id] = model  # type: ignore[assignment]
+                config_groups[group][plugin_id] = info(**plugin_config)  # type: ignore[assignment]
+                types_groups[group][plugin_id] = base_class  # type: ignore[assignment]
 
         return types_groups, config_groups
 
