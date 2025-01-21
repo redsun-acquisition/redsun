@@ -1,8 +1,0 @@
-include HISTORY.md
-include LICENSE
-include README.md
-include redsun/py.typed
-
-recursive-include tests *
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]
