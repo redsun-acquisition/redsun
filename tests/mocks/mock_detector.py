@@ -1,28 +1,48 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
-from attrs import define
+from attrs import define, field, validators, setters, Attribute
 
 from collections import OrderedDict
 
-from sunflare.config import DetectorInfo
+from sunflare.config import ModelInfo
 from sunflare.engine import Status
 from sunflare.model import ModelProtocol
 
 from bluesky.protocols import Reading
 from event_model.documents.event_descriptor import DataKey
 
-from psygnal import SignalGroupDescriptor
-
 @define(kw_only=True)
-class MockDetectorInfo(DetectorInfo):
+class MockDetectorInfo(ModelInfo):
     """Mock motor model information."""
 
+    exposure: float = field(validator=validators.instance_of(float))
+    egu: str = field(
+        default="s", validator=validators.instance_of(str), on_setattr=setters.frozen
+    )
+    sensor_shape: tuple[int, int] = field(converter=tuple, on_setattr=setters.frozen)
+    pixel_size: tuple[float, float, float] = field(converter=tuple)
     integer: int
     floating: float
     string: str
-    events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
+
+    @sensor_shape.validator
+    def _validate_sensor_shape(
+        self, _: Attribute[tuple[int, ...]], value: tuple[int, ...]
+    ) -> None:
+        if not all(isinstance(val, int) for val in value):
+            raise ValueError("All values in the tuple must be integers.")
+        if len(value) != 2:
+            raise ValueError("The tuple must contain exactly two values.")
+    @pixel_size.validator
+    def _validate_pixel_size(
+        self, _: Attribute[tuple[float, ...]], value: tuple[float, ...]
+    ) -> None:
+        if not all(isinstance(val, float) for val in value):
+            raise ValueError("All values in the tuple must be floats.")
+        if len(value) != 3:
+            raise ValueError("The tuple must contain exactly three values.")
 
 class MockDetector:
     def __init__(self, name: str, model_info: MockDetectorInfo) -> None:
