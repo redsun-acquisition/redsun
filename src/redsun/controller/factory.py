@@ -5,15 +5,12 @@ RedSun operates by dynamically loading external plugins with different archetype
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
 
-This mechanism allows for selecting an engine different from the default Bluesky ``RunEngine``;
-but the new engine should still implement the same public API.
-
 This module operates within the RedSun core code and is not exposed to the toolkit or the user.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Mapping
+from typing import TYPE_CHECKING, Mapping, Optional
 
 from sunflare.log import get_logger
 
@@ -29,7 +26,7 @@ __all__ = ["Factory"]
 
 
 class Factory:
-    """Factory base class."""
+    """Internal factory  class."""
 
     _logger: logging.Logger = get_logger()
 
@@ -75,8 +72,6 @@ class Factory:
 
         Parameters
         ----------
-        name: ``str``
-            The name of the controller.
         ctrl_info: ``ControllerInfo``
             Controller information container.
         ctrl_class: ``type[BaseController]``
@@ -90,10 +85,6 @@ class Factory:
         -------
         ``Optional[BaseController]``
             The built controller. ``None`` if the controller could not be built.
-
-        Notes
-        -----
-        The ``name`` parameter is currently not used.
         """
         try:
             return ctrl_class(ctrl_info, models, virtual_bus)
