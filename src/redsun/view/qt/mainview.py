@@ -29,7 +29,7 @@ class RedSunMainWindow(QMainWindow):
         widgets: dict[str, type[BaseQtWidget]],
     ) -> None:
         super().__init__()
-        self.setWindowTitle("RedSun")
+        self.setWindowTitle(config.session)
         self._config = config
         self._virtual_bus = virtual_bus
 
