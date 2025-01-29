@@ -15,7 +15,6 @@ class MockControllerInfo(ControllerInfo):
     integer: int
     floating: float
     boolean: bool
-    events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 
 
 class MockController(ControllerProtocol):
@@ -45,7 +44,6 @@ class NonDerivedControllerInfo:
     integer: int
     floating: float
     boolean: bool
-    events: ClassVar[SignalGroupDescriptor] = SignalGroupDescriptor()
 
 class NonDerivedController:
 
