@@ -31,7 +31,7 @@ You'll also need to install the [SunFlare] package, RedSun's toolkit. It is curr
 
 ```bash
 # first install the SunFlare package...
-pip install sunflare
+pip install -U sunflare
 
 # ... then clone the RedSun repository and install it
 git clone https://github.com/redsun-acquisition/redsun.git
