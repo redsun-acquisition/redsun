@@ -1,5 +1,5 @@
 engine: bluesky
-frontend: qt
+frontend: pyqt
 models:
   iSCAT channel:
     model_name: MockDetector

@@ -1,5 +1,5 @@
 engine: bluesky
-frontend: qt
+frontend: pyqt
 controllers:
   MockController:
     string: "I am a mock controller"
