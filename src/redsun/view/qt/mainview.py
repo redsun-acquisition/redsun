@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sunflare.view.qt import BaseQtWidget
     from sunflare.virtual import VirtualBus
 
-from redsun.common.view import ask_file_path
+from redsun.common.qt import ask_file_path
 
 
 class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
@@ -53,11 +53,10 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
 
         self._menu_bar: QtWidgets.QMenuBar
 
-        # let's make mypy happy...
+        # making mypy happy with qtpy is hard
         self._menu_bar = cast(QtWidgets.QMenuBar, self.menuBar())
         file = cast(QtWidgets.QMenu, self._menu_bar.addMenu("&File"))
 
-        # "File" actions
         # apparently importing QAction from qtpy
         # is a mess, so we'll keep mypy silent
         self._save_action = QtWidgets.QAction("Save configuration as...", self)  # type: ignore[attr-defined]
