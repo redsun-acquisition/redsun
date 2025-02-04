@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from qtpy.QtCore import Qt
 from qtpy import QtWidgets
-
-from sunflare.log import Loggable
+from qtpy.QtCore import Qt
 from sunflare.config import WidgetPositionTypes
+from sunflare.log import Loggable
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
