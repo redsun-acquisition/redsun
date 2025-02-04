@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from sunflare.view.qt import BaseQtWidget
     from sunflare.virtual import VirtualBus
 
+from redsun.common.view import ask_file_path
+
 
 class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
     """RedSun main window.
@@ -54,13 +56,14 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
 
         # let's make mypy happy...
         self._menu_bar = cast(QtWidgets.QMenuBar, self.menuBar())
-        # file = self._menu_bar.addMenu("&File")
+        file = cast(QtWidgets.QMenu, self._menu_bar.addMenu("&File"))
 
         # "File" actions
-        # TODO: something is wrong with mypy/pyright;
-        # need to adjust the type hinting before proceeding
-        # ... or alternatively just ignore the error
-        # self._save_action = QtWidgets.QAction("Save configuration as...", self)
+        # apparently importing QAction from qtpy
+        # is a mess, so we'll keep mypy silent
+        self._save_action = QtWidgets.QAction("Save configuration as...", self)  # type: ignore[attr-defined]
+        self._save_action.triggered.connect(self._save_configuration)
+        file.addAction(self._save_action)
 
     def build_view(self, widget_types: dict[str, type[BaseQtWidget]]) -> None:
         """Build the main view window.
@@ -103,3 +106,14 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         """
         for widget in self._widgets.values():
             widget.connection_phase()
+
+    def _save_configuration(self) -> None:
+        """Save the current configuration."""
+        path = ask_file_path(
+            self,
+            "Save configuration",
+            "YAML (*.yaml *.yml)",
+        )
+        if path:
+            self._config.store_yaml(path)
+            self.info(f"Configuration saved to {path}")
