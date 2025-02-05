@@ -8,8 +8,6 @@ from typing import (
     Any,
     Literal,
     NamedTuple,
-    Optional,
-    Tuple,
     TypedDict,
     get_args,
 )
@@ -24,6 +22,7 @@ from sunflare.config import (
     ControllerInfo,
     FrontendTypes,
     ModelInfo,
+    WidgetInfo,
     RedSunSessionInfo,
 )
 from sunflare.log import get_logger
@@ -39,36 +38,40 @@ if TYPE_CHECKING:
     from sunflare.view import WidgetProtocol
 
 
-class InfoBackend(TypedDict):
+class PluginInfoDict(TypedDict):
     """A support typed dictionary for backend information models.
 
     Parameters
     ----------
-    detectors : ``dict[str, DetectorModelInfo]``
-        Dictionary of detector information models.
     models : ``dict[str, ModelInfo]``
         Dictionary of model informations.
     controllers : ``dict[str, ControllerInfo]``
         Dictionary of controller informations.
+    widgets : ``dict[str, WidgetInfo]``
+        Dictionary of widget informations.
     """
 
     models: dict[str, ModelInfo]
     controllers: dict[str, ControllerInfo]
+    widgets: dict[str, WidgetInfo]
 
 
-class Backend(TypedDict):
+class PluginDict(TypedDict):
     """A support typed dictionary for backend models constructors.
 
     Parameters
     ----------
     models : ``dict[str, type[ModelProtocol]``
-        Dictionary of base models.
+        Dictionary of models classes.
     controllers : ``dict[str, type[ControllerProtocol]``
-        Dictionary of base controllers.
+        Dictionary of controllers classes.
+    widgets : ``dict[str, type[WidgetProtocol]``
+        Dictionary of widgets classes.
     """
 
     models: dict[str, type[ModelProtocol]]
     controllers: dict[str, type[ControllerProtocol]]
+    widgets: dict[str, type[WidgetProtocol]]
 
 
 class Plugin(NamedTuple):
@@ -90,7 +93,7 @@ class Plugin(NamedTuple):
 
 
 #: Plugin group names for the backend.
-PLUGIN_GROUPS = Literal["models", "controllers"]
+PLUGIN_GROUPS = Literal["models", "controllers", "widgets"]
 
 
 class PluginManager:
@@ -102,7 +105,7 @@ class PluginManager:
     @staticmethod
     def load_configuration(
         config_path: str,
-    ) -> Tuple[RedSunSessionInfo, Backend, dict[str, type[WidgetProtocol]]]:
+    ) -> tuple[RedSunSessionInfo, PluginDict]:
         """Load the configuration from a YAML file.
 
         The manager will load the configuration from the input YAML file.
@@ -116,72 +119,33 @@ class PluginManager:
 
         Returns
         -------
-        Tuple[RedSunSessionInfo, dict[str, Types], dict[str, type[BaseController]]
+        tuple[RedSunSessionInfo, dict[str, Types], dict[str, type[BaseController]]
             Redsun instance configuration and class types to build.
         """
-        widgets_config: list[str]
-
         config = RedSunSessionInfo.load_yaml(config_path)
-        try:
-            widgets_config = config.pop("widgets")
-        except KeyError:
-            # no widgets configuration found
-            widgets_config = []
 
         engine = AcquisitionEngineTypes(config.pop("engine"))
         frontend = FrontendTypes(config.pop("frontend"))
 
-        # load the backend configuration
-        types_groups, config_groups = PluginManager.load_backend(config)
-
-        # load the frontend configuration
-        frontend_types: dict[str, type[WidgetProtocol]]
-        if widgets_config:
-            frontend_types = PluginManager.load_frontend(widgets_config)
-        else:
-            frontend_types = {}
+        # load the session configuration
+        types_groups, config_groups = PluginManager.load_session(config)
 
         # build configuration
         output_config = RedSunSessionInfo(
             engine=engine, frontend=frontend, **config_groups
         )
 
-        return output_config, types_groups, frontend_types
+        return output_config, types_groups
 
     @staticmethod
-    def load_frontend(config: list[str]) -> dict[str, type[WidgetProtocol]]:
-        """Load the frontend configuration.
+    def load_session(config: dict[str, Any]) -> tuple[PluginDict, PluginInfoDict]:
+        """Load the plugins for the current session.
 
-        Parameters
-        ----------
-        config : ``list[str]``
-            List of widget class names.
+        The method will load the plugins bundled into three groups:
 
-        Returns
-        -------
-        ``dict[str, type[WidgetProtocol]]``
-            Frontend configuration.
-        """
-        # Get the entry points for the current group.
-        # Plugins not found will be tagged with None
-        plugins = entry_points(group="redsun.plugins.widgets")
-        widgets: dict[str, Optional[type[WidgetProtocol]]] = {
-            widget_name: next(
-                (ep.load() for ep in plugins if ep.name == widget_name), None
-            )
-            for widget_name in config
-        }
-
-        # Remove all entries with None values
-        filtered_widgets: dict[str, type[WidgetProtocol]] = {
-            key: value for key, value in widgets.items() if value is not None
-        }
-
-        return filtered_widgets
-
-    @staticmethod
-    def load_backend(config: dict[str, Any]) -> Tuple[Backend, InfoBackend]:
-        """Load the backend configuration.
+        - models ("redsun.plugins.models" and "redsun.plugins.models.config");
+        - controllers ("redsun.plugins.controllers" and "redsun.plugins.controllers.config");
+        - widgets ("redsun.plugins.widgets" and "redsun.plugins.widgets.config").
 
         Parameters
         ----------
@@ -190,12 +154,12 @@ class PluginManager:
 
         Returns
         -------
-        Backend
-            Backend configuration.
+        ``tuple[PluginDict, PluginInfoDict]``
+            Full configuration for the current session.
         """
-        groups: list[PLUGIN_GROUPS] = list(get_args(PLUGIN_GROUPS))
-        config_groups = InfoBackend(models={}, controllers={})
-        types_groups = Backend(models={}, controllers={})
+        groups: set[PLUGIN_GROUPS] = set(get_args(PLUGIN_GROUPS))
+        config_groups = PluginInfoDict(models={}, controllers={}, widgets={})
+        types_groups = PluginDict(models={}, controllers={}, widgets={})
 
         for group in groups:
             # if the group is not in
@@ -203,7 +167,7 @@ class PluginManager:
             if group not in config:
                 continue
 
-            loaded_plugins = PluginManager.load_backend_plugins(group)
+            loaded_plugins = PluginManager.load_plugins(group)
 
             # if the plugin is a model, we use the "model_name" key
             # to correctily recognize the builder; otherwise,
@@ -212,7 +176,7 @@ class PluginManager:
             class_name_key = "model_name" if group == "models" else ""
 
             for plugin_id, plugin_config in config[group].items():
-                if group == "controllers":
+                if group != "models":
                     class_name_key = plugin_id
                     info = loaded_plugins[plugin_id].info
                     base_class = loaded_plugins[plugin_id].base_class
@@ -224,22 +188,31 @@ class PluginManager:
                         plugin_config[class_name_key]
                     ].base_class
 
-                # type checker complains about the assignment because
-                # it doesn't discern between type[object] and type[ModelInfo] or type[ControllerInfo];
-                # the assignment is correct, so we ignore the warning
+                # mypy complains about the assignment because it doesn't discern
+                # between type[object] and the specific plugin info type;
+                # still, the assignment is correct, so we ignore the warning
                 config_groups[group][plugin_id] = info(**plugin_config)  # type: ignore[assignment]
                 types_groups[group][plugin_id] = base_class  # type: ignore[assignment]
 
         return types_groups, config_groups
 
     @staticmethod
-    def load_backend_plugins(group: PLUGIN_GROUPS) -> dict[str, Plugin]:
+    def load_plugins(group: PLUGIN_GROUPS) -> dict[str, Plugin]:
         """Load the plugins.
+
+        The method will inspect the entry points corresponding to
+        ``redsun.plugins.{group}`` and ``redsun.plugins.{group}.config``.
+
+        Plugins are expected to have a corresponding information class
+        that is a subclass of ``ModelInfo``, ``ControllerInfo``, or ``WidgetInfo``.
+
+        Whenever a plugin is found that does not have a corresponding information class,
+        a warning will be issued, and the plugin will not be loaded.
 
         Parameters
         ----------
-        config : ``dict[str, Any]``
-            The configuration dictionary.
+        group : ``Literal["models", "controllers", "widgets"]``
+            The group of plugins to load.
 
         Returns
         -------
@@ -259,7 +232,7 @@ class PluginManager:
 
         # the two lists must have the same length
         if len(info_plugins) != len(plugins):
-            # find the model plugins that do not have a
+            # find the plugins that do not have a
             # corresponding info plugin and remove them
             missing_plugins = [
                 ep for ep in plugins if ep.name not in [ep.name for ep in info_plugins]
@@ -268,7 +241,7 @@ class PluginManager:
                 plugins.remove(missing_plugin)
             missing_plugins_values = [ep.value for ep in missing_plugins]
             logger.warning(
-                f"The following classes do not have a corresponding information model: {missing_plugins_values}. They will not be loaded."
+                f"The following classes do not have a corresponding information container: {missing_plugins_values}. They will not be loaded."
             )
 
         for info_ep in info_plugins:
@@ -282,7 +255,7 @@ class PluginManager:
             if not any(
                 [
                     issubclass(info_builder, info_type)
-                    for info_type in [ModelInfo, ControllerInfo]
+                    for info_type in [ModelInfo, ControllerInfo, WidgetInfo]
                 ]
             ):
                 logger.warning(
@@ -292,7 +265,7 @@ class PluginManager:
                 )
                 continue
             base_class = plugin_ep.load()
-            # the model key is the last part of the value
+            # the class key is the last part of the value
             model_key = plugin_ep.value.split(":")[-1]
             output_plugins[model_key] = Plugin(
                 name=model_key, info=info_builder, base_class=base_class

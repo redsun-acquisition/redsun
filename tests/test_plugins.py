@@ -29,7 +29,7 @@ def test_load_motor_plugins(config_path: Path, mock_motor_entry_points: Callable
     with patch('redsun.controller.plugins.entry_points', mock_ep):
 
         # Then test through the plugin manager
-        config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
+        config, types_groups = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
 
         assert isinstance(config, RedSunSessionInfo)
         assert len(types_groups["models"]) == 2
@@ -58,7 +58,7 @@ def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Ca
     with patch('redsun.controller.plugins.entry_points', mock_ep):
 
         # Then test through the plugin manager
-        config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_detector_config.yaml"))
+        config, types_groups = PluginManager.load_configuration(str(config_path / "mock_detector_config.yaml"))
 
         assert isinstance(config, RedSunSessionInfo)
         assert len(config.models) == 2
@@ -73,7 +73,7 @@ def test_load_controller_plugins(config_path: Path, mock_controller_entry_points
     with patch('redsun.controller.plugins.entry_points', mock_ep):
 
         # Then test through the plugin manager
-        config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_controller_config.yaml"))
+        config, types_groups = PluginManager.load_configuration(str(config_path / "mock_controller_config.yaml"))
 
         assert isinstance(config, RedSunSessionInfo)
         assert len(config.controllers) == 1
@@ -97,7 +97,7 @@ def test_errors_plugin_loading(config_path: Path, mock_entry_points: Callable[[s
 
     # Need to patch where entry_points is imported, not where it's defined
     with patch('redsun.controller.plugins.entry_points', mock_ep):
-        config, types_groups, _ = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
+        config, types_groups = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
         assert config.models == {}
         assert config.controllers == {}
         assert len(types_groups["models"]) == 0
