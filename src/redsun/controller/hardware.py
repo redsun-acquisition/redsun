@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from sunflare.model import ModelProtocol
     from sunflare.virtual import VirtualBus
 
-    from redsun.controller.plugins import Backend
+    from redsun.controller.plugins import PluginDict
 
 
 class RedSunMainHardwareController(Loggable):
@@ -36,7 +36,7 @@ class RedSunMainHardwareController(Loggable):
         self,
         config: RedSunSessionInfo,
         virtual_bus: VirtualBus,
-        classes: Backend,
+        classes: PluginDict,
     ):
         self.config = config
         self.virtual_bus = virtual_bus

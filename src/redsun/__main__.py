@@ -59,13 +59,13 @@ def main(input_config: str) -> None:
     virtual_bus = VirtualBus()
 
     # get the startup configuration
-    config, types_groups, widgets = PluginManager.load_configuration(input_config)
+    config, types_groups = PluginManager.load_configuration(input_config)
 
     # build the controller layer
     controller = RedSunMainHardwareController(config, virtual_bus, types_groups)
 
     # build the view layer
-    view = build_view_layer(config, widgets, virtual_bus)
+    view = build_view_layer(config, types_groups["widgets"], virtual_bus)
 
     # connect the controller and the view to the virtual layer
     controller.connect_to_virtual()
