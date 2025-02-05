@@ -128,7 +128,7 @@ class PluginManager:
         frontend = FrontendTypes(config.pop("frontend"))
 
         # load the session configuration
-        types_groups, config_groups = PluginManager.load_session(config)
+        types_groups, config_groups = PluginManager.__load_session(config)
 
         # build configuration
         output_config = RedSunSessionInfo(
@@ -138,7 +138,7 @@ class PluginManager:
         return output_config, types_groups
 
     @staticmethod
-    def load_session(config: dict[str, Any]) -> tuple[PluginDict, PluginInfoDict]:
+    def __load_session(config: dict[str, Any]) -> tuple[PluginDict, PluginInfoDict]:
         """Load the plugins for the current session.
 
         The method will load the plugins bundled into three groups:
@@ -167,7 +167,7 @@ class PluginManager:
             if group not in config:
                 continue
 
-            loaded_plugins = PluginManager.load_plugins(group)
+            loaded_plugins = PluginManager.__load_plugins(group)
 
             # if the plugin is a model, we use the "model_name" key
             # to correctily recognize the builder; otherwise,
@@ -197,7 +197,7 @@ class PluginManager:
         return types_groups, config_groups
 
     @staticmethod
-    def load_plugins(group: PLUGIN_GROUPS) -> dict[str, Plugin]:
+    def __load_plugins(group: PLUGIN_GROUPS) -> dict[str, Plugin]:
         """Load the plugins.
 
         The method will inspect the entry points corresponding to
