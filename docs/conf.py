@@ -50,6 +50,12 @@ html_theme_options = {
    ]
 }
 
+html_context = {
+    # this doesn't really matter;
+    # adding it only for completion
+    "default_mode": "auto",
+}
+
 source_suffix = {
     '.rst': 'restructuredtext',
     '.md': 'markdown',
