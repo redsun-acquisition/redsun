@@ -24,11 +24,12 @@ dependencies = [
 requires-python = ">=3.9"
 
 [project.optional-dependencies]
-pyqt = ["sunflare[pyqt"]
+pyqt = ["sunflare[pyqt]"]
 pyside = ["sunflare[pyside]"]
 docs = [
     "sphinx",
     "pydata-sphinx-theme",
+    "sphinx-design",
     "myst-parser"
 ]
 dev = [

@@ -18,12 +18,12 @@ if TYPE_CHECKING:
 
 
 class RedSunMainHardwareController(Loggable):
-    """RedSun main hardware controller.
+    """Redsun main hardware controller.
 
     Parameters
     ----------
     config : RedSunSessionInfo
-        RedSun configuration.
+        Redsun configuration.
     virtual_bus : HardwareVirtualBus
         Hardware virtual bus.
     module_bus : ModuleVirtualBus

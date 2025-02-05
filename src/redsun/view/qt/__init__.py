@@ -35,7 +35,7 @@ def build_view_layer(
     Parameters
     ----------
     config : RedSunSessionInfo
-        RedSun configuration.
+        Redsun configuration.
     widgets : dict[str, type[WidgetProtocol]]
         Dictionary of widgets.
     """

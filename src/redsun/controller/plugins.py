@@ -117,7 +117,7 @@ class PluginManager:
         Returns
         -------
         Tuple[RedSunSessionInfo, dict[str, Types], dict[str, type[BaseController]]
-            RedSun instance configuration and class types to build.
+            Redsun instance configuration and class types to build.
         """
         widgets_config: list[str]
 

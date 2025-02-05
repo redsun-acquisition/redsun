@@ -1,11 +1,11 @@
 """
-The ``factory`` module contains all the tooling necessary for the dynamic building of internal components of RedSun.
+The ``factory`` module contains all the tooling necessary for the dynamic building of internal components of Redsun.
 
-RedSun operates by dynamically loading external plugins with different archetypes
+Redsun operates by dynamically loading external plugins with different archetypes
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
 
-This module operates within the RedSun core code and is not exposed to the toolkit or the user.
+This module operates within the Redsun core code and is not exposed to the toolkit or the user.
 """
 
 from __future__ import annotations

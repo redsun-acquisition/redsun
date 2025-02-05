@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug in RedSun to help us improve
+about: Report a bug in Redsun to help us improve
 title: "[BUG] Bug report"
 labels: bug
 assignees: ''

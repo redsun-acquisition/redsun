@@ -1,4 +1,4 @@
-"""RedSun main view window."""
+"""Redsun main view window."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from redsun.common.qt import ask_file_path
 
 
 class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
-    """RedSun main window.
+    """Redsun main window.
 
     Parameters
     ----------

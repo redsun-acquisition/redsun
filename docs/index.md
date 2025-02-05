@@ -1,14 +1,14 @@
-# RedSun
+# Redsun
 
 ```{warning}
 This project is currently under active development and it may (and most likely will) receive breaking changes. Use at your own risk.
 ```
 
-RedSun is an acquisition software written in [CPython], with the concept of building modular user interfaces for scientific data acquisition.
+Redsun is an acquisition software written in [CPython], with the concept of building modular user interfaces for scientific data acquisition.
 
 It leverages the [Bluesky] ecosystem to provide a flexible, hardware-agnostic and unopinionated framework for building a control software tailored to the specific needs of different users in different scientific fields.
 
-The philosophy of RedSun is to:
+The philosophy of Redsun is to:
 
 - not "reinvent the wheel", but rather "ship the tools to build the wheel";
 - be extensible and modular: pick only the tools you need to get the job done;
@@ -20,7 +20,6 @@ The philosophy of RedSun is to:
 :maxdepth: 1
 
 getting_started/index
-api/index
 ```
 
 ## Indices and tables

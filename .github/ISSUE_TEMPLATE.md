@@ -1,4 +1,4 @@
-* RedSun version:
+* Redsun version:
 * Python version:
 * Operating System:
 

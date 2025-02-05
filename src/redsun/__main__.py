@@ -1,4 +1,4 @@
-"""RedSun main entry point."""
+"""Redsun main entry point."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def parse_args() -> RedSunArgs:
         Parsed command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description="RedSun: event-driven data acquisition system"
+        description="Redsun: event-driven data acquisition system"
     )
     parser.add_argument(
         "-c",
@@ -78,7 +78,7 @@ def main(input_config: str) -> None:
 
 
 def main_cli() -> None:
-    """Command line entry point for the RedSun application."""
+    """Command line entry point for the Redsun application."""
     args = parse_args()
     main(args.config)
 
