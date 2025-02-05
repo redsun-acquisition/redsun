@@ -124,15 +124,19 @@ class PluginManager:
         """
         config = RedSunSessionInfo.load_yaml(config_path)
 
-        engine = AcquisitionEngineTypes(config.pop("engine"))
-        frontend = FrontendTypes(config.pop("frontend"))
+        session = config.pop("session", "Redsun")
+        try:
+            engine = AcquisitionEngineTypes(config.pop("engine"))
+            frontend = FrontendTypes(config.pop("frontend"))
+        except KeyError as e:
+            raise KeyError(f"Configuration file {config_path} is missing the key {e}.")
 
         # load the session configuration
         types_groups, config_groups = PluginManager.__load_session(config)
 
         # build configuration
         output_config = RedSunSessionInfo(
-            engine=engine, frontend=frontend, **config_groups
+            session=session, engine=engine, frontend=frontend, **config_groups
         )
 
         return output_config, types_groups
