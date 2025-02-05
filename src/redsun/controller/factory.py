@@ -10,7 +10,7 @@ This module operates within the Redsun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Mapping, Optional
+from typing import TYPE_CHECKING, Mapping, Optional, ClassVar
 
 from sunflare.log import get_logger
 
@@ -28,7 +28,7 @@ __all__ = ["Factory"]
 class Factory:
     """Internal factory  class."""
 
-    _logger: logging.Logger = get_logger()
+    _logger: ClassVar[logging.Logger] = get_logger()
 
     @classmethod
     def build_model(
