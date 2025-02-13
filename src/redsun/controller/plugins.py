@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import sys
+import logging
+
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -25,7 +27,6 @@ from sunflare.config import (
     WidgetInfo,
     RedSunSessionInfo,
 )
-from sunflare.log import get_logger
 
 if TYPE_CHECKING:
     if sys.version_info < (3, 10):
@@ -223,7 +224,7 @@ class PluginManager:
         ``dict[str, Plugin]``
             The plugin configuration and base classes.
         """
-        logger = get_logger()
+        logger = logging.getLogger("redsun")
 
         output_plugins: dict[str, Plugin] = {}
 

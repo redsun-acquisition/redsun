@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Mapping, Optional, ClassVar
 
-from sunflare.log import get_logger
-
 if TYPE_CHECKING:
     import logging
 
@@ -28,7 +26,7 @@ __all__ = ["Factory"]
 class Factory:
     """Internal factory  class."""
 
-    _logger: ClassVar[logging.Logger] = get_logger()
+    _logger: ClassVar[logging.Logger] = logging.getLogger("redsun")
 
     @classmethod
     def build_model(
