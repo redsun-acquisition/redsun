@@ -1,12 +1,9 @@
-from typing import ClassVar
-
 from attrs import define
 
 from sunflare.config import ControllerInfo
 from sunflare.controller import ControllerProtocol
 from sunflare.model import ModelProtocol
 from sunflare.virtual import VirtualBus
-from psygnal import SignalGroupDescriptor
 
 @define(kw_only=True)
 class MockControllerInfo(ControllerInfo):
