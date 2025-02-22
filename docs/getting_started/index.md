@@ -35,15 +35,15 @@ mamba activate redsun-env
 :::
 ::::
 
-The package is currently not available on PyPI. You'll have to install it from source by cloning the [repository].
-
-You'll also need to install the [Sunflare] package, Redsun's toolkit. It is currently available on PyPI.
+The package available on PyPI. You can install it via the following command in your active environment:
 
 ```bash
-# first install the Sunflare package...
-pip install -U sunflare
+pip install -U redsun
+```
 
-# ... then clone the Redsun repository and install it
+Alternatively, you can install by locally cloning the repository:
+
+```bash
 git clone https://github.com/redsun-acquisition/redsun.git
 cd redsun
 pip install -e .
@@ -53,7 +53,7 @@ pip install -e .
 
 ### Building the documentation
 
-You can build the documentation by running the following command:
+If you have cloned the repository locally, you can build the documentation by running the following command:
 
 ```bash
 cd docs
@@ -64,6 +64,24 @@ make.bat html
 ```
 
 You can then inspect the documentation in the `docs/_build/html` directory by opening the `index.html` file in your browser.
+
+### Running tests
+
+If you have cloned the repository locally, you can run tests via `pytest` as follows:
+
+```bash
+pip install -e .[dev]
+
+pytest
+```
+
+You can get a report of test coverage via the comand:
+
+```bash
+pytest --cov=redsun --cov-report=html
+```
+
+This will generate a coverage report in the folder `htmlcov`. You can inspect the report by opening the `index.html` file in your browser.
 
 [conda]: https://docs.conda.io/en/latest/
 [mamba]: https://mamba.readthedocs.io/en/latest/
