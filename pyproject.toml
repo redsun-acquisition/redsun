@@ -10,11 +10,18 @@ readme = "README.md"
 authors = [{ name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com" }]
 maintainers = [{ name = "Jacopo Abramo", email = "jacopo.abramo@gmail.com" }]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+    "License :: OSI Approved :: Apache Software License",
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
