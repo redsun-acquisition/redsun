@@ -70,9 +70,6 @@ include = [
   "tests/**",
 ]
 
-# mypy
-# ----
-
 [tool.mypy]
 files = "."
 exclude = ["docs", "tests"]
@@ -89,8 +86,11 @@ warn_no_return = true
 module = "tests.*"
 disable_error_code = "attr-defined"
 
-# ruff
-# ----
+[tool.coverage.run]
+source = ["sunflare"]
+omit = [
+    "tests/conftest.py",
+]
 
 [tool.ruff]
 target-version = "py39"
