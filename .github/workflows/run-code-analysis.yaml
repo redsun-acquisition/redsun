@@ -42,4 +42,4 @@ jobs:
           python -m pip install -e .[${{ matrix.frontend }}]
       - name: Run mypy
         run: |
-          mypy src/redsun --ignore-missing-imports
+          mypy src/redsun --ignore-missing-imports $(qtpy mypy-args)
