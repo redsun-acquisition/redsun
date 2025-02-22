@@ -31,6 +31,12 @@ def ask_file_path(
     saving : bool, optional
         True if the dialog is for saving a file, False otherwise.
         Default is True.
+
+    Returns
+    -------
+    Optional[str]
+        Path to the selected file or None if the user cancels the dialog.
+
     """
     if saving:
         dialog = QtWidgets.QFileDialog.getSaveFileName
