@@ -1,5 +1,6 @@
-# noqa : D100
+from importlib.metadata import PackageNotFoundError, version
+
 try:
-    from ._version import version as __version__  # type: ignore[import-not-found]
-except ImportError:
+    __version__ = version("redsun")
+except PackageNotFoundError:
     __version__ = "unknown"
