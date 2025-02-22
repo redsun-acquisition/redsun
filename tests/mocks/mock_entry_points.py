@@ -12,7 +12,6 @@ if sys.version_info >= (3, 10):
 else:
     from importlib_metadata import EntryPoint
 
-"""Motor defined without config entry point."""
 def mocked_motor_missing_entry_points(group: str) -> list[EntryPoint]:
     plugins = []
 
@@ -22,7 +21,7 @@ def mocked_motor_missing_entry_points(group: str) -> list[EntryPoint]:
             value="mock_motor:MockMotor",
             group="redsun.plugins.models",
         )
-        model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
+        object.__setattr__(model_ep, "load", MagicMock(return_value=MockMotor))
         plugins.append(model_ep)
     return plugins
 
@@ -52,7 +51,7 @@ def mocked_motor_non_derived_info_entry_points(group: str) -> list[EntryPoint]:
             value="mock_motor:NonDerivedDetectorInfo",
             group="redsun.plugins.models.config",
         )
-        info_ep.load = MagicMock(return_value=NonDerivedMotorInfo) # type: ignore
+        object.__setattr__(info_ep, "load", MagicMock(return_value=NonDerivedMotorInfo))
         plugins.append(info_ep)
 
     if group == "redsun.plugins.models":
@@ -61,7 +60,7 @@ def mocked_motor_non_derived_info_entry_points(group: str) -> list[EntryPoint]:
             value="mock_motor:MockMotor",
             group="redsun.plugins.models",
         )
-        model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
+        object.__setattr__(model_ep, "load", MagicMock(return_value=MockMotor))
         plugins.append(model_ep)
     return plugins
 
