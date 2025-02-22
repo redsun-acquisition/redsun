@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sunflare.controller import HasConnection, HasRegistration
 from sunflare.log import Loggable
 
-from redsun.controller.factory import Factory
+from redsun.controller.factory import BackendFactory
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from redsun.controller.plugins import PluginDict
 
 
-class RedSunMainHardwareController(Loggable):
+class RedsunController(Loggable):
     """Redsun main hardware controller.
 
     Parameters
@@ -67,7 +68,7 @@ class RedSunMainHardwareController(Loggable):
         # build models
         for model_name, model_info in models_info.items():
             model_class = self.classes["models"][model_name]
-            model_obj = Factory.build_model(
+            model_obj = BackendFactory.build_model(
                 name=model_name,
                 model_class=model_class,
                 model_info=model_info,
@@ -79,7 +80,7 @@ class RedSunMainHardwareController(Loggable):
         # build controllers
         for ctrl_name, ctrl_info in controllers_info.items():
             ctrl_class = self.classes["controllers"][ctrl_name]
-            controller = Factory.build_controller(
+            controller = BackendFactory.build_controller(
                 name=ctrl_name,
                 ctrl_info=ctrl_info,
                 ctrl_class=ctrl_class,
@@ -90,11 +91,13 @@ class RedSunMainHardwareController(Loggable):
                 continue
             self.controllers[ctrl_name] = controller
 
-        # register signals...
+        # register any sender controller
         for ctrl in self.controllers.values():
-            ctrl.registration_phase()
+            if isinstance(ctrl, HasRegistration):
+                ctrl.registration_phase()
 
     def connect_to_virtual(self) -> None:
-        """Connect the controller to the virtual layer."""
+        """Connect any receiver controller to the virtual bus."""
         for ctrl in self.controllers.values():
-            ctrl.connection_phase()
+            if isinstance(ctrl, HasConnection):
+                ctrl.connection_phase()

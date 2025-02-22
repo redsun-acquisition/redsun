@@ -1,4 +1,4 @@
-from .hardware import RedSunMainHardwareController
+from .hardware import RedsunController
 from .plugins import PluginManager
 
-__all__ = ["RedSunMainHardwareController", "PluginManager"]
+__all__ = ["RedsunController", "PluginManager"]

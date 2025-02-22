@@ -10,25 +10,22 @@ This module operates within the Redsun core code and is not exposed to the toolk
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Mapping, Optional, ClassVar
-
-from sunflare.log import get_logger
+import logging
+from typing import TYPE_CHECKING, ClassVar, Mapping, Optional
 
 if TYPE_CHECKING:
-    import logging
-
     from sunflare.config import ControllerInfo, ModelInfo
     from sunflare.controller import ControllerProtocol
     from sunflare.model import ModelProtocol
     from sunflare.virtual import VirtualBus
 
-__all__ = ["Factory"]
+__all__ = ["BackendFactory"]
 
 
-class Factory:
+class BackendFactory:
     """Internal factory  class."""
 
-    _logger: ClassVar[logging.Logger] = get_logger()
+    _logger: ClassVar[logging.Logger] = logging.getLogger("redsun")
 
     @classmethod
     def build_model(

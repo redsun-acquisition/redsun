@@ -87,7 +87,7 @@ disable_error_code = "attr-defined"
 
 [tool.ruff]
 target-version = "py39"
-extend-exclude = ["docs", "tests", "noxfile.py"]
+extend-exclude = ["docs", "tests"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -96,7 +96,6 @@ docstring-code-format = true
 extend-select = [
     "D", # enable docstring checks
     "I", # enable imports checks
-    "TC", # enable type check imports
     "FA102", # force __future__ imports
 ] 
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/

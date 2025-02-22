@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from typing import (
     TYPE_CHECKING,
@@ -22,10 +23,9 @@ from sunflare.config import (
     ControllerInfo,
     FrontendTypes,
     ModelInfo,
-    WidgetInfo,
     RedSunSessionInfo,
+    WidgetInfo,
 )
-from sunflare.log import get_logger
 
 if TYPE_CHECKING:
     if sys.version_info < (3, 10):
@@ -36,6 +36,8 @@ if TYPE_CHECKING:
     from sunflare.controller import ControllerProtocol
     from sunflare.model import ModelProtocol
     from sunflare.view import WidgetProtocol
+
+logger = logging.getLogger("redsun")
 
 
 class PluginInfoDict(TypedDict):
@@ -223,8 +225,6 @@ class PluginManager:
         ``dict[str, Plugin]``
             The plugin configuration and base classes.
         """
-        logger = get_logger()
-
         output_plugins: dict[str, Plugin] = {}
 
         # get the entry points for the current group
