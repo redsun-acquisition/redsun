@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
@@ -51,11 +51,14 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         self._widgets: dict[str, BaseQtWidget] = {}
         self.build_view(widgets)
 
-        self._menu_bar: QtWidgets.QMenuBar
-
-        # making mypy happy with qtpy is hard
-        self._menu_bar = cast(QtWidgets.QMenuBar, self.menuBar())
-        file = cast(QtWidgets.QMenu, self._menu_bar.addMenu("&File"))
+        # making mypy happy with qtpy is hard;
+        # using assert helps with the type checking;
+        # not the best practice but it should
+        # help with different Qt backends
+        self._menu_bar = self.menuBar()
+        assert self._menu_bar is not None
+        file = self._menu_bar.addMenu("&File")
+        assert file is not None
 
         # apparently importing QAction from qtpy
         # is a mess, so we'll keep mypy silent
