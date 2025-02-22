@@ -18,7 +18,7 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "sunflare",
+    "sunflare>=0.4.0",
     "importlib_metadata; python_version < '3.10'",
 ]
 requires-python = ">=3.9"
@@ -39,7 +39,6 @@ dev = [
   "mypy"
 ]
 
-
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
 changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"
@@ -51,16 +50,27 @@ redsun = "redsun.__main__:main_cli"
 [tool.hatch.version]
 source = "vcs"
 
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/redsun"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/redsun/*.py",
+  "src/redsun/docs/**",
+  "tests/**",
+]
 
 # mypy
 # ----
 
 [tool.mypy]
 files = "."
-exclude = ["docs", "tests", "noxfile.py"]
+exclude = ["docs", "tests"]
 disable_error_code = ["import-untyped"]
+pretty = true
 
 # Use strict defaults
 strict = true
@@ -83,7 +93,12 @@ extend-exclude = ["docs", "tests", "noxfile.py"]
 docstring-code-format = true
 
 [tool.ruff.lint]
-extend-select = ["D"]
+extend-select = [
+    "D", # enable docstring checks
+    "I", # enable imports checks
+    "TC", # enable type check imports
+    "FA102", # force __future__ imports
+] 
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.pydocstyle]
