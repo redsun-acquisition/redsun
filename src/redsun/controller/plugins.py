@@ -225,6 +225,8 @@ class PluginManager:
         ``dict[str, Plugin]``
             The plugin configuration and base classes.
         """
+        logger = logging.getLogger("redsun")
+
         output_plugins: dict[str, Plugin] = {}
 
         # get the entry points for the current group
