@@ -12,7 +12,7 @@ def ask_file_path(
     title: str,
     file_filter: str,
     *,
-    folder: Optional[str] = None,
+    folder: str,
     saving: bool = True,
 ) -> Optional[str]:
     """Ask the user for a file path.
@@ -36,5 +36,5 @@ def ask_file_path(
         dialog = QtWidgets.QFileDialog.getSaveFileName
     else:
         dialog = QtWidgets.QFileDialog.getOpenFileName
-    path, _ = dialog(parent=parent, caption=title, directory=folder, filter=file_filter)
+    path, _ = dialog(parent, title, folder, file_filter)
     return path if path else None

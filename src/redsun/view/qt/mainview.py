@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.config import WidgetPositionTypes
@@ -114,6 +115,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
             self,
             "Save configuration",
             "YAML (*.yaml *.yml)",
+            folder=user_documents_dir(),
         )
         if path:
             self._config.store_yaml(path)
