@@ -1,5 +1,3 @@
 # Changelog
 
-## 0.1.0 (2024-10-10)
-
-* Initial commit (not yet released)
+For more information, see the [changelog](https://redsun-acquisition.github.io/redsun/main/changelog/).
