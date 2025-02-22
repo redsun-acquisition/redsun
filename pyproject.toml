@@ -57,9 +57,6 @@ redsun = "redsun.__main__:main_cli"
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.build.hooks.vcs]
-version-file = "_version.py"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/redsun"]
 
