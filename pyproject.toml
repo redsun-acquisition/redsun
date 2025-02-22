@@ -85,7 +85,7 @@ module = "tests.*"
 disable_error_code = "attr-defined"
 
 [tool.coverage.run]
-source = ["sunflare"]
+source = ["redsun"]
 omit = [
     "tests/conftest.py",
 ]
