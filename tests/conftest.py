@@ -30,7 +30,7 @@ def mock_detector_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_detector:MockDetectorInfo",
                 group="redsun.plugins.models.config",
             )
-            info_ep.load = MagicMock(return_value=MockDetectorInfo) # type: ignore
+            object.__setattr__(info_ep, "load", MagicMock(return_value=MockDetectorInfo))
             plugins.append(info_ep)
 
         if group == "redsun.plugins.models":
@@ -39,7 +39,7 @@ def mock_detector_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_detector:MockDetector",
                 group="redsun.plugins.models",
             )
-            model_ep.load = MagicMock(return_value=MockDetector) # type: ignore
+            object.__setattr__(model_ep, "load", MagicMock(return_value=MockDetector))
             plugins.append(model_ep)
 
         return plugins
@@ -58,7 +58,7 @@ def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_motor:MockMotorInfo",
                 group="redsun.plugins.models.config",
             )
-            info_ep.load = MagicMock(return_value=MockMotorInfo) # type: ignore
+            object.__setattr__(info_ep, "load", MagicMock(return_value=MockMotorInfo))
             plugins.append(info_ep)
 
         if group == "redsun.plugins.models":
@@ -67,7 +67,7 @@ def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_motor:MockMotor", 
                 group="redsun.plugins.models"
             )
-            model_ep.load = MagicMock(return_value=MockMotor) # type: ignore
+            object.__setattr__(model_ep, "load", MagicMock(return_value=MockMotor))
             plugins.append(model_ep)
 
         return plugins
@@ -86,7 +86,7 @@ def mock_controller_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_controller:MockControllerInfo",
                 group="redsun.plugins.controllers.config",
             )
-            info_ep.load = MagicMock(return_value=MockControllerInfo) # type: ignore
+            object.__setattr__(info_ep, "load", MagicMock(return_value=MockControllerInfo))
             plugins.append(info_ep)
         if group == "redsun.plugins.controllers":
             model_ep = EntryPoint(
@@ -94,7 +94,7 @@ def mock_controller_entry_points() -> Callable[[str], list[EntryPoint]]:
                 value="mock_controller:MockController",
                 group="redsun.plugins.controllers",
             )
-            model_ep.load = MagicMock(return_value=MockController) # type: ignore
+            object.__setattr__(model_ep, "load", MagicMock(return_value=MockController))
             plugins.append(model_ep)
         
         return plugins
