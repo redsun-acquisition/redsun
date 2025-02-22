@@ -8,6 +8,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import sys
+from importlib.metadata import version as get_version
 from pathlib import Path
 
 sys.path.insert(0, str(Path('..', 'src').resolve()))
@@ -16,6 +17,7 @@ project = 'Redsun'
 copyright = '2024, Jacopo Abramo'
 author = 'Jacopo Abramo'
 
+version = get_version("redsun").split(".dev")[0]
 github_user = "redsun-acquisition"
 github_repo = "redsun"
 
@@ -47,7 +49,12 @@ html_theme_options = {
             "icon": "fa-brands fa-square-github",
             "type": "fontawesome",
         }
-   ]
+   ],
+    "switcher": {
+        "json_url": "https://redsun-acquisition.github.io/redsun/main/_static/switcher.json",
+        "version_match": version,
+    },
+    "navbar_start": ["navbar-logo", "version-switcher"],
 }
 
 html_context = {

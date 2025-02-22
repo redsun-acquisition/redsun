@@ -1,0 +1,41 @@
+name: Run tests
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      event_name:
+        required: true
+        type: string
+    secrets:
+      codecov_token:
+        required: false
+
+env:
+  PROJECT_NAME: redsun
+
+jobs:
+  test:
+    name: Test
+    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v2
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      extras: "dev"
+      pip-install-flags: --editable
+      coverage-upload: artifact
+      pytest-args: "--log-cli-level=DEBUG"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    
+  upload_coverage:
+    if: always()
+    needs: [test]
+    uses: pyapp-kit/workflows/.github/workflows/upload-coverage.yml@v2
+    secrets:
+        codecov_token: ${{ secrets.codecov_token }}

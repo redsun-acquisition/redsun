@@ -1,18 +1,11 @@
 name: Publish documentation
 
 on:
-  push:
-    tags:
-      - "*"
-    branches:
-      - main
-    paths:
-      - "docs/**"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "docs/**"
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
 
 jobs:
   publish-docs:
@@ -22,24 +15,29 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Install hatch and build tools
-        run: |
-          pipx install hatch
-          pip install -U pip hatchling
       - name: install dependencies
         run: |
-          pip install -e .[docs]
+          pip install --upgrade pip
+          pip install --editable .[docs]
       - name: build docs
         run: |
           cd docs
           make dirhtml
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: docs/_build/dirhtml
       - name: deploy on gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           publish_branch: gh-pages
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          external_repository: redsun-acquisition/redsun-acquisition.github.io
+          personal_token: ${{ secrets.REDSUN_DOCS_PUBLISH_TOKEN }}
           publish_dir: docs/_build/dirhtml
-          force_orphan: true
+          destination_dir: redsun/${{github.ref_name}}
