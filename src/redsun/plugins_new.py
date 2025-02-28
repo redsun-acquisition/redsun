@@ -159,6 +159,22 @@ def load_configuration(
 def _load_plugins(
     config: dict[str, Any], group: str, available_manifests: EntryPoints
 ) -> list[Plugin[PluginInfo, PluginType]]:
+    """Load a plugin group.
+
+    Parameters
+    ----------
+    config : ``dict[str, Any]``
+        Configuration read from the YAML file.
+    group : ``str``
+        The group of plugins to load.
+    available_manifests : ``EntryPoints``
+        The available entry points.
+
+    Returns
+    -------
+    ``list[Plugin[PluginInfo, PluginType]]``
+        A list of loaded plugins for the group.
+    """
     plugins: list[Plugin[PluginInfo, PluginType]] = []
 
     group_cfg: dict[str, Any] = config[group]
