@@ -14,7 +14,7 @@ import logging
 from typing import TYPE_CHECKING, ClassVar, Mapping, Optional
 
 if TYPE_CHECKING:
-    from sunflare.config import ControllerInfo, ModelInfo
+    from sunflare.config import ControllerInfoProtocol, ModelInfoProtocol
     from sunflare.controller import ControllerProtocol
     from sunflare.model import ModelProtocol
     from sunflare.virtual import VirtualBus
@@ -32,7 +32,7 @@ class BackendFactory:
         cls,
         name: str,
         model_class: type[ModelProtocol],
-        model_info: ModelInfo,
+        model_info: ModelInfoProtocol,
     ) -> Optional[ModelProtocol]:
         """Build the detector model.
 
@@ -60,7 +60,7 @@ class BackendFactory:
     def build_controller(
         cls,
         name: str,
-        ctrl_info: ControllerInfo,
+        ctrl_info: ControllerInfoProtocol,
         ctrl_class: type[ControllerProtocol],
         models: Mapping[str, ModelProtocol],
         virtual_bus: VirtualBus,

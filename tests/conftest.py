@@ -1,101 +1,51 @@
 import pytest
-from unittest.mock import MagicMock
-
-from typing import Callable
 from importlib.metadata import EntryPoint
 from pathlib import Path
-
-from mocks import (
-    MockMotor, 
-    MockMotorInfo, 
-    MockDetector, 
-    MockDetectorInfo,
-    MockController,
-    MockControllerInfo,
-)
+from unittest import mock
 
 @pytest.fixture
-def config_path() -> Path:
-    return Path(__file__).parent / "mocks" / "configs"
+def mock_plugin_entry_point():
+    """Set up mock entry points for testing."""
 
-@pytest.fixture
-def mock_detector_entry_points() -> Callable[[str], list[EntryPoint]]:
-
-    def mocked_detector_entry_points(group: str) -> list[EntryPoint]:
-        plugins = []
-
-        if group == "redsun.plugins.models.config":
-            info_ep = EntryPoint(
-                name="detector",
-                value="mock_detector:MockDetectorInfo",
-                group="redsun.plugins.models.config",
-            )
-            object.__setattr__(info_ep, "load", MagicMock(return_value=MockDetectorInfo))
-            plugins.append(info_ep)
-
-        if group == "redsun.plugins.models":
-            model_ep = EntryPoint(
-                name="detector",
-                value="mock_detector:MockDetector",
-                group="redsun.plugins.models",
-            )
-            object.__setattr__(model_ep, "load", MagicMock(return_value=MockDetector))
-            plugins.append(model_ep)
-
-        return plugins
+    # Create a mock entry point
+    mock_entry_point = mock.Mock(spec=EntryPoint)
+    mock_entry_point.name = "mock-pkg"
+    mock_entry_point.value = "manifest.yaml"
+    mock_entry_point.group = "redsun.plugins"
     
-    return mocked_detector_entry_points
-
-@pytest.fixture
-def mock_motor_entry_points() -> Callable[[str], list[EntryPoint]]:
-
-    def mocked_motor_entry_points(group: str) -> list[EntryPoint]:
-        plugins = []
-
-        if group == "redsun.plugins.models.config":
-            info_ep = EntryPoint(
-                name="motor",
-                value="mock_motor:MockMotorInfo",
-                group="redsun.plugins.models.config",
-            )
-            object.__setattr__(info_ep, "load", MagicMock(return_value=MockMotorInfo))
-            plugins.append(info_ep)
-
-        if group == "redsun.plugins.models":
-            model_ep = EntryPoint(
-                name="motor", 
-                value="mock_motor:MockMotor", 
-                group="redsun.plugins.models"
-            )
-            object.__setattr__(model_ep, "load", MagicMock(return_value=MockMotor))
-            plugins.append(model_ep)
-
-        return plugins
+    # Set up the module's file attribute to point to our mock package
+    mock_pkg_dir = Path(__file__).parent / "mock_pkg"
+    manifest_path = mock_pkg_dir / "redsun.yaml"
+    mock_entry_point.load.return_value = manifest_path
     
-    return mocked_motor_entry_points
+    return [mock_entry_point]
 
 @pytest.fixture
-def mock_controller_entry_points() -> Callable[[str], list[EntryPoint]]:
-
-    def mocked_controller_entry_points(group: str) -> list[EntryPoint]:
-        plugins = []
-
-        if group == "redsun.plugins.controllers.config":
-            info_ep = EntryPoint(
-                name="controller",
-                value="mock_controller:MockControllerInfo",
-                group="redsun.plugins.controllers.config",
-            )
-            object.__setattr__(info_ep, "load", MagicMock(return_value=MockControllerInfo))
-            plugins.append(info_ep)
-        if group == "redsun.plugins.controllers":
-            model_ep = EntryPoint(
-                name="controller",
-                value="mock_controller:MockController",
-                group="redsun.plugins.controllers",
-            )
-            object.__setattr__(model_ep, "load", MagicMock(return_value=MockController))
-            plugins.append(model_ep)
+def mock_importlib():
+    """Mock importlib to return real classes from custom locations."""
+    with mock.patch('importlib.import_module') as mock_import:
+        def side_effect():
+            import sys
+            from pathlib import Path
+            
+            tests_dir = Path(__file__).parent.absolute()
+            
+            # add the mock_pkg directory to the Python path
+            mock_pkg_path = tests_dir / "mock_pkg"
+            if str(mock_pkg_path) not in sys.path:
+                sys.path.insert(0, str(mock_pkg_path))
+            
+            from .mock_pkg.model import MyModel, MyModelInfo
+            
+            # create a module-like object to return
+            class MockModule:
+                pass
+            
+            mock_module = MockModule()
+            setattr(mock_module, "MyModel", MyModel)
+            setattr(mock_module, "MyModelInfo", MyModelInfo)
+            
+            return mock_module
         
-        return plugins
-    return mocked_controller_entry_points
+        mock_import.side_effect = side_effect
+        yield mock_import

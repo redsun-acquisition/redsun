@@ -7,7 +7,8 @@ import sys
 
 from sunflare.virtual import VirtualBus
 
-from redsun.controller import PluginManager, RedsunController
+import redsun.plugins_new as plugins
+from redsun.controller import RedsunController
 from redsun.view import build_view_layer, create_app, launch_app
 
 
@@ -59,7 +60,7 @@ def main(input_config: str) -> None:
     virtual_bus = VirtualBus()
 
     # get the startup configuration
-    config, types_groups = PluginManager.load_configuration(input_config)
+    config, types_groups = plugins.load_configuration(input_config)
 
     # build the controller layer
     controller = RedsunController(config, virtual_bus, types_groups)

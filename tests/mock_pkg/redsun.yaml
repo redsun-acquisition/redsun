@@ -1,0 +1,4 @@
+models:
+  my_model:
+      class: mock_pkg.model:MyModel
+      info: mock_pkg.model:MyModelInfo
