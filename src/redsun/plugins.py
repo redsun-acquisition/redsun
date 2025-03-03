@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import sys
 from importlib import import_module
 
-try:
+if sys.version_info < (3, 10):
+    from importlib_metadata import EntryPoints, entry_points
+else:
     from importlib.metadata import EntryPoints, entry_points
-except ImportError:
-    from importlib_metadata import EntryPoints, entry_points  # type: ignore
 
 from pathlib import Path
 from typing import Any, Final, Literal, TypedDict, TypeVar, Union
