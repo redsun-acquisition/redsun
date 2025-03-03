@@ -1,5 +1,4 @@
 import pytest
-import sys
 from unittest import mock
 from pathlib import Path
 
