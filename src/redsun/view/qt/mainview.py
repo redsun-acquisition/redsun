@@ -9,6 +9,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.config import WidgetPositionTypes
 from sunflare.log import Loggable
+from sunflare.virtual import HasConnection
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
@@ -96,7 +97,8 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
                     self.setCentralWidget(widget)
                 else:
                     self.error(f"Multiple central widgets are not allowed: {name}")
-            widget.registration_phase()
+            if isinstance(widget, HasConnection):
+                widget.connection_phase()
             self._widgets[name] = widget
 
         self.setWindowState(Qt.WindowState.WindowMaximized)
@@ -107,7 +109,8 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         Iterates over all widgets and calls their `connection_phase` method.
         """
         for widget in self._widgets.values():
-            widget.connection_phase()
+            if isinstance(widget, HasConnection):
+                widget.connection_phase()
 
     def _save_configuration(self) -> None:
         """Save the current configuration."""

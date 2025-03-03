@@ -4,7 +4,7 @@ import logging
 import sys
 from importlib import import_module
 
-if sys.version_info < (3, 10):
+if sys.version_info <= (3, 9):
     from importlib_metadata import EntryPoints, entry_points
 else:
     from importlib.metadata import EntryPoints, entry_points

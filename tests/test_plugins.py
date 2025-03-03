@@ -1,10 +1,9 @@
 from pathlib import Path
 from unittest import mock
-from typing import Callable
 from sunflare.config import RedSunSessionInfo
 
 import sys
-if sys.version_info < (3, 10):
+if sys.version_info <= (3, 9):
     from importlib_metadata import EntryPoint
 else:
     from importlib.metadata import EntryPoint
