@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sunflare.controller import HasConnection, HasRegistration
 from sunflare.log import Loggable
+from sunflare.virtual import HasConnection, HasRegistration
 
 from redsun.controller.factory import BackendFactory
 
