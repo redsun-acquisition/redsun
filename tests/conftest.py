@@ -3,10 +3,11 @@ import sys
 from unittest import mock
 from pathlib import Path
 
-if sys.version_info <= (3, 9):
-    from importlib_metadata import EntryPoint
-else:
+if sys.version_info > (3, 9):
     from importlib.metadata import EntryPoint
+else:
+    from importlib_metadata import EntryPoint
+    
 
 @pytest.fixture
 def config_path() -> Path:
@@ -14,10 +15,11 @@ def config_path() -> Path:
 
 @pytest.fixture
 def importlib_str() -> str:
-    if sys.version_info <= (3, 9):
-        return "importlib_metadata"
-    else:
+    if sys.version_info > (3, 9):
         return "importlib.metadata"
+    else:
+        return "importlib_metadata"
+        
     
 def mock_plugin_entry_point() -> mock.Mock:
     """Set up mock entry points for testing."""

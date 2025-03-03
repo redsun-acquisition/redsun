@@ -2,12 +2,6 @@ from pathlib import Path
 from unittest import mock
 from sunflare.config import RedSunSessionInfo
 
-import sys
-if sys.version_info <= (3, 9):
-    from importlib_metadata import EntryPoint
-else:
-    from importlib.metadata import EntryPoint
-
 from conftest import side_effect
 
 def test_fake_entrypoint(importlib_str: str) -> None:
