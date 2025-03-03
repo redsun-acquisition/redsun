@@ -5,7 +5,7 @@ Redsun operates by dynamically loading external plugins with different archetype
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
 
-This module operates within the Redsun core code and is not exposed to the toolkit or the user.
+This module operates within Redsun and is not exposed to the toolkit or the user.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import logging
 from typing import TYPE_CHECKING, ClassVar, Mapping, Optional
 
 if TYPE_CHECKING:
-    from sunflare.config import ControllerInfo, ModelInfo
+    from sunflare.config import ControllerInfoProtocol, ModelInfoProtocol
     from sunflare.controller import ControllerProtocol
     from sunflare.model import ModelProtocol
     from sunflare.virtual import VirtualBus
@@ -32,7 +32,7 @@ class BackendFactory:
         cls,
         name: str,
         model_class: type[ModelProtocol],
-        model_info: ModelInfo,
+        model_info: ModelInfoProtocol,
     ) -> Optional[ModelProtocol]:
         """Build the detector model.
 
@@ -53,14 +53,14 @@ class BackendFactory:
         try:
             return model_class(name, model_info)
         except Exception as e:
-            cls._logger.exception(f"Failed to build detector {name}: {e}")
+            cls._logger.exception(f'Failed to build model "{name}": {e}')
             return None
 
     @classmethod
     def build_controller(
         cls,
         name: str,
-        ctrl_info: ControllerInfo,
+        ctrl_info: ControllerInfoProtocol,
         ctrl_class: type[ControllerProtocol],
         models: Mapping[str, ModelProtocol],
         virtual_bus: VirtualBus,
@@ -69,6 +69,8 @@ class BackendFactory:
 
         Parameters
         ----------
+        name: ``str``
+            Controller name. Used for logging purposes.
         ctrl_info: ``ControllerInfo``
             Controller information container.
         ctrl_class: ``type[BaseController]``
@@ -86,5 +88,5 @@ class BackendFactory:
         try:
             return ctrl_class(ctrl_info, models, virtual_bus)
         except Exception as e:
-            cls._logger.exception(f"Failed to build controller {name}: {e}")
+            cls._logger.exception(f'Failed to build controller "{name}": {e}')
             return None

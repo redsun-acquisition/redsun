@@ -1,10 +1,11 @@
 engine: bluesky
 frontend: pyqt
+session: test
 models:
   Single axis motor:
-    model_name: MockMotor
-    axis:
-      - X
+    plugin_name: mock-pkg
+    plugin_id: my_motor
+    axis: ["X"]
     step_size: 
       X: 0.1
     egu: mm
@@ -12,10 +13,9 @@ models:
     floating: 3.14
     string: "Hello, World!"
   Double axis motor:
-    model_name: MockMotor
-    axis:
-      - X
-      - Y
+    plugin_name: mock-pkg
+    plugin_id: my_other_motor
+    axis: ["X", "Y"]
     step_size: 
       X: 0.1
       Y: 0.2

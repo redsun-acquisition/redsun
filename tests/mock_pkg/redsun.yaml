@@ -1,0 +1,29 @@
+models:
+  my_motor:
+    class: mock_pkg.model:MyMotor
+    info: mock_pkg.model:MyMotorInfo
+  my_other_motor:
+    class: mock_pkg.model:NonDerivedMotor
+    info: mock_pkg.model:NonDerivedMotorInfo
+  my_detector:
+    class: mock_pkg.model:MockDetector
+    info: mock_pkg.model:MockDetectorInfo
+  my_other_detector:
+    class: mock_pkg.model:NonDerivableDetector
+    info: mock_pkg.model:NonDerivableDetectorInfo
+  my_broken_model:
+    class: mock_pkg.model:BrokenModel
+    info: mock_pkg.model:BrokenModelInfo
+  my_hidden_model:
+    class: mock_pkg.model.hidden:HiddenModel
+    info: mock_pkg.model.hidden:HiddenModelInfo
+  broken_init_model:
+    class: mock_pkg.model:BrokenInitModel
+    info: mock_pkg.model:BrokenModelInfo
+controllers:
+  my_controller:
+    class: mock_pkg.controller:MockController
+    info: mock_pkg.controller:MockControllerInfo
+  broken_controller:
+    class: mock_pkg.controller:BrokenController
+    info: mock_pkg.controller:MockControllerInfo

@@ -1,0 +1,10 @@
+engine: bluesky
+frontend: pyqt
+controllers:
+  MockController:
+    plugin_name: mock-pkg
+    plugin_id: broken_controller
+    string: "I am a mock controller"
+    floating: 0.0
+    integer: 43
+    boolean: false
