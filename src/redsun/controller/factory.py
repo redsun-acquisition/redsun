@@ -5,7 +5,7 @@ Redsun operates by dynamically loading external plugins with different archetype
 (single or multiple controllers, single or multiple models, combination of controllers and models, etc.)
 to create a unique running instance.
 
-This module operates within the Redsun core code and is not exposed to the toolkit or the user.
+This module operates within Redsun and is not exposed to the toolkit or the user.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ class BackendFactory:
         try:
             return model_class(name, model_info)
         except Exception as e:
-            cls._logger.exception(f"Failed to build detector {name}: {e}")
+            cls._logger.exception(f'Failed to build model "{name}": {e}')
             return None
 
     @classmethod
@@ -86,5 +86,5 @@ class BackendFactory:
         try:
             return ctrl_class(ctrl_info, models, virtual_bus)
         except Exception as e:
-            cls._logger.exception(f"Failed to build controller {name}: {e}")
+            cls._logger.exception(f'Failed to build controller "{name}": {e}')
             return None
