@@ -8,7 +8,6 @@ from sunflare.view.qt import BaseQtWidget
 from sunflare.virtual import VirtualBus
 
 from .mainview import RedSunMainWindow
-from .utils import ProcessEventsDuringTask
 
 __all__ = [
     "RedSunMainWindow",
