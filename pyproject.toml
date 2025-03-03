@@ -25,7 +25,7 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "sunflare>=0.4.0",
+    "sunflare>=0.5.0",
     "platformdirs",
     "importlib_metadata; python_version < '3.10'",
 ]
