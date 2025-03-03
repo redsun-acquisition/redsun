@@ -3,7 +3,7 @@ import sys
 from unittest import mock
 from pathlib import Path
 
-if sys.version_info > (3, 9):
+if sys.version_info >= (3, 10):
     from importlib.metadata import EntryPoint
 else:
     from importlib_metadata import EntryPoint
@@ -15,7 +15,7 @@ def config_path() -> Path:
 
 @pytest.fixture
 def importlib_str() -> str:
-    if sys.version_info > (3, 9):
+    if sys.version_info >= (3, 10):
         return "importlib.metadata"
     else:
         return "importlib_metadata"
