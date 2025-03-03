@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [0.2.0]
+## [0.2.0] - 03-03-2025
 
 ### Changed
 
@@ -23,5 +23,5 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
-[0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0...v0.2.0
+[0.2.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0
