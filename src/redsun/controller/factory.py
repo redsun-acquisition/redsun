@@ -69,6 +69,8 @@ class BackendFactory:
 
         Parameters
         ----------
+        name: ``str``
+            Controller name. Used for logging purposes.
         ctrl_info: ``ControllerInfo``
             Controller information container.
         ctrl_class: ``type[BaseController]``

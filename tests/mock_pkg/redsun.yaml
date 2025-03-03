@@ -17,7 +17,13 @@ models:
   my_hidden_model:
     class: mock_pkg.model.hidden:HiddenModel
     info: mock_pkg.model.hidden:HiddenModelInfo
+  broken_init_model:
+    class: mock_pkg.model:BrokenInitModel
+    info: mock_pkg.model:BrokenModelInfo
 controllers:
   my_controller:
     class: mock_pkg.controller:MockController
+    info: mock_pkg.controller:MockControllerInfo
+  broken_controller:
+    class: mock_pkg.controller:BrokenController
     info: mock_pkg.controller:MockControllerInfo

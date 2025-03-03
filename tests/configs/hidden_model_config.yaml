@@ -1,0 +1,6 @@
+engine: bluesky
+frontend: pyqt
+models:
+  iSCAT channel:
+    plugin_name: mock-pkg
+    plugin_id: my_hidden_model

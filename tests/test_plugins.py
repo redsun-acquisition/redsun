@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest import mock
+from typing import Callable
 from sunflare.config import RedSunSessionInfo
 
 import sys
@@ -8,27 +9,10 @@ if sys.version_info < (3, 10):
 else:
     from importlib.metadata import EntryPoint
 
-def mock_plugin_entry_point() -> mock.Mock:
-    """Set up mock entry points for testing."""
-
-    # Create a mock entry point
-    mock_entry_point = mock.Mock(spec=EntryPoint)
-    mock_entry_point.name = "mock-pkg"
-    mock_entry_point.value = "redsun.yaml"
-    mock_entry_point.group = "redsun.plugins"
-    
-    # Set up the module's file attribute to point to our mock package
-    manifest_path = Path(__file__).parent / "mock_pkg" / mock_entry_point.value
-    mock_entry_point.load.return_value = manifest_path
-
-    return mock_entry_point
-
-def return_entry_points(group: str) -> list[EntryPoint]:
-    if group == 'redsun.plugins':
-        return [mock_plugin_entry_point()]
+from conftest import side_effect
 
 def test_fake_entrypoint(importlib_str: str) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points) as entry_points:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect) as entry_points:
         ep = entry_points(group='redsun.plugins')
         assert len(ep) == 1
         assert ep[0].name == 'mock-pkg'
@@ -38,7 +22,7 @@ def test_fake_entrypoint(importlib_str: str) -> None:
 
 def test_plugin_loading(importlib_str: str, config_path: Path) -> None:
 
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points) as entry_points:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect) as entry_points:
         from redsun.plugins import _load_plugins
         config = RedSunSessionInfo.load_yaml(str(config_path / 'mock_motor_config.yaml'))
         manifests = entry_points(group='redsun.plugins')
@@ -56,7 +40,7 @@ def test_plugin_loading(importlib_str: str, config_path: Path) -> None:
 
 def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
 
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
         from redsun.plugins import load_configuration
 
         config, types = load_configuration(str(config_path / 'mock_motor_config.yaml'))
@@ -84,7 +68,7 @@ def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
             assert class_type == NonDerivedMotor
 
 def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
         from redsun.plugins import load_configuration
 
         config, types = load_configuration(str(config_path / 'mock_detector_config.yaml'))
@@ -106,7 +90,7 @@ def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
         assert class_type == MockDetector
 
 def test_controller_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
         from redsun.plugins import load_configuration
 
         config, types = load_configuration(str(config_path / 'mock_controller_config.yaml'))
@@ -128,7 +112,7 @@ def test_controller_configuration(importlib_str: str, config_path: Path) -> None
         assert class_type == MockController
 
 def test_broken_model_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
         from redsun.plugins import load_configuration
         config, types = load_configuration(str(config_path / 'broken_model_config.yaml'))
 
@@ -141,3 +125,18 @@ def test_broken_model_configuration(importlib_str: str, config_path: Path) -> No
         assert isinstance(list(config.models.values())[0], MockDetectorInfo)
         for class_type in types["models"].values():
             assert class_type == MockDetector
+
+def test_hidden_model_configuration(importlib_str: str, config_path: Path) -> None:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
+        from redsun.plugins import load_configuration
+        config, types = load_configuration(str(config_path / 'hidden_model_config.yaml'))
+
+        assert len(config.models) == 1
+        assert len(config.controllers) == 0
+        assert len(config.widgets) == 0
+
+        from mock_pkg.model.hidden import HiddenModel, HiddenModelInfo
+
+        assert isinstance(list(config.models.values())[0], HiddenModelInfo)
+        for class_type in types["models"].values():
+            assert class_type == HiddenModel

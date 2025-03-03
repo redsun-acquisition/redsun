@@ -34,6 +34,25 @@ class MockController(ControllerProtocol):
     def connection_phase(self) -> None:
         ...
 
+class BrokenController(ControllerProtocol):
+
+    def __init__(
+        self,
+        ctrl_info: MockControllerInfo,
+        models: Mapping[str, ModelProtocol],
+        virtual_bus: VirtualBus,
+    ) -> None:
+        self.ctrl_info = ctrl_info
+        self.models = models
+        self.virtual_bus = virtual_bus
+        raise Exception("Broken controller")
+
+    def registration_phase(self) -> None:
+        ...
+
+    def connection_phase(self) -> None:
+        ...
+
 class NonDerivedControllerInfo:
     """Non-derived controller information model."""
     plugin_name: str
