@@ -1,0 +1,21 @@
+engine: bluesky
+frontend: pyqt
+models:
+  iSCAT channel:
+    plugin_name: mock-pkg
+    plugin_id: my_broken_model
+  TIRF channel:
+    plugin_name: mock-pkg
+    plugin_id: my_detector
+    sensor_shape: 
+      - 2400
+      - 2048
+    pixel_size: 
+      - 17.5
+      - 17.5
+      - 17.5
+    exposure: 100.0
+    egu: ms
+    integer: 314
+    floating: 4.2
+    string: "Goodbye, World!"

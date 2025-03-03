@@ -11,6 +11,12 @@ models:
   my_other_detector:
     class: mock_pkg.model:NonDerivableDetector
     info: mock_pkg.model:NonDerivableDetectorInfo
+  my_broken_model:
+    class: mock_pkg.model:BrokenModel
+    info: mock_pkg.model:BrokenModelInfo
+  my_hidden_model:
+    class: mock_pkg.model.hidden:HiddenModel
+    info: mock_pkg.model.hidden:HiddenModelInfo
 controllers:
   my_controller:
     class: mock_pkg.controller:MockController

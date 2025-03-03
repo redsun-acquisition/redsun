@@ -126,3 +126,18 @@ def test_controller_configuration(importlib_str: str, config_path: Path) -> None
 
     for class_type in types["controllers"].values():
         assert class_type == MockController
+
+def test_broken_model_configuration(importlib_str: str, config_path: Path) -> None:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+        from redsun.plugins import load_configuration
+        config, types = load_configuration(str(config_path / 'broken_model_config.yaml'))
+
+        assert len(config.models) == 1
+        assert len(config.controllers) == 0
+        assert len(config.widgets) == 0
+
+        from mock_pkg.model import MockDetector, MockDetectorInfo
+
+        assert isinstance(list(config.models.values())[0], MockDetectorInfo)
+        for class_type in types["models"].values():
+            assert class_type == MockDetector

@@ -69,6 +69,7 @@ class PluginTypeDict(TypedDict):
     widgets: dict[str, type[WidgetProtocol]]
 
 
+T = TypeVar("T")  # generic type
 IC = TypeVar("IC")  # info class
 PC = TypeVar("PC")  # plugin class
 
@@ -225,10 +226,8 @@ def _load_plugins(
                     imported_class = getattr(
                         import_module(class_item_module), class_item_type
                     )
-                    if not any(
-                        isinstance(imported_class, t)
-                        for t in [ModelProtocol, ControllerProtocol, WidgetProtocol]
-                    ):
+                    acceptable = _check_import(imported_class, group)
+                    if not acceptable:
                         logger.error(
                             f"{imported_class} exists, but does not implement any known protocol."
                         )
@@ -262,3 +261,28 @@ def _load_plugins(
             logger.error(f'Plugin "{plugin_name}" not found in the installed plugins.')
 
     return plugins
+
+
+def _check_import(imported_class: type[T], group: str) -> bool:
+    """Check if the imported class implements the correct protocol.
+
+    Parameters
+    ----------
+    imported_class : ``type[T]``
+        The imported class to check.
+    group : ``str``
+        The group to check the class against.
+
+    Returns
+    -------
+    ``bool``
+        True if the class implements the correct protocol; False otherwise.
+    """
+    if group == "models":
+        return isinstance(imported_class, ModelProtocol)
+    elif group == "controllers":
+        return isinstance(imported_class, ControllerProtocol)
+    elif group == "widgets":
+        return isinstance(imported_class, WidgetProtocol)
+    # if we fall here, we have a problem; but we shouldn't
+    raise ValueError(f"Unknown group {group}.")  # pragma: no cover

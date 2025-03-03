@@ -1,5 +1,6 @@
 from .mock_motors import MyMotor, MyMotorInfo, NonDerivedMotorInfo, NonDerivedMotor
 from .mock_detectors import MockDetector, MockDetectorInfo, NonDerivedDetectorInfo, NonDerivedDetector
+from .broken_model import BrokenModel, BrokenModelInfo
 
 __all__ = [
     "MyMotor",
@@ -10,4 +11,6 @@ __all__ = [
     "NonDerivedMotorInfo",
     "NonDerivedDetector",
     "NonDerivedDetectorInfo",
+    "BrokenModel",
+    "BrokenModelInfo",
 ]
