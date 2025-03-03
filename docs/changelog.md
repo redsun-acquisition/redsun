@@ -7,10 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.2.0]
+
+### Changed
+
+- Reworked the plugin system
+  - The approach now loosely follows the [`napari` manifest](https://napari.org/dev/plugins/technical_references/manifest.html), where plugins are to be published via a `yaml` configuration file specifiying where the classes have to be imported.
+  - The manifest is taken as the actual entry point of a plugin, which will be used to redirect to the actual imports which is executed via the standard library `importlib`.
+- Added additional coverage for the ``factory`` module.
+- Bumped sunflare version to ``sunflare>=0.5.0``, which implements the above changes at toolkit level
+
 ## [0.1.0] - 22-02-2025
 
 ### Added
 
 - Initial release on PyPI
 
+[0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0
