@@ -8,7 +8,6 @@ try:
 except ImportError:
     from importlib_metadata import EntryPoints, entry_points  # type: ignore
 
-from importlib.metadata import EntryPoints, entry_points
 from pathlib import Path
 from typing import Any, Final, Literal, TypedDict, TypeVar, Union
 
