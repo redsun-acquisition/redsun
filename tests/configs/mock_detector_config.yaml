@@ -2,7 +2,8 @@ engine: bluesky
 frontend: pyqt
 models:
   iSCAT channel:
-    model_name: MockDetector
+    plugin_name: mock-pkg
+    plugin_id: my_detector
     sensor_shape:
       - 1280
       - 864
@@ -16,7 +17,8 @@ models:
     floating: 3.14
     string: "Hello, World!"
   TIRF channel:
-    model_name: MockDetector
+    plugin_name: mock-pkg
+    plugin_id: my_detector
     sensor_shape: 
       - 2400
       - 2048

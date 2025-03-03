@@ -1,4 +1,17 @@
 models:
-  my_model:
-      class: mock_pkg.model:MyModel
-      info: mock_pkg.model:MyModelInfo
+  my_motor:
+    class: mock_pkg.model:MyMotor
+    info: mock_pkg.model:MyMotorInfo
+  my_other_motor:
+    class: mock_pkg.model:NonDerivedMotor
+    info: mock_pkg.model:NonDerivedMotorInfo
+  my_detector:
+    class: mock_pkg.model:MockDetector
+    info: mock_pkg.model:MockDetectorInfo
+  my_other_detector:
+    class: mock_pkg.model:NonDerivableDetector
+    info: mock_pkg.model:NonDerivableDetectorInfo
+controllers:
+  my_controller:
+    class: mock_pkg.controller:MockController
+    info: mock_pkg.controller:MockControllerInfo

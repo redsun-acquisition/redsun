@@ -1,5 +1,7 @@
 from attrs import define
 
+from typing import Mapping
+
 from sunflare.config import ControllerInfo
 from sunflare.controller import ControllerProtocol
 from sunflare.model import ModelProtocol
@@ -16,18 +18,15 @@ class MockControllerInfo(ControllerInfo):
 
 class MockController(ControllerProtocol):
 
-    _ctrl_info: MockControllerInfo
-
-    def __init__(self, 
-                ctrl_info: MockControllerInfo, 
-                models: dict[str, ModelProtocol],
-                virtual_bus: VirtualBus):
-        self._ctrl_info = ctrl_info
-        self._models = models
-        self._virtual_bus = virtual_bus
-
-    def shutdown(self) -> None:
-        ...
+    def __init__(
+        self,
+        ctrl_info: MockControllerInfo,
+        models: Mapping[str, ModelProtocol],
+        virtual_bus: VirtualBus,
+    ) -> None:
+        self.ctrl_info = ctrl_info
+        self.models = models
+        self.virtual_bus = virtual_bus
 
     def registration_phase(self) -> None:
         ...
@@ -37,15 +36,25 @@ class MockController(ControllerProtocol):
 
 class NonDerivedControllerInfo:
     """Non-derived controller information model."""
+    plugin_name: str
+    plugin_id: str
     string: str
     integer: int
     floating: float
     boolean: bool
 
+    def __init__(self, *, plugin_name: str, plugin_id: str, string: str, integer: int, floating: float, boolean: bool) -> None:
+        self.plugin_name = plugin_name
+        self.plugin_id = plugin_id
+        self.string = string
+        self.integer = integer
+        self.floating = floating
+        self.boolean = boolean
+
 class NonDerivedController:
 
     def __init__(self, 
-                ctrl_info: MockControllerInfo, 
+                ctrl_info: NonDerivedControllerInfo, 
                 models: dict[str, ModelProtocol],
                 virtual_bus: VirtualBus):
             ...

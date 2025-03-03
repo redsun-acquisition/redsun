@@ -2,6 +2,7 @@ from typing import Any
 
 from attrs import define, field, setters, validators
 from sunflare.config import ModelInfo
+from sunflare.model import ModelProtocol
 
 @define(kw_only=True)
 class MyMotorInfo(ModelInfo):
@@ -27,14 +28,82 @@ class MyMotorInfo(ModelInfo):
         if len(value) == 0:
             raise ValueError("The dictionary must contain at least one element.")
 
-class MyMotor:
+class MyMotor(ModelProtocol):
     
     def __init__(self, name: str, model_info: MyMotorInfo) -> None:
-        self.name = name
-        self.model_info = model_info
+        self._name = name
+        self._model_info = model_info
 
     def read_configuration(self) -> dict[str, Any]:
         raise NotImplementedError()
     
     def describe_configuration(self) -> dict[str, Any]:
         raise NotImplementedError()
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def parent(self) -> None:
+        return None
+    
+    @property
+    def model_info(self) -> MyMotorInfo:
+        return self._model_info
+
+class NonDerivedMotorInfo:
+    """Mock detector model information."""
+
+    plugin_name: str
+    plugin_id: str
+    axis: list[str]
+    step_size: dict[str, float]
+    egu: str
+    integer: int
+    floating: float
+    string: str
+
+    def __init__(
+            self,
+            *, 
+            plugin_name: str, 
+            plugin_id: str, 
+            axis: list[str], 
+            step_size: dict[str, float],
+            egu: str,
+            integer: int,
+            floating: float,
+            string: str) -> None:
+        self.plugin_name = plugin_name
+        self.plugin_id = plugin_id
+        self.axis = axis
+        self.step_size = step_size
+        self.egu = egu
+        self.integer = integer
+        self.floating = floating
+        self.string = string
+
+class NonDerivedMotor:
+
+    def __init__(self, name: str, model_info: NonDerivedMotorInfo) -> None:
+        self._name = name
+        self._model_info = model_info
+
+    def read_configuration(self) -> dict[str, Any]:
+        raise NotImplementedError()
+    
+    def describe_configuration(self) -> dict[str, Any]:
+        raise NotImplementedError()
+    
+    @property
+    def parent(self) -> None:
+        return None
+    
+    @property
+    def model_info(self) -> NonDerivedMotorInfo:
+        return self.model_info
+    
+    @property
+    def name(self) -> str:
+        return self.name

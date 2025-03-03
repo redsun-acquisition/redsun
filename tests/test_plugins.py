@@ -1,104 +1,128 @@
-# # type: ignore
-# import pytest
+from pathlib import Path
+from unittest import mock
+from sunflare.config import RedSunSessionInfo
 
-# from unittest.mock import MagicMock, patch
+import sys
+if sys.version_info < (3, 10):
+    from importlib_metadata import EntryPoint
+else:
+    from importlib.metadata import EntryPoint
 
-# import logging
-# from pathlib import Path
-# from importlib.metadata import EntryPoint
-# from typing import Callable
-# from redsun.controller.plugins import PluginManager
-# from sunflare.config import RedSunSessionInfo
+def mock_plugin_entry_point() -> mock.Mock:
+    """Set up mock entry points for testing."""
 
-# from mocks import (
-#     mocked_motor_missing_entry_points, 
-#     mocked_motor_mismatched_entry_points, 
-#     mocked_motor_non_derived_info_entry_points,
-#     mocked_ctrl_non_derived_info_entry_points,
-#     mocked_ctrl_non_derived_entry_points,
-#     mocked_ctrl_mismatched_entry_points
-# )
+    # Create a mock entry point
+    mock_entry_point = mock.Mock(spec=EntryPoint)
+    mock_entry_point.name = "mock-pkg"
+    mock_entry_point.value = "redsun.yaml"
+    mock_entry_point.group = "redsun.plugins"
+    
+    # Set up the module's file attribute to point to our mock package
+    manifest_path = Path(__file__).parent / "mock_pkg" / mock_entry_point.value
+    mock_entry_point.load.return_value = manifest_path
 
-# logging.basicConfig(level=logging.DEBUG)
+    return mock_entry_point
 
-# def test_load_motor_plugins(config_path: Path, mock_motor_entry_points: Callable[[str], list[EntryPoint]]) -> None:
-#     # Create a mock that returns our function
-#     mock_ep = MagicMock(side_effect=mock_motor_entry_points)
+def return_entry_points(group: str) -> list[EntryPoint]:
+    if group == 'redsun.plugins':
+        return [mock_plugin_entry_point()]
 
-#     # Need to patch where entry_points is imported, not where it's defined
-#     with patch('redsun.controller.plugins.entry_points', mock_ep):
+def test_fake_entrypoint(importlib_str: str) -> None:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points) as entry_points:
+        ep = entry_points(group='redsun.plugins')
+        assert len(ep) == 1
+        assert ep[0].name == 'mock-pkg'
+        assert ep[0].value == 'redsun.yaml'
+        assert ep[0].group == 'redsun.plugins'
 
-#         # Then test through the plugin manager
-#         config, types_groups = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
 
-#         assert isinstance(config, RedSunSessionInfo)
-#         assert len(types_groups["models"]) == 2
-#         assert ["Single axis motor", "Double axis motor"] == list(types_groups["models"].keys())
+def test_plugin_loading(importlib_str: str, config_path: Path) -> None:
 
-#         # check config for single axis motor
-#         assert config.models["Single axis motor"].model_name == "MockMotor"
-#         assert config.models["Single axis motor"].axis == ["X"]
-#         assert config.models["Single axis motor"].integer == 42
-#         assert config.models["Single axis motor"].floating == 3.14
-#         assert config.models["Single axis motor"].string == "Hello, World!"
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points) as entry_points:
+        from redsun.plugins import _load_plugins
+        config = RedSunSessionInfo.load_yaml(str(config_path / 'mock_motor_config.yaml'))
+        manifests = entry_points(group='redsun.plugins')
+        plugins = _load_plugins(group_cfg=config["models"], group='models', available_manifests=manifests)
 
-#         # check config for double axis motor
-#         assert config.models["Double axis motor"].model_name == "MockMotor"
-#         assert config.models["Double axis motor"].axis == ["X", "Y"]
-#         assert config.models["Double axis motor"].egu == "mm"
-#         assert config.models["Double axis motor"].integer == 314
-#         assert config.models["Double axis motor"].floating == 4.2
-#         assert config.models["Double axis motor"].string == "Goodbye, World!"
+    assert len(plugins) != 0
 
-# def test_load_detector_plugins(config_path: Path, mock_detector_entry_points: Callable[[str], list[EntryPoint]]) -> None:
-#     # Create a mock that returns our function
-#     mock_ep = MagicMock(side_effect=mock_detector_entry_points)
+    from mock_pkg.model import MyMotorInfo, MyMotor, NonDerivedMotor, NonDerivedMotorInfo
 
-#     # Need to patch where entry_points is imported, not where it's defined
-#     with patch('redsun.controller.plugins.entry_points', mock_ep):
+    target = [(MyMotor, MyMotorInfo), (NonDerivedMotor, NonDerivedMotorInfo)]
 
-#         # Then test through the plugin manager
-#         config, types_groups = PluginManager.load_configuration(str(config_path / "mock_detector_config.yaml"))
+    for plugin, t in zip(plugins, target):
+        assert plugin.base_class == t[0]
+        assert isinstance(plugin.info, t[1])
 
-#         assert isinstance(config, RedSunSessionInfo)
-#         assert len(config.models) == 2
-#         assert len(types_groups["models"]) == 2
-#         assert ["iSCAT channel", "TIRF channel"] == list(types_groups["models"].keys())
+def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
 
-# def test_load_controller_plugins(config_path: Path, mock_controller_entry_points: Callable[[str], list[EntryPoint]]) -> None:
-#     # Create a mock that returns our function
-#     mock_ep = MagicMock(side_effect=mock_controller_entry_points)
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+        from redsun.plugins import load_configuration
 
-#     # Need to patch where entry_points is imported, not where it's defined
-#     with patch('redsun.controller.plugins.entry_points', mock_ep):
+        config, types = load_configuration(str(config_path / 'mock_motor_config.yaml'))
 
-#         # Then test through the plugin manager
-#         config, types_groups = PluginManager.load_configuration(str(config_path / "mock_controller_config.yaml"))
+    assert len(config.models) == 2
+    assert len(config.controllers) == 0
+    assert len(config.widgets) == 0
 
-#         assert isinstance(config, RedSunSessionInfo)
-#         assert len(config.controllers) == 1
-#         assert len(config.models) == 0
-#         assert len(types_groups["controllers"]) == 1
-#         assert ["MockController"] == list(types_groups["controllers"].keys())
+    from mock_pkg.model import MyMotorInfo, MyMotor, NonDerivedMotor, NonDerivedMotorInfo
 
-# mocked_error_entry_points = [
-#     mocked_motor_mismatched_entry_points,
-#     mocked_motor_missing_entry_points,
-#     mocked_motor_non_derived_info_entry_points,
-#     mocked_ctrl_non_derived_info_entry_points,
-#     mocked_ctrl_non_derived_entry_points,
-#     mocked_ctrl_mismatched_entry_points
-# ]
+    for i, model in enumerate(config.models.values()):
+        if i == 0:
+            assert isinstance(model, MyMotorInfo)
+        else:
+            assert isinstance(model, NonDerivedMotorInfo)
 
-# @pytest.mark.parametrize("mock_entry_points", mocked_error_entry_points)
-# def test_errors_plugin_loading(config_path: Path, mock_entry_points: Callable[[str], list[EntryPoint]]) -> None:
-#     # Create a mock that returns our function
-#     mock_ep = MagicMock(side_effect=mock_entry_points)
+    assert len(types["models"]) == 2
+    assert len(types["controllers"]) == 0
+    assert len(types["widgets"]) == 0
 
-#     # Need to patch where entry_points is imported, not where it's defined
-#     with patch('redsun.controller.plugins.entry_points', mock_ep):
-#         config, types_groups = PluginManager.load_configuration(str(config_path / "mock_motor_config.yaml"))
-#         assert config.models == {}
-#         assert config.controllers == {}
-#         assert len(types_groups["models"]) == 0
-#         assert len(types_groups["controllers"]) == 0
+    for i, class_type in enumerate(types["models"].values()):
+        if i == 0:
+            assert class_type == MyMotor
+        else:
+            assert class_type == NonDerivedMotor
+
+def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+        from redsun.plugins import load_configuration
+
+        config, types = load_configuration(str(config_path / 'mock_detector_config.yaml'))
+
+    assert len(config.models) == 2
+    assert len(config.controllers) == 0
+    assert len(config.widgets) == 0
+
+    from mock_pkg.model import MockDetector, MockDetectorInfo
+
+    for model in config.models.values():
+        assert isinstance(model, MockDetectorInfo)
+
+    assert len(types["models"]) == 2
+    assert len(types["controllers"]) == 0
+    assert len(types["widgets"]) == 0
+
+    for class_type in types["models"].values():
+        assert class_type == MockDetector
+
+def test_controller_configuration(importlib_str: str, config_path: Path) -> None:
+    with mock.patch(f"{importlib_str}.entry_points", side_effect=return_entry_points):
+        from redsun.plugins import load_configuration
+
+        config, types = load_configuration(str(config_path / 'mock_controller_config.yaml'))
+
+    assert len(config.models) == 0
+    assert len(config.controllers) == 1
+    assert len(config.widgets) == 0
+
+    from mock_pkg.controller import MockController, MockControllerInfo
+
+    for ctrl in config.controllers.values():
+        assert isinstance(ctrl, MockControllerInfo)
+
+    assert len(types["models"]) == 0
+    assert len(types["controllers"]) == 1
+    assert len(types["widgets"]) == 0
+
+    for class_type in types["controllers"].values():
+        assert class_type == MockController

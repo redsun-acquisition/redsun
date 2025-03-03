@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import logging
+import sys
 from importlib import import_module
+
+if sys.version_info < (3, 10):
+    from importlib_metadata import EntryPoints, entry_points
+else:
+    from importlib.metadata import EntryPoints, entry_points
+
 from importlib.metadata import EntryPoints, entry_points
 from pathlib import Path
-from typing import Any, Final, Generic, Literal, NamedTuple, TypedDict, TypeVar, Union
+from typing import Any, Final, Literal, TypedDict, TypeVar, Union
 
 import yaml
 from sunflare.config import (
@@ -21,6 +28,7 @@ from sunflare.config import (
 from sunflare.controller import ControllerProtocol
 from sunflare.model import ModelProtocol
 from sunflare.view import WidgetProtocol
+from typing_extensions import Generic, NamedTuple
 
 logger = logging.getLogger("redsun")
 
@@ -114,7 +122,7 @@ def load_configuration(
 
     Returns
     -------
-    tuple[RedSunSessionInfo, dict[str, Types], dict[str, type[BaseController]]
+    ``tuple[RedSunSessionInfo, PluginTypeDict]``
         Redsun instance configuration and class types to build.
     """
     config = RedSunSessionInfo.load_yaml(config_path)
@@ -134,7 +142,16 @@ def load_configuration(
     groups: list[PLUGIN_GROUPS] = ["models", "controllers", "widgets"]
 
     for group in groups:
-        plugins = _load_plugins(config[group], group, available_manifests)
+        if group not in config.keys():
+            logger.debug(
+                "Group %s not found in the configuration file. Skipping", group
+            )
+            continue
+        plugins = _load_plugins(
+            group_cfg=config[group],
+            group=group,
+            available_manifests=available_manifests,
+        )
         for p in plugins:
             # it's too hard to explain to the
             # type checker which is the actual
@@ -157,14 +174,14 @@ def load_configuration(
 
 
 def _load_plugins(
-    config: dict[str, Any], group: str, available_manifests: EntryPoints
+    *, group_cfg: dict[str, Any], group: str, available_manifests: EntryPoints
 ) -> list[Plugin[PluginInfo, PluginType]]:
     """Load a plugin group.
 
     Parameters
     ----------
-    config : ``dict[str, Any]``
-        Configuration read from the YAML file.
+    group_cfg : ``dict[str, Any]``
+        Configuration read from the YAML file for given ``group``.
     group : ``str``
         The group of plugins to load.
     available_manifests : ``EntryPoints``
@@ -177,18 +194,16 @@ def _load_plugins(
     """
     plugins: list[Plugin[PluginInfo, PluginType]] = []
 
-    group_cfg: dict[str, Any] = config[group]
-
     for name, info in group_cfg.items():
         # inspect the configuration;
         # grab the plugin name and id
         plugin_name = info["plugin_name"]
         plugin_id = info["plugin_id"]
 
+        iterator = (entry for entry in available_manifests if entry.name == plugin_name)
+
         # check if the plugin is available in the entry points
-        plugin = next(
-            (entry for entry in available_manifests if entry.name == plugin_name), None
-        )
+        plugin = next(iterator, None)
         if plugin is not None:
             # load the manifest file
             manifest_path = Path(plugin.load()).resolve()
@@ -240,7 +255,9 @@ def _load_plugins(
 
                 # add the plugin to the dictionary
                 imported_info_obj = imported_info(**info)
-                plugins.append(Plugin(name, imported_info_obj, imported_class))
+                plugins.append(
+                    Plugin(name=name, info=imported_info_obj, base_class=imported_class)
+                )
         else:
             logger.error(f'Plugin "{plugin_name}" not found in the installed plugins.')
 

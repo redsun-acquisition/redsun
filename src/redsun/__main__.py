@@ -7,7 +7,7 @@ import sys
 
 from sunflare.virtual import VirtualBus
 
-import redsun.plugins_new as plugins
+from redsun import plugins
 from redsun.controller import RedsunController
 from redsun.view import build_view_layer, create_app, launch_app
 
