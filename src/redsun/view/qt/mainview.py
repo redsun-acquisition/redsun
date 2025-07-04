@@ -28,7 +28,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         Session virtual bus.
     config : :class:`~sunflare.config.RedSunSessionInfo`
         Session configuration.
-    widgets : dict[str, type[:class:`~sunflare.view.qt.BaseQtWidget`]]
+    views : dict[str, type[:class:`~sunflare.view.qt.BaseQtWidget`]]
         Dictionary with the widget names and their types.
     """
 
@@ -43,7 +43,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         self,
         virtual_bus: VirtualBus,
         config: RedSunSessionInfo,
-        widgets: dict[str, type[BaseQtWidget]],
+        views: dict[str, type[BaseQtWidget]],
     ) -> None:
         super().__init__()
         self.setWindowTitle(config.session)
@@ -51,7 +51,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         self._virtual_bus = virtual_bus
 
         self._widgets: dict[str, BaseQtWidget] = {}
-        self.build_view(widgets)
+        self.build_view(views)
 
         # making mypy happy with qtpy is hard;
         # using assert helps with the type checking;
@@ -71,9 +71,9 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
     def build_view(self, widget_types: dict[str, type[BaseQtWidget]]) -> None:
         """Build the main view window.
 
-        Iterates over `widget_types` and creates the widgets.
-        The widgets are docked according to the associated value of
-        ``config.widgets[widget_name].position``. If said value is
+        Iterates over `widget_types` and creates the views.
+        The views are docked according to the associated value of
+        ``config.views[widget_name].position``. If said value is
         :class:`~sunflare.config.WidgetPositionTypes.CENTER`,
         the widget is set as the central widget.
 
@@ -83,10 +83,10 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
             Dictionary with the widget names and their types.
         """
         for name, widget_type in widget_types.items():
-            widget = widget_type(self._config, self._virtual_bus)
+            widget = widget_type(self._config.views[name], self._virtual_bus)
             self._widgets[name] = widget
             try:
-                cfg = self._config.widgets[name]
+                cfg = self._config.views[name]
                 dock_area = self._DOCK_MAP[cfg.position]
                 dock_widget = QtWidgets.QDockWidget(name, widget)
                 self.addDockWidget(dock_area, dock_widget)
@@ -96,7 +96,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
                 if self.centralWidget() is None:
                     self.setCentralWidget(widget)
                 else:
-                    self.error(f"Multiple central widgets are not allowed: {name}")
+                    self.logger.error(f"Multiple central views are not allowed: {name}")
             if isinstance(widget, HasConnection):
                 widget.connection_phase()
             self._widgets[name] = widget
@@ -106,7 +106,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
     def connect_to_virtual(self) -> None:
         """Connect the view to the virtual layer.
 
-        Iterates over all widgets and calls their `connection_phase` method.
+        Iterates over all views and calls their `connection_phase` method.
         """
         for widget in self._widgets.values():
             if isinstance(widget, HasConnection):
@@ -122,4 +122,4 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         )
         if path:
             self._config.store_yaml(path)
-            self.info(f"Configuration saved to {path}")
+            self.logger.info(f"Configuration saved to {path}")

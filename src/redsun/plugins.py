@@ -1,32 +1,25 @@
 from __future__ import annotations
 
 import logging
-import sys
 from importlib import import_module
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import EntryPoints, entry_points
-else:
-    from importlib.metadata import EntryPoints, entry_points
-
+from importlib.metadata import EntryPoints, entry_points
 from pathlib import Path
 from typing import Any, Final, Literal, TypedDict, TypeVar, Union
 
 import yaml
 from sunflare.config import (
-    AcquisitionEngineTypes,
     ControllerInfo,
     ControllerInfoProtocol,
     FrontendTypes,
     ModelInfo,
     ModelInfoProtocol,
     RedSunSessionInfo,
-    WidgetInfo,
-    WidgetInfoProtocol,
+    ViewInfo,
+    ViewInfoProtocol,
 )
 from sunflare.controller import ControllerProtocol
 from sunflare.model import ModelProtocol
-from sunflare.view import WidgetProtocol
+from sunflare.view import ViewProtocol
 from typing_extensions import Generic, NamedTuple
 
 logger = logging.getLogger("redsun")
@@ -41,13 +34,13 @@ class PluginInfoDict(TypedDict):
         Dictionary of model informations.
     controllers : ``dict[str, ControllerInfo]``
         Dictionary of controller informations.
-    widgets : ``dict[str, WidgetInfo]``
+    views : ``dict[str, ViewInfo]``
         Dictionary of widget informations.
     """
 
     models: dict[str, ModelInfoProtocol]
     controllers: dict[str, ControllerInfoProtocol]
-    widgets: dict[str, WidgetInfoProtocol]
+    views: dict[str, ViewInfoProtocol]
 
 
 class PluginTypeDict(TypedDict):
@@ -59,13 +52,13 @@ class PluginTypeDict(TypedDict):
         Dictionary of models classes.
     controllers : ``dict[str, type[ControllerProtocol]``
         Dictionary of controllers classes.
-    widgets : ``dict[str, type[WidgetProtocol]``
-        Dictionary of widgets classes.
+    views : ``dict[str, type[ViewProtocol]``
+        Dictionary of view classes.
     """
 
     models: dict[str, type[ModelProtocol]]
     controllers: dict[str, type[ControllerProtocol]]
-    widgets: dict[str, type[WidgetProtocol]]
+    views: dict[str, type[ViewProtocol]]
 
 
 T = TypeVar("T")  # generic type
@@ -92,18 +85,18 @@ class Plugin(NamedTuple, Generic[IC, PC]):
 
 
 # helper typing
-PluginInfo = Union[ModelInfoProtocol, ControllerInfoProtocol, WidgetInfoProtocol]
-PluginType = Union[ModelProtocol, ControllerProtocol, WidgetProtocol]
+PluginInfo = Union[ModelInfoProtocol, ControllerInfoProtocol, ViewInfoProtocol]
+PluginType = Union[ModelProtocol, ControllerProtocol, ViewProtocol]
 ManifestItems = dict[str, dict[str, str]]
 
 # constants
 FALLBACK_INFO: Final[dict[str, Any]] = {
     "models": ModelInfo,
     "controllers": ControllerInfo,
-    "widgets": WidgetInfo,
+    "views": ViewInfo,
 }
 
-PLUGIN_GROUPS = Literal["models", "controllers", "widgets"]
+PLUGIN_GROUPS = Literal["models", "controllers", "views"]
 
 
 def load_configuration(
@@ -129,17 +122,16 @@ def load_configuration(
 
     session = config.pop("session", "Redsun")
     try:
-        engine = AcquisitionEngineTypes(config.pop("engine"))
         frontend = FrontendTypes(config.pop("frontend"))
     except KeyError as e:
         raise KeyError(f"Configuration file {config_path} is missing the key {e}.")
 
-    plugin_types = PluginTypeDict(models={}, controllers={}, widgets={})
-    plugins_info = PluginInfoDict(models={}, controllers={}, widgets={})
+    plugin_types = PluginTypeDict(models={}, controllers={}, views={})
+    plugins_info = PluginInfoDict(models={}, controllers={}, views={})
 
     available_manifests = entry_points(group="redsun.plugins")
 
-    groups: list[PLUGIN_GROUPS] = ["models", "controllers", "widgets"]
+    groups: list[PLUGIN_GROUPS] = ["models", "controllers", "views"]
 
     for group in groups:
         if group not in config.keys():
@@ -163,11 +155,10 @@ def load_configuration(
 
     session_container = RedSunSessionInfo(
         session=session,
-        engine=engine,
         frontend=frontend,
         models=plugins_info["models"],
         controllers=plugins_info["controllers"],
-        widgets=plugins_info["widgets"],
+        views=plugins_info["views"],
     )
 
     return (session_container, plugin_types)
@@ -281,7 +272,7 @@ def _check_import(imported_class: type[T], group: str) -> bool:
         return isinstance(imported_class, ModelProtocol)
     elif group == "controllers":
         return isinstance(imported_class, ControllerProtocol)
-    elif group == "widgets":
-        return isinstance(imported_class, WidgetProtocol)
+    elif group == "views":
+        return isinstance(imported_class, ViewProtocol)
     # if we fall here, we have a problem; but we shouldn't
     raise ValueError(f"Unknown group {group}.")  # pragma: no cover

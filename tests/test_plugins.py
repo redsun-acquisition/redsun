@@ -40,7 +40,7 @@ def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
 
     assert len(config.models) == 2
     assert len(config.controllers) == 0
-    assert len(config.widgets) == 0
+    assert len(config.views) == 0
 
     from mock_pkg.model import MyMotorInfo, MyMotor, NonDerivedMotor, NonDerivedMotorInfo
 
@@ -52,7 +52,7 @@ def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
 
     assert len(types["models"]) == 2
     assert len(types["controllers"]) == 0
-    assert len(types["widgets"]) == 0
+    assert len(types["views"]) == 0
 
     for i, class_type in enumerate(types["models"].values()):
         if i == 0:
@@ -68,7 +68,7 @@ def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
 
     assert len(config.models) == 2
     assert len(config.controllers) == 0
-    assert len(config.widgets) == 0
+    assert len(config.views) == 0
 
     from mock_pkg.model import MockDetector, MockDetectorInfo
 
@@ -77,7 +77,7 @@ def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
 
     assert len(types["models"]) == 2
     assert len(types["controllers"]) == 0
-    assert len(types["widgets"]) == 0
+    assert len(types["views"]) == 0
 
     for class_type in types["models"].values():
         assert class_type == MockDetector
@@ -90,7 +90,7 @@ def test_controller_configuration(importlib_str: str, config_path: Path) -> None
 
     assert len(config.models) == 0
     assert len(config.controllers) == 1
-    assert len(config.widgets) == 0
+    assert len(config.views) == 0
 
     from mock_pkg.controller import MockController, MockControllerInfo
 
@@ -99,7 +99,7 @@ def test_controller_configuration(importlib_str: str, config_path: Path) -> None
 
     assert len(types["models"]) == 0
     assert len(types["controllers"]) == 1
-    assert len(types["widgets"]) == 0
+    assert len(types["views"]) == 0
 
     for class_type in types["controllers"].values():
         assert class_type == MockController
@@ -111,7 +111,7 @@ def test_broken_model_configuration(importlib_str: str, config_path: Path) -> No
 
         assert len(config.models) == 1
         assert len(config.controllers) == 0
-        assert len(config.widgets) == 0
+        assert len(config.views) == 0
 
         from mock_pkg.model import MockDetector, MockDetectorInfo
 
@@ -126,7 +126,7 @@ def test_hidden_model_configuration(importlib_str: str, config_path: Path) -> No
 
         assert len(config.models) == 1
         assert len(config.controllers) == 0
-        assert len(config.widgets) == 0
+        assert len(config.views) == 0
 
         from mock_pkg.model.hidden import HiddenModel, HiddenModelInfo
 
