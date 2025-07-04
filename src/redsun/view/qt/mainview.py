@@ -83,7 +83,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
             Dictionary with the widget names and their types.
         """
         for name, widget_type in widget_types.items():
-            widget = widget_type(self._config, self._virtual_bus)
+            widget = widget_type(self._config.views[name], self._virtual_bus)
             self._widgets[name] = widget
             try:
                 cfg = self._config.views[name]
@@ -96,7 +96,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
                 if self.centralWidget() is None:
                     self.setCentralWidget(widget)
                 else:
-                    self.error(f"Multiple central views are not allowed: {name}")
+                    self.logger.error(f"Multiple central views are not allowed: {name}")
             if isinstance(widget, HasConnection):
                 widget.connection_phase()
             self._widgets[name] = widget
@@ -122,4 +122,4 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         )
         if path:
             self._config.store_yaml(path)
-            self.info(f"Configuration saved to {path}")
+            self.logger.info(f"Configuration saved to {path}")
