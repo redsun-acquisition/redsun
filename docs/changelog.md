@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.3.0] - 04-07-2025
+
+### Changed
+
+- Upgraded to `sunflare>=0.6.0`
+- Switch to `uv`
+
 ## [0.2.0] - 03-03-2025
 
 ### Changed
