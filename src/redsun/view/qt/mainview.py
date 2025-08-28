@@ -9,7 +9,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.config import WidgetPositionTypes
 from sunflare.log import Loggable
-from sunflare.virtual import HasConnection
+from sunflare.virtual import HasConnection, HasRegistration
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
@@ -49,6 +49,7 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
         self.setWindowTitle(config.session)
         self._config = config
         self._virtual_bus = virtual_bus
+        self._central_widget_set = False
 
         self._widgets: dict[str, BaseQtWidget] = {}
         self.build_view(views)
@@ -93,12 +94,13 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
             except KeyError:
                 # assuming that current widget
                 # should be set as central widget
-                if self.centralWidget() is None:
+                if not self._central_widget_set:
                     self.setCentralWidget(widget)
+                    self._central_widget_set = True
                 else:
                     self.logger.error(f"Multiple central views are not allowed: {name}")
-            if isinstance(widget, HasConnection):
-                widget.connection_phase()
+            if isinstance(widget, HasRegistration):
+                widget.registration_phase()
             self._widgets[name] = widget
 
         self.setWindowState(Qt.WindowState.WindowMaximized)
