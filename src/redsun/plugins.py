@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
-from pathlib import Path
+from importlib.resources import as_file, files
 from typing import Any, Final, Literal, TypedDict, TypeVar, Union
 
 import yaml
@@ -196,57 +196,59 @@ def _load_plugins(
         # check if the plugin is available in the entry points
         plugin = next(iterator, None)
         if plugin is not None:
-            # load the manifest file
-            manifest_path = Path(plugin.load()).resolve()
-            with open(manifest_path, "r") as f:
-                # read the manifest for the current group
-                manifest: dict[str, ManifestItems] = yaml.safe_load(f)
-                items = manifest[group]
-                if plugin_id not in items.keys():
-                    # plugin id not found in the manifest;
-                    # log the error and continue
-                    logger.error(
-                        f'Plugin "{plugin_name}" does not contain the id "{plugin_id}".'
-                    )
-                    continue
-                item = items[plugin_id]
-                try:
-                    # retrieve the class definition
-                    class_item_module, class_item_type = item["class"].split(":")
-                    imported_class = getattr(
-                        import_module(class_item_module), class_item_type
-                    )
-                    acceptable = _check_import(imported_class, group)
-                    if not acceptable:
+            pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
+            with as_file(pkg_manifest) as config_path:
+                with open(config_path, "r") as f:
+                    # read the manifest for the current group
+                    manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+                    items = manifest[group]
+                    if plugin_id not in items.keys():
+                        # plugin id not found in the manifest;
+                        # log the error and continue
                         logger.error(
-                            f"{imported_class} exists, but does not implement any known protocol."
+                            f'Plugin "{plugin_name}" does not contain the id "{plugin_id}".'
                         )
                         continue
-                except KeyError:
-                    # couldn't load the class definition;
-                    # ditch the plugin and log the error
-                    logger.error(
-                        f'Plugin id "{plugin_id}" of "{name}" does not contain the class key. Skipping.'
-                    )
-                    continue
-                try:
-                    # get the information class
-                    info_item_module, info_item_type = item["info"].split(":")
-                    imported_info = getattr(
-                        import_module(info_item_module), info_item_type
-                    )
-                except KeyError:
-                    # fallback to default info class
-                    imported_info = FALLBACK_INFO[group]
-                    logger.debug(
-                        f'Plugin "{plugin_name}" does not contain the info key. Falling back to default info class.'
-                    )
+                    item = items[plugin_id]
+                    try:
+                        # retrieve the class definition
+                        class_item_module, class_item_type = item["class"].split(":")
+                        imported_class = getattr(
+                            import_module(class_item_module), class_item_type
+                        )
+                        acceptable = _check_import(imported_class, group)
+                        if not acceptable:
+                            logger.error(
+                                f"{imported_class} exists, but does not implement any known protocol."
+                            )
+                            continue
+                    except KeyError:
+                        # couldn't load the class definition;
+                        # ditch the plugin and log the error
+                        logger.error(
+                            f'Plugin id "{plugin_id}" of "{name}" does not contain the class key. Skipping.'
+                        )
+                        continue
+                    try:
+                        # get the information class
+                        info_item_module, info_item_type = item["info"].split(":")
+                        imported_info = getattr(
+                            import_module(info_item_module), info_item_type
+                        )
+                    except KeyError:
+                        # fallback to default info class
+                        imported_info = FALLBACK_INFO[group]
+                        logger.debug(
+                            f'Plugin "{plugin_name}" does not contain the info key. Falling back to default info class.'
+                        )
 
-                # add the plugin to the dictionary
-                imported_info_obj = imported_info(**info)
-                plugins.append(
-                    Plugin(name=name, info=imported_info_obj, base_class=imported_class)
-                )
+                    # add the plugin to the dictionary
+                    imported_info_obj = imported_info(**info)
+                    plugins.append(
+                        Plugin(
+                            name=name, info=imported_info_obj, base_class=imported_class
+                        )
+                    )
         else:
             logger.error(f'Plugin "{plugin_name}" not found in the installed plugins.')
 
