@@ -1,6 +1,7 @@
 import sys
 from typing import NoReturn, cast
 
+from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 from sunflare.config import RedSunSessionInfo
 from sunflare.view import ViewProtocol
@@ -60,5 +61,6 @@ def launch_app(app: QApplication, view: RedSunMainWindow) -> NoReturn:
     view : RedSunMainWindow
         The main window.
     """
+    start_emitting_from_queue()
     view.show()
     sys.exit(app.exec())
