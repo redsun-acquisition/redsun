@@ -89,7 +89,8 @@ class RedSunMainWindow(QtWidgets.QMainWindow, Loggable):
             try:
                 cfg = self._config.views[name]
                 dock_area = self._DOCK_MAP[cfg.position]
-                dock_widget = QtWidgets.QDockWidget(name, widget)
+                dock_widget = QtWidgets.QDockWidget(name)
+                dock_widget.setWidget(widget)
                 self.addDockWidget(dock_area, dock_widget)
             except KeyError:
                 # assuming that current widget
