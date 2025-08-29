@@ -64,7 +64,6 @@ def main(input_config: str) -> None:
 
     # build the controller layer
     controller = RedsunController(config, virtual_bus, types_groups)
-    controller.build_layer()
 
     # build the view layer
     view = build_view_layer(config, types_groups["views"], virtual_bus)

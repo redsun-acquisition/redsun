@@ -44,6 +44,7 @@ class RedsunController(Loggable):
         self.classes = classes
         self.models: dict[str, ModelProtocol] = {}
         self.controllers: dict[str, ControllerProtocol] = {}
+        self.build_layer()
 
     def build_layer(self) -> None:
         """Build the controller layer.

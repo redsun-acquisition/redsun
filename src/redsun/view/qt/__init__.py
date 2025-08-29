@@ -42,7 +42,6 @@ def build_view_layer(
     # build_view_layer is selected based on the frontend type
     qt_widgets = cast(dict[str, type[BaseQtWidget]], views)
     view = RedSunMainWindow(virtual_bus, config, qt_widgets)
-    view.build_view(qt_widgets)
     return view
 
 
