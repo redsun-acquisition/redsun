@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 
 from sunflare.virtual import VirtualBus
@@ -16,6 +17,7 @@ class RedSunArgs(argparse.Namespace):
     """type hints for command line arguments."""
 
     config: str
+    debug: bool
 
 
 def parse_args() -> RedSunArgs:
@@ -35,6 +37,13 @@ def parse_args() -> RedSunArgs:
         type=str,
         help="Absolute path to the YAML configuration file",
         required=True,
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+        default=False,
     )
 
     if len(sys.argv) == 1:
@@ -81,6 +90,11 @@ def main(input_config: str) -> None:
 def main_cli() -> None:
     """Command line entry point for the Redsun application."""
     args = parse_args()
+    logger = logging.getLogger("redsun")
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
     main(args.config)
 
 
