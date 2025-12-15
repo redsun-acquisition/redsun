@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.4.0] - 15-12-2025
+
+### Changed
+
+- Apply a more strict check on imported plugins
+- Add support for 3.13 (simply declared on PyPI and tested via CI)
+- Upgrade to `sunflare>=0.7.0`
+
 ## [0.3.0] - 04-07-2025
 
 ### Changed
@@ -31,6 +39,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.4.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.2.0...v0.4.0
 [0.3.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0
