@@ -13,11 +13,28 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, ClassVar, Mapping, Optional
 
+from sunflare.model import PModel
+from sunflare.presenter import PPresenter
+
 if TYPE_CHECKING:
-    from sunflare.config import ControllerInfoProtocol, ModelInfoProtocol
-    from sunflare.controller import ControllerProtocol
-    from sunflare.model import ModelProtocol
+    from typing import Protocol
+
+    from sunflare.config import PModelInfo, PPresenterInfo
+    from sunflare.model import PModel
+    from sunflare.presenter import PPresenter
     from sunflare.virtual import VirtualBus
+
+    class BuildableModel(PModel, Protocol):  # noqa: D101
+        def __init__(self, name: str, model_info: PModelInfo) -> None: ...
+
+    class BuildablePresenter(PPresenter, Protocol):  # noqa: D101
+        def __init__(
+            self,
+            ctrl_info: PPresenterInfo,
+            models: Mapping[str, PModel],
+            virtual_bus: VirtualBus,
+        ) -> None: ...
+
 
 __all__ = ["BackendFactory"]
 
@@ -31,9 +48,9 @@ class BackendFactory:
     def build_model(
         cls,
         name: str,
-        model_class: type[ModelProtocol],
-        model_info: ModelInfoProtocol,
-    ) -> Optional[ModelProtocol]:
+        model_class: type[BuildableModel],
+        model_info: PModelInfo,
+    ) -> Optional[PModel]:
         """Build the detector model.
 
         Parameters
@@ -60,22 +77,22 @@ class BackendFactory:
     def build_controller(
         cls,
         name: str,
-        ctrl_info: ControllerInfoProtocol,
-        ctrl_class: type[ControllerProtocol],
-        models: Mapping[str, ModelProtocol],
+        ctrl_info: PPresenterInfo,
+        ctrl_class: type[BuildablePresenter],
+        models: Mapping[str, PModel],
         virtual_bus: VirtualBus,
-    ) -> Optional[ControllerProtocol]:
+    ) -> Optional[PPresenter]:
         """Build the controller.
 
         Parameters
         ----------
         name: ``str``
             Controller name. Used for logging purposes.
-        ctrl_info: ``ControllerInfo``
+        ctrl_info: ``PresenterInfo``
             Controller information container.
         ctrl_class: ``type[BaseController]``
             Controller class.
-        models: ``Mapping[str, ModelProtocol]``
+        models: ``Mapping[str, PModel]``
             Mapping of model names to model instances.
         virtual_bus: :class:`sunflare.virtual.VirtualBus`
             Hardware control virtual bus.

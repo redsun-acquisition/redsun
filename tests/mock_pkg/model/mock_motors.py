@@ -2,7 +2,7 @@ from typing import Any
 
 from attrs import define, field, setters, validators
 from sunflare.config import ModelInfo
-from sunflare.model import ModelProtocol
+from sunflare.model import PModel
 
 @define(kw_only=True)
 class MyMotorInfo(ModelInfo):
@@ -28,7 +28,7 @@ class MyMotorInfo(ModelInfo):
         if len(value) == 0:
             raise ValueError("The dictionary must contain at least one element.")
 
-class MyMotor(ModelProtocol):
+class MyMotor(PModel):
     
     def __init__(self, name: str, model_info: MyMotorInfo) -> None:
         self._name = name
