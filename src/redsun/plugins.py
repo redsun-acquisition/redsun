@@ -8,19 +8,19 @@ from typing import Any, Final, Literal, TypedDict, TypeVar, Union
 
 import yaml
 from sunflare.config import (
-    ControllerInfo,
-    ControllerInfoProtocol,
     FrontendTypes,
     ModelInfo,
-    ModelInfoProtocol,
+    PModelInfo,
+    PPresenterInfo,
+    PresenterInfo,
+    PViewInfo,
     RedSunSessionInfo,
     ViewInfo,
-    ViewInfoProtocol,
 )
-from sunflare.controller import ControllerProtocol
-from sunflare.model import ModelProtocol
+from sunflare.model import PModel
+from sunflare.presenter import PPresenter
 from sunflare.view import ViewProtocol
-from typing_extensions import Generic, NamedTuple
+from typing_extensions import Generic, NamedTuple, get_annotations
 
 logger = logging.getLogger("redsun")
 
@@ -30,17 +30,17 @@ class PluginInfoDict(TypedDict):
 
     Parameters
     ----------
-    models : ``dict[str, ModelInfoProtocol]``
+    models : ``dict[str, PModelInfo]``
         Dictionary of model informations.
-    controllers : ``dict[str, ControllerInfo]``
+    controllers : ``dict[str, PPresenterInfo]``
         Dictionary of controller informations.
-    views : ``dict[str, ViewInfo]``
+    views : ``dict[str, PViewInfo]``
         Dictionary of widget informations.
     """
 
-    models: dict[str, ModelInfoProtocol]
-    controllers: dict[str, ControllerInfoProtocol]
-    views: dict[str, ViewInfoProtocol]
+    models: dict[str, PModelInfo]
+    controllers: dict[str, PPresenterInfo]
+    views: dict[str, PViewInfo]
 
 
 class PluginTypeDict(TypedDict):
@@ -48,16 +48,16 @@ class PluginTypeDict(TypedDict):
 
     Parameters
     ----------
-    models : ``dict[str, type[ModelProtocol]``
+    models : ``dict[str, type[PModel]``
         Dictionary of models classes.
-    controllers : ``dict[str, type[ControllerProtocol]``
+    controllers : ``dict[str, type[PPresenter]``
         Dictionary of controllers classes.
     views : ``dict[str, type[ViewProtocol]``
         Dictionary of view classes.
     """
 
-    models: dict[str, type[ModelProtocol]]
-    controllers: dict[str, type[ControllerProtocol]]
+    models: dict[str, type[PModel]]
+    controllers: dict[str, type[PPresenter]]
     views: dict[str, type[ViewProtocol]]
 
 
@@ -85,14 +85,14 @@ class Plugin(NamedTuple, Generic[IC, PC]):
 
 
 # helper typing
-PluginInfo = Union[ModelInfoProtocol, ControllerInfoProtocol, ViewInfoProtocol]
-PluginType = Union[ModelProtocol, ControllerProtocol, ViewProtocol]
+PluginInfo = Union[PModelInfo, PPresenterInfo, PViewInfo]
+PluginType = Union[PModel, PPresenter, ViewProtocol]
 ManifestItems = dict[str, dict[str, str]]
 
 # constants
 FALLBACK_INFO: Final[dict[str, Any]] = {
     "models": ModelInfo,
-    "controllers": ControllerInfo,
+    "controllers": PresenterInfo,
     "views": ViewInfo,
 }
 
@@ -256,7 +256,7 @@ def _load_plugins(
 
 
 def _check_import(imported_class: type[T], group: str) -> bool:
-    """Check if the imported class implements the correct protocol.
+    """Check if the imported class implements the correct protocol by inspecting its __init__ signature.
 
     Parameters
     ----------
@@ -271,10 +271,102 @@ def _check_import(imported_class: type[T], group: str) -> bool:
         True if the class implements the correct protocol; False otherwise.
     """
     if group == "models":
-        return isinstance(imported_class, ModelProtocol)
+        return _check_model_protocol(imported_class)
     elif group == "controllers":
-        return isinstance(imported_class, ControllerProtocol)
+        return _check_controller_protocol(imported_class)
     elif group == "views":
-        return isinstance(imported_class, ViewProtocol)
-    # if we fall here, we have a problem; but we shouldn't
-    raise ValueError(f"Unknown group {group}.")  # pragma: no cover
+        return _check_view_protocol(imported_class)
+    else:
+        raise ValueError(f"Unknown group {group}.")  # pragma: no cover
+
+
+def _check_model_protocol(cls: type) -> bool:
+    """Check if a class implements the model protocol.
+
+    Models should inherit from or structurally implement PModel.
+    """
+    # First check inheritance hierarchy (works even for data protocols)
+    if PModel in cls.mro():
+        return True
+
+    # For structural typing, check the __init__ annotations
+    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
+    param_names = list(annotations.keys())
+
+    # Check if the __init__ signature matches the expected pattern
+    # Should have: name (str) and some_info (ModelInfo-like)
+    if (
+        len(param_names) == 2
+        and "name" in param_names
+        and any("model_info" in param.lower() for param in param_names)
+    ):
+        return True
+
+    # Fall back to checking required methods and properties
+    required_methods = ["read_configuration", "describe_configuration"]
+    required_properties = ["name", "parent", "model_info"]
+
+    # Check if all required methods exist and are callable
+    for method_name in required_methods:
+        if not hasattr(cls, method_name) or not callable(getattr(cls, method_name)):
+            return False
+
+    # Check if all required properties exist
+    for prop_name in required_properties:
+        if not hasattr(cls, prop_name):
+            return False
+
+    return True
+
+
+def _check_controller_protocol(cls: type) -> bool:
+    """Check if a class implements the controller protocol.
+
+    Controllers should inherit from or structurally implement PPresenter.
+    """
+    # First check inheritance hierarchy (works even for data protocols)
+    if PPresenter in cls.mro():
+        return True
+
+    # For structural typing, check the __init__ annotations
+    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
+    param_names = list(annotations.keys())
+
+    # Check if the __init__ signature matches the expected pattern
+    # Should have: ctrl_info, models, virtual_bus
+    if (
+        len(param_names) == 3
+        and any("ctrl_info" in param.lower() for param in param_names)
+        and any("models" in param.lower() for param in param_names)
+        and any("virtual_bus" in param.lower() for param in param_names)
+    ):
+        return True
+
+    # Fall back to checking class attributes
+    required_attributes = ["ctrl_info", "models", "virtual_bus"]
+    return all(hasattr(cls, attr) for attr in required_attributes)
+
+
+def _check_view_protocol(cls: type) -> bool:
+    """Check if a class implements the view protocol.
+
+    Views should inherit from or structurally implement ViewProtocol.
+    """
+    # First check inheritance hierarchy (works even for data protocols)
+    if ViewProtocol in cls.mro():
+        return True
+
+    # For structural typing, check the __init__ annotations
+    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
+    param_names = list(annotations.keys())
+
+    # Check if the __init__ signature matches the expected pattern
+    # Should have: view_info, virtual_bus
+    if any("view_info" in param.lower() for param in param_names) and any(
+        "virtual_bus" in param.lower() for param in param_names
+    ):
+        return True
+
+    # Fall back to checking class attributes
+    required_attributes = ["view_info", "virtual_bus"]
+    return all(hasattr(cls, attr) for attr in required_attributes)

@@ -11,8 +11,8 @@ from redsun.controller.factory import BackendFactory
 
 if TYPE_CHECKING:
     from sunflare.config import RedSunSessionInfo
-    from sunflare.controller import ControllerProtocol
-    from sunflare.model import ModelProtocol
+    from sunflare.model import PModel
+    from sunflare.presenter import PPresenter
     from sunflare.virtual import VirtualBus
 
     from redsun.plugins import PluginTypeDict
@@ -42,8 +42,8 @@ class RedsunController(Loggable):
         self.config = config
         self.virtual_bus = virtual_bus
         self.classes = classes
-        self.models: dict[str, ModelProtocol] = {}
-        self.controllers: dict[str, ControllerProtocol] = {}
+        self.models: dict[str, PModel] = {}
+        self.controllers: dict[str, PPresenter] = {}
         self.build_layer()
 
     def build_layer(self) -> None:

@@ -2,13 +2,13 @@ from attrs import define
 
 from typing import Mapping
 
-from sunflare.config import ControllerInfo
-from sunflare.controller import ControllerProtocol
-from sunflare.model import ModelProtocol
+from sunflare.config import PresenterInfo
+from sunflare.presenter import PPresenter
+from sunflare.model import PModel
 from sunflare.virtual import VirtualBus
 
 @define(kw_only=True)
-class MockControllerInfo(ControllerInfo):
+class MockControllerInfo(PresenterInfo):
     """Mock controller information model."""
     string: str
     integer: int
@@ -16,12 +16,12 @@ class MockControllerInfo(ControllerInfo):
     boolean: bool
 
 
-class MockController(ControllerProtocol):
+class MockController(PPresenter):
 
     def __init__(
         self,
         ctrl_info: MockControllerInfo,
-        models: Mapping[str, ModelProtocol],
+        models: Mapping[str, PModel],
         virtual_bus: VirtualBus,
     ) -> None:
         self.ctrl_info = ctrl_info
@@ -34,12 +34,12 @@ class MockController(ControllerProtocol):
     def connection_phase(self) -> None:
         ...
 
-class BrokenController(ControllerProtocol):
+class BrokenController(PPresenter):
 
     def __init__(
         self,
         ctrl_info: MockControllerInfo,
-        models: Mapping[str, ModelProtocol],
+        models: Mapping[str, PModel],
         virtual_bus: VirtualBus,
     ) -> None:
         self.ctrl_info = ctrl_info
@@ -74,7 +74,7 @@ class NonDerivedController:
 
     def __init__(self, 
                 ctrl_info: NonDerivedControllerInfo, 
-                models: dict[str, ModelProtocol],
+                models: dict[str, PModel],
                 virtual_bus: VirtualBus):
             ...
         

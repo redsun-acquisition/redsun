@@ -1,4 +1,3 @@
-engine: bluesky
 frontend: pyqt
 controllers:
   MockController:
