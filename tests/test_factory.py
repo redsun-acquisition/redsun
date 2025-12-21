@@ -52,5 +52,3 @@ def test_controller_broken_factory(importlib_str: str, config_path: Path) -> Non
             ctrl = BackendFactory.build_controller(name="controller", ctrl_info=info, ctrl_class=class_type, models={}, virtual_bus=bus)
 
             assert ctrl is None
-
-    bus.shutdown()
