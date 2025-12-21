@@ -18,24 +18,102 @@ env:
 
 jobs:
   test:
-    name: Test
-    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v2
-    with:
-      os: ${{ matrix.os }}
-      python-version: ${{ matrix.python-version }}
-      extras: "dev"
-      pip-install-flags: --editable
-      coverage-upload: artifact
-      pytest-args: "--log-cli-level=DEBUG"
+    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-    
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run tests with coverage
+        run: uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+
+      - name: Generate UUID
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "UUID=$(powershell -Command '[guid]::NewGuid().ToString()')" >> $GITHUB_ENV
+          else
+            echo "UUID=$(uuidgen)" >> $GITHUB_ENV
+          fi
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}-${{ env.UUID }}
+          path: ./.coverage*
+          include-hidden-files: true
+
   upload_coverage:
+    name: Upload coverage
     if: always()
     needs: [test]
-    uses: pyapp-kit/workflows/.github/workflows/upload-coverage.yml@v2
-    secrets:
-        codecov_token: ${{ secrets.codecov_token }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.x
+
+      - name: Install coverage
+        run: uv pip install --system coverage
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: covreport-*
+          path: covreports
+          merge-multiple: true
+
+      - name: Combine coverage data
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          echo "[paths]" > ci_coveragerc
+          echo "source =" >> ci_coveragerc
+          if [[ -d "src" ]]; then
+            echo "    ${GITHUB_WORKSPACE}/src" >> ci_coveragerc
+            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME\\src" >> ci_coveragerc
+            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
+            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
+          else
+            echo "    ${GITHUB_WORKSPACE}" >> ci_coveragerc
+            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME" >> ci_coveragerc
+            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
+            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
+          fi
+          echo "    */site-packages/" >> ci_coveragerc
+          cat ci_coveragerc
+          uv run coverage combine --rcfile=ci_coveragerc covreports
+          uv run coverage xml -o coverage.xml
+          uv run coverage report
+          uv run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload to codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
+          token: ${{ secrets.codecov_token }}

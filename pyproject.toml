@@ -47,20 +47,6 @@ dev = [
 [project.optional-dependencies]
 pyqt = ["sunflare[pyqt]"]
 pyside = ["sunflare[pyside]"]
-dev = [
-    "sunflare[pyqt]>=0.7.0",
-    "mypy>=1.19.1",
-    "pre-commit>=4.5.0",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1",
-    "ruff>=0.12.2",
-]
-docs = [
-    "sphinx",
-    "pydata-sphinx-theme",
-    "sphinx-design",
-    "myst-parser"
-]
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
