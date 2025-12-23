@@ -4,36 +4,36 @@
 
 It is reccomended to install the package in a virtual environment.
 
-::::{tab-set}
-:::{tab-item} venv
-```{code-block} shell
-# python version depends
-# on the globally installed python
-python -m venv redsun-env
+=== "venv"
 
-venv\Scripts\activate
+    ```shell
+    # python version depends
+    # on the globally installed python
+    python -m venv redsun-env
 
-# for Windows...
-# ... command prompt
-venv\Scripts\activate.bat
+    venv\Scripts\activate
 
-# ... powershell
-venv\Scripts\Activate.ps1
-```
-:::
-:::{tab-item} conda
-```{code-block} shell
-conda create -n redsun-env python=3.9
-conda activate redsun-env
-```
-:::
-:::{tab-item} mamba
-```{code-block} shell
-mamba create -n redsun-env python=3.9
-mamba activate redsun-env
-```
-:::
-::::
+    # for Windows...
+    # ... command prompt
+    venv\Scripts\activate.bat
+
+    # ... powershell
+    venv\Scripts\Activate.ps1
+    ```
+
+=== "conda"
+
+    ```shell
+    conda create -n redsun-env python=3.9
+    conda activate redsun-env
+    ```
+
+=== "mamba"
+
+    ```shell
+    mamba create -n redsun-env python=3.9
+    mamba activate redsun-env
+    ```
 
 The package available on PyPI. You can install it via the following command in your active environment:
 

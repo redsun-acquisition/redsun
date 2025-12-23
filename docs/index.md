@@ -8,9 +8,8 @@
 
 # Redsun
 
-```{warning}
-This project is currently under active development and it may (and most likely will) receive breaking changes. Use at your own risk.
-```
+!!! warning
+    This project is currently under active development and it may (and most likely will) receive breaking changes. Use at your own risk.
 
 Redsun is an acquisition software written in [CPython], with the concept of building modular user interfaces for scientific data acquisition.
 

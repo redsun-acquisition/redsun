@@ -112,3 +112,6 @@ ENV/
 
 # local test configs
 test_configs/*
+
+# MkDocs build output
+site/
