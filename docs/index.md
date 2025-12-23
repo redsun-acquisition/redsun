@@ -21,14 +21,7 @@ The philosophy of Redsun is to:
 - be extensible and modular: pick only the tools you need to get the job done;
 - give the control of your data (and metadata) to you: you decide what is what.
 
-## Contents
-
-```{toctree}
-:maxdepth: 1
-
-getting_started/index
-changelog
-```
+<!-- Navigation handled by mkdocs.yml -->
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [cpython]: https://www.python.org/
