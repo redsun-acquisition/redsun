@@ -11,7 +11,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from dependency_injector import containers, providers
-from sunflare.virtual import HasShutdown, IsInjectable, IsProvider
+from sunflare.virtual import HasShutdown, IsInjectable, IsProvider, VirtualBus
 
 from redsun.plugins import load_configuration
 
@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from sunflare.device import Device
     from sunflare.presenter import Presenter
     from sunflare.view import View
-    from sunflare.virtual import VirtualBus
 
 __all__ = ["AppContainerMeta", "AppContainer"]
 
