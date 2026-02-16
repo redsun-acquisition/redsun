@@ -55,7 +55,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            xvfb-run -a uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+            xvfb-run --server-args "-screen 0 1920x1080x24" uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
           else
             uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
           fi
