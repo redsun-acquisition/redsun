@@ -15,9 +15,6 @@ from redsun.containers import (
 )
 
 
-# ── Component wrappers ──────────────────────────────────────────────
-
-
 class TestComponentWrappers:
     """Tests for DeviceComponent, PresenterComponent, ViewComponent."""
 

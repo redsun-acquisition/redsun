@@ -6,7 +6,7 @@ from enum import Enum, unique
 
 __all__ = [
     "FrontendTypes",
-    "WidgetPositionTypes",
+    "ViewPositionTypes",
 ]
 
 
@@ -27,23 +27,27 @@ class FrontendTypes(str, Enum):
 
 
 @unique
-class WidgetPositionTypes(str, Enum):
-    """Supported widget position types.
+class ViewPositionTypes(str, Enum):
+    """Supported view position types.
 
-    Used to define the position of a widget in the main view of the GUI.
+    Used to define the position of a view component in the main view of the GUI.
 
     Attributes
     ----------
     CENTER : str
-        Center widget position.
+        Center view position.
     LEFT : str
-        Left widget position.
+        Left view position.
     RIGHT : str
-        Right widget position.
+        Right view position.
     TOP : str
-        Top widget position.
+        Top view position.
     BOTTOM : str
-        Bottom widget position.
+        Bottom view position.
+
+    !!! warning
+        These values are based on how Qt manages dock widgets.
+        They may change in the future.
     """
 
     CENTER = "center"

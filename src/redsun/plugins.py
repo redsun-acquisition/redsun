@@ -214,14 +214,12 @@ def _check_device_protocol(cls: type) -> bool:
     required_methods = ["read_configuration", "describe_configuration"]
     required_properties = ["name", "parent"]
 
-    for method_name in required_methods:
-        if not hasattr(cls, method_name) or not callable(getattr(cls, method_name)):
-            return False
-
-    for prop_name in required_properties:
-        if not hasattr(cls, prop_name):
-            return False
-
+    is_compliant = all(
+        hasattr(cls, attr) for attr in [*required_methods, *required_properties]
+    )
+    if is_compliant:
+        # we have a hit: register as subclass
+        Device.register(cls)
     return True
 
 
@@ -237,7 +235,11 @@ def _check_presenter_protocol(cls: type) -> bool:
 
     # Structural check: required attributes
     required_attributes = ["devices", "virtual_bus"]
-    return all(hasattr(cls, attr) for attr in required_attributes)
+    is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
+    if is_compliant:
+        # we have a hit: register as subclass
+        Presenter.register(cls)
+    return is_compliant
 
 
 def _check_view_protocol(cls: type) -> bool:
@@ -248,6 +250,9 @@ def _check_view_protocol(cls: type) -> bool:
     """
     if issubclass(cls, View):
         return True
+    is_compliant = hasattr(cls, "virtual_bus")
 
-    # Structural check: virtual_bus must be present
-    return hasattr(cls, "virtual_bus")
+    if is_compliant:
+        # we have a hit: register as subclass
+        View.register(cls)
+    return is_compliant

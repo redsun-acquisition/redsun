@@ -10,10 +10,10 @@ from qtpy.QtCore import Qt
 from sunflare.log import Loggable
 from sunflare.virtual import VirtualAware
 
-from redsun.config import WidgetPositionTypes
+from redsun.config import ViewPositionTypes
 
 if TYPE_CHECKING:
-    from sunflare.view import View
+    from sunflare.view.qt import QtView
     from sunflare.virtual import VirtualBus
 
 
@@ -31,35 +31,35 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
     """
 
     _DOCK_MAP = {
-        WidgetPositionTypes.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
-        WidgetPositionTypes.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
-        WidgetPositionTypes.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
-        WidgetPositionTypes.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
+        ViewPositionTypes.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
+        ViewPositionTypes.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
+        ViewPositionTypes.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
+        ViewPositionTypes.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
     }
 
     def __init__(
         self,
         virtual_bus: VirtualBus,
         session_name: str,
-        views: dict[str, View],
+        views: dict[str, QtView],
     ) -> None:
         super().__init__()
         self.setWindowTitle(session_name)
         self._virtual_bus = virtual_bus
         self._central_widget_set = False
-        self._widgets: dict[str, View] = {}
+        self._widgets: dict[str, QtView] = {}
         self._dock_views(views)
 
         self._menu_bar = self.menuBar()
         assert self._menu_bar is not None
-        file = self._menu_bar.addMenu("&File")
-        assert file is not None
+        self._file = self._menu_bar.addMenu("&File")
+        assert self._file is not None
 
         self._save_action = QtWidgets.QAction("Save configuration as...", self)  # type: ignore[attr-defined]
         self._save_action.triggered.connect(self._save_configuration)
-        file.addAction(self._save_action)
+        self._file.addAction(self._save_action)
 
-    def _dock_views(self, views: dict[str, View]) -> None:
+    def _dock_views(self, views: dict[str, QtView]) -> None:
         """Dock pre-built view instances into the main window.
 
         Views are docked according to a ``position`` attribute if
@@ -75,17 +75,17 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
             self._widgets[name] = widget
 
             position = getattr(widget, "position", None)
-            if position is not None and position != WidgetPositionTypes.CENTER:
+            if position is not None and position != ViewPositionTypes.CENTER:
                 try:
-                    dock_area = self._DOCK_MAP[WidgetPositionTypes(position)]
+                    dock_area = self._DOCK_MAP[ViewPositionTypes(position)]
                     dock_widget = QtWidgets.QDockWidget(name)
-                    dock_widget.setWidget(widget)  # type: ignore[arg-type]
+                    dock_widget.setWidget(widget)
                     self.addDockWidget(dock_area, dock_widget)
                 except (KeyError, ValueError):
                     self.logger.error(f"Unknown position '{position}' for view: {name}")
             else:
                 if not self._central_widget_set:
-                    self.setCentralWidget(widget)  # type: ignore[arg-type]
+                    self.setCentralWidget(widget)
                     self._central_widget_set = True
                 else:
                     self.logger.error(f"Multiple central views are not allowed: {name}")

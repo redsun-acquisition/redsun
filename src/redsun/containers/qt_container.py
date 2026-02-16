@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, NoReturn, cast
 
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
@@ -14,6 +14,8 @@ from redsun.view.qt.mainview import QtMainView
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from sunflare.view.qt import QtView
 
 __all__ = ["QtAppContainer"]
 
@@ -71,12 +73,11 @@ class QtAppContainer(AppContainer):
         if not self.is_built:
             self.build()
 
-        # 3. Construct main view
         session_name = self._config.get("session", "Redsun")
         self._main_view = QtMainView(
             virtual_bus=self.virtual_bus,
             session_name=session_name,
-            views=self.views,
+            views=cast("dict[str, QtView]", self.views),
         )
 
         # 4. Connect virtual bus

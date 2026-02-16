@@ -56,8 +56,7 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
     dotted_path = _FRONTEND_CONTAINERS.get(frontend)
     if dotted_path is None:
         raise ValueError(
-            f"Unknown frontend {frontend!r}. "
-            f"Supported: {sorted(_FRONTEND_CONTAINERS)}"
+            f"Unknown frontend {frontend!r}. Supported: {sorted(_FRONTEND_CONTAINERS)}"
         )
     module_path, class_name = dotted_path.rsplit(".", 1)
     module = import_module(module_path)
@@ -130,12 +129,9 @@ class AppContainerMeta(type):
 class AppContainer(metaclass=AppContainerMeta):
     """Application container for MVP architecture.
 
-    Uses ``dependency-injector`` for IoC between presenter and view layers.
-    ``VirtualBus`` signals are reserved for runtime communication.
-
     Parameters
     ----------
-    **config : Any
+    **config : dict[str, Any]
         Configuration options.  Common keys:
 
         - ``session`` : str - Session name (default: ``"Redsun"``)
@@ -155,7 +151,7 @@ class AppContainer(metaclass=AppContainerMeta):
     )
 
     def __init__(self, **config: Any) -> None:
-        self._config: dict[str, Any] = {
+        self._config = {
             "session": config.get("session", "Redsun"),
             "frontend": config.get("frontend", "pyqt"),
             **config,
@@ -257,8 +253,6 @@ class AppContainer(metaclass=AppContainerMeta):
         AppContainer
             Self, for method chaining.
         """
-        from sunflare.virtual import VirtualBus
-
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
             return self
@@ -275,7 +269,7 @@ class AppContainer(metaclass=AppContainerMeta):
         self._di_container.config.from_dict(self._config)
         logger.debug("DI container created")
 
-        # 3. Build devices
+        # build devices
         built_devices: dict[str, Device] = {}
         for name, device in self._device_components.items():
             try:
@@ -284,7 +278,7 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
-        # 4. Build presenters and register their providers
+        # build presenters and register their providers
         for name, presenter_component in self._presenter_components.items():
             try:
                 presenter = presenter_component.build(built_devices, self._virtual_bus)
@@ -294,7 +288,7 @@ class AppContainer(metaclass=AppContainerMeta):
                 logger.error(f"Failed to build presenter '{name}': {e}")
                 raise
 
-        # 5. Build views and inject dependencies
+        # build views and inject dependencies
         for name, view_component in self._view_components.items():
             try:
                 view = view_component.build(self._virtual_bus)
@@ -315,7 +309,7 @@ class AppContainer(metaclass=AppContainerMeta):
         return self
 
     def shutdown(self) -> None:
-        """Shutdown all components that implement ``HasShutdown``."""
+        """Shutdown all presenters that implement ``HasShutdown``."""
         if not self._is_built:
             return
 
