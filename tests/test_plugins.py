@@ -1,135 +1,126 @@
+"""Tests for plugin discovery and loading."""
+
+from __future__ import annotations
+
 from pathlib import Path
-from unittest import mock
-from sunflare.config import RedSunSessionInfo
+from typing import Any
 
-from conftest import side_effect
-
-def test_fake_entrypoint(importlib_str: str) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect) as entry_points:
-        ep = entry_points(group='redsun.plugins')
-        assert len(ep) == 1
-        assert ep[0].name == 'mock-pkg'
-        assert ep[0].value == 'redsun.yaml'
-        assert ep[0].group == 'redsun.plugins'
+from redsun.plugins import (
+    _check_device_protocol,
+    _check_presenter_protocol,
+    _check_view_protocol,
+    load_configuration,
+)
 
 
-def test_plugin_loading(importlib_str: str, config_path: Path) -> None:
+class TestPluginLoading:
+    """Tests for loading plugin classes from manifests."""
 
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect) as entry_points:
-        from redsun.plugins import _load_plugins
-        config = RedSunSessionInfo.load_yaml(str(config_path / 'mock_motor_config.yaml'))
-        manifests = entry_points(group='redsun.plugins')
-        plugins = _load_plugins(group_cfg=config["models"], group='models', available_manifests=manifests)
+    def test_load_motor_config(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, types = load_configuration(str(config_path / "mock_motor_config.yaml"))
 
-    assert len(plugins) != 0
+        assert len(types["models"]) == 2
+        assert "Single axis motor" in types["models"]
+        assert "Double axis motor" in types["models"]
+        assert len(types["controllers"]) == 0
+        assert len(types["views"]) == 0
 
-    from mock_pkg.model import MyMotorInfo, MyMotor, NonDerivedMotor, NonDerivedMotorInfo
+    def test_load_detector_config(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, types = load_configuration(
+            str(config_path / "mock_detector_config.yaml")
+        )
 
-    target = [(MyMotor, MyMotorInfo), (NonDerivedMotor, NonDerivedMotorInfo)]
+        assert len(types["models"]) == 2
+        assert "iSCAT channel" in types["models"]
+        assert "TIRF channel" in types["models"]
 
-    for plugin, t in zip(plugins, target):
-        assert plugin.base_class == t[0]
-        assert isinstance(plugin.info, t[1])
+    def test_load_controller_config(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, types = load_configuration(
+            str(config_path / "mock_controller_config.yaml")
+        )
 
-def test_motor_configuration(importlib_str: str, config_path: Path) -> None:
+        assert len(types["controllers"]) == 1
+        assert "MockController" in types["controllers"]
 
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
-        from redsun.plugins import load_configuration
+        from mock_pkg.controller import MockController
 
-        config, types = load_configuration(str(config_path / 'mock_motor_config.yaml'))
+        assert types["controllers"]["MockController"] is MockController
 
-    assert len(config.models) == 2
-    assert len(config.controllers) == 0
-    assert len(config.views) == 0
+    def test_load_hidden_model_config(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, types = load_configuration(
+            str(config_path / "hidden_model_config.yaml")
+        )
 
-    from mock_pkg.model import MyMotorInfo, MyMotor, NonDerivedMotor, NonDerivedMotorInfo
+        assert len(types["models"]) == 1
 
-    for i, model in enumerate(config.models.values()):
-        if i == 0:
-            assert isinstance(model, MyMotorInfo)
-        else:
-            assert isinstance(model, NonDerivedMotorInfo)
+        from mock_pkg.device.hidden import HiddenModel
 
-    assert len(types["models"]) == 2
-    assert len(types["controllers"]) == 0
-    assert len(types["views"]) == 0
+        assert types["models"]["iSCAT channel"] is HiddenModel
 
-    for i, class_type in enumerate(types["models"].values()):
-        if i == 0:
-            assert class_type == MyMotor
-        else:
-            assert class_type == NonDerivedMotor
+    def test_broken_model_loads_valid_only(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """Broken device class still passes protocol check (inherits Device).
 
-def test_detector_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
-        from redsun.plugins import load_configuration
+        The build step would fail, not the loading step.
+        """
+        config, types = load_configuration(
+            str(config_path / "broken_model_config.yaml")
+        )
 
-        config, types = load_configuration(str(config_path / 'mock_detector_config.yaml'))
+        from mock_pkg.device import MockDetector
 
-    assert len(config.models) == 2
-    assert len(config.controllers) == 0
-    assert len(config.views) == 0
+        assert types["models"]["TIRF channel"] is MockDetector
 
-    from mock_pkg.model import MockDetector, MockDetectorInfo
+    def test_config_returns_raw_dict(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, _ = load_configuration(str(config_path / "mock_motor_config.yaml"))
 
-    for model in config.models.values():
-        assert isinstance(model, MockDetectorInfo)
+        assert isinstance(config, dict)
+        assert config["frontend"] == "pyqt"
+        assert config["session"] == "test"
+        assert "models" in config
 
-    assert len(types["models"]) == 2
-    assert len(types["controllers"]) == 0
-    assert len(types["views"]) == 0
+    def test_full_config(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        config, types = load_configuration(
+            str(config_path / "mock_full_config.yaml")
+        )
 
-    for class_type in types["models"].values():
-        assert class_type == MockDetector
+        assert len(types["models"]) == 1
+        assert len(types["controllers"]) == 1
+        assert len(types["views"]) == 1
 
-def test_controller_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
-        from redsun.plugins import load_configuration
 
-        config, types = load_configuration(str(config_path / 'mock_controller_config.yaml'))
+class TestProtocolChecks:
+    """Tests for protocol validation helpers."""
 
-    assert len(config.models) == 0
-    assert len(config.controllers) == 1
-    assert len(config.views) == 0
+    def test_device_protocol_derived(self) -> None:
+        from mock_pkg.device import MyMotor
 
-    from mock_pkg.controller import MockController, MockControllerInfo
+        assert _check_device_protocol(MyMotor) is True
 
-    for ctrl in config.controllers.values():
-        assert isinstance(ctrl, MockControllerInfo)
+    def test_device_protocol_non_derived(self) -> None:
+        from mock_pkg.device import NonDerivedMotor
 
-    assert len(types["models"]) == 0
-    assert len(types["controllers"]) == 1
-    assert len(types["views"]) == 0
+        assert _check_device_protocol(NonDerivedMotor) is True
 
-    for class_type in types["controllers"].values():
-        assert class_type == MockController
+    def test_presenter_protocol_derived(self) -> None:
+        from mock_pkg.controller import MockController
 
-def test_broken_model_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
-        from redsun.plugins import load_configuration
-        config, types = load_configuration(str(config_path / 'broken_model_config.yaml'))
+        assert _check_presenter_protocol(MockController) is True
 
-        assert len(config.models) == 1
-        assert len(config.controllers) == 0
-        assert len(config.views) == 0
+    def test_view_protocol_check(self) -> None:
+        from mock_pkg.view import MockQtView
 
-        from mock_pkg.model import MockDetector, MockDetectorInfo
-
-        assert isinstance(list(config.models.values())[0], MockDetectorInfo)
-        for class_type in types["models"].values():
-            assert class_type == MockDetector
-
-def test_hidden_model_configuration(importlib_str: str, config_path: Path) -> None:
-    with mock.patch(f"{importlib_str}.entry_points", side_effect=side_effect):
-        from redsun.plugins import load_configuration
-        config, types = load_configuration(str(config_path / 'hidden_model_config.yaml'))
-
-        assert len(config.models) == 1
-        assert len(config.controllers) == 0
-        assert len(config.views) == 0
-
-        from mock_pkg.model.hidden import HiddenModel, HiddenModelInfo
-
-        assert isinstance(list(config.models.values())[0], HiddenModelInfo)
-        for class_type in types["models"].values():
-            assert class_type == HiddenModel
+        assert _check_view_protocol(MockQtView) is True
