@@ -60,9 +60,17 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --group dev
-
+      
+      # if we're running on linux make sure to
+      # create a virtual display otherwise it goes crazy
       - name: Run tests with coverage
-        run: uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            xvfb-run -a uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+          else
+            uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+          fi
+        shell: bash
 
       - name: Generate UUID
         shell: bash
