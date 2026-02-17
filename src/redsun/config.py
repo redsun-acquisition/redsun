@@ -32,6 +32,10 @@ class ViewPositionTypes(str, Enum):
 
     Used to define the position of a view component in the main view of the GUI.
 
+    !!! warning
+        These values are based on how Qt manages dock widgets.
+        They may change in the future.
+
     Attributes
     ----------
     CENTER : str
@@ -44,10 +48,6 @@ class ViewPositionTypes(str, Enum):
         Top view position.
     BOTTOM : str
         Bottom view position.
-
-    !!! warning
-        These values are based on how Qt manages dock widgets.
-        They may change in the future.
     """
 
     CENTER = "center"

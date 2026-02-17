@@ -33,7 +33,6 @@ from typing_extensions import dataclass_transform
 from .components import (
     RedSunConfig,
     _ComponentField,
-    _ConfigField,
     _DeviceComponent,
     _PresenterComponent,
     _ViewComponent,
@@ -217,20 +216,51 @@ class AppContainerMeta(type):
     Annotated fields using `component` are also resolved: the type
     annotation provides the component class and the attribute name becomes
     the component name.
+
+    A configuration file can be specified at metaclass level,
+    which allows component fields to pull their kwargs from the config.
     """
 
     _device_components: dict[str, _DeviceComponent]
     _presenter_components: dict[str, _PresenterComponent]
     _view_components: dict[str, _ViewComponent]
+    _config_path: Path | None
 
-    def __new__(  # noqa: D102
+    def __new__(
         mcs,
         name: str,
         bases: tuple[type, ...],
         namespace: dict[str, Any],
+        config: str | Path | None = None,
         **kwargs: Any,
     ) -> AppContainerMeta:
+        """Create the class and collect component wrappers.
+
+        Parameters
+        ----------
+        config : str | Path | None
+            Path to a YAML configuration file for component kwargs. Passed when
+            defining the subclass:
+
+                class MyApp(AppContainer, config="app.yaml"): ...
+        """
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        # Store config path on the class
+        config_path: Path | None = None
+        if config is not None:
+            config_path = Path(config)
+        else:
+            # Check base classes for an inherited config path
+            for base in bases:
+                if hasattr(base, "_config_path") and base._config_path is not None:
+                    if isinstance(base._config_path, str):
+                        config_path = Path(base._config_path)
+                    elif isinstance(base._config_path, Path):
+                        config_path = base._config_path
+                    config_path = base._config_path
+                    break
+        cls._config_path = config_path
 
         # Inherit components from base classes
         devices: dict[str, _DeviceComponent] = {}
@@ -267,21 +297,10 @@ class AppContainerMeta(type):
         }
 
         if component_fields:
-            # Load container-level config if a _ConfigField is present
+            # Load container-level config if a config path is present
             config_data: dict[str, Any] = {}
-            for attr_value in namespace.values():
-                if isinstance(attr_value, _ConfigField):
-                    config_data = _load_yaml(attr_value.path)
-                    break
-            else:
-                # Check base classes for an inherited config field
-                for base in bases:
-                    for val in vars(base).values():
-                        if isinstance(val, _ConfigField):
-                            config_data = _load_yaml(val.path)
-                            break
-                    if config_data:
-                        break
+            if config_path is not None:
+                config_data = _load_yaml(config_path)
 
             try:
                 hints = get_type_hints(cls)
@@ -308,8 +327,8 @@ class AppContainerMeta(type):
                     if not config_data:
                         raise TypeError(
                             f"Component field '{attr_name}' in {name} has "
-                            f"from_config set but no config() field was "
-                            f"declared on the container"
+                            f"from_config set but no config path was "
+                            f"provided to the container class"
                         )
 
                     # Map layer to config section key
@@ -373,16 +392,36 @@ class AppContainerMeta(type):
 class AppContainer(metaclass=AppContainerMeta):
     """Application container for MVP architecture.
 
+    Subclass this to define your application's components using the
+    [`component`][redsun.containers.components.component] field specifier.
+
     Parameters
     ----------
-    **config : dict[str, Any]
-        Configuration options.  Common keys:
+    session : str
+        Session name. Defaults to ``"Redsun"``.
+    frontend : str
+        Frontend type. Defaults to ``"pyqt"``.
 
-        - ``session`` : str - Session name (default: ``"Redsun"``)
-        - ``frontend`` : str - Frontend type (default: ``"pyqt"``)
+    Examples
+    --------
+    Basic usage with inline kwargs:
+
+    >>> class MyApp(AppContainer):
+    ...     motor: MyMotor = component(layer="device", axis=["X"])
+    ...     ctrl: MyController = component(layer="presenter")
+
+    With a configuration file:
+
+    >>> class MyApp(AppContainer, config="app_config.yaml"):
+    ...     motor: MyMotor = component(layer="device", from_config="motor")
+
+    Building and running:
+
+    >>> app = MyApp(session="Experiment 1")
+    >>> app.build()
+    >>> app.run()
     """
 
-    # Populated by metaclass
     _device_components: ClassVar[dict[str, _DeviceComponent]]
     _presenter_components: ClassVar[dict[str, _PresenterComponent]]
     _view_components: ClassVar[dict[str, _ViewComponent]]
@@ -394,11 +433,10 @@ class AppContainer(metaclass=AppContainerMeta):
         "_is_built",
     )
 
-    def __init__(self, **config: Any) -> None:
+    def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
         self._config = {
-            "session": config.get("session", "Redsun"),
-            "frontend": config.get("frontend", "pyqt"),
-            **config,
+            "session": session,
+            "frontend": frontend,
         }
         self._virtual_bus: VirtualBus | None = None
         self._di_container: containers.DynamicContainer | None = None
