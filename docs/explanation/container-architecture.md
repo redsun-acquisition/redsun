@@ -59,15 +59,11 @@ The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass
 ## Configuration file support
 
 Components can pull their keyword arguments from a YAML configuration file:
-
 ```python
-from redsun.containers import AppContainer, RedSunConfig, component, config
-
-class AppConfig(RedSunConfig):
-    motor: MotorKwargs
+from redsun.containers import AppContainer, component, config
 
 class MyApp(AppContainer):
-    cfg: AppConfig = config("app_config.yaml")
+    cfg = config("app_config.yaml")
     motor: MyMotor = component(layer="device", from_config="motor")
 ```
 

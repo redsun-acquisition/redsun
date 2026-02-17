@@ -43,8 +43,8 @@ class _ConfigField:
 
     Stores the path to a YAML configuration file.  The
     `AppContainerMeta` metaclass loads the file and makes its
-    contents available to `component` fields that set
-    ``from_config=True``.
+    contents available to `component` fields that specify
+    a ``from_config`` key.
     """
 
     __slots__ = ("path",)
@@ -56,11 +56,9 @@ class _ConfigField:
 def config(path: str | Path) -> Any:
     """Declare a container-level configuration file.
 
-    The type annotation on the attribute should be a `TypedDict`
-    subclass of `RedSunConfig` describing the expected shape of the
-    YAML file.  At class creation time the file is loaded and its
-    sections are used to populate kwargs for any `component` field
-    that sets ``from_config=True``.
+    At class creation time the file is loaded and its sections are
+    used to populate kwargs for any `component` field that specifies
+    a ``from_config`` key.
 
     Parameters
     ----------
@@ -74,13 +72,8 @@ def config(path: str | Path) -> Any:
 
     Examples
     --------
-    >>> class MotorKwargs(TypedDict):
-    ...     axis: list[str]
-    ...     step_size: dict[str, float]
-    >>> class AppConfig(RedSunConfig):
-    ...     motor: MotorKwargs
     >>> class MyApp(AppContainer):
-    ...     cfg: AppConfig = config("app_config.yaml")
+    ...     cfg = config("app_config.yaml")
     ...     motor: MyMotor = component(layer="device", from_config="motor")
     """
     return _ConfigField(path=path)
@@ -151,13 +144,18 @@ def component(
     ----------
     layer : "device" | "presenter" | "view"
         The layer this component belongs to.
+    alias : str | None
+        For device components only: an alternative name to pass to the
+        device constructor instead of the attribute name. Ignored for
+        presenters and views. Defaults to `None`.
     from_config : str | None
-        The name of the config section to pull kwargs from, or `None`
-        if kwargs should be specified directly in the field declaration.
-        Defaults to `None`.
+        The key to look up in the configuration file's ``devices``,
+        ``presenters``, or ``views`` section (based on ``layer``).
+        If `None`, kwargs must be specified inline. Defaults to `None`.
     **kwargs : `Any`
         Additional keyword arguments forwarded to the component
-        constructor at build time.
+        constructor at build time. These override values from the
+        configuration file if ``from_config`` is set.
 
     Returns
     -------
@@ -175,7 +173,7 @@ def component(
     With a config file:
 
     >>> class MyApp(AppContainer):
-    ...     cfg: AppConfig = config("app_config.yaml")
+    ...     cfg = config("app_config.yaml")
     ...     motor: MyMotor = component(layer="device", from_config="motor")
     """
     return _ComponentField(
