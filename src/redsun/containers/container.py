@@ -382,16 +382,42 @@ class AppContainerMeta(type):
 class AppContainer(metaclass=AppContainerMeta):
     """Application container for MVP architecture.
 
+    Subclass this to define your application's components using the
+    :func:`~redsun.containers.component` field specifier.
+
     Parameters
     ----------
-    **config : dict[str, Any]
-        Configuration options.  Common keys:
+    config : str | Path | None
+        Class parameter (not ``__init__``). Path to a YAML configuration
+        file for component kwargs. Passed when defining the subclass::
 
-        - ``session`` : str - Session name (default: ``"Redsun"``)
-        - ``frontend`` : str - Frontend type (default: ``"pyqt"``)
+            class MyApp(AppContainer, config="app.yaml"): ...
+
+    session : str
+        Session name. Defaults to ``"Redsun"``.
+    frontend : str
+        Frontend type. Defaults to ``"pyqt"``.
+
+    Examples
+    --------
+    Basic usage with inline kwargs:
+
+    >>> class MyApp(AppContainer):
+    ...     motor: MyMotor = component(layer="device", axis=["X"])
+    ...     ctrl: MyController = component(layer="presenter")
+
+    With a configuration file:
+
+    >>> class MyApp(AppContainer, config="app_config.yaml"):
+    ...     motor: MyMotor = component(layer="device", from_config="motor")
+
+    Building and running:
+
+    >>> app = MyApp(session="Experiment 1")
+    >>> app.build()
+    >>> app.run()
     """
 
-    # Populated by metaclass
     _device_components: ClassVar[dict[str, _DeviceComponent]]
     _presenter_components: ClassVar[dict[str, _PresenterComponent]]
     _view_components: ClassVar[dict[str, _ViewComponent]]
@@ -403,11 +429,10 @@ class AppContainer(metaclass=AppContainerMeta):
         "_is_built",
     )
 
-    def __init__(self, **config: Any) -> None:
+    def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
         self._config = {
-            "session": config.get("session", "Redsun"),
-            "frontend": config.get("frontend", "pyqt"),
-            **config,
+            "session": session,
+            "frontend": frontend,
         }
         self._virtual_bus: VirtualBus | None = None
         self._di_container: containers.DynamicContainer | None = None
