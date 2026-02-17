@@ -3,25 +3,46 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import pytest
 
-from redsun.containers import (
-    AppContainer,
-    DeviceComponent,
-    PresenterComponent,
-    ViewComponent,
+from redsun.containers import AppContainer, RedSunConfig, component, config
+from redsun.containers.components import (
+    _DeviceComponent,
+    _PresenterComponent,
+    _ViewComponent,
 )
 
 
+class _MotorKwargs(TypedDict):
+    axis: list[str]
+    step_size: dict[str, float]
+    egu: str
+    integer: int
+    floating: float
+    string: str
+
+
+class _CtrlKwargs(TypedDict):
+    string: str
+    integer: int
+    floating: float
+    boolean: bool
+
+
+class _MockComponentConfig(RedSunConfig):
+    motor: _MotorKwargs
+    ctrl: _CtrlKwargs
+
+
 class TestComponentWrappers:
-    """Tests for DeviceComponent, PresenterComponent, ViewComponent."""
+    """Tests for _DeviceComponent, _PresenterComponent, _ViewComponent."""
 
     def test_device_component_pending_repr(self) -> None:
         from mock_pkg.device import MyMotor
 
-        comp = DeviceComponent(
+        comp = _DeviceComponent(
             MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
@@ -30,7 +51,7 @@ class TestComponentWrappers:
     def test_device_component_build(self) -> None:
         from mock_pkg.device import MyMotor
 
-        comp = DeviceComponent(
+        comp = _DeviceComponent(
             MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
@@ -41,7 +62,7 @@ class TestComponentWrappers:
     def test_instance_before_build_raises(self) -> None:
         from mock_pkg.device import MyMotor
 
-        comp = DeviceComponent(
+        comp = _DeviceComponent(
             MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
@@ -53,7 +74,7 @@ class TestComponentWrappers:
 
         from sunflare.virtual import VirtualBus
 
-        comp = PresenterComponent(
+        comp = _PresenterComponent(
             MockController, "ctrl",
             string="s", integer=1, floating=0.0, boolean=False,
         )
@@ -69,7 +90,7 @@ class TestComponentWrappers:
         from sunflare.virtual import VirtualBus
 
         _ = QApplication.instance() or QApplication([])
-        comp = ViewComponent(MockQtView, "v")
+        comp = _ViewComponent(MockQtView, "v")
         bus = VirtualBus()
         view = comp.build(bus)
         assert view is comp.instance
@@ -87,11 +108,11 @@ class TestAppContainerMeta:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = DeviceComponent(
+            motor = _DeviceComponent(
                 MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            ctrl = PresenterComponent(
+            ctrl = _PresenterComponent(
                 MockController, "ctrl",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
@@ -109,7 +130,7 @@ class TestAppContainerMeta:
         from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
-            motor = DeviceComponent(
+            motor = _DeviceComponent(
                 MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
@@ -131,11 +152,11 @@ class TestAppContainerBuild:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = DeviceComponent(
+            motor = _DeviceComponent(
                 MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            ctrl = PresenterComponent(
+            ctrl = _PresenterComponent(
                 MockController, "ctrl",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
@@ -246,3 +267,202 @@ class TestFromConfig:
 
         with pytest.raises(ValueError, match="Unknown frontend"):
             AppContainer.from_config(str(cfg_file))
+
+
+# ── component() field syntax ────────────────────────────────────────
+
+
+class TestComponentFieldSyntax:
+    """Tests for the ``component()`` field-specifier syntax."""
+
+    def test_component_field_collects_device(self) -> None:
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor: MyMotor = component(
+                layer="model", axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+
+        assert "motor" in TestApp._device_components
+        assert isinstance(TestApp._device_components["motor"], _DeviceComponent)
+
+    def test_component_field_collects_presenter(self) -> None:
+        from mock_pkg.controller import MockController
+
+        class TestApp(AppContainer):
+            ctrl: MockController = component(
+                layer="presenter",
+                string="s", integer=1, floating=0.0, boolean=False,
+            )
+
+        assert "ctrl" in TestApp._presenter_components
+        assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
+
+    def test_component_field_collects_view(self) -> None:
+        from mock_pkg.view import MockQtView
+
+        from qtpy.QtWidgets import QApplication
+
+        _ = QApplication.instance() or QApplication([])
+
+        class TestApp(AppContainer):
+            v: MockQtView = component(layer="view")
+
+        assert "v" in TestApp._view_components
+        assert isinstance(TestApp._view_components["v"], _ViewComponent)
+
+    def test_component_field_build_lifecycle(self) -> None:
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor: MyMotor = component(
+                layer="model", axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+            ctrl: MockController = component(
+                layer="presenter",
+                string="s", integer=1, floating=0.0, boolean=False,
+            )
+
+        app = TestApp()
+        assert not app.is_built
+
+        app.build()
+        assert app.is_built
+        assert "motor" in app.devices
+        assert app.devices["motor"].name == "motor"
+        assert "ctrl" in app.presenters
+
+    def test_component_field_mixed_with_old_style(self) -> None:
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor: MyMotor = component(
+                layer="model", axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+            ctrl = _PresenterComponent(
+                MockController, "ctrl",
+                string="s", integer=1, floating=0.0, boolean=False,
+            )
+
+        assert "motor" in TestApp._device_components
+        assert "ctrl" in TestApp._presenter_components
+
+        app = TestApp()
+        app.build()
+        assert "motor" in app.devices
+        assert "ctrl" in app.presenters
+
+    def test_component_field_inherits_from_base(self) -> None:
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        class Base(AppContainer):
+            motor: MyMotor = component(
+                layer="model", axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+
+        class Child(Base):
+            ctrl: MockController = component(
+                layer="presenter",
+                string="s", integer=1, floating=0.0, boolean=False,
+            )
+
+        assert "motor" in Child._device_components
+        assert "ctrl" in Child._presenter_components
+
+
+# ── config() + from_config ──────────────────────────────────────────
+
+
+class TestConfigField:
+    """Tests for the ``config()`` field and ``from_config`` kwarg loading."""
+
+    def test_from_config_loads_device_kwargs(self, config_path: Path) -> None:
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
+            motor: MyMotor = component(layer="model", from_config=True)
+
+        comp = TestApp._device_components["motor"]
+        assert comp.kwargs["axis"] == ["X"]
+        assert comp.kwargs["egu"] == "mm"
+        assert comp.kwargs["integer"] == 42
+        assert comp.kwargs["string"] == "from config"
+
+    def test_from_config_loads_presenter_kwargs(self, config_path: Path) -> None:
+        from mock_pkg.controller import MockController
+
+        class TestApp(AppContainer):
+            cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
+            ctrl: MockController = component(layer="presenter", from_config=True)
+
+        comp = TestApp._presenter_components["ctrl"]
+        assert comp.kwargs["string"] == "config ctrl"
+        assert comp.kwargs["integer"] == 10
+        assert comp.kwargs["boolean"] is True
+
+    def test_from_config_inline_overrides(self, config_path: Path) -> None:
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
+            motor: MyMotor = component(
+                layer="model", from_config=True, egu="um",
+            )
+
+        comp = TestApp._device_components["motor"]
+        # inline egu="um" should override config egu="mm"
+        assert comp.kwargs["egu"] == "um"
+        # other config values should remain
+        assert comp.kwargs["axis"] == ["X"]
+        assert comp.kwargs["integer"] == 42
+
+    def test_from_config_build_lifecycle(self, config_path: Path) -> None:
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
+            motor: MyMotor = component(layer="model", from_config=True)
+            ctrl: MockController = component(layer="presenter", from_config=True)
+
+        app = TestApp()
+        app.build()
+        assert app.is_built
+        assert "motor" in app.devices
+        assert app.devices["motor"].name == "motor"
+        assert "ctrl" in app.presenters
+
+    def test_from_config_without_config_field_raises(self) -> None:
+        from mock_pkg.device import MyMotor
+
+        with pytest.raises(TypeError, match="no config.*field was declared"):
+
+            class TestApp(AppContainer):
+                motor: MyMotor = component(layer="model", from_config=True)
+
+    def test_from_config_missing_section_warns(
+        self, config_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
+            # "missing" is not a key in the config file
+            missing: MyMotor = component(
+                layer="model", from_config=True,
+                axis=["Y"], step_size={"Y": 0.2},
+                egu="deg", integer=0, floating=0.0, string="fallback",
+            )
+
+        assert "No config section 'missing'" in caplog.text
+        # should still work with just the inline kwargs
+        comp = TestApp._device_components["missing"]
+        assert comp.kwargs["egu"] == "deg"

@@ -91,7 +91,7 @@ omit = [
 ]
 
 [tool.ruff]
-target-version = "py39"
+fix = true
 extend-exclude = ["docs", "tests"]
 
 [tool.ruff.format]

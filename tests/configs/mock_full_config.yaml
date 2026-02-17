@@ -1,6 +1,7 @@
-session: test-full
+schema_version: 1.0
 frontend: pyqt
-models:
+session: mock-session
+devices:
   Single axis motor:
     plugin_name: mock-pkg
     plugin_id: my_motor
@@ -11,7 +12,7 @@ models:
     integer: 42
     floating: 3.14
     string: "Hello, World!"
-controllers:
+presenters:
   MockController:
     plugin_name: mock-pkg
     plugin_id: my_controller

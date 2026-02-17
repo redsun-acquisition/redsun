@@ -1,0 +1,17 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-session
+devices:
+  motor:
+    axis: ["X"]
+    step_size:
+      X: 0.1
+    egu: mm
+    integer: 42
+    floating: 3.14
+    string: "from config"
+presenters:
+  string: "config ctrl"
+  integer: 10
+  floating: 2.0
+  boolean: true

@@ -1,4 +1,4 @@
-models:
+devices:
   my_motor:
     class: mock_pkg.device:MyMotor
   my_other_motor:
@@ -11,7 +11,7 @@ models:
     class: mock_pkg.device:BrokenDevice
   my_hidden_model:
     class: mock_pkg.device.hidden:HiddenModel
-controllers:
+presenters:
   my_controller:
     class: mock_pkg.controller:MockController
   broken_controller:

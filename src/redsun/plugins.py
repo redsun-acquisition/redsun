@@ -11,6 +11,8 @@ from sunflare.device import Device
 from sunflare.presenter import Presenter
 from sunflare.view import View
 
+from redsun.containers import RedSunConfig
+
 logger = logging.getLogger("redsun")
 
 T = TypeVar("T")
@@ -18,30 +20,25 @@ T = TypeVar("T")
 # Type aliases
 ManifestItems = dict[str, dict[str, str]]
 PluginType = Union[type[Device], type[Presenter], type[View]]
-PLUGIN_GROUPS = Literal["models", "controllers", "views"]
+PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
 
 class PluginTypeDict(TypedDict):
-    """Typed dictionary for discovered plugin classes, organized by group.
+    """Typed dictionary for discovered plugin classes, organized by group."""
 
-    Attributes
-    ----------
-    models : dict[str, type[PDevice]]
-        Dictionary of device classes.
-    controllers : dict[str, type[PPresenter]]
-        Dictionary of presenter classes.
-    views : dict[str, type[PView]]
-        Dictionary of view classes.
-    """
+    devices: dict[str, type[Device]]
+    """Dictionary of device classes, keyed by component name."""
 
-    models: dict[str, type[Device]]
-    controllers: dict[str, type[Presenter]]
+    presenters: dict[str, type[Presenter]]
+    """Dictionary of presenter classes, keyed by component name."""
+
     views: dict[str, type[View]]
+    """Dictionary of view classes, keyed by component name."""
 
 
 def load_configuration(
     config_path: str,
-) -> tuple[dict[str, Any], PluginTypeDict]:
+) -> tuple[RedSunConfig, PluginTypeDict]:
     """Load configuration and discover plugin classes from a YAML file.
 
     Reads the YAML configuration, discovers installed plugins via
@@ -61,12 +58,12 @@ def load_configuration(
         ``session``, ``frontend``, and per-component kwargs.
     """
     with open(config_path, "r") as f:
-        config: dict[str, Any] = yaml.safe_load(f)
+        config: RedSunConfig = yaml.safe_load(f)
 
-    plugin_types = PluginTypeDict(models={}, controllers={}, views={})
+    plugin_types = PluginTypeDict(devices={}, presenters={}, views={})
     available_manifests = entry_points(group="redsun.plugins")
 
-    groups: list[PLUGIN_GROUPS] = ["models", "controllers", "views"]
+    groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 
     for group in groups:
         if group not in config:
@@ -105,7 +102,7 @@ def _load_plugins(
     group_cfg : dict[str, Any]
         Configuration entries for the group from the YAML file.
     group : str
-        The plugin group (``"models"``, ``"controllers"``, or ``"views"``).
+        The plugin group (``"devices"``, ``"presenters"``, or ``"views"``).
     available_manifests : EntryPoints
         The available ``redsun.plugins`` entry points.
 
@@ -190,9 +187,9 @@ def _check_import(imported_class: type[T], group: str) -> bool:
     bool
         ``True`` if the class implements the correct protocol.
     """
-    if group == "models":
+    if group == "devices":
         return _check_device_protocol(imported_class)
-    elif group == "controllers":
+    elif group == "presenters":
         return _check_presenter_protocol(imported_class)
     elif group == "views":
         return _check_view_protocol(imported_class)

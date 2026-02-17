@@ -1,7 +1,7 @@
-engine: bluesky
+schema_version: 1.0
 frontend: pyqt
-session: test
-models:
+session: mock-session
+devices:
   Single axis motor:
     plugin_name: mock-pkg
     plugin_id: my_motor

@@ -21,10 +21,10 @@ class TestPluginLoading:
     ) -> None:
         config, types = load_configuration(str(config_path / "mock_motor_config.yaml"))
 
-        assert len(types["models"]) == 2
-        assert "Single axis motor" in types["models"]
-        assert "Double axis motor" in types["models"]
-        assert len(types["controllers"]) == 0
+        assert len(types["devices"]) == 2
+        assert "Single axis motor" in types["devices"]
+        assert "Double axis motor" in types["devices"]
+        assert len(types["presenters"]) == 0
         assert len(types["views"]) == 0
 
     def test_load_detector_config(
@@ -34,9 +34,9 @@ class TestPluginLoading:
             str(config_path / "mock_detector_config.yaml")
         )
 
-        assert len(types["models"]) == 2
-        assert "iSCAT channel" in types["models"]
-        assert "TIRF channel" in types["models"]
+        assert len(types["devices"]) == 2
+        assert "iSCAT channel" in types["devices"]
+        assert "TIRF channel" in types["devices"]
 
     def test_load_controller_config(
         self, mock_entry_points: Any, config_path: Path
@@ -45,12 +45,12 @@ class TestPluginLoading:
             str(config_path / "mock_controller_config.yaml")
         )
 
-        assert len(types["controllers"]) == 1
-        assert "MockController" in types["controllers"]
+        assert len(types["presenters"]) == 1
+        assert "MockController" in types["presenters"]
 
         from mock_pkg.controller import MockController
 
-        assert types["controllers"]["MockController"] is MockController
+        assert types["presenters"]["MockController"] is MockController
 
     def test_load_hidden_model_config(
         self, mock_entry_points: Any, config_path: Path
@@ -59,11 +59,11 @@ class TestPluginLoading:
             str(config_path / "hidden_model_config.yaml")
         )
 
-        assert len(types["models"]) == 1
+        assert len(types["devices"]) == 1
 
         from mock_pkg.device.hidden import HiddenModel
 
-        assert types["models"]["iSCAT channel"] is HiddenModel
+        assert types["devices"]["iSCAT channel"] is HiddenModel
 
     def test_broken_model_loads_valid_only(
         self, mock_entry_points: Any, config_path: Path
@@ -78,7 +78,7 @@ class TestPluginLoading:
 
         from mock_pkg.device import MockDetector
 
-        assert types["models"]["TIRF channel"] is MockDetector
+        assert types["devices"]["TIRF channel"] is MockDetector
 
     def test_config_returns_raw_dict(
         self, mock_entry_points: Any, config_path: Path
@@ -86,9 +86,10 @@ class TestPluginLoading:
         config, _ = load_configuration(str(config_path / "mock_motor_config.yaml"))
 
         assert isinstance(config, dict)
+        assert config["schema"] == "1.0"
         assert config["frontend"] == "pyqt"
-        assert config["session"] == "test"
-        assert "models" in config
+        assert config["session"] == "mock-session"
+        assert "devices" in config
 
     def test_full_config(
         self, mock_entry_points: Any, config_path: Path
@@ -97,8 +98,8 @@ class TestPluginLoading:
             str(config_path / "mock_full_config.yaml")
         )
 
-        assert len(types["models"]) == 1
-        assert len(types["controllers"]) == 1
+        assert len(types["devices"]) == 1
+        assert len(types["presenters"]) == 1
         assert len(types["views"]) == 1
 
 
