@@ -36,7 +36,7 @@ def _make_mock_entry_point() -> mock.Mock:
 def mock_entry_points() -> Generator[Any, None, None]:
     """Patch entry_points and importlib.resources to use mock-pkg manifest.
 
-    ``plugins.py`` resolves the manifest via::
+    ``container.py`` resolves the manifest via::
 
         pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
         with as_file(pkg_manifest) as manifest_path: ...
@@ -55,15 +55,15 @@ def mock_entry_points() -> Generator[Any, None, None]:
 
     with (
         mock.patch(
-            "redsun.plugins.entry_points",
+            "redsun.containers.container.entry_points",
             return_value=[ep],
         ),
         mock.patch(
-            "redsun.plugins.files",
+            "redsun.containers.container.files",
             side_effect=mock_files,
         ),
         mock.patch(
-            "redsun.plugins.as_file",
+            "redsun.containers.container.as_file",
             side_effect=mock_as_file,
         ),
     ):
