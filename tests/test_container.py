@@ -43,7 +43,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         assert "pending" in repr(comp)
@@ -52,7 +52,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         device = comp.build()
@@ -63,7 +63,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         with pytest.raises(RuntimeError, match="not been instantiated"):
@@ -75,7 +75,7 @@ class TestComponentWrappers:
         from sunflare.virtual import VirtualBus
 
         comp = _PresenterComponent(
-            MockController, "ctrl",
+            MockController, "ctrl", None,
             string="s", integer=1, floating=0.0, boolean=False,
         )
         bus = VirtualBus()
@@ -90,14 +90,11 @@ class TestComponentWrappers:
         from sunflare.virtual import VirtualBus
 
         _ = QApplication.instance() or QApplication([])
-        comp = _ViewComponent(MockQtView, "v")
+        comp = _ViewComponent(MockQtView, "v", None)
         bus = VirtualBus()
         view = comp.build(bus)
         assert view is comp.instance
         assert "built" in repr(comp)
-
-
-# ── Metaclass ────────────────────────────────────────────────────────
 
 
 class TestAppContainerMeta:
@@ -109,11 +106,11 @@ class TestAppContainerMeta:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
+                MockController, "ctrl", None,
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -131,7 +128,7 @@ class TestAppContainerMeta:
 
         class Base(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
@@ -139,9 +136,6 @@ class TestAppContainerMeta:
             pass
 
         assert "motor" in Child._device_components
-
-
-# ── Build lifecycle ──────────────────────────────────────────────────
 
 
 class TestAppContainerBuild:
@@ -153,11 +147,11 @@ class TestAppContainerBuild:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
+                MockController, "ctrl", None,
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -280,7 +274,7 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor: MyMotor = component(
-                layer="model", axis=["X"], step_size={"X": 0.1},
+                layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
@@ -318,7 +312,7 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor: MyMotor = component(
-                layer="model", axis=["X"], step_size={"X": 0.1},
+                layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl: MockController = component(
@@ -341,11 +335,11 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor: MyMotor = component(
-                layer="model", axis=["X"], step_size={"X": 0.1},
+                layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
+                MockController, "ctrl", None,
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -363,7 +357,7 @@ class TestComponentFieldSyntax:
 
         class Base(AppContainer):
             motor: MyMotor = component(
-                layer="model", axis=["X"], step_size={"X": 0.1},
+                layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
@@ -388,7 +382,7 @@ class TestConfigField:
 
         class TestApp(AppContainer):
             cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
-            motor: MyMotor = component(layer="model", from_config=True)
+            motor: MyMotor = component(layer="device", from_config="motor")
 
         comp = TestApp._device_components["motor"]
         assert comp.kwargs["axis"] == ["X"]
@@ -401,7 +395,7 @@ class TestConfigField:
 
         class TestApp(AppContainer):
             cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
-            ctrl: MockController = component(layer="presenter", from_config=True)
+            ctrl: MockController = component(layer="presenter", from_config="ctrl")
 
         comp = TestApp._presenter_components["ctrl"]
         assert comp.kwargs["string"] == "config ctrl"
@@ -414,7 +408,7 @@ class TestConfigField:
         class TestApp(AppContainer):
             cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
             motor: MyMotor = component(
-                layer="model", from_config=True, egu="um",
+                layer="device", from_config="motor", egu="um",
             )
 
         comp = TestApp._device_components["motor"]
@@ -430,8 +424,8 @@ class TestConfigField:
 
         class TestApp(AppContainer):
             cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
-            motor: MyMotor = component(layer="model", from_config=True)
-            ctrl: MockController = component(layer="presenter", from_config=True)
+            motor: MyMotor = component(layer="device", from_config="motor")
+            ctrl: MockController = component(layer="presenter", from_config="ctrl")
 
         app = TestApp()
         app.build()
@@ -446,7 +440,7 @@ class TestConfigField:
         with pytest.raises(TypeError, match="no config.*field was declared"):
 
             class TestApp(AppContainer):
-                motor: MyMotor = component(layer="model", from_config=True)
+                motor: MyMotor = component(layer="device", from_config="motor")
 
     def test_from_config_missing_section_warns(
         self, config_path: Path, caplog: pytest.LogCaptureFixture,
@@ -457,7 +451,7 @@ class TestConfigField:
             cfg: _MockComponentConfig = config(config_path / "mock_component_config.yaml")
             # "missing" is not a key in the config file
             missing: MyMotor = component(
-                layer="model", from_config=True,
+                layer="device", from_config="missing",
                 axis=["Y"], step_size={"Y": 0.2},
                 egu="deg", integer=0, floating=0.0, string="fallback",
             )
