@@ -31,9 +31,9 @@ graph LR
 
 Redsun follows the **Model-View-Presenter** pattern provided by [Sunflare]:
 
-- **Model (Devices)**: hardware abstractions that implement Bluesky's device protocols. They represent the actual instruments being controlled.
-- **View**: user interface components (currently Qt-based) that display data and capture user interactions.
-- **Presenter**: business logic components that sit between models and views, coordinating device operations and updating the UI through the virtual bus.
+- **Model (Devices)**: hardware abstractions that implement Bluesky's device protocols via [`Device`][sunflare.device.Device]. They represent the actual instruments being controlled.
+- **View**: UI components (currently Qt-based) that implement [`View`][sunflare.view.View] to display data and capture user interactions.
+- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through the virtual bus.
 
 This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
 
@@ -73,17 +73,17 @@ The configuration file provides base keyword arguments that can be overridden by
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container instantiates components in a strict dependency order:
 
-1. **VirtualBus** - the event-driven communication channel.
+1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
 2. **DI container** - the dependency injection container, seeded with the application configuration.
 3. **Devices** - hardware interfaces, each receiving their name and keyword arguments.
-4. **Presenters** - business logic components, receiving the full device dictionary and virtual bus. Presenters that implement `IsProvider` register their providers in the DI container.
-5. **Views** - UI components, receiving the virtual bus. Views that implement `IsInjectable` receive dependencies from the DI container.
+4. **Presenters** - business logic components, receiving the full device dictionary and virtual bus. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the DI container.
+5. **Views** - UI components, receiving the virtual bus. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the DI container.
 
 ## Communication
 
 Components communicate through two mechanisms:
 
-- **Virtual bus**: an event-driven publish/subscribe system provided by Sunflare. Presenters and views can emit and listen for signals without direct references to each other.
+- **Virtual bus**: an event-driven publish/subscribe system provided by Sunflare ([`VirtualBus`][sunflare.virtual.VirtualBus]). Presenters and views can emit and listen for signals without direct references to each other.
 - **Dependency injection**: presenters can register providers in the DI container, and views can consume them. This allows views to access presenter-provided data without coupling to specific presenter implementations.
 
 ## Qt integration

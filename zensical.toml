@@ -81,6 +81,10 @@ repo = "fontawesome/brands/github"
 
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
+inventories = [
+  "https://redsun-acquisition.github.io/sunflare/objects.inv",
+  "https://docs.python.org/3/objects.inv",
+]
 
 [project.plugins.mkdocstrings.handlers.python.options]
 docstring_style = "numpy"

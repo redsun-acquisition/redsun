@@ -7,7 +7,7 @@ Redsun's plugin system allows third-party packages to provide devices, presenter
 Plugins are standard Python packages that register themselves via [entry points]. When Redsun builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.
 
 ```mermaid
-graph LR
+graph TB
     Config[YAML config] -->|references| Plugins
     Plugins -->|discovered via| EntryPoints[entry points]
     EntryPoints -->|load| Manifest[plugin manifest]
@@ -17,7 +17,8 @@ graph LR
 
 ## Plugin discovery
 
-When [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config] is called with a configuration file, Redsun:
+When [`AppContainer.from_config()`][redsun.containers.AppContainer.from_config]
+is called with a configuration file, Redsun:
 
 1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
 2. **Queries entry points** - looks up installed packages registered under the `redsun.plugins` entry point group.
@@ -84,17 +85,23 @@ The `plugin_name` and `plugin_id` keys are used for plugin resolution and are no
 
 Before a plugin class is used, Redsun verifies it implements the expected protocol:
 
-- **Devices** must be subclasses of `sunflare.device.Device` or implement `read_configuration`, `describe_configuration`, `name`, and `parent`.
-- **Presenters** must be subclasses of `sunflare.presenter.Presenter` or have `devices` and `virtual_bus` attributes.
-- **Views** must be subclasses of `sunflare.view.View` or have a `virtual_bus` attribute.
+- **Devices** must be subclasses of [`Device`][sunflare.device.Device] or implement `read_configuration`, `describe_configuration`, `name`, and `parent`.
+- **Presenters** must be subclasses of [`Presenter`][sunflare.presenter.Presenter] or have `devices` and `virtual_bus` attributes.
+- **Views** must be subclasses of [`View`][sunflare.view.View] or have a `virtual_bus` attribute.
 
-Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via `abc.ABCMeta.register()`.
+Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via [`ABCMeta.register()`][abc.ABCMeta.register].
 
 ## Inline vs. config-based registration
 
-The plugin system is used when building from configuration files via [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config]. When using the declarative class-based approach (defining a container subclass with [`component()`][redsun.containers.components.component] fields), component classes are specified directly through type annotations and do not go through plugin discovery.
+The plugin system is used when building from configuration files via
+[`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config].
+When using the declarative class-based approach (defining a container subclass with
+[`component()`][redsun.containers.components.component] fields), component classes are
+specified directly through type annotations and do not go through plugin discovery.
 
-Both approaches produce the same result: an [`AppContainer`][redsun.containers.container.AppContainer] with registered device, presenter, and view components ready to be built.
+Both approaches produce the same result: an
+[`AppContainer`][redsun.containers.container.AppContainer] with registered device,
+presenter, and view components ready to be built.
 
 [entry points]: https://packaging.python.org/en/latest/specifications/entry-points/
 [python entry point]: https://packaging.python.org/en/latest/specifications/entry-points/
