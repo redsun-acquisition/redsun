@@ -27,7 +27,6 @@ from .components import (
     _PresenterComponent,
     _ViewComponent,
     component,
-    config,
 )
 
 if TYPE_CHECKING:
@@ -115,7 +114,7 @@ def _assert_never(arg: Never) -> Never:
     raise AssertionError(f"Unhandled case: {arg!r}")
 
 
-@dataclass_transform(field_specifiers=(component, config))
+@dataclass_transform(field_specifiers=(component,))
 class AppContainerMeta(type):
     """Metaclass that auto-collects component wrappers from class attributes.
 
