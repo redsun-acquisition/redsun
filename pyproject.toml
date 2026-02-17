@@ -60,13 +60,6 @@ source = "vcs"
 [tool.hatch.build.targets.wheel]
 packages = ["src/redsun"]
 
-[tool.hatch.build.targets.sdist]
-include = [
-  "src/redsun/*.py",
-  "src/redsun/docs/**",
-  "tests/**",
-]
-
 [tool.mypy]
 files = "."
 exclude = ["docs", "tests"]
