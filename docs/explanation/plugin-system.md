@@ -17,7 +17,7 @@ graph TB
 
 ## Plugin discovery
 
-When [`AppContainer.from_config()`][redsun.containers.AppContainer.from_config]
+When [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config]
 is called with a configuration file, Redsun:
 
 1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
