@@ -217,7 +217,7 @@ class AppContainerMeta(type):
     annotation provides the component class and the attribute name becomes
     the component name.
 
-    A configuration file can be specified at the class level,
+    A configuration file can be specified at metaclass level,
     which allows component fields to pull their kwargs from the config.
     """
 
