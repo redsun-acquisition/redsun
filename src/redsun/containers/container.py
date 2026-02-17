@@ -217,11 +217,8 @@ class AppContainerMeta(type):
     annotation provides the component class and the attribute name becomes
     the component name.
 
-    Parameters
-    ----------
-    config : str | Path | None
-        Path to a YAML configuration file. If provided, component fields
-        with ``from_config`` set will pull their kwargs from this file.
+    A configuration file can be specified at the class level,
+    which allows component fields to pull their kwargs from the config.
     """
 
     _device_components: dict[str, _DeviceComponent]
