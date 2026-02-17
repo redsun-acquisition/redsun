@@ -215,35 +215,52 @@ class AppContainerMeta(type):
 
                 # Merge kwargs: config file values as base, inline as override
                 kwargs = field.kwargs
-                if field.from_config:
+                if field.from_config is not None:
                     if not config_data:
                         raise TypeError(
                             f"Component field '{attr_name}' in {name} has "
-                            f"from_config=True but no config() field was "
+                            f"from_config set but no config() field was "
                             f"declared on the container"
                         )
-                    cfg_section = config_data.get(attr_name)
+
+                    # Map layer to config section key
+                    layer_to_section = {
+                        "device": "devices",
+                        "presenter": "presenters",
+                        "view": "views",
+                    }
+                    section_key = layer_to_section[field.layer]
+                    section_data: dict[str, Any] = config_data.get(section_key, {})
+                    cfg_section = section_data.get(field.from_config)
+
                     if cfg_section is None:
                         logger.warning(
-                            f"No config section '{attr_name}' found for "
-                            f"component field in {name}, using inline "
-                            f"kwargs only"
+                            f"No config section '{field.from_config}' found in "
+                            f"'{section_key}' for component field '{attr_name}' in {name}, "
+                            f"using inline kwargs only"
                         )
+                        kwargs = field.kwargs
                     else:
                         kwargs = {**cfg_section, **field.kwargs}
+                else:
+                    kwargs = field.kwargs
 
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
                 match field.layer:
-                    case "model":
-                        wrapper = _DeviceComponent(component_cls, attr_name, **kwargs)
+                    case "device":
+                        wrapper = _DeviceComponent(
+                            component_cls, attr_name, field.alias, **kwargs
+                        )
                         devices[attr_name] = wrapper
                     case "presenter":
                         wrapper = _PresenterComponent(
-                            component_cls, attr_name, **kwargs
+                            component_cls, attr_name, None, **kwargs
                         )
                         presenters[attr_name] = wrapper
                     case "view":
-                        wrapper = _ViewComponent(component_cls, attr_name, **kwargs)
+                        wrapper = _ViewComponent(
+                            component_cls, attr_name, None, **kwargs
+                        )
                         views[attr_name] = wrapper
                     case _:
                         _assert_never(field.layer)
@@ -497,7 +514,7 @@ class AppContainer(metaclass=AppContainerMeta):
         for name, device_cfg in config.get("devices", {}).items():
             device_class = plugin_types["devices"][name]
             kwargs = {k: v for k, v in device_cfg.items() if k not in _PLUGIN_META_KEYS}
-            namespace[name] = _DeviceComponent(device_class, name, **kwargs)
+            namespace[name] = _DeviceComponent(device_class, name, None, **kwargs)
 
         # Create presenter components
         for name, presenter_cfg in config.get("presenters", {}).items():
@@ -505,13 +522,13 @@ class AppContainer(metaclass=AppContainerMeta):
             kwargs = {
                 k: v for k, v in presenter_cfg.items() if k not in _PLUGIN_META_KEYS
             }
-            namespace[name] = _PresenterComponent(presenter_class, name, **kwargs)
+            namespace[name] = _PresenterComponent(presenter_class, name, None, **kwargs)
 
         # Create view components
         for name, view_cfg in config.get("views", {}).items():
             view_class = plugin_types["views"][name]
             kwargs = {k: v for k, v in view_cfg.items() if k not in _PLUGIN_META_KEYS}
-            namespace[name] = _ViewComponent(view_class, name, **kwargs)
+            namespace[name] = _ViewComponent(view_class, name, None, **kwargs)
 
         # Resolve the correct base class for the configured frontend
         frontend = config.get("frontend", "pyqt")

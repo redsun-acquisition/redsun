@@ -86,7 +86,7 @@ class TestPluginLoading:
         config, _ = load_configuration(str(config_path / "mock_motor_config.yaml"))
 
         assert isinstance(config, dict)
-        assert config["schema"] == "1.0"
+        assert config["schema"] == 1.0
         assert config["frontend"] == "pyqt"
         assert config["session"] == "mock-session"
         assert "devices" in config

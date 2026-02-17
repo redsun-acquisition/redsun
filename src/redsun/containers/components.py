@@ -81,7 +81,7 @@ def config(path: str | Path) -> Any:
     ...     motor: MotorKwargs
     >>> class MyApp(AppContainer):
     ...     cfg: AppConfig = config("app_config.yaml")
-    ...     motor: MyMotor = component(layer="model", from_config=True)
+    ...     motor: MyMotor = component(layer="device", from_config=True)
     """
     return _ConfigField(path=path)
 
@@ -98,9 +98,9 @@ class _ComponentField:
 
     def __init__(
         self,
-        layer: Literal["model", "presenter", "view"],
+        layer: Literal["device", "presenter", "view"],
         alias: str | None,
-        from_config: bool,
+        from_config: str | None,
         kwargs: dict[str, Any],
     ) -> None:
         self.layer = layer
@@ -112,56 +112,32 @@ class _ComponentField:
 @overload
 def component(
     *,
-    layer: Literal["model"],
+    layer: Literal["device"],
     alias: str | None = ...,
-    from_config: Literal[True] = ...,
-    **kwargs: Any,
-) -> Any: ...
-@overload
-def component(
-    *,
-    layer: Literal["model"],
-    alias: str | None = ...,
-    from_config: Literal[False] = ...,
+    from_config: str | None = ...,
     **kwargs: Any,
 ) -> Any: ...
 @overload
 def component(
     *,
     layer: Literal["presenter"],
-    alias: str | None = ...,
-    from_config: Literal[True] = ...,
-    **kwargs: Any,
-) -> Any: ...
-@overload
-def component(
-    *,
-    layer: Literal["presenter"],
-    alias: str | None = ...,
-    from_config: Literal[False] = ...,
+    alias: None = ...,
+    from_config: str | None = ...,
     **kwargs: Any,
 ) -> Any: ...
 @overload
 def component(
     *,
     layer: Literal["view"],
-    alias: str | None = ...,
-    from_config: Literal[True] = ...,
-    **kwargs: Any,
-) -> Any: ...
-@overload
-def component(
-    *,
-    layer: Literal["view"],
-    alias: str | None = ...,
-    from_config: Literal[False] = ...,
+    alias: None = ...,
+    from_config: str | None = ...,
     **kwargs: Any,
 ) -> Any: ...
 def component(
     *,
-    layer: Literal["model", "presenter", "view"],
+    layer: Literal["device", "presenter", "view"],
     alias: str | None = None,
-    from_config: bool = False,
+    from_config: str | None = None,
     **kwargs: Any,
 ) -> Any:
     """Declare a component as a class field.
@@ -173,14 +149,12 @@ def component(
 
     Parameters
     ----------
-    layer : "model" | "presenter" | "view"
+    layer : "device" | "presenter" | "view"
         The layer this component belongs to.
-    from_config : bool
-        If `True`, the component's kwargs are loaded from the
-        container-level `config` field at class creation time.
-        The component's attribute name is used as the lookup key in the
-        loaded configuration dictionary.  Inline ``**kwargs`` override
-        values from the config file.
+    from_config : str | None
+        The name of the config section to pull kwargs from, or `None`
+        if kwargs should be specified directly in the field declaration.
+        Defaults to `None`.
     **kwargs : `Any`
         Additional keyword arguments forwarded to the component
         constructor at build time.
@@ -194,7 +168,7 @@ def component(
     Examples
     --------
     >>> class MyApp(AppContainer):
-    ...     motor: MyMotor = component(layer="model", axis=["X"])
+    ...     motor: MyMotor = component(layer="device", axis=["X"])
     ...     ctrl: MyCtrl = component(layer="presenter", gain=1.0)
     ...     ui: MyView = component(layer="view")
 
@@ -202,7 +176,7 @@ def component(
 
     >>> class MyApp(AppContainer):
     ...     cfg: AppConfig = config("app_config.yaml")
-    ...     motor: MyMotor = component(layer="model", from_config=True)
+    ...     motor: MyMotor = component(layer="device", from_config=True)
     """
     return _ComponentField(
         layer=layer, alias=alias, from_config=from_config, kwargs=kwargs
@@ -212,11 +186,14 @@ def component(
 class _ComponentBase(Generic[T]):
     """Generic base class for components."""
 
-    __slots__ = ("cls", "name", "kwargs", "_instance")
+    __slots__ = ("cls", "name", "alias", "kwargs", "_instance")
 
-    def __init__(self, cls: type[T], name: str, /, **kwargs: Any) -> None:
+    def __init__(
+        self, cls: type[T], name: str, alias: str | None, /, **kwargs: Any
+    ) -> None:
         self.cls = cls
         self.name = name
+        self.alias = alias
         self.kwargs = kwargs
         self._instance: T | None = None
 
@@ -238,7 +215,8 @@ class _DeviceComponent(_ComponentBase[Device]):
 
     def build(self) -> Device:
         """Build the device instance."""
-        self._instance = self.cls(self.name, **self.kwargs)
+        name = self.alias if self.alias is not None else self.name
+        self._instance = self.cls(name, **self.kwargs)
         return self.instance
 
 
