@@ -4,12 +4,33 @@
         <loc>https://redsun-acquisition.github.io/redsun/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/getting_started/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/changelog/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/plugin-system/</loc>
       </url>
 </urlset>
