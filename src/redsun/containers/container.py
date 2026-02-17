@@ -226,7 +226,7 @@ class AppContainerMeta(type):
     _view_components: dict[str, _ViewComponent]
     _config_path: Path | None
 
-    def __new__(  # noqa: D102
+    def __new__(
         mcs,
         name: str,
         bases: tuple[type, ...],
@@ -234,6 +234,16 @@ class AppContainerMeta(type):
         config: str | Path | None = None,
         **kwargs: Any,
     ) -> AppContainerMeta:
+        """Create the class and collect component wrappers.
+
+        Parameters
+        ----------
+        config : str | Path | None
+            Path to a YAML configuration file for component kwargs. Passed when
+            defining the subclass:
+
+                class MyApp(AppContainer, config="app.yaml"): ...
+        """
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
         # Store config path on the class
@@ -383,16 +393,10 @@ class AppContainer(metaclass=AppContainerMeta):
     """Application container for MVP architecture.
 
     Subclass this to define your application's components using the
-    :func:`~redsun.containers.component` field specifier.
+    [`component`][redsun.containers.components.component] field specifier.
 
     Parameters
     ----------
-    config : str | Path | None
-        Class parameter (not ``__init__``). Path to a YAML configuration
-        file for component kwargs. Passed when defining the subclass::
-
-            class MyApp(AppContainer, config="app.yaml"): ...
-
     session : str
         Session name. Defaults to ``"Redsun"``.
     frontend : str

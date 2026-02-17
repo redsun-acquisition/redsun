@@ -56,18 +56,7 @@ class QtAppContainer(AppContainer):
         return self._main_view
 
     def run(self) -> NoReturn:
-        """Build and launch the Qt application.
-
-        This method handles the full lifecycle:
-
-        1. Creates the ``QApplication`` instance.
-        2. Calls :meth:`build` to instantiate all components.
-        3. Constructs :class:`~redsun.view.qt.mainview.QtMainView` and
-           docks all built views.
-        4. Calls ``connect_to_virtual()`` on all ``VirtualAware`` views.
-        5. Starts the ``psygnal`` signal queue bridge.
-        6. Shows the main window and enters ``app.exec()``.
-        """
+        """Build and launch the Qt application."""
         self._qt_app = QApplication(sys.argv)
 
         if not self.is_built:

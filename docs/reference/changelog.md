@@ -17,6 +17,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - Upgrade to `sunflare>=0.9.0`
 - Move the `FrontendTypes` and `ViewPositionTypes` from `sunflare` to `redsun`
   - They're part of the overall configuration and should not concern the core package
+- Revamped documentation with more comprehensive information
 
 ## [0.4.0] - 15-12-2025
 
@@ -50,6 +51,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/redsun-acquisition/redsun/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/redsun-acquisition/redsun/compare/v0.1.0...v0.2.0
