@@ -115,3 +115,6 @@ test_configs/*
 
 # MkDocs build output
 site/
+
+# model agent files
+.claude/

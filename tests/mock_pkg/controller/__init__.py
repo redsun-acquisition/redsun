@@ -1,7 +1,6 @@
-from .mock_controllers import MockController, MockControllerInfo, BrokenController
+from .mock_presenters import MockController, BrokenController
 
 __all__ = [
     "MockController",
-    "MockControllerInfo",
     "BrokenController"
 ]

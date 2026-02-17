@@ -1,6 +1,7 @@
-engine: bluesky
+schema: 1.0
 frontend: pyqt
-models:
+session: hidden-device-session
+devices:
   iSCAT channel:
     plugin_name: mock-pkg
     plugin_id: my_hidden_model

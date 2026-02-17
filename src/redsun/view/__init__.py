@@ -1,3 +1,7 @@
-from redsun.view.qt import build_view_layer, create_app, launch_app
+"""View layer for redsun."""
 
-__all__ = ["build_view_layer", "launch_app", "create_app"]
+from __future__ import annotations
+
+from .qt import QtMainView
+
+__all__ = ["QtMainView"]

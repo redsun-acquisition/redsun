@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## Unreleased
+
+### Changed
+
+- Fully refactor the package to go towards a containerization approach
+  - Declare applications as containers, list relevant components as fields of a class
+  - Provide support also for building from a configuration file as before
+- Upgrade to `sunflare>=0.9.0`
+- Move the `FrontendTypes` and `ViewPositionTypes` from `sunflare` to `redsun`
+  - They're part of the overall configuration and should not concern the core package
+
 ## [0.4.0] - 15-12-2025
 
 ### Changed

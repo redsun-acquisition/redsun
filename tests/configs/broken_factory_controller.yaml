@@ -1,6 +1,7 @@
-engine: bluesky
+schema: 1.0
 frontend: pyqt
-controllers:
+session: broken-factory-session
+presenters:
   MockController:
     plugin_name: mock-pkg
     plugin_id: broken_controller

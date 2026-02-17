@@ -1,3 +1,5 @@
-from .hardware import RedsunController
+"""Controller layer (legacy).
 
-__all__ = ["RedsunController"]
+The hardware controller and factory have been replaced by
+:class:`~redsun.containers.AppContainer`.
+"""

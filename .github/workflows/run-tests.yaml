@@ -24,8 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-
+        python-version: ["3.10", "3.11", "3.12", "3.13"]        
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,10 +41,22 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --group dev
-
+        run: |
+            if [ "$RUNNER_OS" == "Linux" ]; then
+                echo "DISPLAY=:99.0" >> $GITHUB_ENV
+                sudo apt-get update
+                sudo apt-get install -y libegl1 libdbus-1-3 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 x11-utils libxcb-cursor0 libopengl0
+                /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX
+            fi
+            uv sync --group dev
+        shell: bash
+      
+      # if we're running on linux make sure to
+      # create a virtual display otherwise it goes crazy
       - name: Run tests with coverage
-        run: uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+        run: |
+            uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+        shell: bash
 
       - name: Generate UUID
         shell: bash

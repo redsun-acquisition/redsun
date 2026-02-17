@@ -4,369 +4,252 @@ import logging
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
 from importlib.resources import as_file, files
-from typing import Any, Final, Literal, TypedDict, TypeVar, Union
+from typing import Any, Literal, TypedDict, TypeVar, Union
 
 import yaml
-from sunflare.config import (
-    FrontendTypes,
-    ModelInfo,
-    PModelInfo,
-    PPresenterInfo,
-    PresenterInfo,
-    PViewInfo,
-    RedSunSessionInfo,
-    ViewInfo,
-)
-from sunflare.model import PModel
-from sunflare.presenter import PPresenter
-from sunflare.view import ViewProtocol
-from typing_extensions import Generic, NamedTuple, get_annotations
+from sunflare.device import Device
+from sunflare.presenter import Presenter
+from sunflare.view import View
+
+from redsun.containers import RedSunConfig
 
 logger = logging.getLogger("redsun")
 
+T = TypeVar("T")
 
-class PluginInfoDict(TypedDict):
-    """A support typed dictionary for backend information models.
-
-    Parameters
-    ----------
-    models : ``dict[str, PModelInfo]``
-        Dictionary of model informations.
-    controllers : ``dict[str, PPresenterInfo]``
-        Dictionary of controller informations.
-    views : ``dict[str, PViewInfo]``
-        Dictionary of widget informations.
-    """
-
-    models: dict[str, PModelInfo]
-    controllers: dict[str, PPresenterInfo]
-    views: dict[str, PViewInfo]
+# Type aliases
+ManifestItems = dict[str, dict[str, str]]
+PluginType = Union[type[Device], type[Presenter], type[View]]
+PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
 
 class PluginTypeDict(TypedDict):
-    """A support typed dictionary for backend models constructors.
+    """Typed dictionary for discovered plugin classes, organized by group."""
 
-    Parameters
-    ----------
-    models : ``dict[str, type[PModel]``
-        Dictionary of models classes.
-    controllers : ``dict[str, type[PPresenter]``
-        Dictionary of controllers classes.
-    views : ``dict[str, type[ViewProtocol]``
-        Dictionary of view classes.
-    """
+    devices: dict[str, type[Device]]
+    """Dictionary of device classes, keyed by component name."""
 
-    models: dict[str, type[PModel]]
-    controllers: dict[str, type[PPresenter]]
-    views: dict[str, type[ViewProtocol]]
+    presenters: dict[str, type[Presenter]]
+    """Dictionary of presenter classes, keyed by component name."""
 
-
-T = TypeVar("T")  # generic type
-IC = TypeVar("IC")  # info class
-PC = TypeVar("PC")  # plugin class
-
-
-class Plugin(NamedTuple, Generic[IC, PC]):
-    """A named tuple representing the elements required to identify and load a plugin.
-
-    Parameters
-    ----------
-    name : ``str``
-        The name of the plugin.
-    info : ``IC``
-        The information class for the plugin.
-    base_class : ``type[PC]``
-        The base class for the plugin.
-    """
-
-    name: str
-    info: IC
-    base_class: type[PC]
-
-
-# helper typing
-PluginInfo = Union[PModelInfo, PPresenterInfo, PViewInfo]
-PluginType = Union[PModel, PPresenter, ViewProtocol]
-ManifestItems = dict[str, dict[str, str]]
-
-# constants
-FALLBACK_INFO: Final[dict[str, Any]] = {
-    "models": ModelInfo,
-    "controllers": PresenterInfo,
-    "views": ViewInfo,
-}
-
-PLUGIN_GROUPS = Literal["models", "controllers", "views"]
+    views: dict[str, type[View]]
+    """Dictionary of view classes, keyed by component name."""
 
 
 def load_configuration(
     config_path: str,
-) -> tuple[RedSunSessionInfo, PluginTypeDict]:
-    """Load the configuration from a YAML file.
+) -> tuple[RedSunConfig, PluginTypeDict]:
+    """Load configuration and discover plugin classes from a YAML file.
 
-    The manager will load the configuration from the input YAML file.
-    It will then load the information models and device models for each group.
-    The information models are built here; the actual device models are built in the factory.
+    Reads the YAML configuration, discovers installed plugins via
+    entry points, imports and validates their classes against sunflare
+    protocols.
 
     Parameters
     ----------
-    config_path : ``str``
-        Path to the YAML file.
+    config_path : str
+        Path to the YAML configuration file.
 
     Returns
     -------
-    ``tuple[RedSunSessionInfo, PluginTypeDict]``
-        Redsun instance configuration and class types to build.
+    tuple[dict[str, Any], PluginTypeDict]
+        The raw configuration dictionary and the discovered plugin classes.
+        The config dict preserves the full YAML structure including
+        ``session``, ``frontend``, and per-component kwargs.
     """
-    config = RedSunSessionInfo.load_yaml(config_path)
+    with open(config_path, "r") as f:
+        config: RedSunConfig = yaml.safe_load(f)
 
-    session = config.pop("session", "Redsun")
-    try:
-        frontend = FrontendTypes(config.pop("frontend"))
-    except KeyError as e:
-        raise KeyError(f"Configuration file {config_path} is missing the key {e}.")
-
-    plugin_types = PluginTypeDict(models={}, controllers={}, views={})
-    plugins_info = PluginInfoDict(models={}, controllers={}, views={})
-
+    plugin_types = PluginTypeDict(devices={}, presenters={}, views={})
     available_manifests = entry_points(group="redsun.plugins")
 
-    groups: list[PLUGIN_GROUPS] = ["models", "controllers", "views"]
+    groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 
     for group in groups:
-        if group not in config.keys():
+        if group not in config:
             logger.debug(
                 "Group %s not found in the configuration file. Skipping", group
             )
             continue
-        plugins = _load_plugins(
+        loaded = _load_plugins(
             group_cfg=config[group],
             group=group,
             available_manifests=available_manifests,
         )
-        for p in plugins:
-            # it's too hard to explain to the
-            # type checker which is the actual
-            # type of p.info and p.base_class;
-            # we know it's correct, so we'll just
-            # ignore the type checker here
-            plugin_types[group][p.name] = p.base_class  # type: ignore[assignment]
-            plugins_info[group][p.name] = p.info  # type: ignore[assignment]
+        for name, cls in loaded:
+            # this assignment is safe at runtime;
+            # for mypy sake we should have a better
+            # way of dealing with the different plugin types
+            # in order to remove the type: ignore comment
+            plugin_types[group][name] = cls  # type: ignore
 
-    session_container = RedSunSessionInfo(
-        session=session,
-        frontend=frontend,
-        models=plugins_info["models"],
-        controllers=plugins_info["controllers"],
-        views=plugins_info["views"],
-    )
-
-    return (session_container, plugin_types)
+    return config, plugin_types
 
 
 def _load_plugins(
-    *, group_cfg: dict[str, Any], group: str, available_manifests: EntryPoints
-) -> list[Plugin[PluginInfo, PluginType]]:
-    """Load a plugin group.
+    *,
+    group_cfg: dict[str, Any],
+    group: str,
+    available_manifests: EntryPoints,
+) -> list[tuple[str, PluginType]]:
+    """Load plugin classes for a given group.
+
+    For each entry in the group configuration, find the matching entry
+    point, read the plugin manifest, import the class, and validate it.
 
     Parameters
     ----------
-    group_cfg : ``dict[str, Any]``
-        Configuration read from the YAML file for given ``group``.
-    group : ``str``
-        The group of plugins to load.
-    available_manifests : ``EntryPoints``
-        The available entry points.
+    group_cfg : dict[str, Any]
+        Configuration entries for the group from the YAML file.
+    group : str
+        The plugin group (``"devices"``, ``"presenters"``, or ``"views"``).
+    available_manifests : EntryPoints
+        The available ``redsun.plugins`` entry points.
 
     Returns
     -------
-    ``list[Plugin[PluginInfo, PluginType]]``
-        A list of loaded plugins for the group.
+    list[tuple[str, PluginType]]
+        A list of ``(name, class)`` tuples for successfully loaded plugins.
     """
-    plugins: list[Plugin[PluginInfo, PluginType]] = []
+    plugins: list[tuple[str, PluginType]] = []
 
     for name, info in group_cfg.items():
-        # inspect the configuration;
-        # grab the plugin name and id
-        plugin_name = info["plugin_name"]
-        plugin_id = info["plugin_id"]
+        plugin_name: str = info["plugin_name"]
+        plugin_id: str = info["plugin_id"]
 
         iterator = (entry for entry in available_manifests if entry.name == plugin_name)
-
-        # check if the plugin is available in the entry points
         plugin = next(iterator, None)
-        if plugin is not None:
-            pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-            with as_file(pkg_manifest) as config_path:
-                with open(config_path, "r") as f:
-                    # read the manifest for the current group
-                    manifest: dict[str, ManifestItems] = yaml.safe_load(f)
-                    items = manifest[group]
-                    if plugin_id not in items.keys():
-                        # plugin id not found in the manifest;
-                        # log the error and continue
-                        logger.error(
-                            f'Plugin "{plugin_name}" does not contain the id "{plugin_id}".'
-                        )
-                        continue
-                    item = items[plugin_id]
-                    try:
-                        # retrieve the class definition
-                        class_item_module, class_item_type = item["class"].split(":")
-                        imported_class = getattr(
-                            import_module(class_item_module), class_item_type
-                        )
-                        acceptable = _check_import(imported_class, group)
-                        if not acceptable:
-                            logger.error(
-                                f"{imported_class} exists, but does not implement any known protocol."
-                            )
-                            continue
-                    except KeyError:
-                        # couldn't load the class definition;
-                        # ditch the plugin and log the error
-                        logger.error(
-                            f'Plugin id "{plugin_id}" of "{name}" does not contain the class key. Skipping.'
-                        )
-                        continue
-                    try:
-                        # get the information class
-                        info_item_module, info_item_type = item["info"].split(":")
-                        imported_info = getattr(
-                            import_module(info_item_module), info_item_type
-                        )
-                    except KeyError:
-                        # fallback to default info class
-                        imported_info = FALLBACK_INFO[group]
-                        logger.debug(
-                            f'Plugin "{plugin_name}" does not contain the info key. Falling back to default info class.'
-                        )
 
-                    # add the plugin to the dictionary
-                    imported_info_obj = imported_info(**info)
-                    plugins.append(
-                        Plugin(
-                            name=name, info=imported_info_obj, base_class=imported_class
-                        )
-                    )
-        else:
-            logger.error(f'Plugin "{plugin_name}" not found in the installed plugins.')
+        if plugin is None:
+            logger.error('Plugin "%s" not found in the installed plugins.', plugin_name)
+            continue
+
+        pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
+        with as_file(pkg_manifest) as manifest_path:
+            with open(manifest_path, "r") as f:
+                manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+
+            if group not in manifest:
+                logger.error(
+                    'Plugin "%s" manifest does not contain group "%s".',
+                    plugin_name,
+                    group,
+                )
+                continue
+
+            items = manifest[group]
+            if plugin_id not in items:
+                logger.error(
+                    'Plugin "%s" does not contain the id "%s".',
+                    plugin_name,
+                    plugin_id,
+                )
+                continue
+
+            item = items[plugin_id]
+            try:
+                class_item_module, class_item_type = item["class"].split(":")
+                imported_class = getattr(
+                    import_module(class_item_module), class_item_type
+                )
+            except KeyError:
+                logger.error(
+                    'Plugin id "%s" of "%s" does not contain the class key. Skipping.',
+                    plugin_id,
+                    name,
+                )
+                continue
+
+            if not _check_import(imported_class, group):
+                logger.error(
+                    "%s exists, but does not implement any known protocol.",
+                    imported_class,
+                )
+                continue
+
+            plugins.append((name, imported_class))
 
     return plugins
 
 
 def _check_import(imported_class: type[T], group: str) -> bool:
-    """Check if the imported class implements the correct protocol by inspecting its __init__ signature.
+    """Check if the imported class implements the correct protocol.
 
     Parameters
     ----------
-    imported_class : ``type[T]``
+    imported_class : type
         The imported class to check.
-    group : ``str``
+    group : str
         The group to check the class against.
 
     Returns
     -------
-    ``bool``
-        True if the class implements the correct protocol; False otherwise.
+    bool
+        ``True`` if the class implements the correct protocol.
     """
-    if group == "models":
-        return _check_model_protocol(imported_class)
-    elif group == "controllers":
-        return _check_controller_protocol(imported_class)
+    if group == "devices":
+        return _check_device_protocol(imported_class)
+    elif group == "presenters":
+        return _check_presenter_protocol(imported_class)
     elif group == "views":
         return _check_view_protocol(imported_class)
     else:
         raise ValueError(f"Unknown group {group}.")  # pragma: no cover
 
 
-def _check_model_protocol(cls: type) -> bool:
-    """Check if a class implements the model protocol.
+def _check_device_protocol(cls: type) -> bool:
+    """Check if a class implements the device protocol.
 
-    Models should inherit from or structurally implement PModel.
+    Devices should inherit from :class:`~sunflare.device.Device` or
+    structurally implement :class:`~sunflare.device.PDevice`.
     """
-    # First check inheritance hierarchy (works even for data protocols)
-    if PModel in cls.mro():
+    # Check inheritance hierarchy
+    if Device in cls.mro():
         return True
 
-    # For structural typing, check the __init__ annotations
-    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
-    param_names = list(annotations.keys())
-
-    # Check if the __init__ signature matches the expected pattern
-    # Should have: name (str) and some_info (ModelInfo-like)
-    if (
-        len(param_names) == 2
-        and "name" in param_names
-        and any("model_info" in param.lower() for param in param_names)
-    ):
-        return True
-
-    # Fall back to checking required methods and properties
+    # Structural check: required methods and properties
     required_methods = ["read_configuration", "describe_configuration"]
-    required_properties = ["name", "parent", "model_info"]
+    required_properties = ["name", "parent"]
 
-    # Check if all required methods exist and are callable
-    for method_name in required_methods:
-        if not hasattr(cls, method_name) or not callable(getattr(cls, method_name)):
-            return False
-
-    # Check if all required properties exist
-    for prop_name in required_properties:
-        if not hasattr(cls, prop_name):
-            return False
-
+    is_compliant = all(
+        hasattr(cls, attr) for attr in [*required_methods, *required_properties]
+    )
+    if is_compliant:
+        # we have a hit: register as subclass
+        Device.register(cls)
     return True
 
 
-def _check_controller_protocol(cls: type) -> bool:
-    """Check if a class implements the controller protocol.
+def _check_presenter_protocol(cls: type) -> bool:
+    """Check if a class implements the presenter protocol.
 
-    Controllers should inherit from or structurally implement PPresenter.
+    Presenters should inherit from :class:`~sunflare.presenter.Presenter`
+    or structurally implement :class:`~sunflare.presenter.PPresenter`.
     """
-    # First check inheritance hierarchy (works even for data protocols)
-    if PPresenter in cls.mro():
+    # Check inheritance hierarchy
+    if Presenter in cls.mro():
         return True
 
-    # For structural typing, check the __init__ annotations
-    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
-    param_names = list(annotations.keys())
-
-    # Check if the __init__ signature matches the expected pattern
-    # Should have: ctrl_info, models, virtual_bus
-    if (
-        len(param_names) == 3
-        and any("ctrl_info" in param.lower() for param in param_names)
-        and any("models" in param.lower() for param in param_names)
-        and any("virtual_bus" in param.lower() for param in param_names)
-    ):
-        return True
-
-    # Fall back to checking class attributes
-    required_attributes = ["ctrl_info", "models", "virtual_bus"]
-    return all(hasattr(cls, attr) for attr in required_attributes)
+    # Structural check: required attributes
+    required_attributes = ["devices", "virtual_bus"]
+    is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
+    if is_compliant:
+        # we have a hit: register as subclass
+        Presenter.register(cls)
+    return is_compliant
 
 
 def _check_view_protocol(cls: type) -> bool:
     """Check if a class implements the view protocol.
 
-    Views should inherit from or structurally implement ViewProtocol.
+    Views should inherit from :class:`~sunflare.view.View` or
+    structurally implement :class:`~sunflare.view.PView`.
     """
-    # First check inheritance hierarchy (works even for data protocols)
-    if ViewProtocol in cls.mro():
+    if issubclass(cls, View):
         return True
+    is_compliant = hasattr(cls, "virtual_bus")
 
-    # For structural typing, check the __init__ annotations
-    annotations = get_annotations(cls.__init__, eval_str=False)  # type: ignore[misc]
-    param_names = list(annotations.keys())
-
-    # Check if the __init__ signature matches the expected pattern
-    # Should have: view_info, virtual_bus
-    if any("view_info" in param.lower() for param in param_names) and any(
-        "virtual_bus" in param.lower() for param in param_names
-    ):
-        return True
-
-    # Fall back to checking class attributes
-    required_attributes = ["view_info", "virtual_bus"]
-    return all(hasattr(cls, attr) for attr in required_attributes)
+    if is_compliant:
+        # we have a hit: register as subclass
+        View.register(cls)
+    return is_compliant

@@ -6,15 +6,11 @@ import argparse
 import logging
 import sys
 
-from sunflare.virtual import VirtualBus
-
-from redsun import plugins
-from redsun.controller import RedsunController
-from redsun.view import build_view_layer, create_app, launch_app
+from redsun.containers import AppContainer
 
 
 class RedSunArgs(argparse.Namespace):
-    """type hints for command line arguments."""
+    """Type hints for command line arguments."""
 
     config: str
     debug: bool
@@ -62,29 +58,7 @@ def main(input_config: str) -> None:
     input_config : str
         Path to the configuration file.
     """
-    # create the application
-    app = create_app()
-
-    # virtual layer
-    virtual_bus = VirtualBus()
-
-    # get the startup configuration
-    config, types_groups = plugins.load_configuration(input_config)
-
-    # build the controller layer
-    controller = RedsunController(config, virtual_bus, types_groups)
-
-    # build the view layer
-    view = build_view_layer(config, types_groups["views"], virtual_bus)
-
-    # connect the controller and the view to the virtual layer
-    controller.connect_to_virtual()
-    view.connect_to_virtual()
-
-    # launch the application;
-    # the app starts here and
-    # there is no return until it's closed
-    launch_app(app, view)
+    AppContainer.from_config(input_config).run()
 
 
 def main_cli() -> None:
