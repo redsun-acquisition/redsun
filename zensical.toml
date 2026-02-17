@@ -19,11 +19,7 @@ nav = [
     { "Run tests" = "how-to/run-tests.md" },
   ]},
   { "Reference" = [
-    "reference/index.md",
-    { "Configuration" = "reference/api/config.md" },
-    { "Containers" = "reference/api/containers.md" },
-    { "View" = "reference/api/view.md" },
-    { "Changelog" = "reference/changelog.md" },
+    "reference/index.md"
   ]},
   { "Explanation" = [
     "explanation/index.md",
