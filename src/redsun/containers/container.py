@@ -9,15 +9,26 @@ from __future__ import annotations
 import logging
 import sys
 from importlib import import_module
+from importlib.metadata import EntryPoints, entry_points
+from importlib.resources import as_file, files
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    TypedDict,
+    TypeGuard,
+    TypeVar,
+    Union,
+    get_type_hints,
+    overload,
+)
 
 import yaml
 from dependency_injector import containers, providers
 from sunflare.virtual import HasShutdown, IsInjectable, IsProvider, VirtualBus
 from typing_extensions import dataclass_transform
-
-from redsun.plugins import load_configuration
 
 from .components import (
     RedSunConfig,
@@ -30,10 +41,93 @@ from .components import (
 )
 
 if TYPE_CHECKING:
-    from sunflare.device import Device
-    from sunflare.presenter import Presenter
-    from sunflare.view import View
     from typing_extensions import Never
+
+from sunflare.device import Device
+from sunflare.presenter import Presenter
+from sunflare.view import View
+
+ManifestItems = dict[str, dict[str, str]]
+PluginType = Union[type[Device], type[Presenter], type[View]]
+PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
+
+
+class _PluginTypeDict(TypedDict):
+    """Typed dictionary for discovered plugin classes, organized by group."""
+
+    devices: dict[str, type[Device]]
+    presenters: dict[str, type[Presenter]]
+    views: dict[str, type[View]]
+
+
+def _assert_never(arg: Never) -> Never:
+    raise AssertionError(f"Unhandled case: {arg!r}")
+
+
+def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
+    """Check if a class implements the device protocol."""
+    if Device in cls.mro():
+        return True
+
+    required_methods = ["read_configuration", "describe_configuration"]
+    required_properties = ["name", "parent"]
+
+    is_compliant = all(
+        hasattr(cls, attr) for attr in [*required_methods, *required_properties]
+    )
+    if is_compliant:
+        Device.register(cls)
+    return True
+
+
+def _check_presenter_protocol(cls: type) -> TypeGuard[type[Presenter]]:
+    """Check if a class implements the presenter protocol."""
+    if Presenter in cls.mro():
+        return True
+
+    required_attributes = ["devices", "virtual_bus"]
+    is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
+    if is_compliant:
+        Presenter.register(cls)
+    return is_compliant
+
+
+def _check_view_protocol(cls: type) -> TypeGuard[type[View]]:
+    """Check if a class implements the view protocol."""
+    if issubclass(cls, View):
+        return True
+    is_compliant = hasattr(cls, "virtual_bus")
+
+    if is_compliant:
+        View.register(cls)
+    return is_compliant
+
+
+@overload
+def _check_plugin_protocol(
+    imported_class: type, group: Literal["devices"]
+) -> TypeGuard[type[Device]]: ...
+@overload
+def _check_plugin_protocol(
+    imported_class: type, group: Literal["presenters"]
+) -> TypeGuard[type[Presenter]]: ...
+@overload
+def _check_plugin_protocol(
+    imported_class: type, group: Literal["views"]
+) -> TypeGuard[type[View]]: ...
+def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
+    match group:
+        case "devices":
+            return _check_device_protocol(imported_class)
+        case "presenters":
+            return _check_presenter_protocol(imported_class)
+        case "views":
+            return _check_view_protocol(imported_class)
+        case _:
+            _assert_never(group)
+
+
+T = TypeVar("T")
 
 __all__ = ["AppContainerMeta", "AppContainer"]
 
@@ -108,10 +202,6 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
     module = import_module(module_path)
     ret_cls: type[AppContainer] = getattr(module, class_name)
     return ret_cls
-
-
-def _assert_never(arg: Never) -> Never:
-    raise AssertionError(f"Unhandled case: {arg!r}")
 
 
 @dataclass_transform(field_specifiers=(component,))
@@ -505,7 +595,7 @@ class AppContainer(metaclass=AppContainerMeta):
         AppContainer
             A configured (but unbuilt) container instance.
         """
-        config, plugin_types = load_configuration(config_path)
+        config, plugin_types = cls._load_configuration(config_path)
 
         namespace: dict[str, Any] = {}
 
@@ -539,3 +629,108 @@ class AppContainer(metaclass=AppContainerMeta):
             session=config.get("session", "Redsun"),
             frontend=frontend,
         )
+
+    @classmethod
+    def _load_configuration(
+        cls, config_path: str
+    ) -> tuple[dict[str, Any], _PluginTypeDict]:
+        """Load configuration and discover plugin classes from a YAML file."""
+        with open(config_path, "r") as f:
+            config: dict[str, Any] = yaml.safe_load(f)
+
+        plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
+        available_manifests = entry_points(group="redsun.plugins")
+
+        groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
+
+        for group in groups:
+            if group not in config:
+                logger.debug(
+                    "Group %s not found in the configuration file. Skipping", group
+                )
+                continue
+            loaded = cls._load_plugins(
+                group_cfg=config[group],
+                group=group,
+                available_manifests=available_manifests,
+            )
+            for name, plugin_cls in loaded:
+                # mypy complains because it can't verify the type of plugin_cls;
+                # but it is guaranteed to be correct at runtime because we're
+                # doing a lot of manual checks so just ignore it
+                plugin_types[group][name] = plugin_cls  # type: ignore[assignment]
+
+        return config, plugin_types
+
+    @classmethod
+    def _load_plugins(
+        cls,
+        *,
+        group_cfg: dict[str, Any],
+        group: PLUGIN_GROUPS,
+        available_manifests: EntryPoints,
+    ) -> list[tuple[str, PluginType]]:
+        """Load plugin classes for a given group."""
+        plugins: list[tuple[str, PluginType]] = []
+
+        for name, info in group_cfg.items():
+            plugin_name: str = info["plugin_name"]
+            plugin_id: str = info["plugin_id"]
+
+            iterator = (
+                entry for entry in available_manifests if entry.name == plugin_name
+            )
+            plugin = next(iterator, None)
+
+            if plugin is None:
+                logger.error(
+                    'Plugin "%s" not found in the installed plugins.', plugin_name
+                )
+                continue
+
+            pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
+            with as_file(pkg_manifest) as manifest_path:
+                with open(manifest_path, "r") as f:
+                    manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+
+                if group not in manifest:
+                    logger.error(
+                        'Plugin "%s" manifest does not contain group "%s".',
+                        plugin_name,
+                        group,
+                    )
+                    continue
+
+                items = manifest[group]
+                if plugin_id not in items:
+                    logger.error(
+                        'Plugin "%s" does not contain the id "%s".',
+                        plugin_name,
+                        plugin_id,
+                    )
+                    continue
+
+                item = items[plugin_id]
+                try:
+                    class_item_module, class_item_type = item["class"].split(":")
+                    imported_class = getattr(
+                        import_module(class_item_module), class_item_type
+                    )
+                except KeyError:
+                    logger.error(
+                        'Plugin id "%s" of "%s" does not contain the class key. Skipping.',
+                        plugin_id,
+                        name,
+                    )
+                    continue
+
+                if not _check_plugin_protocol(imported_class, group):
+                    logger.error(
+                        "%s exists, but does not implement any known protocol.",
+                        imported_class,
+                    )
+                    continue
+
+                plugins.append((name, imported_class))
+
+        return plugins
