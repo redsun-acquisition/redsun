@@ -28,7 +28,6 @@ from typing import (
 import yaml
 from dependency_injector import containers, providers
 from sunflare.virtual import HasShutdown, IsInjectable, IsProvider, VirtualBus
-from typing_extensions import dataclass_transform
 
 from .components import (
     RedSunConfig,
@@ -203,7 +202,6 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
     return ret_cls
 
 
-@dataclass_transform(field_specifiers=(component,))
 class AppContainerMeta(type):
     """Metaclass that auto-collects component wrappers from class attributes.
 
