@@ -11,7 +11,6 @@
       members:
         - RedSunConfig
         - component
-        - config
 
 ## AppContainer
 
