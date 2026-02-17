@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from redsun.containers import AppContainer, component, config
+from redsun.containers import AppContainer, component
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
@@ -358,8 +358,7 @@ class TestConfigField:
     def test_from_config_loads_device_kwargs(self, config_path: Path) -> None:
         from mock_pkg.device import MyMotor
 
-        class TestApp(AppContainer):
-            cfg = config(config_path / "mock_component_config.yaml")
+        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor: MyMotor = component(layer="device", from_config="motor")
 
         comp = TestApp._device_components["motor"]
@@ -371,8 +370,7 @@ class TestConfigField:
     def test_from_config_loads_presenter_kwargs(self, config_path: Path) -> None:
         from mock_pkg.controller import MockController
 
-        class TestApp(AppContainer):
-            cfg = config(config_path / "mock_component_config.yaml")
+        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             ctrl: MockController = component(layer="presenter", from_config="ctrl")
 
         comp = TestApp._presenter_components["ctrl"]
@@ -383,8 +381,7 @@ class TestConfigField:
     def test_from_config_inline_overrides(self, config_path: Path) -> None:
         from mock_pkg.device import MyMotor
 
-        class TestApp(AppContainer):
-            cfg = config(config_path / "mock_component_config.yaml")
+        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor: MyMotor = component(
                 layer="device", from_config="motor", egu="um",
             )
@@ -400,8 +397,7 @@ class TestConfigField:
         from mock_pkg.controller import MockController
         from mock_pkg.device import MyMotor
 
-        class TestApp(AppContainer):
-            cfg = config(config_path / "mock_component_config.yaml")
+        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor: MyMotor = component(layer="device", from_config="motor")
             ctrl: MockController = component(layer="presenter", from_config="ctrl")
 
@@ -415,7 +411,7 @@ class TestConfigField:
     def test_from_config_without_config_field_raises(self) -> None:
         from mock_pkg.device import MyMotor
 
-        with pytest.raises(TypeError, match="no config.*field was declared"):
+        with pytest.raises(TypeError, match="no config path was provided"):
 
             class TestApp(AppContainer):
                 motor: MyMotor = component(layer="device", from_config="motor")
@@ -425,8 +421,7 @@ class TestConfigField:
     ) -> None:
         from mock_pkg.device import MyMotor
 
-        class TestApp(AppContainer):
-            cfg = config(config_path / "mock_component_config.yaml")
+        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             # "missing" is not a key in the config file
             missing: MyMotor = component(
                 layer="device", from_config="missing",

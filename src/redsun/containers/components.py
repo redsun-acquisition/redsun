@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, TypeVar, overload
 
 from sunflare.device import Device
@@ -36,47 +35,6 @@ class RedSunConfig(TypedDict, total=False):
     """Dictionary of presenter kwargs, keyed by component name."""
     views: NotRequired[dict[str, Any]]
     """Dictionary of view kwargs, keyed by component name."""
-
-
-class _ConfigField:
-    """Internal sentinel returned by `config`.
-
-    Stores the path to a YAML configuration file.  The
-    `AppContainerMeta` metaclass loads the file and makes its
-    contents available to `component` fields that specify
-    a ``from_config`` key.
-    """
-
-    __slots__ = ("path",)
-
-    def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
-
-
-def config(path: str | Path) -> Any:
-    """Declare a container-level configuration file.
-
-    At class creation time the file is loaded and its sections are
-    used to populate kwargs for any `component` field that specifies
-    a ``from_config`` key.
-
-    Parameters
-    ----------
-    path : ``str | Path``
-        Path to a YAML configuration file.
-
-    Returns
-    -------
-    ``Any``
-        A `_ConfigField` sentinel.
-
-    Examples
-    --------
-    >>> class MyApp(AppContainer):
-    ...     cfg = config("app_config.yaml")
-    ...     motor: MyMotor = component(layer="device", from_config="motor")
-    """
-    return _ConfigField(path=path)
 
 
 class _ComponentField:
@@ -172,8 +130,7 @@ def component(
 
     With a config file:
 
-    >>> class MyApp(AppContainer):
-    ...     cfg = config("app_config.yaml")
+    >>> class MyApp(AppContainer, config="app_config.yaml"):
     ...     motor: MyMotor = component(layer="device", from_config="motor")
     """
     return _ComponentField(

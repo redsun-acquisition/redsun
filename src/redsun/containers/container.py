@@ -33,7 +33,6 @@ from typing_extensions import dataclass_transform
 from .components import (
     RedSunConfig,
     _ComponentField,
-    _ConfigField,
     _DeviceComponent,
     _PresenterComponent,
     _ViewComponent,
@@ -217,20 +216,40 @@ class AppContainerMeta(type):
     Annotated fields using `component` are also resolved: the type
     annotation provides the component class and the attribute name becomes
     the component name.
+
+    Parameters
+    ----------
+    config : str | Path | None
+        Path to a YAML configuration file. If provided, component fields
+        with ``from_config`` set will pull their kwargs from this file.
     """
 
     _device_components: dict[str, _DeviceComponent]
     _presenter_components: dict[str, _PresenterComponent]
     _view_components: dict[str, _ViewComponent]
+    _config_path: Path | None
 
     def __new__(  # noqa: D102
         mcs,
         name: str,
         bases: tuple[type, ...],
         namespace: dict[str, Any],
+        config: str | Path | None = None,
         **kwargs: Any,
     ) -> AppContainerMeta:
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        # Store config path on the class
+        config_path: Path | None = None
+        if config is not None:
+            config_path = Path(config)
+        else:
+            # Check base classes for an inherited config path
+            for base in bases:
+                if hasattr(base, "_config_path") and base._config_path is not None:
+                    config_path = base._config_path
+                    break
+        cls._config_path = config_path
 
         # Inherit components from base classes
         devices: dict[str, _DeviceComponent] = {}
@@ -267,21 +286,10 @@ class AppContainerMeta(type):
         }
 
         if component_fields:
-            # Load container-level config if a _ConfigField is present
+            # Load container-level config if a config path is present
             config_data: dict[str, Any] = {}
-            for attr_value in namespace.values():
-                if isinstance(attr_value, _ConfigField):
-                    config_data = _load_yaml(attr_value.path)
-                    break
-            else:
-                # Check base classes for an inherited config field
-                for base in bases:
-                    for val in vars(base).values():
-                        if isinstance(val, _ConfigField):
-                            config_data = _load_yaml(val.path)
-                            break
-                    if config_data:
-                        break
+            if config_path is not None:
+                config_data = _load_yaml(config_path)
 
             try:
                 hints = get_type_hints(cls)
@@ -308,8 +316,8 @@ class AppContainerMeta(type):
                     if not config_data:
                         raise TypeError(
                             f"Component field '{attr_name}' in {name} has "
-                            f"from_config set but no config() field was "
-                            f"declared on the container"
+                            f"from_config set but no config path was "
+                            f"provided to the container class"
                         )
 
                     # Map layer to config section key
