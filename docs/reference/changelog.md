@@ -50,7 +50,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
-[0.4.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.2.0...v0.4.0
-[0.3.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/redsun-acquisition/sunflare/compare/v0.1.0
+[0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/redsun-acquisition/redsun/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/redsun-acquisition/redsun/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/redsun-acquisition/redsun/compare/v0.1.0

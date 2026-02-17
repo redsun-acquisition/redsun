@@ -1,8 +1,8 @@
-# API Reference
+# Configuration
 
-::: redsun
+::: redsun.config
     handler: python
     options:
       show_root_heading: true
-      show_source: false
+      show_source: true
       heading_level: 2

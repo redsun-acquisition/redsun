@@ -81,7 +81,7 @@ def config(path: str | Path) -> Any:
     ...     motor: MotorKwargs
     >>> class MyApp(AppContainer):
     ...     cfg: AppConfig = config("app_config.yaml")
-    ...     motor: MyMotor = component(layer="device", from_config=True)
+    ...     motor: MyMotor = component(layer="device", from_config="motor")
     """
     return _ConfigField(path=path)
 
@@ -176,7 +176,7 @@ def component(
 
     >>> class MyApp(AppContainer):
     ...     cfg: AppConfig = config("app_config.yaml")
-    ...     motor: MyMotor = component(layer="device", from_config=True)
+    ...     motor: MyMotor = component(layer="device", from_config="motor")
     """
     return _ComponentField(
         layer=layer, alias=alias, from_config=from_config, kwargs=kwargs
