@@ -244,6 +244,10 @@ class AppContainerMeta(type):
             # Check base classes for an inherited config path
             for base in bases:
                 if hasattr(base, "_config_path") and base._config_path is not None:
+                    if isinstance(base._config_path, str):
+                        config_path = Path(base._config_path)
+                    elif isinstance(base._config_path, Path):
+                        config_path = base._config_path
                     config_path = base._config_path
                     break
         cls._config_path = config_path
