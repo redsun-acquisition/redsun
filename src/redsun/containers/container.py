@@ -46,8 +46,6 @@ ManifestItems = dict[str, dict[str, str]]
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
-__all__ = ["AppContainerMeta", "AppContainer"]
-
 
 class _PluginTypeDict(TypedDict):
     """Typed dictionary for discovered plugin classes, organized by group."""

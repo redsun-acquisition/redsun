@@ -4,7 +4,7 @@ Redsun uses a **container-based Model-View-Presenter (MVP) architecture** to man
 
 ## Overview
 
-At the core of Redsun is the [`AppContainer`][redsun.containers.container.AppContainer], which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.
+At the core of Redsun is the [`AppContainer`][redsun.AppContainer], which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.
 
 ```mermaid
 graph LR
@@ -87,7 +87,7 @@ The configuration file provides base keyword arguments for each component. These
 
 ## Build order
 
-When [`build()`][redsun.containers.container.AppContainer.build] is called, the container instantiates components in a strict dependency order:
+When [`build()`][redsun.AppContainer.build] is called, the container instantiates components in a strict dependency order:
 
 1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
 2. **DI container** - the dependency injection container, seeded with the application configuration.
