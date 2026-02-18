@@ -165,7 +165,7 @@ See the [plugin system](plugin-system.md) documentation for a full description o
 
 1. Creates the `QApplication` instance.
 2. Calls [`build()`][redsun.containers.container.AppContainer.build] to instantiate all components.
-3. Constructs the [`QtMainView`][redsun.view.qt.QtMainView] main window and docks all views.
+3. Constructs the `QtMainView` main window and docks all views.
 4. Connects `VirtualAware` views to the virtual bus.
 5. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
 6. Shows the main window and enters the Qt event loop.

@@ -10,7 +10,7 @@ from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers.container import AppContainer
-from redsun.view.qt.mainview import QtMainView
+from redsun.qt._mainview import QtMainView
 
 if TYPE_CHECKING:
     from typing import Any
