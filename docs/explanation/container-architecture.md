@@ -81,13 +81,18 @@ def my_app() -> None:
         ui = component(MyView, layer="view", from_config="ui")
 
     MyApp().run()
+
+    # alternatively, you can first build and then run the app
+    app = MyApp()
+    app.build()
+    app.run()
 ```
 
 The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the `component()` call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
 
 ## Build order
 
-When [`build()`][redsun.AppContainer.build] is called, the container instantiates components in a strict dependency order:
+When [`build()`][redsun.containers.container.AppContainer.build] is called, the container instantiates components in a strict dependency order:
 
 1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
 2. **DI container** - the dependency injection container, seeded with the application configuration.
@@ -159,7 +164,11 @@ devices:
 
 See the [plugin system](plugin-system.md) documentation for a full description of the dynamic flow.
 
-## Qt integration
+## Frontend support
+
+Frontend is intended as the toolkit that deploys the functionalities to implement the Graphical User Interface (GUI).
+
+### Qt
 
 [`QtAppContainer`][redsun.qt.QtAppContainer] extends [`AppContainer`][redsun.containers.container.AppContainer] with the full Qt lifecycle:
 
@@ -175,3 +184,11 @@ It is imported from the public `redsun.qt` namespace:
 ```python
 from redsun.qt import QtAppContainer
 ```
+
+Both [`PyQt6`](https://pypi.org/project/PyQt6/) or [`PySide6`](https://pypi.org/project/PySide6/) wrapped via [`qtpy`](https://github.com/spyder-ide/qtpy) are supported.
+
+### Other frontends
+
+The future expectation is to provide support for other frontends (either desktop or web-based).
+
+While the presenter and device layer are decoupled via the `VirtualBus`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach accross the board, regardless of the specified frontend.
