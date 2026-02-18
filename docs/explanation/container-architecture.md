@@ -39,16 +39,23 @@ This separation ensures that hardware drivers, UI components, and business logic
 
 ## Declarative component registration
 
-Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument:
+Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument. When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
-from redsun import AppContainer, component
+from redsun import component
+from redsun.qt import QtAppContainer
 
-class MyApp(AppContainer):
-    motor = component(MyMotor, layer="device", axis=["X", "Y"])
-    ctrl = component(MyController, layer="presenter", gain=1.0)
-    ui = component(MyView, layer="view")
+
+def my_app() -> None:
+    class _MyApp(QtAppContainer):
+        motor = component(MyMotor, layer="device", axis=["X", "Y"])
+        ctrl = component(MyController, layer="presenter", gain=1.0)
+        ui = component(MyView, layer="view")
+
+    _MyApp().run()
 ```
+
+The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
 
 The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to `component()`, no annotation inspection is needed. This declarative approach allows the container to:
 
@@ -58,16 +65,23 @@ The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass
 
 ## Configuration file support
 
-Components can pull their keyword arguments from a YAML configuration file:
+Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each `component()` call:
 
 ```python
-from redsun import AppContainer, component
+from redsun import component
+from redsun.qt import QtAppContainer
 
-class MyApp(AppContainer, config="app_config.yaml"):
-    motor = component(MyMotor, layer="device", from_config="motor")
+
+def my_app() -> None:
+    class _MyApp(QtAppContainer, config="app_config.yaml"):
+        motor = component(MyMotor, layer="device", from_config="motor")
+        ctrl = component(MyController, layer="presenter", from_config="ctrl")
+        ui = component(MyView, layer="view", from_config="ui")
+
+    _MyApp().run()
 ```
 
-The configuration file provides base keyword arguments that can be overridden by inline values in the [`component()`][redsun.containers.components.component] call. This allows the same application class to be reused across different setups by swapping configuration files.
+The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the `component()` call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
 
 ## Build order
 
