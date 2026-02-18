@@ -859,19 +859,30 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#055-18-02-2026" class="md-nav__link">
+  <a href="#056-18-02-2026" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.5.5 - 18-02-2026
+        0.5.6 - 18-02-2026
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.5.5 - 18-02-2026">
+    <nav class="md-nav" aria-label="0.5.6 - 18-02-2026">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -927,7 +938,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1078,7 +1089,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1116,8 +1127,16 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <p>Dates are specified in the format <code>DD-MM-YYYY</code>.</p>
-<h2 id="055-18-02-2026"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.5.4...v0.5.5">0.5.5</a> - 18-02-2026<a class="headerlink" href="#055-18-02-2026" title="Permanent link">&para;</a></h2>
+<h2 id="056-18-02-2026"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.5.5...v0.5.6">0.5.6</a> - 18-02-2026<a class="headerlink" href="#056-18-02-2026" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[<code>AppContainer.build()</code>][redsun.containers.AppContainer.build] now calls
+  <code>connect_to_virtual()</code> on all <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualAware"><code>VirtualAware</code></a>
+  presenters after all components are fully constructed. Previously only views
+  received this call (via <code>QtMainView</code>), leaving presenter signal connections
+  never wired.</li>
+</ul>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>redsun.qt</code> public namespace exposing <code>QtAppContainer</code> for use in explicit,
   developer-written application configurations:
@@ -1138,7 +1157,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <p class="admonition-title">Warning</p>
 <p>This release was yanked from PyPI due to a broken distribution</p>
 </div>
-<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>AppContainer</code> and <code>component</code> are now importable directly from the top-level
   <code>redsun</code> package:
@@ -1191,7 +1210,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>Bumped sunflare version to <code>sunflare&gt;=0.5.0</code>, which implements the above changes at toolkit level</li>
 </ul>
 <h2 id="010-22-02-2025"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.1.0">0.1.0</a> - 22-02-2025<a class="headerlink" href="#010-22-02-2025" title="Permanent link">&para;</a></h2>
-<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Initial release on PyPI</li>
 </ul>
