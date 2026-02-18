@@ -7,7 +7,6 @@ for declarative component registration and dependency-ordered instantiation.
 from __future__ import annotations
 
 import logging
-import sys
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
 from importlib.resources import as_file, files
@@ -21,7 +20,6 @@ from typing import (
     TypeGuard,
     TypeVar,
     Union,
-    get_type_hints,
     overload,
 )
 
@@ -35,7 +33,6 @@ from .components import (
     _DeviceComponent,
     _PresenterComponent,
     _ViewComponent,
-    component,
 )
 
 if TYPE_CHECKING:
@@ -285,13 +282,14 @@ class AppContainerMeta(type):
             elif isinstance(attr_value, _ViewComponent):
                 views[attr_value.name] = attr_value
 
-        # Resolve component() field declarations from annotations
-        annotations = namespace.get("__annotations__", {})
+        # Resolve component() field declarations from the namespace.
+        # The class is carried directly on the _ComponentField, so no
+        # annotation inspection or get_type_hints() call is needed.
         component_fields = {
-            attr_name
-            for attr_name in annotations
+            attr_name: value
+            for attr_name, value in namespace.items()
             if not attr_name.startswith("_")
-            and isinstance(namespace.get(attr_name), _ComponentField)
+            and isinstance(value, _ComponentField)
         }
 
         if component_fields:
@@ -300,25 +298,7 @@ class AppContainerMeta(type):
             if config_path is not None:
                 config_data = _load_yaml(config_path)
 
-            try:
-                hints = get_type_hints(cls)
-            except NameError:
-                # Annotations may reference names from an enclosing local
-                # scope (e.g. a class defined inside a function).  Fall back
-                # to the caller's frame locals for resolution.
-                frame = sys._getframe(1)
-                hints = get_type_hints(cls, localns=frame.f_locals)
-
-            for attr_name in component_fields:
-                field: _ComponentField = namespace[attr_name]
-                component_cls = hints.get(attr_name)
-                if component_cls is None:
-                    logger.warning(
-                        f"Could not resolve type hint for component "
-                        f"field '{attr_name}' in {name}, skipping"
-                    )
-                    continue
-
+            for attr_name, field in component_fields.items():
                 # Merge kwargs: config file values as base, inline as override
                 kwargs = field.kwargs
                 if field.from_config is not None:
@@ -348,24 +328,22 @@ class AppContainerMeta(type):
                         kwargs = field.kwargs
                     else:
                         kwargs = {**cfg_section, **field.kwargs}
-                else:
-                    kwargs = field.kwargs
 
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
                 match field.layer:
                     case "device":
                         wrapper = _DeviceComponent(
-                            component_cls, attr_name, field.alias, **kwargs
+                            field.cls, attr_name, field.alias, **kwargs
                         )
                         devices[attr_name] = wrapper
                     case "presenter":
                         wrapper = _PresenterComponent(
-                            component_cls, attr_name, None, **kwargs
+                            field.cls, attr_name, None, **kwargs
                         )
                         presenters[attr_name] = wrapper
                     case "view":
                         wrapper = _ViewComponent(
-                            component_cls, attr_name, None, **kwargs
+                            field.cls, attr_name, None, **kwargs
                         )
                         views[attr_name] = wrapper
                     case _:
@@ -405,13 +383,13 @@ class AppContainer(metaclass=AppContainerMeta):
     Basic usage with inline kwargs:
 
     >>> class MyApp(AppContainer):
-    ...     motor: MyMotor = component(layer="device", axis=["X"])
-    ...     ctrl: MyController = component(layer="presenter")
+    ...     motor = component(MyMotor, layer="device", axis=["X"])
+    ...     ctrl = component(MyController, layer="presenter")
 
     With a configuration file:
 
     >>> class MyApp(AppContainer, config="app_config.yaml"):
-    ...     motor: MyMotor = component(layer="device", from_config="motor")
+    ...     motor = component(MyMotor, layer="device", from_config="motor")
 
     Building and running:
 

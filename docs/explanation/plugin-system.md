@@ -97,7 +97,7 @@ The plugin system is used when building from configuration files via
 [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config].
 When using the declarative class-based approach (defining a container subclass with
 [`component()`][redsun.containers.components.component] fields), component classes are
-specified directly through type annotations and do not go through plugin discovery.
+passed directly as the first argument to `component()` and do not go through plugin discovery.
 
 Both approaches produce the same result: an
 [`AppContainer`][redsun.containers.container.AppContainer] with registered device,

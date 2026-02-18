@@ -39,18 +39,18 @@ This separation ensures that hardware drivers, UI components, and business logic
 
 ## Declarative component registration
 
-Components are declared as annotated class attributes using the [`component()`][redsun.containers.components.component] field specifier:
+Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument:
 
 ```python
 from redsun.containers import AppContainer, component
 
 class MyApp(AppContainer):
-    motor: MyMotor = component(layer="device", axis=["X", "Y"])
-    ctrl: MyController = component(layer="presenter", gain=1.0)
-    ui: MyView = component(layer="view")
+    motor = component(MyMotor, layer="device", axis=["X", "Y"])
+    ctrl = component(MyController, layer="presenter", gain=1.0)
+    ui = component(MyView, layer="view")
 ```
 
-The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time, resolving type annotations to concrete component classes. This declarative approach allows the container to:
+The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to `component()`, no annotation inspection is needed. This declarative approach allows the container to:
 
 - validate component types at class creation time;
 - inherit and override components from base classes;
@@ -64,7 +64,7 @@ Components can pull their keyword arguments from a YAML configuration file:
 from redsun.containers import AppContainer, component
 
 class MyApp(AppContainer, config="app_config.yaml"):
-    motor: MyMotor = component(layer="device", from_config="motor")
+    motor = component(MyMotor, layer="device", from_config="motor")
 ```
 
 The configuration file provides base keyword arguments that can be overridden by inline values in the [`component()`][redsun.containers.components.component] call. This allows the same application class to be reused across different setups by swapping configuration files.
