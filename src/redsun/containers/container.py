@@ -560,9 +560,9 @@ class AppContainer(metaclass=AppContainerMeta):
                 raise
 
         # wire presenter signals now that all components exist on the virtual bus
-        for presenter in self.presenters.values():
-            if isinstance(presenter, VirtualAware):
-                presenter.connect_to_virtual()
+        for comp in self._presenter_components.values():
+            if comp.instance is not None and isinstance(comp.instance, VirtualAware):
+                comp.instance.connect_to_virtual()
 
         self._is_built = True
         logger.info(
