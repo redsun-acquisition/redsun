@@ -133,8 +133,8 @@ logger = logging.getLogger("redsun")
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
-    "pyqt": "redsun.containers.qt_container.QtAppContainer",
-    "pyside": "redsun.containers.qt_container.QtAppContainer",
+    "pyqt": "redsun.containers.qt._container.QtAppContainer",
+    "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
 
 

@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, NoReturn, cast
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
-from redsun.containers._mainview import QtMainView
 from redsun.containers.container import AppContainer
+from redsun.containers.qt._mainview import QtMainView
 
 if TYPE_CHECKING:
     from typing import Any

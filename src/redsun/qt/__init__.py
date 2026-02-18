@@ -14,6 +14,6 @@ Examples
 
 from __future__ import annotations
 
-from redsun.containers.qt_container import QtAppContainer
+from redsun.containers.qt import QtAppContainer
 
 __all__ = ["QtAppContainer"]
