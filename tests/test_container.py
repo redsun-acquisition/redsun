@@ -451,7 +451,7 @@ class TestTopLevelImports:
     """Tests that the main APIs are importable directly from redsun."""
 
     def test_qtappcontainer_importable_from_redsun_qt(self) -> None:
-        from redsun.containers.qt._container import QtAppContainer as _QAC
+        from redsun.containers.qt import QtAppContainer as _QAC
         from redsun.qt import QtAppContainer
 
         assert QtAppContainer is _QAC
