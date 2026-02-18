@@ -40,20 +40,22 @@ class RedSunConfig(TypedDict, total=False):
 class _ComponentField:
     """Internal sentinel returned by `component`.
 
-    Stores the layer assignment and keyword arguments until the
-    `AppContainerMeta` metaclass resolves them into concrete
+    Stores the component class, layer assignment, and keyword arguments
+    until the `AppContainerMeta` metaclass resolves them into concrete
     component wrappers.
     """
 
-    __slots__ = ("layer", "alias", "from_config", "kwargs")
+    __slots__ = ("cls", "layer", "alias", "from_config", "kwargs")
 
     def __init__(
         self,
+        cls: type,
         layer: Literal["device", "presenter", "view"],
         alias: str | None,
         from_config: str | None,
         kwargs: dict[str, Any],
     ) -> None:
+        self.cls = cls
         self.layer = layer
         self.alias = alias
         self.from_config = from_config
@@ -62,6 +64,7 @@ class _ComponentField:
 
 @overload
 def component(
+    cls: type[Device],
     *,
     layer: Literal["device"],
     alias: str | None = ...,
@@ -70,6 +73,7 @@ def component(
 ) -> Any: ...
 @overload
 def component(
+    cls: type[Presenter],
     *,
     layer: Literal["presenter"],
     alias: None = ...,
@@ -78,6 +82,7 @@ def component(
 ) -> Any: ...
 @overload
 def component(
+    cls: type[View],
     *,
     layer: Literal["view"],
     alias: None = ...,
@@ -85,6 +90,7 @@ def component(
     **kwargs: Any,
 ) -> Any: ...
 def component(
+    cls: type,
     *,
     layer: Literal["device", "presenter", "view"],
     alias: str | None = None,
@@ -94,12 +100,15 @@ def component(
     """Declare a component as a class field.
 
     This function is a field specifier for use with
-    `~redsun.containers.AppContainer` subclasses.  The type
-    annotation on the attribute provides the component class, and the
-    attribute name becomes the component name.
+    `~redsun.containers.AppContainer` subclasses.  The component class
+    is passed directly as the first argument, and the attribute name
+    becomes the component name.
 
     Parameters
     ----------
+    cls : type
+        The component class to instantiate. Must be a `Device`,
+        `Presenter`, or `View` subclass matching the given ``layer``.
     layer : "device" | "presenter" | "view"
         The layer this component belongs to.
     alias : str | None
@@ -118,23 +127,23 @@ def component(
     Returns
     -------
     `Any`
-        A `_ComponentField` sentinel (typed as `Any` so that
-        `attr: MyClass = component(...)` satisfies type checkers).
+        A `_ComponentField` sentinel (typed as `Any` so that the
+        attribute assignment satisfies type checkers).
 
     Examples
     --------
     >>> class MyApp(AppContainer):
-    ...     motor: MyMotor = component(layer="device", axis=["X"])
-    ...     ctrl: MyCtrl = component(layer="presenter", gain=1.0)
-    ...     ui: MyView = component(layer="view")
+    ...     motor = component(MyMotor, layer="device", axis=["X"])
+    ...     ctrl = component(MyCtrl, layer="presenter", gain=1.0)
+    ...     ui = component(MyView, layer="view")
 
     With a config file:
 
     >>> class MyApp(AppContainer, config="app_config.yaml"):
-    ...     motor: MyMotor = component(layer="device", from_config="motor")
+    ...     motor = component(MyMotor, layer="device", from_config="motor")
     """
     return _ComponentField(
-        layer=layer, alias=alias, from_config=from_config, kwargs=kwargs
+        cls=cls, layer=layer, alias=alias, from_config=from_config, kwargs=kwargs
     )
 
 

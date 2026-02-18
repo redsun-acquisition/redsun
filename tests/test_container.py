@@ -251,7 +251,8 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor: MyMotor = component(
+            motor = component(
+                MyMotor,
                 layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
@@ -263,7 +264,8 @@ class TestComponentFieldSyntax:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer):
-            ctrl: MockController = component(
+            ctrl = component(
+                MockController,
                 layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
@@ -279,7 +281,7 @@ class TestComponentFieldSyntax:
         _ = QApplication.instance() or QApplication([])
 
         class TestApp(AppContainer):
-            v: MockQtView = component(layer="view")
+            v = component(MockQtView, layer="view")
 
         assert "v" in TestApp._view_components
         assert isinstance(TestApp._view_components["v"], _ViewComponent)
@@ -289,11 +291,13 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor: MyMotor = component(
+            motor = component(
+                MyMotor,
                 layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            ctrl: MockController = component(
+            ctrl = component(
+                MockController,
                 layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
@@ -307,12 +311,13 @@ class TestComponentFieldSyntax:
         assert app.devices["motor"].name == "motor"
         assert "ctrl" in app.presenters
 
-    def test_component_field_mixed_with_old_style(self) -> None:
+    def test_component_field_mixed_with_direct_wrapper(self) -> None:
         from mock_pkg.controller import MockController
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor: MyMotor = component(
+            motor = component(
+                MyMotor,
                 layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
@@ -334,13 +339,15 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
-            motor: MyMotor = component(
+            motor = component(
+                MyMotor,
                 layer="device", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
         class Child(Base):
-            ctrl: MockController = component(
+            ctrl = component(
+                MockController,
                 layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
@@ -359,7 +366,7 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor: MyMotor = component(layer="device", from_config="motor")
+            motor = component(MyMotor, layer="device", from_config="motor")
 
         comp = TestApp._device_components["motor"]
         assert comp.kwargs["axis"] == ["X"]
@@ -371,7 +378,7 @@ class TestConfigField:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            ctrl: MockController = component(layer="presenter", from_config="ctrl")
+            ctrl = component(MockController, layer="presenter", from_config="ctrl")
 
         comp = TestApp._presenter_components["ctrl"]
         assert comp.kwargs["string"] == "config ctrl"
@@ -382,7 +389,8 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor: MyMotor = component(
+            motor = component(
+                MyMotor,
                 layer="device", from_config="motor", egu="um",
             )
 
@@ -398,8 +406,8 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor: MyMotor = component(layer="device", from_config="motor")
-            ctrl: MockController = component(layer="presenter", from_config="ctrl")
+            motor = component(MyMotor, layer="device", from_config="motor")
+            ctrl = component(MockController, layer="presenter", from_config="ctrl")
 
         app = TestApp()
         app.build()
@@ -414,7 +422,7 @@ class TestConfigField:
         with pytest.raises(TypeError, match="no config path was provided"):
 
             class TestApp(AppContainer):
-                motor: MyMotor = component(layer="device", from_config="motor")
+                motor = component(MyMotor, layer="device", from_config="motor")
 
     def test_from_config_missing_section_warns(
         self, config_path: Path, caplog: pytest.LogCaptureFixture,
@@ -423,7 +431,8 @@ class TestConfigField:
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             # "missing" is not a key in the config file
-            missing: MyMotor = component(
+            missing = component(
+                MyMotor,
                 layer="device", from_config="missing",
                 axis=["Y"], step_size={"Y": 0.2},
                 egu="deg", integer=0, floating=0.0, string="fallback",
@@ -433,3 +442,46 @@ class TestConfigField:
         # should still work with just the inline kwargs
         comp = TestApp._device_components["missing"]
         assert comp.kwargs["egu"] == "deg"
+
+
+# ── top-level public API ────────────────────────────────────────────
+
+
+class TestTopLevelImports:
+    """Tests that the main APIs are importable directly from redsun."""
+
+    def test_appcontainer_importable_from_redsun(self) -> None:
+        from redsun import AppContainer as AC
+
+        assert AC is AppContainer
+
+    def test_component_importable_from_redsun(self) -> None:
+        from redsun import component as c
+
+        assert c is component
+
+    def test_redsun_config_not_in_public_api(self) -> None:
+        import redsun
+
+        assert not hasattr(redsun, "RedSunConfig")
+        assert "RedSunConfig" not in redsun.__all__
+
+    def test_top_level_import_works_end_to_end(self) -> None:
+        """Smoke test: define and build a container using only top-level imports."""
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        from redsun import AppContainer as AC
+        from redsun import component as c
+
+        class TestApp(AC):
+            motor = c(MyMotor, layer="device", axis=["X"], step_size={"X": 0.1},
+                      egu="mm", integer=1, floating=1.0, string="s")
+            ctrl = c(MockController, layer="presenter",
+                     string="s", integer=1, floating=0.0, boolean=False)
+
+        app = TestApp()
+        app.build()
+        assert "motor" in app.devices
+        assert "ctrl" in app.presenters
+
