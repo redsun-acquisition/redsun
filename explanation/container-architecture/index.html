@@ -913,6 +913,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#two-usage-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two usage flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two usage flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#explicit-flow-developer-written-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explicit flow (developer-written containers)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-flow-configuration-driven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic flow (configuration-driven)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#qt-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1061,6 +1100,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#two-usage-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two usage flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two usage flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#explicit-flow-developer-written-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explicit flow (developer-written containers)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-flow-configuration-driven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic flow (configuration-driven)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#qt-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1157,8 +1235,43 @@
 <li><strong>Virtual bus</strong>: an event-driven publish/subscribe system provided by Sunflare (<a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualBus"><code>VirtualBus</code></a>). Presenters and views can emit and listen for signals without direct references to each other.</li>
 <li><strong>Dependency injection</strong>: presenters can register providers in the DI container, and views can consume them. This allows views to access presenter-provided data without coupling to specific presenter implementations.</li>
 </ul>
+<h2 id="two-usage-flows">Two usage flows<a class="headerlink" href="#two-usage-flows" title="Permanent link">&para;</a></h2>
+<p>Redsun supports two distinct approaches for assembling an application, both producing the same result at runtime.</p>
+<h3 id="explicit-flow-developer-written-containers">Explicit flow (developer-written containers)<a class="headerlink" href="#explicit-flow-developer-written-containers" title="Permanent link">&para;</a></h3>
+<p>The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">my_app</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">_MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">&quot;config.yaml&quot;</span><span class="p">):</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;motor&quot;</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">ctrl</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyController</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;presenter&quot;</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ctrl&quot;</span><span class="p">)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">ui</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;view&quot;</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ui&quot;</span><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">_MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></div>
+<p>The class is defined inside a function so that Qt imports (and any heavy device imports) are deferred until the function is actually called. <code>QtAppContainer</code> is imported from the public [<code>redsun.qt</code>][] namespace.</p>
+<h3 id="dynamic-flow-configuration-driven">Dynamic flow (configuration-driven)<a class="headerlink" href="#dynamic-flow-configuration-driven" title="Permanent link">&para;</a></h3>
+<p>The dynamic flow is for end users who point Redsun at a YAML configuration file. Plugins are discovered via entry points and the frontend is resolved from the <code>frontend:</code> key in the file — no Python code needs to be written:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">&quot;path/to/config.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></div>
+<p>The YAML file drives everything:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Experiment&quot;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pyqt&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">devices</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">motor</span><span class="p">:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
+</span></code></pre></div>
+<p>See the <a href="../plugin-system/">plugin system</a> documentation for a full description of the dynamic flow.</p>
 <h2 id="qt-integration">Qt integration<a class="headerlink" href="#qt-integration" title="Permanent link">&para;</a></h2>
-<p>The <a class="autorefs autorefs-internal" href="../../reference/api/#redsun.containers.qt_container.QtAppContainer"><code>QtAppContainer</code></a> extends <a class="autorefs autorefs-internal" href="../../reference/api/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with the full Qt lifecycle:</p>
+<p><a class="autorefs autorefs-internal" href="../../reference/api/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a> extends <a class="autorefs autorefs-internal" href="../../reference/api/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with the full Qt lifecycle:</p>
 <ol>
 <li>Creates the <code>QApplication</code> instance.</li>
 <li>Calls <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;/code&gt;" href="../../reference/api/#redsun.containers.container.AppContainer.build"><code>build()</code></a> to instantiate all components.</li>
@@ -1167,6 +1280,9 @@
 <li>Starts the <code>psygnal</code> signal queue bridge for thread-safe signal delivery.</li>
 <li>Shows the main window and enters the Qt event loop.</li>
 </ol>
+<p>It is imported from the public <code>redsun.qt</code> namespace:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+</span></code></pre></div>
 
 
 
