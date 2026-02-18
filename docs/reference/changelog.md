@@ -16,6 +16,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```python
   from redsun.qt import QtAppContainer
   ```
+- Clarified documentation
 
 ## [0.5.4] - 18-02-2026
 
