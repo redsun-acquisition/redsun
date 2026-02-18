@@ -952,13 +952,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#qt-integration" class="md-nav__link">
+  <a href="#frontend-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Qt integration
+        Frontend support
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Frontend support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#qt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Qt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-frontends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other frontends
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1139,13 +1167,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#qt-integration" class="md-nav__link">
+  <a href="#frontend-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Qt integration
+        Frontend support
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Frontend support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#qt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Qt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-frontends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other frontends
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1232,10 +1288,15 @@
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="n">ui</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;view&quot;</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ui&quot;</span><span class="p">)</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="c1"># alternatively, you can first build and then run the app</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the <code>component()</code> call, allowing the same container class to be reused across different hardware setups by swapping configuration files.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<p>When [<code>build()</code>][redsun.AppContainer.build] is called, the container instantiates components in a strict dependency order:</p>
+<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;/code&gt;" href="../../reference/api/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container instantiates components in a strict dependency order:</p>
 <ol>
 <li><strong>VirtualBus</strong> - the event-driven communication channel (<a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualBus"><code>VirtualBus</code></a>).</li>
 <li><strong>DI container</strong> - the dependency injection container, seeded with the application configuration.</li>
@@ -1291,7 +1352,9 @@
 </span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
 </span></code></pre></div>
 <p>See the <a href="../plugin-system/">plugin system</a> documentation for a full description of the dynamic flow.</p>
-<h2 id="qt-integration">Qt integration<a class="headerlink" href="#qt-integration" title="Permanent link">&para;</a></h2>
+<h2 id="frontend-support">Frontend support<a class="headerlink" href="#frontend-support" title="Permanent link">&para;</a></h2>
+<p>Frontend is intended as the toolkit that deploys the functionalities to implement the Graphical User Interface (GUI).</p>
+<h3 id="qt">Qt<a class="headerlink" href="#qt" title="Permanent link">&para;</a></h3>
 <p><a class="autorefs autorefs-internal" href="../../reference/api/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a> extends <a class="autorefs autorefs-internal" href="../../reference/api/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with the full Qt lifecycle:</p>
 <ol>
 <li>Creates the <code>QApplication</code> instance.</li>
@@ -1304,6 +1367,10 @@
 <p>It is imported from the public <code>redsun.qt</code> namespace:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span></code></pre></div>
+<p>Both <a href="https://pypi.org/project/PyQt6/"><code>PyQt6</code></a> or <a href="https://pypi.org/project/PySide6/"><code>PySide6</code></a> wrapped via <a href="https://github.com/spyder-ide/qtpy"><code>qtpy</code></a> are supported.</p>
+<h3 id="other-frontends">Other frontends<a class="headerlink" href="#other-frontends" title="Permanent link">&para;</a></h3>
+<p>The future expectation is to provide support for other frontends (either desktop or web-based).</p>
+<p>While the presenter and device layer are decoupled via the <code>VirtualBus</code>, the <code>View</code> layer is tied to the frontend selection and plugins will have to implement each <code>View</code> according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach accross the board, regardless of the specified frontend.</p>
 
 
 
