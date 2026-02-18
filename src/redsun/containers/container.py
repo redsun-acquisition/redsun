@@ -561,13 +561,13 @@ class AppContainer(metaclass=AppContainerMeta):
 
         # wire signals now that all components exist on the virtual bus;
         # order: presenters first (they publish), then views (they subscribe)
-        for comp in self._presenter_components.values():
-            if comp.instance is not None and isinstance(comp.instance, VirtualAware):
-                comp.instance.connect_to_virtual()
+        for presenter_comp in self._presenter_components.values():
+            if presenter_comp.instance is not None and isinstance(presenter_comp.instance, VirtualAware):
+                presenter_comp.instance.connect_to_virtual()
 
-        for comp in self._view_components.values():
-            if comp.instance is not None and isinstance(comp.instance, VirtualAware):
-                comp.instance.connect_to_virtual()
+        for view_comp in self._view_components.values():
+            if view_comp.instance is not None and isinstance(view_comp.instance, VirtualAware):
+                view_comp.instance.connect_to_virtual()
 
         self._is_built = True
         logger.info(
