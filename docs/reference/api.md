@@ -11,4 +11,4 @@
 
 ::: redsun.containers.container.AppContainer
 
-::: redsun.containers.qt_container.QtAppContainer
+::: redsun.qt.QtAppContainer
