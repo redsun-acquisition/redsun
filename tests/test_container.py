@@ -212,7 +212,7 @@ class TestFromConfig:
     def test_from_config_returns_qt_container(
         self, mock_entry_points: Any, config_path: Path
     ) -> None:
-        from redsun.containers.qt_container import QtAppContainer
+        from redsun.qt import QtAppContainer
 
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
@@ -449,6 +449,12 @@ class TestConfigField:
 
 class TestTopLevelImports:
     """Tests that the main APIs are importable directly from redsun."""
+
+    def test_qtappcontainer_importable_from_redsun_qt(self) -> None:
+        from redsun.containers.qt_container import QtAppContainer as _QAC
+        from redsun.qt import QtAppContainer
+
+        assert QtAppContainer is _QAC
 
     def test_appcontainer_importable_from_redsun(self) -> None:
         from redsun import AppContainer as AC
