@@ -29,7 +29,7 @@ graph LR
 
 ## The MVP pattern
 
-Redsun follows the **Model-View-Presenter** pattern provided by [Sunflare]:
+Redsun follows the **Model-View-Presenter** pattern provided by [`sunflare`]:
 
 - **Model (Devices)**: hardware abstractions that implement Bluesky's device protocols via [`Device`][sunflare.device.Device]. They represent the actual instruments being controlled.
 - **View**: UI components (currently Qt-based) that implement [`View`][sunflare.view.View] to display data and capture user interactions.
@@ -176,4 +176,4 @@ It is imported from the public `redsun.qt` namespace:
 from redsun.qt import QtAppContainer
 ```
 
-[sunflare]: https://redsun-acquisition.github.io/sunflare/
+[`sunflare`]: https://redsun-acquisition.github.io/sunflare/
