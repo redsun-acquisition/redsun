@@ -1138,6 +1138,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   was Qt-specific and bypassed the base build phase entirely.</li>
 <li>Removed the now-redundant <code>connect_to_virtual()</code> delegator from <code>QtMainView</code>
   and the explicit call to it in <code>QtAppContainer.run()</code>.</li>
+<li>Fixed a spurious warning when a <code>from_config</code> key exists in the YAML but has
+  no kwargs (bare key with null value, e.g. <code>camera2:</code> with nothing after it).
+  Previously <code>dict.get()</code> returned <code>None</code> for both a missing key and a null
+  value, making them indistinguishable. A sentinel is now used so only a
+  genuinely absent key triggers the warning; a present-but-empty section is
+  silently normalised to <code>{}</code>.</li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
