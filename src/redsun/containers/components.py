@@ -64,7 +64,7 @@ class _ComponentField:
 
 @overload
 def component(
-    cls: type[Device],
+    cls: type,
     *,
     layer: Literal["device"],
     alias: str | None = ...,
@@ -73,7 +73,7 @@ def component(
 ) -> Any: ...
 @overload
 def component(
-    cls: type[Presenter],
+    cls: type,
     *,
     layer: Literal["presenter"],
     alias: None = ...,
@@ -82,7 +82,7 @@ def component(
 ) -> Any: ...
 @overload
 def component(
-    cls: type[View],
+    cls: type,
     *,
     layer: Literal["view"],
     alias: None = ...,
@@ -107,8 +107,11 @@ def component(
     Parameters
     ----------
     cls : type
-        The component class to instantiate. Must be a `Device`,
-        `Presenter`, or `View` subclass matching the given ``layer``.
+        The component class to instantiate. For ``layer="device"`` this
+        must be a `Device` subclass. For ``layer="presenter"`` and
+        ``layer="view"`` any class with the appropriate constructor
+        signature is accepted, including protocol-based implementations
+        that do not inherit from `Presenter` or `View` directly.
     layer : "device" | "presenter" | "view"
         The layer this component belongs to.
     alias : str | None
