@@ -559,8 +559,13 @@ class AppContainer(metaclass=AppContainerMeta):
                 logger.error(f"Failed to build view '{name}': {e}")
                 raise
 
-        # wire presenter signals now that all components exist on the virtual bus
+        # wire signals now that all components exist on the virtual bus;
+        # order: presenters first (they publish), then views (they subscribe)
         for comp in self._presenter_components.values():
+            if comp.instance is not None and isinstance(comp.instance, VirtualAware):
+                comp.instance.connect_to_virtual()
+
+        for comp in self._view_components.values():
             if comp.instance is not None and isinstance(comp.instance, VirtualAware):
                 comp.instance.connect_to_virtual()
 

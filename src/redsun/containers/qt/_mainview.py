@@ -8,7 +8,6 @@ from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.log import Loggable
-from sunflare.virtual import VirtualAware
 
 from redsun.config import ViewPositionTypes
 
@@ -93,12 +92,6 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
                     self.logger.error(f"Multiple central views are not allowed: {name}")
 
         self.setWindowState(Qt.WindowState.WindowMaximized)
-
-    def connect_to_virtual(self) -> None:
-        """Connect all views to the virtual layer."""
-        for widget in self._widgets.values():
-            if isinstance(widget, VirtualAware):
-                widget.connect_to_virtual()
 
     def _save_configuration(self) -> None:
         """Save the current configuration."""
