@@ -19,6 +19,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   was Qt-specific and bypassed the base build phase entirely.
 - Removed the now-redundant `connect_to_virtual()` delegator from `QtMainView`
   and the explicit call to it in `QtAppContainer.run()`.
+- Fixed a spurious warning when a `from_config` key exists in the YAML but has
+  no kwargs (bare key with null value, e.g. `camera2:` with nothing after it).
+  Previously `dict.get()` returned `None` for both a missing key and a null
+  value, making them indistinguishable. A sentinel is now used so only a
+  genuinely absent key triggers the warning; a present-but-empty section is
+  silently normalised to `{}`.
 
 ### Added
 
