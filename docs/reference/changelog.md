@@ -9,15 +9,16 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [0.5.6] - 18-02-2026
 
-### Added
+### Fixed
 
 - [`AppContainer.build()`][redsun.containers.AppContainer.build] now calls
   `connect_to_virtual()` on all [`VirtualAware`][sunflare.virtual.VirtualAware]
-  presenters after all components are fully constructed. Previously only views
-  received this call (via `QtMainView`), leaving presenter signal connections
-  never wired.
-
-
+  **view** components after all components are fully constructed, symmetrically
+  with the existing presenter loop. Previously, views were connected only via a
+  `QtMainView` delegator called from `QtAppContainer.run()`, meaning the wiring
+  was Qt-specific and bypassed the base build phase entirely.
+- Removed the now-redundant `connect_to_virtual()` delegator from `QtMainView`
+  and the explicit call to it in `QtAppContainer.run()`.
 
 ### Added
 
