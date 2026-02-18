@@ -39,6 +39,8 @@ This separation ensures that hardware drivers, UI components, and business logic
 
 ## Declarative component registration
 
+`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can by dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
+
 Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument. When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
@@ -47,12 +49,12 @@ from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
-    class _MyApp(QtAppContainer):
+    class MyApp(QtAppContainer):
         motor = component(MyMotor, layer="device", axis=["X", "Y"])
         ctrl = component(MyController, layer="presenter", gain=1.0)
         ui = component(MyView, layer="view")
 
-    _MyApp().run()
+    MyApp().run()
 ```
 
 The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
@@ -73,12 +75,12 @@ from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
-    class _MyApp(QtAppContainer, config="app_config.yaml"):
+    class MyApp(QtAppContainer, config="app_config.yaml"):
         motor = component(MyMotor, layer="device", from_config="motor")
         ctrl = component(MyController, layer="presenter", from_config="ctrl")
         ui = component(MyView, layer="view", from_config="ui")
 
-    _MyApp().run()
+    MyApp().run()
 ```
 
 The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the `component()` call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
@@ -97,7 +99,7 @@ When [`build()`][redsun.containers.container.AppContainer.build] is called, the 
 
 Components communicate through two mechanisms:
 
-- **Virtual bus**: an event-driven publish/subscribe system provided by Sunflare ([`VirtualBus`][sunflare.virtual.VirtualBus]). Presenters and views can emit and listen for signals without direct references to each other.
+- **Virtual bus**: an event-driven publish/subscribe system provided by `sunflare` ([`VirtualBus`][sunflare.virtual.VirtualBus]). Presenters and views can emit and listen for signals without direct references to each other.
 - **Dependency injection**: presenters can register providers in the DI container, and views can consume them. This allows views to access presenter-provided data without coupling to specific presenter implementations.
 
 ## Two usage flows
@@ -109,20 +111,27 @@ Redsun supports two distinct approaches for assembling an application, both prod
 The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
 
 ```python
-from redsun import AppContainer, component
+from redsun import component
 from redsun.qt import QtAppContainer
+
+# these are user-developed classes
+# that should reflect the structure
+# provided by sunflare for each layer
+from my_package.device import MyMotor
+from my_package.presenter import MyPresenter
+from my_package.view import MyView
 
 
 def my_app() -> None:
-    class _MyApp(QtAppContainer, config="config.yaml"):
+    class MyApp(QtAppContainer, config="config.yaml"):
         motor = component(MyMotor, layer="device", from_config="motor")
-        ctrl = component(MyController, layer="presenter", from_config="ctrl")
+        ctrl = component(MyPresenter, layer="presenter", from_config="ctrl")
         ui = component(MyView, layer="view", from_config="ui")
 
-    _MyApp().run()
+    MyApp().run()
 ```
 
-The class is defined inside a function so that Qt imports (and any heavy device imports) are deferred until the function is actually called. `QtAppContainer` is imported from the public [`redsun.qt`][redsun.qt] namespace.
+The class is defined inside a function so that Qt imports (and any heavy device imports) are deferred until the function is actually called. `QtAppContainer` is imported from the public `redsun.qt` namespace.
 
 ### Dynamic flow (configuration-driven)
 

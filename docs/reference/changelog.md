@@ -28,6 +28,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [0.5.3] - 18-02-2026
 
+!!! warning
+
+    This release was yanked from PyPI due to a broken distribution
+
 ### Added
 
 - `AppContainer` and `component` are now importable directly from the top-level

@@ -46,6 +46,8 @@ ManifestItems = dict[str, dict[str, str]]
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
+__all__ = ["AppContainerMeta", "AppContainer"]
+
 
 class _PluginTypeDict(TypedDict):
     """Typed dictionary for discovered plugin classes, organized by group."""
@@ -288,8 +290,7 @@ class AppContainerMeta(type):
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
-            if not attr_name.startswith("_")
-            and isinstance(value, _ComponentField)
+            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
         }
 
         if component_fields:
@@ -342,9 +343,7 @@ class AppContainerMeta(type):
                         )
                         presenters[attr_name] = wrapper
                     case "view":
-                        wrapper = _ViewComponent(
-                            field.cls, attr_name, None, **kwargs
-                        )
+                        wrapper = _ViewComponent(field.cls, attr_name, None, **kwargs)
                         views[attr_name] = wrapper
                     case _:
                         _assert_never(field.layer)
