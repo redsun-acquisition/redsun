@@ -25,7 +25,13 @@ from typing import (
 
 import yaml
 from dependency_injector import containers, providers
-from sunflare.virtual import HasShutdown, IsInjectable, IsProvider, VirtualBus
+from sunflare.virtual import (
+    HasShutdown,
+    IsInjectable,
+    IsProvider,
+    VirtualAware,
+    VirtualBus,
+)
 
 from .components import (
     RedSunConfig,
@@ -552,6 +558,11 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build view '{name}': {e}")
                 raise
+
+        # wire presenter signals now that all components exist on the virtual bus
+        for presenter in self.presenters.values():
+            if isinstance(presenter, VirtualAware):
+                presenter.connect_to_virtual()
 
         self._is_built = True
         logger.info(
