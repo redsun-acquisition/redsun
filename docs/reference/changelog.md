@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.5.3] - 18-02-2026
+
+### Changed
+
+- `component()` now takes the class to use for building explicitly
+
 ## [0.5.0] - 17-02-2026
 
 ### Changed
@@ -51,6 +57,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.5.0...v0.5.3
 [0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/redsun-acquisition/redsun/compare/v0.2.0...v0.3.0
