@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [0.5.5] - 18-02-2026
+## [0.5.6] - 18-02-2026
+
+### Fixed
+
+- [`AppContainer.build()`][redsun.containers.AppContainer.build] now calls
+  `connect_to_virtual()` on all [`VirtualAware`][sunflare.virtual.VirtualAware]
+  **view** components after all components are fully constructed, symmetrically
+  with the existing presenter loop. Previously, views were connected only via a
+  `QtMainView` delegator called from `QtAppContainer.run()`, meaning the wiring
+  was Qt-specific and bypassed the base build phase entirely.
+- Removed the now-redundant `connect_to_virtual()` delegator from `QtMainView`
+  and the explicit call to it in `QtAppContainer.run()`.
+- Fixed a spurious warning when a `from_config` key exists in the YAML but has
+  no kwargs (bare key with null value, e.g. `camera2:` with nothing after it).
+  Previously `dict.get()` returned `None` for both a missing key and a null
+  value, making them indistinguishable. A sentinel is now used so only a
+  genuinely absent key triggers the warning; a present-but-empty section is
+  silently normalised to `{}`.
 
 ### Added
 
@@ -97,6 +114,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.5.6]: https://github.com/redsun-acquisition/redsun/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/redsun-acquisition/redsun/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/redsun-acquisition/redsun/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/redsun-acquisition/redsun/compare/v0.5.2...v0.5.3

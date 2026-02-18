@@ -88,10 +88,7 @@ class QtAppContainer(AppContainer):
             views=cast("dict[str, QtView]", self.views),
         )
 
-        # 4. Connect virtual bus
-        self._main_view.connect_to_virtual()
-
-        # 5. Wire shutdown and start psygnal bridge
+        # 4. Wire shutdown and start psygnal bridge
         self._qt_app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
 

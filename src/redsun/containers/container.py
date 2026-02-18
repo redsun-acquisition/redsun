@@ -25,7 +25,13 @@ from typing import (
 
 import yaml
 from dependency_injector import containers, providers
-from sunflare.virtual import HasShutdown, IsInjectable, IsProvider, VirtualBus
+from sunflare.virtual import (
+    HasShutdown,
+    IsInjectable,
+    IsProvider,
+    VirtualAware,
+    VirtualBus,
+)
 
 from .components import (
     RedSunConfig,
@@ -316,9 +322,10 @@ class AppContainerMeta(type):
                     }
                     section_key = layer_to_section[field.layer]
                     section_data: dict[str, Any] = config_data.get(section_key, {})
-                    cfg_section = section_data.get(field.from_config)
+                    _sentinel = object()
+                    cfg_section = section_data.get(field.from_config, _sentinel)
 
-                    if cfg_section is None:
+                    if cfg_section is _sentinel:
                         logger.warning(
                             f"No config section '{field.from_config}' found in "
                             f"'{section_key}' for component field '{attr_name}' in {name}, "
@@ -326,7 +333,7 @@ class AppContainerMeta(type):
                         )
                         kwargs = field.kwargs
                     else:
-                        kwargs = {**cfg_section, **field.kwargs}
+                        kwargs = {**(cfg_section or {}), **field.kwargs}
 
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
                 match field.layer:
@@ -552,6 +559,20 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build view '{name}': {e}")
                 raise
+
+        # wire signals now that all components exist on the virtual bus;
+        # order: presenters first (they publish), then views (they subscribe)
+        for presenter_comp in self._presenter_components.values():
+            if presenter_comp.instance is not None and isinstance(
+                presenter_comp.instance, VirtualAware
+            ):
+                presenter_comp.instance.connect_to_virtual()
+
+        for view_comp in self._view_components.values():
+            if view_comp.instance is not None and isinstance(
+                view_comp.instance, VirtualAware
+            ):
+                view_comp.instance.connect_to_virtual()
 
         self._is_built = True
         logger.info(
