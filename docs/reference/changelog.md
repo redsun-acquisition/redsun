@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [0.5.5] - 18-02-2026
+## [0.5.6] - 18-02-2026
+
+### Added
+
+- [`AppContainer.build()`][redsun.containers.AppContainer.build] now calls
+  `connect_to_virtual()` on all [`VirtualAware`][sunflare.virtual.VirtualAware]
+  presenters after all components are fully constructed. Previously only views
+  received this call (via `QtMainView`), leaving presenter signal connections
+  never wired.
+
+
 
 ### Added
 
@@ -97,6 +107,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.5.6]: https://github.com/redsun-acquisition/redsun/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/redsun-acquisition/redsun/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/redsun-acquisition/redsun/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/redsun-acquisition/redsun/compare/v0.5.2...v0.5.3
