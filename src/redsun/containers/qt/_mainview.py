@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from sunflare.view.qt import QtView
     from sunflare.virtual import VirtualBus
 
+__all__ = ["QtMainView"]
+
 
 class QtMainView(QtWidgets.QMainWindow, Loggable):
     """Qt main window.
@@ -26,7 +28,7 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
         Session virtual bus.
     session_name : str
         Display name for the window title.
-    views : dict[str, PView]
+    views : dict[str, QtView]
         Dictionary of view name to pre-built view instance.
     """
 

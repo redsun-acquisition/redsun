@@ -7,11 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.5.5] - 18-02-2026
+
+### Added
+
+- `redsun.qt` public namespace exposing `QtAppContainer` for use in explicit,
+  developer-written application configurations:
+  ```python
+  from redsun.qt import QtAppContainer
+  ```
+- Clarified documentation
+
+## [0.5.4] - 18-02-2026
+
+### Fixed
+
+- Relaxed the `component()` overloads: all three (`layer="device"`, `layer="presenter"`,
+  `layer="view"`) now accept `type` instead of `type[Device]`, `type[Presenter]`,
+  `type[View]`. This fixes mypy errors for classes built from protocol mixins that do
+  not inherit from the sunflare base classes directly.
+
 ## [0.5.3] - 18-02-2026
+
+!!! warning
+
+    This release was yanked from PyPI due to a broken distribution
+
+### Added
+
+- `AppContainer` and `component` are now importable directly from the top-level
+  `redsun` package:
+  ```python
+  from redsun import AppContainer, component
+  ```
 
 ### Changed
 
-- `component()` now takes the class to use for building explicitly
+- `component()` now takes the component class as its first positional argument:
+  ```python
+  # Before
+  motor: MyMotor = component(layer="device", axis=["X"])
+  # After
+  motor = component(MyMotor, layer="device", axis=["X"])
+  ```
+- `RedSunConfig` removed from the public API; it is an internal `TypedDict` used
+  only for YAML configuration validation.
 
 ## [0.5.0] - 17-02-2026
 
@@ -57,8 +97,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
-[0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.5.0...v0.5.3
-[0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.4.0...v0.5.0
+[0.5.5]: https://github.com/redsun-acquisition/redsun/compare/v0.5.4...v0.5.5
+[0.5.4]: https://github.com/redsun-acquisition/redsun/compare/v0.5.3...v0.5.4
+[0.5.3]: https://github.com/redsun-acquisition/redsun/compare/v0.5.2...v0.5.3
+[0.5.0]: https://github.com/redsun-acquisition/redsun/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/redsun-acquisition/redsun/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/redsun-acquisition/redsun/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/redsun-acquisition/redsun/compare/v0.1.0...v0.2.0

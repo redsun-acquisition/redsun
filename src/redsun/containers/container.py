@@ -131,8 +131,8 @@ logger = logging.getLogger("redsun")
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
-    "pyqt": "redsun.containers.qt_container.QtAppContainer",
-    "pyside": "redsun.containers.qt_container.QtAppContainer",
+    "pyqt": "redsun.containers.qt._container.QtAppContainer",
+    "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
 
 
@@ -288,8 +288,7 @@ class AppContainerMeta(type):
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
-            if not attr_name.startswith("_")
-            and isinstance(value, _ComponentField)
+            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
         }
 
         if component_fields:
@@ -342,9 +341,7 @@ class AppContainerMeta(type):
                         )
                         presenters[attr_name] = wrapper
                     case "view":
-                        wrapper = _ViewComponent(
-                            field.cls, attr_name, None, **kwargs
-                        )
+                        wrapper = _ViewComponent(field.cls, attr_name, None, **kwargs)
                         views[attr_name] = wrapper
                     case _:
                         _assert_never(field.layer)

@@ -191,9 +191,6 @@ class TestAppContainerBuild:
         app.shutdown()  # should not raise
 
 
-# ── from_config ──────────────────────────────────────────────────────
-
-
 class TestFromConfig:
     """Tests for YAML-based dynamic container creation."""
 
@@ -212,7 +209,7 @@ class TestFromConfig:
     def test_from_config_returns_qt_container(
         self, mock_entry_points: Any, config_path: Path
     ) -> None:
-        from redsun.containers.qt_container import QtAppContainer
+        from redsun.qt import QtAppContainer
 
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
@@ -239,9 +236,6 @@ class TestFromConfig:
 
         with pytest.raises(ValueError, match="Unknown frontend"):
             AppContainer.from_config(str(cfg_file))
-
-
-# ── component() field syntax ────────────────────────────────────────
 
 
 class TestComponentFieldSyntax:
@@ -444,11 +438,14 @@ class TestConfigField:
         assert comp.kwargs["egu"] == "deg"
 
 
-# ── top-level public API ────────────────────────────────────────────
-
-
 class TestTopLevelImports:
     """Tests that the main APIs are importable directly from redsun."""
+
+    def test_qtappcontainer_importable_from_redsun_qt(self) -> None:
+        from redsun.containers.qt import QtAppContainer as _QAC
+        from redsun.qt import QtAppContainer
+
+        assert QtAppContainer is _QAC
 
     def test_appcontainer_importable_from_redsun(self) -> None:
         from redsun import AppContainer as AC
@@ -485,3 +482,55 @@ class TestTopLevelImports:
         assert "motor" in app.devices
         assert "ctrl" in app.presenters
 
+
+class TestQtAppContainer:
+    """Tests for QtAppContainer lifecycle correctness."""
+
+    def test_build_before_run_creates_qapplication(self) -> None:
+        """build() must ensure QApplication exists before instantiating widgets.
+
+        This is the critical ordering case: if a caller does
+            app = MyQtApp()
+            app.build()   # <-- QApplication must exist here, not only in run()
+            app.run()
+        any QWidget subclass instantiated during build() would crash without
+        a QApplication. QtAppContainer.build() must handle this.
+        """
+        from mock_pkg.view import MockQtView
+        from mock_pkg.device import MyMotor
+
+        from qtpy.QtWidgets import QApplication
+        from redsun.qt import QtAppContainer
+
+        class _TestQtApp(QtAppContainer):
+            motor = component(
+                MyMotor, layer="device", axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+            view = component(MockQtView, layer="view")
+
+        app = _TestQtApp()
+        assert app._qt_app is None  # not created yet
+
+        app.build()  # must create QApplication internally before widgets
+
+        assert app._qt_app is not None
+        assert QApplication.instance() is app._qt_app
+        assert app.is_built
+        assert "motor" in app.devices
+        assert "view" in app.views
+
+    def test_run_reuses_qapplication_created_by_build(self) -> None:
+        """run() must not create a second QApplication if build() already did."""
+        from qtpy.QtWidgets import QApplication
+        from redsun.qt import QtAppContainer
+
+        class _TestQtApp(QtAppContainer):
+            pass
+
+        app = _TestQtApp()
+        app.build()
+        first_instance = app._qt_app
+
+        # Confirm QApplication.instance() returns the same object
+        assert QApplication.instance() is first_instance
