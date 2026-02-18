@@ -191,9 +191,6 @@ class TestAppContainerBuild:
         app.shutdown()  # should not raise
 
 
-# ── from_config ──────────────────────────────────────────────────────
-
-
 class TestFromConfig:
     """Tests for YAML-based dynamic container creation."""
 
@@ -239,9 +236,6 @@ class TestFromConfig:
 
         with pytest.raises(ValueError, match="Unknown frontend"):
             AppContainer.from_config(str(cfg_file))
-
-
-# ── component() field syntax ────────────────────────────────────────
 
 
 class TestComponentFieldSyntax:
@@ -444,9 +438,6 @@ class TestConfigField:
         assert comp.kwargs["egu"] == "deg"
 
 
-# ── top-level public API ────────────────────────────────────────────
-
-
 class TestTopLevelImports:
     """Tests that the main APIs are importable directly from redsun."""
 
@@ -490,9 +481,6 @@ class TestTopLevelImports:
         app.build()
         assert "motor" in app.devices
         assert "ctrl" in app.presenters
-
-
-# ── QtAppContainer ──────────────────────────────────────────────────
 
 
 class TestQtAppContainer:
