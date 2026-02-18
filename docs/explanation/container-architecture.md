@@ -42,7 +42,7 @@ This separation ensures that hardware drivers, UI components, and business logic
 Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument:
 
 ```python
-from redsun.containers import AppContainer, component
+from redsun import AppContainer, component
 
 class MyApp(AppContainer):
     motor = component(MyMotor, layer="device", axis=["X", "Y"])
@@ -61,7 +61,7 @@ The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass
 Components can pull their keyword arguments from a YAML configuration file:
 
 ```python
-from redsun.containers import AppContainer, component
+from redsun import AppContainer, component
 
 class MyApp(AppContainer, config="app_config.yaml"):
     motor = component(MyMotor, layer="device", from_config="motor")
@@ -142,7 +142,7 @@ See the [plugin system](plugin-system.md) documentation for a full description o
 
 1. Creates the `QApplication` instance.
 2. Calls [`build()`][redsun.containers.container.AppContainer.build] to instantiate all components.
-3. Constructs the [`QtMainView`][redsun.view.qt.mainview.QtMainView] main window and docks all views.
+3. Constructs the [`QtMainView`][redsun.view.qt.QtMainView] main window and docks all views.
 4. Connects `VirtualAware` views to the virtual bus.
 5. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
 6. Shows the main window and enters the Qt event loop.
