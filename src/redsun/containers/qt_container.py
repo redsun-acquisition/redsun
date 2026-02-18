@@ -55,13 +55,32 @@ class QtAppContainer(AppContainer):
             raise RuntimeError("Main view not built. Call run() first.")
         return self._main_view
 
+    def build(self) -> QtAppContainer:
+        """Ensure a ``QApplication`` exists, then build all components.
+
+        If a ``QApplication`` is not yet running (e.g. when ``build()`` is
+        called explicitly before ``run()``), one is created here so that
+        view components that instantiate ``QWidget`` subclasses have a valid
+        application object available.
+        """
+        if self._qt_app is None:
+            self._qt_app = cast(
+                "QApplication", QApplication.instance() or QApplication(sys.argv)
+            )
+        super().build()
+        return self
+
     def run(self) -> NoReturn:
         """Build and launch the Qt application."""
-        self._qt_app = QApplication(sys.argv)
+        if self._qt_app is None:
+            self._qt_app = cast(
+                "QApplication", QApplication.instance() or QApplication(sys.argv)
+            )
 
         if not self.is_built:
             self.build()
 
+        assert self._qt_app is not None  # guaranteed by build() above
         session_name = self._config.get("session", "Redsun")
         self._main_view = QtMainView(
             virtual_bus=self.virtual_bus,
