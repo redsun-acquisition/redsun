@@ -1190,7 +1190,7 @@
     Presenters -.-&gt;|register providers| DI
     DI -.-&gt;|inject dependencies| Views</code></pre>
 <h2 id="the-mvp-pattern">The MVP pattern<a class="headerlink" href="#the-mvp-pattern" title="Permanent link">&para;</a></h2>
-<p>Redsun follows the <strong>Model-View-Presenter</strong> pattern provided by [<code>sunflare</code>]:</p>
+<p>Redsun follows the <strong>Model-View-Presenter</strong> pattern provided by <a href="https://redsun-acquisition.github.io/sunflare/"><code>sunflare</code></a>:</p>
 <ul>
 <li><strong>Model (Devices)</strong>: hardware abstractions that implement Bluesky's device protocols via <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.device.Device"><code>Device</code></a>. They represent the actual instruments being controlled.</li>
 <li><strong>View</strong>: UI components (currently Qt-based) that implement <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.view.View"><code>View</code></a> to display data and capture user interactions.</li>
@@ -1235,7 +1235,7 @@
 </span></code></pre></div>
 <p>The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the <code>component()</code> call, allowing the same container class to be reused across different hardware setups by swapping configuration files.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;/code&gt;" href="../../reference/api/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container instantiates components in a strict dependency order:</p>
+<p>When [<code>build()</code>][redsun.AppContainer.build] is called, the container instantiates components in a strict dependency order:</p>
 <ol>
 <li><strong>VirtualBus</strong> - the event-driven communication channel (<a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualBus"><code>VirtualBus</code></a>).</li>
 <li><strong>DI container</strong> - the dependency injection container, seeded with the application configuration.</li>
