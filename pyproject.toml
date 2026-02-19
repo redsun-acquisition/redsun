@@ -25,14 +25,14 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "sunflare>=0.9.0",
+    "sunflare>=0.9.1",
     "platformdirs>=4.3.8",
 ]
 requires-python = ">=3.10"
 
 [dependency-groups]
 dev = [
-    "sunflare[pyqt]>=0.9.0",
+    "sunflare[pyqt]>=0.9.1",
     "mypy>=1.19.1",
     "pre-commit>=4.5.0",
     "pytest>=8.4.1",

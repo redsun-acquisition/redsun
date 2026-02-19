@@ -8,8 +8,7 @@ from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.log import Loggable
-
-from redsun.config import ViewPositionTypes
+from sunflare.view import ViewPosition
 
 if TYPE_CHECKING:
     from sunflare.view.qt import QtView
@@ -32,10 +31,10 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
     """
 
     _DOCK_MAP = {
-        ViewPositionTypes.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
-        ViewPositionTypes.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
-        ViewPositionTypes.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
-        ViewPositionTypes.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
+        ViewPosition.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
+        ViewPosition.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
+        ViewPosition.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
+        ViewPosition.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
     }
 
     def __init__(
@@ -76,9 +75,9 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
             self._widgets[name] = widget
 
             position = getattr(widget, "position", None)
-            if position is not None and position != ViewPositionTypes.CENTER:
+            if position is not None and position != ViewPosition.CENTER:
                 try:
-                    dock_area = self._DOCK_MAP[ViewPositionTypes(position)]
+                    dock_area = self._DOCK_MAP[ViewPosition(position)]
                     dock_widget = QtWidgets.QDockWidget(name)
                     dock_widget.setWidget(widget)
                     self.addDockWidget(dock_area, dock_widget)

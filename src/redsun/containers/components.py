@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, TypeVar
 
 from sunflare.device import Device
 from sunflare.presenter import Presenter
@@ -62,62 +62,29 @@ class _ComponentField:
         self.kwargs = kwargs
 
 
-@overload
-def component(
+def device(
     cls: type,
-    *,
-    layer: Literal["device"],
-    alias: str | None = ...,
-    from_config: str | None = ...,
-    **kwargs: Any,
-) -> Any: ...
-@overload
-def component(
-    cls: type,
-    *,
-    layer: Literal["presenter"],
-    alias: None = ...,
-    from_config: str | None = ...,
-    **kwargs: Any,
-) -> Any: ...
-@overload
-def component(
-    cls: type,
-    *,
-    layer: Literal["view"],
-    alias: None = ...,
-    from_config: str | None = ...,
-    **kwargs: Any,
-) -> Any: ...
-def component(
-    cls: type,
-    *,
-    layer: Literal["device", "presenter", "view"],
+    /,
     alias: str | None = None,
     from_config: str | None = None,
     **kwargs: Any,
 ) -> Any:
-    """Declare a component as a class field.
+    """Declare a component as a device layer field.
 
-    This function is a field specifier for use with
-    `~redsun.containers.AppContainer` subclasses.  The component class
-    is passed directly as the first argument, and the attribute name
-    becomes the component name.
+    A device can be declared inside the body of an `AppContainer`:
+
+    >>> class MyApp(AppContainer):
+    ...     motor = device(MyMotor, axis=["X"])
+
+    The container will create an instance of `MyMotor` with the specified kwargs when the
+    container is built. The attribute name `motor` will be used as the device `name` argument.
 
     Parameters
     ----------
     cls : type
-        The component class to instantiate. For ``layer="device"`` this
-        must be a `Device` subclass. For ``layer="presenter"`` and
-        ``layer="view"`` any class with the appropriate constructor
-        signature is accepted, including protocol-based implementations
-        that do not inherit from `Presenter` or `View` directly.
-    layer : "device" | "presenter" | "view"
-        The layer this component belongs to.
-    alias : str | None
-        For device components only: an alternative name to pass to the
-        device constructor instead of the attribute name. Ignored for
-        presenters and views. Defaults to `None`.
+        The component class to instantiate. It must be either a
+        direct subclass of `Device` or implement the `PDevice` protocol
+        at structural level.
     from_config : str | None
         The key to look up in the configuration file's ``devices``,
         ``presenters``, or ``views`` section (based on ``layer``).
@@ -126,27 +93,69 @@ def component(
         Additional keyword arguments forwarded to the component
         constructor at build time. These override values from the
         configuration file if ``from_config`` is set.
-
-    Returns
-    -------
-    `Any`
-        A `_ComponentField` sentinel (typed as `Any` so that the
-        attribute assignment satisfies type checkers).
-
-    Examples
-    --------
-    >>> class MyApp(AppContainer):
-    ...     motor = component(MyMotor, layer="device", axis=["X"])
-    ...     ctrl = component(MyCtrl, layer="presenter", gain=1.0)
-    ...     ui = component(MyView, layer="view")
-
-    With a config file:
-
-    >>> class MyApp(AppContainer, config="app_config.yaml"):
-    ...     motor = component(MyMotor, layer="device", from_config="motor")
     """
     return _ComponentField(
-        cls=cls, layer=layer, alias=alias, from_config=from_config, kwargs=kwargs
+        cls=cls, layer="device", alias=alias, from_config=from_config, kwargs=kwargs
+    )
+
+
+def view(cls: type, /, from_config: str | None = None, **kwargs: Any) -> Any:
+    """Declare a component as a view layer field.
+
+    A view can be declared inside the body of an `AppContainer`:
+
+    >>> class MyApp(AppContainer):
+    ...     ui = view(MyView)
+
+    The container will create an instance of `MyView` with the specified kwargs when the
+    container is built.
+
+    Parameters
+    ----------
+    cls : type
+        The component class to instantiate. It must implement the `PView`
+        protocol at structural level; inheritance from `View` is not required.
+    from_config : str | None
+        The key to look up in the configuration file's ``devices``,
+        ``presenters``, or ``views`` section (based on ``layer``).
+        If `None`, kwargs must be specified inline. Defaults to `None`.
+    **kwargs : `Any`
+        Additional keyword arguments forwarded to the component
+        constructor at build time. These override values from the
+        configuration file if ``from_config`` is set.
+    """
+    return _ComponentField(
+        cls=cls, layer="view", alias=None, from_config=from_config, kwargs=kwargs
+    )
+
+
+def presenter(cls: type, /, from_config: str | None = None, **kwargs: Any) -> Any:
+    """Declare a component as a presenter layer field.
+
+    A presenter can be declared inside the body of an `AppContainer`:
+
+    >>> class MyApp(AppContainer):
+    ...     ctrl = presenter(MyCtrl, gain=1.0)
+
+    The container will create an instance of `MyCtrl` with the specified kwargs when the
+    container is built.
+
+    Parameters
+    ----------
+    cls : type
+        The component class to instantiate. It must implement the `PPresenter`
+        protocol at structural level; inheritance from `Presenter` is not required.
+    from_config : str | None
+        The key to look up in the configuration file's ``devices``,
+        ``presenters``, or ``views`` section (based on ``layer``).
+        If `None`, kwargs must be specified inline. Defaults to `None`.
+    **kwargs : `Any`
+        Additional keyword arguments forwarded to the component
+        constructor at build time. These override values from the
+        configuration file if ``from_config`` is set.
+    """
+    return _ComponentField(
+        cls=cls, layer="presenter", alias=None, from_config=from_config, kwargs=kwargs
     )
 
 

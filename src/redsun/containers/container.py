@@ -7,6 +7,7 @@ for declarative component registration and dependency-ordered instantiation.
 from __future__ import annotations
 
 import logging
+from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
 from importlib.resources import as_file, files
@@ -51,6 +52,22 @@ from sunflare.view import View
 ManifestItems = dict[str, dict[str, str]]
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
+
+
+@unique
+class Frontend(str, Enum):
+    """Supported frontend types.
+
+    Attributes
+    ----------
+    PYQT : str
+        PyQt6 frontend.
+    PYSIDE : str
+        PySide6 frontend.
+    """
+
+    PYQT = "pyqt"
+    PYSIDE = "pyside"
 
 
 class _PluginTypeDict(TypedDict):
