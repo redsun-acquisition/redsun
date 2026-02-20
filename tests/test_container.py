@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +61,7 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.skipif(
-        not __import__("os").environ.get("DISPLAY"),
+        not os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_view_component_build(self) -> None:
@@ -195,11 +196,9 @@ class TestAppContainerBuild:
 
         app = EmptyApp(session="TestSession", frontend="pyqt")
         app.build()
-        cfg = app.virtual_container.configuration
-        assert cfg is not None
-        assert cfg["session"] == "TestSession"
-        assert cfg["frontend"] == "pyqt"
-        assert cfg["schema_version"] == 1.0
+        assert app.virtual_container.session == "TestSession"
+        assert app.virtual_container.frontend == "pyqt"
+        assert app.virtual_container.schema_version == 1.0
 
 
 class TestFromConfig:
@@ -278,7 +277,7 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.skipif(
-        not __import__("os").environ.get("DISPLAY"),
+        not os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_component_field_collects_view(self) -> None:

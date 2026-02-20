@@ -62,10 +62,10 @@ The philosophy of Redsun is to:
 
 ## Quick links
 
-- **[Installation guide](how-to/installation.md)** - Get Redsun up and running
-- **[Statement of need](explanation/statement.md)** - Why Redsun exists
-- **[API reference](reference/api/config.md)** - Explore the complete API
-- **[Changelog](reference/changelog.md)** - See what's new
+- **[Installation guide](how-to/installation.md)**
+- **[Statement of need](explanation/statement.md)**
+- **[API reference](reference/api/config.md)**
+- **[Changelog](reference/changelog.md)**
 
 ## About the documentation
 
