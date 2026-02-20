@@ -7,12 +7,13 @@ from typing import Any
 
 import pytest
 
-from redsun.containers import AppContainer, device, presenter, view
+from redsun.containers import AppContainer, AppConfig, device, presenter, view
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
     _ViewComponent,
 )
+
 
 class TestComponentWrappers:
     """Tests for _DeviceComponent, _PresenterComponent, _ViewComponent."""
@@ -49,28 +50,24 @@ class TestComponentWrappers:
 
     def test_presenter_component_build(self) -> None:
         from mock_pkg.controller import MockController
-
-        from sunflare.virtual import VirtualBus
+        from sunflare.virtual import VirtualContainer
 
         comp = _PresenterComponent(
             MockController, "ctrl", None,
             string="s", integer=1, floating=0.0, boolean=False,
         )
-        bus = VirtualBus()
-        presenter = comp.build({}, bus)
+        container = VirtualContainer()
+        presenter = comp.build("ctrl", {}, container)
         assert presenter is comp.instance
         assert "built" in repr(comp)
 
     def test_view_component_build(self) -> None:
         from mock_pkg.view import MockQtView
-
         from qtpy.QtWidgets import QApplication
-        from sunflare.virtual import VirtualBus
 
         _ = QApplication.instance() or QApplication([])
         comp = _ViewComponent(MockQtView, "v", None)
-        bus = VirtualBus()
-        view = comp.build(bus)
+        view = comp.build("v")
         assert view is comp.instance
         assert "built" in repr(comp)
 
@@ -162,14 +159,13 @@ class TestAppContainerBuild:
         with pytest.raises(RuntimeError):
             _ = app.views
         with pytest.raises(RuntimeError):
-            _ = app.virtual_bus
-        with pytest.raises(RuntimeError):
-            _ = app.di_container
+            _ = app.virtual_container
 
     def test_config_defaults(self) -> None:
         app = AppContainer()
         assert app.config["session"] == "Redsun"
         assert app.config["frontend"] == "pyqt"
+        assert app.config["schema_version"] == 1.0
 
     def test_config_override(self) -> None:
         app = AppContainer(session="MySession", frontend="pyside")
@@ -189,6 +185,19 @@ class TestAppContainerBuild:
     def test_shutdown_noop_when_not_built(self) -> None:
         app = AppContainer()
         app.shutdown()  # should not raise
+
+    def test_virtual_container_carries_config(self) -> None:
+        """After build(), virtual_container.configuration holds base config fields."""
+        class EmptyApp(AppContainer):
+            pass
+
+        app = EmptyApp(session="TestSession", frontend="pyqt")
+        app.build()
+        cfg = app.virtual_container.configuration
+        assert cfg is not None
+        assert cfg["session"] == "TestSession"
+        assert cfg["frontend"] == "pyqt"
+        assert cfg["schema_version"] == 1.0
 
 
 class TestFromConfig:
@@ -268,12 +277,9 @@ class TestComponentFieldSyntax:
 
     def test_component_field_collects_view(self) -> None:
         from mock_pkg.view import MockQtView
-
         from qtpy.QtWidgets import QApplication
 
-        app = QApplication.instance() or QApplication([])
-
-        assert app is not None, "QApplication instance should be created for view component test"
+        _ = QApplication.instance() or QApplication([])
 
         class TestApp(AppContainer):
             v = view(MockQtView)
@@ -346,9 +352,6 @@ class TestComponentFieldSyntax:
         assert "ctrl" in Child._presenter_components
 
 
-# ── config() + from_config ──────────────────────────────────────────
-
-
 class TestConfigField:
     """Tests for the ``config()`` field and ``from_config`` kwarg loading."""
 
@@ -384,9 +387,7 @@ class TestConfigField:
             )
 
         comp = TestApp._device_components["motor"]
-        # inline egu="um" should override config egu="mm"
         assert comp.kwargs["egu"] == "um"
-        # other config values should remain
         assert comp.kwargs["axis"] == ["X"]
         assert comp.kwargs["integer"] == 42
 
@@ -419,7 +420,6 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            # "missing" is not a key in the config file
             missing = device(
                 MyMotor, from_config="missing",
                 axis=["Y"], step_size={"Y": 0.2},
@@ -427,23 +427,55 @@ class TestConfigField:
             )
 
         assert "No config section 'missing'" in caplog.text
-        # should still work with just the inline kwargs
         comp = TestApp._device_components["missing"]
         assert comp.kwargs["egu"] == "deg"
+
+
+class TestAppConfig:
+    """Tests for AppConfig TypedDict and RedSunConfig inheritance."""
+
+    def test_app_config_has_schema_version(self) -> None:
+        from redsun.containers import AppConfig
+        from sunflare.virtual import RedSunConfig
+
+        cfg: AppConfig = {
+            "schema_version": 1.0,
+            "session": "s",
+            "frontend": "pyqt",
+        }
+        assert cfg["schema_version"] == 1.0
+        # AppConfig extends RedSunConfig — verify required keys are inherited
+        assert "schema_version" in AppConfig.__required_keys__
+        assert "frontend" in AppConfig.__required_keys__
+        # session is NotRequired in sunflare 0.10.0
+        assert "session" in AppConfig.__optional_keys__
+
+    def test_app_config_has_component_fields(self) -> None:
+        from redsun.containers import AppConfig
+
+        cfg: AppConfig = {
+            "schema_version": 1.0,
+            "session": "s",
+            "frontend": "pyqt",
+            "devices": {"cam": {}},
+            "presenters": {},
+            "views": {},
+        }
+        assert "devices" in cfg
+        assert "cam" in cfg["devices"]
+
+    def test_redsun_config_no_component_fields(self) -> None:
+        """RedSunConfig in sunflare must not expose devices/presenters/views."""
+        from sunflare.virtual import RedSunConfig
+        assert "devices" not in RedSunConfig.__annotations__
+        assert "presenters" not in RedSunConfig.__annotations__
+        assert "views" not in RedSunConfig.__annotations__
+
 
 class TestQtAppContainer:
     """Tests for QtAppContainer lifecycle correctness."""
 
     def test_build_before_run_creates_qapplication(self) -> None:
-        """build() must ensure QApplication exists before instantiating widgets.
-
-        This is the critical ordering case: if a caller does
-            app = MyQtApp()
-            app.build()   # <-- QApplication must exist here, not only in run()
-            app.run()
-        any QWidget subclass instantiated during build() would crash without
-        a QApplication. QtAppContainer.build() must handle this.
-        """
         from mock_pkg.view import MockQtView
         from mock_pkg.device import MyMotor
 
@@ -455,21 +487,20 @@ class TestQtAppContainer:
                 MyMotor, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            view = view(MockQtView)
+            v = view(MockQtView)
 
         app = _TestQtApp()
-        assert app._qt_app is None  # not created yet
+        assert app._qt_app is None
 
-        app.build()  # must create QApplication internally before widgets
+        app.build()
 
         assert app._qt_app is not None
         assert QApplication.instance() is app._qt_app
         assert app.is_built
         assert "motor" in app.devices
-        assert "view" in app.views
+        assert "v" in app.views
 
     def test_run_reuses_qapplication_created_by_build(self) -> None:
-        """run() must not create a second QApplication if build() already did."""
         from qtpy.QtWidgets import QApplication
         from redsun.qt import QtAppContainer
 
@@ -480,5 +511,4 @@ class TestQtAppContainer:
         app.build()
         first_instance = app._qt_app
 
-        # Confirm QApplication.instance() returns the same object
         assert QApplication.instance() is first_instance

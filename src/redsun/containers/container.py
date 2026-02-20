@@ -25,17 +25,15 @@ from typing import (
 )
 
 import yaml
-from dependency_injector import containers, providers
 from sunflare.virtual import (
     HasShutdown,
     IsInjectable,
     IsProvider,
-    VirtualAware,
-    VirtualBus,
+    VirtualContainer,
 )
 
+from ._config import AppConfig
 from .components import (
-    RedSunConfig,
     _ComponentField,
     _DeviceComponent,
     _PresenterComponent,
@@ -49,22 +47,14 @@ from sunflare.device import Device
 from sunflare.presenter import Presenter
 from sunflare.view import View
 
-ManifestItems = dict[str, dict[str, str]]
+ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
 
 @unique
 class Frontend(str, Enum):
-    """Supported frontend types.
-
-    Attributes
-    ----------
-    PYQT : str
-        PyQt6 frontend.
-    PYSIDE : str
-        PySide6 frontend.
-    """
+    """Supported frontend types."""
 
     PYQT = "pyqt"
     PYSIDE = "pyside"
@@ -103,7 +93,7 @@ def _check_presenter_protocol(cls: type) -> TypeGuard[type[Presenter]]:
     if Presenter in cls.mro():
         return True
 
-    required_attributes = ["devices", "virtual_bus"]
+    required_attributes = ["devices", "name"]
     is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
     if is_compliant:
         Presenter.register(cls)
@@ -114,7 +104,7 @@ def _check_view_protocol(cls: type) -> TypeGuard[type[View]]:
     """Check if a class implements the view protocol."""
     if issubclass(cls, View):
         return True
-    is_compliant = hasattr(cls, "virtual_bus")
+    is_compliant = hasattr(cls, "name")
 
     if is_compliant:
         View.register(cls)
@@ -160,30 +150,14 @@ _FRONTEND_CONTAINERS: dict[str, str] = {
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML file and return its contents as a dictionary.
-
-    Parameters
-    ----------
-    path : Path
-        Path to the YAML configuration file.
-
-    Returns
-    -------
-    dict[str, Any]
-        Parsed YAML contents.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the file does not exist.
-    """
+    """Load a YAML file and validate required keys against AppConfig."""
     with open(path) as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         raise TypeError(
             f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
         )
-    required_keys = RedSunConfig.__required_keys__
+    required_keys = AppConfig.__required_keys__
     missing = required_keys - data.keys()
     if missing:
         raise KeyError(
@@ -194,23 +168,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
-    """Resolve a frontend string to the appropriate container class.
-
-    Parameters
-    ----------
-    frontend : str
-        Frontend type from configuration (e.g. ``"pyqt"``, ``"pyside"``).
-
-    Returns
-    -------
-    type[AppContainer]
-        The container subclass for the given frontend.
-
-    Raises
-    ------
-    ValueError
-        If the frontend type is not recognized.
-    """
+    """Resolve a frontend string to the appropriate container class."""
     dotted_path = _FRONTEND_CONTAINERS.get(frontend)
     if dotted_path is None:
         raise ValueError(
@@ -223,21 +181,7 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
 
 
 class AppContainerMeta(type):
-    """Metaclass that auto-collects component wrappers from class attributes.
-
-    When a new class is created with this metaclass, it scans the namespace
-    for `_DeviceComponent`, `_PresenterComponent`, and
-    `_ViewComponent` instances, collecting them into class-level
-    dictionaries.  Components from base classes are inherited and can be
-    overridden.
-
-    Annotated fields using `component` are also resolved: the type
-    annotation provides the component class and the attribute name becomes
-    the component name.
-
-    A configuration file can be specified at metaclass level,
-    which allows component fields to pull their kwargs from the config.
-    """
+    """Metaclass that auto-collects component wrappers from class attributes."""
 
     _device_components: dict[str, _DeviceComponent]
     _presenter_components: dict[str, _PresenterComponent]
@@ -257,19 +201,14 @@ class AppContainerMeta(type):
         Parameters
         ----------
         config : str | Path | None
-            Path to a YAML configuration file for component kwargs. Passed when
-            defining the subclass:
-
-                class MyApp(AppContainer, config="app.yaml"): ...
+            Path to a YAML configuration file for component kwargs.
         """
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
-        # Store config path on the class
         config_path: Path | None = None
         if config is not None:
             config_path = Path(config)
         else:
-            # Check base classes for an inherited config path
             for base in bases:
                 if hasattr(base, "_config_path") and base._config_path is not None:
                     if isinstance(base._config_path, str):
@@ -280,7 +219,6 @@ class AppContainerMeta(type):
                     break
         cls._config_path = config_path
 
-        # Inherit components from base classes
         devices: dict[str, _DeviceComponent] = {}
         presenters: dict[str, _PresenterComponent] = {}
         views: dict[str, _ViewComponent] = {}
@@ -293,7 +231,6 @@ class AppContainerMeta(type):
             if hasattr(base, "_view_components"):
                 views.update(base._view_components)
 
-        # Overlay with explicit component wrappers declared in current namespace
         for attr_name, attr_value in namespace.items():
             if attr_name.startswith("_"):
                 continue
@@ -305,9 +242,6 @@ class AppContainerMeta(type):
             elif isinstance(attr_value, _ViewComponent):
                 views[attr_value.name] = attr_value
 
-        # Resolve component() field declarations from the namespace.
-        # The class is carried directly on the _ComponentField, so no
-        # annotation inspection or get_type_hints() call is needed.
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
@@ -315,14 +249,12 @@ class AppContainerMeta(type):
         }
 
         if component_fields:
-            # Load container-level config if a config path is present
             config_data: dict[str, Any] = {}
             if config_path is not None:
                 config_data = _load_yaml(config_path)
 
             for attr_name, field in component_fields.items():
-                # Merge kwargs: config file values as base, inline as override
-                kwargs = field.kwargs
+                kw = field.kwargs
                 if field.from_config is not None:
                     if not config_data:
                         raise TypeError(
@@ -331,7 +263,6 @@ class AppContainerMeta(type):
                             f"provided to the container class"
                         )
 
-                    # Map layer to config section key
                     layer_to_section = {
                         "device": "devices",
                         "presenter": "presenters",
@@ -348,25 +279,28 @@ class AppContainerMeta(type):
                             f"'{section_key}' for component field '{attr_name}' in {name}, "
                             f"using inline kwargs only"
                         )
-                        kwargs = field.kwargs
+                        kw = field.kwargs
                     else:
-                        kwargs = {**(cfg_section or {}), **field.kwargs}
+                        kw = {**(cfg_section or {}), **field.kwargs}
+
+                # component name: alias wins, then attr_name
+                comp_name = field.alias if field.alias is not None else attr_name
 
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
                 match field.layer:
                     case "device":
                         wrapper = _DeviceComponent(
-                            field.cls, attr_name, field.alias, **kwargs
+                            field.cls, comp_name, field.alias, **kw
                         )
-                        devices[attr_name] = wrapper
+                        devices[comp_name] = wrapper
                     case "presenter":
                         wrapper = _PresenterComponent(
-                            field.cls, attr_name, None, **kwargs
+                            field.cls, comp_name, field.alias, **kw
                         )
-                        presenters[attr_name] = wrapper
+                        presenters[comp_name] = wrapper
                     case "view":
-                        wrapper = _ViewComponent(field.cls, attr_name, None, **kwargs)
-                        views[attr_name] = wrapper
+                        wrapper = _ViewComponent(field.cls, comp_name, field.alias, **kw)
+                        views[comp_name] = wrapper
                     case _:
                         _assert_never(field.layer)
                 setattr(cls, attr_name, wrapper)
@@ -387,37 +321,7 @@ class AppContainerMeta(type):
 
 
 class AppContainer(metaclass=AppContainerMeta):
-    """Application container for MVP architecture.
-
-    Subclass this to define your application's components using the
-    [`component`][redsun.containers.components.component] field specifier.
-
-    Parameters
-    ----------
-    session : str
-        Session name. Defaults to ``"Redsun"``.
-    frontend : str
-        Frontend type. Defaults to ``"pyqt"``.
-
-    Examples
-    --------
-    Basic usage with inline kwargs:
-
-    >>> class MyApp(AppContainer):
-    ...     motor = component(MyMotor, layer="device", axis=["X"])
-    ...     ctrl = component(MyController, layer="presenter")
-
-    With a configuration file:
-
-    >>> class MyApp(AppContainer, config="app_config.yaml"):
-    ...     motor = component(MyMotor, layer="device", from_config="motor")
-
-    Building and running:
-
-    >>> app = MyApp(session="Experiment 1")
-    >>> app.build()
-    >>> app.run()
-    """
+    """Application container for MVP architecture."""
 
     _device_components: ClassVar[dict[str, _DeviceComponent]]
     _presenter_components: ClassVar[dict[str, _PresenterComponent]]
@@ -425,47 +329,34 @@ class AppContainer(metaclass=AppContainerMeta):
 
     __slots__ = (
         "_config",
-        "_virtual_bus",
-        "_di_container",
+        "_virtual_container",
         "_is_built",
     )
 
     def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
-        self._config = {
+        self._config: AppConfig = {
+            "schema_version": 1.0,
             "session": session,
             "frontend": frontend,
         }
-        self._virtual_bus: VirtualBus | None = None
-        self._di_container: containers.DynamicContainer | None = None
+        self._virtual_container: VirtualContainer | None = None
         self._is_built: bool = False
 
     @property
-    def config(self) -> dict[str, Any]:
-        """Return the configuration dictionary."""
+    def config(self) -> AppConfig:
+        """Return the application configuration."""
         return self._config
 
     @property
     def devices(self) -> dict[str, Device]:
-        """Return built device instances.
-
-        Raises
-        ------
-        RuntimeError
-            If the container has not been built yet.
-        """
+        """Return built device instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return {name: comp.instance for name, comp in self._device_components.items()}
 
     @property
     def presenters(self) -> dict[str, Presenter]:
-        """Return built presenter instances.
-
-        Raises
-        ------
-        RuntimeError
-            If the container has not been built yet.
-        """
+        """Return built presenter instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return {
@@ -474,42 +365,17 @@ class AppContainer(metaclass=AppContainerMeta):
 
     @property
     def views(self) -> dict[str, View]:
-        """Return built view instances.
-
-        Raises
-        ------
-        RuntimeError
-            If the container has not been built yet.
-        """
+        """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return {name: comp.instance for name, comp in self._view_components.items()}
 
     @property
-    def virtual_bus(self) -> VirtualBus:
-        """Return the virtual bus instance.
-
-        Raises
-        ------
-        RuntimeError
-            If the container has not been built yet.
-        """
-        if self._virtual_bus is None:
+    def virtual_container(self) -> VirtualContainer:
+        """Return the virtual container instance."""
+        if self._virtual_container is None:
             raise RuntimeError("Container not built. Call build() first.")
-        return self._virtual_bus
-
-    @property
-    def di_container(self) -> containers.DynamicContainer:
-        """Return the dependency-injector container.
-
-        Raises
-        ------
-        RuntimeError
-            If the container has not been built yet.
-        """
-        if self._di_container is None:
-            raise RuntimeError("Container not built. Call build() first.")
-        return self._di_container
+        return self._virtual_container
 
     @property
     def is_built(self) -> bool:
@@ -521,16 +387,10 @@ class AppContainer(metaclass=AppContainerMeta):
 
         Build order:
 
-        1. VirtualBus
-        2. DI Container
-        3. Devices
-        4. Presenters (register their providers in the DI container)
-        5. Views (inject dependencies from the DI container)
-
-        Returns
-        -------
-        AppContainer
-            Self, for method chaining.
+        1. VirtualContainer
+        2. Devices
+        3. Presenters (register their providers in the VirtualContainer)
+        4. Views (inject dependencies from the VirtualContainer)
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -538,58 +398,48 @@ class AppContainer(metaclass=AppContainerMeta):
 
         logger.info("Building application container...")
 
-        # 1. Virtual bus for runtime signals
-        self._virtual_bus = VirtualBus()
-        logger.debug("Virtual bus created")
-
-        # 2. DI container for presenter -> view injection
-        self._di_container = containers.DynamicContainer()
-        self._di_container.config = providers.Configuration()
-        self._di_container.config.from_dict(self._config)
-        logger.debug("DI container created")
+        # 1. VirtualContainer — carries signals, callbacks, and config
+        self._virtual_container = VirtualContainer()
+        # Populate only the base config fields; component sections stay in AppConfig
+        from sunflare.virtual import RedSunConfig
+        base_cfg: RedSunConfig = {
+            "schema_version": self._config.get("schema_version", 1.0),
+            "session": self._config.get("session", "Redsun"),
+            "frontend": self._config.get("frontend", "pyqt"),
+        }
+        self._virtual_container.configuration = base_cfg
+        logger.debug("VirtualContainer created")
 
         # build devices
         built_devices: dict[str, Device] = {}
-        for name, device in self._device_components.items():
+        for name, device_comp in self._device_components.items():
             try:
-                built_devices[name] = device.build()
+                built_devices[name] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
-        # build presenters and register their providers
-        for name, presenter_component in self._presenter_components.items():
+        # build presenters and optionally register their providers
+        for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter = presenter_component.build(built_devices, self._virtual_bus)
+                presenter = presenter_component.build(
+                    comp_name, built_devices, self._virtual_container
+                )
                 if isinstance(presenter, IsProvider):
-                    presenter.register_providers(self._di_container)
+                    presenter.register_providers(self._virtual_container)
             except Exception as e:
-                logger.error(f"Failed to build presenter '{name}': {e}")
+                logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
 
-        # build views and inject dependencies
-        for name, view_component in self._view_components.items():
+        # build views and optionally inject dependencies
+        for comp_name, view_component in self._view_components.items():
             try:
-                view = view_component.build(self._virtual_bus)
+                view = view_component.build(comp_name)
                 if isinstance(view, IsInjectable):
-                    view.inject_dependencies(self._di_container)
+                    view.inject_dependencies(self._virtual_container)
             except Exception as e:
-                logger.error(f"Failed to build view '{name}': {e}")
+                logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
-
-        # wire signals now that all components exist on the virtual bus;
-        # order: presenters first (they publish), then views (they subscribe)
-        for presenter_comp in self._presenter_components.values():
-            if presenter_comp.instance is not None and isinstance(
-                presenter_comp.instance, VirtualAware
-            ):
-                presenter_comp.instance.connect_to_virtual()
-
-        for view_comp in self._view_components.values():
-            if view_comp.instance is not None and isinstance(
-                view_comp.instance, VirtualAware
-            ):
-                view_comp.instance.connect_to_virtual()
 
         self._is_built = True
         logger.info(
@@ -617,10 +467,7 @@ class AppContainer(metaclass=AppContainerMeta):
         logger.info("Container shutdown complete")
 
     def run(self) -> None:
-        """Build if needed and start the application.
-
-        Subclasses override this to provide frontend-specific launch logic.
-        """
+        """Build if needed and start the application."""
         if not self._is_built:
             self.build()
 
@@ -629,46 +476,35 @@ class AppContainer(metaclass=AppContainerMeta):
 
     @classmethod
     def from_config(cls, config_path: str) -> AppContainer:
-        """Build a container dynamically from a YAML configuration file.
-
-        Reads the configuration, discovers plugins via entry points,
-        and returns an unbuilt container of the appropriate frontend type.
-
-        Parameters
-        ----------
-        config_path : str
-            Path to the YAML configuration file.
-
-        Returns
-        -------
-        AppContainer
-            A configured (but unbuilt) container instance.
-        """
+        """Build a container dynamically from a YAML configuration file."""
         config, plugin_types = cls._load_configuration(config_path)
 
         namespace: dict[str, Any] = {}
 
-        # Create device components
-        for name, device_cfg in config.get("devices", {}).items():
-            device_class = plugin_types["devices"][name]
-            kwargs = {k: v for k, v in device_cfg.items() if k not in _PLUGIN_META_KEYS}
-            namespace[name] = _DeviceComponent(device_class, name, None, **kwargs)
-
-        # Create presenter components
-        for name, presenter_cfg in config.get("presenters", {}).items():
-            presenter_class = plugin_types["presenters"][name]
-            kwargs = {
-                k: v for k, v in presenter_cfg.items() if k not in _PLUGIN_META_KEYS
+        for name, device_class in plugin_types["devices"].items():
+            cfg_kwargs = {
+                k: v
+                for k, v in config.get("devices", {}).get(name, {}).items()
+                if k not in _PLUGIN_META_KEYS
             }
-            namespace[name] = _PresenterComponent(presenter_class, name, None, **kwargs)
+            namespace[name] = _DeviceComponent(device_class, name, None, **cfg_kwargs)
 
-        # Create view components
-        for name, view_cfg in config.get("views", {}).items():
-            view_class = plugin_types["views"][name]
-            kwargs = {k: v for k, v in view_cfg.items() if k not in _PLUGIN_META_KEYS}
-            namespace[name] = _ViewComponent(view_class, name, None, **kwargs)
+        for name, presenter_class in plugin_types["presenters"].items():
+            cfg_kwargs = {
+                k: v
+                for k, v in config.get("presenters", {}).get(name, {}).items()
+                if k not in _PLUGIN_META_KEYS
+            }
+            namespace[name] = _PresenterComponent(presenter_class, name, None, **cfg_kwargs)
 
-        # Resolve the correct base class for the configured frontend
+        for name, view_class in plugin_types["views"].items():
+            cfg_kwargs = {
+                k: v
+                for k, v in config.get("views", {}).get(name, {}).items()
+                if k not in _PLUGIN_META_KEYS
+            }
+            namespace[name] = _ViewComponent(view_class, name, None, **cfg_kwargs)
+
         frontend = config.get("frontend", "pyqt")
         base_class = _resolve_frontend_container(frontend)
 
@@ -704,9 +540,6 @@ class AppContainer(metaclass=AppContainerMeta):
                 available_manifests=available_manifests,
             )
             for name, plugin_cls in loaded:
-                # mypy complains because it can't verify the type of plugin_cls;
-                # but it is guaranteed to be correct at runtime because we're
-                # doing a lot of manual checks so just ignore it
                 plugin_types[group][name] = plugin_cls  # type: ignore[assignment]
 
         return config, plugin_types
@@ -719,7 +552,7 @@ class AppContainer(metaclass=AppContainerMeta):
         group: PLUGIN_GROUPS,
         available_manifests: EntryPoints,
     ) -> list[tuple[str, PluginType]]:
-        """Load plugin classes for a given group."""
+        """Load plugin classes for a given group from manifests."""
         plugins: list[tuple[str, PluginType]] = []
 
         for name, info in group_cfg.items():
@@ -759,17 +592,24 @@ class AppContainer(metaclass=AppContainerMeta):
                     )
                     continue
 
-                item = items[plugin_id]
+                class_path = items[plugin_id]
                 try:
-                    class_item_module, class_item_type = item["class"].split(":")
+                    if isinstance(class_path, dict):
+                        # old-style manifest: {class: "module:Type", ...}
+                        dotted = class_path["class"]
+                    else:
+                        # new-style manifest: plain "module:Type" string
+                        dotted = class_path
+                    class_item_module, class_item_type = dotted.split(":")
                     imported_class = getattr(
                         import_module(class_item_module), class_item_type
                     )
-                except KeyError:
+                except (KeyError, ValueError):
                     logger.error(
-                        'Plugin id "%s" of "%s" does not contain the class key. Skipping.',
+                        'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
                         plugin_id,
                         name,
+                        class_path,
                     )
                     continue
 

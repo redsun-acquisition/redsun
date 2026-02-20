@@ -83,7 +83,7 @@ class QtAppContainer(AppContainer):
         assert self._qt_app is not None  # guaranteed by build() above
         session_name = self._config.get("session", "Redsun")
         self._main_view = QtMainView(
-            virtual_bus=self.virtual_bus,
+            virtual_container=self.virtual_container,
             session_name=session_name,
             views=cast("dict[str, QtView]", self.views),
         )

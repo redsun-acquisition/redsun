@@ -1,64 +1,58 @@
 from typing import Mapping
 
 from sunflare.presenter import Presenter
-from sunflare.virtual import VirtualBus
 from sunflare.device import PDevice
+
 
 class MockController(Presenter):
 
     def __init__(
         self,
+        name: str,
         devices: Mapping[str, PDevice],
-        virtual_bus: VirtualBus,
-        string: str,
-        integer: int,
-        floating: float,
-        boolean: bool,
+        /,
+        string: str = "",
+        integer: int = 0,
+        floating: float = 0.0,
+        boolean: bool = False,
     ) -> None:
-        super().__init__(devices, virtual_bus)
+        super().__init__(name, devices)
         self.string = string
         self.integer = integer
         self.floating = floating
         self.boolean = boolean
 
-
-    def registration_phase(self) -> None:
-        ...
-
-    def connection_phase(self) -> None:
-        ...
 
 class BrokenController(Presenter):
 
     def __init__(
         self,
+        name: str,
         devices: Mapping[str, PDevice],
-        virtual_bus: VirtualBus,
-        string: str,
-        integer: int,
-        floating: float,
-        boolean: bool,
+        /,
+        string: str = "",
+        integer: int = 0,
+        floating: float = 0.0,
+        boolean: bool = False,
     ) -> None:
         raise Exception("Broken controller")
 
-    def connect_to_virtual(self) -> None:
-        ...
 
 class NonDerivedController:
 
-    def __init__(self, 
-                devices: dict[str, PDevice],
-                virtual_bus: VirtualBus,
-                string: str,
-                integer: int,
-                floating: float,
-                boolean: bool) -> None:
+    def __init__(
+        self,
+        name: str,
+        devices: dict[str, PDevice],
+        /,
+        string: str = "",
+        integer: int = 0,
+        floating: float = 0.0,
+        boolean: bool = False,
+    ) -> None:
+        self.name = name
         self.devices = devices
-        self.virtual_bus = virtual_bus
         self.string = string
         self.integer = integer
         self.floating = floating
         self.boolean = boolean
-
-    def connect_to_virtual(self) -> None:
-        ...

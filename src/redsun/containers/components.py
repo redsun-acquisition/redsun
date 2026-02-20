@@ -1,40 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from sunflare.device import Device
 from sunflare.presenter import Presenter
 from sunflare.view import View
-from typing_extensions import NotRequired, Required
 
 if TYPE_CHECKING:
-    from sunflare.virtual import VirtualBus
+    from sunflare.virtual import VirtualContainer
 
 
 T = TypeVar("T")
-
-
-class RedSunConfig(TypedDict, total=False):
-    """Base configuration dictionary for Redsun containers.
-
-    Describes the common top-level keys that may appear in a container
-    configuration YAML file.  Users should inherit from this class to
-    add component-specific sections.
-    """
-
-    schema: Required[float]
-    """Version number for the configuration schema."""
-    session: Required[str]
-    """Display name for the session."""
-    frontend: Required[str]
-    """Frontend toolkit identifier (e.g. ``"pyqt"``, ``"pyside"``)."""
-
-    devices: NotRequired[dict[str, Any]]
-    """Dictionary of device kwargs, keyed by component name."""
-    presenters: NotRequired[dict[str, Any]]
-    """Dictionary of presenter kwargs, keyed by component name."""
-    views: NotRequired[dict[str, Any]]
-    """Dictionary of view kwargs, keyed by component name."""
 
 
 class _ComponentField:
@@ -82,80 +58,60 @@ def device(
     Parameters
     ----------
     cls : type
-        The component class to instantiate. It must be either a
-        direct subclass of `Device` or implement the `PDevice` protocol
-        at structural level.
+        The component class to instantiate.
+    alias : str | None
+        Override the component name. Takes priority over the attribute name.
     from_config : str | None
-        The key to look up in the configuration file's ``devices``,
-        ``presenters``, or ``views`` section (based on ``layer``).
-        If `None`, kwargs must be specified inline. Defaults to `None`.
-    **kwargs : `Any`
-        Additional keyword arguments forwarded to the component
-        constructor at build time. These override values from the
-        configuration file if ``from_config`` is set.
+        Key to look up in the configuration file's ``devices`` section.
+    **kwargs : Any
+        Additional keyword arguments forwarded to the component constructor.
     """
     return _ComponentField(
         cls=cls, layer="device", alias=alias, from_config=from_config, kwargs=kwargs
     )
 
 
-def view(cls: type, /, from_config: str | None = None, **kwargs: Any) -> Any:
+def view(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
     """Declare a component as a view layer field.
-
-    A view can be declared inside the body of an `AppContainer`:
 
     >>> class MyApp(AppContainer):
     ...     ui = view(MyView)
 
-    The container will create an instance of `MyView` with the specified kwargs when the
-    container is built.
-
     Parameters
     ----------
     cls : type
-        The component class to instantiate. It must implement the `PView`
-        protocol at structural level; inheritance from `View` is not required.
+        The component class to instantiate.
+    alias : str | None
+        Override the component name. Takes priority over the attribute name.
     from_config : str | None
-        The key to look up in the configuration file's ``devices``,
-        ``presenters``, or ``views`` section (based on ``layer``).
-        If `None`, kwargs must be specified inline. Defaults to `None`.
-    **kwargs : `Any`
-        Additional keyword arguments forwarded to the component
-        constructor at build time. These override values from the
-        configuration file if ``from_config`` is set.
+        Key to look up in the configuration file's ``views`` section.
+    **kwargs : Any
+        Additional keyword arguments forwarded to the component constructor.
     """
     return _ComponentField(
-        cls=cls, layer="view", alias=None, from_config=from_config, kwargs=kwargs
+        cls=cls, layer="view", alias=alias, from_config=from_config, kwargs=kwargs
     )
 
 
-def presenter(cls: type, /, from_config: str | None = None, **kwargs: Any) -> Any:
+def presenter(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
     """Declare a component as a presenter layer field.
-
-    A presenter can be declared inside the body of an `AppContainer`:
 
     >>> class MyApp(AppContainer):
     ...     ctrl = presenter(MyCtrl, gain=1.0)
 
-    The container will create an instance of `MyCtrl` with the specified kwargs when the
-    container is built.
-
     Parameters
     ----------
     cls : type
-        The component class to instantiate. It must implement the `PPresenter`
-        protocol at structural level; inheritance from `Presenter` is not required.
+        The component class to instantiate.
+    alias : str | None
+        Override the component name. Takes priority over the attribute name.
     from_config : str | None
-        The key to look up in the configuration file's ``devices``,
-        ``presenters``, or ``views`` section (based on ``layer``).
-        If `None`, kwargs must be specified inline. Defaults to `None`.
-    **kwargs : `Any`
-        Additional keyword arguments forwarded to the component
-        constructor at build time. These override values from the
-        configuration file if ``from_config`` is set.
+        Key to look up in the configuration file's ``presenters`` section.
+    **kwargs : Any
+        Additional keyword arguments forwarded to the component constructor.
     """
     return _ComponentField(
-        cls=cls, layer="presenter", alias=None, from_config=from_config, kwargs=kwargs
+        cls=cls, layer="presenter", alias=alias, from_config=from_config, kwargs=kwargs
     )
 
 
@@ -199,16 +155,16 @@ class _DeviceComponent(_ComponentBase[Device]):
 class _PresenterComponent(_ComponentBase[Presenter]):
     """Presenter component wrapper."""
 
-    def build(self, devices: dict[str, Device], virtual_bus: VirtualBus) -> Presenter:
+    def build(self, name: str, devices: dict[str, Device], container: VirtualContainer) -> Presenter:
         """Build the presenter instance."""
-        self._instance = self.cls(devices, virtual_bus, **self.kwargs)
+        self._instance = self.cls(name, devices, **self.kwargs)
         return self.instance
 
 
 class _ViewComponent(_ComponentBase[View]):
     """View component wrapper."""
 
-    def build(self, virtual_bus: VirtualBus) -> View:
+    def build(self, name: str) -> View:
         """Build the view instance."""
-        self._instance = self.cls(virtual_bus, **self.kwargs)
+        self._instance = self.cls(name, **self.kwargs)
         return self.instance
