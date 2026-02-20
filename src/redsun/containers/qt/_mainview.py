@@ -8,12 +8,11 @@ from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from sunflare.log import Loggable
-
-from redsun.config import ViewPositionTypes
+from sunflare.view import ViewPosition
 
 if TYPE_CHECKING:
     from sunflare.view.qt import QtView
-    from sunflare.virtual import VirtualBus
+    from sunflare.virtual import VirtualContainer
 
 __all__ = ["QtMainView"]
 
@@ -23,8 +22,8 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
 
     Parameters
     ----------
-    virtual_bus : VirtualBus
-        Session virtual bus.
+    virtual_container : VirtualContainer
+        Session virtual container.
     session_name : str
         Display name for the window title.
     views : dict[str, QtView]
@@ -32,21 +31,21 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
     """
 
     _DOCK_MAP = {
-        ViewPositionTypes.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
-        ViewPositionTypes.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
-        ViewPositionTypes.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
-        ViewPositionTypes.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
+        ViewPosition.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
+        ViewPosition.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
+        ViewPosition.TOP: Qt.DockWidgetArea.TopDockWidgetArea,
+        ViewPosition.BOTTOM: Qt.DockWidgetArea.BottomDockWidgetArea,
     }
 
     def __init__(
         self,
-        virtual_bus: VirtualBus,
+        virtual_container: VirtualContainer,
         session_name: str,
         views: dict[str, QtView],
     ) -> None:
         super().__init__()
         self.setWindowTitle(session_name)
-        self._virtual_bus = virtual_bus
+        self._virtual_container = virtual_container
         self._central_widget_set = False
         self._widgets: dict[str, QtView] = {}
         self._dock_views(views)
@@ -76,9 +75,9 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
             self._widgets[name] = widget
 
             position = getattr(widget, "position", None)
-            if position is not None and position != ViewPositionTypes.CENTER:
+            if position is not None and position != ViewPosition.CENTER:
                 try:
-                    dock_area = self._DOCK_MAP[ViewPositionTypes(position)]
+                    dock_area = self._DOCK_MAP[ViewPosition(position)]
                     dock_widget = QtWidgets.QDockWidget(name)
                     dock_widget.setWidget(widget)
                     self.addDockWidget(dock_area, dock_widget)

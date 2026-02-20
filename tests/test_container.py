@@ -7,12 +7,13 @@ from typing import Any
 
 import pytest
 
-from redsun.containers import AppContainer, component
+from redsun.containers import AppContainer, AppConfig, device, presenter, view
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
     _ViewComponent,
 )
+
 
 class TestComponentWrappers:
     """Tests for _DeviceComponent, _PresenterComponent, _ViewComponent."""
@@ -49,28 +50,24 @@ class TestComponentWrappers:
 
     def test_presenter_component_build(self) -> None:
         from mock_pkg.controller import MockController
-
-        from sunflare.virtual import VirtualBus
+        from sunflare.virtual import VirtualContainer
 
         comp = _PresenterComponent(
             MockController, "ctrl", None,
             string="s", integer=1, floating=0.0, boolean=False,
         )
-        bus = VirtualBus()
-        presenter = comp.build({}, bus)
+        container = VirtualContainer()
+        presenter = comp.build("ctrl", {}, container)
         assert presenter is comp.instance
         assert "built" in repr(comp)
 
     def test_view_component_build(self) -> None:
         from mock_pkg.view import MockQtView
-
         from qtpy.QtWidgets import QApplication
-        from sunflare.virtual import VirtualBus
 
         _ = QApplication.instance() or QApplication([])
         comp = _ViewComponent(MockQtView, "v", None)
-        bus = VirtualBus()
-        view = comp.build(bus)
+        view = comp.build("v")
         assert view is comp.instance
         assert "built" in repr(comp)
 
@@ -162,14 +159,13 @@ class TestAppContainerBuild:
         with pytest.raises(RuntimeError):
             _ = app.views
         with pytest.raises(RuntimeError):
-            _ = app.virtual_bus
-        with pytest.raises(RuntimeError):
-            _ = app.di_container
+            _ = app.virtual_container
 
     def test_config_defaults(self) -> None:
         app = AppContainer()
         assert app.config["session"] == "Redsun"
         assert app.config["frontend"] == "pyqt"
+        assert app.config["schema_version"] == 1.0
 
     def test_config_override(self) -> None:
         app = AppContainer(session="MySession", frontend="pyside")
@@ -189,6 +185,19 @@ class TestAppContainerBuild:
     def test_shutdown_noop_when_not_built(self) -> None:
         app = AppContainer()
         app.shutdown()  # should not raise
+
+    def test_virtual_container_carries_config(self) -> None:
+        """After build(), virtual_container.configuration holds base config fields."""
+        class EmptyApp(AppContainer):
+            pass
+
+        app = EmptyApp(session="TestSession", frontend="pyqt")
+        app.build()
+        cfg = app.virtual_container.configuration
+        assert cfg is not None
+        assert cfg["session"] == "TestSession"
+        assert cfg["frontend"] == "pyqt"
+        assert cfg["schema_version"] == 1.0
 
 
 class TestFromConfig:
@@ -245,9 +254,9 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = component(
+            motor = device(
                 MyMotor,
-                layer="device", axis=["X"], step_size={"X": 0.1},
+                axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
@@ -258,9 +267,8 @@ class TestComponentFieldSyntax:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer):
-            ctrl = component(
+            ctrl = presenter(
                 MockController,
-                layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -269,13 +277,12 @@ class TestComponentFieldSyntax:
 
     def test_component_field_collects_view(self) -> None:
         from mock_pkg.view import MockQtView
-
         from qtpy.QtWidgets import QApplication
 
         _ = QApplication.instance() or QApplication([])
 
         class TestApp(AppContainer):
-            v = component(MockQtView, layer="view")
+            v = view(MockQtView)
 
         assert "v" in TestApp._view_components
         assert isinstance(TestApp._view_components["v"], _ViewComponent)
@@ -285,14 +292,12 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = component(
-                MyMotor,
-                layer="device", axis=["X"], step_size={"X": 0.1},
+            motor = device(
+                MyMotor, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            ctrl = component(
+            ctrl = presenter(
                 MockController,
-                layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -310,9 +315,8 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = component(
-                MyMotor,
-                layer="device", axis=["X"], step_size={"X": 0.1},
+            motor = device(
+                MyMotor, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
@@ -333,24 +337,19 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
-            motor = component(
-                MyMotor,
-                layer="device", axis=["X"], step_size={"X": 0.1},
+            motor = device(
+                MyMotor, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
         class Child(Base):
-            ctrl = component(
+            ctrl = presenter(
                 MockController,
-                layer="presenter",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
         assert "motor" in Child._device_components
         assert "ctrl" in Child._presenter_components
-
-
-# ── config() + from_config ──────────────────────────────────────────
 
 
 class TestConfigField:
@@ -360,7 +359,7 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = component(MyMotor, layer="device", from_config="motor")
+            motor = device(MyMotor, from_config="motor")
 
         comp = TestApp._device_components["motor"]
         assert comp.kwargs["axis"] == ["X"]
@@ -372,7 +371,7 @@ class TestConfigField:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            ctrl = component(MockController, layer="presenter", from_config="ctrl")
+            ctrl = presenter(MockController, from_config="ctrl")
 
         comp = TestApp._presenter_components["ctrl"]
         assert comp.kwargs["string"] == "config ctrl"
@@ -383,15 +382,12 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = component(
-                MyMotor,
-                layer="device", from_config="motor", egu="um",
+            motor = device(
+                MyMotor, from_config="motor", egu="um",
             )
 
         comp = TestApp._device_components["motor"]
-        # inline egu="um" should override config egu="mm"
         assert comp.kwargs["egu"] == "um"
-        # other config values should remain
         assert comp.kwargs["axis"] == ["X"]
         assert comp.kwargs["integer"] == 42
 
@@ -400,8 +396,8 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = component(MyMotor, layer="device", from_config="motor")
-            ctrl = component(MockController, layer="presenter", from_config="ctrl")
+            motor = device(MyMotor, from_config="motor")
+            ctrl = presenter(MockController, from_config="ctrl")
 
         app = TestApp()
         app.build()
@@ -416,7 +412,7 @@ class TestConfigField:
         with pytest.raises(TypeError, match="no config path was provided"):
 
             class TestApp(AppContainer):
-                motor = component(MyMotor, layer="device", from_config="motor")
+                motor = device(MyMotor, from_config="motor")
 
     def test_from_config_missing_section_warns(
         self, config_path: Path, caplog: pytest.LogCaptureFixture,
@@ -424,78 +420,62 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            # "missing" is not a key in the config file
-            missing = component(
-                MyMotor,
-                layer="device", from_config="missing",
+            missing = device(
+                MyMotor, from_config="missing",
                 axis=["Y"], step_size={"Y": 0.2},
                 egu="deg", integer=0, floating=0.0, string="fallback",
             )
 
         assert "No config section 'missing'" in caplog.text
-        # should still work with just the inline kwargs
         comp = TestApp._device_components["missing"]
         assert comp.kwargs["egu"] == "deg"
 
 
-class TestTopLevelImports:
-    """Tests that the main APIs are importable directly from redsun."""
+class TestAppConfig:
+    """Tests for AppConfig TypedDict and RedSunConfig inheritance."""
 
-    def test_qtappcontainer_importable_from_redsun_qt(self) -> None:
-        from redsun.containers.qt import QtAppContainer as _QAC
-        from redsun.qt import QtAppContainer
+    def test_app_config_has_schema_version(self) -> None:
+        from redsun.containers import AppConfig
+        from sunflare.virtual import RedSunConfig
 
-        assert QtAppContainer is _QAC
+        cfg: AppConfig = {
+            "schema_version": 1.0,
+            "session": "s",
+            "frontend": "pyqt",
+        }
+        assert cfg["schema_version"] == 1.0
+        # AppConfig extends RedSunConfig — verify required keys are inherited
+        assert "schema_version" in AppConfig.__required_keys__
+        assert "frontend" in AppConfig.__required_keys__
+        # session is NotRequired in sunflare 0.10.0
+        assert "session" in AppConfig.__optional_keys__
 
-    def test_appcontainer_importable_from_redsun(self) -> None:
-        from redsun import AppContainer as AC
+    def test_app_config_has_component_fields(self) -> None:
+        from redsun.containers import AppConfig
 
-        assert AC is AppContainer
+        cfg: AppConfig = {
+            "schema_version": 1.0,
+            "session": "s",
+            "frontend": "pyqt",
+            "devices": {"cam": {}},
+            "presenters": {},
+            "views": {},
+        }
+        assert "devices" in cfg
+        assert "cam" in cfg["devices"]
 
-    def test_component_importable_from_redsun(self) -> None:
-        from redsun import component as c
-
-        assert c is component
-
-    def test_redsun_config_not_in_public_api(self) -> None:
-        import redsun
-
-        assert not hasattr(redsun, "RedSunConfig")
-        assert "RedSunConfig" not in redsun.__all__
-
-    def test_top_level_import_works_end_to_end(self) -> None:
-        """Smoke test: define and build a container using only top-level imports."""
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
-
-        from redsun import AppContainer as AC
-        from redsun import component as c
-
-        class TestApp(AC):
-            motor = c(MyMotor, layer="device", axis=["X"], step_size={"X": 0.1},
-                      egu="mm", integer=1, floating=1.0, string="s")
-            ctrl = c(MockController, layer="presenter",
-                     string="s", integer=1, floating=0.0, boolean=False)
-
-        app = TestApp()
-        app.build()
-        assert "motor" in app.devices
-        assert "ctrl" in app.presenters
+    def test_redsun_config_no_component_fields(self) -> None:
+        """RedSunConfig in sunflare must not expose devices/presenters/views."""
+        from sunflare.virtual import RedSunConfig
+        assert "devices" not in RedSunConfig.__annotations__
+        assert "presenters" not in RedSunConfig.__annotations__
+        assert "views" not in RedSunConfig.__annotations__
 
 
 class TestQtAppContainer:
     """Tests for QtAppContainer lifecycle correctness."""
 
     def test_build_before_run_creates_qapplication(self) -> None:
-        """build() must ensure QApplication exists before instantiating widgets.
-
-        This is the critical ordering case: if a caller does
-            app = MyQtApp()
-            app.build()   # <-- QApplication must exist here, not only in run()
-            app.run()
-        any QWidget subclass instantiated during build() would crash without
-        a QApplication. QtAppContainer.build() must handle this.
-        """
         from mock_pkg.view import MockQtView
         from mock_pkg.device import MyMotor
 
@@ -503,25 +483,24 @@ class TestQtAppContainer:
         from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
-            motor = component(
-                MyMotor, layer="device", axis=["X"], step_size={"X": 0.1},
+            motor = device(
+                MyMotor, axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
-            view = component(MockQtView, layer="view")
+            v = view(MockQtView)
 
         app = _TestQtApp()
-        assert app._qt_app is None  # not created yet
+        assert app._qt_app is None
 
-        app.build()  # must create QApplication internally before widgets
+        app.build()
 
         assert app._qt_app is not None
         assert QApplication.instance() is app._qt_app
         assert app.is_built
         assert "motor" in app.devices
-        assert "view" in app.views
+        assert "v" in app.views
 
     def test_run_reuses_qapplication_created_by_build(self) -> None:
-        """run() must not create a second QApplication if build() already did."""
         from qtpy.QtWidgets import QApplication
         from redsun.qt import QtAppContainer
 
@@ -532,5 +511,4 @@ class TestQtAppContainer:
         app.build()
         first_instance = app._qt_app
 
-        # Confirm QApplication.instance() returns the same object
         assert QApplication.instance() is first_instance
