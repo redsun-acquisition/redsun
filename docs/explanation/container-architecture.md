@@ -9,8 +9,7 @@ At the core of Redsun is the [`AppContainer`][redsun.AppContainer], which acts a
 ```mermaid
 graph LR
     subgraph 1. Create infrastructure
-        VirtualBus
-        DI[DI Container]
+        VC[VirtualContainer]
     end
 
     subgraph 2. Build components
@@ -21,10 +20,10 @@ graph LR
 
     Devices --> Presenters
     Presenters --> Views
-    VirtualBus --> Presenters
-    VirtualBus --> Views
-    Presenters -.->|register providers| DI
-    DI -.->|inject dependencies| Views
+    VC --> Presenters
+    VC --> Views
+    Presenters -.->|register providers| VC
+    VC -.->|inject dependencies| Views
 ```
 
 ## The MVP pattern
@@ -127,18 +126,19 @@ The configuration file provides base keyword arguments for each component. These
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container instantiates components in a strict dependency order:
 
-1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
-2. **DI container** - the dependency injection container, seeded with the application configuration.
-3. **Devices** - hardware interfaces, each receiving their resolved name and keyword arguments.
-4. **Presenters** - business logic components, receiving their resolved name and the full device dictionary. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the DI container.
-5. **Views** - UI components, receiving their resolved name. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the DI container.
+1. **VirtualContainer** - the shared signal registry and dependency injection layer ([`VirtualContainer`][sunflare.virtual.VirtualContainer]), seeded with the application configuration.
+2. **Devices** - hardware interfaces, each receiving their resolved name and keyword arguments.
+3. **Presenters** - business logic components, receiving their resolved name and the full device dictionary. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the VirtualContainer.
+4. **Views** - UI components, receiving their resolved name. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the VirtualContainer.
 
 ## Communication
 
-Components communicate through two mechanisms:
+Components communicate through the [`VirtualContainer`][sunflare.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
 
-- **Virtual bus**: an event-driven publish/subscribe system provided by `sunflare` ([`VirtualBus`][sunflare.virtual.VirtualBus]). Presenters and views can emit and listen for signals without direct references to each other.
-- **Dependency injection**: presenters can register providers in the DI container, and views can consume them. This allows views to access presenter-provided data without coupling to specific presenter implementations.
+- **Signal registry**: components can register their [`psygnal`](https://psygnal.readthedocs.io/) signals into the container via `register_signals()`, making them discoverable by other components without direct references to each other. Registered signals are accessible through the `signals` property.
+- **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] to register typed providers, and views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] to consume them. This decouples views from specific presenter implementations.
+
+The `VirtualContainer` is created during [`build()`][redsun.containers.container.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
 ## Two usage flows
 
@@ -223,4 +223,4 @@ Both [`PyQt6`](https://pypi.org/project/PyQt6/) or [`PySide6`](https://pypi.org/
 
 The future expectation is to provide support for other frontends (either desktop or web-based).
 
-While the presenter and device layer are decoupled via the `VirtualBus`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach across the board, regardless of the specified frontend.
+While the presenter and device layer are decoupled via the `VirtualContainer`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach across the board, regardless of the specified frontend.
