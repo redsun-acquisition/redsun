@@ -446,8 +446,9 @@ class TestAppConfig:
         assert cfg["schema_version"] == 1.0
         # AppConfig extends RedSunConfig — verify required keys are inherited
         assert "schema_version" in AppConfig.__required_keys__
-        assert "session" in AppConfig.__required_keys__
         assert "frontend" in AppConfig.__required_keys__
+        # session is NotRequired in sunflare 0.10.0
+        assert "session" in AppConfig.__optional_keys__
 
     def test_app_config_has_component_fields(self) -> None:
         from redsun.containers import AppConfig
