@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.6.0] - 20-02-2026
+
+### Added
+
+- Added `device()`, `presenter()`, `view()` typed field specifiers for declarative component registration
+
+### Changed
+
+- `IsProvider.register_providers()` now runs over both presenters and views
+- `IsInjectable.inject_dependencies()` now runs over both presenters and views
+- Refactored build loop in component construction, provider registration and dependency injection
+- `_ComponentBase`: alias slot removed; name fully resolved at metaclass time
+- `_PresenterComponent.build()`: removed unused container: VirtualContainer parameter
+- All `_*Component.build()` methods use self.name directly
+- Changed plugin manifest format: from `{ class: "module:Type" }` to flat `"module:Type"` string
+- Updated documentation
+
+### Removed
+
+- Removed `component()` catch-all field declarator in favor of layer-specific functions
+
 ## [0.5.6] - 18-02-2026
 
 ### Fixed
