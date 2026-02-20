@@ -22,7 +22,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         assert "pending" in repr(comp)
@@ -31,7 +31,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         device = comp.build()
@@ -42,7 +42,7 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", None, axis=["X"], step_size={"X": 0.1},
+            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
             egu="mm", integer=1, floating=1.0, string="s",
         )
         with pytest.raises(RuntimeError, match="not been instantiated"):
@@ -53,21 +53,25 @@ class TestComponentWrappers:
         from sunflare.virtual import VirtualContainer
 
         comp = _PresenterComponent(
-            MockController, "ctrl", None,
+            MockController, "ctrl",
             string="s", integer=1, floating=0.0, boolean=False,
         )
         container = VirtualContainer()
-        presenter = comp.build("ctrl", {}, container)
+        presenter = comp.build({}, container)
         assert presenter is comp.instance
         assert "built" in repr(comp)
 
+    @pytest.mark.skipif(
+        not __import__("os").environ.get("DISPLAY"),
+        reason="requires a display (Qt)",
+    )
     def test_view_component_build(self) -> None:
         from mock_pkg.view import MockQtView
         from qtpy.QtWidgets import QApplication
 
         _ = QApplication.instance() or QApplication([])
-        comp = _ViewComponent(MockQtView, "v", None)
-        view = comp.build("v")
+        comp = _ViewComponent(MockQtView, "v")
+        view = comp.build()
         assert view is comp.instance
         assert "built" in repr(comp)
 
@@ -81,11 +85,11 @@ class TestAppContainerMeta:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl", None,
+                MockController, "ctrl",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -103,7 +107,7 @@ class TestAppContainerMeta:
 
         class Base(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
 
@@ -122,11 +126,11 @@ class TestAppContainerBuild:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", None, axis=["X"], step_size={"X": 0.1},
+                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl", None,
+                MockController, "ctrl",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -275,6 +279,10 @@ class TestComponentFieldSyntax:
         assert "ctrl" in TestApp._presenter_components
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
+    @pytest.mark.skipif(
+        not __import__("os").environ.get("DISPLAY"),
+        reason="requires a display (Qt)",
+    )
     def test_component_field_collects_view(self) -> None:
         from mock_pkg.view import MockQtView
         from qtpy.QtWidgets import QApplication
@@ -320,7 +328,7 @@ class TestComponentFieldSyntax:
                 egu="mm", integer=1, floating=1.0, string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl", None,
+                MockController, "ctrl",
                 string="s", integer=1, floating=0.0, boolean=False,
             )
 
@@ -512,3 +520,79 @@ class TestQtAppContainer:
         first_instance = app._qt_app
 
         assert QApplication.instance() is first_instance
+
+
+class TestComponentNaming:
+    """Tests for component naming priority: alias > attribute name.
+
+    For ``from_config()``, the YAML key becomes the component name.
+    For declarative syntax, ``alias`` wins over the attribute name.
+    """
+
+    def test_device_alias_overrides_attr_name(self) -> None:
+        """alias takes priority over the attribute name as device name."""
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor = device(
+                MyMotor, alias="cam",
+                axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+
+        app = TestApp()
+        app.build()
+        assert "cam" in app.devices
+        assert "motor" not in app.devices
+        assert app.devices["cam"].name == "cam"
+
+    def test_device_attr_name_used_when_no_alias(self) -> None:
+        """Attribute name is used when alias is None."""
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor = device(
+                MyMotor,
+                axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+
+        app = TestApp()
+        app.build()
+        assert "motor" in app.devices
+        assert app.devices["motor"].name == "motor"
+
+    def test_presenter_alias_overrides_attr_name(self) -> None:
+        """alias takes priority over the attribute name for presenters."""
+        from mock_pkg.controller import MockController
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor = device(
+                MyMotor, axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+            ctrl = presenter(
+                MockController, alias="my_ctrl",
+                string="s", integer=1, floating=0.0, boolean=False,
+            )
+
+        app = TestApp()
+        app.build()
+        assert "my_ctrl" in app.presenters
+        assert "ctrl" not in app.presenters
+        assert app.presenters["my_ctrl"].name == "my_ctrl"
+
+    def test_alias_baked_into_component_dict_key(self) -> None:
+        """Metaclass stores the component under the alias, not the attr name."""
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            my_motor = device(
+                MyMotor, alias="detector",
+                axis=["X"], step_size={"X": 0.1},
+                egu="mm", integer=1, floating=1.0, string="s",
+            )
+
+        assert "detector" in TestApp._device_components
+        assert "my_motor" not in TestApp._device_components
