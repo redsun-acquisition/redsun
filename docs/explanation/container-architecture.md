@@ -41,8 +41,8 @@ This separation ensures that hardware drivers, UI components, and business logic
 `redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
 
 Components are declared as class attributes using the layer-specific field specifiers:
-[`device()`][redsun.containers.device],
-[`presenter()`][redsun.containers.presenter], and
+[`device()`][redsun.device],
+[`presenter()`][redsun.containers.components.presenter], and
 [`view()`][redsun.containers.view].
 Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
 
@@ -72,11 +72,11 @@ The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass
 
 ## Component naming
 
-Every component receives a **name** that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
+Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
 
-1. **`alias`** — if an explicit `alias` is passed to `device()`, `presenter()`, or `view()`, that value is used regardless of everything else.
-2. **Attribute name** — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
-3. **YAML key** — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
+1. `alias` — if an explicit `alias` is passed to `device()`, `presenter()`, or `view()`, that value is used regardless of everything else.
+2. attribute name — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
+3. YAML key — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
 
 Examples in the declarative flow:
 
@@ -94,8 +94,6 @@ devices:
     plugin_name: my-plugin
     plugin_id: my_detector
 ```
-
-The `alias` parameter is useful when the desired runtime name differs from the attribute name — for example to match an identifier expected elsewhere in the application without renaming the Python attribute.
 
 ## Configuration file support
 
@@ -138,11 +136,11 @@ Components communicate through the [`VirtualContainer`][sunflare.virtual.Virtual
 - **Signal registry**: components can register their [`psygnal`](https://psygnal.readthedocs.io/) signals into the container via `register_signals()`, making them discoverable by other components without direct references to each other. Registered signals are accessible through the `signals` property.
 - **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] to register typed providers, and views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] to consume them. This decouples views from specific presenter implementations.
 
-The `VirtualContainer` is created during [`build()`][redsun.containers.container.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
+The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
 ## Two usage flows
 
-Redsun supports two distinct approaches for assembling an application, both producing the same result at runtime.
+`redsun` supports two distinct approaches for assembling an application, both producing the same result at runtime.
 
 ### Explicit flow (developer-written containers)
 
@@ -160,16 +158,13 @@ from my_package.presenter import MyPresenter
 from my_package.view import MyView
 
 
-def my_app() -> None:
-    class MyApp(QtAppContainer, config="config.yaml"):
-        motor = device(MyMotor, from_config="motor")
-        ctrl = presenter(MyPresenter, from_config="ctrl")
-        ui = view(MyView, from_config="ui")
+class MyApp(QtAppContainer, config="config.yaml"):
+    motor = device(MyMotor, from_config="motor")
+    ctrl = presenter(MyPresenter, from_config="ctrl")
+    ui = view(MyView, from_config="ui")
 
-    MyApp().run()
+MyApp().run()
 ```
-
-The class is defined inside a function so that Qt imports (and any heavy device imports) are deferred until the function is actually called. `QtAppContainer` is imported from the public `redsun.qt` namespace.
 
 ### Dynamic flow (configuration-driven)
 
@@ -193,9 +188,15 @@ devices:
   motor:
     plugin_name: my-plugin
     plugin_id: my_motor
+
+presenters:
+  ...
+
+views:
+  ...
 ```
 
-See the [plugin system](plugin-system.md) documentation for a full description of the dynamic flow.
+See the [component system](component-system.md) documentation for a full description of the dynamic flow.
 
 ## Frontend support
 

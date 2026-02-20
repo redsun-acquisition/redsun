@@ -25,7 +25,7 @@ nav = [
     "explanation/index.md",
     { "Statement of need" = "explanation/statement.md" },
     { "Container architecture" = "explanation/container-architecture.md" },
-    { "Plugin system" = "explanation/plugin-system.md" },
+    { "Component system" = "explanation/component-system.md" },
   ]},
 ]
 

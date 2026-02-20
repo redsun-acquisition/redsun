@@ -1,10 +1,10 @@
-# Plugin system
+# Component system
 
-Redsun's plugin system allows third-party packages to provide devices, presenters, and views that are dynamically discovered and loaded at runtime.
+`redsun` component system allows third-party packages to provide devices, presenters, and views that are dynamically discovered and loaded at runtime.
 
 ## Overview
 
-Plugins are standard Python packages that register themselves via [entry points]. When Redsun builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.
+From Python point of view, components are standard Python packages that register themselves via [entry points]. When `redsun` builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.
 
 ```mermaid
 graph TB
@@ -23,7 +23,7 @@ is called with a configuration file, Redsun:
 1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
 2. **Queries entry points** - looks up installed packages registered under the `redsun.plugins` entry point group.
 3. **Loads manifests** - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.
-4. **Validates protocols** - each loaded class is checked against the expected protocol (Device, Presenter, or View).
+4. **Validates protocols** - each loaded class is checked against the expected protocol ([`Device`][sunflare.device.Device], [`Presenter`][sunflare.presenter.Presenter], or [`View`][sunflare.view.View]).
 5. **Creates the container** - a dynamic container class is assembled with the discovered components.
 
 ## Plugin manifest
@@ -54,7 +54,7 @@ The application configuration file references plugins by name and ID:
 
 ```yaml
 schema: 1.0
-session: "My Experiment"
+session: "My applcation"
 frontend: "pyqt"
 
 devices:
@@ -82,9 +82,9 @@ The `plugin_name` and `plugin_id` keys are used for plugin resolution and are no
 
 Before a plugin class is used, Redsun verifies it implements the expected protocol:
 
-- **Devices** must be subclasses of [`Device`][sunflare.device.Device] or implement `read_configuration`, `describe_configuration`, `name`, and `parent`.
-- **Presenters** must be subclasses of [`Presenter`][sunflare.presenter.Presenter] or have `devices` and `virtual_bus` attributes.
-- **Views** must be subclasses of [`View`][sunflare.view.View] or have a `virtual_bus` attribute.
+- **Devices** must be subclasses of [`Device`][sunflare.device.Device] or structurally implement the [`PDevice`][sunflare.device.PDevice] protocol.
+- **Presenters** must be subclasses of [`Presenter`][sunflare.presenter.Presenter] or structurally implement the [`PPresenter`][sunflare.presenter.PPresenter] protocol.
+- **Views** must be subclasses of [`View`][sunflare.view.View] or structurally implement the [`PView`][sunflare.view.PView] protocol.
 
 Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via [`ABCMeta.register()`][abc.ABCMeta.register].
 

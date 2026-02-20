@@ -74,8 +74,10 @@ def device(
 
     A device can be declared inside the body of an `AppContainer`:
 
-    >>> class MyApp(AppContainer):
-    ...     motor = device(MyMotor, axis=["X"])
+    ```python
+    class MyApp(AppContainer):
+        motor = device(MyMotor, axis=["X"])
+    ```
 
     The container will create an instance of `MyMotor` with the specified kwargs when the
     container is built. The attribute name ``motor`` will be used as the device ``name`` argument.
@@ -103,8 +105,10 @@ def view(
 ) -> Any:
     """Declare a component as a view layer field.
 
-    >>> class MyApp(AppContainer):
-    ...     ui = view(MyView)
+    ```python
+    class MyApp(AppContainer):
+        ui = view(MyView)
+    ```
 
     Parameters
     ----------
@@ -129,8 +133,10 @@ def presenter(
 ) -> Any:
     """Declare a component as a presenter layer field.
 
-    >>> class MyApp(AppContainer):
-    ...     ctrl = presenter(MyCtrl, gain=1.0)
+    ```python
+    class MyApp(AppContainer):
+        ctrl = presenter(MyCtrl, gain=1.0)
+    ```
 
     Parameters
     ----------
@@ -201,3 +207,6 @@ class _ViewComponent(_ComponentBase[View]):
         """Build the view instance."""
         self._instance = self.cls(self.name, **self.kwargs)
         return self.instance
+
+
+__all__ = ["device", "presenter", "view"]
