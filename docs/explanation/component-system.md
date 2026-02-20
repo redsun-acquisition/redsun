@@ -114,8 +114,8 @@ Classes that satisfy the protocol structurally (without inheriting from the base
 The plugin system is used when building from configuration files via
 [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config].
 When using the declarative class-based approach (defining a container subclass with
-[`component()`][redsun.containers.components.component] fields), component classes are
-passed directly as the first argument to `component()` and do not go through plugin discovery.
+[`device()`][redsun.containers.components.device], [`presenter()`][redsun.containers.components.presenter] or [`view()`][redsun.containers.components.view] field functions), component classes are
+passed directly as the first argument to the respective function and do not go through plugin discovery.
 
 Both approaches produce the same result: an
 [`AppContainer`][redsun.containers.container.AppContainer] with registered device,

@@ -4,7 +4,7 @@ This guide covers how to build the Redsun documentation locally.
 
 ## Prerequisites
 
-Make sure you have [installed Redsun with development dependencies](installation.md#install-development-dependencies).
+Make sure you have [installed `redsun` with development dependencies](installation.md#install-development-dependencies).
 
 ## Build with Zensical
 
@@ -14,11 +14,7 @@ Build the documentation from the project root:
 uv run zensical build
 ```
 
-The built documentation will be in the `site/` directory. Open `site/index.html` in your browser to view it.
-
-## Serve documentation locally
-
-For development, serve the documentation with live reload:
+The built documentation will be in the `site/` directory. You can serve the documentation locally via:
 
 ```bash
 uv run zensical serve

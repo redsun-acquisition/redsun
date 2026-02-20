@@ -1,6 +1,6 @@
 # Installation
 
-This guide covers how to install Redsun in different environments.
+This guide covers how to install `redsun` in different environments.
 
 ## Create a virtual environment
 
@@ -74,7 +74,7 @@ The package is available on [PyPI](https://pypi.org/project/redsun/) or directly
 
 ### Qt backend
 
-Redsun requires a Qt backend. Install with your preferred binding:
+`redsun` requires a Qt backend. Install with your preferred binding:
 
 === "PyQt6"
 
@@ -90,7 +90,7 @@ Redsun requires a Qt backend. Install with your preferred binding:
 
 ## Install development dependencies
 
-If you are contributing to Redsun or want to run tests locally, install the development dependencies via [PEP-735](https://peps.python.org/pep-0735/) dependency groups.
+If you are contributing to `redsun` or want to run tests locally, install the development dependencies via [PEP-735](https://peps.python.org/pep-0735/) dependency groups.
 
 === "uv (recommended)"
 
@@ -103,9 +103,3 @@ If you are contributing to Redsun or want to run tests locally, install the deve
     ```bash
     pip install -e .[dev]
     ```
-
-## Next steps
-
-- Learn how to [build the documentation](build-docs.md)
-- Learn how to [run tests](run-tests.md)
-- Check out the [tutorials](../tutorials/index.md) to get started with Redsun

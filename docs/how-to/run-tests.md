@@ -1,10 +1,10 @@
 # Run tests
 
-This guide covers how to run the Redsun test suite and generate coverage reports.
+This guide covers how to run the `redsun` test suite and generate coverage reports.
 
 ## Prerequisites
 
-Make sure you have [installed Redsun with development dependencies](installation.md#install-development-dependencies).
+Make sure you have [installed `redsun` with development dependencies](installation.md#install-development-dependencies).
 
 ## Run all tests
 
@@ -36,9 +36,3 @@ pytest tests/test_config.py::test_function_name
 # Run tests matching a pattern
 pytest -k "test_container"
 ```
-
-## Next steps
-
-- Learn how to [build the documentation](build-docs.md)
-- Understand [Redsun's container architecture](../explanation/container-architecture.md)
-- Check the [API reference](../reference/api/config.md)
