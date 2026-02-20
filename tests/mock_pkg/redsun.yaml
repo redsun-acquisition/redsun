@@ -1,21 +1,12 @@
 devices:
-  my_motor:
-    class: mock_pkg.device:MyMotor
-  my_other_motor:
-    class: mock_pkg.device:NonDerivedMotor
-  my_detector:
-    class: mock_pkg.device:MockDetector
-  my_other_detector:
-    class: mock_pkg.device:NonDerivedDetector
-  my_broken_model:
-    class: mock_pkg.device:BrokenDevice
-  my_hidden_model:
-    class: mock_pkg.device.hidden:HiddenModel
+  my_motor: mock_pkg.device:MyMotor
+  my_other_motor: mock_pkg.device:NonDerivedMotor
+  my_detector: mock_pkg.device:MockDetector
+  my_other_detector: mock_pkg.device:NonDerivedDetector
+  my_broken_model: mock_pkg.device:BrokenDevice
+  my_hidden_model: mock_pkg.device.hidden:HiddenModel
 presenters:
-  my_controller:
-    class: mock_pkg.controller:MockController
-  broken_controller:
-    class: mock_pkg.controller:BrokenController
+  my_controller: mock_pkg.controller:MockController
+  broken_controller: mock_pkg.controller:BrokenController
 views:
-  mock_view:
-    class: mock_pkg.view:MockQtView
+  mock_view: mock_pkg.view:MockQtView

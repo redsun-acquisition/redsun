@@ -596,13 +596,7 @@ class AppContainer(metaclass=AppContainerMeta):
 
                 class_path = items[plugin_id]
                 try:
-                    if isinstance(class_path, dict):
-                        # old-style manifest: {class: "module:Type", ...}
-                        dotted = class_path["class"]
-                    else:
-                        # new-style manifest: plain "module:Type" string
-                        dotted = class_path
-                    class_item_module, class_item_type = dotted.split(":")
+                    class_item_module, class_item_type = class_path.split(":")
                     imported_class = getattr(
                         import_module(class_item_module), class_item_type
                     )
