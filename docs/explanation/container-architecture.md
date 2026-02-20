@@ -144,18 +144,18 @@ The configuration file provides base keyword arguments for each component. These
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in three phases:
 
-**Phase 1 — construction** (strict dependency order):
+**Phase 1 — construction**:
 
 1. [`VirtualContainer`][sunflare.virtual.VirtualContainer] — created and seeded with the application configuration.
 2. **Devices** — each receives its resolved name and keyword arguments.
 3. **Presenters** — each receives its resolved name and the full device dictionary.
 4. **Views** — each receives its resolved name.
 
-**Phase 2 — provider registration** (any order, both layers):
+**Phase 2 — provider registration**:
 
 Any presenter or view implementing [`IsProvider`][sunflare.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
 
-**Phase 3 — dependency injection** (any order, both layers):
+**Phase 3 — dependency injection**:
 
 Any presenter or view implementing [`IsInjectable`][sunflare.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
 
