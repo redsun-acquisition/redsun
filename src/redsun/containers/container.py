@@ -423,25 +423,35 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
-        # build presenters and optionally register their providers
+        # build presenters
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter = presenter_component.build(built_devices)
-                if isinstance(presenter, IsProvider):
-                    presenter.register_providers(self._virtual_container)
+                presenter_component.build(built_devices)
             except Exception as e:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
 
-        # build views and optionally inject dependencies
+        # build views
         for comp_name, view_component in self._view_components.items():
             try:
-                view = view_component.build()
-                if isinstance(view, IsInjectable):
-                    view.inject_dependencies(self._virtual_container)
+                view_component.build()
             except Exception as e:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
+
+        # register providers from presenters and views
+        all_components: dict[str, _PresenterComponent | _ViewComponent] = {
+            **self._presenter_components,
+            **self._view_components,
+        }
+        for comp_name, component in all_components.items():
+            if isinstance(component.instance, IsProvider):
+                component.instance.register_providers(self._virtual_container)
+
+        # inject dependencies into presenters and views
+        for comp_name, component in all_components.items():
+            if isinstance(component.instance, IsInjectable):
+                component.instance.inject_dependencies(self._virtual_container)
 
         self._is_built = True
         logger.info(
