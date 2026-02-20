@@ -25,6 +25,9 @@ from typing import (
 )
 
 import yaml
+from sunflare.device import Device
+from sunflare.presenter import Presenter
+from sunflare.view import View
 from sunflare.virtual import (
     HasShutdown,
     IsInjectable,
@@ -34,18 +37,17 @@ from sunflare.virtual import (
 
 from ._config import AppConfig
 from .components import (
-    _ComponentField,
+    _AnyField,
     _DeviceComponent,
+    _DeviceField,
     _PresenterComponent,
+    _PresenterField,
     _ViewComponent,
+    _ViewField,
 )
 
 if TYPE_CHECKING:
     from typing_extensions import Never
-
-from sunflare.device import Device
-from sunflare.presenter import Presenter
-from sunflare.view import View
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
@@ -66,7 +68,6 @@ class _PluginTypeDict(TypedDict):
     devices: dict[str, type[Device]]
     presenters: dict[str, type[Presenter]]
     views: dict[str, type[View]]
-
 
 def _assert_never(arg: Never) -> Never:
     raise AssertionError(f"Unhandled case: {arg!r}")
@@ -245,13 +246,19 @@ class AppContainerMeta(type):
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
-            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
+            if not attr_name.startswith("_") and isinstance(value, _AnyField)
         }
 
         if component_fields:
             config_data: dict[str, Any] = {}
             if config_path is not None:
                 config_data = _load_yaml(config_path)
+
+            _section_key: dict[type, str] = {
+                _DeviceField: "devices",
+                _PresenterField: "presenters",
+                _ViewField: "views",
+            }
 
             for attr_name, field in component_fields.items():
                 kw = field.kwargs
@@ -263,12 +270,7 @@ class AppContainerMeta(type):
                             f"provided to the container class"
                         )
 
-                    layer_to_section = {
-                        "device": "devices",
-                        "presenter": "presenters",
-                        "view": "views",
-                    }
-                    section_key = layer_to_section[field.layer]
+                    section_key = _section_key[type(field)]
                     section_data: dict[str, Any] = config_data.get(section_key, {})
                     _sentinel = object()
                     cfg_section = section_data.get(field.from_config, _sentinel)
@@ -283,22 +285,18 @@ class AppContainerMeta(type):
                     else:
                         kw = {**(cfg_section or {}), **field.kwargs}
 
-                # component name: alias wins, then attr_name
                 comp_name = field.alias if field.alias is not None else attr_name
 
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
-                match field.layer:
-                    case "device":
-                        wrapper = _DeviceComponent(field.cls, comp_name, **kw)
-                        devices[comp_name] = wrapper
-                    case "presenter":
-                        wrapper = _PresenterComponent(field.cls, comp_name, **kw)
-                        presenters[comp_name] = wrapper
-                    case "view":
-                        wrapper = _ViewComponent(field.cls, comp_name, **kw)
-                        views[comp_name] = wrapper
-                    case _:
-                        _assert_never(field.layer)
+                if isinstance(field, _DeviceField):
+                    wrapper = _DeviceComponent(field.cls, comp_name, **kw)
+                    devices[comp_name] = wrapper
+                elif isinstance(field, _PresenterField):
+                    wrapper = _PresenterComponent(field.cls, comp_name, **kw)
+                    presenters[comp_name] = wrapper
+                else:
+                    wrapper = _ViewComponent(field.cls, comp_name, **kw)
+                    views[comp_name] = wrapper
                 setattr(cls, attr_name, wrapper)
 
         cls._device_components = devices

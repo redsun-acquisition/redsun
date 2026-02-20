@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from sunflare.device import Device
 from sunflare.presenter import Presenter
@@ -13,29 +13,44 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class _ComponentField:
-    """Internal sentinel returned by `component`.
+class _DeviceField:
+    """Sentinel returned by :func:`device`. Resolved by the metaclass into a ``_DeviceComponent``."""
 
-    Stores the component class, layer assignment, and keyword arguments
-    until the `AppContainerMeta` metaclass resolves them into concrete
-    component wrappers.
-    """
+    __slots__ = ("cls", "alias", "from_config", "kwargs")
 
-    __slots__ = ("cls", "layer", "alias", "from_config", "kwargs")
-
-    def __init__(
-        self,
-        cls: type,
-        layer: Literal["device", "presenter", "view"],
-        alias: str | None,
-        from_config: str | None,
-        kwargs: dict[str, Any],
-    ) -> None:
+    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
         self.cls = cls
-        self.layer = layer
         self.alias = alias
         self.from_config = from_config
         self.kwargs = kwargs
+
+
+class _PresenterField:
+    """Sentinel returned by :func:`presenter`. Resolved by the metaclass into a ``_PresenterComponent``."""
+
+    __slots__ = ("cls", "alias", "from_config", "kwargs")
+
+    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
+        self.cls = cls
+        self.alias = alias
+        self.from_config = from_config
+        self.kwargs = kwargs
+
+
+class _ViewField:
+    """Sentinel returned by :func:`view`. Resolved by the metaclass into a ``_ViewComponent``."""
+
+    __slots__ = ("cls", "alias", "from_config", "kwargs")
+
+    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
+        self.cls = cls
+        self.alias = alias
+        self.from_config = from_config
+        self.kwargs = kwargs
+
+
+# Union used for isinstance checks in the metaclass.
+_AnyField = _DeviceField | _PresenterField | _ViewField
 
 
 def device(
@@ -53,7 +68,7 @@ def device(
     ...     motor = device(MyMotor, axis=["X"])
 
     The container will create an instance of `MyMotor` with the specified kwargs when the
-    container is built. The attribute name `motor` will be used as the device `name` argument.
+    container is built. The attribute name ``motor`` will be used as the device ``name`` argument.
 
     Parameters
     ----------
@@ -66,9 +81,7 @@ def device(
     **kwargs : Any
         Additional keyword arguments forwarded to the component constructor.
     """
-    return _ComponentField(
-        cls=cls, layer="device", alias=alias, from_config=from_config, kwargs=kwargs
-    )
+    return _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
 def view(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
@@ -88,9 +101,7 @@ def view(cls: type, /, alias: str | None = None, from_config: str | None = None,
     **kwargs : Any
         Additional keyword arguments forwarded to the component constructor.
     """
-    return _ComponentField(
-        cls=cls, layer="view", alias=alias, from_config=from_config, kwargs=kwargs
-    )
+    return _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
 def presenter(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
@@ -110,9 +121,7 @@ def presenter(cls: type, /, alias: str | None = None, from_config: str | None = 
     **kwargs : Any
         Additional keyword arguments forwarded to the component constructor.
     """
-    return _ComponentField(
-        cls=cls, layer="presenter", alias=alias, from_config=from_config, kwargs=kwargs
-    )
+    return _PresenterField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
 class _ComponentBase(Generic[T]):
