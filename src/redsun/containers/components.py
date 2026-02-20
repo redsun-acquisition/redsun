@@ -116,21 +116,24 @@ def presenter(cls: type, /, alias: str | None = None, from_config: str | None = 
 
 
 class _ComponentBase(Generic[T]):
-    """Generic base class for components."""
+    """Generic base class for components.
 
-    __slots__ = ("cls", "name", "alias", "kwargs", "_instance")
+    The ``name`` attribute holds the fully-resolved component name.
+    For declarative fields it is ``alias`` (if set) or the attribute name;
+    for ``from_config()``-built containers it is the YAML key.
+    """
 
-    def __init__(
-        self, cls: type[T], name: str, alias: str | None, /, **kwargs: Any
-    ) -> None:
+    __slots__ = ("cls", "name", "kwargs", "_instance")
+
+    def __init__(self, cls: type[T], name: str, /, **kwargs: Any) -> None:
         self.cls = cls
         self.name = name
-        self.alias = alias
         self.kwargs = kwargs
         self._instance: T | None = None
 
     @property
     def instance(self) -> T:
+        """Return the built instance, raising ``RuntimeError`` if not yet built."""
         if self._instance is None:
             raise RuntimeError(
                 f"Component {self.name} has not been instantiated yet. Call 'build' first."
@@ -147,24 +150,23 @@ class _DeviceComponent(_ComponentBase[Device]):
 
     def build(self) -> Device:
         """Build the device instance."""
-        name = self.alias if self.alias is not None else self.name
-        self._instance = self.cls(name, **self.kwargs)
+        self._instance = self.cls(self.name, **self.kwargs)
         return self.instance
 
 
 class _PresenterComponent(_ComponentBase[Presenter]):
     """Presenter component wrapper."""
 
-    def build(self, name: str, devices: dict[str, Device], container: VirtualContainer) -> Presenter:
+    def build(self, devices: dict[str, Device], container: VirtualContainer) -> Presenter:
         """Build the presenter instance."""
-        self._instance = self.cls(name, devices, **self.kwargs)
+        self._instance = self.cls(self.name, devices, **self.kwargs)
         return self.instance
 
 
 class _ViewComponent(_ComponentBase[View]):
     """View component wrapper."""
 
-    def build(self, name: str) -> View:
+    def build(self) -> View:
         """Build the view instance."""
-        self._instance = self.cls(name, **self.kwargs)
+        self._instance = self.cls(self.name, **self.kwargs)
         return self.instance

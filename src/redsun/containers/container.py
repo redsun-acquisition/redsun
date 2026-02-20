@@ -289,17 +289,13 @@ class AppContainerMeta(type):
                 wrapper: _DeviceComponent | _PresenterComponent | _ViewComponent
                 match field.layer:
                     case "device":
-                        wrapper = _DeviceComponent(
-                            field.cls, comp_name, field.alias, **kw
-                        )
+                        wrapper = _DeviceComponent(field.cls, comp_name, **kw)
                         devices[comp_name] = wrapper
                     case "presenter":
-                        wrapper = _PresenterComponent(
-                            field.cls, comp_name, field.alias, **kw
-                        )
+                        wrapper = _PresenterComponent(field.cls, comp_name, **kw)
                         presenters[comp_name] = wrapper
                     case "view":
-                        wrapper = _ViewComponent(field.cls, comp_name, field.alias, **kw)
+                        wrapper = _ViewComponent(field.cls, comp_name, **kw)
                         views[comp_name] = wrapper
                     case _:
                         _assert_never(field.layer)
@@ -422,9 +418,7 @@ class AppContainer(metaclass=AppContainerMeta):
         # build presenters and optionally register their providers
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter = presenter_component.build(
-                    comp_name, built_devices, self._virtual_container
-                )
+                presenter = presenter_component.build(built_devices, self._virtual_container)
                 if isinstance(presenter, IsProvider):
                     presenter.register_providers(self._virtual_container)
             except Exception as e:
@@ -434,7 +428,7 @@ class AppContainer(metaclass=AppContainerMeta):
         # build views and optionally inject dependencies
         for comp_name, view_component in self._view_components.items():
             try:
-                view = view_component.build(comp_name)
+                view = view_component.build()
                 if isinstance(view, IsInjectable):
                     view.inject_dependencies(self._virtual_container)
             except Exception as e:
@@ -487,7 +481,7 @@ class AppContainer(metaclass=AppContainerMeta):
                 for k, v in config.get("devices", {}).get(name, {}).items()
                 if k not in _PLUGIN_META_KEYS
             }
-            namespace[name] = _DeviceComponent(device_class, name, None, **cfg_kwargs)
+            namespace[name] = _DeviceComponent(device_class, name, **cfg_kwargs)
 
         for name, presenter_class in plugin_types["presenters"].items():
             cfg_kwargs = {
@@ -495,7 +489,7 @@ class AppContainer(metaclass=AppContainerMeta):
                 for k, v in config.get("presenters", {}).get(name, {}).items()
                 if k not in _PLUGIN_META_KEYS
             }
-            namespace[name] = _PresenterComponent(presenter_class, name, None, **cfg_kwargs)
+            namespace[name] = _PresenterComponent(presenter_class, name, **cfg_kwargs)
 
         for name, view_class in plugin_types["views"].items():
             cfg_kwargs = {
@@ -503,7 +497,7 @@ class AppContainer(metaclass=AppContainerMeta):
                 for k, v in config.get("views", {}).get(name, {}).items()
                 if k not in _PLUGIN_META_KEYS
             }
-            namespace[name] = _ViewComponent(view_class, name, None, **cfg_kwargs)
+            namespace[name] = _ViewComponent(view_class, name, **cfg_kwargs)
 
         frontend = config.get("frontend", "pyqt")
         base_class = _resolve_frontend_container(frontend)
