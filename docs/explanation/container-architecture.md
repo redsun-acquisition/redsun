@@ -2,6 +2,33 @@
 
 `redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture, but with a series of differences.
 
+=== "Architecture block diagram"
+
+```mermaid
+block-beta
+  columns 6
+
+  V1["View A"]:2
+  V2["View B"]:2
+  V3["View C"]:2
+  VC["VirtualContainer"]:6
+  P1["Presenter A"]:3
+  P2["Presenter B"]:3
+  D1["Device A"]:2
+  D2["Device B"]:2
+  D3["Device C"]:2
+
+  style V1 fill:#4caf50,color:#fff,stroke:#388e3c
+  style V2 fill:#4caf50,color:#fff,stroke:#388e3c
+  style V3 fill:#4caf50,color:#fff,stroke:#388e3c
+  style VC fill:#ffc107,color:#000,stroke:#f9a825
+  style P1 fill:#f44336,color:#fff,stroke:#c62828
+  style P2 fill:#f44336,color:#fff,stroke:#c62828
+  style D1 fill:#2196f3,color:#fff,stroke:#1565c0
+  style D2 fill:#2196f3,color:#fff,stroke:#1565c0
+  style D3 fill:#2196f3,color:#fff,stroke:#1565c0
+```
+
 - In `MVP`, the **Model** layer represents the **data** the application holds; think for example of a text editor: the content of the text is stored in this layer.
 - In contrast, the **Device** layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.
 - Additionally, in the `MVP` pattern, **Presenters** and **Views** are tightly coupled between each other, making it difficult to have one without the other. In `DVP`, both layers are decoupled via a **virtual container** to follow an approach of [**dependency injection**](https://en.wikipedia.org/wiki/Dependency_injection) in order to maintain all the components separated, allowing to bring only the pieces you need to create an application fully compliant with your specifications.
