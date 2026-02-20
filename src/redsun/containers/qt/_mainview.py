@@ -46,7 +46,6 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
         super().__init__()
         self.setWindowTitle(session_name)
         self._virtual_container = virtual_container
-        self._central_widget_set = False
         self._widgets: dict[str, QtView] = {}
         self._dock_views(views)
 
@@ -68,28 +67,41 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
 
         Parameters
         ----------
-        views : dict[str, PView]
+        views : dict[str, QtView]
             Dictionary of view name to pre-built view instance.
         """
+        centers: set[QtView] = set()
+
         for name, widget in views.items():
-            self._widgets[name] = widget
+            widget.setObjectName(name)
+            try:
+                if widget.view_position == ViewPosition.CENTER:
+                    # stash the center widgets to add them
+                    # as a tab widget if there are multiple
+                    centers.add(widget)
+                    continue
+                dock_area = self._DOCK_MAP[widget.view_position]
+                dock_widget = QtWidgets.QDockWidget(name)
+                dock_widget.setWidget(widget)
+                self.addDockWidget(dock_area, dock_widget)
+            except (AttributeError, KeyError):
+                self.logger.error(
+                    f"View '{name}' does not have a valid position and will not be shown."
+                    "Ensure the view has a 'view_position' attribute set to a valid ViewPosition value."
+                )
+        if len(centers) == 0:
+            # no center widgets, do nothing
+            pass
+        elif len(centers) > 1:
+            center_tab = QtWidgets.QTabWidget()
+            for widget in centers:
+                center_tab.addTab(widget, widget.objectName())
+            self.setCentralWidget(center_tab)
+        else:
+            # only one center widget, add it directly
+            self.setCentralWidget(centers.pop())
 
-            position = getattr(widget, "position", None)
-            if position is not None and position != ViewPosition.CENTER:
-                try:
-                    dock_area = self._DOCK_MAP[ViewPosition(position)]
-                    dock_widget = QtWidgets.QDockWidget(name)
-                    dock_widget.setWidget(widget)
-                    self.addDockWidget(dock_area, dock_widget)
-                except (KeyError, ValueError):
-                    self.logger.error(f"Unknown position '{position}' for view: {name}")
-            else:
-                if not self._central_widget_set:
-                    self.setCentralWidget(widget)
-                    self._central_widget_set = True
-                else:
-                    self.logger.error(f"Multiple central views are not allowed: {name}")
-
+        # TODO: this should be customizable by the user
         self.setWindowState(Qt.WindowState.WindowMaximized)
 
     def _save_configuration(self) -> None:
