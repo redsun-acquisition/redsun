@@ -1246,7 +1246,35 @@
 
 
 <h1 id="container-architecture">Container architecture<a class="headerlink" href="#container-architecture" title="Permanent link">&para;</a></h1>
-<p><code>redsun</code> leverages an architectural denominated to the <strong>Device-View-Presenter</strong> (<code>DVP</code>). This is semantically close to the definition of the <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter">Model-View-Presenter</a> (<code>MVP</code>) architecture, but with a series of differences.</p>
+<p><code>redsun</code> leverages an architectural denominated to the <strong>Device-View-Presenter</strong> (<code>DVP</code>). This is semantically close to the definition of the <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter">Model-View-Presenter</a> (<code>MVP</code>) architecture.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Architecture block diagram</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block"></div>
+</div>
+</div>
+<pre class="mermaid"><code>block-beta
+  columns 6
+
+  V1["View A"]:2
+  V2["View B"]:2
+  V3["View C"]:2
+  VC["VirtualContainer"]:6
+  P1["Presenter A"]:3
+  P2["Presenter B"]:3
+  D1["Device A"]:2
+  D2["Device B"]:2
+  D3["Device C"]:2
+
+  style V1 fill:#4caf50,color:#fff,stroke:#388e3c
+  style V2 fill:#4caf50,color:#fff,stroke:#388e3c
+  style V3 fill:#4caf50,color:#fff,stroke:#388e3c
+  style VC fill:#ffc107,color:#000,stroke:#f9a825
+  style P1 fill:#f44336,color:#fff,stroke:#c62828
+  style P2 fill:#f44336,color:#fff,stroke:#c62828
+  style D1 fill:#2196f3,color:#fff,stroke:#1565c0
+  style D2 fill:#2196f3,color:#fff,stroke:#1565c0
+  style D3 fill:#2196f3,color:#fff,stroke:#1565c0</code></pre>
+<p>The key differences in respect to the <code>MVP</code> architecture are the following:</p>
 <ul>
 <li>In <code>MVP</code>, the <strong>Model</strong> layer represents the <strong>data</strong> the application holds; think for example of a text editor: the content of the text is stored in this layer.</li>
 <li>In contrast, the <strong>Device</strong> layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.</li>
@@ -1254,23 +1282,34 @@
 </ul>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>At the core of Redsun is the <a class="autorefs autorefs-internal" href="../../reference/api/#redsun.containers.container.AppContainer"><code>AppContainer</code></a>, which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.</p>
+<p><strong>Build order</strong> — components are constructed in strict dependency sequence:</p>
 <pre class="mermaid"><code>graph LR
-    subgraph 1. Create infrastructure
-        VC[VirtualContainer]
-    end
+    VC[VirtualContainer]
+    Devices
+    Presenters
+    Views
 
-    subgraph 2. Build components
-        Devices
-        Presenters
-        Views
-    end
-
+    VC --&gt; Devices
     Devices --&gt; Presenters
-    Presenters --&gt; Views
-    VC --&gt; Presenters
-    VC --&gt; Views
-    Presenters -.-&gt;|register providers| VC
-    VC -.-&gt;|inject dependencies| Views</code></pre>
+    Presenters --&gt; Views</code></pre>
+<p><strong>Provider registration and dependency injection</strong> — once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:</p>
+<pre class="mermaid"><code>graph LR
+    VC[VirtualContainer]
+
+    subgraph Presenters
+        P1[Presenter A]
+        P2[Presenter B]
+    end
+
+    subgraph Views
+        V1[View A]
+        V2[View B]
+    end
+
+    P1 -.-&gt;|IsProvider: register_providers| VC
+    V1 -.-&gt;|IsProvider: register_providers| VC
+    VC -.-&gt;|IsInjectable: inject_dependencies| P2
+    VC -.-&gt;|IsInjectable: inject_dependencies| V2</code></pre>
 <h2 id="the-dvp-pattern">The DVP pattern<a class="headerlink" href="#the-dvp-pattern" title="Permanent link">&para;</a></h2>
 <p><code>redsun</code> builds components using reusable patterns provided by <a href="https://redsun-acquisition.github.io/sunflare/"><code>sunflare</code></a>:</p>
 <ul>
@@ -1349,18 +1388,23 @@ Each accepts the component class as its first positional argument, followed by o
 </span></code></pre></div>
 <p>The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;/code&gt;" href="../../reference/api/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container instantiates components in a strict dependency order:</p>
+<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;/code&gt;" href="../../reference/api/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container proceeds in three phases:</p>
+<p><strong>Phase 1 — construction</strong>:</p>
 <ol>
-<li><strong>VirtualContainer</strong> - the shared signal registry and dependency injection layer (<a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualContainer"><code>VirtualContainer</code></a>), seeded with the application configuration.</li>
-<li><strong>Devices</strong> - hardware interfaces, each receiving their resolved name and keyword arguments.</li>
-<li><strong>Presenters</strong> - business logic components, receiving their resolved name and the full device dictionary. Presenters that implement <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsProvider"><code>IsProvider</code></a> register their providers in the VirtualContainer.</li>
-<li><strong>Views</strong> - UI components, receiving their resolved name. Views that implement <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsInjectable"><code>IsInjectable</code></a> receive dependencies from the VirtualContainer.</li>
+<li><a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualContainer"><code>VirtualContainer</code></a> — created and seeded with the application configuration.</li>
+<li><strong>Devices</strong> — each receives its resolved name and keyword arguments.</li>
+<li><strong>Presenters</strong> — each receives its resolved name and the full device dictionary.</li>
+<li><strong>Views</strong> — each receives its resolved name.</li>
 </ol>
+<p><strong>Phase 2 — provider registration</strong>:</p>
+<p>Any presenter or view implementing <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsProvider"><code>IsProvider</code></a> calls <code>register_providers()</code> on the <code>VirtualContainer</code>. This is safe to run across both layers simultaneously because no injection occurs here.</p>
+<p><strong>Phase 3 — dependency injection</strong>:</p>
+<p>Any presenter or view implementing <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsInjectable"><code>IsInjectable</code></a> calls <code>inject_dependencies()</code> on the <code>VirtualContainer</code>, consuming providers registered in phase 2.</p>
 <h2 id="communication">Communication<a class="headerlink" href="#communication" title="Permanent link">&para;</a></h2>
 <p>Components communicate through the <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.VirtualContainer"><code>VirtualContainer</code></a>, which serves as the single shared data exchange layer for the application. It combines two roles:</p>
 <ul>
 <li><strong>Signal registry</strong>: components can register their <a href="https://psygnal.readthedocs.io/"><code>psygnal</code></a> signals into the container via <code>register_signals()</code>, making them discoverable by other components without direct references to each other. Registered signals are accessible through the <code>signals</code> property.</li>
-<li><strong>Dependency injection</strong>: built on top of <a href="https://python-dependency-injector.readthedocs.io/"><code>dependency_injector</code></a>'s <code>DynamicContainer</code>, it allows presenters that implement <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsProvider"><code>IsProvider</code></a> to register typed providers, and views that implement <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsInjectable"><code>IsInjectable</code></a> to consume them. This decouples views from specific presenter implementations.</li>
+<li><strong>Dependency injection</strong>: built on top of <a href="https://python-dependency-injector.readthedocs.io/"><code>dependency_injector</code></a>'s <code>DynamicContainer</code>, it allows any presenter or view implementing <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsProvider"><code>IsProvider</code></a> to register typed providers, and any presenter or view implementing <a class="autorefs autorefs-external" href="https://redsun-acquisition.github.io/sunflare/reference/api/#sunflare.virtual.IsInjectable"><code>IsInjectable</code></a> to consume them. This enables components across both layers to share information without direct coupling.</li>
 </ul>
 <p>The <code>VirtualContainer</code> is created during [<code>build()</code>][redsun.AppContainer.build] and is accessible via the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;highlight language-python&quot;&gt;&lt;span class=&quot;n&quot;&gt;virtual_container&lt;/span&gt;&lt;/code&gt;
 
