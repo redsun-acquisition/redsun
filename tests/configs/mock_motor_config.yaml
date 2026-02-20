@@ -3,20 +3,18 @@ frontend: pyqt
 session: mock-session
 devices:
   Single axis motor:
-    plugin_name: mock-pkg
-    plugin_id: my_motor
+    class: mock_pkg.device:MyMotor
     axis: ["X"]
-    step_size: 
+    step_size:
       X: 0.1
     egu: mm
     integer: 42
     floating: 3.14
     string: "Hello, World!"
   Double axis motor:
-    plugin_name: mock-pkg
-    plugin_id: my_other_motor
+    class: mock_pkg.device:NonDerivedMotor
     axis: ["X", "Y"]
-    step_size: 
+    step_size:
       X: 0.1
       Y: 0.2
     egu: mm

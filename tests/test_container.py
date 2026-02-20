@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -206,19 +205,30 @@ class TestFromConfig:
     """Tests for YAML-based dynamic container creation."""
 
     def test_from_config_motor(
-        self, mock_entry_points: Any, config_path: Path
+        self, config_path: Path
     ) -> None:
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
         )
         assert not container.is_built
         assert container.config["frontend"] == "pyqt"
+        assert len(container._device_components) == 2
 
+    @pytest.mark.skipif(
+        not __import__("os").environ.get("DISPLAY"),
+        reason="requires a display (Qt)",
+    )
+    def test_from_config_motor_build(
+        self, config_path: Path
+    ) -> None:
+        container = AppContainer.from_config(
+            str(config_path / "mock_motor_config.yaml")
+        )
         container.build()
         assert len(container.devices) == 2
 
     def test_from_config_returns_qt_container(
-        self, mock_entry_points: Any, config_path: Path
+        self, config_path: Path
     ) -> None:
         from redsun.qt import QtAppContainer
 
@@ -228,7 +238,19 @@ class TestFromConfig:
         assert isinstance(container, QtAppContainer)
 
     def test_from_config_controller(
-        self, mock_entry_points: Any, config_path: Path
+        self, config_path: Path
+    ) -> None:
+        container = AppContainer.from_config(
+            str(config_path / "mock_controller_config.yaml")
+        )
+        assert len(container._presenter_components) == 1
+
+    @pytest.mark.skipif(
+        not __import__("os").environ.get("DISPLAY"),
+        reason="requires a display (Qt)",
+    )
+    def test_from_config_controller_build(
+        self, config_path: Path
     ) -> None:
         container = AppContainer.from_config(
             str(config_path / "mock_controller_config.yaml")
@@ -237,7 +259,7 @@ class TestFromConfig:
         assert len(container.presenters) == 1
 
     def test_from_config_unknown_frontend_raises(
-        self, mock_entry_points: Any, config_path: Path, tmp_path: Path
+        self, config_path: Path, tmp_path: Path
     ) -> None:
         import yaml
 

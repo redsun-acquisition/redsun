@@ -3,8 +3,7 @@ frontend: pyqt
 session: mock-session
 devices:
   Single axis motor:
-    plugin_name: mock-pkg
-    plugin_id: my_motor
+    class: mock_pkg.device:MyMotor
     axis: ["X"]
     step_size:
       X: 0.1
@@ -14,13 +13,11 @@ devices:
     string: "Hello, World!"
 presenters:
   MockController:
-    plugin_name: mock-pkg
-    plugin_id: my_controller
+    class: mock_pkg.controller:MockController
     string: "I am a mock controller"
     floating: 0.0
     integer: 43
     boolean: false
 views:
   MockView:
-    plugin_name: mock-pkg
-    plugin_id: mock_view
+    class: mock_pkg.view:MockQtView

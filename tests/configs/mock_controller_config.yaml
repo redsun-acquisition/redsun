@@ -3,8 +3,7 @@ frontend: pyqt
 session: mock-session
 presenters:
   MockController:
-    plugin_name: mock-pkg
-    plugin_id: my_controller
+    class: mock_pkg.controller:MockController
     string: "I am a mock controller"
     floating: 0.0
     integer: 43

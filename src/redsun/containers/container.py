@@ -9,8 +9,6 @@ from __future__ import annotations
 import logging
 from enum import Enum, unique
 from importlib import import_module
-from importlib.metadata import EntryPoints, entry_points
-from importlib.resources import as_file, files
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -21,7 +19,6 @@ from typing import (
     TypeGuard,
     TypeVar,
     Union,
-    overload,
 )
 
 import yaml
@@ -46,9 +43,8 @@ from .components import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Never
+    pass
 
-ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
@@ -71,8 +67,6 @@ class _PluginTypeDict(TypedDict):
     views: dict[str, type[View]]
 
 
-def _assert_never(arg: Never) -> Never:
-    raise AssertionError(f"Unhandled case: {arg!r}")
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
@@ -121,28 +115,15 @@ def _check_view_protocol(cls: type) -> TypeGuard[type[View]]:
     return is_compliant
 
 
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["devices"]
-) -> TypeGuard[type[Device]]: ...
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["presenters"]
-) -> TypeGuard[type[Presenter]]: ...
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["views"]
-) -> TypeGuard[type[View]]: ...
 def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
+    """Check if a class implements the required protocol for its group."""
     match group:
         case "devices":
             return _check_device_protocol(imported_class)
         case "presenters":
             return _check_presenter_protocol(imported_class)
-        case "views":
-            return _check_view_protocol(imported_class)
         case _:
-            _assert_never(group)
+            return _check_view_protocol(imported_class)
 
 
 T = TypeVar("T")
@@ -151,7 +132,6 @@ __all__ = ["AppContainerMeta", "AppContainer"]
 
 logger = logging.getLogger("redsun")
 
-_PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
@@ -478,7 +458,22 @@ class AppContainer(metaclass=AppContainerMeta):
 
     @classmethod
     def from_config(cls, config_path: str) -> AppContainer:
-        """Build a container dynamically from a YAML configuration file."""
+        """Build a container dynamically from a YAML configuration file.
+
+        Reads the configuration, imports plugin classes directly from their
+        ``class`` paths, and returns an unbuilt container of the appropriate
+        frontend type.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the YAML configuration file.
+
+        Returns
+        -------
+        AppContainer
+            A configured (but unbuilt) container instance.
+        """
         config, plugin_types = cls._load_configuration(config_path)
 
         namespace: dict[str, Any] = {}
@@ -487,7 +482,7 @@ class AppContainer(metaclass=AppContainerMeta):
             cfg_kwargs = {
                 k: v
                 for k, v in config.get("devices", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
+                if k != "class"
             }
             namespace[name] = _DeviceComponent(device_class, name, **cfg_kwargs)
 
@@ -495,7 +490,7 @@ class AppContainer(metaclass=AppContainerMeta):
             cfg_kwargs = {
                 k: v
                 for k, v in config.get("presenters", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
+                if k != "class"
             }
             namespace[name] = _PresenterComponent(presenter_class, name, **cfg_kwargs)
 
@@ -503,7 +498,7 @@ class AppContainer(metaclass=AppContainerMeta):
             cfg_kwargs = {
                 k: v
                 for k, v in config.get("views", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
+                if k != "class"
             }
             namespace[name] = _ViewComponent(view_class, name, **cfg_kwargs)
 
@@ -521,13 +516,11 @@ class AppContainer(metaclass=AppContainerMeta):
     def _load_configuration(
         cls, config_path: str
     ) -> tuple[dict[str, Any], _PluginTypeDict]:
-        """Load configuration and discover plugin classes from a YAML file."""
+        """Load configuration and import plugin classes from a YAML file."""
         with open(config_path, "r") as f:
             config: dict[str, Any] = yaml.safe_load(f)
 
         plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
-        available_manifests = entry_points(group="redsun.plugins")
-
         groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 
         for group in groups:
@@ -536,11 +529,7 @@ class AppContainer(metaclass=AppContainerMeta):
                     "Group %s not found in the configuration file. Skipping", group
                 )
                 continue
-            loaded = cls._load_plugins(
-                group_cfg=config[group],
-                group=group,
-                available_manifests=available_manifests,
-            )
+            loaded = cls._load_plugins(group_cfg=config[group], group=group)
             for name, plugin_cls in loaded:
                 plugin_types[group][name] = plugin_cls  # type: ignore[assignment]
 
@@ -552,76 +541,45 @@ class AppContainer(metaclass=AppContainerMeta):
         *,
         group_cfg: dict[str, Any],
         group: PLUGIN_GROUPS,
-        available_manifests: EntryPoints,
     ) -> list[tuple[str, PluginType]]:
-        """Load plugin classes for a given group from manifests."""
+        """Import plugin classes for a given group directly from ``class`` paths.
+
+        Each entry in ``group_cfg`` must have a ``class`` key with a
+        ``"module:ClassName"`` value, e.g.::
+
+            devices:
+              camera:
+                class: mypackage.devices:Camera
+                exposure: 100.0
+        """
         plugins: list[tuple[str, PluginType]] = []
 
         for name, info in group_cfg.items():
-            plugin_name: str = info["plugin_name"]
-            plugin_id: str = info["plugin_id"]
-
-            iterator = (
-                entry for entry in available_manifests if entry.name == plugin_name
-            )
-            plugin = next(iterator, None)
-
-            if plugin is None:
+            class_path: str | None = info.get("class") if isinstance(info, dict) else None
+            if not class_path:
                 logger.error(
-                    'Plugin "%s" not found in the installed plugins.', plugin_name
+                    'Component "%s" in group "%s" is missing a "class" key. Skipping.',
+                    name, group,
                 )
                 continue
 
-            pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-            with as_file(pkg_manifest) as manifest_path:
-                with open(manifest_path, "r") as f:
-                    manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+            try:
+                module_path, class_name = class_path.split(":")
+                imported_class = getattr(import_module(module_path), class_name)
+            except (ValueError, AttributeError, ModuleNotFoundError) as e:
+                logger.error(
+                    'Failed to import class "%s" for "%s": %s. Skipping.',
+                    class_path, name, e,
+                )
+                continue
 
-                if group not in manifest:
-                    logger.error(
-                        'Plugin "%s" manifest does not contain group "%s".',
-                        plugin_name,
-                        group,
-                    )
-                    continue
+            if not _check_plugin_protocol(imported_class, group):
+                logger.error(
+                    '"%s" does not implement the required protocol for group "%s".',
+                    imported_class, group,
+                )
+                continue
 
-                items = manifest[group]
-                if plugin_id not in items:
-                    logger.error(
-                        'Plugin "%s" does not contain the id "%s".',
-                        plugin_name,
-                        plugin_id,
-                    )
-                    continue
-
-                class_path = items[plugin_id]
-                try:
-                    if isinstance(class_path, dict):
-                        # old-style manifest: {class: "module:Type", ...}
-                        dotted = class_path["class"]
-                    else:
-                        # new-style manifest: plain "module:Type" string
-                        dotted = class_path
-                    class_item_module, class_item_type = dotted.split(":")
-                    imported_class = getattr(
-                        import_module(class_item_module), class_item_type
-                    )
-                except (KeyError, ValueError):
-                    logger.error(
-                        'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
-                        plugin_id,
-                        name,
-                        class_path,
-                    )
-                    continue
-
-                if not _check_plugin_protocol(imported_class, group):
-                    logger.error(
-                        "%s exists, but does not implement any known protocol.",
-                        imported_class,
-                    )
-                    continue
-
-                plugins.append((name, imported_class))
+            plugins.append((name, imported_class))
 
         return plugins

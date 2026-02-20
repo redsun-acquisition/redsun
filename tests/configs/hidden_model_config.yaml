@@ -3,5 +3,4 @@ frontend: pyqt
 session: hidden-device-session
 devices:
   iSCAT channel:
-    plugin_name: mock-pkg
-    plugin_id: my_hidden_model
+    class: mock_pkg.device.hidden:HiddenModel

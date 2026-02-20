@@ -3,5 +3,4 @@ frontend: pyqt
 session: broken-factory-session
 devices:
   iSCAT channel:
-    plugin_name: mock-pkg
-    plugin_id: broken_init_model
+    class: mock_pkg.device:BrokenDevice

@@ -3,8 +3,7 @@ frontend: pyqt
 session: mock-session
 devices:
   iSCAT channel:
-    plugin_name: mock-pkg
-    plugin_id: my_detector
+    class: mock_pkg.device:MockDetector
     sensor_shape:
       - 1280
       - 864
@@ -18,12 +17,11 @@ devices:
     floating: 3.14
     string: "Hello, World!"
   TIRF channel:
-    plugin_name: mock-pkg
-    plugin_id: my_detector
-    sensor_shape: 
+    class: mock_pkg.device:MockDetector
+    sensor_shape:
       - 2400
       - 2048
-    pixel_size: 
+    pixel_size:
       - 17.5
       - 17.5
       - 17.5
