@@ -37,7 +37,6 @@ from sunflare.virtual import (
 
 from ._config import AppConfig
 from .components import (
-    _AnyField,
     _DeviceComponent,
     _DeviceField,
     _PresenterComponent,
@@ -52,6 +51,8 @@ if TYPE_CHECKING:
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
+
+_AnyField = _DeviceField | _PresenterField | _ViewField
 
 
 @unique
@@ -68,6 +69,7 @@ class _PluginTypeDict(TypedDict):
     devices: dict[str, type[Device]]
     presenters: dict[str, type[Presenter]]
     views: dict[str, type[View]]
+
 
 def _assert_never(arg: Never) -> Never:
     raise AssertionError(f"Unhandled case: {arg!r}")
@@ -94,6 +96,11 @@ def _check_presenter_protocol(cls: type) -> TypeGuard[type[Presenter]]:
     if Presenter in cls.mro():
         return True
 
+    # TODO: this check is fragile because it might
+    # happen that a class does not store at initialization
+    # the devices and so such attribute does not exists at the
+    # moment of the check; the best solution is to impose
+    # a stricter __instancecheck__ hook at protocol level
     required_attributes = ["devices", "name"]
     is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
     if is_compliant:
@@ -105,7 +112,9 @@ def _check_view_protocol(cls: type) -> TypeGuard[type[View]]:
     """Check if a class implements the view protocol."""
     if issubclass(cls, View):
         return True
-    is_compliant = hasattr(cls, "name")
+
+    required_attributes = ["name", "view_position"]
+    is_compliant = all([hasattr(cls, attr) for attr in required_attributes])
 
     if is_compliant:
         View.register(cls)
@@ -396,6 +405,7 @@ class AppContainer(metaclass=AppContainerMeta):
         self._virtual_container = VirtualContainer()
         # Populate only the base config fields; component sections stay in AppConfig
         from sunflare.virtual import RedSunConfig
+
         base_cfg: RedSunConfig = {
             "schema_version": self._config.get("schema_version", 1.0),
             "session": self._config.get("session", "Redsun"),
@@ -416,7 +426,9 @@ class AppContainer(metaclass=AppContainerMeta):
         # build presenters and optionally register their providers
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter = presenter_component.build(built_devices, self._virtual_container)
+                presenter = presenter_component.build(
+                    built_devices, self._virtual_container
+                )
                 if isinstance(presenter, IsProvider):
                     presenter.register_providers(self._virtual_container)
             except Exception as e:

@@ -14,11 +14,17 @@ T = TypeVar("T")
 
 
 class _DeviceField:
-    """Sentinel returned by :func:`device`. Resolved by the metaclass into a ``_DeviceComponent``."""
+    """Sentinel returned by [`device`][redsun.containers.device]. Resolved by the metaclass into a ``_DeviceComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
-    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        cls: type,
+        alias: str | None,
+        from_config: str | None,
+        kwargs: dict[str, Any],
+    ) -> None:
         self.cls = cls
         self.alias = alias
         self.from_config = from_config
@@ -26,11 +32,17 @@ class _DeviceField:
 
 
 class _PresenterField:
-    """Sentinel returned by :func:`presenter`. Resolved by the metaclass into a ``_PresenterComponent``."""
+    """Sentinel returned by [`presenter`][redsun.containers.presenter]. Resolved by the metaclass into a ``_PresenterComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
-    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        cls: type,
+        alias: str | None,
+        from_config: str | None,
+        kwargs: dict[str, Any],
+    ) -> None:
         self.cls = cls
         self.alias = alias
         self.from_config = from_config
@@ -38,19 +50,21 @@ class _PresenterField:
 
 
 class _ViewField:
-    """Sentinel returned by :func:`view`. Resolved by the metaclass into a ``_ViewComponent``."""
+    """Sentinel returned by [`view`][redsun.containers.view]. Resolved by the metaclass into a ``_ViewComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
-    def __init__(self, cls: type, alias: str | None, from_config: str | None, kwargs: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        cls: type,
+        alias: str | None,
+        from_config: str | None,
+        kwargs: dict[str, Any],
+    ) -> None:
         self.cls = cls
         self.alias = alias
         self.from_config = from_config
         self.kwargs = kwargs
-
-
-# Union used for isinstance checks in the metaclass.
-_AnyField = _DeviceField | _PresenterField | _ViewField
 
 
 def device(
@@ -84,7 +98,13 @@ def device(
     return _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
-def view(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
+def view(
+    cls: type,
+    /,
+    alias: str | None = None,
+    from_config: str | None = None,
+    **kwargs: Any,
+) -> Any:
     """Declare a component as a view layer field.
 
     >>> class MyApp(AppContainer):
@@ -104,7 +124,13 @@ def view(cls: type, /, alias: str | None = None, from_config: str | None = None,
     return _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
-def presenter(cls: type, /, alias: str | None = None, from_config: str | None = None, **kwargs: Any) -> Any:
+def presenter(
+    cls: type,
+    /,
+    alias: str | None = None,
+    from_config: str | None = None,
+    **kwargs: Any,
+) -> Any:
     """Declare a component as a presenter layer field.
 
     >>> class MyApp(AppContainer):
@@ -166,7 +192,9 @@ class _DeviceComponent(_ComponentBase[Device]):
 class _PresenterComponent(_ComponentBase[Presenter]):
     """Presenter component wrapper."""
 
-    def build(self, devices: dict[str, Device], container: VirtualContainer) -> Presenter:
+    def build(
+        self, devices: dict[str, Device], container: VirtualContainer
+    ) -> Presenter:
         """Build the presenter instance."""
         self._instance = self.cls(self.name, devices, **self.kwargs)
         return self.instance
