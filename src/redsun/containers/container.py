@@ -411,7 +411,7 @@ class AppContainer(metaclass=AppContainerMeta):
             "session": self._config.get("session", "Redsun"),
             "frontend": self._config.get("frontend", "pyqt"),
         }
-        self._virtual_container.configuration = base_cfg
+        self._virtual_container._set_configuration(base_cfg)
         logger.debug("VirtualContainer created")
 
         # build devices

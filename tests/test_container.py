@@ -195,11 +195,9 @@ class TestAppContainerBuild:
 
         app = EmptyApp(session="TestSession", frontend="pyqt")
         app.build()
-        cfg = app.virtual_container.configuration
-        assert cfg is not None
-        assert cfg["session"] == "TestSession"
-        assert cfg["frontend"] == "pyqt"
-        assert cfg["schema_version"] == 1.0
+        assert app.virtual_container.session == "TestSession"
+        assert app.virtual_container.frontend == "pyqt"
+        assert app.virtual_container.schema_version == 1.0
 
 
 class TestFromConfig:
