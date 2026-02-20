@@ -208,9 +208,8 @@ Frontend is intended as the toolkit that deploys the functionalities to implemen
 1. Creates the `QApplication` instance.
 2. Calls [`build()`][redsun.containers.container.AppContainer.build] to instantiate all components.
 3. Constructs the `QtMainView` main window and docks all views.
-4. Connects `VirtualAware` views to the virtual bus.
-5. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
-6. Shows the main window and enters the Qt event loop.
+4. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
+5. Shows the main window and enters the Qt event loop.
 
 It is imported from the public `redsun.qt` namespace:
 
