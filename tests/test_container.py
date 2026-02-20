@@ -61,7 +61,7 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.skipif(
-        os.environ.get("DISPLAY"),
+        not os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_view_component_build(self) -> None:
@@ -277,7 +277,7 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.skipif(
-        os.environ.get("DISPLAY"),
+        not os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_component_field_collects_view(self) -> None:
