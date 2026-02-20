@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +61,7 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.skipif(
-        not __import__("os").environ.get("DISPLAY"),
+        os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_view_component_build(self) -> None:
@@ -276,7 +277,7 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.skipif(
-        not __import__("os").environ.get("DISPLAY"),
+        os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_component_field_collects_view(self) -> None:
