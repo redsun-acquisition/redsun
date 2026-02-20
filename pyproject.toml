@@ -111,3 +111,9 @@ exclude_lines = [
     "except PackageNotFoundError",
     "raise NotImplementedError()",
 ]
+
+[tool.pytest.ini_options]
+addopts = "-p no:warnings"
+env = [
+    "QT_QPA_PLATFORM=offscreen",
+]

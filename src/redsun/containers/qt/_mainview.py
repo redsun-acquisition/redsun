@@ -12,7 +12,7 @@ from sunflare.view import ViewPosition
 
 if TYPE_CHECKING:
     from sunflare.view.qt import QtView
-    from sunflare.virtual import VirtualBus
+    from sunflare.virtual import VirtualContainer
 
 __all__ = ["QtMainView"]
 
@@ -22,8 +22,8 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
 
     Parameters
     ----------
-    virtual_bus : VirtualBus
-        Session virtual bus.
+    virtual_container : VirtualContainer
+        Session virtual container.
     session_name : str
         Display name for the window title.
     views : dict[str, QtView]
@@ -39,13 +39,13 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
 
     def __init__(
         self,
-        virtual_bus: VirtualBus,
+        virtual_container: VirtualContainer,
         session_name: str,
         views: dict[str, QtView],
     ) -> None:
         super().__init__()
         self.setWindowTitle(session_name)
-        self._virtual_bus = virtual_bus
+        self._virtual_container = virtual_container
         self._central_widget_set = False
         self._widgets: dict[str, QtView] = {}
         self._dock_views(views)
