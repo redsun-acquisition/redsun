@@ -1480,7 +1480,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8" },
-    { name = "sunflare", specifier = ">=0.10.0" },
+    { name = "sunflare", specifier = ">=0.10.1" },
     { name = "sunflare", extras = ["pyqt"], marker = "extra == 'pyqt'" },
     { name = "sunflare", extras = ["pyside"], marker = "extra == 'pyside'" },
 ]
@@ -1697,7 +1697,7 @@ wheels = [
 
 [[package]]
 name = "sunflare"
-version = "0.10.0"
+version = "0.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bluesky" },
@@ -1706,9 +1706,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/6e/0e3b429131e4d8df3325e2777416f8e653191ba7d0cd91eb6f14aade8c3a/sunflare-0.10.0.tar.gz", hash = "sha256:a708ad9b19c5bcb9204b53be8b4db7db64c3840831110397fd1f24da7f4978e8", size = 26732, upload-time = "2026-02-20T11:55:40.119Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/2a/126fd16b2c2175e64e325be35f183aca5aedcc5f8dc70630a8f0227f14db/sunflare-0.10.1.tar.gz", hash = "sha256:5b7448d5f7c2796a7eb7381977e869f5f4fa211e98c46a24bddeed501e28f185", size = 21087, upload-time = "2026-02-20T21:20:57.29Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/96/0a8a247ee118ed047b685b419498ab502ddaed3e1f743f19cdb54133eaed/sunflare-0.10.0-py3-none-any.whl", hash = "sha256:130a3ed83b9aa7527ce6783d1b9b22ba0964cb2e6456e61f5755eef51b28d9cd", size = 25912, upload-time = "2026-02-20T11:55:38.915Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/07/6685fc3618795c30fca26a19417aaadb635dc963e6022ac3adf2cc8631f2/sunflare-0.10.1-py3-none-any.whl", hash = "sha256:e8ef1a658ab09f8d43675851d4fc4a6bafcfcc6d66c4517d487516528b849d32", size = 26488, upload-time = "2026-02-20T21:20:55.846Z" },
 ]
 
 [package.optional-dependencies]
