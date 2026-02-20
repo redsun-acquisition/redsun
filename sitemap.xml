@@ -1,13 +1,36 @@
-{#-
-  This file was automatically generated - do not edit
--#}
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  {%- for page in pages -%}
-    {%- if page.canonical_url %}
       <url>
-        <loc>{{ page.canonical_url }}</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/</loc>
       </url>
-    {%- endif -%}
-  {%- endfor %}
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
+      </url>
 </urlset>
