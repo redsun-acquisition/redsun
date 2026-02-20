@@ -28,20 +28,17 @@ is called with a configuration file, Redsun:
 
 ## Plugin manifest
 
-Each plugin package includes a YAML manifest file that declares the available components:
+Each plugin package includes a YAML manifest file that declares the available components. Each entry maps a plugin ID directly to its `"module:ClassName"` class path:
 
 ```yaml
 devices:
-  my_motor:
-    class: "my_plugin.devices:MyMotor"
+  my_motor: "my_plugin.devices:MyMotor"
 
 presenters:
-  my_controller:
-    class: "my_plugin.presenters:MyController"
+  my_controller: "my_plugin.presenters:MyController"
 
 views:
-  my_ui:
-    class: "my_plugin.views:MyView"
+  my_ui: "my_plugin.views:MyView"
 ```
 
 The manifest is registered as a [Python entry point] in the plugin's `pyproject.toml`:

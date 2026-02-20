@@ -39,46 +39,79 @@ This separation ensures that hardware drivers, UI components, and business logic
 
 ## Declarative component registration
 
-`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can by dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
+`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
 
-Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument. When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
+Components are declared as class attributes using the layer-specific field specifiers:
+[`device()`][redsun.containers.device],
+[`presenter()`][redsun.containers.presenter], and
+[`view()`][redsun.containers.view].
+Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
+
+When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
-from redsun import component
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer):
-        motor = component(MyMotor, layer="device", axis=["X", "Y"])
-        ctrl = component(MyController, layer="presenter", gain=1.0)
-        ui = component(MyView, layer="view")
+        motor = device(MyMotor, axis=["X", "Y"])
+        ctrl = presenter(MyController, gain=1.0)
+        ui = view(MyView)
 
     MyApp().run()
 ```
 
 The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
 
-The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to `component()`, no annotation inspection is needed. This declarative approach allows the container to:
+The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:
 
 - validate component types at class creation time;
 - inherit and override components from base classes;
 - merge configuration from YAML files with inline keyword arguments.
 
-## Configuration file support
+## Component naming
 
-Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each `component()` call:
+Every component receives a **name** that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
+
+1. **`alias`** — if an explicit `alias` is passed to `device()`, `presenter()`, or `view()`, that value is used regardless of everything else.
+2. **Attribute name** — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
+3. **YAML key** — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
+
+Examples in the declarative flow:
 
 ```python
-from redsun import component
+class MyApp(QtAppContainer):
+    motor = device(MyMotor)                       # name → "motor"
+    cam = device(MyCamera, alias="detector")      # name → "detector"
+```
+
+In the dynamic flow:
+
+```yaml
+devices:
+  iSCAT channel:           # name → "iSCAT channel"
+    plugin_name: my-plugin
+    plugin_id: my_detector
+```
+
+The `alias` parameter is useful when the desired runtime name differs from the attribute name — for example to match an identifier expected elsewhere in the application without renaming the Python attribute.
+
+## Configuration file support
+
+Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each field specifier call:
+
+```python
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer, config="app_config.yaml"):
-        motor = component(MyMotor, layer="device", from_config="motor")
-        ctrl = component(MyController, layer="presenter", from_config="ctrl")
-        ui = component(MyView, layer="view", from_config="ui")
+        motor = device(MyMotor, from_config="motor")
+        ctrl = presenter(MyController, from_config="ctrl")
+        ui = view(MyView, from_config="ui")
 
     MyApp().run()
 
@@ -88,7 +121,7 @@ def my_app() -> None:
     app.run()
 ```
 
-The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the `component()` call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
+The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
 
 ## Build order
 
@@ -96,9 +129,9 @@ When [`build()`][redsun.containers.container.AppContainer.build] is called, the 
 
 1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
 2. **DI container** - the dependency injection container, seeded with the application configuration.
-3. **Devices** - hardware interfaces, each receiving their name and keyword arguments.
-4. **Presenters** - business logic components, receiving the full device dictionary and virtual bus. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the DI container.
-5. **Views** - UI components, receiving the virtual bus. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the DI container.
+3. **Devices** - hardware interfaces, each receiving their resolved name and keyword arguments.
+4. **Presenters** - business logic components, receiving their resolved name and the full device dictionary. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the DI container.
+5. **Views** - UI components, receiving their resolved name. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the DI container.
 
 ## Communication
 
@@ -116,7 +149,7 @@ Redsun supports two distinct approaches for assembling an application, both prod
 The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
 
 ```python
-from redsun import component
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 # these are user-developed classes
@@ -129,9 +162,9 @@ from my_package.view import MyView
 
 def my_app() -> None:
     class MyApp(QtAppContainer, config="config.yaml"):
-        motor = component(MyMotor, layer="device", from_config="motor")
-        ctrl = component(MyPresenter, layer="presenter", from_config="ctrl")
-        ui = component(MyView, layer="view", from_config="ui")
+        motor = device(MyMotor, from_config="motor")
+        ctrl = presenter(MyPresenter, from_config="ctrl")
+        ui = view(MyView, from_config="ui")
 
     MyApp().run()
 ```
@@ -152,7 +185,7 @@ app.run()
 The YAML file drives everything:
 
 ```yaml
-schema: 1.0
+schema_version: 1.0
 session: "My Experiment"
 frontend: "pyqt"
 
@@ -191,4 +224,4 @@ Both [`PyQt6`](https://pypi.org/project/PyQt6/) or [`PySide6`](https://pypi.org/
 
 The future expectation is to provide support for other frontends (either desktop or web-based).
 
-While the presenter and device layer are decoupled via the `VirtualBus`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach accross the board, regardless of the specified frontend.
+While the presenter and device layer are decoupled via the `VirtualBus`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach across the board, regardless of the specified frontend.
