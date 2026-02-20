@@ -5,13 +5,14 @@
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Redsun
+# `redsun`
 
-Event-driven, unopinionated data acquisition in Python.
+A component-based, customizable application builder for scientific hardware orchestration, based on the [Bluesky] framework.
 
 > [!WARNING]
 > This project is still in alpha stage and very unstable. Use at your own risk.
 
 See the [documentation] for more informations.
 
+[bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [documentation]: https://redsun-acquisition.github.io/redsun/main/
