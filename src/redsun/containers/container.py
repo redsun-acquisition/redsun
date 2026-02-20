@@ -426,9 +426,7 @@ class AppContainer(metaclass=AppContainerMeta):
         # build presenters and optionally register their providers
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter = presenter_component.build(
-                    built_devices, self._virtual_container
-                )
+                presenter = presenter_component.build(built_devices)
                 if isinstance(presenter, IsProvider):
                     presenter.register_providers(self._virtual_container)
             except Exception as e:

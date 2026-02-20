@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sunflare.device import Device
 from sunflare.presenter import Presenter
 from sunflare.view import View
-
-if TYPE_CHECKING:
-    from sunflare.virtual import VirtualContainer
-
 
 T = TypeVar("T")
 
@@ -192,9 +188,7 @@ class _DeviceComponent(_ComponentBase[Device]):
 class _PresenterComponent(_ComponentBase[Presenter]):
     """Presenter component wrapper."""
 
-    def build(
-        self, devices: dict[str, Device], container: VirtualContainer
-    ) -> Presenter:
+    def build(self, devices: dict[str, Device]) -> Presenter:
         """Build the presenter instance."""
         self._instance = self.cls(self.name, devices, **self.kwargs)
         return self.instance

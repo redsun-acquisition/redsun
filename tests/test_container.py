@@ -50,14 +50,12 @@ class TestComponentWrappers:
 
     def test_presenter_component_build(self) -> None:
         from mock_pkg.controller import MockController
-        from sunflare.virtual import VirtualContainer
 
         comp = _PresenterComponent(
             MockController, "ctrl",
             string="s", integer=1, floating=0.0, boolean=False,
         )
-        container = VirtualContainer()
-        presenter = comp.build({}, container)
+        presenter = comp.build({})
         assert presenter is comp.instance
         assert "built" in repr(comp)
 
