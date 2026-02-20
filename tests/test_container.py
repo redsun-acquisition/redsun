@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -61,7 +62,7 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.skipif(
-        not os.environ.get("DISPLAY"),
+        sys.platform == "linux" and not os.environ.get("DISPLAY"),
         reason="requires a display (Qt)",
     )
     def test_view_component_build(self) -> None:
@@ -277,8 +278,8 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.skipif(
-        not os.environ.get("DISPLAY"),
-        reason="requires a display (Qt)",
+        sys.platform == "linux" and not os.environ.get("DISPLAY"),
+        reason="Fails on Linux CI without a display (Qt required for view components)",
     )
     def test_component_field_collects_view(self) -> None:
         from mock_pkg.view import MockQtView
