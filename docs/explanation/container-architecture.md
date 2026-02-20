@@ -1,6 +1,6 @@
 # Container architecture
 
-`redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture, but with a series of differences.
+`redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture.
 
 === "Architecture block diagram"
 
@@ -28,6 +28,8 @@ block-beta
   style D2 fill:#2196f3,color:#fff,stroke:#1565c0
   style D3 fill:#2196f3,color:#fff,stroke:#1565c0
 ```
+
+The key differences in respect to the `MVP` architecture are the following:
 
 - In `MVP`, the **Model** layer represents the **data** the application holds; think for example of a text editor: the content of the text is stored in this layer.
 - In contrast, the **Device** layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.
