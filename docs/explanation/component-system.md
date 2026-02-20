@@ -26,11 +26,15 @@ is called with a configuration file, Redsun:
 4. **Validates protocols** - each loaded class is checked against the expected protocol ([`Device`][sunflare.device.Device], [`Presenter`][sunflare.presenter.Presenter], or [`View`][sunflare.view.View]).
 5. **Creates the container** - a dynamic container class is assembled with the discovered components.
 
-## Plugin manifest
+## Component manifest
 
-Each plugin package includes a YAML manifest file that declares the available components. Each entry maps a plugin ID directly to its `"module:ClassName"` class path:
+Each component package must include a YAML manifest file named `redsun.yaml` that declares the available components. 
+
+Each entry maps a plugin ID directly to its `"module:ClassName"` class path:
 
 ```yaml
+# redsun.yaml
+
 devices:
   my_motor: "my_plugin.devices:MyMotor"
 
@@ -41,21 +45,31 @@ views:
   my_ui: "my_plugin.views:MyView"
 ```
 
-The manifest is registered as a [Python entry point] in the plugin's `pyproject.toml`:
+The manifest must be registered as a [Python entry point] in the package `pyproject.toml`:
 
 ```toml
 [project.entry-points."redsun.plugins"]
-my-plugin = "manifest.yaml"
+my-plugin = "redsun.yaml"
 ```
+
+!!! tip
+
+    This is inspired by the [napari manifest](https://napari.org/stable/plugins/technical_references/manifest.html).
+
+    Make sure that depending on the packaging system you use, the `redsun.yaml` is included in the built package otherwise your components will not be discoverable.
 
 ## Configuration file format
 
-The application configuration file references plugins by name and ID:
+The application configuration file references plugins by name and ID. A full example follows:
 
 ```yaml
-schema: 1.0
-session: "My applcation"
+schema_version: 1.0
+session: "My application"
 frontend: "pyqt"
+metadata:
+    user: Jacopo Abramo
+    location: Jena
+    setup: iSCAT
 
 devices:
   motor:
@@ -76,11 +90,18 @@ views:
     plugin_id: my_ui
 ```
 
+The top-level keys represent application level information:
+
+- `schema_version` is the version value of the component system, kept for future compatibility;
+- `session` is the name which will be assigned to the application for display;
+- `frontend` is the UI toolkit used to load the correct subclass of `AppContainer`;
+- `metadata` are application-level metadata to add contextual informations.
+
 The `plugin_name` and `plugin_id` keys are used for plugin resolution and are not passed to the component constructors. All other keys become keyword arguments for the component.
 
 ## Protocol validation
 
-Before a plugin class is used, Redsun verifies it implements the expected protocol:
+Before a plugin class is used, `redsun` verifies it implements the expected protocol:
 
 - **Devices** must be subclasses of [`Device`][sunflare.device.Device] or structurally implement the [`PDevice`][sunflare.device.PDevice] protocol.
 - **Presenters** must be subclasses of [`Presenter`][sunflare.presenter.Presenter] or structurally implement the [`PPresenter`][sunflare.presenter.PPresenter] protocol.
