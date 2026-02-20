@@ -46,7 +46,8 @@ from .components import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Never
+    from sunflare.virtual import RedSunConfig
+    from typing_extensions import Never, Self
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
@@ -385,7 +386,7 @@ class AppContainer(metaclass=AppContainerMeta):
         """Return whether the container has been built."""
         return self._is_built
 
-    def build(self) -> AppContainer:
+    def build(self) -> Self:
         """Instantiate all components in dependency order.
 
         Build order:
@@ -401,10 +402,7 @@ class AppContainer(metaclass=AppContainerMeta):
 
         logger.info("Building application container...")
 
-        # 1. VirtualContainer — carries signals, callbacks, and config
         self._virtual_container = VirtualContainer()
-        # Populate only the base config fields; component sections stay in AppConfig
-        from sunflare.virtual import RedSunConfig
 
         base_cfg: RedSunConfig = {
             "schema_version": self._config.get("schema_version", 1.0),
