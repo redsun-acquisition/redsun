@@ -1,6 +1,10 @@
 # Container architecture
 
-Redsun uses a **container-based Model-View-Presenter (MVP) architecture** to manage the lifecycle and dependencies of application components.
+`redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture, but with a series of differences.
+
+- In `MVP`, the **Model** layer represents the **data** the application holds; think for example of a text editor: the content of the text is stored in this layer.
+- In contrast, the **Device** layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.
+- Additionally, in the `MVP` pattern, **Presenters** and **Views** are tightly coupled between each other, making it difficult to have one without the other. In `DVP`, both layers are decoupled via a **virtual container** to follow an approach of [**dependency injection**](https://en.wikipedia.org/wiki/Dependency_injection) in order to maintain all the components separated, allowing to bring only the pieces you need to create an application fully compliant with your specifications.
 
 ## Overview
 
@@ -26,17 +30,17 @@ graph LR
     VC -.->|inject dependencies| Views
 ```
 
-## The MVP pattern
+## The DVP pattern
 
-Redsun follows the **Model-View-Presenter** pattern provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
+`redsun` builds components using reusable patterns provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
 
-- **Model (Devices)**: hardware abstractions that implement Bluesky's device protocols via [`Device`][sunflare.device.Device]. They represent the actual instruments being controlled.
-- **View**: UI components (currently Qt-based) that implement [`View`][sunflare.view.View] to display data and capture user interactions.
-- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through the virtual bus.
+- **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][sunflare.device.Device].
+- **View**: UI components that implement [`View`][sunflare.view.View] to display data and capture user interactions.
+- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
 This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
 
-## Declarative component registration
+## Declarative containers
 
 `redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
 
