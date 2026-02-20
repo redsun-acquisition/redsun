@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.6.1] - 20-02-2026
+
+### Fixed
+
+- Allow multiple widgets to be stacked in the center via `QTabWidget` for `QtAppContainer`
+- Fix the attribute look-up in loop construction to get the `view_position` attribute of `PView`
+
 ## [0.6.0] - 20-02-2026
 
 ### Added
@@ -135,6 +142,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.6.1]: https://github.com/redsun-acquisition/redsun/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/redsun-acquisition/redsun/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/redsun-acquisition/redsun/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/redsun-acquisition/redsun/compare/v0.5.4...v0.5.5
