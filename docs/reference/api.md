@@ -1,11 +1,11 @@
 # API reference
 
-::: redsun.config
-
 ::: redsun.containers.components
     options:
       members:
-        - component
+        - device
+        - presenter
+        - view
 
 ::: redsun.containers.container.AppContainerMeta
 

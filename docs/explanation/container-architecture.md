@@ -1,6 +1,10 @@
 # Container architecture
 
-Redsun uses a **container-based Model-View-Presenter (MVP) architecture** to manage the lifecycle and dependencies of application components.
+`redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture, but with a series of differences.
+
+- In `MVP`, the **Model** layer represents the **data** the application holds; think for example of a text editor: the content of the text is stored in this layer.
+- In contrast, the **Device** layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.
+- Additionally, in the `MVP` pattern, **Presenters** and **Views** are tightly coupled between each other, making it difficult to have one without the other. In `DVP`, both layers are decoupled via a **virtual container** to follow an approach of [**dependency injection**](https://en.wikipedia.org/wiki/Dependency_injection) in order to maintain all the components separated, allowing to bring only the pieces you need to create an application fully compliant with your specifications.
 
 ## Overview
 
@@ -9,8 +13,7 @@ At the core of Redsun is the [`AppContainer`][redsun.AppContainer], which acts a
 ```mermaid
 graph LR
     subgraph 1. Create infrastructure
-        VirtualBus
-        DI[DI Container]
+        VC[VirtualContainer]
     end
 
     subgraph 2. Build components
@@ -21,64 +24,95 @@ graph LR
 
     Devices --> Presenters
     Presenters --> Views
-    VirtualBus --> Presenters
-    VirtualBus --> Views
-    Presenters -.->|register providers| DI
-    DI -.->|inject dependencies| Views
+    VC --> Presenters
+    VC --> Views
+    Presenters -.->|register providers| VC
+    VC -.->|inject dependencies| Views
 ```
 
-## The MVP pattern
+## The DVP pattern
 
-Redsun follows the **Model-View-Presenter** pattern provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
+`redsun` builds components using reusable patterns provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
 
-- **Model (Devices)**: hardware abstractions that implement Bluesky's device protocols via [`Device`][sunflare.device.Device]. They represent the actual instruments being controlled.
-- **View**: UI components (currently Qt-based) that implement [`View`][sunflare.view.View] to display data and capture user interactions.
-- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through the virtual bus.
+- **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][sunflare.device.Device].
+- **View**: UI components that implement [`View`][sunflare.view.View] to display data and capture user interactions.
+- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
 This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
 
-## Declarative component registration
+## Declarative containers
 
-`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can by dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
+`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
 
-Components are declared as class attributes using the [`component()`][redsun.containers.components.component] field specifier, passing the component class as the first argument. When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
+Components are declared as class attributes using the layer-specific field specifiers:
+[`device()`][redsun.device],
+[`presenter()`][redsun.containers.components.presenter], and
+[`view()`][redsun.containers.view].
+Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
+
+When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
-from redsun import component
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer):
-        motor = component(MyMotor, layer="device", axis=["X", "Y"])
-        ctrl = component(MyController, layer="presenter", gain=1.0)
-        ui = component(MyView, layer="view")
+        motor = device(MyMotor, axis=["X", "Y"])
+        ctrl = presenter(MyController, gain=1.0)
+        ui = view(MyView)
 
     MyApp().run()
 ```
 
 The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
 
-The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to `component()`, no annotation inspection is needed. This declarative approach allows the container to:
+The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:
 
 - validate component types at class creation time;
 - inherit and override components from base classes;
 - merge configuration from YAML files with inline keyword arguments.
 
-## Configuration file support
+## Component naming
 
-Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each `component()` call:
+Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
+
+1. `alias` — if an explicit `alias` is passed to `device()`, `presenter()`, or `view()`, that value is used regardless of everything else.
+2. attribute name — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
+3. YAML key — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
+
+Examples in the declarative flow:
 
 ```python
-from redsun import component
+class MyApp(QtAppContainer):
+    motor = device(MyMotor)                       # name → "motor"
+    cam = device(MyCamera, alias="detector")      # name → "detector"
+```
+
+In the dynamic flow:
+
+```yaml
+devices:
+  iSCAT channel:           # name → "iSCAT channel"
+    plugin_name: my-plugin
+    plugin_id: my_detector
+```
+
+## Configuration file support
+
+Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each field specifier call:
+
+```python
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer, config="app_config.yaml"):
-        motor = component(MyMotor, layer="device", from_config="motor")
-        ctrl = component(MyController, layer="presenter", from_config="ctrl")
-        ui = component(MyView, layer="view", from_config="ui")
+        motor = device(MyMotor, from_config="motor")
+        ctrl = presenter(MyController, from_config="ctrl")
+        ui = view(MyView, from_config="ui")
 
     MyApp().run()
 
@@ -88,35 +122,36 @@ def my_app() -> None:
     app.run()
 ```
 
-The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the `component()` call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
+The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
 
 ## Build order
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container instantiates components in a strict dependency order:
 
-1. **VirtualBus** - the event-driven communication channel ([`VirtualBus`][sunflare.virtual.VirtualBus]).
-2. **DI container** - the dependency injection container, seeded with the application configuration.
-3. **Devices** - hardware interfaces, each receiving their name and keyword arguments.
-4. **Presenters** - business logic components, receiving the full device dictionary and virtual bus. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the DI container.
-5. **Views** - UI components, receiving the virtual bus. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the DI container.
+1. **VirtualContainer** - the shared signal registry and dependency injection layer ([`VirtualContainer`][sunflare.virtual.VirtualContainer]), seeded with the application configuration.
+2. **Devices** - hardware interfaces, each receiving their resolved name and keyword arguments.
+3. **Presenters** - business logic components, receiving their resolved name and the full device dictionary. Presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] register their providers in the VirtualContainer.
+4. **Views** - UI components, receiving their resolved name. Views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] receive dependencies from the VirtualContainer.
 
 ## Communication
 
-Components communicate through two mechanisms:
+Components communicate through the [`VirtualContainer`][sunflare.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
 
-- **Virtual bus**: an event-driven publish/subscribe system provided by `sunflare` ([`VirtualBus`][sunflare.virtual.VirtualBus]). Presenters and views can emit and listen for signals without direct references to each other.
-- **Dependency injection**: presenters can register providers in the DI container, and views can consume them. This allows views to access presenter-provided data without coupling to specific presenter implementations.
+- **Signal registry**: components can register their [`psygnal`](https://psygnal.readthedocs.io/) signals into the container via `register_signals()`, making them discoverable by other components without direct references to each other. Registered signals are accessible through the `signals` property.
+- **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows presenters that implement [`IsProvider`][sunflare.virtual.IsProvider] to register typed providers, and views that implement [`IsInjectable`][sunflare.virtual.IsInjectable] to consume them. This decouples views from specific presenter implementations.
+
+The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
 ## Two usage flows
 
-Redsun supports two distinct approaches for assembling an application, both producing the same result at runtime.
+`redsun` supports two distinct approaches for assembling an application, both producing the same result at runtime.
 
 ### Explicit flow (developer-written containers)
 
 The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
 
 ```python
-from redsun import component
+from redsun.containers import device, presenter, view
 from redsun.qt import QtAppContainer
 
 # these are user-developed classes
@@ -127,16 +162,13 @@ from my_package.presenter import MyPresenter
 from my_package.view import MyView
 
 
-def my_app() -> None:
-    class MyApp(QtAppContainer, config="config.yaml"):
-        motor = component(MyMotor, layer="device", from_config="motor")
-        ctrl = component(MyPresenter, layer="presenter", from_config="ctrl")
-        ui = component(MyView, layer="view", from_config="ui")
+class MyApp(QtAppContainer, config="config.yaml"):
+    motor = device(MyMotor, from_config="motor")
+    ctrl = presenter(MyPresenter, from_config="ctrl")
+    ui = view(MyView, from_config="ui")
 
-    MyApp().run()
+MyApp().run()
 ```
-
-The class is defined inside a function so that Qt imports (and any heavy device imports) are deferred until the function is actually called. `QtAppContainer` is imported from the public `redsun.qt` namespace.
 
 ### Dynamic flow (configuration-driven)
 
@@ -152,7 +184,7 @@ app.run()
 The YAML file drives everything:
 
 ```yaml
-schema: 1.0
+schema_version: 1.0
 session: "My Experiment"
 frontend: "pyqt"
 
@@ -160,9 +192,15 @@ devices:
   motor:
     plugin_name: my-plugin
     plugin_id: my_motor
+
+presenters:
+  ...
+
+views:
+  ...
 ```
 
-See the [plugin system](plugin-system.md) documentation for a full description of the dynamic flow.
+See the [component system](component-system.md) documentation for a full description of the dynamic flow.
 
 ## Frontend support
 
@@ -175,9 +213,8 @@ Frontend is intended as the toolkit that deploys the functionalities to implemen
 1. Creates the `QApplication` instance.
 2. Calls [`build()`][redsun.containers.container.AppContainer.build] to instantiate all components.
 3. Constructs the `QtMainView` main window and docks all views.
-4. Connects `VirtualAware` views to the virtual bus.
-5. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
-6. Shows the main window and enters the Qt event loop.
+4. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
+5. Shows the main window and enters the Qt event loop.
 
 It is imported from the public `redsun.qt` namespace:
 
@@ -191,4 +228,4 @@ Both [`PyQt6`](https://pypi.org/project/PyQt6/) or [`PySide6`](https://pypi.org/
 
 The future expectation is to provide support for other frontends (either desktop or web-based).
 
-While the presenter and device layer are decoupled via the `VirtualBus`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach accross the board, regardless of the specified frontend.
+While the presenter and device layer are decoupled via the `VirtualContainer`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach across the board, regardless of the specified frontend.

@@ -80,7 +80,7 @@ This documentation follows the [Diataxis](https://diataxis.fr/) framework, organ
 
 - [GitHub repository](https://github.com/redsun-acquisition/redsun)
 - [PyPI package](https://pypi.org/project/redsun/)
-- [Sunflare SDK](https://redsun-acquisition.github.io/sunflare/)
+- [`sunflare` repository](https://redsun-acquisition.github.io/sunflare/)
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [cpython]: https://www.python.org/
