@@ -159,16 +159,26 @@ def _build_writer(cfg: StorageConfig) -> Writer:
 
     Parameters
     ----------
-    cfg :
+    cfg : StorageConfig
         Storage section from the application configuration.
 
     Returns
     -------
     Writer
         Configured writer instance ready for injection.
+
+    Notes
+    -----
+    If ``base_uri`` is absent, the store root defaults to
+    ``~/redsun/storage``, which is created on first use.
     """
     backend = cfg.get("backend", "zarr")
-    base_uri = cfg.get("base_uri", "file:///tmp/redsun")
+    base_uri = cfg.get("base_uri")
+    if base_uri is None:
+        from pathlib import Path
+        base_uri = Path.home() / "redsun" / "storage"
+        base_uri.mkdir(parents=True, exist_ok=True)
+        base_uri = base_uri.as_uri()
     strategy = cfg.get("filename_provider", "uuid")
 
     if strategy == "static":

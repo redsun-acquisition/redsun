@@ -14,7 +14,8 @@ class StorageConfig(RedSunConfig, total=False):
     backend : str
         Storage backend identifier. Currently only ``"zarr"`` is supported.
     base_uri : str
-        Base URI for the store root (e.g. ``"file:///data"``).
+        Base URI for the store root (e.g. ``"file:///data/scans"``).
+        Defaults to ``~/redsun/storage`` (created automatically if absent).
     filename_provider : str
         Filename strategy: ``"static"``, ``"uuid"`` (default), or
         ``"auto_increment"``.
