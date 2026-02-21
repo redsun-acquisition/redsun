@@ -3,7 +3,7 @@ from typing import Any
 from sunflare.virtual import RedSunConfig
 from typing_extensions import NotRequired
 
-__all__ = ["AppConfig"]
+__all__ = ["AppConfig", "StorageConfig"]
 
 
 class StorageConfig(RedSunConfig, total=False):
@@ -13,9 +13,10 @@ class StorageConfig(RedSunConfig, total=False):
     ----------
     backend : str
         Storage backend identifier. Currently only ``"zarr"`` is supported.
-    base_uri : str
-        Base URI for the store root (e.g. ``"file:///data/scans"``).
-        Defaults to ``~/redsun/storage`` (created automatically if absent).
+    base_path : str
+        Base directory for the store root as a plain filesystem path
+        (e.g. ``"C:/data/scans"`` or ``"/data/scans"``).
+        Defaults to ``~/redsun/<session>`` — created automatically if absent.
     filename_provider : str
         Filename strategy: ``"auto_increment"`` (default), ``"uuid"``, or
         ``"static"``.
@@ -24,7 +25,7 @@ class StorageConfig(RedSunConfig, total=False):
     """
 
     backend: NotRequired[str]
-    base_uri: NotRequired[str]
+    base_path: NotRequired[str]
     filename_provider: NotRequired[str]
     filename: NotRequired[str]
 

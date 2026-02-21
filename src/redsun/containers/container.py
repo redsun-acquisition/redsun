@@ -154,31 +154,33 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
             _assert_never(group)
 
 
-def _build_writer(cfg: StorageConfig) -> Writer:
+def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     """Build a storage writer from a ``StorageConfig`` mapping.
 
     Parameters
     ----------
     cfg : StorageConfig
         Storage section from the application configuration.
+    session : str
+        Session name, used to derive the default storage directory
+        (``~/redsun/<session>``).
 
     Returns
     -------
     Writer
         Configured writer instance ready for injection.
-
-    Notes
-    -----
-    If ``base_uri`` is absent, the store root defaults to
-    ``~/redsun/storage``, which is created on first use.
     """
+    from pathlib import Path
+
     backend = cfg.get("backend", "zarr")
-    base_uri = cfg.get("base_uri")
-    if base_uri is None:
-        from pathlib import Path
-        base_uri = Path.home() / "redsun" / "storage"
-        base_uri.mkdir(parents=True, exist_ok=True)
-        base_uri = base_uri.as_uri()
+    raw_path = cfg.get("base_path")
+    if raw_path is None:
+        base_dir = Path.home() / "redsun" / session
+    else:
+        base_dir = Path(raw_path)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    base_uri = base_dir.as_uri()
+
     strategy = cfg.get("filename_provider", "auto_increment")  # TODO: expose per-plan override (future PR)
 
     if strategy == "static":
@@ -497,7 +499,7 @@ class AppContainer(metaclass=AppContainerMeta):
         storage_cfg = self._config.get("storage")
         if storage_cfg is not None:
             try:
-                writer = _build_writer(storage_cfg)
+                writer = _build_writer(storage_cfg, self._config.get("session", "redsun"))
                 _inject_storage(built_devices, writer)
                 logger.debug("Storage writer built and injected")
             except Exception as e:
