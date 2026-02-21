@@ -26,6 +26,7 @@ nav = [
     { "Statement of need" = "explanation/statement.md" },
     { "Container architecture" = "explanation/container-architecture.md" },
     { "Component system" = "explanation/component-system.md" },
+    { "Storage" = "explanation/storage.md" },
   ]},
 ]
 

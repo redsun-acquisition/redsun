@@ -17,16 +17,28 @@ from typing import (
     Any,
     ClassVar,
     Literal,
+    Protocol,
     TypedDict,
     TypeGuard,
     TypeVar,
     Union,
+    _ProtocolMeta,
     overload,
+    runtime_checkable,
 )
 
 import yaml
 from sunflare.device import Device
 from sunflare.presenter import Presenter
+from sunflare.storage import (
+    AutoIncrementFilenameProvider,
+    StaticFilenameProvider,
+    StaticPathProvider,
+    StorageDescriptor,
+    StorageProxy,
+    UUIDFilenameProvider,
+    Writer,
+)
 from sunflare.view import View
 from sunflare.virtual import (
     HasShutdown,
@@ -35,7 +47,7 @@ from sunflare.virtual import (
     VirtualContainer,
 )
 
-from ._config import AppConfig
+from ._config import AppConfig, StorageConfig
 from .components import (
     _DeviceComponent,
     _DeviceField,
@@ -144,6 +156,103 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
             return _check_view_protocol(imported_class)
         case _:
             _assert_never(group)
+
+
+def _build_writer(cfg: StorageConfig, session: str) -> Writer:
+    """Build a storage writer from a ``StorageConfig`` mapping.
+
+    Parameters
+    ----------
+    cfg : StorageConfig
+        Storage section from the application configuration.
+    session : str
+        Session name, used to derive the default storage directory
+        (``~/redsun-storage/<session>``).
+
+    Returns
+    -------
+    Writer
+        Configured writer instance ready for injection.
+    """
+    from pathlib import Path
+
+    backend = cfg.get("backend", "zarr")
+    raw_path = cfg.get("base_path")
+    if raw_path is None:
+        base_dir = Path.home() / "redsun-storage" / session
+    else:
+        base_dir = Path(raw_path)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    base_uri = base_dir.as_uri()
+
+    strategy = cfg.get(
+        "filename_provider", "auto_increment"
+    )  # TODO: expose per-plan override (future PR)
+
+    filename_provider: (
+        StaticFilenameProvider | AutoIncrementFilenameProvider | UUIDFilenameProvider
+    )
+    if strategy == "static":
+        filename = cfg.get("filename", "scan")
+        filename_provider = StaticFilenameProvider(filename)
+    elif strategy == "auto_increment":
+        filename_provider = AutoIncrementFilenameProvider()
+    else:
+        filename_provider = UUIDFilenameProvider()
+
+    path_provider = StaticPathProvider(filename_provider, base_uri=base_uri)
+
+    if backend == "zarr":
+        try:
+            from sunflare.storage._zarr import ZarrWriter
+        except ImportError:
+            raise ImportError(
+                "The 'zarr' storage backend requires the 'acquire-zarr' package. "
+                "Install it with: pip install sunflare[zarr]"
+            )
+        return ZarrWriter("redsun-writer", path_provider)
+
+    raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
+
+
+class _HasStorageMeta(_ProtocolMeta):
+    """Metaclass for ``_HasStorage`` that overrides ``__instancecheck__``.
+
+    Walks ``type(instance).__mro__`` looking for a ``StorageDescriptor``
+    on the class itself — not the ``None`` value the descriptor returns
+    before injection.  This ensures ``isinstance(device, _HasStorage)``
+    is only ``True`` when the device has genuinely opted in to storage.
+
+    TODO: move to ``sunflare.storage`` together with ``_HasStorage``
+    in a future sunflare release.
+    """
+
+    def __instancecheck__(cls, instance: object) -> bool:
+        return any(
+            isinstance(vars(c).get("storage"), StorageDescriptor)
+            for c in type(instance).__mro__
+        )
+
+
+@runtime_checkable
+class _HasStorage(Protocol, metaclass=_HasStorageMeta):
+    """Private protocol for devices that have opted in to storage.
+
+    Declares the ``storage`` attribute so that mypy narrows the type
+    correctly inside ``_inject_storage`` after the ``isinstance`` check.
+
+    TODO: move to ``sunflare.storage`` in a future sunflare release.
+    """
+
+    storage: StorageProxy | None
+
+
+def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
+    """Inject *writer* into every device that carries a ``StorageDescriptor``."""
+    for name, device in devices.items():
+        if isinstance(device, _HasStorage):
+            device.storage = writer
+            logger.debug(f"Injected storage writer into device '{name}'")
 
 
 T = TypeVar("T")
@@ -421,6 +530,18 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
+        # inject storage writer if configured
+        storage_cfg = self._config.get("storage")
+        if storage_cfg is not None:
+            try:
+                writer = _build_writer(
+                    storage_cfg, self._config.get("session", "redsun")
+                )
+                _inject_storage(built_devices, writer)
+                logger.debug("Storage writer built and injected")
+            except Exception as e:
+                logger.error(f"Failed to build storage writer: {e}")
+
         # build presenters
         for comp_name, presenter_component in self._presenter_components.items():
             try:
@@ -520,10 +641,16 @@ class AppContainer(metaclass=AppContainerMeta):
 
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
 
-        return DynamicApp(
+        instance = DynamicApp(
             session=config.get("session", "Redsun"),
             frontend=frontend,
         )
+
+        storage_cfg = config.get("storage")
+        if storage_cfg is not None:
+            instance._config["storage"] = storage_cfg
+
+        return instance
 
     @classmethod
     def _load_configuration(

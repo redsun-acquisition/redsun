@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from redsun.containers import AppContainer, AppConfig, device, presenter, view
+from redsun.containers import AppContainer, AppConfig, StorageConfig, device, presenter, view
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
@@ -594,3 +594,180 @@ class TestComponentNaming:
 
         assert "detector" in TestApp._device_components
         assert "my_motor" not in TestApp._device_components
+
+
+class TestStorageInjection:
+    """Tests for storage writer injection into devices."""
+
+    @pytest.fixture
+    def mock_writer(self):
+        """Patch _build_writer to return a MagicMock, avoiding acquire-zarr dependency."""
+        from unittest.mock import MagicMock, patch
+        from sunflare.storage import Writer
+
+        writer = MagicMock(spec=Writer)
+        with patch("redsun.containers.container._build_writer", return_value=writer):
+            yield writer
+
+    def test_storage_injected_into_device_with_descriptor(
+        self, tmp_path: Path, mock_writer: Any
+    ) -> None:
+        """Writer is injected into a device that declares StorageDescriptor."""
+        from mock_pkg.device import MockDetectorWithStorage
+
+        class TestApp(AppContainer):
+            cam = device(
+                MockDetectorWithStorage,
+                sensor_shape=(512, 512),
+                pixel_size=(6.5, 6.5, 6.5),
+                exposure=100.0,
+                egu="ms",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp(session="test-session")
+        app._config["storage"] = StorageConfig(
+            backend="zarr",
+            base_path=str(tmp_path),
+            filename_provider="auto_increment",
+        )
+        app.build()
+
+        cam = app.devices["cam"]
+        assert cam.storage is mock_writer
+
+    def test_storage_not_injected_into_device_without_descriptor(
+        self, tmp_path: Path, mock_writer: Any
+    ) -> None:
+        """Devices without StorageDescriptor are unaffected by storage config."""
+        from mock_pkg.device import MyMotor
+
+        class TestApp(AppContainer):
+            motor = device(
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 1.0},
+                egu="um",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp(session="test-session")
+        app._config["storage"] = StorageConfig(
+            backend="zarr",
+            base_path=str(tmp_path),
+            filename_provider="auto_increment",
+        )
+        app.build()
+
+        motor = app.devices["motor"]
+        assert not hasattr(motor, "storage")
+
+    def test_storage_none_when_no_config(self) -> None:
+        """Without a storage section, device.storage remains None."""
+        from mock_pkg.device import MockDetectorWithStorage
+
+        class TestApp(AppContainer):
+            cam = device(
+                MockDetectorWithStorage,
+                sensor_shape=(512, 512),
+                pixel_size=(6.5, 6.5, 6.5),
+                exposure=100.0,
+                egu="ms",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp()
+        app.build()
+
+        cam = app.devices["cam"]
+        assert cam.storage is None  # type: ignore[union-attr]
+
+    def test_storage_injected_via_inheritance(
+        self, tmp_path: Path, mock_writer: Any
+    ) -> None:
+        """StorageDescriptor declared on a base class is still found via MRO."""
+        from mock_pkg.device import MockDetectorWithStorage
+
+        class ExtendedDetector(MockDetectorWithStorage):
+            """Subclass that inherits StorageDescriptor from MockDetectorWithStorage."""
+            pass
+
+        class TestApp(AppContainer):
+            cam = device(
+                ExtendedDetector,
+                sensor_shape=(512, 512),
+                pixel_size=(6.5, 6.5, 6.5),
+                exposure=100.0,
+                egu="ms",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp(session="test-session")
+        app._config["storage"] = StorageConfig(
+            backend="zarr",
+            base_path=str(tmp_path),
+            filename_provider="auto_increment",
+        )
+        app.build()
+
+        cam = app.devices["cam"]
+        assert cam.storage is mock_writer  # type: ignore[union-attr]
+
+    def test_default_base_path_uses_session_name(self) -> None:
+        """When base_path is omitted, _build_writer is called with the session name."""
+        from unittest.mock import MagicMock, patch, call
+        from sunflare.storage import Writer
+        from mock_pkg.device import MockDetectorWithStorage
+
+        writer = MagicMock(spec=Writer)
+
+        class TestApp(AppContainer):
+            cam = device(
+                MockDetectorWithStorage,
+                sensor_shape=(512, 512),
+                pixel_size=(6.5, 6.5, 6.5),
+                exposure=100.0,
+                egu="ms",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp(session="my-session")
+        app._config["storage"] = StorageConfig(backend="zarr")
+
+        with patch(
+            "redsun.containers.container._build_writer", return_value=writer
+        ) as mock_build:
+            app.build()
+
+        mock_build.assert_called_once()
+        _, called_session = mock_build.call_args.args
+        assert called_session == "my-session"
+
+    def test_build_writer_creates_session_directory(self, tmp_path: Path) -> None:
+        """_build_writer creates ~/redsun-storage/<session> when base_path is omitted."""
+        from unittest.mock import patch
+        from pathlib import Path as _Path
+        from redsun.containers.container import _build_writer
+
+        storage_cfg = StorageConfig(backend="zarr")
+
+        with patch.object(_Path, "home", return_value=tmp_path):
+            # _build_writer will try to import ZarrWriter; catch the ImportError
+            # since acquire-zarr is not installed in the test environment
+            try:
+                _build_writer(storage_cfg, "my-session")
+            except ImportError:
+                pass
+
+        expected = tmp_path / "redsun-storage" / "my-session"
+        assert expected.exists()
