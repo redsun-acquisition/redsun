@@ -17,8 +17,8 @@ class StorageConfig(RedSunConfig, total=False):
         Base URI for the store root (e.g. ``"file:///data/scans"``).
         Defaults to ``~/redsun/storage`` (created automatically if absent).
     filename_provider : str
-        Filename strategy: ``"static"``, ``"uuid"`` (default), or
-        ``"auto_increment"``.
+        Filename strategy: ``"auto_increment"`` (default), ``"uuid"``, or
+        ``"static"``.
     filename : str
         Static filename — only used when *filename_provider* is ``"static"``.
     """

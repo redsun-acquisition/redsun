@@ -179,7 +179,7 @@ def _build_writer(cfg: StorageConfig) -> Writer:
         base_uri = Path.home() / "redsun" / "storage"
         base_uri.mkdir(parents=True, exist_ok=True)
         base_uri = base_uri.as_uri()
-    strategy = cfg.get("filename_provider", "uuid")
+    strategy = cfg.get("filename_provider", "auto_increment")  # TODO: expose per-plan override (future PR)
 
     if strategy == "static":
         filename = cfg.get("filename", "scan")
