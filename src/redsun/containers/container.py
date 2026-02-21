@@ -33,7 +33,6 @@ from sunflare.storage import (
     AutoIncrementFilenameProvider,
     StaticFilenameProvider,
     StaticPathProvider,
-    StorageDescriptor,
     StorageProxy,
     UUIDFilenameProvider,
     Writer,
@@ -230,9 +229,7 @@ def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
     for name, device in devices.items():
         if isinstance(device, _HasStorage):
             device.storage = writer
-            logger.debug(
-                f"Injected storage writer into device '{name}'"
-            )
+            logger.debug(f"Injected storage writer into device '{name}'")
 
 
 T = TypeVar("T")
