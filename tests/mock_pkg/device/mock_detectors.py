@@ -52,6 +52,19 @@ class MockDetector(Device):
         return None
 
 
+from sunflare.storage import StorageDescriptor
+
+
+@define(kw_only=True, slots=False)
+class MockDetectorWithStorage(MockDetector):
+    """Mock detector that opts in to storage via ``StorageDescriptor``."""
+
+    storage = StorageDescriptor()
+
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        super().__init__(name, **kwargs)
+
+
 @define(kw_only=True, slots=False)
 class NonDerivedDetector:
     """Mock non-derived detector for structural protocol testing."""

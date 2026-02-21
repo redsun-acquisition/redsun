@@ -1,0 +1,30 @@
+schema_version: 1.0
+frontend: pyqt
+session: test-session
+devices:
+  cam:
+    plugin_name: mock-pkg
+    plugin_id: my_detector_with_storage
+    sensor_shape:
+      - 512
+      - 512
+    pixel_size:
+      - 6.5
+      - 6.5
+      - 6.5
+    exposure: 100.0
+    egu: ms
+    integer: 1
+    floating: 1.0
+    string: test
+  motor:
+    plugin_name: mock-pkg
+    plugin_id: my_motor
+    axis:
+      - X
+    step_size:
+      X: 1.0
+    egu: um
+    integer: 1
+    floating: 1.0
+    string: test
