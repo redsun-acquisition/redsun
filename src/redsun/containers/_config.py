@@ -7,27 +7,19 @@ __all__ = ["AppConfig", "StorageConfig"]
 
 
 class StorageConfig(RedSunConfig, total=False):
-    """Configuration for the storage backend.
-
-    Parameters
-    ----------
-    backend : str
-        Storage backend identifier. Currently only ``"zarr"`` is supported.
-    base_path : str
-        Base directory for the store root as a plain filesystem path
-        (e.g. ``"C:/data/scans"`` or ``"/data/scans"``).
-        Defaults to ``~/redsun-storage/<session>`` — created automatically if absent.
-    filename_provider : str
-        Filename strategy: ``"auto_increment"`` (default), ``"uuid"``, or
-        ``"static"``.
-    filename : str
-        Static filename — only used when *filename_provider* is ``"static"``.
-    """
+    """Configuration for the storage backend."""
 
     backend: NotRequired[str]
+    """Storage backend identifier. Currently only ``"zarr"`` is supported."""
+
     base_path: NotRequired[str]
+    """Base directory for the store root as a plain filesystem path."""
+
     filename_provider: NotRequired[str]
+    """Filename strategy: ``"auto_increment"`` (default), ``"uuid"``, or ``"static"``."""
+
     filename: NotRequired[str]
+    """Static filename — only used when *filename_provider* is ``"static"``."""
 
 
 class AppConfig(RedSunConfig, total=False):
