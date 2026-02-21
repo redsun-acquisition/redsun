@@ -227,7 +227,7 @@ def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
     """Inject *writer* into every device that carries a ``StorageDescriptor``."""
     for name, device in devices.items():
         if _has_storage(device):
-            device.storage = writer  # type: ignore[union-attr]
+            device.storage = writer
             logger.debug(f"Injected storage writer into device '{name}'")
 
 

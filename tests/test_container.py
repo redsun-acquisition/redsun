@@ -636,7 +636,7 @@ class TestStorageInjection:
         app.build()
 
         cam = app.devices["cam"]
-        assert cam.storage is mock_writer  # type: ignore[union-attr]
+        assert cam.storage is mock_writer
 
     def test_storage_not_injected_into_device_without_descriptor(
         self, tmp_path: Path, mock_writer: Any
@@ -771,4 +771,3 @@ class TestStorageInjection:
 
         expected = tmp_path / "redsun-storage" / "my-session"
         assert expected.exists()
-
