@@ -8,10 +8,10 @@ A single shared [`Writer`][sunflare.storage.Writer] instance is constructed once
 
 ```mermaid
 graph TD
-    YAML[YAML config\nstorage section] -->|_build_writer| W[Writer\nshared instance]
-    W -->|injected via\nStorageDescriptor| D1[Device A\nstorage = writer]
-    W -->|injected via\nStorageDescriptor| D2[Device B\nstorage = writer]
-    D3[Device C\nno StorageDescriptor] -. unaffected .-> W
+    YAML[YAML config storage section] -->|_build_writer| W[Writer shared instance]
+    W -->|injected via StorageDescriptor| D1[Device A storage = writer]
+    W -->|injected via StorageDescriptor| D2[Device B storage = writer]
+    D3[Device C no StorageDescriptor] -. unaffected .-> W
 ```
 
 Storage is fully **opt-in** at two levels:
