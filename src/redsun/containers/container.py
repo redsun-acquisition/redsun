@@ -22,10 +22,10 @@ from typing import (
     TypeGuard,
     TypeVar,
     Union,
+    _ProtocolMeta,
     overload,
     runtime_checkable,
 )
-from typing import _ProtocolMeta  # type: ignore[attr-defined]
 
 import yaml
 from sunflare.device import Device
