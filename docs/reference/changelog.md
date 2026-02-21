@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.7.0] - 21-02-2026
+
+### Added
+
+- Added initial support for opt-in storage capacities for devices via descriptor protocol
+- Currently supporting only Zarr V3 format via `acquire-zarr`
+
 ## [0.6.1] - 20-02-2026
 
 ### Fixed
@@ -142,6 +149,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.7.0]: https://github.com/redsun-acquisition/redsun/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/redsun-acquisition/redsun/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/redsun-acquisition/redsun/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/redsun-acquisition/redsun/compare/v0.5.5...v0.5.6
