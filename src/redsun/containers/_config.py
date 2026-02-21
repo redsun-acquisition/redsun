@@ -6,6 +6,28 @@ from typing_extensions import NotRequired
 __all__ = ["AppConfig"]
 
 
+class StorageConfig(RedSunConfig, total=False):
+    """Configuration for the storage backend.
+
+    Parameters
+    ----------
+    backend : str
+        Storage backend identifier. Currently only ``"zarr"`` is supported.
+    base_uri : str
+        Base URI for the store root (e.g. ``"file:///data"``).
+    filename_provider : str
+        Filename strategy: ``"static"``, ``"uuid"`` (default), or
+        ``"auto_increment"``.
+    filename : str
+        Static filename — only used when *filename_provider* is ``"static"``.
+    """
+
+    backend: NotRequired[str]
+    base_uri: NotRequired[str]
+    filename_provider: NotRequired[str]
+    filename: NotRequired[str]
+
+
 class AppConfig(RedSunConfig, total=False):
     """Extended configuration for Redsun application containers.
 
@@ -16,3 +38,4 @@ class AppConfig(RedSunConfig, total=False):
     devices: NotRequired[dict[str, Any]]
     presenters: NotRequired[dict[str, Any]]
     views: NotRequired[dict[str, Any]]
+    storage: NotRequired[StorageConfig]

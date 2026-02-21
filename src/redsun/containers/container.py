@@ -27,6 +27,14 @@ from typing import (
 import yaml
 from sunflare.device import Device
 from sunflare.presenter import Presenter
+from sunflare.storage import (
+    AutoIncrementFilenameProvider,
+    StaticFilenameProvider,
+    StaticPathProvider,
+    StorageDescriptor,
+    UUIDFilenameProvider,
+    Writer,
+)
 from sunflare.view import View
 from sunflare.virtual import (
     HasShutdown,
@@ -35,7 +43,7 @@ from sunflare.virtual import (
     VirtualContainer,
 )
 
-from ._config import AppConfig
+from ._config import AppConfig, StorageConfig
 from .components import (
     _DeviceComponent,
     _DeviceField,
@@ -144,6 +152,60 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
             return _check_view_protocol(imported_class)
         case _:
             _assert_never(group)
+
+
+def _build_writer(cfg: StorageConfig) -> Writer:
+    """Build a storage writer from a ``StorageConfig`` mapping.
+
+    Parameters
+    ----------
+    cfg :
+        Storage section from the application configuration.
+
+    Returns
+    -------
+    Writer
+        Configured writer instance ready for injection.
+    """
+    backend = cfg.get("backend", "zarr")
+    base_uri = cfg.get("base_uri", "file:///tmp/redsun")
+    strategy = cfg.get("filename_provider", "uuid")
+
+    if strategy == "static":
+        filename = cfg.get("filename", "scan")
+        filename_provider = StaticFilenameProvider(filename)
+    elif strategy == "auto_increment":
+        filename_provider = AutoIncrementFilenameProvider()
+    else:
+        filename_provider = UUIDFilenameProvider()
+
+    path_provider = StaticPathProvider(filename_provider, base_uri=base_uri)
+
+    if backend == "zarr":
+        try:
+            from sunflare.storage._zarr import ZarrWriter
+        except ImportError:
+            raise ImportError(
+                "The 'zarr' storage backend requires the 'acquire-zarr' package. "
+                "Install it with: pip install sunflare[zarr]"
+            )
+        return ZarrWriter("redsun-writer", path_provider)
+
+    raise ValueError(
+        f"Unknown storage backend {backend!r}. Supported backends: 'zarr'"
+    )
+
+
+def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
+    """Inject *writer* into every device that carries a ``StorageDescriptor``."""
+    for name, device in devices.items():
+        for attr in vars(type(device)):
+            if isinstance(getattr(type(device), attr), StorageDescriptor):
+                setattr(device, attr, writer)
+                logger.debug(
+                    f"Injected storage writer into device '{name}' (attribute '{attr}')"
+                )
+                break
 
 
 T = TypeVar("T")
@@ -421,6 +483,16 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
+        # inject storage writer if configured
+        storage_cfg = self._config.get("storage")
+        if storage_cfg is not None:
+            try:
+                writer = _build_writer(storage_cfg)
+                _inject_storage(built_devices, writer)
+                logger.debug("Storage writer built and injected")
+            except Exception as e:
+                logger.error(f"Failed to build storage writer: {e}")
+
         # build presenters
         for comp_name, presenter_component in self._presenter_components.items():
             try:
@@ -520,10 +592,16 @@ class AppContainer(metaclass=AppContainerMeta):
 
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
 
-        return DynamicApp(
+        instance = DynamicApp(
             session=config.get("session", "Redsun"),
             frontend=frontend,
         )
+
+        storage_cfg = config.get("storage")
+        if storage_cfg is not None:
+            instance._config["storage"] = storage_cfg
+
+        return instance
 
     @classmethod
     def _load_configuration(
