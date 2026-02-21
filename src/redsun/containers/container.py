@@ -163,7 +163,7 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
         Storage section from the application configuration.
     session : str
         Session name, used to derive the default storage directory
-        (``~/redsun/<session>``).
+        (``~/redsun-storage/<session>``).
 
     Returns
     -------
@@ -175,7 +175,7 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     backend = cfg.get("backend", "zarr")
     raw_path = cfg.get("base_path")
     if raw_path is None:
-        base_dir = Path.home() / "redsun" / session
+        base_dir = Path.home() / "redsun-storage" / session
     else:
         base_dir = Path(raw_path)
     base_dir.mkdir(parents=True, exist_ok=True)

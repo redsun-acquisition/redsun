@@ -16,7 +16,7 @@ class StorageConfig(RedSunConfig, total=False):
     base_path : str
         Base directory for the store root as a plain filesystem path
         (e.g. ``"C:/data/scans"`` or ``"/data/scans"``).
-        Defaults to ``~/redsun/<session>`` — created automatically if absent.
+        Defaults to ``~/redsun-storage/<session>`` — created automatically if absent.
     filename_provider : str
         Filename strategy: ``"auto_increment"`` (default), ``"uuid"``, or
         ``"static"``.
