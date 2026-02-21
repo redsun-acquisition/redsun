@@ -17,12 +17,15 @@ from typing import (
     Any,
     ClassVar,
     Literal,
+    Protocol,
     TypedDict,
     TypeGuard,
     TypeVar,
     Union,
     overload,
+    runtime_checkable,
 )
+from typing import _ProtocolMeta  # type: ignore[attr-defined]
 
 import yaml
 from sunflare.device import Device
@@ -32,6 +35,7 @@ from sunflare.storage import (
     StaticFilenameProvider,
     StaticPathProvider,
     StorageDescriptor,
+    StorageProxy,
     UUIDFilenameProvider,
     Writer,
 )
@@ -211,22 +215,42 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
 
 
-def _has_storage(device: Device) -> bool:
-    """Return True if *device*'s class declares a ``StorageDescriptor`` anywhere in its MRO.
+class _HasStorageMeta(_ProtocolMeta):
+    """Metaclass for ``_HasStorage`` that overrides ``__instancecheck__``.
 
-    TODO: move to ``sunflare.storage`` in the next sunflare release
-    that adds this check to the public API.
+    Walks ``type(instance).__mro__`` looking for a ``StorageDescriptor``
+    on the class itself — not the ``None`` value the descriptor returns
+    before injection.  This ensures ``isinstance(device, _HasStorage)``
+    is only ``True`` when the device has genuinely opted in to storage.
+
+    TODO: move to ``sunflare.storage`` together with ``_HasStorage``
+    in a future sunflare release.
     """
-    return any(
-        isinstance(vars(cls).get("storage"), StorageDescriptor)
-        for cls in type(device).__mro__
-    )
+
+    def __instancecheck__(cls, instance: object) -> bool:
+        return any(
+            isinstance(vars(c).get("storage"), StorageDescriptor)
+            for c in type(instance).__mro__
+        )
+
+
+@runtime_checkable
+class _HasStorage(Protocol, metaclass=_HasStorageMeta):
+    """Private protocol for devices that have opted in to storage.
+
+    Declares the ``storage`` attribute so that mypy narrows the type
+    correctly inside ``_inject_storage`` after the ``isinstance`` check.
+
+    TODO: move to ``sunflare.storage`` in a future sunflare release.
+    """
+
+    storage: StorageProxy | None
 
 
 def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
     """Inject *writer* into every device that carries a ``StorageDescriptor``."""
     for name, device in devices.items():
-        if _has_storage(device):
+        if isinstance(device, _HasStorage):
             device.storage = writer
             logger.debug(f"Injected storage writer into device '{name}'")
 
