@@ -181,8 +181,13 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     base_dir.mkdir(parents=True, exist_ok=True)
     base_uri = base_dir.as_uri()
 
-    strategy = cfg.get("filename_provider", "auto_increment")  # TODO: expose per-plan override (future PR)
+    strategy = cfg.get(
+        "filename_provider", "auto_increment"
+    )  # TODO: expose per-plan override (future PR)
 
+    filename_provider: (
+        StaticFilenameProvider | AutoIncrementFilenameProvider | UUIDFilenameProvider
+    )
     if strategy == "static":
         filename = cfg.get("filename", "scan")
         filename_provider = StaticFilenameProvider(filename)
@@ -203,9 +208,7 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
             )
         return ZarrWriter("redsun-writer", path_provider)
 
-    raise ValueError(
-        f"Unknown storage backend {backend!r}. Supported backends: 'zarr'"
-    )
+    raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
 
 
 def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
@@ -499,7 +502,9 @@ class AppContainer(metaclass=AppContainerMeta):
         storage_cfg = self._config.get("storage")
         if storage_cfg is not None:
             try:
-                writer = _build_writer(storage_cfg, self._config.get("session", "redsun"))
+                writer = _build_writer(
+                    storage_cfg, self._config.get("session", "redsun")
+                )
                 _inject_storage(built_devices, writer)
                 logger.debug("Storage writer built and injected")
             except Exception as e:
