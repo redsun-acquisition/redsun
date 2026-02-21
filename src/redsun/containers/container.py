@@ -17,13 +17,11 @@ from typing import (
     Any,
     ClassVar,
     Literal,
-    Protocol,
     TypedDict,
     TypeGuard,
     TypeVar,
     Union,
     overload,
-    runtime_checkable,
 )
 
 import yaml
@@ -33,7 +31,7 @@ from sunflare.storage import (
     AutoIncrementFilenameProvider,
     StaticFilenameProvider,
     StaticPathProvider,
-    StorageProxy,
+    StorageDescriptor,
     UUIDFilenameProvider,
     Writer,
 )
@@ -213,22 +211,23 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
 
 
-@runtime_checkable
-class _HasStorage(Protocol):
-    """Private protocol for devices that carry a storage descriptor.
+def _has_storage(device: Device) -> bool:
+    """Return True if *device*'s class declares a ``StorageDescriptor`` anywhere in its MRO.
 
     TODO: move to ``sunflare.storage`` in the next sunflare release
-    that adds this protocol to the public API.
+    that adds this check to the public API.
     """
-
-    storage: StorageProxy | None
+    return any(
+        isinstance(vars(cls).get("storage"), StorageDescriptor)
+        for cls in type(device).__mro__
+    )
 
 
 def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
     """Inject *writer* into every device that carries a ``StorageDescriptor``."""
     for name, device in devices.items():
-        if isinstance(device, _HasStorage):
-            device.storage = writer
+        if _has_storage(device):
+            device.storage = writer  # type: ignore[union-attr]
             logger.debug(f"Injected storage writer into device '{name}'")
 
 
