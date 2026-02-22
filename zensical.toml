@@ -94,6 +94,7 @@ nav = [
 [project.plugins.mkdocstrings]
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
+preload_modules = ["bluesky", "psygnal"]
 inventories = [
     "https://psygnal.readthedocs.io/en/latest/objects.inv",
     "https://docs.python.org/3/objects.inv",
