@@ -4,7 +4,7 @@ Redsun provides an optional, session-scoped storage layer that lets devices writ
 
 ## Overview
 
-A single shared [`Writer`][sunflare.storage.Writer] instance is constructed once per session and injected into every device that opts in. All devices within a session write to the same store, each under its own array key, so data from multiple cameras or detectors ends up in one coherent file.
+A single shared [`Writer`][redsun.storage.Writer] instance is constructed once per session and injected into every device that opts in. All devices within a session write to the same store, each under its own array key, so data from multiple cameras or detectors ends up in one coherent file.
 
 ```mermaid
 graph TD
@@ -24,7 +24,7 @@ Storage is fully **opt-in** at two levels:
 Declare the descriptor as a class attribute:
 
 ```python
-from sunflare.storage import StorageDescriptor, StorageProxy
+from redsun.storage import StorageDescriptor, StorageProxy
 
 class MyDetector(Device):
     storage = StorageDescriptor()
@@ -43,7 +43,7 @@ def prepare(self, value: PrepareKwargs) -> Status:
     ...
 ```
 
-The [`StorageProxy`][sunflare.storage.StorageProxy] protocol is the full interface available on `self.storage` after injection — `update_source`, `prepare`, `kickoff`, `get_indices_written`, `collect_stream_docs`.
+The [`StorageProxy`][redsun.storage.StorageProxy] protocol is the full interface available on `self.storage` after injection — `update_source`, `prepare`, `kickoff`, `get_indices_written`, `collect_stream_docs`.
 
 ## Session configuration
 
@@ -128,7 +128,7 @@ The directory is created automatically on first use.
 
 ## How injection works
 
-During [`build()`][redsun.containers.container.AppContainer.build], after all devices are constructed, the container checks each device for a [`StorageDescriptor`][sunflare.storage.StorageDescriptor] anywhere in its class hierarchy (full MRO walk). Devices that have one receive the shared writer via `setattr`. The check is performed by [`HasStorage`][sunflare.storage.HasStorage], a protocol in `sunflare.storage` whose metaclass overrides `__instancecheck__` to inspect the class rather than the instance value — this correctly identifies opted-in devices even when `storage` is currently `None`.
+During [`build()`][redsun.containers.container.AppContainer.build], after all devices are constructed, the container checks each device for a [`StorageDescriptor`][redsun.storage.StorageDescriptor] anywhere in its class hierarchy (full MRO walk). Devices that have one receive the shared writer via `setattr`. The check is performed by [`HasStorage`][redsun.storage.HasStorage], a protocol in `redsun.storage` whose metaclass overrides `__instancecheck__` to inspect the class rather than the instance value — this correctly identifies opted-in devices even when `storage` is currently `None`.
 
 !!! note "Future: per-plan override"
     The filename provider is currently fixed for the lifetime of the session.
@@ -141,7 +141,7 @@ During [`build()`][redsun.containers.container.AppContainer.build], after all de
 The `zarr` backend requires the optional `acquire-zarr` package, installed via:
 
 ```bash
-pip install sunflare[zarr]
+pip install redsun[zarr]
 ```
 
 The import is deferred until the writer is actually built, so sessions without a `storage:` section have no dependency on `acquire-zarr`.

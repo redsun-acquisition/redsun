@@ -1,0 +1,44 @@
+/* Custom styles for Sunflare documentation */
+
+/* Diátaxis section colors */
+.md-nav__link[href*="tutorials"] {
+    border-left: 3px solid #00bcd4;
+}
+
+.md-nav__link[href*="how-to"] {
+    border-left: 3px solid #4caf50;
+}
+
+.md-nav__link[href*="reference"] {
+    border-left: 3px solid #ff9800;
+}
+
+.md-nav__link[href*="explanation"] {
+    border-left: 3px solid #9c27b0;
+}
+
+/* Grid cards styling */
+.grid.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.grid.cards > * {
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: 0.2rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.grid.cards > *:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Icon styling in cards */
+.grid.cards .lg.middle {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}

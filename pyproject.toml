@@ -25,26 +25,46 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "sunflare>=0.11.1",
     "platformdirs>=4.3.8",
+    "pyyaml>=6.0.3",
+    "bluesky>=1.14.6",
+    "psygnal>=0.15.1",
+    "typing-extensions>=4.15.0",
+    "dependency-injector>=4.48.3",
 ]
 requires-python = ">=3.10"
 
 [dependency-groups]
 dev = [
-    "sunflare[pyqt]>=0.11.0",
+    "redsun[pyqt,zarr]",
     "mypy>=1.19.1",
     "pre-commit>=4.5.0",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.2.1",
-    "ruff>=0.14.4",
-    "mkdocstrings-python>=2.0.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "types-pyyaml>=6.0.12.20250915",
+    "ruff>=0.14.14",
+    "ophyd>=1.11.0",
+    "griffe-fieldz>=0.4.0",
+    "attrs>=25.4.0",
+    "mike>=2.1.3",
+    "mkdocstrings-python>=2.0.2",
     "zensical>=0.0.23",
 ]
 
 [project.optional-dependencies]
-pyqt = ["sunflare[pyqt]"]
-pyside = ["sunflare[pyside]"]
+zarr = [
+    "acquire-zarr>=0.6.0",
+]
+pyqt = [
+    "magicgui>=0.10.1",
+    "pyqt6>=6.10.2",
+    "qtpy>=2.4.3",
+]
+pyside = [
+    "magicgui>=0.10.1",
+    "pyside6>=6.9.1",
+    "qtpy>=2.4.3",
+]
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
@@ -59,6 +79,11 @@ source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/redsun"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/redsun/**",
+]
 
 [tool.mypy]
 files = "."
@@ -80,6 +105,7 @@ disable_error_code = "attr-defined"
 source = ["redsun"]
 omit = [
     "tests/conftest.py",
+    "src/redsun/view/**",
 ]
 
 [tool.ruff]
@@ -93,6 +119,7 @@ docstring-code-format = true
 extend-select = [
     "D", # enable docstring checks
     "I", # enable imports checks
+    "TC", # enable type check imports
     "FA102", # force __future__ imports
 ] 
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
@@ -113,6 +140,10 @@ exclude_lines = [
 ]
 
 [tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
 addopts = "-p no:warnings"
 env = [
     "QT_QPA_PLATFORM=offscreen",

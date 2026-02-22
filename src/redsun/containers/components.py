@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
-from sunflare.device import Device
-from sunflare.presenter import Presenter
-from sunflare.view import View
+from redsun.device import Device
+from redsun.presenter import Presenter
+from redsun.view import View
 
 T = TypeVar("T")
 

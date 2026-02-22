@@ -1,7 +1,8 @@
 from typing import Any
 
-from sunflare.virtual import RedSunConfig
 from typing_extensions import NotRequired
+
+from redsun.virtual import RedSunConfig
 
 __all__ = ["AppConfig", "StorageConfig"]
 
@@ -25,7 +26,7 @@ class StorageConfig(RedSunConfig, total=False):
 class AppConfig(RedSunConfig, total=False):
     """Extended configuration for Redsun application containers.
 
-    Extends [`RedSunConfig`][sunflare.virtual.RedSunConfig`] with component sections
+    Extends [`RedSunConfig`][redsun.virtual.RedSunConfig`] with component sections
     used by the application layer. These are **not** propagated to components.
     """
 

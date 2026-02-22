@@ -1,0 +1,14 @@
+frontend: pyqt
+models:
+  Single axis motor:
+    plugin_name: mocks
+    plugin_id: mock_motor
+    axes:
+      - X
+  Double axis motor:
+    plugin_name: mocks
+    plugin_id: mock_motor
+    axes:
+      - X
+      - Y
+    step_egu: mm

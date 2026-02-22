@@ -64,7 +64,7 @@ The philosophy of Redsun is to:
 
 - **[Installation guide](how-to/installation.md)**
 - **[Statement of need](explanation/statement.md)**
-- **[API reference](reference/api/config.md)**
+- **[API reference](reference/api/container.md)**
 - **[Changelog](reference/changelog.md)**
 
 ## About the documentation
@@ -80,7 +80,6 @@ This documentation follows the [Diataxis](https://diataxis.fr/) framework, organ
 
 - [GitHub repository](https://github.com/redsun-acquisition/redsun)
 - [PyPI package](https://pypi.org/project/redsun/)
-- [`sunflare` repository](https://redsun-acquisition.github.io/sunflare/)
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [cpython]: https://www.python.org/

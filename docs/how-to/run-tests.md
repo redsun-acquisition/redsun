@@ -27,12 +27,15 @@ This generates an `htmlcov/` directory. Open `htmlcov/index.html` in your browse
 ## Run specific tests
 
 ```bash
-# Run a specific test file
-pytest tests/test_config.py
+# Run SDK tests only
+pytest tests/sdk/
+
+# Run container tests only
+pytest tests/container/
 
 # Run a specific test function
-pytest tests/test_config.py::test_function_name
+pytest tests/container/test_container.py::test_function_name
 
 # Run tests matching a pattern
-pytest -k "test_container"
+pytest -k "test_storage"
 ```

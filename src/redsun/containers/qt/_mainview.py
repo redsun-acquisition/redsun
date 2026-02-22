@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
-from sunflare.log import Loggable
-from sunflare.view import ViewPosition
+
+from redsun.log import Loggable
+from redsun.view import ViewPosition
 
 if TYPE_CHECKING:
-    from sunflare.view.qt import QtView
-    from sunflare.virtual import VirtualContainer
+    from redsun.view.qt import QtView
+    from redsun.virtual import VirtualContainer
 
 __all__ = ["QtMainView"]
 

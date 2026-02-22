@@ -15,7 +15,7 @@ from redsun.containers.qt._mainview import QtMainView
 if TYPE_CHECKING:
     from typing import Any
 
-    from sunflare.view.qt import QtView
+    from redsun.view.qt import QtView
 
 __all__ = ["QtAppContainer"]
 

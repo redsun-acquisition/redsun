@@ -23,7 +23,7 @@ is called with a configuration file, Redsun:
 1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
 2. **Queries entry points** - looks up installed packages registered under the `redsun.plugins` entry point group.
 3. **Loads manifests** - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.
-4. **Validates protocols** - each loaded class is checked against the expected protocol ([`Device`][sunflare.device.Device], [`Presenter`][sunflare.presenter.Presenter], or [`View`][sunflare.view.View]).
+4. **Validates protocols** - each loaded class is checked against the expected protocol ([`Device`][redsun.device.Device], [`Presenter`][redsun.presenter.Presenter], or [`View`][redsun.view.View]).
 5. **Creates the container** - a dynamic container class is assembled with the discovered components.
 
 ## Component manifest
@@ -103,9 +103,9 @@ The `plugin_name` and `plugin_id` keys are used for plugin resolution and are no
 
 Before a plugin class is used, `redsun` verifies it implements the expected protocol:
 
-- **Devices** must be subclasses of [`Device`][sunflare.device.Device] or structurally implement the [`PDevice`][sunflare.device.PDevice] protocol.
-- **Presenters** must be subclasses of [`Presenter`][sunflare.presenter.Presenter] or structurally implement the [`PPresenter`][sunflare.presenter.PPresenter] protocol.
-- **Views** must be subclasses of [`View`][sunflare.view.View] or structurally implement the [`PView`][sunflare.view.PView] protocol.
+- **Devices** must be subclasses of [`Device`][redsun.device.Device] or structurally implement the [`PDevice`][redsun.device.PDevice] protocol.
+- **Presenters** must be subclasses of [`Presenter`][redsun.presenter.Presenter] or structurally implement the [`PPresenter`][redsun.presenter.PPresenter] protocol.
+- **Views** must be subclasses of [`View`][redsun.view.View] or structurally implement the [`PView`][redsun.view.PView] protocol.
 
 Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via [`ABCMeta.register()`][abc.ABCMeta.register].
 

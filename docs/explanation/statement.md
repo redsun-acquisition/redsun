@@ -6,16 +6,15 @@ Scientific data acquisition often involves controlling a variety of hardware dev
 
 ```mermaid
 graph TD
-    sunflare -->|provides SDK for| components
-    sunflare -->|provides SDK for| redsun
+    redsun -->|provides SDK for| components
     components -->|loaded by| redsun
     redsun -->|assembles| application
 ```
 
 ## The role of each part
 
-- **[sunflare]** is the Software Development Kit (SDK) that provides shared base classes and communication patterns (devices, presenters, views, a shared container for inter-component communication and data exchange). It ensures a consistent programming model across the entire ecosystem.
-- **Components** are user-developed packages that implement the actual hardware drivers, business logic, and UI components using `sunflare` abstractions.
+- **Redsun** provides both the application container and the SDK — shared base classes and communication patterns (devices, presenters, views, a shared container for inter-component communication and data exchange) — ensuring a consistent programming model across the entire ecosystem.
+- **Components** are user-developed packages that implement the actual hardware drivers, business logic, and UI components using the redsun SDK.
 - **redsun** is the application shell that discovers plugins, wires them together through its container architecture, and launches the final application.
 
 ## Design philosophy
@@ -33,7 +32,6 @@ Bluesky was originally designed with an interactive approach in mind, in the sen
 What `redsun` provides on top of Bluesky is a more lab-bench experience, for setups that are meant to be controlled via a Graphical User Interface similar to [Micro-Manager].
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[sunflare]: https://redsun-acquisition.github.io/sunflare/
 [micro-manager]: https://micro-manager.org/
 [epics]: https://epics-controls.org/
 [tango]: https://www.tango-controls.org/
