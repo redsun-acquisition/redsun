@@ -1,4 +1,4 @@
-from sunflare.device import Device
+from redsun.device import Device
 
 class BrokenDevice(Device):
     def __init__(self, name: str) -> None:

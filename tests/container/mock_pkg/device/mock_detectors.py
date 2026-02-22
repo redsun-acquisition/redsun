@@ -2,7 +2,7 @@ from typing import Any
 
 from attrs import define, field, setters, validators
 from bluesky.protocols import Descriptor, Reading
-from sunflare.device import Device
+from redsun.device import Device
 
 
 @define(kw_only=True)
@@ -52,7 +52,7 @@ class MockDetector(Device):
         return None
 
 
-from sunflare.storage import StorageDescriptor
+from redsun.storage import StorageDescriptor
 
 
 @define(kw_only=True, slots=False)

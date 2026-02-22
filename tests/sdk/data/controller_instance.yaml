@@ -1,0 +1,9 @@
+frontend: pyqt
+controllers:
+  MyController:
+    plugin_name: mocks
+    plugin_id: mock_controller
+    integer: 42
+    floating: 3.14
+    string: hello
+    boolean: true

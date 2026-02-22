@@ -1,0 +1,47 @@
+session: "My test session"
+frontend: pyqt
+controllers:
+  MyController:
+    plugin_name: mocks
+    plugin_id: mock_controller
+    integer: 42
+    floating: 3.14
+    string: hello
+    boolean: true
+models:
+  First mock detector:
+    plugin_name: redsun-greenheart
+    plugin_id: mock_detector
+    vendor: "Greenheart GmbH"
+    serial_number: "1234"
+    sensor_size: [10, 10]
+  Second mock detector:
+    plugin_name: redsun-bluesapphire
+    plugin_id: mock_detector
+    vendor: "Bluesapphire GmbH"
+    serial_number: "5678"
+    sensor_size: [20, 20]
+    pixel_size: [2, 2, 2]
+    exposure_egu: s
+  Single axis motor:
+    plugin_name: mocks
+    plugin_id: mock_motor
+    axes:
+      - X
+  Double axis motor:
+    plugin_name: mocks
+    plugin_id: mock_motor
+    axes:
+      - X
+      - Y
+    step_egu: mm
+views:
+  MockWidget:
+    plugin_name: mocks
+    plugin_id: mock_widget
+    gui_int_param: 100
+    gui_choices:
+      - 'a'
+      - 'b'
+      - 'c'
+    position: "center"

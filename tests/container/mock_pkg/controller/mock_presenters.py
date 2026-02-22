@@ -1,7 +1,7 @@
 from typing import Mapping
 
-from sunflare.presenter import Presenter
-from sunflare.device import PDevice
+from redsun.presenter import Presenter
+from redsun.device import PDevice
 
 
 class MockController(Presenter):

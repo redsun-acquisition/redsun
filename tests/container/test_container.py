@@ -442,7 +442,7 @@ class TestAppConfig:
 
     def test_app_config_has_schema_version(self) -> None:
         from redsun.containers import AppConfig
-        from sunflare.virtual import RedSunConfig
+        from redsun.virtual import RedSunConfig
 
         cfg: AppConfig = {
             "schema_version": 1.0,
@@ -453,7 +453,7 @@ class TestAppConfig:
         # AppConfig extends RedSunConfig — verify required keys are inherited
         assert "schema_version" in AppConfig.__required_keys__
         assert "frontend" in AppConfig.__required_keys__
-        # session is NotRequired in sunflare 0.10.0
+        # session is NotRequired since 0.10.0
         assert "session" in AppConfig.__optional_keys__
 
     def test_app_config_has_component_fields(self) -> None:
@@ -471,8 +471,8 @@ class TestAppConfig:
         assert "cam" in cfg["devices"]
 
     def test_redsun_config_no_component_fields(self) -> None:
-        """RedSunConfig in sunflare must not expose devices/presenters/views."""
-        from sunflare.virtual import RedSunConfig
+        """RedSunConfig must not expose devices/presenters/views."""
+        from redsun.virtual import RedSunConfig
         assert "devices" not in RedSunConfig.__annotations__
         assert "presenters" not in RedSunConfig.__annotations__
         assert "views" not in RedSunConfig.__annotations__
@@ -603,7 +603,7 @@ class TestStorageInjection:
     def mock_writer(self):
         """Patch _build_writer to return a MagicMock, avoiding acquire-zarr dependency."""
         from unittest.mock import MagicMock, patch
-        from sunflare.storage import Writer
+        from redsun.storage import Writer
 
         writer = MagicMock(spec=Writer)
         with patch("redsun.containers.container._build_writer", return_value=writer):
@@ -767,7 +767,7 @@ class TestStorageInjection:
     def test_default_base_path_uses_session_name(self) -> None:
         """When base_path is omitted, _build_writer is called with the session name."""
         from unittest.mock import MagicMock, patch, call
-        from sunflare.storage import Writer
+        from redsun.storage import Writer
         from mock_pkg.device import MockDetectorWithStorage
 
         writer = MagicMock(spec=Writer)

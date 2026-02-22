@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from sunflare.view.qt import QtView
-from sunflare.view import ViewPosition
+from redsun.view.qt import QtView
+from redsun.view import ViewPosition
 
 
 class MockQtView(QtView):
