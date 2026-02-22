@@ -21,3 +21,4 @@ def RE() -> RunEngine:
 def bus() -> Generator[VirtualContainer, None, None]:
     container = VirtualContainer()
     yield container
+    container._config.reset()
