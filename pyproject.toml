@@ -117,3 +117,6 @@ addopts = "-p no:warnings"
 env = [
     "QT_QPA_PLATFORM=offscreen",
 ]
+
+[tool.uv.sources]
+sunflare = { path = "../sunflare" }
