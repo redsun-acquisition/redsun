@@ -56,6 +56,7 @@ from redsun.storage._proxy import (
     HasStorage,
     StorageDescriptor,
     StorageProxy,
+    require_storage,
 )
 
 __all__ = [
@@ -75,4 +76,5 @@ __all__ = [
     "StorageProxy",
     "StorageDescriptor",
     "HasStorage",
+    "require_storage",
 ]

@@ -145,3 +145,51 @@ class StorageDescriptor:
 
     def __set__(self, obj: Any, value: StorageProxy | None) -> None:
         object.__setattr__(obj, self._private_name, value)
+
+
+def require_storage(storage: StorageProxy | None, name: str = "") -> StorageProxy:
+    """Return *storage* narrowed to [`StorageProxy`][redsun.storage.StorageProxy], raising if ``None``.
+
+    Use this in device methods that may only be called after the container
+    has injected the storage backend (i.e. after ``prepare()``).  It avoids
+    scattering ``assert self.storage is not None`` calls throughout device
+    code while still giving mypy a fully-narrowed type.
+
+    Parameters
+    ----------
+    storage:
+        The value of ``self.storage``.
+    name:
+        Optional device name included in the error message.
+
+    Returns
+    -------
+    StorageProxy
+        *storage* unchanged, narrowed to non-optional.
+
+    Raises
+    ------
+    RuntimeError
+        If *storage* is ``None``.
+
+    Examples
+    --------
+    ```python
+    from redsun.storage import require_storage
+
+    class MyDetector(Device):
+        storage = StorageDescriptor()
+
+        def kickoff(self) -> Status:
+            backend = require_storage(self.storage, self.name)
+            backend.kickoff()
+            ...
+    ```
+    """
+    if storage is None:
+        device_info = f" for device '{name}'" if name else ""
+        raise RuntimeError(
+            f"No storage backend configured{device_info}. "
+            "Ensure prepare() is called before this method."
+        )
+    return storage
