@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/component-system/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/architecture/virtual/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../storage/">
       
       
-        <link rel="next" href="../container-architecture/">
+        <link rel="next" href="../../../how-to/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.23">
     
     
       
-        <title>Component system - Redsun</title>
+        <title>Virtual container - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.1e989742.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.1e989742.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#component-system" class="md-skip">
+        <a href="#virtual-container" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Component system
+              Virtual container
             
           </span>
         </div>
@@ -215,7 +215,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   Redsun
@@ -235,7 +235,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="../../" class="md-tabs__link">
           
   
   Explanation
@@ -254,7 +254,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../how-to/" class="md-tabs__link">
+        <a href="../../../how-to/" class="md-tabs__link">
           
   
   How to
@@ -273,7 +273,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -292,7 +292,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -325,7 +325,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -355,7 +355,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -420,7 +420,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -461,37 +461,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Component system
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../component-system/" class="md-nav__link">
         
   
   
@@ -507,93 +480,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#plugin-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#component-manifest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Component manifest
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-file-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration file format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#protocol-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protocol validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inline-vs-config-based-registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inline vs. config-based registration
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -606,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container-architecture/" class="md-nav__link">
+      <a href="../../container-architecture/" class="md-nav__link">
         
   
   
@@ -634,7 +520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../statement/" class="md-nav__link">
+      <a href="../../statement/" class="md-nav__link">
         
   
   
@@ -642,6 +528,187 @@
     
   
     Statement of need
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Devices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../in-process-device/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-process devices
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../presenters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Presenters
   
 
     
@@ -687,189 +754,37 @@
                 
   
   
+    
   
   
-    
-    
+  
+    <li class="md-nav__item md-nav__item--active">
       
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
         
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
           
-          
-        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual container
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Architecture
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/devices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Devices
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/in-process-device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    In-process devices
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/presenters/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Presenters
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/storage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Storage
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/virtual/" class="md-nav__link">
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -885,6 +800,49 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#provider-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#injected-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Injected components
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -941,7 +899,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../how-to/" class="md-nav__link ">
+            <a href="../../../how-to/" class="md-nav__link ">
               
   
   
@@ -985,7 +943,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/build-docs/" class="md-nav__link">
+      <a href="../../../how-to/build-docs/" class="md-nav__link">
         
   
   
@@ -1013,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/installation/" class="md-nav__link">
+      <a href="../../../how-to/installation/" class="md-nav__link">
         
   
   
@@ -1041,7 +999,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-tests/" class="md-nav__link">
+      <a href="../../../how-to/run-tests/" class="md-nav__link">
         
   
   
@@ -1103,7 +1061,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../../../reference/" class="md-nav__link ">
               
   
   
@@ -1147,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/changelog/" class="md-nav__link">
+      <a href="../../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1245,7 +1203,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/container/" class="md-nav__link">
+      <a href="../../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1273,7 +1231,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/device/" class="md-nav__link">
+      <a href="../../../reference/api/device/" class="md-nav__link">
         
   
   
@@ -1301,7 +1259,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/engine/" class="md-nav__link">
+      <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1329,7 +1287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/log/" class="md-nav__link">
+      <a href="../../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1357,7 +1315,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1385,7 +1343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/storage/" class="md-nav__link">
+      <a href="../../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -1413,7 +1371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/view/" class="md-nav__link">
+      <a href="../../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -1441,7 +1399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -1507,7 +1465,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/" class="md-nav__link ">
+            <a href="../../../tutorials/" class="md-nav__link ">
               
   
   
@@ -1574,10 +1532,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#provider-components" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Provider components
       
     </span>
   </a>
@@ -1585,54 +1543,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#plugin-discovery" class="md-nav__link">
+  <a href="#injected-components" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Plugin discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#component-manifest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Component manifest
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-file-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration file format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#protocol-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protocol validation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inline-vs-config-based-registration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inline vs. config-based registration
+        Injected components
       
     </span>
   </a>
@@ -1657,112 +1571,102 @@
   
 
 
-<h1 id="component-system">Component system<a class="headerlink" href="#component-system" title="Permanent link">&para;</a></h1>
-<p><code>redsun</code> component system allows third-party packages to provide devices, presenters, and views that are dynamically discovered and loaded at runtime.</p>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>From Python point of view, components are standard Python packages that register themselves via <a href="https://packaging.python.org/en/latest/specifications/entry-points/">entry points</a>. When <code>redsun</code> builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.</p>
-<pre class="mermaid"><code>graph TB
-    Config[YAML config] --&gt;|references| Plugins
-    Plugins --&gt;|discovered via| EntryPoints[entry points]
-    EntryPoints --&gt;|load| Manifest[plugin manifest]
-    Manifest --&gt;|resolves to| Classes[component classes]
-    Classes --&gt;|registered in| Container[AppContainer]</code></pre>
-<h2 id="plugin-discovery">Plugin discovery<a class="headerlink" href="#plugin-discovery" title="Permanent link">&para;</a></h2>
-<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-classmethod&quot;&gt;&lt;code&gt;classmethod&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.from_config"><code>AppContainer.from_config()</code></a>
-is called with a configuration file, Redsun:</p>
-<ol>
-<li><strong>Reads the configuration</strong> - parses the YAML file to determine which devices, presenters, and views are needed.</li>
-<li><strong>Queries entry points</strong> - looks up installed packages registered under the <code>redsun.plugins</code> entry point group.</li>
-<li><strong>Loads manifests</strong> - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.</li>
-<li><strong>Validates protocols</strong> - each loaded class is checked against the expected protocol (<a class="autorefs autorefs-internal" href="../../reference/api/device/#redsun.device.Device"><code>Device</code></a>, <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a>, or <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a>).</li>
-<li><strong>Creates the container</strong> - a dynamic container class is assembled with the discovered components.</li>
-</ol>
-<h2 id="component-manifest">Component manifest<a class="headerlink" href="#component-manifest" title="Permanent link">&para;</a></h2>
-<p>Each component package must include a YAML manifest file named <code>redsun.yaml</code> that declares the available components. </p>
-<p>Each entry maps a plugin ID directly to its <code>"module:ClassName"</code> class path:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># redsun.yaml</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">devices</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">my_motor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my_plugin.devices:MyMotor&quot;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">my_controller</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my_plugin.presenters:MyController&quot;</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">my_ui</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;my_plugin.views:MyView&quot;</span>
+<h1 id="virtual-container">Virtual container<a class="headerlink" href="#virtual-container" title="Permanent link">&para;</a></h1>
+<p>At application construction, <code>redsun</code> creates a <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>, a shared resource container which provides the following things:</p>
+<ul>
+<li>a registration point for <a class="autorefs autorefs-external" href="https://psygnal.readthedocs.io/en/latest/reference/psygnal/#psygnal.Signal"><code>psygnal.Signals</code></a> declared in your component;</li>
+<li>a registration point for <code>bluesky</code>-compliant callbacks to consume documents produced by a <code>RunEngine</code> during a plan execution;</li>
+<li>a way to dynamically registering any kind of resource to make them available to the rest of the application, giving control to the single component to expose whatever additional information it can provide or should be able to retrieve.</li>
+</ul>
+<p>Additionally it provides a view of the configuration file app-level fields, described in <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RedSunConfig&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.RedSunConfig"><code>RedSunConfig</code></a>.</p>
+<h2 id="provider-components">Provider components<a class="headerlink" href="#provider-components" title="Permanent link">&para;</a></h2>
+<p>Components that may wish to inject one of the above functionalities must implement the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> protocol, by adding the following method:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.virtual</span><span class="w"> </span><span class="kn">import</span> <span class="n">VirtualContainer</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dependency_injector</span><span class="w"> </span><span class="kn">import</span> <span class="n">providers</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">event_model.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyComponent</span><span class="p">:</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">mySignal</span><span class="p">:</span> <span class="n">Signal</span><span class="p">()</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">myOtherSignal</span><span class="p">:</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">my_provider</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">my_callback</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">document</span><span class="p">:</span> <span class="n">Document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="c1"># a callback a RunEngine can consume</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">my_other_callback</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">document</span><span class="p">:</span> <span class="n">Document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        <span class="c1"># a second callback from the same owner</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">register_providers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">VirtualContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="c1"># register a signal via &quot;register signals&quot;, which can be accessed via</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        <span class="c1"># container.signals[&quot;MyComponent&quot;][&quot;mySignal&quot;]</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_signals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="c1"># you can also provide an alias for the component to be cached</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_signals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;my-component&quot;</span><span class="p">)</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        <span class="c1"># you can selectively specify which signal to expose via the &quot;only&quot; keyword</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="c1"># and provide an iterable object containing names matching the signal attributes</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="c1"># you wish to register, hiding the others</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_signals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">only</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mySignal&quot;</span><span class="p">])</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>        <span class="c1"># you can register your callbacks; by default the owner&#39;s name attribute</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>        <span class="c1"># is used as the registry key; if your component subclasses DocumentRouter</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>        <span class="c1"># directly, it is accepted as-is without signature inspection since the</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>        <span class="c1"># interface is guaranteed by the base class</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>        <span class="c1"># you can override the registry key with an explicit name</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my-callback&quot;</span><span class="p">)</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>        <span class="c1"># if you need to expose more than one callback from the same owner,</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>        <span class="c1"># use the callback_map parameter; each entry is registered independently</span>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>        <span class="c1"># under its own key, and the owner-level name is ignored</span>
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback_map</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>            <span class="s2">&quot;live-data&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">my_callback</span><span class="p">,</span>
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>            <span class="s2">&quot;scan-meta&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">my_other_callback</span><span class="p">,</span>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>        <span class="p">})</span>
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>        <span class="c1"># you can dynamically register objects the other components can get access to,</span>
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>        <span class="c1"># using the dependency_injector.providers module</span>
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>        <span class="n">container</span><span class="o">.</span><span class="n">my_object</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Object</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">my_provider</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The manifest must be registered as a <a href="https://packaging.python.org/en/latest/specifications/entry-points/">Python entry point</a> in the package <code>pyproject.toml</code>:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[project.entry-points.</span><span class="s2">&quot;redsun.plugins&quot;</span><span class="k">]</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">my-plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;redsun.yaml&quot;</span>
+<p><a href="https://python-dependency-injector.ets-labs.org/index.html"><code>python-dependency-injector</code></a> offers a great deal of options of what kind of resource to shared with other components. Refer to its documentation for more information.</p>
+<h2 id="injected-components">Injected components<a class="headerlink" href="#injected-components" title="Permanent link">&para;</a></h2>
+<p>Through the <code>VirtualContainer</code>, objects provided by other components may be retrieved by implementing the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> protocol.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.virtual</span><span class="w"> </span><span class="kn">import</span> <span class="n">VirtualContainer</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dependency_injector</span><span class="w"> </span><span class="kn">import</span> <span class="n">providers</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">event_model.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyOtherComponent</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">my_slot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="o">...</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">inject_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">VirtualContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>        <span class="c1"># get the currently cached signals so you can connect them</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="c1"># to your own slots, to provide event-based communication</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="c1"># between components; be sure to handle the case</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>        <span class="c1"># where the component might not be existent</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="n">container</span><span class="o">.</span><span class="n">signals</span><span class="p">[</span><span class="s2">&quot;MyComponent&quot;</span><span class="p">][</span><span class="s2">&quot;MySignal&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">my_slot</span><span class="p">)</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        <span class="c1"># get the currently available callbacks so you can consume RunEngine documents;</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="c1"># this is useful when your component contains a RunEngine itself and you wish</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="c1"># to dispatch documents to other components</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="n">callback</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">callbacks</span><span class="p">[</span><span class="s2">&quot;my-callback&quot;</span><span class="p">]</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="c1"># get any object registered by other components</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>        <span class="n">object_from_component</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">my_object</span><span class="p">()</span>
 </span></code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>This is inspired by the <a href="https://napari.org/stable/plugins/technical_references/manifest.html">napari manifest</a>.</p>
-<p>Make sure that depending on the packaging system you use, the <code>redsun.yaml</code> is included in the built package otherwise your components will not be discoverable.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Dynamically registering objects via <code>container.my_object = providers.Object()</code> or any other provider
+does not allow other components to be aware of the type hints associated with that injected object;
+it is the responsibility of component developers to document whatever object is stored in the virtual
+container and what type does it represent.</p>
 </div>
-<h2 id="configuration-file-format">Configuration file format<a class="headerlink" href="#configuration-file-format" title="Permanent link">&para;</a></h2>
-<p>The application configuration file references plugins by name and ID. A full example follows:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">application&quot;</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pyqt&quot;</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">metadata</span><span class="p">:</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Jacopo Abramo</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Jena</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">setup</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">iSCAT</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">devices</span><span class="p">:</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">motor</span><span class="p">:</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nt">axis</span><span class="p">:</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">X</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Y</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="nt">controller</span><span class="p">:</span>
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_controller</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span><span class="nt">ui</span><span class="p">:</span>
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_ui</span>
-</span></code></pre></div>
-<p>The top-level keys represent application level information:</p>
-<ul>
-<li><code>schema_version</code> is the version value of the component system, kept for future compatibility;</li>
-<li><code>session</code> is the name which will be assigned to the application for display;</li>
-<li><code>frontend</code> is the UI toolkit used to load the correct subclass of <code>AppContainer</code>;</li>
-<li><code>metadata</code> are application-level metadata to add contextual informations.</li>
-</ul>
-<p>The <code>plugin_name</code> and <code>plugin_id</code> keys are used for plugin resolution and are not passed to the component constructors. All other keys become keyword arguments for the component.</p>
-<h2 id="protocol-validation">Protocol validation<a class="headerlink" href="#protocol-validation" title="Permanent link">&para;</a></h2>
-<p>Before a plugin class is used, <code>redsun</code> verifies it implements the expected protocol:</p>
-<ul>
-<li><strong>Devices</strong> must be subclasses of <a class="autorefs autorefs-internal" href="../../reference/api/device/#redsun.device.Device"><code>Device</code></a> or structurally implement the <a class="autorefs autorefs-internal" href="../../reference/api/device/#redsun.device.PDevice"><code>PDevice</code></a> protocol.</li>
-<li><strong>Presenters</strong> must be subclasses of <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> or structurally implement the <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> protocol.</li>
-<li><strong>Views</strong> must be subclasses of <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> or structurally implement the <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a> protocol.</li>
-</ul>
-<p>Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/abc.html#abc.ABCMeta.register"><code>ABCMeta.register()</code></a>.</p>
-<h2 id="inline-vs-config-based-registration">Inline vs. config-based registration<a class="headerlink" href="#inline-vs-config-based-registration" title="Permanent link">&para;</a></h2>
-<p>The plugin system is used when building from configuration files via
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-classmethod&quot;&gt;&lt;code&gt;classmethod&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.from_config"><code>AppContainer.from_config()</code></a>.
-When using the declarative class-based approach (defining a container subclass with
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;device&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.device"><code>device()</code></a>, <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;presenter&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.presenter"><code>presenter()</code></a> or <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;view&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.view"><code>view()</code></a> field functions), component classes are
-passed directly as the first argument to the respective function and do not go through plugin discovery.</p>
-<p>Both approaches produce the same result: an
-<a class="autorefs autorefs-internal" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with registered device,
-presenter, and view components ready to be built.</p>
 
 
 
@@ -1802,7 +1706,7 @@ presenter, and view components ready to be built.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Explanation">
+          <a href="../storage/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Storage">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1812,20 +1716,20 @@ presenter, and view components ready to be built.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Explanation
+                Storage
               </div>
             </div>
           </a>
         
         
           
-          <a href="../container-architecture/" class="md-footer__link md-footer__link--next" aria-label="Next: Container architecture">
+          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Container architecture
+                How-to guides
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1890,10 +1794,10 @@ presenter, and view components ready to be built.</p>
       
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.5fcf0de6.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.5fcf0de6.min.js"></script>
       
     
   </body>

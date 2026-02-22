@@ -4,16 +4,43 @@
         <loc>https://redsun-acquisition.github.io/redsun/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/storage/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/devices/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/in-process-device/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/presenters/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/storage/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/virtual/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
@@ -22,18 +49,33 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/changelog/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/container/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/device/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/engine/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/storage/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/log/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/presenter/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/storage/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/view/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/virtual/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
       </url>
 </urlset>
