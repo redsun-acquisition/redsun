@@ -41,6 +41,7 @@ dev = [
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "pytest-env>=1.1.5",
     "types-pyyaml>=6.0.12.20250915",
     "ruff>=0.14.14",
     "ophyd>=1.11.0",
@@ -142,6 +143,9 @@ testpaths = [
     "tests",
 ]
 addopts = "-p no:warnings"
+markers = [
+    "qt: marks tests that require a Qt display (skipped in headless environments)",
+]
 env = [
     "QT_QPA_PLATFORM=offscreen",
 ]

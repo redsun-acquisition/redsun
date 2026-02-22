@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from redsun.containers import AppContainer, AppConfig, StorageConfig, device, presenter, view
+from redsun.containers import (
+    AppConfig,
+    AppContainer,
+    StorageConfig,
+    device,
+    presenter,
+    view,
+)
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
@@ -61,10 +66,7 @@ class TestComponentWrappers:
         assert presenter is comp.instance
         assert "built" in repr(comp)
 
-    @pytest.mark.skipif(
-        sys.platform == "linux" and not os.environ.get("DISPLAY"),
-        reason="requires a display (Qt)",
-    )
+    @pytest.mark.qt
     def test_view_component_build(self) -> None:
         from mock_pkg.view import MockQtView
         from qtpy.QtWidgets import QApplication
@@ -277,10 +279,7 @@ class TestComponentFieldSyntax:
         assert "ctrl" in TestApp._presenter_components
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
-    @pytest.mark.skipif(
-        sys.platform == "linux" and not os.environ.get("DISPLAY"),
-        reason="Fails on Linux CI without a display (Qt required for view components)",
-    )
+    @pytest.mark.qt
     def test_component_field_collects_view(self) -> None:
         from mock_pkg.view import MockQtView
         from qtpy.QtWidgets import QApplication
@@ -442,7 +441,6 @@ class TestAppConfig:
 
     def test_app_config_has_schema_version(self) -> None:
         from redsun.containers import AppConfig
-        from redsun.virtual import RedSunConfig
 
         cfg: AppConfig = {
             "schema_version": 1.0,
@@ -457,7 +455,6 @@ class TestAppConfig:
         assert "session" in AppConfig.__optional_keys__
 
     def test_app_config_has_component_fields(self) -> None:
-        from redsun.containers import AppConfig
 
         cfg: AppConfig = {
             "schema_version": 1.0,
@@ -478,14 +475,15 @@ class TestAppConfig:
         assert "views" not in RedSunConfig.__annotations__
 
 
+@pytest.mark.qt
 class TestQtAppContainer:
     """Tests for QtAppContainer lifecycle correctness."""
 
     def test_build_before_run_creates_qapplication(self) -> None:
-        from mock_pkg.view import MockQtView
         from mock_pkg.device import MyMotor
-
+        from mock_pkg.view import MockQtView
         from qtpy.QtWidgets import QApplication
+
         from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
@@ -508,6 +506,7 @@ class TestQtAppContainer:
 
     def test_run_reuses_qapplication_created_by_build(self) -> None:
         from qtpy.QtWidgets import QApplication
+
         from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
@@ -528,7 +527,7 @@ class TestComponentNaming:
     """
 
     def test_device_alias_overrides_attr_name(self) -> None:
-        """alias takes priority over the attribute name as device name."""
+        """Alias takes priority over the attribute name as device name."""
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
@@ -561,7 +560,7 @@ class TestComponentNaming:
         assert app.devices["motor"].name == "motor"
 
     def test_presenter_alias_overrides_attr_name(self) -> None:
-        """alias takes priority over the attribute name for presenters."""
+        """Alias takes priority over the attribute name for presenters."""
         from mock_pkg.controller import MockController
         from mock_pkg.device import MyMotor
 
@@ -603,6 +602,7 @@ class TestStorageInjection:
     def mock_writer(self):
         """Patch _build_writer to return a MagicMock, avoiding acquire-zarr dependency."""
         from unittest.mock import MagicMock, patch
+
         from redsun.storage import Writer
 
         writer = MagicMock(spec=Writer)
@@ -667,7 +667,7 @@ class TestStorageInjection:
         assert not hasattr(motor, "storage")
 
     def test_storage_none_when_no_config(self) -> None:
-        """Without a storage section, device.storage remains None."""
+        """Without a storage section, device.storage is not injected."""
         from mock_pkg.device import MockDetectorWithStorage
 
         class TestApp(AppContainer):
@@ -686,7 +686,7 @@ class TestStorageInjection:
         app.build()
 
         cam = app.devices["cam"]
-        assert cam.storage is None  # type: ignore[union-attr]
+        assert not hasattr(cam, "storage")
 
     def test_storage_injected_via_inheritance(
         self, tmp_path: Path, mock_writer: Any
@@ -696,6 +696,7 @@ class TestStorageInjection:
 
         class ExtendedDetector(MockDetectorWithStorage):
             """Subclass that inherits StorageDescriptor from MockDetectorWithStorage."""
+
             pass
 
         class TestApp(AppContainer):
@@ -766,9 +767,11 @@ class TestStorageInjection:
 
     def test_default_base_path_uses_session_name(self) -> None:
         """When base_path is omitted, _build_writer is called with the session name."""
-        from unittest.mock import MagicMock, patch, call
-        from redsun.storage import Writer
+        from unittest.mock import MagicMock, patch
+
         from mock_pkg.device import MockDetectorWithStorage
+
+        from redsun.storage import Writer
 
         writer = MagicMock(spec=Writer)
 
@@ -798,8 +801,9 @@ class TestStorageInjection:
 
     def test_build_writer_creates_session_directory(self, tmp_path: Path) -> None:
         """_build_writer creates ~/redsun-storage/<session> when base_path is omitted."""
-        from unittest.mock import patch
         from pathlib import Path as _Path
+        from unittest.mock import patch
+
         from redsun.containers.container import _build_writer
 
         storage_cfg = StorageConfig(backend="zarr")

@@ -1,7 +1,9 @@
-from redsun.virtual import VirtualContainer, IsInjectable, IsProvider
-from redsun.view import View, ViewPosition, PView
-from redsun.view.qt import QtView
+import pytest
 from qtpy import QtWidgets as QtW
+
+from redsun.view import PView, View, ViewPosition
+from redsun.view.qt import QtView
+from redsun.virtual import IsInjectable, IsProvider, VirtualContainer
 
 
 def test_qtview_subclassing() -> None:
@@ -29,6 +31,7 @@ def test_base_view(bus: VirtualContainer) -> None:
     assert view.view_position == ViewPosition.CENTER
 
 
+@pytest.mark.qt
 def test_presenter_is_provider(bus: VirtualContainer) -> None:
     """Test that a presenter can optionally implement IsProvider."""
 
@@ -69,6 +72,7 @@ def test_view_is_injectable(bus: VirtualContainer) -> None:
     assert issubclass(InjectableView, IsInjectable)
 
 
+@pytest.mark.qt
 def test_base_qt_view(bus: VirtualContainer) -> None:
     """Test basic QtView functionality."""
 
