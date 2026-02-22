@@ -25,5 +25,3 @@
 ::: redsun.storage.StorageDescriptor
 
 ::: redsun.storage.HasStorage
-
-::: redsun.storage.require_storage

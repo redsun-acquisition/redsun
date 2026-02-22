@@ -34,8 +34,11 @@ class StorageProxy(Protocol):
     [`Writer`][redsun.storage.Writer] instances implement this protocol,
     so device code remains independent of the concrete backend.
 
-    Devices access the backend via their `storage` attribute, which is
-    `None` when no backend has been configured for the session.
+    Devices access the backend via their ``storage`` attribute. The container
+    injects a [`Writer`][redsun.storage.Writer] instance before any acquisition
+    begins; if no storage section is present in the session configuration the
+    device's ``storage`` attribute is never set and accessing it will raise
+    ``AttributeError``.
     """
 
     def update_source(
@@ -91,15 +94,23 @@ class HasStorage(Protocol, metaclass=_HasStorageMeta):
 
 
 class StorageDescriptor:
-    """Descriptor that manages the `storage` slot on a device.
+    """Descriptor that manages the ``storage`` slot on a device.
 
     The private attribute name is derived from the descriptor's own name
-    at class-creation time via `__set_name__` (e.g. a class attribute
-    named `storage` produces a backing attribute `_storage`).  Reading
-    and writing go through `object.__getattribute__` and
-    `object.__setattr__` rather than `__dict__` access, so the descriptor
-    works correctly on classes that define `__slots__` as long as the
+    at class-creation time via ``__set_name__`` (e.g. a class attribute
+    named ``storage`` produces a backing attribute ``_storage``).  Reading
+    and writing go through ``object.__getattribute__`` and
+    ``object.__setattr__`` rather than ``__dict__`` access, so the descriptor
+    works correctly on classes that define ``__slots__`` as long as the
     backing slot is declared.
+
+    From the **typing perspective**, ``storage`` is always a
+    [`StorageProxy`][redsun.storage.StorageProxy] — the descriptor promises
+    that the container will inject a backend before any acquisition method is
+    called.  At runtime, reading ``storage`` before injection raises
+    ``AttributeError``; device code that must guard against a sessionless
+    configuration should check via ``hasattr(self, 'storage')`` rather than
+    comparing against ``None``.
 
     This descriptor is public so users can reference it explicitly in
     custom device classes:
@@ -111,6 +122,11 @@ class StorageDescriptor:
 
     class MyDevice(Device):
         storage = StorageDescriptor()
+
+        def prepare(self, ...) -> Status:
+            if not hasattr(self, 'storage'):
+                raise RuntimeError("No storage backend configured.")
+            self.storage.update_source(...)
     ```
     """
 
@@ -126,70 +142,16 @@ class StorageDescriptor:
     def __get__(self, obj: None, objtype: type) -> StorageDescriptor: ...
 
     @overload
-    def __get__(self, obj: Any, objtype: type | None) -> StorageProxy | None: ...
+    def __get__(self, obj: Any, objtype: type | None) -> StorageProxy: ...
 
     def __get__(
         self,
         obj: Any,
         objtype: type | None = None,
-    ) -> StorageDescriptor | StorageProxy | None:
+    ) -> StorageDescriptor | StorageProxy:
         if obj is None:
             return self
-        try:
-            result: StorageProxy | None = object.__getattribute__(
-                obj, self._private_name
-            )
-        except AttributeError:
-            result = None
-        return result
+        return object.__getattribute__(obj, self._private_name)  # type: ignore[no-any-return]
 
-    def __set__(self, obj: Any, value: StorageProxy | None) -> None:
+    def __set__(self, obj: Any, value: StorageProxy) -> None:
         object.__setattr__(obj, self._private_name, value)
-
-
-def require_storage(storage: StorageProxy | None, name: str = "") -> StorageProxy:
-    """Return *storage* narrowed to [`StorageProxy`][redsun.storage.StorageProxy], raising if ``None``.
-
-    Use this in device methods that may only be called after the container
-    has injected the storage backend (i.e. after ``prepare()``).  It avoids
-    scattering ``assert self.storage is not None`` calls throughout device
-    code while still giving mypy a fully-narrowed type.
-
-    Parameters
-    ----------
-    storage:
-        The value of ``self.storage``.
-    name:
-        Optional device name included in the error message.
-
-    Returns
-    -------
-    StorageProxy
-        *storage* unchanged, narrowed to non-optional.
-
-    Raises
-    ------
-    RuntimeError
-        If *storage* is ``None``.
-
-    Examples
-    --------
-    ```python
-    from redsun.storage import require_storage
-
-    class MyDetector(Device):
-        storage = StorageDescriptor()
-
-        def kickoff(self) -> Status:
-            backend = require_storage(self.storage, self.name)
-            backend.kickoff()
-            ...
-    ```
-    """
-    if storage is None:
-        device_info = f" for device '{name}'" if name else ""
-        raise RuntimeError(
-            f"No storage backend configured{device_info}. "
-            "Ensure prepare() is called before this method."
-        )
-    return storage

@@ -97,9 +97,16 @@ class TestStorageDescriptor:
         """Subclasses that declare StorageDescriptor must have it in __dict__."""
         assert isinstance(_StorageDevice.__dict__.get("storage"), StorageDescriptor)
 
-    def test_default_is_none(self) -> None:
+    def test_default_raises(self) -> None:
+        """Accessing storage before injection must raise AttributeError."""
         device = _StorageDevice("dev")
-        assert device.storage is None
+        with pytest.raises(AttributeError):
+            _ = device.storage
+
+    def test_uninjected_via_hasattr(self) -> None:
+        """hasattr is the correct way to check whether storage is injected."""
+        device = _StorageDevice("dev")
+        assert not hasattr(device, "storage")
 
     def test_set_and_get(self) -> None:
         device = _StorageDevice("dev")
@@ -107,18 +114,12 @@ class TestStorageDescriptor:
         device.storage = mock_proxy
         assert device.storage is mock_proxy
 
-    def test_set_none_resets(self) -> None:
-        device = _StorageDevice("dev")
-        device.storage = MagicMock(spec=StorageProxy)
-        device.storage = None
-        assert device.storage is None
-
     def test_independent_per_instance(self) -> None:
         """Each device instance must have its own storage slot."""
         dev_a = _StorageDevice("a")
         dev_b = _StorageDevice("b")
         dev_a.storage = MagicMock(spec=StorageProxy)
-        assert dev_b.storage is None
+        assert not hasattr(dev_b, "storage")
 
     def test_class_access_returns_descriptor(self) -> None:
         assert isinstance(_StorageDevice.storage, StorageDescriptor)
@@ -159,12 +160,10 @@ class TestStorageDescriptor:
                 self._name = name
 
         device = _SlottedDevice("slotted")
-        assert device.storage is None
+        assert not hasattr(device, "storage")
         mock_proxy = MagicMock(spec=StorageProxy)
         device.storage = mock_proxy
         assert device.storage is mock_proxy
-        device.storage = None
-        assert device.storage is None
 
 
 # ---------------------------------------------------------------------------
