@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.8.0] - 22-02-2026
+
+### Changed
+
+- Migrated sunflare codebase to redsun. Sunflare will be archived.
+
 ## [0.7.2] - 22-02-2026
 
 ### Changed
