@@ -172,8 +172,6 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     Writer
         Configured writer instance ready for injection.
     """
-    from pathlib import Path
-
     backend = cfg.get("backend", "zarr")
     raw_path = cfg.get("base_path")
     if raw_path is None:

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 try:
     from acquire_zarr import (
@@ -32,6 +34,14 @@ if TYPE_CHECKING:
     import numpy.typing as npt
 
     from redsun.storage._path import PathProvider
+
+
+def from_uri(uri: str) -> str:
+    """Convert a URI to a filesystem path if local, otherwise return as-is."""
+    parsed = urlparse(uri)
+    if parsed.scheme == "file":
+        return url2pathname(parsed.path)
+    return uri
 
 
 class ZarrWriter(Writer):
@@ -102,7 +112,7 @@ class ZarrWriter(Writer):
         """
         path_info = self._path_provider(name)
         self._store_path = path_info.store_uri
-        self._stream_settings.store_path = path_info.store_uri
+        self._stream_settings.store_path = from_uri(path_info.store_uri)
 
         source = self._sources[name]
         height, width = source.shape
