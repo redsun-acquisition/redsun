@@ -17,14 +17,11 @@ from typing import (
     Any,
     ClassVar,
     Literal,
-    Protocol,
     TypedDict,
     TypeGuard,
     TypeVar,
     Union,
-    _ProtocolMeta,
     overload,
-    runtime_checkable,
 )
 
 import yaml
@@ -32,10 +29,9 @@ from sunflare.device import Device
 from sunflare.presenter import Presenter
 from sunflare.storage import (
     AutoIncrementFilenameProvider,
+    HasStorage,
     StaticFilenameProvider,
     StaticPathProvider,
-    StorageDescriptor,
-    StorageProxy,
     UUIDFilenameProvider,
     Writer,
 )
@@ -215,42 +211,10 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
 
 
-class _HasStorageMeta(_ProtocolMeta):
-    """Metaclass for ``_HasStorage`` that overrides ``__instancecheck__``.
-
-    Walks ``type(instance).__mro__`` looking for a ``StorageDescriptor``
-    on the class itself — not the ``None`` value the descriptor returns
-    before injection.  This ensures ``isinstance(device, _HasStorage)``
-    is only ``True`` when the device has genuinely opted in to storage.
-
-    TODO: move to ``sunflare.storage`` together with ``_HasStorage``
-    in a future sunflare release.
-    """
-
-    def __instancecheck__(cls, instance: object) -> bool:
-        return any(
-            isinstance(vars(c).get("storage"), StorageDescriptor)
-            for c in type(instance).__mro__
-        )
-
-
-@runtime_checkable
-class _HasStorage(Protocol, metaclass=_HasStorageMeta):
-    """Private protocol for devices that have opted in to storage.
-
-    Declares the ``storage`` attribute so that mypy narrows the type
-    correctly inside ``_inject_storage`` after the ``isinstance`` check.
-
-    TODO: move to ``sunflare.storage`` in a future sunflare release.
-    """
-
-    storage: StorageProxy | None
-
-
 def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
     """Inject *writer* into every device that carries a ``StorageDescriptor``."""
     for name, device in devices.items():
-        if isinstance(device, _HasStorage):
+        if isinstance(device, HasStorage):
             device.storage = writer
             logger.debug(f"Injected storage writer into device '{name}'")
 
