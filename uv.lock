@@ -1480,9 +1480,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "platformdirs", specifier = ">=4.3.8" },
-    { name = "sunflare", directory = "../sunflare" },
-    { name = "sunflare", extras = ["pyqt"], marker = "extra == 'pyqt'", directory = "../sunflare" },
-    { name = "sunflare", extras = ["pyside"], marker = "extra == 'pyside'", directory = "../sunflare" },
+    { name = "sunflare", specifier = ">=0.11.1" },
+    { name = "sunflare", extras = ["pyqt"], marker = "extra == 'pyqt'" },
+    { name = "sunflare", extras = ["pyside"], marker = "extra == 'pyside'" },
 ]
 provides-extras = ["pyqt", "pyside"]
 
@@ -1494,7 +1494,7 @@ dev = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.14.4" },
-    { name = "sunflare", extras = ["pyqt"], directory = "../sunflare" },
+    { name = "sunflare", extras = ["pyqt"], specifier = ">=0.11.0" },
     { name = "zensical", specifier = ">=0.0.23" },
 ]
 
@@ -1697,13 +1697,18 @@ wheels = [
 
 [[package]]
 name = "sunflare"
-source = { directory = "../sunflare" }
+version = "0.11.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bluesky" },
     { name = "dependency-injector" },
     { name = "psygnal" },
     { name = "pyyaml" },
     { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/c9/4fa3bc54420eca4cd40565700cbeeb92935e0108fb9b257350f36537e50b/sunflare-0.11.1.tar.gz", hash = "sha256:b3a129de84161081d007ae23c7df2bc0532caabec5b3f3453a1bfe864be204ce", size = 28899, upload-time = "2026-02-22T09:36:13.919Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/3b/2f9591a26e667cfa560ed9716d82ac41054b60e1c49e58146243a78e403a/sunflare-0.11.1-py3-none-any.whl", hash = "sha256:f11e348c76fabfb6d7895ea43c6804341d8bc1d9fcba1537ecaac1449fe3b412", size = 38044, upload-time = "2026-02-22T09:36:12.295Z" },
 ]
 
 [package.optional-dependencies]
@@ -1716,45 +1721,6 @@ pyside = [
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.6.0" },
-    { name = "bluesky", specifier = ">=1.14.6" },
-    { name = "dependency-injector", specifier = ">=4.48.3" },
-    { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.1" },
-    { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.1" },
-    { name = "psygnal", specifier = ">=0.15.1" },
-    { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.10.2" },
-    { name = "pyside6", marker = "extra == 'pyside'", specifier = ">=6.9.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "qtpy", marker = "extra == 'pyqt'", specifier = ">=2.4.3" },
-    { name = "qtpy", marker = "extra == 'pyside'", specifier = ">=2.4.3" },
-    { name = "typing-extensions", specifier = ">=4.15.0" },
-]
-provides-extras = ["pyqt", "pyside", "zarr"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "attrs", specifier = ">=25.4.0" },
-    { name = "griffe-fieldz", specifier = ">=0.4.0" },
-    { name = "mike", specifier = ">=2.1.3" },
-    { name = "mkdocstrings-python", specifier = ">=2.0.2" },
-    { name = "mypy", specifier = ">=1.19.1" },
-    { name = "myst-parser", specifier = ">=4.0.1" },
-    { name = "ophyd", specifier = ">=1.11.0" },
-    { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pydata-sphinx-theme", specifier = ">=0.16.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "ruff", specifier = ">=0.14.14" },
-    { name = "sphinx", specifier = ">=8.1.3" },
-    { name = "sphinx-design", specifier = ">=0.6.1" },
-    { name = "sphinxcontrib-mermaid", specifier = ">=2.0.0" },
-    { name = "sunflare", extras = ["pyqt", "zarr"] },
-    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
-    { name = "zensical", specifier = ">=0.0.23" },
 ]
 
 [[package]]
