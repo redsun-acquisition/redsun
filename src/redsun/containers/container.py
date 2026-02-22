@@ -210,7 +210,7 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
                 "The 'zarr' storage backend requires the 'acquire-zarr' package. "
                 "Install it with: pip install sunflare[zarr]"
             )
-        return ZarrWriter("redsun-writer", path_provider)
+        return ZarrWriter("redsun-writer", path_provider, base_dir)
 
     raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
 
