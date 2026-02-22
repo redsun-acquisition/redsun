@@ -128,7 +128,7 @@ The directory is created automatically on first use.
 
 ## How injection works
 
-During [`build()`][redsun.containers.container.AppContainer.build], after all devices are constructed, the container checks each device for a [`StorageDescriptor`][sunflare.storage.StorageDescriptor] anywhere in its class hierarchy (full MRO walk). Devices that have one receive the shared writer via `setattr`. The check is performed by the private `_HasStorage` protocol, whose metaclass overrides `__instancecheck__` to inspect the class rather than the instance value — this correctly identifies opted-in devices even when `storage` is currently `None`.
+During [`build()`][redsun.containers.container.AppContainer.build], after all devices are constructed, the container checks each device for a [`StorageDescriptor`][sunflare.storage.StorageDescriptor] anywhere in its class hierarchy (full MRO walk). Devices that have one receive the shared writer via `setattr`. The check is performed by [`HasStorage`][sunflare.storage.HasStorage], a protocol in `sunflare.storage` whose metaclass overrides `__instancecheck__` to inspect the class rather than the instance value — this correctly identifies opted-in devices even when `storage` is currently `None`.
 
 !!! note "Future: per-plan override"
     The filename provider is currently fixed for the lifetime of the session.
