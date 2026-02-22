@@ -721,6 +721,49 @@ class TestStorageInjection:
         cam = app.devices["cam"]
         assert cam.storage is mock_writer  # type: ignore[union-attr]
 
+    def test_storage_injected_from_yaml_in_declarative_path(
+        self, tmp_path: Path, mock_writer: Any
+    ) -> None:
+        """Storage section in YAML is picked up automatically in the declarative path.
+
+        Previously AppContainerMeta loaded the YAML only to resolve component
+        kwargs and never wrote non-component top-level keys (storage, session,
+        schema_version) into _config.  AppContainer.__init__ now reads those
+        keys from the YAML when _config_path is set, closing the gap with the
+        from_config() path.
+        """
+        from mock_pkg.device import MockDetectorWithStorage
+
+        cfg_file = tmp_path / "app.yaml"
+        cfg_file.write_text(
+            "schema_version: 1.0\n"
+            "session: declarative-session\n"
+            "frontend: pyqt\n"
+            "storage:\n"
+            "  backend: zarr\n"
+            "  base_path: /tmp/redsun-test\n"
+        )
+
+        class TestApp(AppContainer, config=str(cfg_file)):
+            cam = device(
+                MockDetectorWithStorage,
+                sensor_shape=(512, 512),
+                pixel_size=(6.5, 6.5, 6.5),
+                exposure=100.0,
+                egu="ms",
+                integer=1,
+                floating=1.0,
+                string="test",
+            )
+
+        app = TestApp()
+        # storage must have been read from the YAML — not set manually
+        assert app._config.get("storage") == {"backend": "zarr", "base_path": "/tmp/redsun-test"}
+        app.build()
+
+        cam = app.devices["cam"]
+        assert cam.storage is mock_writer  # type: ignore[union-attr]
+
     def test_default_base_path_uses_session_name(self) -> None:
         """When base_path is omitted, _build_writer is called with the session name."""
         from unittest.mock import MagicMock, patch, call

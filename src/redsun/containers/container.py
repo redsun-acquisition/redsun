@@ -455,6 +455,23 @@ class AppContainer(metaclass=AppContainerMeta):
         self._virtual_container: VirtualContainer | None = None
         self._is_built: bool = False
 
+        # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
+        # the metaclass loads the YAML only to resolve component kwargs and never
+        # populates _config with top-level sections such as 'storage', 'session',
+        # or 'schema_version'.  We read those here so that build() sees the same
+        # state as the from_config() path, which sets them explicitly.
+        config_path: Path | None = getattr(type(self), "_config_path", None)
+        if config_path is not None:
+            try:
+                yaml_data = _load_yaml(config_path)
+            except Exception as e:
+                logger.warning(f"Could not read config file {config_path}: {e}")
+                yaml_data = {}
+            _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
+            for key, value in yaml_data.items():
+                if key not in _COMPONENT_SECTIONS:
+                    self._config[key] = value  # type: ignore[literal-required]
+
     @property
     def config(self) -> AppConfig:
         """Return the application configuration."""
