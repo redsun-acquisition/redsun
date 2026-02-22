@@ -6,9 +6,9 @@
 
 - **[Container architecture](container-architecture.md)**
 - **[Component system](component-system.md)**
-- **[Storage](storage.md)**
+- **[Session storage](storage.md)**
 
-### SDK
+## SDK
 
 - **[Devices](architecture/devices.md)**
 - **[In-process devices](architecture/in-process-device.md)**

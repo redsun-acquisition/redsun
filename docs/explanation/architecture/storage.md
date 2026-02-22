@@ -215,5 +215,5 @@ class MyWriter(Writer):
 
 ## See also
 
-- [`redsun.storage` API reference](../../reference/api.md)
+- [`redsun.storage` API reference](../../reference/api/storage.md)
 - [Devices](devices.md)

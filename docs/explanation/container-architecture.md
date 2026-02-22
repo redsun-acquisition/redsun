@@ -77,7 +77,7 @@ graph LR
 
 ## The DVP pattern
 
-`redsun` builds components using reusable patterns provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
+`redsun` builds three types of components:
 
 - **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][redsun.device.Device].
 - **View**: UI components that implement [`View`][redsun.view.View] to display data and capture user interactions.
