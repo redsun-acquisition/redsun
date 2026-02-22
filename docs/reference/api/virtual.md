@@ -1,13 +1,11 @@
 # Virtual container
 
-::: redsun.virtual.VirtualContainer
-
-::: redsun.virtual.RedSunConfig
-
-::: redsun.virtual.Signal
-
-::: redsun.virtual.HasShutdown
-
-::: redsun.virtual.IsProvider
-
-::: redsun.virtual.IsInjectable
+::: redsun.virtual
+    options:
+      members:
+        - VirtualContainer
+        - RedSunConfig
+        - Signal
+        - HasShutdown
+        - IsProvider
+        - IsInjectable
