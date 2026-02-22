@@ -11,7 +11,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- Updated to sunflare 0.11.1
+- Merged SDK (formerly sunflare) into redsun
 - Migrated the HasStorage protocol to toolkit
 
 ### Fixed

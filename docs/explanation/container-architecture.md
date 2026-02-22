@@ -79,9 +79,9 @@ graph LR
 
 `redsun` builds components using reusable patterns provided by [`sunflare`](https://redsun-acquisition.github.io/sunflare/):
 
-- **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][sunflare.device.Device].
-- **View**: UI components that implement [`View`][sunflare.view.View] to display data and capture user interactions.
-- **Presenter**: business logic components that implement [`Presenter`][sunflare.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
+- **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][redsun.device.Device].
+- **View**: UI components that implement [`View`][redsun.view.View] to display data and capture user interactions.
+- **Presenter**: business logic components that implement [`Presenter`][redsun.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
 This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
 
@@ -175,25 +175,25 @@ When [`build()`][redsun.containers.container.AppContainer.build] is called, the 
 
 **Phase 1 — construction**:
 
-1. [`VirtualContainer`][sunflare.virtual.VirtualContainer] — created and seeded with the application configuration.
+1. [`VirtualContainer`][redsun.virtual.VirtualContainer] — created and seeded with the application configuration.
 2. **Devices** — each receives its resolved name and keyword arguments.
 3. **Presenters** — each receives its resolved name and the full device dictionary.
 4. **Views** — each receives its resolved name.
 
 **Phase 2 — provider registration**:
 
-Any presenter or view implementing [`IsProvider`][sunflare.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
+Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
 
 **Phase 3 — dependency injection**:
 
-Any presenter or view implementing [`IsInjectable`][sunflare.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
+Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
 
 ## Communication
 
-Components communicate through the [`VirtualContainer`][sunflare.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
+Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
 
 - **Signal registry**: components can register their [`psygnal`](https://psygnal.readthedocs.io/) signals into the container via `register_signals()`, making them discoverable by other components without direct references to each other. Registered signals are accessible through the `signals` property.
-- **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][sunflare.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][sunflare.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
+- **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
 
 The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
@@ -211,7 +211,7 @@ from redsun.qt import QtAppContainer
 
 # these are user-developed classes
 # that should reflect the structure
-# provided by sunflare for each layer
+# provided by redsun for each layer
 from my_package.device import MyMotor
 from my_package.presenter import MyPresenter
 from my_package.view import MyView

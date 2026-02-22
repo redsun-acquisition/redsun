@@ -19,7 +19,17 @@ nav = [
     { "Run tests" = "how-to/run-tests.md" },
   ]},
   { "Reference" = [
-    "reference/index.md"
+    "reference/index.md",
+    { "API" = [
+      { "Container" = "reference/api/container.md" },
+      { "Device" = "reference/api/device.md" },
+      { "Engine" = "reference/api/engine.md" },
+      { "Presenter" = "reference/api/presenter.md" },
+      { "Storage" = "reference/api/storage.md" },
+      { "View" = "reference/api/view.md" },
+      { "Virtual container" = "reference/api/virtual.md" },
+    ]},
+    { "Changelog" = "reference/changelog.md" },
   ]},
   { "Explanation" = [
     "explanation/index.md",
@@ -27,6 +37,13 @@ nav = [
     { "Container architecture" = "explanation/container-architecture.md" },
     { "Component system" = "explanation/component-system.md" },
     { "Storage" = "explanation/storage.md" },
+    { "Architecture" = [
+      { "Devices" = "explanation/architecture/devices.md" },
+      { "In-process devices" = "explanation/architecture/in-process-device.md" },
+      { "Presenters" = "explanation/architecture/presenters.md" },
+      { "Storage" = "explanation/architecture/storage.md" },
+      { "Virtual container" = "explanation/architecture/virtual.md" },
+    ]},
   ]},
 ]
 
@@ -79,7 +96,6 @@ repo = "fontawesome/brands/github"
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
 inventories = [
-  "https://redsun-acquisition.github.io/sunflare/objects.inv",
   "https://docs.python.org/3/objects.inv",
 ]
 
