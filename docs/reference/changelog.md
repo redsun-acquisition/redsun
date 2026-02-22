@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.7.2] - 22-02-2026
+
+### Changed
+
+- Updated to sunflare 0.11.1
+- Migrated the HasStorage protocol to toolkit
+
+### Fixed
+
+- Fixed path lookup for storage
+
 ## [0.7.0] - 21-02-2026
 
 ### Added
@@ -149,6 +160,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.7.2]: https://github.com/redsun-acquisition/redsun/compare/v0.7.0...v0.7.2
 [0.7.0]: https://github.com/redsun-acquisition/redsun/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/redsun-acquisition/redsun/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/redsun-acquisition/redsun/compare/v0.5.6...v0.6.0
