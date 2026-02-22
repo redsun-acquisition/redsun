@@ -25,9 +25,10 @@ from typing import (
 )
 
 import yaml
-from sunflare.device import Device
-from sunflare.presenter import Presenter
-from sunflare.storage import (
+
+from redsun.device import Device
+from redsun.presenter import Presenter
+from redsun.storage import (
     AutoIncrementFilenameProvider,
     HasStorage,
     StaticFilenameProvider,
@@ -35,8 +36,8 @@ from sunflare.storage import (
     UUIDFilenameProvider,
     Writer,
 )
-from sunflare.view import View
-from sunflare.virtual import (
+from redsun.view import View
+from redsun.virtual import (
     HasShutdown,
     IsInjectable,
     IsProvider,
@@ -54,8 +55,9 @@ from .components import (
 )
 
 if TYPE_CHECKING:
-    from sunflare.virtual import RedSunConfig
     from typing_extensions import Never, Self
+
+    from redsun.virtual import RedSunConfig
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = Union[type[Device], type[Presenter], type[View]]
@@ -200,11 +202,11 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
 
     if backend == "zarr":
         try:
-            from sunflare.storage._zarr import ZarrWriter
+            from redsun.storage._zarr import ZarrWriter
         except ImportError:
             raise ImportError(
                 "The 'zarr' storage backend requires the 'acquire-zarr' package. "
-                "Install it with: pip install sunflare[zarr]"
+                "Install it with: pip install redsun[zarr]"
             )
         return ZarrWriter("redsun-writer", path_provider, base_dir)
 
