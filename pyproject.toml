@@ -71,9 +71,6 @@ bugs = "https://github.com/redsun-acquisition/redsun/issues"
 changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"
 homepage = "https://github.com/redsun-acquisition/redsun"
 
-[project.scripts]
-redsun = "redsun.__main__:main_cli"
-
 [tool.hatch.version]
 source = "vcs"
 
