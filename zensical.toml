@@ -69,6 +69,7 @@ nav = [
             { "Storage" = "reference/api/storage.md" },
             { "View" = "reference/api/view.md" },
             { "Virtual container" = "reference/api/virtual.md" },
+            { "Logging" = "reference/api/log.md" },
         ]},
         { "Changelog" = "reference/changelog.md" },
     ]},

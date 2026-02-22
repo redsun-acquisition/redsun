@@ -32,7 +32,6 @@ Bluesky was originally designed with an interactive approach in mind, in the sen
 What `redsun` provides on top of Bluesky is a more lab-bench experience, for setups that are meant to be controlled via a Graphical User Interface similar to [Micro-Manager].
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[sunflare]: https://redsun-acquisition.github.io/sunflare/
 [micro-manager]: https://micro-manager.org/
 [epics]: https://epics-controls.org/
 [tango]: https://www.tango-controls.org/
