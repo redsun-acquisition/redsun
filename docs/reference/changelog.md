@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.8.2] - 23-02-2026
+
+### Changed
+
+- Drop the `Static` and `UUID` filename providers in favor of `AutoIncrement` as default
+  -  Will be reintroduced at a later date when storage API is stabilized
+
+### Fixed
+
+- Fixed broken links in changelog
+- Store the suffix of a `FilenameProvider` or it gets lost
+- Convert URI to standard path for `acquire-zarr` backend
+
+### Added
+
+- Added some helper utilities for making descriptor/reading keys following canonical convention
+
 ## [0.8.0] - 22-02-2026
 
 ### Changed
@@ -166,6 +183,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.8.2]: https://github.com/redsun-acquisition/redsun/compare/v0.8.0...v0.8.2
+[0.8.0]: https://github.com/redsun-acquisition/redsun/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/redsun-acquisition/redsun/compare/v0.7.0...v0.7.2
 [0.7.0]: https://github.com/redsun-acquisition/redsun/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/redsun-acquisition/redsun/compare/v0.6.0...v0.6.1
