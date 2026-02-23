@@ -276,26 +276,26 @@ class TestWriter:
         w = self._make_writer()
         assert not w.is_open
         assert w.name == "test_writer"
-        assert len(w.sources) == 0
+        assert len(w._sources) == 0
 
     def test_update_source(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (512, 512))
-        assert "cam" in w.sources
-        assert w.sources["cam"].shape == (512, 512)
-        assert w.sources["cam"].mimetype == "application/x-test"
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (512, 512))
+        assert "cam" in w._sources
+        assert w._sources["cam"].shape == (512, 512)
+        assert w._sources["cam"].mimetype == "application/x-test"
 
     def test_update_source_while_open_raises(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (64, 64))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (64, 64))
         w.prepare("cam")
         w.kickoff()
         with pytest.raises(RuntimeError, match="open"):
-            w.update_source("cam2", np.dtype("uint8"), (64, 64))
+            w.update_source("cam2", "cam2-buffer_stream", np.dtype("uint8"), (64, 64))
 
     def test_prepare_returns_sink(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (4, 4))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
         sink = w.prepare("cam")
         assert isinstance(sink, FrameSink)
         assert hasattr(sink, "write")
@@ -308,14 +308,14 @@ class TestWriter:
 
     def test_kickoff_sets_open(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (4, 4))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
         w.prepare("cam")
         w.kickoff()
         assert w.is_open
 
     def test_frame_written_via_sink(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         sink = w.prepare("cam")
         w.kickoff()
         frame = np.zeros((2, 2), dtype="uint8")
@@ -325,7 +325,7 @@ class TestWriter:
 
     def test_complete_finalizes_when_last_source_done(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         w.complete("cam")
@@ -335,7 +335,7 @@ class TestWriter:
     def test_two_sources_complete_sequence(self) -> None:
         w = self._make_writer()
         for src in ("cam_a", "cam_b"):
-            w.update_source(src, np.dtype("uint8"), (2, 2))
+            w.update_source(src, f"{src}-buffer_stream", np.dtype("uint8"), (2, 2))
             w.prepare(src)
         w.kickoff()
         # first complete should not finalize
@@ -348,9 +348,9 @@ class TestWriter:
 
     def test_clear_source(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.clear_source("cam")
-        assert "cam" not in w.sources
+        assert "cam" not in w._sources
 
     def test_clear_missing_source_silent(self) -> None:
         w = self._make_writer()
@@ -364,7 +364,7 @@ class TestWriter:
     def test_get_indices_written_min_across_sources(self) -> None:
         w = self._make_writer()
         for src in ("a", "b"):
-            w.update_source(src, np.dtype("uint8"), (2, 2))
+            w.update_source(src, f"{src}-buffer_stream", np.dtype("uint8"), (2, 2))
             w.prepare(src)
         w.kickoff()
         frame = np.zeros((2, 2), dtype="uint8")
@@ -375,7 +375,7 @@ class TestWriter:
 
     def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         # Simulate frames written
@@ -387,7 +387,7 @@ class TestWriter:
 
     def test_collect_stream_docs_no_duplicate_resource(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         w._sources["cam"].frames_written = 2
@@ -436,7 +436,7 @@ class TestZarrWriterBaseDir:
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 
-        writer.update_source("cam", dtype=np.dtype("uint16"), shape=(64, 64))
+        writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
         with patch("redsun.storage._zarr.ZarrStream"):
             writer.prepare("cam", capacity=10)
@@ -455,7 +455,7 @@ class TestZarrWriterBaseDir:
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 
-        writer.update_source("cam", dtype=np.dtype("uint16"), shape=(64, 64))
+        writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
         with patch("redsun.storage._zarr.ZarrStream"):
             writer.prepare("cam", capacity=10)
