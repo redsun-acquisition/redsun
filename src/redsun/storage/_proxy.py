@@ -44,15 +44,44 @@ class StorageProxy(Protocol):
     def update_source(
         self,
         name: str,
+        data_key: str,
         dtype: np.dtype[np.generic],
         shape: tuple[int, ...],
         extra: dict[str, Any] | None = None,
     ) -> None:
-        """Register or update a data source on the backend."""
+        """Register or update a data source on the backend.
+
+        Parameters
+        ----------
+        name : str
+            Source name (typically the device name).
+        data_key : str
+            Bluesky data key for stream documents used
+            in `collect_stream_docs()`.
+        dtype : np.dtype[np.generic]
+            NumPy data type of the frames.
+        shape : tuple[int, ...]
+            Shape of each frame.
+        extra : dict[str, Any] | None, optional
+            Optional dict of extra metadata to associate with the source.
+        """
         ...
 
     def prepare(self, name: str, capacity: int = 0) -> FrameSink:
-        """Prepare the backend for *name* and return a [`FrameSink`][redsun.storage.FrameSink]."""
+        """Prepare the backend for *name* and return a [`FrameSink`][redsun.storage.FrameSink].
+
+        Parameters
+        ----------
+        name : str
+            Source name (typically the device name).
+        capacity : int, optional
+            Optional capacity hint for the sink.
+            Defaults to 0 (unlimited capacity).
+
+        !!! note
+            The backend will use `capacity`
+            to optimize resource allocation.
+        """
         ...
 
     def kickoff(self) -> None:
@@ -60,11 +89,11 @@ class StorageProxy(Protocol):
         ...
 
     def complete(self, name: str) -> None:
-        """Signal that *name* has finished writing."""
+        """Signal that `name` has finished writing."""
         ...
 
     def get_indices_written(self, name: str | None = None) -> int:
-        """Return the number of frames written for *name*."""
+        """Return the number of frames written for `name`."""
         ...
 
     def collect_stream_docs(
@@ -72,7 +101,7 @@ class StorageProxy(Protocol):
         name: str,
         indices_written: int,
     ) -> Iterator[StreamAsset]:
-        """Yield Bluesky stream documents for *name*."""
+        """Yield Bluesky stream documents for `name`."""
         ...
 
 
@@ -94,26 +123,12 @@ class HasStorage(Protocol, metaclass=_HasStorageMeta):
 
 
 class StorageDescriptor:
-    """Descriptor that manages the ``storage`` slot on a device.
+    """Descriptor that manages the `storage` slot on a device.
 
-    The private attribute name is derived from the descriptor's own name
-    at class-creation time via ``__set_name__`` (e.g. a class attribute
-    named ``storage`` produces a backing attribute ``_storage``).  Reading
-    and writing go through ``object.__getattribute__`` and
-    ``object.__setattr__`` rather than ``__dict__`` access, so the descriptor
-    works correctly on classes that define ``__slots__`` as long as the
-    backing slot is declared.
-
-    From the **typing perspective**, ``storage`` is always a
-    [`StorageProxy`][redsun.storage.StorageProxy] — the descriptor promises
-    that the container will inject a backend before any acquisition method is
-    called.  At runtime, reading ``storage`` before injection raises
-    ``AttributeError``; device code that must guard against a sessionless
-    configuration should check via ``hasattr(self, 'storage')`` rather than
-    comparing against ``None``.
-
-    This descriptor is public so users can reference it explicitly in
-    custom device classes:
+    !!! note
+        `update_source()` should be called every time
+        there's a change to the data source
+        (e.g. if the shape changes between runs).
 
     ```python
     from redsun.device import Device
@@ -123,10 +138,12 @@ class StorageDescriptor:
     class MyDevice(Device):
         storage = StorageDescriptor()
 
-        def prepare(self, ...) -> Status:
-            if not hasattr(self, 'storage'):
-                raise RuntimeError("No storage backend configured.")
+        def __init__(self, name: str):
+            super().__init__(name)
             self.storage.update_source(...)
+
+        def prepare(self, ...) -> Status:
+            self.storage.prepare(...)
     ```
     """
 

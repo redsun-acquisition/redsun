@@ -14,7 +14,6 @@ import abc
 import threading as th
 import uuid
 from dataclasses import dataclass, field
-from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from redsun.log import Loggable
@@ -162,10 +161,6 @@ class Writer(abc.ABC, Loggable):
         self._sources: dict[str, SourceInfo] = {}
         self._active_sinks: set[str] = set()
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def is_open(self) -> bool:
         """Return whether the writer is currently open."""
@@ -182,18 +177,10 @@ class Writer(abc.ABC, Loggable):
         """Return the MIME type string for this backend."""
         ...
 
-    @property
-    def sources(self) -> MappingProxyType[str, SourceInfo]:
-        """Return a read-only view of the registered data sources."""
-        return MappingProxyType(self._sources)
-
-    # ------------------------------------------------------------------
-    # Source management
-    # ------------------------------------------------------------------
-
     def update_source(
         self,
         name: str,
+        data_key: str,
         dtype: np.dtype[np.generic],
         shape: tuple[int, ...],
         extra: dict[str, Any] | None = None,
@@ -204,6 +191,9 @@ class Writer(abc.ABC, Loggable):
         ----------
         name : str
             Source name (typically the device name).
+        data_key : str
+            Bluesky data key for stream documents used
+            in `collect_stream_docs`.
         dtype : np.dtype[np.generic]
             NumPy data type of the frames.
         shape : tuple[int, ...]
@@ -220,7 +210,6 @@ class Writer(abc.ABC, Loggable):
         if self._is_open:
             raise RuntimeError("Cannot update sources while writer is open.")
 
-        data_key = f"{name}:buffer:stream"
         self._sources[name] = SourceInfo(
             name=name,
             dtype=dtype,
@@ -293,10 +282,6 @@ class Writer(abc.ABC, Loggable):
         source = self._sources[name]
         source.collection_counter = 0
         source.stream_resource_uid = str(uuid.uuid4())
-
-    # ------------------------------------------------------------------
-    # Acquisition lifecycle
-    # ------------------------------------------------------------------
 
     @abc.abstractmethod
     def kickoff(self) -> None:

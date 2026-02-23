@@ -12,6 +12,9 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING
 
+from redsun.storage._base import FrameSink, Writer
+from redsun.storage._path import from_uri
+
 try:
     from acquire_zarr import (
         ArraySettings,
@@ -25,7 +28,6 @@ try:
 except ImportError:
     _ACQUIRE_ZARR_AVAILABLE = False
 
-from redsun.storage._base import FrameSink, Writer
 
 if TYPE_CHECKING:
     import numpy as np
@@ -102,7 +104,7 @@ class ZarrWriter(Writer):
         """
         path_info = self._path_provider(name)
         self._store_path = path_info.store_uri
-        self._stream_settings.store_path = path_info.store_uri
+        self._stream_settings.store_path = from_uri(path_info.store_uri)
 
         source = self._sources[name]
         height, width = source.shape

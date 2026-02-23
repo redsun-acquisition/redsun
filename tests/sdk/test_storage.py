@@ -2,31 +2,30 @@
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 from bluesky.protocols import Descriptor, Reading
+from redsun.storage._zarr import ZarrWriter
 
 from redsun.device import Device
 from redsun.storage import (
     AutoIncrementFilenameProvider,
     FrameSink,
     PathInfo,
-    StaticFilenameProvider,
     StaticPathProvider,
     StorageDescriptor,
     StorageProxy,
-    UUIDFilenameProvider,
     Writer,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
+@pytest.fixture
+def current_date() -> str:
+    return datetime.datetime.now().strftime("%Y_%m_%d")
 
 class _MinimalDevice(Device):
     """Minimal concrete Device with no storage declared."""
@@ -81,11 +80,6 @@ class _ConcreteWriter(Writer):
 
     def _finalize(self) -> None:
         self._finalized = True
-
-
-# ---------------------------------------------------------------------------
-# StorageDescriptor
-# ---------------------------------------------------------------------------
 
 
 class TestStorageDescriptor:
@@ -166,11 +160,6 @@ class TestStorageDescriptor:
         assert device.storage is mock_proxy
 
 
-# ---------------------------------------------------------------------------
-# PathInfo
-# ---------------------------------------------------------------------------
-
-
 class TestPathInfo:
     def test_defaults(self) -> None:
         pi = PathInfo(store_uri="file:///data/scan.zarr", array_key="camera")
@@ -191,47 +180,55 @@ class TestPathInfo:
         assert pi.extra == {"units": "nm"}
 
 
-# ---------------------------------------------------------------------------
-# FilenameProviders
-# ---------------------------------------------------------------------------
-
-
-class TestStaticFilenameProvider:
-    def test_always_same(self) -> None:
-        p = StaticFilenameProvider("scan001")
-        assert p() == "scan001"
-        assert p("camera") == "scan001"
-        assert p() == "scan001"
-
-
-class TestUUIDFilenameProvider:
-    def test_returns_string(self) -> None:
-        p = UUIDFilenameProvider()
-        name = p()
-        assert isinstance(name, str)
-        assert len(name) == 36  # UUID4 canonical form
-
-    def test_unique_per_call(self) -> None:
-        p = UUIDFilenameProvider()
-        assert p() != p()
-
-
 class TestAutoIncrementFilenameProvider:
-    def test_increments(self) -> None:
+    def test_increments(self, current_date: str) -> None:
         p = AutoIncrementFilenameProvider(base="scan", max_digits=3, start=0)
-        assert p() == "scan_000"
-        assert p() == "scan_001"
-        assert p() == "scan_002"
+        assert p() == "_".join([current_date, "scan_000"])
+        assert p() == "_".join([current_date, "scan_001"])
+        assert p() == "_".join([current_date, "scan_002"])
 
-    def test_no_base(self) -> None:
+    def test_no_base(self, current_date: str) -> None:
         p = AutoIncrementFilenameProvider(max_digits=2, start=5)
-        assert p() == "05"
-        assert p() == "06"
+        assert p() == "_".join([current_date, "05"])
+        assert p() == "_".join([current_date, "06"])
 
     def test_overflow_raises(self) -> None:
         p = AutoIncrementFilenameProvider(max_digits=1, start=10)
         with pytest.raises(ValueError, match="exceeded maximum"):
             p()
+    
+    def test_scan_empty_dir(self, tmp_path: Path, current_date: str) -> None:
+        """Empty directory should start from 0."""
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00000"])
+
+    def test_scan_picks_up_existing(self, tmp_path: Path, current_date: str) -> None:
+        """Counter should start one past the highest existing entry."""
+        (tmp_path / f"{current_date}_scan_00000.zarr").mkdir()
+        (tmp_path / f"{current_date}_scan_00001.zarr").mkdir()
+        (tmp_path / f"{current_date}_scan_00002.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00003"])
+
+    def test_scan_picks_up_across_dates(self, tmp_path: Path, current_date: str) -> None:
+        """Counter should account for entries from previous days."""
+        (tmp_path / "2024_01_01_scan_00007.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00008"])
+
+    def test_scan_ignores_unrelated_files(self, tmp_path: Path, current_date: str) -> None:
+        """Files that don't match the pattern should not affect the counter."""
+        (tmp_path / "some_other_file.zarr").touch()
+        (tmp_path / "background.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00000"])
+
+    def test_scan_nonexistent_dir_starts_from_zero(self, tmp_path: Path, current_date: str) -> None:
+        """A base_dir that doesn't exist yet should not raise and should start from 0."""
+        p = AutoIncrementFilenameProvider(
+            base="scan", max_digits=5, base_dir=tmp_path / "new_session", suffix=".zarr"
+        )
+        assert p() == "_".join([current_date, "scan_00000"])
 
 
 # ---------------------------------------------------------------------------
@@ -240,28 +237,28 @@ class TestAutoIncrementFilenameProvider:
 
 
 class TestStaticPathProvider:
-    def test_basic(self) -> None:
-        fp = StaticFilenameProvider("scan001")
+    def test_basic(self, current_date: str) -> None:
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp("camera")
-        assert info.store_uri == "file:///data/scan001"
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
         assert info.array_key == "camera"
 
-    def test_trailing_slash_stripped(self) -> None:
-        fp = StaticFilenameProvider("scan")
+    def test_trailing_slash_stripped(self, current_date: str) -> None:
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data/")
         info = pp("det")
-        assert info.store_uri == "file:///data/scan"
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
 
-    def test_none_device_name(self) -> None:
-        fp = StaticFilenameProvider("scan")
+    def test_none_device_name(self, current_date: str) -> None:
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp(None)
         # array_key falls back to filename when device_name is None
-        assert info.array_key == "scan"
+        assert info.array_key == "_".join([current_date, "scan_00000"])
 
     def test_capacity_forwarded(self) -> None:
-        fp = StaticFilenameProvider("s")
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///d", capacity=50)
         assert pp("x").capacity == 50
 
@@ -279,26 +276,26 @@ class TestWriter:
         w = self._make_writer()
         assert not w.is_open
         assert w.name == "test_writer"
-        assert len(w.sources) == 0
+        assert len(w._sources) == 0
 
     def test_update_source(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (512, 512))
-        assert "cam" in w.sources
-        assert w.sources["cam"].shape == (512, 512)
-        assert w.sources["cam"].mimetype == "application/x-test"
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (512, 512))
+        assert "cam" in w._sources
+        assert w._sources["cam"].shape == (512, 512)
+        assert w._sources["cam"].mimetype == "application/x-test"
 
     def test_update_source_while_open_raises(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (64, 64))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (64, 64))
         w.prepare("cam")
         w.kickoff()
         with pytest.raises(RuntimeError, match="open"):
-            w.update_source("cam2", np.dtype("uint8"), (64, 64))
+            w.update_source("cam2", "cam2-buffer_stream", np.dtype("uint8"), (64, 64))
 
     def test_prepare_returns_sink(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (4, 4))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
         sink = w.prepare("cam")
         assert isinstance(sink, FrameSink)
         assert hasattr(sink, "write")
@@ -311,14 +308,14 @@ class TestWriter:
 
     def test_kickoff_sets_open(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (4, 4))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
         w.prepare("cam")
         w.kickoff()
         assert w.is_open
 
     def test_frame_written_via_sink(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         sink = w.prepare("cam")
         w.kickoff()
         frame = np.zeros((2, 2), dtype="uint8")
@@ -328,7 +325,7 @@ class TestWriter:
 
     def test_complete_finalizes_when_last_source_done(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         w.complete("cam")
@@ -338,7 +335,7 @@ class TestWriter:
     def test_two_sources_complete_sequence(self) -> None:
         w = self._make_writer()
         for src in ("cam_a", "cam_b"):
-            w.update_source(src, np.dtype("uint8"), (2, 2))
+            w.update_source(src, f"{src}-buffer_stream", np.dtype("uint8"), (2, 2))
             w.prepare(src)
         w.kickoff()
         # first complete should not finalize
@@ -351,9 +348,9 @@ class TestWriter:
 
     def test_clear_source(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.clear_source("cam")
-        assert "cam" not in w.sources
+        assert "cam" not in w._sources
 
     def test_clear_missing_source_silent(self) -> None:
         w = self._make_writer()
@@ -367,7 +364,7 @@ class TestWriter:
     def test_get_indices_written_min_across_sources(self) -> None:
         w = self._make_writer()
         for src in ("a", "b"):
-            w.update_source(src, np.dtype("uint8"), (2, 2))
+            w.update_source(src, f"{src}-buffer_stream", np.dtype("uint8"), (2, 2))
             w.prepare(src)
         w.kickoff()
         frame = np.zeros((2, 2), dtype="uint8")
@@ -378,7 +375,7 @@ class TestWriter:
 
     def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         # Simulate frames written
@@ -390,7 +387,7 @@ class TestWriter:
 
     def test_collect_stream_docs_no_duplicate_resource(self) -> None:
         w = self._make_writer()
-        w.update_source("cam", np.dtype("uint8"), (2, 2))
+        w.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w.prepare("cam")
         w.kickoff()
         w._sources["cam"].frames_written = 2
@@ -403,15 +400,10 @@ class TestWriter:
         assert not any(d[0] == "stream_resource" for d in docs2)
 
 
-# ---------------------------------------------------------------------------
-# StorageProxy structural check
-# ---------------------------------------------------------------------------
-
-
 class TestStorageProxyProtocol:
     def test_writer_satisfies_proxy(self) -> None:
         """Writer must structurally satisfy StorageProxy."""
-        assert issubclass(_ConcreteWriter, StorageProxy)  # type: ignore[arg-type]
+        assert issubclass(_ConcreteWriter, StorageProxy)
 
 
 class TestZarrWriterImportGuard:
@@ -423,7 +415,7 @@ class TestZarrWriterImportGuard:
         from redsun.storage._zarr import ZarrWriter
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
-        fp = StaticFilenameProvider("scan")
+        fp = AutoIncrementFilenameProvider("scan")
         pp = StaticPathProvider(fp, base_uri="file:///data")
         with pytest.raises(ImportError, match="acquire-zarr"):
             ZarrWriter("test", pp, Path("/data"))
@@ -434,18 +426,17 @@ class TestZarrWriterBaseDir:
 
     def test_kickoff_creates_base_dir(self, tmp_path: Path) -> None:
         """kickoff() creates base_dir if it does not exist yet."""
-        from unittest.mock import MagicMock, patch
-        from redsun.storage._zarr import ZarrWriter
-        from redsun.storage import StaticFilenameProvider, StaticPathProvider
+        
+        from redsun.storage import StaticPathProvider
 
         base_dir = tmp_path / "scans"
         assert not base_dir.exists()
 
-        fp = StaticFilenameProvider("run001")
+        fp = AutoIncrementFilenameProvider("run001")
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 
-        writer.update_source("cam", dtype=np.dtype("uint16"), shape=(64, 64))
+        writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
         with patch("redsun.storage._zarr.ZarrStream"):
             writer.prepare("cam", capacity=10)
@@ -455,19 +446,16 @@ class TestZarrWriterBaseDir:
         assert base_dir.is_dir()
 
     def test_kickoff_base_dir_already_exists(self, tmp_path: Path) -> None:
-        """kickoff() is a no-op mkdir when base_dir already exists."""
-        from unittest.mock import patch
-        from redsun.storage._zarr import ZarrWriter
-        from redsun.storage import StaticFilenameProvider, StaticPathProvider
+        """kickoff() is a no-op mkdir when base_dir already exists."""        
 
         base_dir = tmp_path / "scans"
         base_dir.mkdir()
 
-        fp = StaticFilenameProvider("run001")
+        fp = AutoIncrementFilenameProvider("run001")
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 
-        writer.update_source("cam", dtype=np.dtype("uint16"), shape=(64, 64))
+        writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
         with patch("redsun.storage._zarr.ZarrStream"):
             writer.prepare("cam", capacity=10)

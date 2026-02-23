@@ -31,9 +31,7 @@ from redsun.presenter import Presenter
 from redsun.storage import (
     AutoIncrementFilenameProvider,
     HasStorage,
-    StaticFilenameProvider,
     StaticPathProvider,
-    UUIDFilenameProvider,
     Writer,
 )
 from redsun.view import View
@@ -172,8 +170,6 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     Writer
         Configured writer instance ready for injection.
     """
-    from pathlib import Path
-
     backend = cfg.get("backend", "zarr")
     raw_path = cfg.get("base_path")
     if raw_path is None:
@@ -183,20 +179,26 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
     base_dir.mkdir(parents=True, exist_ok=True)
     base_uri = base_dir.as_uri()
 
-    strategy = cfg.get(
-        "filename_provider", "auto_increment"
-    )  # TODO: expose per-plan override (future PR)
+    # TODO: expose per-plan override;
+    # this should be managed by a presenter component,
+    # but it would mean decentralizing everything...
+    # maybe a built-in stack to manage this is the way to go?
+    strategy = cfg.get("filename_provider", "auto_increment")
 
-    filename_provider: (
-        StaticFilenameProvider | AutoIncrementFilenameProvider | UUIDFilenameProvider
-    )
-    if strategy == "static":
-        filename = cfg.get("filename", "scan")
-        filename_provider = StaticFilenameProvider(filename)
-    elif strategy == "auto_increment":
-        filename_provider = AutoIncrementFilenameProvider()
+    filename_provider: AutoIncrementFilenameProvider
+    if strategy == "auto_increment":
+        # TODO: this is weak... but this whole
+        # storage system is at this time; will need
+        # proper rework to decentralize it; see
+        # the todo before
+        suffix = f".{backend}"
+        filename_provider = AutoIncrementFilenameProvider(
+            base_dir=base_dir, suffix=suffix
+        )
     else:
-        filename_provider = UUIDFilenameProvider()
+        raise ValueError(
+            f"Unknown filename provider strategy {strategy!r}. Supported: 'auto_increment'"
+        )
 
     path_provider = StaticPathProvider(filename_provider, base_uri=base_uri)
 
