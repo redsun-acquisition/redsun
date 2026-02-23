@@ -5,28 +5,23 @@ from __future__ import annotations
 import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 from bluesky.protocols import Descriptor, Reading
+from redsun.storage._zarr import ZarrWriter
 
 from redsun.device import Device
 from redsun.storage import (
     AutoIncrementFilenameProvider,
     FrameSink,
     PathInfo,
-    StaticFilenameProvider,
     StaticPathProvider,
     StorageDescriptor,
     StorageProxy,
-    UUIDFilenameProvider,
     Writer,
 )
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def current_date() -> str:
@@ -85,11 +80,6 @@ class _ConcreteWriter(Writer):
 
     def _finalize(self) -> None:
         self._finalized = True
-
-
-# ---------------------------------------------------------------------------
-# StorageDescriptor
-# ---------------------------------------------------------------------------
 
 
 class TestStorageDescriptor:
@@ -170,11 +160,6 @@ class TestStorageDescriptor:
         assert device.storage is mock_proxy
 
 
-# ---------------------------------------------------------------------------
-# PathInfo
-# ---------------------------------------------------------------------------
-
-
 class TestPathInfo:
     def test_defaults(self) -> None:
         pi = PathInfo(store_uri="file:///data/scan.zarr", array_key="camera")
@@ -195,34 +180,6 @@ class TestPathInfo:
         assert pi.extra == {"units": "nm"}
 
 
-# ---------------------------------------------------------------------------
-# FilenameProviders
-# ---------------------------------------------------------------------------
-
-
-class TestStaticFilenameProvider:
-    def test_always_same(self, current_date: str) -> None:
-        p = StaticFilenameProvider("scan001")
-        assert p() == "_".join([current_date, "scan001"])
-        assert p("camera") == "_".join([current_date, "scan001"])
-        assert p() == "_".join([current_date, "scan001"])
-
-
-class TestUUIDFilenameProvider:
-    def test_returns_string(self, current_date: str) -> None:
-        p = UUIDFilenameProvider()
-        name = p()
-        assert isinstance(name, str)
-
-        # UUID4 canonical form plus date and underscore
-        # should be 36 + 1 + len(current_date)
-        assert len(name) == len(current_date) + 1 + 36
-
-    def test_unique_per_call(self) -> None:
-        p = UUIDFilenameProvider()
-        assert p() != p()
-
-
 class TestAutoIncrementFilenameProvider:
     def test_increments(self, current_date: str) -> None:
         p = AutoIncrementFilenameProvider(base="scan", max_digits=3, start=0)
@@ -239,6 +196,39 @@ class TestAutoIncrementFilenameProvider:
         p = AutoIncrementFilenameProvider(max_digits=1, start=10)
         with pytest.raises(ValueError, match="exceeded maximum"):
             p()
+    
+    def test_scan_empty_dir(self, tmp_path: Path, current_date: str) -> None:
+        """Empty directory should start from 0."""
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00000"])
+
+    def test_scan_picks_up_existing(self, tmp_path: Path, current_date: str) -> None:
+        """Counter should start one past the highest existing entry."""
+        (tmp_path / f"{current_date}_scan_00000.zarr").mkdir()
+        (tmp_path / f"{current_date}_scan_00001.zarr").mkdir()
+        (tmp_path / f"{current_date}_scan_00002.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00003"])
+
+    def test_scan_picks_up_across_dates(self, tmp_path: Path, current_date: str) -> None:
+        """Counter should account for entries from previous days."""
+        (tmp_path / "2024_01_01_scan_00007.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00008"])
+
+    def test_scan_ignores_unrelated_files(self, tmp_path: Path, current_date: str) -> None:
+        """Files that don't match the pattern should not affect the counter."""
+        (tmp_path / "some_other_file.zarr").touch()
+        (tmp_path / "background.zarr").mkdir()
+        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
+        assert p() == "_".join([current_date, "scan_00000"])
+
+    def test_scan_nonexistent_dir_starts_from_zero(self, tmp_path: Path, current_date: str) -> None:
+        """A base_dir that doesn't exist yet should not raise and should start from 0."""
+        p = AutoIncrementFilenameProvider(
+            base="scan", max_digits=5, base_dir=tmp_path / "new_session", suffix=".zarr"
+        )
+        assert p() == "_".join([current_date, "scan_00000"])
 
 
 # ---------------------------------------------------------------------------
@@ -248,27 +238,27 @@ class TestAutoIncrementFilenameProvider:
 
 class TestStaticPathProvider:
     def test_basic(self, current_date: str) -> None:
-        fp = StaticFilenameProvider("scan001")
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp("camera")
-        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan001"])
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
         assert info.array_key == "camera"
 
     def test_trailing_slash_stripped(self, current_date: str) -> None:
-        fp = StaticFilenameProvider("scan")
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data/")
         info = pp("det")
-        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan"])
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
 
     def test_none_device_name(self, current_date: str) -> None:
-        fp = StaticFilenameProvider("scan")
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp(None)
         # array_key falls back to filename when device_name is None
-        assert info.array_key == "_".join([current_date, "scan"])
+        assert info.array_key == "_".join([current_date, "scan_00000"])
 
     def test_capacity_forwarded(self) -> None:
-        fp = StaticFilenameProvider("s")
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
         pp = StaticPathProvider(fp, base_uri="file:///d", capacity=50)
         assert pp("x").capacity == 50
 
@@ -410,11 +400,6 @@ class TestWriter:
         assert not any(d[0] == "stream_resource" for d in docs2)
 
 
-# ---------------------------------------------------------------------------
-# StorageProxy structural check
-# ---------------------------------------------------------------------------
-
-
 class TestStorageProxyProtocol:
     def test_writer_satisfies_proxy(self) -> None:
         """Writer must structurally satisfy StorageProxy."""
@@ -430,7 +415,7 @@ class TestZarrWriterImportGuard:
         from redsun.storage._zarr import ZarrWriter
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
-        fp = StaticFilenameProvider("scan")
+        fp = AutoIncrementFilenameProvider("scan")
         pp = StaticPathProvider(fp, base_uri="file:///data")
         with pytest.raises(ImportError, match="acquire-zarr"):
             ZarrWriter("test", pp, Path("/data"))
@@ -441,14 +426,13 @@ class TestZarrWriterBaseDir:
 
     def test_kickoff_creates_base_dir(self, tmp_path: Path) -> None:
         """kickoff() creates base_dir if it does not exist yet."""
-        from unittest.mock import MagicMock, patch
-        from redsun.storage._zarr import ZarrWriter
-        from redsun.storage import StaticFilenameProvider, StaticPathProvider
+        
+        from redsun.storage import StaticPathProvider
 
         base_dir = tmp_path / "scans"
         assert not base_dir.exists()
 
-        fp = StaticFilenameProvider("run001")
+        fp = AutoIncrementFilenameProvider("run001")
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 
@@ -462,15 +446,12 @@ class TestZarrWriterBaseDir:
         assert base_dir.is_dir()
 
     def test_kickoff_base_dir_already_exists(self, tmp_path: Path) -> None:
-        """kickoff() is a no-op mkdir when base_dir already exists."""
-        from unittest.mock import patch
-        from redsun.storage._zarr import ZarrWriter
-        from redsun.storage import StaticFilenameProvider, StaticPathProvider
+        """kickoff() is a no-op mkdir when base_dir already exists."""        
 
         base_dir = tmp_path / "scans"
         base_dir.mkdir()
 
-        fp = StaticFilenameProvider("run001")
+        fp = AutoIncrementFilenameProvider("run001")
         pp = StaticPathProvider(fp, base_uri=base_dir.as_uri())
         writer = ZarrWriter("test-writer", pp, base_dir)
 

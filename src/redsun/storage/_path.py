@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import datetime
-import uuid
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
 from urllib.parse import urlparse
 from urllib.request import url2pathname
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def from_uri(uri: str) -> str:
@@ -111,45 +113,6 @@ class DateTimeMixin:
     _current_date: ClassVar[str] = datetime.datetime.now().strftime("%Y_%m_%d")
 
 
-class StaticFilenameProvider(FilenameProvider, DateTimeMixin):
-    """Always returns the same filename.
-
-    The filename is returned formatted as the current
-    datetime (YYYY_MM_DD) followed by the provided filename, separated by an underscore.
-
-    i.e.
-
-    ```
-    filename = StaticFilenameProvider("myfile")
-    print(filename())  # Output: "2024_06_01_myfile"
-    ```
-
-    Parameters
-    ----------
-    filename : str
-        The filename string to return on every call.
-    """
-
-    def __init__(self, filename: str) -> None:
-        self._filename = filename
-
-    def __call__(self, device_name: str | None = None) -> str:
-        """Return the static filename."""
-        return "_".join([self._current_date, self._filename])
-
-
-class UUIDFilenameProvider(FilenameProvider, DateTimeMixin):
-    """Returns a fresh UUID4 string on every call.
-
-    Each call produces a new UUID, so files from different acquisitions
-    are never overwritten.
-    """
-
-    def __call__(self, device_name: str | None = None) -> str:
-        """Return a new UUID4 filename."""
-        return "_".join([self._current_date, str(uuid.uuid4())])
-
-
 class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
     """Returns a numerically incrementing filename on each call.
 
@@ -157,6 +120,11 @@ class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
     ----------
     base : str
         Optional base prefix for the filename.
+    base_dir : Path | None
+        Optional directory to scan for
+        existing files matching the pattern `{base}_{counter}`
+        to initialize the counter.
+        If `None` (default), the counter starts at `start` without scanning.
     max_digits : int
         Zero-padding width for the counter.
     start : int
@@ -170,16 +138,33 @@ class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
     def __init__(
         self,
         base: str = "",
+        base_dir: Path | None = None,
         max_digits: int = 5,
         start: int = 0,
         step: int = 1,
         delimiter: str = "_",
+        suffix: str = "",
     ) -> None:
         self._base = base
         self._max_digits = max_digits
-        self._current = start
         self._step = step
         self._delimiter = delimiter
+        self._current = self._scan(base_dir, suffix) if base_dir else start
+
+    def _scan(self, base_dir: Path, suffix: str) -> int:
+        """Scan *base_dir* for existing files matching the pattern and return max + 1."""
+        pattern = (
+            f"*_{self._base}{self._delimiter}*{suffix}"
+            if self._base
+            else f"*{self._delimiter}*{suffix}"
+        )
+        counters = []
+        for p in base_dir.glob(pattern):
+            try:
+                counters.append(int(p.stem.split(self._delimiter)[-1]))
+            except ValueError:
+                continue
+        return max(counters) + 1 if counters else 0
 
     def __call__(self, device_name: str | None = None) -> str:
         """Return the next incremented filename."""

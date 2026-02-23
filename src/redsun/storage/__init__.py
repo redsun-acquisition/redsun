@@ -16,8 +16,6 @@ This subpackage provides the dependency-free primitives for storage:
 - [`PathInfo`][redsun.storage.PathInfo] — storage path and configuration for one device
 - [`FilenameProvider`][redsun.storage.FilenameProvider] — protocol for filename callables
 - [`PathProvider`][redsun.storage.PathProvider] — protocol for path-info callables
-- [`StaticFilenameProvider`][redsun.storage.StaticFilenameProvider],
-  [`UUIDFilenameProvider`][redsun.storage.UUIDFilenameProvider],
   [`AutoIncrementFilenameProvider`][redsun.storage.AutoIncrementFilenameProvider] — concrete filename strategies
 - [`StaticPathProvider`][redsun.storage.StaticPathProvider] — concrete path provider
 - [`StorageProxy`][redsun.storage.StorageProxy] — protocol implemented by all storage backends
@@ -48,9 +46,7 @@ from redsun.storage._path import (
     FilenameProvider,
     PathInfo,
     PathProvider,
-    StaticFilenameProvider,
     StaticPathProvider,
-    UUIDFilenameProvider,
 )
 from redsun.storage._proxy import (
     HasStorage,
@@ -67,8 +63,6 @@ __all__ = [
     "PathInfo",
     "FilenameProvider",
     "PathProvider",
-    "StaticFilenameProvider",
-    "UUIDFilenameProvider",
     "AutoIncrementFilenameProvider",
     "StaticPathProvider",
     # proxy / descriptor
