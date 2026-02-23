@@ -150,6 +150,7 @@ class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
         self._max_digits = max_digits
         self._step = step
         self._delimiter = delimiter
+        self._suffix = suffix
         self._current = self._scan(base_dir, suffix) if base_dir else start
 
     def _scan(self, base_dir: Path, suffix: str) -> int:
@@ -175,7 +176,7 @@ class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
         name = f"{self._base}{self._delimiter}{padded}" if self._base else padded
         name = "_".join([self._current_date, name])
         self._current += self._step
-        return name
+        return f"{name}{self._suffix}"
 
 
 class StaticPathProvider(PathProvider):
