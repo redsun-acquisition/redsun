@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import ClassVar
 
 
 def from_uri(uri: str) -> str:
