@@ -200,7 +200,7 @@ class TestAutoIncrementFilenameProvider:
     def test_scan_empty_dir(self, tmp_path: Path, current_date: str) -> None:
         """Empty directory should start from 0."""
         p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00000"])
+        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
 
     def test_scan_picks_up_existing(self, tmp_path: Path, current_date: str) -> None:
         """Counter should start one past the highest existing entry."""
@@ -208,27 +208,27 @@ class TestAutoIncrementFilenameProvider:
         (tmp_path / f"{current_date}_scan_00001.zarr").mkdir()
         (tmp_path / f"{current_date}_scan_00002.zarr").mkdir()
         p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00003"])
+        assert p() == "_".join([current_date, "scan_00003"]) + ".zarr"
 
     def test_scan_picks_up_across_dates(self, tmp_path: Path, current_date: str) -> None:
         """Counter should account for entries from previous days."""
         (tmp_path / "2024_01_01_scan_00007.zarr").mkdir()
         p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00008"])
+        assert p() == "_".join([current_date, "scan_00008"]) + ".zarr"
 
     def test_scan_ignores_unrelated_files(self, tmp_path: Path, current_date: str) -> None:
         """Files that don't match the pattern should not affect the counter."""
         (tmp_path / "some_other_file.zarr").touch()
         (tmp_path / "background.zarr").mkdir()
         p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00000"])
+        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
 
     def test_scan_nonexistent_dir_starts_from_zero(self, tmp_path: Path, current_date: str) -> None:
         """A base_dir that doesn't exist yet should not raise and should start from 0."""
         p = AutoIncrementFilenameProvider(
             base="scan", max_digits=5, base_dir=tmp_path / "new_session", suffix=".zarr"
         )
-        assert p() == "_".join([current_date, "scan_00000"])
+        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
 
 
 # ---------------------------------------------------------------------------
