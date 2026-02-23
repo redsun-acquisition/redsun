@@ -189,7 +189,7 @@ def _build_writer(cfg: StorageConfig, session: str) -> Writer:
         StaticFilenameProvider | AutoIncrementFilenameProvider | UUIDFilenameProvider
     )
     if strategy == "static":
-        filename = cfg.get("filename", "scan")
+        filename = cfg.get("filename", "recording")
         filename_provider = StaticFilenameProvider(filename)
     elif strategy == "auto_increment":
         filename_provider = AutoIncrementFilenameProvider()

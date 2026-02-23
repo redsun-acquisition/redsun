@@ -10,14 +10,34 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, runtime_checkable
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+
+
+def from_uri(uri: str) -> str:
+    """Convert a URI to a filesystem path if local, otherwise return as-is."""
+    parsed = urlparse(uri)
+    if parsed.scheme == "file":
+        return url2pathname(parsed.path)
+    return uri
 
 
 @dataclass
 class PathInfo:
     """Where and how a storage backend should write data for one device.
+
+    !!! note
+
+        For local file storage, The `store_uri` must be converted to
+        a concrete filesystem path before use. This is responsibility
+        of the backend writer.
+
+        An helper method [`from_uri`][redsun.storage._path.from_uri]
+        is provided for this purpose.
 
     Attributes
     ----------
@@ -85,8 +105,24 @@ class PathProvider(Protocol):
         ...
 
 
-class StaticFilenameProvider:
+class DateTimeMixin:
+    """Mixin providing class variable for current date string (YYYY_MM_DD) to be used in filename generation."""
+
+    _current_date: ClassVar[str] = datetime.datetime.now().strftime("%Y_%m_%d")
+
+
+class StaticFilenameProvider(FilenameProvider, DateTimeMixin):
     """Always returns the same filename.
+
+    The filename is returned formatted as the current
+    datetime (YYYY_MM_DD) followed by the provided filename, separated by an underscore.
+
+    i.e.
+
+    ```
+    filename = StaticFilenameProvider("myfile")
+    print(filename())  # Output: "2024_06_01_myfile"
+    ```
 
     Parameters
     ----------
@@ -99,10 +135,10 @@ class StaticFilenameProvider:
 
     def __call__(self, device_name: str | None = None) -> str:
         """Return the static filename."""
-        return self._filename
+        return "_".join([self._current_date, self._filename])
 
 
-class UUIDFilenameProvider:
+class UUIDFilenameProvider(FilenameProvider, DateTimeMixin):
     """Returns a fresh UUID4 string on every call.
 
     Each call produces a new UUID, so files from different acquisitions
@@ -111,10 +147,10 @@ class UUIDFilenameProvider:
 
     def __call__(self, device_name: str | None = None) -> str:
         """Return a new UUID4 filename."""
-        return str(uuid.uuid4())
+        return "_".join([self._current_date, str(uuid.uuid4())])
 
 
-class AutoIncrementFilenameProvider:
+class AutoIncrementFilenameProvider(FilenameProvider, DateTimeMixin):
     """Returns a numerically incrementing filename on each call.
 
     Parameters
@@ -151,15 +187,16 @@ class AutoIncrementFilenameProvider:
             raise ValueError(f"Counter exceeded maximum of {self._max_digits} digits")
         padded = f"{self._current:0{self._max_digits}}"
         name = f"{self._base}{self._delimiter}{padded}" if self._base else padded
+        name = "_".join([self._current_date, name])
         self._current += self._step
         return name
 
 
-class StaticPathProvider:
+class StaticPathProvider(PathProvider):
     """Provides [`PathInfo`][redsun.storage.PathInfo] rooted at a fixed base URI.
 
     Composes a [`FilenameProvider`][redsun.storage.FilenameProvider]
-    (for the array key / filename) with a fixed *base_uri* (for the store location).
+    (for the array key / filename) with a fixed `base_uri` (for the store location).
 
     Parameters
     ----------

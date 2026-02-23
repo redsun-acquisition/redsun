@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -27,6 +28,9 @@ from redsun.storage import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+@pytest.fixture
+def current_date() -> str:
+    return datetime.datetime.now().strftime("%Y_%m_%d")
 
 class _MinimalDevice(Device):
     """Minimal concrete Device with no storage declared."""
@@ -197,19 +201,22 @@ class TestPathInfo:
 
 
 class TestStaticFilenameProvider:
-    def test_always_same(self) -> None:
+    def test_always_same(self, current_date: str) -> None:
         p = StaticFilenameProvider("scan001")
-        assert p() == "scan001"
-        assert p("camera") == "scan001"
-        assert p() == "scan001"
+        assert p() == "_".join([current_date, "scan001"])
+        assert p("camera") == "_".join([current_date, "scan001"])
+        assert p() == "_".join([current_date, "scan001"])
 
 
 class TestUUIDFilenameProvider:
-    def test_returns_string(self) -> None:
+    def test_returns_string(self, current_date: str) -> None:
         p = UUIDFilenameProvider()
         name = p()
         assert isinstance(name, str)
-        assert len(name) == 36  # UUID4 canonical form
+
+        # UUID4 canonical form plus date and underscore
+        # should be 36 + 1 + len(current_date)
+        assert len(name) == len(current_date) + 1 + 36
 
     def test_unique_per_call(self) -> None:
         p = UUIDFilenameProvider()
@@ -217,16 +224,16 @@ class TestUUIDFilenameProvider:
 
 
 class TestAutoIncrementFilenameProvider:
-    def test_increments(self) -> None:
+    def test_increments(self, current_date: str) -> None:
         p = AutoIncrementFilenameProvider(base="scan", max_digits=3, start=0)
-        assert p() == "scan_000"
-        assert p() == "scan_001"
-        assert p() == "scan_002"
+        assert p() == "_".join([current_date, "scan_000"])
+        assert p() == "_".join([current_date, "scan_001"])
+        assert p() == "_".join([current_date, "scan_002"])
 
-    def test_no_base(self) -> None:
+    def test_no_base(self, current_date: str) -> None:
         p = AutoIncrementFilenameProvider(max_digits=2, start=5)
-        assert p() == "05"
-        assert p() == "06"
+        assert p() == "_".join([current_date, "05"])
+        assert p() == "_".join([current_date, "06"])
 
     def test_overflow_raises(self) -> None:
         p = AutoIncrementFilenameProvider(max_digits=1, start=10)
@@ -240,25 +247,25 @@ class TestAutoIncrementFilenameProvider:
 
 
 class TestStaticPathProvider:
-    def test_basic(self) -> None:
+    def test_basic(self, current_date: str) -> None:
         fp = StaticFilenameProvider("scan001")
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp("camera")
-        assert info.store_uri == "file:///data/scan001"
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan001"])
         assert info.array_key == "camera"
 
-    def test_trailing_slash_stripped(self) -> None:
+    def test_trailing_slash_stripped(self, current_date: str) -> None:
         fp = StaticFilenameProvider("scan")
         pp = StaticPathProvider(fp, base_uri="file:///data/")
         info = pp("det")
-        assert info.store_uri == "file:///data/scan"
+        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan"])
 
-    def test_none_device_name(self) -> None:
+    def test_none_device_name(self, current_date: str) -> None:
         fp = StaticFilenameProvider("scan")
         pp = StaticPathProvider(fp, base_uri="file:///data")
         info = pp(None)
         # array_key falls back to filename when device_name is None
-        assert info.array_key == "scan"
+        assert info.array_key == "_".join([current_date, "scan"])
 
     def test_capacity_forwarded(self) -> None:
         fp = StaticFilenameProvider("s")
@@ -411,7 +418,7 @@ class TestWriter:
 class TestStorageProxyProtocol:
     def test_writer_satisfies_proxy(self) -> None:
         """Writer must structurally satisfy StorageProxy."""
-        assert issubclass(_ConcreteWriter, StorageProxy)  # type: ignore[arg-type]
+        assert issubclass(_ConcreteWriter, StorageProxy)
 
 
 class TestZarrWriterImportGuard:
