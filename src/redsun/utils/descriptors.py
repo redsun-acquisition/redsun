@@ -1,22 +1,17 @@
 """Helper utilities for building bluesky-compatible descriptor and reading keys.
 
-Key format
-----------
-Keys follow the convention::
+### Key format
 
-    {name} - {property}
+Keys follow the convention:
+
+```
+    {name}-{property}
+```
 
 where:
 
-- ``name``     is the runtime device instance name (e.g. ``"mmcore"``).
-- ``property`` is the individual setting name (e.g. ``"exposure"``).
-
-Example: ``mmcore-exposure``
-
-The same key convention applies to both configuration descriptor dicts
-(``describe_configuration()``) and configuration reading dicts
-(``read_configuration()``), so that the same ``parse_key`` or ``make_key``
-helpers can be reused uniformly across both.
+- `name`` is the runtime device instance name;
+- `property`` is the individual setting name.
 """
 
 from __future__ import annotations
@@ -38,19 +33,19 @@ T = TypeVar("T")
 
 
 def make_key(name: str, property_name: str) -> str:
-    r"""Build a canonical device property key.
+    """Build a canonical device property key.
 
     Parameters
     ----------
     name :
-        Runtime device instance name (e.g. ``"mmcore"``).
+        Runtime device instance name.
     property_name :
-        Individual setting name (e.g. ``"exposure"``).
+        Individual setting name.
 
     Returns
     -------
     str
-        Key in the form ``{name}\{property_name}``.
+        Key in the form ``{name}-{property_name}``.
     """
     return f"{name}-{property_name}"
 
@@ -61,7 +56,7 @@ def parse_key(key: str) -> tuple[str, str]:
     Parameters
     ----------
     key :
-        Key in the form ``{name}\{property_name}``.
+        Key in the form ``{name}-{property_name}``.
 
     Returns
     -------
@@ -132,26 +127,26 @@ def make_descriptor(
     shape: list[int | None] | None = None,
     readonly: bool = False,
 ) -> Descriptor:
-    r"""Build a bluesky-compatible descriptor entry.
+    """Build a bluesky-compatible descriptor entry.
 
     Parameters
     ----------
     source : str
-        Human-readable source label (e.g. ``"settings"``).
+        Human-readable source label (e.g. `"settings"`).
     dtype : Literal["number", "integer", "string", "array"]
         Data type of the field.
     low : float | int | None
-        Lower control limit (``"number"`` / ``"integer"`` only).
+        Lower control limit (`"number"`` or `"integer"` only).
     high : float | int | None
-        Upper control limit (``"number"`` / ``"integer"`` only).
+        Upper control limit (`"number"`` or `"integer"` only).
     units : str | None
         Physical unit string.
     choices : list[str] | None
-        Allowed string values (``"string"`` only).
+        Allowed string values (`"string"` only).
     shape : list[int | None] | None
-        Array dimensions (required for ``"array"``).
+        Array dimensions (required for `"array"`).
     readonly : bool
-        When ``True``, the ``source`` field is suffixed with ``":readonly"``.
+        When ``True``, the ``source`` field is suffixed with `":readonly"`.
 
     Returns
     -------
@@ -180,7 +175,7 @@ def make_descriptor(
     return d
 
 
-def make_reading(value: T, timestamp: float) -> "Reading[T]":
+def make_reading(value: T, timestamp: float) -> Reading[T]:
     """Build a bluesky-compatible reading entry.
 
     Parameters
@@ -188,7 +183,8 @@ def make_reading(value: T, timestamp: float) -> "Reading[T]":
     value : T
         Current value for the property.
     timestamp : float
-        UNIX timestamp of the reading.
+        UNIX timestamp of the reading
+        (i.e. return value of `time.time()`).
 
     Returns
     -------
