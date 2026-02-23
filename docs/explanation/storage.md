@@ -1,5 +1,9 @@
 # Storage
 
+!!! warning
+
+    This support is very barebone and might be reworked entirely. Expect breaking changes.
+
 Redsun provides an optional, session-scoped storage layer that lets devices write acquired frames to disk without managing their own file handles or knowing where data lands. The design follows the same dependency injection principle as the rest of the container: devices declare intent, the container supplies the implementation.
 
 ## Overview
@@ -85,33 +89,6 @@ All fields and their defaults:
     ```
 
     Produces: `/data/scans/scan_00000.zarr`, `/data/scans/scan_00001.zarr`, …
-
-=== "uuid"
-
-    Each store gets a random UUID4 name. Useful when concurrent writers must avoid any chance of collision.
-
-    ```yaml
-    storage:
-      backend: zarr
-      base_path: /data/scans
-      filename_provider: uuid
-    ```
-
-    Produces: `/data/scans/3f2504e0-4f89-11d3-9a0c-0305e82c3301.zarr`, …
-
-=== "static"
-
-    Every acquisition writes to the same filename. Use only when you explicitly want to overwrite.
-
-    ```yaml
-    storage:
-      backend: zarr
-      base_path: /data/scans
-      filename_provider: static
-      filename: background
-    ```
-
-    Produces: `/data/scans/background.zarr` (overwritten each run).
 
 ### Default store location
 
