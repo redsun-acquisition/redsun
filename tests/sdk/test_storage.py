@@ -21,6 +21,13 @@ from redsun.storage import (
     Writer,
 )
 
+from redsun.storage import make_writer
+from redsun.storage.zarr import ZarrWriter
+from redsun.storage import StorageContext
+from redsun.storage import PrepareInfo
+from redsun.storage import HasStorage
+from redsun.device import PDevice
+
 
 @pytest.fixture
 def current_date() -> str:
@@ -314,3 +321,172 @@ class TestZarrWriterKickoff:
             writer.kickoff()
 
         assert writer.is_open
+
+
+class TestDeviceStorageInfo:
+    def test_defaults(self) -> None:
+        info = DeviceStorageInfo(format_hint="application/x-zarr")
+        assert info.format_hint == "application/x-zarr"
+        assert info.extra == {}
+
+    def test_extra_is_mutable(self) -> None:
+        info = DeviceStorageInfo(format_hint="application/x-zarr")
+        info.extra["key"] = "value"
+        assert info.extra["key"] == "value"
+
+    def test_no_uri_field(self) -> None:
+        info = DeviceStorageInfo(format_hint="application/x-zarr")
+        assert not hasattr(info, "uri")
+
+
+class TestStorageInfo:
+    def test_defaults(self) -> None:
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        assert info.uri == "file:///tmp/scan.zarr"
+        assert info.devices == {}
+
+    def test_devices_is_mutable_and_shared(self) -> None:
+        """Mutations on devices dict are visible to all references to the same instance."""
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        ref = info
+        info.devices["motor"] = DeviceStorageInfo(format_hint="application/x-zarr")
+        assert "motor" in ref.devices
+
+    def test_two_devices_do_not_overwrite(self) -> None:
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        info.devices["cam"] = DeviceStorageInfo(format_hint="application/x-zarr", extra={"x": 1})
+        info.devices["motor"] = DeviceStorageInfo(format_hint="application/x-zarr", extra={"y": 2})
+        assert info.devices["cam"].extra == {"x": 1}
+        assert info.devices["motor"].extra == {"y": 2}
+
+
+class TestPrepareInfo:
+    def test_all_fields_optional(self) -> None:
+
+        pi = PrepareInfo()
+        assert pi.storage is None
+
+    def test_storage_can_be_set(self) -> None:
+
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        pi = PrepareInfo(storage=info)
+        assert pi.storage is info
+
+    def test_accessible_via_getattr_without_import(self) -> None:
+        """Third-party code can access fields via getattr without importing PrepareInfo."""
+
+        pi = PrepareInfo(storage=None)
+        assert getattr(pi, "storage", "sentinel") is None
+
+        pi2 = PrepareInfo()
+        assert getattr(pi2, "storage", "sentinel") is None
+
+
+class TestHasStorageProtocol:
+    def test_isinstance_passes_for_compliant_class(self) -> None:
+
+        class _FakeDevice:
+            @property
+            def name(self) -> str:
+                return "dev"
+
+            def storage_info(self) -> DeviceStorageInfo:
+                return DeviceStorageInfo(format_hint="application/x-zarr")
+
+        assert isinstance(_FakeDevice(), HasStorage)
+
+    def test_isinstance_fails_without_storage_info(self) -> None:
+
+        class _NoStorage:
+            @property
+            def name(self) -> str:
+                return "dev"
+
+        assert not isinstance(_NoStorage(), HasStorage)
+
+    def test_isinstance_fails_without_name(self) -> None:
+
+        class _NoName:
+            def storage_info(self) -> DeviceStorageInfo:
+                return DeviceStorageInfo(format_hint="application/x-zarr")
+
+        assert not isinstance(_NoName(), HasStorage)
+
+
+class TestStorageContext:
+    def _make_device(self, name: str = "cam") -> PDevice:
+        """Return a minimal HasStorage-compliant device."""
+
+        class _Dev:
+            def __init__(self, n: str) -> None:
+                self._name = n
+
+            @property
+            def name(self) -> str:
+                return self._name
+
+            def storage_info(self) -> DeviceStorageInfo:
+                return DeviceStorageInfo(
+                    format_hint="application/x-zarr", extra={"sensor": "test"}
+                )
+
+        return _Dev(name)
+
+    def _make_context(self, base_uri: str = "file:///tmp") -> StorageContext:
+        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
+        pp = StaticPathProvider(fp, base_uri=base_uri)
+        return StorageContext(name="default", path_provider=pp)
+
+    def test_resolve_returns_storage_info(self) -> None:
+        ctx = self._make_context()
+        dev = self._make_device("cam")
+        info = ctx.resolve(dev)
+        assert isinstance(info, StorageInfo)
+
+    def test_resolve_uri_comes_from_path_provider(self, current_date: str) -> None:
+        ctx = self._make_context(base_uri="file:///data")
+        dev = self._make_device("cam")
+        info = ctx.resolve(dev)
+        assert info.uri.startswith("file:///data/")
+
+    def test_resolve_preseeds_device_entry(self) -> None:
+        ctx = self._make_context()
+        dev = self._make_device("cam")
+        info = ctx.resolve(dev)
+        assert "cam" in info.devices
+        assert info.devices["cam"].extra == {"sensor": "test"}
+
+    def test_resolve_returns_independent_instances(self) -> None:
+        """Mutating one resolved StorageInfo must not affect a second resolve() call."""
+        ctx = self._make_context()
+        dev = self._make_device("cam")
+        info1 = ctx.resolve(dev)
+        info1.devices["motor"] = DeviceStorageInfo(format_hint="application/x-zarr")
+
+        info2 = ctx.resolve(dev)
+        assert "motor" not in info2.devices
+
+
+class TestMakeWriter:
+    def test_raises_for_unknown_format(self) -> None:
+        info = StorageInfo(
+            uri="file:///tmp/scan.zarr",
+            devices={"cam": DeviceStorageInfo(format_hint="application/x-unknown")},
+        )
+        with pytest.raises(ValueError, match="Unsupported format hint"):
+            make_writer("cam", info)
+
+    def test_returns_zarr_writer(self) -> None:
+        info = StorageInfo(
+            uri="file:///tmp/scan.zarr",
+            devices={"cam": DeviceStorageInfo(format_hint="application/x-zarr")},
+        )
+        w = make_writer("cam", info)
+        assert isinstance(w, ZarrWriter)
+
+    def test_unknown_device_falls_back_to_zarr(self) -> None:
+        """make_writer with a name not in info.devices defaults to zarr."""
+
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        w = make_writer("unknown_device", info)
+        assert isinstance(w, ZarrWriter)
