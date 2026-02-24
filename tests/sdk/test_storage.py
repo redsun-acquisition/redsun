@@ -430,12 +430,12 @@ class TestMakeWriter:
     def test_registry_cleared_after_complete(self) -> None:
         """After all sources complete, the next call returns a fresh instance."""
         uri = "file:///tmp/release_test.zarr"
-        w1 = make_writer(uri)
+        w1 = _ConcreteWriter.get(uri)
         w1.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
         w1.prepare("cam")
         w1.kickoff()
         w1.complete("cam")  # last source — triggers release
-        w2 = make_writer(uri)
+        w2 = _ConcreteWriter.get(uri)
         assert w1 is not w2
 
 
