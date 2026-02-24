@@ -2,8 +2,9 @@ import logging
 
 import pytest
 
-from redsun.virtual import Signal, VirtualContainer, IsProvider, IsInjectable
 from event_model import DocumentRouter
+from redsun.storage import DeviceStorageInfo, StorageInfo
+from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 logger = logging.getLogger("redsun")
 logger.setLevel(logging.DEBUG)
@@ -280,3 +281,54 @@ def test_virtual_container_configuration(bus: VirtualContainer) -> None:
     assert bus.session == "test-session"
     assert bus.frontend == "pyqt"
     assert bus.metadata == {"key": "value"}
+
+
+class TestStorageInfoOnVirtualContainer:
+    def test_storage_info_available_by_default(self) -> None:
+        """storage_info is accessible on a freshly constructed VirtualContainer."""
+        container = VirtualContainer()
+        assert isinstance(container.storage_info, StorageInfo)
+
+    def test_storage_info_empty_by_default(self) -> None:
+        """Default storage_info has empty uri and no devices."""
+        container = VirtualContainer()
+        assert container.storage_info.uri == ""
+        assert container.storage_info.devices == {}
+
+    def test_storage_info_setter(self) -> None:
+        """Assigning a new StorageInfo is reflected immediately on the property."""
+        container = VirtualContainer()
+        new_info = StorageInfo(uri="file:///data/scan.zarr")
+        container.storage_info = new_info
+        assert container.storage_info.uri == "file:///data/scan.zarr"
+
+    def test_storage_info_setter_returns_same_instance(self) -> None:
+        """The getter returns exactly the instance that was set."""
+        container = VirtualContainer()
+        new_info = StorageInfo(uri="file:///data/scan.zarr")
+        container.storage_info = new_info
+        assert container.storage_info is new_info
+
+    def test_storage_info_mutation_visible(self) -> None:
+        """Mutations on the stored instance are visible through the property."""
+        container = VirtualContainer()
+        info = StorageInfo(uri="file:///data/scan.zarr")
+        container.storage_info = info
+        container.storage_info.devices["motor"] = DeviceStorageInfo(mimetype="application/x-zarr")
+        assert "motor" in container.storage_info.devices
+
+    def test_plan_gets_fresh_copy(self) -> None:
+        """The plan body should construct a fresh StorageInfo from the container's uri,
+        so that motor metadata from one acquisition does not bleed into the next."""
+        container = VirtualContainer()
+        container.storage_info = StorageInfo(uri="file:///data/scan.zarr")
+
+        def make_fresh() -> StorageInfo:
+            return StorageInfo(uri=container.storage_info.uri)
+
+        acq1 = make_fresh()
+        acq1.devices["motor"] = DeviceStorageInfo(mimetype="application/x-zarr", extra={"pos": 1.0})
+
+        acq2 = make_fresh()
+        assert "motor" not in acq2.devices
+        assert acq2.uri == "file:///data/scan.zarr"

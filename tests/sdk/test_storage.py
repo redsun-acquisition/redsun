@@ -15,15 +15,15 @@ from redsun.storage import (
     AutoIncrementFilenameProvider,
     DeviceStorageInfo,
     FrameSink,
+    HasStorage,
     PathInfo,
+    PrepareInfo,
     StaticPathProvider,
     StorageInfo,
     Writer,
+    make_writer,
 )
-
-from redsun.storage import make_writer
 from redsun.storage.zarr import ZarrWriter
-from redsun.storage import HasStorage
 
 
 @pytest.fixture
@@ -410,3 +410,53 @@ class TestMakeWriter:
         info = StorageInfo(uri="file:///tmp/scan.zarr")
         w = make_writer("unknown_device", info)
         assert isinstance(w, ZarrWriter)
+
+
+class TestPrepareInfo:
+    def test_default_constructs_empty_storage_info(self) -> None:
+        """PrepareInfo() with no args should produce an empty StorageInfo, not None."""
+        pi = PrepareInfo()
+        assert isinstance(pi.storage, StorageInfo)
+        assert pi.storage.uri == ""
+        assert pi.storage.devices == {}
+
+    def test_accepts_explicit_storage_info(self) -> None:
+        info = StorageInfo(uri="file:///tmp/scan.zarr")
+        pi = PrepareInfo(storage=info)
+        assert pi.storage is info
+
+    def test_storage_is_never_none(self) -> None:
+        """PrepareInfo.storage is always a StorageInfo — no None sentinel."""
+        assert PrepareInfo().storage is not None
+
+    def test_each_default_instance_is_independent(self) -> None:
+        """Two PrepareInfo() calls must not share the same StorageInfo instance."""
+        pi1 = PrepareInfo()
+        pi2 = PrepareInfo()
+        pi1.storage.devices["motor"] = DeviceStorageInfo(mimetype="application/x-zarr")
+        assert "motor" not in pi2.storage.devices
+
+    def test_accessible_via_getattr_without_import(self) -> None:
+        """Third-party code can reach storage via getattr without importing PrepareInfo."""
+        pi = PrepareInfo()
+        assert getattr(pi, "storage", None) is not None
+
+
+class TestStorageInfoDefaults:
+    def test_no_args_constructor(self) -> None:
+        """StorageInfo() is valid with no arguments — uri defaults to empty string."""
+        info = StorageInfo()
+        assert info.uri == ""
+        assert info.devices == {}
+
+    def test_uri_settable_after_construction(self) -> None:
+        info = StorageInfo()
+        info.uri = "file:///data/scan.zarr"
+        assert info.uri == "file:///data/scan.zarr"
+
+    def test_empty_instances_are_independent(self) -> None:
+        """Two StorageInfo() calls must not share the same devices dict."""
+        a = StorageInfo()
+        b = StorageInfo()
+        a.devices["cam"] = DeviceStorageInfo(mimetype="application/x-zarr")
+        assert "cam" not in b.devices
