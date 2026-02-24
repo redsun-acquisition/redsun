@@ -13,8 +13,7 @@ This subpackage provides the primitives for storage:
 - [`PathInfo`][redsun.storage.PathInfo] — storage path and configuration for one device
 - [`FilenameProvider`][redsun.storage.FilenameProvider] — protocol for filename callables
 - [`PathProvider`][redsun.storage.PathProvider] — protocol for path-info callables
-- [`AutoIncrementFilenameProvider`][redsun.storage.AutoIncrementFilenameProvider] — concrete filename strategy
-- [`StaticPathProvider`][redsun.storage.StaticPathProvider] — concrete path provider
+- [`SessionPathProvider`][redsun.storage.SessionPathProvider] — structured session-scoped path provider
 - [`DeviceStorageInfo`][redsun.storage.DeviceStorageInfo] — storage capability declared by a device
 - [`StorageInfo`][redsun.storage.StorageInfo] — fully resolved storage location produced by the application
 - [`PrepareInfo`][redsun.storage.PrepareInfo] — typed container passed to `prepare` methods
@@ -44,11 +43,10 @@ from redsun.storage._info import (
     StorageInfo,
 )
 from redsun.storage._path import (
-    AutoIncrementFilenameProvider,
     FilenameProvider,
     PathInfo,
     PathProvider,
-    StaticPathProvider,
+    SessionPathProvider,
 )
 from redsun.storage.protocols import (
     DeviceMetadata,
@@ -66,8 +64,7 @@ __all__ = [
     "PathInfo",
     "FilenameProvider",
     "PathProvider",
-    "AutoIncrementFilenameProvider",
-    "StaticPathProvider",
+    "SessionPathProvider",
     # prepare
     "DeviceStorageInfo",
     "StorageInfo",

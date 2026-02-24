@@ -12,13 +12,12 @@ import pytest
 from redsun.storage.zarr import ZarrWriter
 
 from redsun.storage import (
-    AutoIncrementFilenameProvider,
     DeviceStorageInfo,
     FrameSink,
     HasStorage,
     PathInfo,
     PrepareInfo,
-    StaticPathProvider,
+    SessionPathProvider,
     StorageInfo,
     Writer,
     make_writer,
@@ -85,81 +84,78 @@ class TestPathInfo:
         assert pi.extra == {"units": "nm"}
 
 
-class TestAutoIncrementFilenameProvider:
-    def test_increments(self, current_date: str) -> None:
-        p = AutoIncrementFilenameProvider(base="scan", max_digits=3, start=0)
-        assert p() == "_".join([current_date, "scan_000"])
-        assert p() == "_".join([current_date, "scan_001"])
-        assert p() == "_".join([current_date, "scan_002"])
+class TestSessionPathProvider:
+    def test_uri_structure(self, current_date: str, tmp_path: Path) -> None:
+        """URI follows <base_dir>/<session>/<date>/<key>_<counter> format."""
+        p = SessionPathProvider(base_dir=tmp_path, session="exp1")
+        info = p("live_stream")
+        assert info.store_uri == f"file://{tmp_path}/exp1/{current_date}/live_stream_00000"
 
-    def test_no_base(self, current_date: str) -> None:
-        p = AutoIncrementFilenameProvider(max_digits=2, start=5)
-        assert p() == "_".join([current_date, "05"])
-        assert p() == "_".join([current_date, "06"])
+    def test_counter_increments_per_key(self, tmp_path: Path) -> None:
+        """Each call with the same key advances that key's counter."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        assert p("snap").store_uri.endswith("snap_00000")
+        assert p("snap").store_uri.endswith("snap_00001")
+        assert p("snap").store_uri.endswith("snap_00002")
 
-    def test_overflow_raises(self) -> None:
-        p = AutoIncrementFilenameProvider(max_digits=1, start=10)
-        with pytest.raises(ValueError, match="exceeded maximum"):
-            p()
+    def test_counters_are_independent_per_key(self, tmp_path: Path) -> None:
+        """Different keys have independent counters."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        p("live_stream")
+        p("live_stream")
+        assert p("snap").store_uri.endswith("snap_00000")
+        assert p("live_stream").store_uri.endswith("live_stream_00002")
 
-    def test_scan_empty_dir(self, tmp_path: Path, current_date: str) -> None:
-        """Empty directory should start from 0."""
-        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
+    def test_none_key_maps_to_default(self, tmp_path: Path) -> None:
+        """key=None uses 'default' as the bucket name."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        info = p(None)
+        assert "default_00000" in info.store_uri
+        assert info.array_key == "default"
 
-    def test_scan_picks_up_existing(self, tmp_path: Path, current_date: str) -> None:
-        """Counter should start one past the highest existing entry."""
-        (tmp_path / f"{current_date}_scan_00000.zarr").mkdir()
-        (tmp_path / f"{current_date}_scan_00001.zarr").mkdir()
-        (tmp_path / f"{current_date}_scan_00002.zarr").mkdir()
-        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00003"]) + ".zarr"
-
-    def test_scan_picks_up_across_dates(self, tmp_path: Path, current_date: str) -> None:
-        """Counter should account for entries from previous days."""
-        (tmp_path / "2024_01_01_scan_00007.zarr").mkdir()
-        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00008"]) + ".zarr"
-
-    def test_scan_ignores_unrelated_files(self, tmp_path: Path, current_date: str) -> None:
-        """Files that don't match the pattern should not affect the counter."""
-        (tmp_path / "some_other_file.zarr").touch()
-        (tmp_path / "background.zarr").mkdir()
-        p = AutoIncrementFilenameProvider(base="scan", max_digits=5, base_dir=tmp_path, suffix=".zarr")
-        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
-
-    def test_scan_nonexistent_dir_starts_from_zero(self, tmp_path: Path, current_date: str) -> None:
-        """A base_dir that doesn't exist yet should not raise and should start from 0."""
-        p = AutoIncrementFilenameProvider(
-            base="scan", max_digits=5, base_dir=tmp_path / "new_session", suffix=".zarr"
-        )
-        assert p() == "_".join([current_date, "scan_00000"]) + ".zarr"
-
-
-class TestStaticPathProvider:
-    def test_basic(self, current_date: str) -> None:
-        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
-        pp = StaticPathProvider(fp, base_uri="file:///data")
-        info = pp("camera")
-        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
+    def test_array_key_matches_key(self, tmp_path: Path) -> None:
+        """PathInfo.array_key is set to the resolved key."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        info = p("camera")
         assert info.array_key == "camera"
 
-    def test_trailing_slash_stripped(self, current_date: str) -> None:
-        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
-        pp = StaticPathProvider(fp, base_uri="file:///data/")
-        info = pp("det")
-        assert info.store_uri == "file:///data/" + "_".join([current_date, "scan_00000"])
+    def test_overflow_raises(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s", max_digits=1)
+        for _ in range(9):
+            p("x")
+        p("x")  # 9 → ok (single digit)
+        with pytest.raises(ValueError, match="exceeded maximum"):
+            p("x")  # 10 → two digits
 
-    def test_none_device_name(self, current_date: str) -> None:
-        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
-        pp = StaticPathProvider(fp, base_uri="file:///data")
-        info = pp(None)
-        assert info.array_key == "_".join([current_date, "scan_00000"])
+    def test_session_setter_preserves_counters(self, tmp_path: Path) -> None:
+        """Updating session name does not reset counters."""
+        p = SessionPathProvider(base_dir=tmp_path, session="a")
+        p("snap")
+        p.session = "b"
+        info = p("snap")
+        assert "snap_00001" in info.store_uri
+        assert "/b/" in info.store_uri
 
-    def test_capacity_forwarded(self) -> None:
-        fp = AutoIncrementFilenameProvider(base="scan", max_digits=5, start=0)
-        pp = StaticPathProvider(fp, base_uri="file:///d", capacity=50)
-        assert pp("x").capacity == 50
+    def test_base_dir_setter_resets_counters(self, tmp_path: Path) -> None:
+        """Updating base_dir resets all counters to zero."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        p("snap")
+        p("snap")
+        new_dir = tmp_path / "new"
+        p.base_dir = new_dir
+        info = p("snap")
+        assert "snap_00000" in info.store_uri
+        assert str(new_dir) in info.store_uri
+
+    def test_capacity_forwarded(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s", capacity=100)
+        assert p("x").capacity == 100
+
+    def test_default_base_dir_is_home(self) -> None:
+        """Default base_dir is ~/redsun-storage."""
+        p = SessionPathProvider(session="s")
+        expected = Path.home() / "redsun-storage"
+        assert p.base_dir == expected
 
 
 class TestWriter:
