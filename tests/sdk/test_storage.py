@@ -30,19 +30,11 @@ def current_date() -> str:
     return datetime.datetime.now().strftime("%Y_%m_%d")
 
 
-@pytest.fixture
-def storage_info() -> StorageInfo:
-    return StorageInfo(
-        uri="file:///tmp/test.zarr",
-        devices={"cam": DeviceStorageInfo(mimetype="application/x-zarr")},
-    )
-
-
 class _ConcreteWriter(Writer):
     """Minimal Writer subclass for testing the abstract base."""
 
-    def __init__(self, info: StorageInfo) -> None:
-        super().__init__(info)
+    def __init__(self, uri: str) -> None:
+        super().__init__(uri)
         self._frames: dict[str, list[Any]] = {}
         self._finalized = False
 
@@ -199,10 +191,8 @@ class TestSessionPathProvider:
 
 
 class TestWriter:
-    def _make_writer(self, info: StorageInfo | None = None) -> _ConcreteWriter:
-        if info is None:
-            info = StorageInfo(uri="file:///tmp/test.zarr")
-        return _ConcreteWriter(info)
+    def _make_writer(self, uri: str = "file:///tmp/test.zarr") -> _ConcreteWriter:
+        return _ConcreteWriter(uri)
 
     def test_initial_state(self) -> None:
         w = self._make_writer()
@@ -330,22 +320,15 @@ class TestZarrWriterImportGuard:
         import redsun.storage.zarr as zarr_mod
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
-        info = StorageInfo(
-            uri="file:///tmp/test.zarr",
-            devices={"cam": DeviceStorageInfo(mimetype="application/x-zarr")},
-        )
         with pytest.raises(ImportError, match="acquire-zarr"):
-            ZarrWriter(info)
+            ZarrWriter("file:///tmp/test.zarr")
 
 
 class TestZarrWriterKickoff:
     def test_kickoff(self, tmp_path: Path) -> None:
         """kickoff() opens the ZarrStream with the configured store path."""
-        info = StorageInfo(
-            uri=tmp_path.as_uri() + "/scan.zarr",
-            devices={"cam": DeviceStorageInfo(mimetype="application/x-zarr")},
-        )
-        writer = ZarrWriter(info)
+        uri = tmp_path.as_uri() + "/scan.zarr"
+        writer = ZarrWriter(uri)
         writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
         with patch("redsun.storage.zarr.ZarrStream"):
@@ -425,27 +408,35 @@ class TestHasStorageProtocol:
 
 class TestMakeWriter:
     def test_raises_for_unknown_format(self) -> None:
-        info = StorageInfo(
-            uri="file:///tmp/scan.zarr",
-            devices={"cam": DeviceStorageInfo(mimetype="application/x-unknown")},
-        )
         with pytest.raises(ValueError, match="Unsupported format hint"):
-            make_writer("cam", info)
+            make_writer("file:///tmp/scan.zarr", "application/x-unknown")
 
     def test_returns_zarr_writer(self) -> None:
-        info = StorageInfo(
-            uri="file:///tmp/scan.zarr",
-            devices={"cam": DeviceStorageInfo(mimetype="application/x-zarr")},
-        )
-        w = make_writer("cam", info)
+        w = make_writer("file:///tmp/scan.zarr")
         assert isinstance(w, ZarrWriter)
 
-    def test_unknown_device_falls_back_to_zarr(self) -> None:
-        """make_writer with a name not in info.devices defaults to zarr."""
+    def test_same_uri_returns_same_instance(self) -> None:
+        """Two calls with the same URI must return the same writer."""
+        uri = "file:///tmp/singleton_test.zarr"
+        w1 = make_writer(uri)
+        w2 = make_writer(uri)
+        assert w1 is w2
 
-        info = StorageInfo(uri="file:///tmp/scan.zarr")
-        w = make_writer("unknown_device", info)
-        assert isinstance(w, ZarrWriter)
+    def test_different_uri_returns_different_instance(self) -> None:
+        w1 = make_writer("file:///tmp/a.zarr")
+        w2 = make_writer("file:///tmp/b.zarr")
+        assert w1 is not w2
+
+    def test_registry_cleared_after_complete(self) -> None:
+        """After all sources complete, the next call returns a fresh instance."""
+        uri = "file:///tmp/release_test.zarr"
+        w1 = make_writer(uri)
+        w1.update_source("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
+        w1.prepare("cam")
+        w1.kickoff()
+        w1.complete("cam")  # last source — triggers release
+        w2 = make_writer(uri)
+        assert w1 is not w2
 
 
 class TestPrepareInfo:

@@ -18,8 +18,6 @@ if TYPE_CHECKING:
     from bluesky.protocols import StreamAsset
     from event_model.documents import StreamDatum, StreamResource
 
-    from redsun.storage._info import StorageInfo
-
 
 @dataclass
 class SourceInfo:
@@ -110,10 +108,11 @@ _W = TypeVar("_W", bound="Writer")
 class Writer(abc.ABC, Loggable):
     """Abstract base class for data writers.
 
-    Each device that writes data owns its own `Writer` instance,
-    constructed from a [`StorageInfo`][redsun.storage.StorageInfo]
-    received via `prepare()`. The writer is responsible for a single
-    store at a single URI.
+    Devices sharing the same store URI and MIME type receive the same
+    `Writer` instance via [`get`][redsun.storage.Writer.get], so that a
+    single backend (e.g. one `ZarrStream`) serves all arrays in one
+    acquisition.  Call [`release`][redsun.storage.Writer.release] when
+    the URI is no longer needed to remove it from the registry.
 
     Call order per acquisition:
 
@@ -133,16 +132,61 @@ class Writer(abc.ABC, Loggable):
 
     Parameters
     ----------
-    info : StorageInfo
-        Fully resolved storage location. The URI and device metadata
-        are read from this object on construction.
+    uri : str
+        Store URI for this writer (e.g. ``"file:///tmp/scan.zarr"``).
     """
 
-    def __init__(self, info: StorageInfo) -> None:
-        self.info = info
+    _registry: dict[str, "Writer"] = {}
+    _registry_lock: th.Lock = th.Lock()
+
+    def __init__(self, uri: str) -> None:
+        self._uri = uri
         self._lock = th.Lock()
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
+
+    @classmethod
+    def get(cls: type[_W], uri: str) -> _W:
+        """Return the singleton writer for *uri*, creating it if necessary.
+
+        All devices that share the same store URI receive the same instance,
+        ensuring a single backend serves all arrays in one acquisition.
+
+        Parameters
+        ----------
+        uri : str
+            Store URI.
+
+        Returns
+        -------
+        Writer
+            Existing or newly created instance for *uri*.
+        """
+        with cls._registry_lock:
+            if uri not in cls._registry:
+                cls._registry[uri] = cls(uri)
+            instance = cls._registry[uri]
+        if not isinstance(instance, cls):
+            raise TypeError(
+                f"Registry entry for {uri!r} is {type(instance).__name__!r}, "
+                f"expected {cls.__name__!r}"
+            )
+        return instance  # type: ignore[return-value]
+
+    @classmethod
+    def release(cls, uri: str) -> None:
+        """Remove the registry entry for *uri*.
+
+        Should be called after an acquisition completes so that the next
+        acquisition at the same URI gets a fresh writer.
+
+        Parameters
+        ----------
+        uri : str
+            Store URI to evict.
+        """
+        with cls._registry_lock:
+            cls._registry.pop(uri, None)
 
     @property
     def is_open(self) -> bool:
@@ -152,7 +196,7 @@ class Writer(abc.ABC, Loggable):
     @property
     def uri(self) -> str:
         """Return the URI for this writer."""
-        return self.info.uri
+        return self._uri
 
     @property
     @abc.abstractmethod
@@ -304,6 +348,8 @@ class Writer(abc.ABC, Loggable):
         """Mark acquisition complete for *name* and finalise the backend.
 
         Called automatically by [`FrameSink.close`][redsun.storage.FrameSink.close].
+        When the last source completes, the backend is finalised and this
+        writer is removed from the singleton registry.
 
         Parameters
         ----------
@@ -314,6 +360,7 @@ class Writer(abc.ABC, Loggable):
         if not self._sources:
             self._finalize()
             self._is_open = False
+            Writer.release(self._uri)
 
     @abc.abstractmethod
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:

@@ -18,7 +18,7 @@ This subpackage provides the primitives for storage:
 - [`StorageInfo`][redsun.storage.StorageInfo] — fully resolved storage location produced by the application
 - [`PrepareInfo`][redsun.storage.PrepareInfo] — typed container passed to `prepare` methods
 - [`HasStorage`][redsun.storage.HasStorage] — protocol for devices that declare storage capability
-- [`make_writer`][redsun.storage.make_writer] — SDK factory for constructing a writer from a `StorageInfo`
+- [`make_writer`][redsun.storage.make_writer] — return the singleton writer for a URI and MIME type
 
 Devices declare storage capability by implementing `storage_info()`:
 

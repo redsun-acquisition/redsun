@@ -25,33 +25,28 @@ if TYPE_CHECKING:
     import numpy as np
     import numpy.typing as npt
 
-    from redsun.storage._info import StorageInfo
-
 
 class ZarrWriter(Writer):
     """Zarr storage backend using `acquire-zarr`.
 
     Writes detector frames to a Zarr v3 store. Each `ZarrWriter` instance
-    is owned by a single device and writes to the URI provided in the
-    [`StorageInfo`][redsun.storage.StorageInfo] it receives on construction.
+    is owned by a single device and writes to the URI provided at construction.
 
     Parameters
     ----------
-    info : StorageInfo
-        Fully resolved storage location. The store URI is read from
-        `info.uri`; device metadata from `info.devices` is available
-        to subclasses for format-specific configuration.
+    uri : str
+        Store URI for this writer (e.g. ``"file:///tmp/scan.zarr"``).
     """
 
-    def __init__(self, info: StorageInfo) -> None:
+    def __init__(self, uri: str) -> None:
         if not _ACQUIRE_ZARR_AVAILABLE:
             raise ImportError(
                 "ZarrWriter requires the 'acquire-zarr' package. "
                 "Install it with: pip install redsun[zarr]"
             )
-        super().__init__(info)
+        super().__init__(uri)
         self._stream_settings = StreamSettings()
-        self._stream_settings.store_path = from_uri(info.uri)
+        self._stream_settings.store_path = from_uri(uri)
         self._array_settings: dict[str, ArraySettings] = {}
 
     @property
