@@ -308,7 +308,6 @@ class TestZarrWriterImportGuard:
 class TestZarrWriterKickoff:
     def test_kickoff(self, tmp_path: Path) -> None:
         """kickoff() opens the ZarrStream with the configured store path."""
-        pytest.importorskip("acquire_zarr")
         info = StorageInfo(
             uri=tmp_path.as_uri() + "/scan.zarr",
             devices={"cam": DeviceStorageInfo(format_hint="application/x-zarr")},
