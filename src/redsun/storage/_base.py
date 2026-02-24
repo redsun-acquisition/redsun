@@ -171,7 +171,7 @@ class Writer(abc.ABC, Loggable):
                 f"Registry entry for {uri!r} is {type(instance).__name__!r}, "
                 f"expected {cls.__name__!r}"
             )
-        return instance  # type: ignore[return-value]
+        return instance
 
     @classmethod
     def release(cls, uri: str) -> None:
