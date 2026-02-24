@@ -73,7 +73,7 @@ class FilenameProvider(Protocol):
 
 @runtime_checkable
 class PathProvider(Protocol):
-    """Callable that produces :class:`PathInfo` for a given key."""
+    """Callable that produces [`PathInfo`][redsun.storage.PathInfo] for a given key."""
 
     def __call__(self, key: str | None = None) -> PathInfo:
         """Return path information for *key*.
@@ -87,7 +87,7 @@ class PathProvider(Protocol):
 
         Returns
         -------
-        PathInfo
+        [`PathInfo`][redsun.storage.PathInfo]
             Complete path and storage metadata.
         """
         ...
@@ -100,7 +100,7 @@ class SessionPathProvider(PathProvider):
 
         file:///<base_dir>/<session>/<YYYY_MM_DD>/<key>_<counter>
 
-    where ``<key>`` is the value passed to :meth:`__call__` (e.g. the plan
+    where ``<key>`` is the value passed to [`__call__`][redsun.storage.SessionPathProvider.__call__] (e.g. the plan
     name), and ``<counter>`` is a zero-padded integer that increments
     independently for each distinct ``key``.  Calling with ``key=None``
     uses ``"default"`` as the key.
@@ -109,14 +109,6 @@ class SessionPathProvider(PathProvider):
     started just before midnight does not split its files across two
     date directories.
 
-    ```python
-        provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
-        info = provider("live_stream")
-        info.store_uri                      # output: file:///data/exp1/2026_02_24/live_stream_00000
-        provider("live_stream").store_uri   # output: file:///data/exp1/2026_02_24/live_stream_00001
-        provider("snap").store_uri          # output: file:///data/exp1/2026_02_24/snap_00000
-    ```
-
     Parameters
     ----------
     base_dir :
@@ -124,27 +116,29 @@ class SessionPathProvider(PathProvider):
         Defaults to ``~/redsun-storage``.
     session : str
         Session name, used as the second path segment.
-        Defaults to ``"redsun-application"``.
+        Defaults to ``"default"``.
     max_digits : int
-        Zero-padding width for the counter. Defaults to ``5``.
-    mimetype_hint : Storage
+        Zero-padding width for the counter.  Defaults to ``5``.
+    mimetype_hint : str
         MIME type hint forwarded to [`PathInfo`][redsun.storage.PathInfo].
     capacity : int
         Default frame capacity forwarded to [`PathInfo`][redsun.storage.PathInfo].
 
-    Attributes
-    ----------
-    session: str
-        Session name, used as the second path segment.
-    base_dir: Path
-        Root directory for all output files.
-        Can be updated after construction; updating it resets all counters to zero.
+    Examples
+    --------
+    ```python
+        provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
+        info = provider("live_stream")
+        info.store_uri                    # output: 'file:///data/exp1/2026_02_24/live_stream_00000'
+        provider("live_stream").store_uri # output: 'file:///data/exp1/2026_02_24/live_stream_00001'
+        provider("snap").store_uri        # output: 'file:///data/exp1/2026_02_24/snap_00000'
+    ```
     """
 
     def __init__(
         self,
         base_dir: Path | None = None,
-        session: str = "redsun-application",
+        session: str = "default",
         max_digits: int = 5,
         mimetype_hint: str = "application/x-zarr",
         capacity: int = 0,
@@ -152,12 +146,28 @@ class SessionPathProvider(PathProvider):
         self._base_dir = (
             base_dir if base_dir is not None else Path.home() / "redsun-storage"
         )
-        self.session = session
+        self._session = session
         self._max_digits = max_digits
         self._mimetype_hint = mimetype_hint
         self._capacity = capacity
         self._date = datetime.datetime.now().strftime("%Y_%m_%d")
-        self._counters: dict[str, int] = {}
+        self._counters: dict[str, int] = self._scan_existing()
+
+    @property
+    def session(self) -> str:
+        """The active session name."""
+        return self._session
+
+    @session.setter
+    def session(self, value: str) -> None:
+        """Update the session name and rescan the new session directory.
+
+        Counters are rebuilt from whatever already exists under
+        ``<base_dir>/<value>/<date>/`` so that numbering continues
+        correctly if the session was used in a previous run.
+        """
+        self._session = value
+        self._counters = self._scan_existing()
 
     @property
     def base_dir(self) -> Path:
@@ -166,16 +176,53 @@ class SessionPathProvider(PathProvider):
 
     @base_dir.setter
     def base_dir(self, value: Path) -> None:
-        """Update the root output directory and reset all counters.
+        """Update the root output directory and rescan.
 
-        Resetting counters ensures numbering restarts from zero when the
-        user chooses a new output location.
+        Counters are rebuilt from whatever already exists under
+        ``<value>/<session>/<date>/`` so that numbering continues
+        correctly if the directory was used in a previous run.
         """
         self._base_dir = value
-        self._counters.clear()
+        self._counters = self._scan_existing()
+
+    def _scan_existing(self) -> dict[str, int]:
+        """Scan the current date directory and return counters initialised from existing directories.
+
+        Looks for directories directly inside
+        ``<base_dir>/<session>/<date>/`` whose names match
+        ``<key>_<N>`` (last ``_``-delimited segment is a pure integer).
+        For each key, the counter is set to ``max(N) + 1`` so the next
+        call produces a name that does not collide with existing data.
+
+        Entries whose names cannot be parsed are silently ignored.
+        If the directory does not exist yet, an empty dict is returned.
+
+        Returns
+        -------
+        dict[str, int]
+            Mapping of key to next counter value.
+        """
+        directory = self._base_dir / self._session / self._date
+        counters: dict[str, int] = {}
+        if not directory.is_dir():
+            return counters
+        for entry in directory.iterdir():
+            if not entry.is_dir():
+                continue
+            name = entry.name
+            parts = name.rsplit("_", 1)
+            if len(parts) != 2:
+                continue
+            key, suffix = parts
+            if not suffix.isdigit():
+                continue
+            n = int(suffix)
+            if n + 1 > counters.get(key, 0):
+                counters[key] = n + 1
+        return counters
 
     def __call__(self, key: str | None = None) -> PathInfo:
-        """Return a fresh :class:`PathInfo` for *key* and advance its counter.
+        """Return a fresh [`PathInfo`][redsun.storage.PathInfo] for *key* and advance its counter.
 
         Parameters
         ----------
@@ -187,7 +234,7 @@ class SessionPathProvider(PathProvider):
 
         Returns
         -------
-        PathInfo
+        [`PathInfo`][redsun.storage.PathInfo]
             Path rooted at
             ``<base_dir>/<session>/<YYYY_MM_DD>/<key>_<counter>``.
         """
@@ -202,8 +249,8 @@ class SessionPathProvider(PathProvider):
 
         padded = f"{current:0{self._max_digits}}"
         filename = f"{resolved_key}_{padded}"
-        directory = self._base_dir / self.session / self._date
-        store_uri = f"file://{directory}/{filename}"
+        directory = self._base_dir / self._session / self._date
+        store_uri = f"file://{directory.as_posix()}/{filename}"
 
         self._counters[resolved_key] = current + 1
 

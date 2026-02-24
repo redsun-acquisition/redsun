@@ -89,7 +89,7 @@ class TestSessionPathProvider:
         """URI follows <base_dir>/<session>/<date>/<key>_<counter> format."""
         p = SessionPathProvider(base_dir=tmp_path, session="exp1")
         info = p("live_stream")
-        assert info.store_uri == f"file://{tmp_path}/exp1/{current_date}/live_stream_00000"
+        assert info.store_uri == f"file://{tmp_path.as_posix()}/exp1/{current_date}/live_stream_00000"
 
     def test_counter_increments_per_key(self, tmp_path: Path) -> None:
         """Each call with the same key advances that key's counter."""
@@ -127,26 +127,6 @@ class TestSessionPathProvider:
         with pytest.raises(ValueError, match="exceeded maximum"):
             p("x")  # 10 → two digits
 
-    def test_session_setter_preserves_counters(self, tmp_path: Path) -> None:
-        """Updating session name does not reset counters."""
-        p = SessionPathProvider(base_dir=tmp_path, session="a")
-        p("snap")
-        p.session = "b"
-        info = p("snap")
-        assert "snap_00001" in info.store_uri
-        assert "/b/" in info.store_uri
-
-    def test_base_dir_setter_resets_counters(self, tmp_path: Path) -> None:
-        """Updating base_dir resets all counters to zero."""
-        p = SessionPathProvider(base_dir=tmp_path, session="s")
-        p("snap")
-        p("snap")
-        new_dir = tmp_path / "new"
-        p.base_dir = new_dir
-        info = p("snap")
-        assert "snap_00000" in info.store_uri
-        assert str(new_dir) in info.store_uri
-
     def test_capacity_forwarded(self, tmp_path: Path) -> None:
         p = SessionPathProvider(base_dir=tmp_path, session="s", capacity=100)
         assert p("x").capacity == 100
@@ -156,6 +136,66 @@ class TestSessionPathProvider:
         p = SessionPathProvider(session="s")
         expected = Path.home() / "redsun-storage"
         assert p.base_dir == expected
+
+    def test_scan_existing_on_construction(self, current_date: str, tmp_path: Path) -> None:
+        """Counters are initialised from existing directories on construction."""
+        date_dir = tmp_path / "s" / current_date
+        date_dir.mkdir(parents=True)
+        (date_dir / "snap_00000").mkdir()
+        (date_dir / "snap_00001").mkdir()
+        (date_dir / "snap_00002").mkdir()
+        (date_dir / "live_stream_00000").mkdir()
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        assert p("snap").store_uri.endswith("snap_00003")
+        assert p("live_stream").store_uri.endswith("live_stream_00001")
+
+    def test_scan_ignores_files(self, current_date: str, tmp_path: Path) -> None:
+        """Plain files in the date directory are not counted."""
+        date_dir = tmp_path / "s" / current_date
+        date_dir.mkdir(parents=True)
+        (date_dir / "snap_00000").touch()  # file, not dir — must be ignored
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        assert p("snap").store_uri.endswith("snap_00000")
+
+    def test_scan_ignores_unparseable_entries(self, current_date: str, tmp_path: Path) -> None:
+        """Directories that don't match <key>_<N> are silently skipped."""
+        date_dir = tmp_path / "s" / current_date
+        date_dir.mkdir(parents=True)
+        (date_dir / "nodigit_abc").mkdir()
+        (date_dir / "nodash").mkdir()
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        assert p("nodigit").store_uri.endswith("nodigit_00000")
+
+    def test_missing_date_dir_starts_from_zero(self, tmp_path: Path) -> None:
+        """Missing date directory silently starts counters from zero."""
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        assert p("snap").store_uri.endswith("snap_00000")
+
+    def test_session_setter_rescans(self, current_date: str, tmp_path: Path) -> None:
+        """Updating session rescans the new session's directory."""
+        date_dir = tmp_path / "b" / current_date
+        date_dir.mkdir(parents=True)
+        (date_dir / "snap_00000").mkdir()
+        (date_dir / "snap_00001").mkdir()
+        p = SessionPathProvider(base_dir=tmp_path, session="a")
+        p("snap")  # a/snap → 00000
+        p.session = "b"
+        info = p("snap")
+        assert "snap_00002" in info.store_uri
+        assert "b" in info.store_uri.split("snap")[0]
+
+    def test_base_dir_setter_rescans(self, current_date: str, tmp_path: Path) -> None:
+        """Updating base_dir rescans the new location."""
+        new_dir = tmp_path / "new"
+        date_dir = new_dir / "s" / current_date
+        date_dir.mkdir(parents=True)
+        (date_dir / "snap_00000").mkdir()
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        p("snap")  # old location → 00000
+        p.base_dir = new_dir
+        info = p("snap")
+        assert "snap_00001" in info.store_uri
+        assert new_dir.as_posix() in info.store_uri
 
 
 class TestWriter:
