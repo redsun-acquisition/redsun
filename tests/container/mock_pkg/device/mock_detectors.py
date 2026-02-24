@@ -3,6 +3,7 @@ from typing import Any
 from attrs import define, field, setters, validators
 from bluesky.protocols import Descriptor, Reading
 from redsun.device import Device
+from redsun.storage import DeviceStorageInfo
 
 
 @define(kw_only=True)
@@ -52,17 +53,15 @@ class MockDetector(Device):
         return None
 
 
-from redsun.storage import StorageDescriptor
-
-
 @define(kw_only=True, slots=False)
 class MockDetectorWithStorage(MockDetector):
-    """Mock detector that opts in to storage via ``StorageDescriptor``."""
-
-    storage = StorageDescriptor()
+    """Mock detector that declares storage capability via ``storage_info()``."""
 
     def __init__(self, name: str, /, **kwargs: Any) -> None:
         super().__init__(name, **kwargs)
+
+    def storage_info(self) -> DeviceStorageInfo:
+        return DeviceStorageInfo(format_hint="application/x-zarr")
 
 
 @define(kw_only=True, slots=False)

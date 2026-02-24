@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-# The design of this module is heavily inspired by ophyd-async
+# The file and path providers are inspired by ophyd-async
 # (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
 # ophyd-async is licensed under the BSD 3-Clause License.
-# No source code from ophyd-async has been copied; the PathProvider / FilenameProvider
-# composable pattern was studied and independently re-implemented for redsun,
-# with URI-based paths for storage location flexibility.
 
 """Path and filename providers for storage backends."""
 
@@ -13,20 +10,10 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
-from urllib.parse import urlparse
-from urllib.request import url2pathname
 
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import ClassVar
-
-
-def from_uri(uri: str) -> str:
-    """Convert a URI to a filesystem path if local, otherwise return as-is."""
-    parsed = urlparse(uri)
-    if parsed.scheme == "file":
-        return url2pathname(parsed.path)
-    return uri
 
 
 @dataclass

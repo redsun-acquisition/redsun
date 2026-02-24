@@ -25,7 +25,7 @@ class DeviceStorageInfo(PDeviceStorageInfo):
 
 @dataclass
 class StorageInfo(PStorageInfo):
-    """Concrete implementation of PStorageInfo."""
+    """Application-resolved storage information with information from contributing devices."""
 
     uri: str
     """URI to the storage location."""

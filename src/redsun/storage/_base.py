@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-# The design of this module is heavily inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
-# ophyd-async is licensed under the BSD 3-Clause License.
-# No source code from ophyd-async has been copied; the architectural patterns
-# (shared writer, FrameSink, SourceInfo, stream document generation) were
-# studied and independently re-implemented to fit the redsun model.
-
 """Abstract base classes for storage writers."""
 
 from __future__ import annotations
@@ -14,7 +6,7 @@ import abc
 import threading as th
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from redsun.log import Loggable
 
@@ -26,10 +18,18 @@ if TYPE_CHECKING:
     from bluesky.protocols import StreamAsset
     from event_model.documents import StreamDatum, StreamResource
 
+    from redsun.storage._prepare import StorageInfo
+
 
 @dataclass
 class SourceInfo:
-    """Metadata for a registered data source.
+    """Runtime acquisition state for a registered data source.
+
+    Tracks per-source counters and identifiers used during an acquisition.
+    Format and metadata are carried by
+    [`DeviceStorageInfo`][redsun.storage.DeviceStorageInfo] in
+    [`StorageInfo.devices`][redsun.storage.StorageInfo]; this dataclass
+    is internal to [`Writer`][redsun.storage.Writer].
 
     Attributes
     ----------
@@ -41,29 +41,21 @@ class SourceInfo:
         Shape of individual frames from the source.
     data_key : str
         Bluesky data key for stream documents.
-    mimetype : str
-        MIME type hint for the storage backend.
     frames_written : int
         Running count of frames written so far.
     collection_counter : int
         Frames reported in the current collection cycle.
     stream_resource_uid : str
         UID of the current `StreamResource` document.
-    extra : dict[str, Any]
-        Optional extra metadata for backend-specific use (e.g. OME-Zarr
-        axis labels, physical units).  Base [`Writer`][redsun.storage.Writer]
-        ignores this field; specialised subclasses may read it.
     """
 
     name: str
     dtype: np.dtype[np.generic]
     shape: tuple[int, ...]
     data_key: str
-    mimetype: str = "application/octet-stream"
     frames_written: int = 0
     collection_counter: int = 0
     stream_resource_uid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    extra: dict[str, Any] = field(default_factory=dict)
 
 
 class FrameSink:
@@ -71,18 +63,16 @@ class FrameSink:
 
     Returned by [`Writer.prepare`][redsun.storage.Writer.prepare].
     Devices write frames by calling [`write`][redsun.storage.FrameSink.write];
-    the sink routes each frame to the correct array inside the shared
-    [`Writer`][redsun.storage.Writer] and updates the frame counter atomically.
+    the sink routes each frame to the backend and updates the frame counter
+    atomically.
 
-    Calling [`close`][redsun.storage.FrameSink.close] is equivalent to calling
-    [`Writer.complete`][redsun.storage.Writer.complete] for this source — it
-    signals that no more frames will arrive and triggers backend finalisation
-    once all active sinks have been closed.
+    Calling [`close`][redsun.storage.FrameSink.close] signals that no more
+    frames will arrive and triggers backend finalisation.
 
     Parameters
     ----------
     writer : Writer
-        The shared writer that owns this sink.
+        The writer that owns this sink.
     name : str
         Source name this sink is bound to.
     """
@@ -92,14 +82,14 @@ class FrameSink:
         self._name = name
 
     def write(self, frame: npt.NDArray[np.generic]) -> None:
-        """Push *frame* to the storage backend.
+        """Push `frame` to the storage backend.
 
-        Thread-safe; multiple sinks may call `write` concurrently.
+        Thread-safe.
 
         Parameters
         ----------
         frame : npt.NDArray[np.generic]
-            Array data to write.  dtype and shape must match the source
+            Array data to write. dtype and shape must match the source
             registration from [`Writer.update_source`][redsun.storage.Writer.update_source].
         """
         with self._writer._lock:
@@ -110,7 +100,6 @@ class FrameSink:
         """Signal that no more frames will be written from this sink.
 
         Delegates to [`Writer.complete`][redsun.storage.Writer.complete].
-        The backend is finalised once all active sinks have called `close`.
         """
         self._writer.complete(self._name)
 
@@ -121,23 +110,18 @@ _W = TypeVar("_W", bound="Writer")
 class Writer(abc.ABC, Loggable):
     """Abstract base class for data writers.
 
-    This interface loosely follows the Bluesky `Flyable` protocol while
-    remaining generic — methods do not need to return a `Status` object;
-    that is left to the device that owns the writer.
-
-    A single `Writer` instance is shared by all devices in a session.
-    Each device registers itself as a *source* via
-    [`update_source`][redsun.storage.Writer.update_source] and obtains
-    a dedicated [`FrameSink`][redsun.storage.FrameSink] via
-    [`prepare`][redsun.storage.Writer.prepare].
+    Each device that writes data owns its own `Writer` instance,
+    constructed from a [`StorageInfo`][redsun.storage.StorageInfo]
+    received via `prepare()`. The writer is responsible for a single
+    store at a single URI.
 
     Call order per acquisition:
 
-    1. `update_source(name, dtype, shape)` — register the device
+    1. `update_source(name, data_key, dtype, shape)` — register the device source
     2. `prepare(name, capacity)` — returns a [`FrameSink`][redsun.storage.FrameSink]
     3. `kickoff()` — opens the backend
     4. `sink.write(frame)` — push frames (thread-safe)
-    5. `sink.close()` — signals completion (calls [`complete`][redsun.storage.Writer.complete])
+    5. `sink.close()` — signals completion
 
     Subclasses must implement:
 
@@ -145,21 +129,20 @@ class Writer(abc.ABC, Loggable):
     - [`prepare`][redsun.storage.Writer.prepare] — source-specific setup; must call `super().prepare()`
     - [`kickoff`][redsun.storage.Writer.kickoff] — open the backend; must call `super().kickoff()`
     - `_write_frame` — write one frame to the backend
-    - `_finalize` — close the backend when all sources are complete
+    - `_finalize` — close the backend
 
     Parameters
     ----------
-    name : str
-        Unique name for this writer instance (used for logging).
+    info : StorageInfo
+        Fully resolved storage location. The URI and device metadata
+        are read from this object on construction.
     """
 
-    def __init__(self, name: str) -> None:
-        self._name = name
-        self._store_path = ""
+    def __init__(self, info: StorageInfo) -> None:
+        self.info = info
         self._lock = th.Lock()
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
-        self._active_sinks: set[str] = set()
 
     @property
     def is_open(self) -> bool:
@@ -167,9 +150,9 @@ class Writer(abc.ABC, Loggable):
         return self._is_open
 
     @property
-    def name(self) -> str:
-        """Return the name of this writer."""
-        return self._name
+    def uri(self) -> str:
+        """Return the URI for this writer."""
+        return self.info.uri
 
     @property
     @abc.abstractmethod
@@ -183,7 +166,6 @@ class Writer(abc.ABC, Loggable):
         data_key: str,
         dtype: np.dtype[np.generic],
         shape: tuple[int, ...],
-        extra: dict[str, Any] | None = None,
     ) -> None:
         """Register or update a data source.
 
@@ -192,15 +174,11 @@ class Writer(abc.ABC, Loggable):
         name : str
             Source name (typically the device name).
         data_key : str
-            Bluesky data key for stream documents used
-            in `collect_stream_docs`.
+            Bluesky data key for stream documents.
         dtype : np.dtype[np.generic]
             NumPy data type of the frames.
         shape : tuple[int, ...]
-            Shape of individual frames.
-        extra : dict[str, Any] | None
-            Optional backend-specific metadata forwarded to
-            [`SourceInfo`][redsun.storage.SourceInfo].
+            Shape of each frame.
 
         Raises
         ------
@@ -209,14 +187,11 @@ class Writer(abc.ABC, Loggable):
         """
         if self._is_open:
             raise RuntimeError("Cannot update sources while writer is open.")
-
         self._sources[name] = SourceInfo(
             name=name,
             dtype=dtype,
             shape=shape,
             data_key=data_key,
-            mimetype=self.mimetype,
-            extra=extra or {},
         )
         self.logger.debug(f"Updated source '{name}' with shape {shape}")
 
@@ -323,28 +298,22 @@ class Writer(abc.ABC, Loggable):
         source.frames_written = 0
         source.collection_counter = 0
         source.stream_resource_uid = str(uuid.uuid4())
-        self._active_sinks.add(name)
         return FrameSink(self, name)
 
     def complete(self, name: str) -> None:
-        """Mark acquisition complete for *name*.
+        """Mark acquisition complete for *name* and finalise the backend.
 
         Called automatically by [`FrameSink.close`][redsun.storage.FrameSink.close].
-        The backend is finalised once all active sinks have called `close`.
 
         Parameters
         ----------
         name : str
             Source name.
         """
-        self._active_sinks.discard(name)
-        if not self._active_sinks:
+        self._sources.pop(name, None)
+        if not self._sources:
             self._finalize()
             self._is_open = False
-
-    # ------------------------------------------------------------------
-    # Backend hooks (subclass responsibility)
-    # ------------------------------------------------------------------
 
     @abc.abstractmethod
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
@@ -364,7 +333,7 @@ class Writer(abc.ABC, Loggable):
 
     @abc.abstractmethod
     def _finalize(self) -> None:
-        """Close the backend after all sinks have been closed."""
+        """Close the backend after the source has completed."""
         ...
 
     # ------------------------------------------------------------------
@@ -411,10 +380,10 @@ class Writer(abc.ABC, Loggable):
         if source.collection_counter == 0:
             stream_resource: StreamResource = {
                 "data_key": source.data_key,
-                "mimetype": source.mimetype,
+                "mimetype": self.mimetype,
                 "parameters": {"array_name": source.name},
                 "uid": source.stream_resource_uid,
-                "uri": self._store_path,
+                "uri": self.uri,
             }
             yield ("stream_resource", stream_resource)
 

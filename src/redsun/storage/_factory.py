@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from redsun.storage._zarr import ZarrWriter
+from redsun.storage.zarr import ZarrWriter
 
 if TYPE_CHECKING:
     from redsun.storage._base import Writer

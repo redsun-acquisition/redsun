@@ -1,46 +1,44 @@
 # SPDX-License-Identifier: Apache-2.0
-# The design of this subpackage is heavily inspired by ophyd-async
+# The file and path providers are inspired by ophyd-async
 # (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
 # ophyd-async is licensed under the BSD 3-Clause License.
-# No source code from ophyd-async has been copied; the architectural patterns
-# (shared writer, path providers, FrameSink, StorageProxy protocol) were
-# studied and independently re-implemented to fit the redsun model.
 
 """Storage infrastructure for redsun devices.
 
-This subpackage provides the dependency-free primitives for storage:
+This subpackage provides the primitives for storage:
 
 - [`Writer`][redsun.storage.Writer] — abstract base class for storage backends
 - [`FrameSink`][redsun.storage.FrameSink] — device-facing handle for pushing frames
-- [`SourceInfo`][redsun.storage.SourceInfo] — per-device frame metadata
+- [`SourceInfo`][redsun.storage.SourceInfo] — per-source runtime acquisition state
 - [`PathInfo`][redsun.storage.PathInfo] — storage path and configuration for one device
 - [`FilenameProvider`][redsun.storage.FilenameProvider] — protocol for filename callables
 - [`PathProvider`][redsun.storage.PathProvider] — protocol for path-info callables
-  [`AutoIncrementFilenameProvider`][redsun.storage.AutoIncrementFilenameProvider] — concrete filename strategies
+- [`AutoIncrementFilenameProvider`][redsun.storage.AutoIncrementFilenameProvider] — concrete filename strategy
 - [`StaticPathProvider`][redsun.storage.StaticPathProvider] — concrete path provider
-- [`StorageProxy`][redsun.storage.StorageProxy] — protocol implemented by all storage backends
-- [`StorageDescriptor`][redsun.storage.StorageDescriptor] — descriptor for declaring `storage` on a device
-- [`HasStorage`][redsun.storage.HasStorage] — protocol for devices that have opted in to storage
+- [`DeviceStorageInfo`][redsun.storage.DeviceStorageInfo] — storage capability declared by a device
+- [`StorageInfo`][redsun.storage.StorageInfo] — fully resolved storage location produced by the application
+- [`PrepareInfo`][redsun.storage.PrepareInfo] — typed container passed to `prepare` methods
+- [`StorageContext`][redsun.storage.StorageContext] — shared presenter-level storage coordination object
+- [`HasStorage`][redsun.storage.HasStorage] — protocol for devices that declare storage capability
+- [`make_writer`][redsun.storage.make_writer] — SDK factory for constructing a writer from a `StorageInfo`
 
-Concrete backend classes (e.g. `ZarrWriter`) are internal
-implementation details and are not exported from this package.
-The application container is responsible for selecting and instantiating
-the correct backend based on the session configuration.
-
-Devices that require storage declare it explicitly in their class body:
+Devices declare storage capability by implementing `storage_info()`:
 
 ```python
-from redsun.storage import StorageDescriptor
+from redsun.storage import DeviceStorageInfo
 
 
-class MyDetector(Device):
-    storage = StorageDescriptor()
+class MyDetector:
+    def storage_info(self) -> DeviceStorageInfo:
+        return DeviceStorageInfo(format_hint="application/x-zarr")
 ```
 """
 
 from __future__ import annotations
 
 from redsun.storage._base import FrameSink, SourceInfo, Writer
+from redsun.storage._context import StorageContext
+from redsun.storage._factory import make_writer
 from redsun.storage._path import (
     AutoIncrementFilenameProvider,
     FilenameProvider,
@@ -48,10 +46,17 @@ from redsun.storage._path import (
     PathProvider,
     StaticPathProvider,
 )
-from redsun.storage._proxy import (
+from redsun.storage._prepare import (
+    DeviceStorageInfo,
     HasStorage,
-    StorageDescriptor,
-    StorageProxy,
+    PrepareInfo,
+    StorageInfo,
+)
+from redsun.storage.protocols import (
+    DeviceMetadata,
+    PDeviceStorageInfo,
+    PStorageInfo,
+    StorageMetadata,
 )
 
 __all__ = [
@@ -65,8 +70,19 @@ __all__ = [
     "PathProvider",
     "AutoIncrementFilenameProvider",
     "StaticPathProvider",
-    # proxy / descriptor
-    "StorageProxy",
-    "StorageDescriptor",
+    # prepare
+    "DeviceStorageInfo",
+    "StorageInfo",
+    "PrepareInfo",
+    # protocols
+    "PDeviceStorageInfo",
+    "PStorageInfo",
+    "DeviceMetadata",
+    "StorageMetadata",
+    # context
+    "StorageContext",
+    # factory
+    "make_writer",
+    # has storage
     "HasStorage",
 ]
