@@ -167,7 +167,7 @@ class TestWriter:
     def test_initial_state(self) -> None:
         w = self._make_writer()
         assert not w.is_open
-        assert w.name == "file:///tmp/test.zarr"
+        assert w.uri == "file:///tmp/test.zarr"
         assert len(w._sources) == 0
 
     def test_update_source(self) -> None:
@@ -309,7 +309,7 @@ class TestZarrWriterKickoff:
         writer = ZarrWriter(info)
         writer.update_source("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
 
-        with patch("redsun.storage._zarr.ZarrStream"):
+        with patch("redsun.storage.zarr.ZarrStream"):
             writer.prepare("cam", capacity=10)
             writer.kickoff()
 
