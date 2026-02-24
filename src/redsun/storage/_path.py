@@ -197,7 +197,7 @@ class StaticPathProvider(PathProvider):
         self._capacity = capacity
 
     def __call__(self, device_name: str | None = None) -> PathInfo:
-        """Return [`PathInfo`][redsun.storage.PathInfo] for *device_name*."""
+        """Return [`PathInfo`][redsun.storage.PathInfo] for `device_name`."""
         filename = self._filename_provider(device_name)
         store_uri = f"{self._base_uri}/{filename}"
         array_key = device_name or filename

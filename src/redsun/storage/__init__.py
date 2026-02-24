@@ -18,7 +18,6 @@ This subpackage provides the primitives for storage:
 - [`DeviceStorageInfo`][redsun.storage.DeviceStorageInfo] — storage capability declared by a device
 - [`StorageInfo`][redsun.storage.StorageInfo] — fully resolved storage location produced by the application
 - [`PrepareInfo`][redsun.storage.PrepareInfo] — typed container passed to `prepare` methods
-- [`StorageContext`][redsun.storage.StorageContext] — shared presenter-level storage coordination object
 - [`HasStorage`][redsun.storage.HasStorage] — protocol for devices that declare storage capability
 - [`make_writer`][redsun.storage.make_writer] — SDK factory for constructing a writer from a `StorageInfo`
 
@@ -30,27 +29,26 @@ from redsun.storage import DeviceStorageInfo
 
 class MyDetector:
     def storage_info(self) -> DeviceStorageInfo:
-        return DeviceStorageInfo(format_hint="application/x-zarr")
+        return DeviceStorageInfo(mimetype="application/x-zarr")
 ```
 """
 
 from __future__ import annotations
 
 from redsun.storage._base import FrameSink, SourceInfo, Writer
-from redsun.storage._context import StorageContext
 from redsun.storage._factory import make_writer
+from redsun.storage._info import (
+    DeviceStorageInfo,
+    HasStorage,
+    PrepareInfo,
+    StorageInfo,
+)
 from redsun.storage._path import (
     AutoIncrementFilenameProvider,
     FilenameProvider,
     PathInfo,
     PathProvider,
     StaticPathProvider,
-)
-from redsun.storage._prepare import (
-    DeviceStorageInfo,
-    HasStorage,
-    PrepareInfo,
-    StorageInfo,
 )
 from redsun.storage.protocols import (
     DeviceMetadata,
@@ -79,8 +77,6 @@ __all__ = [
     "PStorageInfo",
     "DeviceMetadata",
     "StorageMetadata",
-    # context
-    "StorageContext",
     # factory
     "make_writer",
     # has storage

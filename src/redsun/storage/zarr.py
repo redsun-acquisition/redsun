@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     import numpy as np
     import numpy.typing as npt
 
-    from redsun.storage._prepare import StorageInfo
+    from redsun.storage._info import StorageInfo
 
 
 class ZarrWriter(Writer):

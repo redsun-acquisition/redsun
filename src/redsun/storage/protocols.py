@@ -14,10 +14,10 @@ StorageMetadata: TypeAlias = dict[str, DeviceMetadata]
 
 @runtime_checkable
 class PDeviceStorageInfo(Protocol):
-    """Protocol for device storage information."""
+    """Device-level protocol for device storage information."""
 
-    format_hint: str
-    """`mimetype` hint for the storage format."""
+    mimetype: str
+    """mimetype for the storage format."""
 
     extra: DeviceMetadata
     """Extra metadata contributed by the device."""
@@ -25,7 +25,7 @@ class PDeviceStorageInfo(Protocol):
 
 @runtime_checkable
 class PStorageInfo(Protocol):
-    """Protocol for storage information."""
+    """Application-level protocol for storage information."""
 
     uri: str
     """URI to the storage location."""

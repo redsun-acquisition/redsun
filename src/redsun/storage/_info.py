@@ -14,9 +14,9 @@ from redsun.storage.protocols import (
 
 @dataclass
 class DeviceStorageInfo(PDeviceStorageInfo):
-    """Concrete implementation of PDeviceStorageInfo."""
+    """Per-device storage information."""
 
-    format_hint: str
+    mimetype: str = field(default="")
     """`mimetype` hint for the storage format."""
 
     extra: DeviceMetadata = field(default_factory=dict)
@@ -25,21 +25,30 @@ class DeviceStorageInfo(PDeviceStorageInfo):
 
 @dataclass
 class StorageInfo(PStorageInfo):
-    """Application-resolved storage information with information from contributing devices."""
+    """Per-application storage information."""
 
-    uri: str
+    uri: str = field(default="")
     """URI to the storage location."""
 
     devices: dict[str, DeviceStorageInfo] = field(default_factory=dict)
-    """Information about the devices that contributed to the storage information, keyed by device name."""
+    """Information about the devices contributing to storage, keyed by device name."""
 
 
 @dataclass
 class PrepareInfo:
-    """Information to be passed as value to `prepare` methods."""
+    """Information to be passed as value to `prepare` methods.
 
-    storage: StorageInfo | None = None
-    """Storage information, if any, from previous devices in the prepare sequence."""
+    !!! note
+
+        Currently holds only one field, `storage`. The goal is
+        to experiment to find the right set of information
+        to pass to `prepare` methods in the future
+        (i.e. trigger information).
+
+    """
+
+    storage: StorageInfo = field(default_factory=StorageInfo)
+    """Application-level storage information."""
 
 
 @runtime_checkable

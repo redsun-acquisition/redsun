@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from bluesky.protocols import StreamAsset
     from event_model.documents import StreamDatum, StreamResource
 
-    from redsun.storage._prepare import StorageInfo
+    from redsun.storage._info import StorageInfo
 
 
 @dataclass

@@ -61,7 +61,7 @@ class MockDetectorWithStorage(MockDetector):
         super().__init__(name, **kwargs)
 
     def storage_info(self) -> DeviceStorageInfo:
-        return DeviceStorageInfo(format_hint="application/x-zarr")
+        return DeviceStorageInfo(mimetype="application/x-zarr")
 
 
 @define(kw_only=True, slots=False)
