@@ -55,6 +55,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     _signals = dip.Factory(dict[str, SignalCache])
     _callbacks = dip.Factory(dict[str, CallbackType])
     _config = dip.Singleton(_FrozenConfig)
+
     @property
     def schema_version(self) -> float:
         """The plugin schema version specified in the configuration."""
