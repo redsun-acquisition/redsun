@@ -40,7 +40,14 @@ from redsun.storage._path import (
 
 @dataclass
 class PrepareInfo:
-    """Plan-time information passed to device ``prepare()`` methods."""
+    """Plan-time information passed to device ``prepare()`` methods.
+
+    !!! warning
+
+        These are still experimental. New fields may be added
+        or existing fields may change.
+
+    """
 
     capacity: int = 0
     """Number of frames to prepare for.  ``0`` means unlimited."""
@@ -50,15 +57,9 @@ class PrepareInfo:
 
 
 __all__ = [
-    # path
     "PathInfo",
     "FilenameProvider",
     "PathProvider",
     "SessionPathProvider",
-    # prepare
-    "DeviceStorageInfo",
-    "StorageInfo",
     "PrepareInfo",
-    # has storage
-    "HasStorage",
 ]
