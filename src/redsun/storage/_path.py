@@ -161,6 +161,8 @@ class SessionPathProvider(PathProvider):
         self._capacity = capacity
         self._date = datetime.datetime.now().strftime("%Y_%m_%d")
         self._counters: dict[str, int] = self._scan_existing()
+        self._time_resolved_path = self._base_dir / self._session / self._date
+        self._time_resolved_path.mkdir(parents=True, exist_ok=True)
 
     @property
     def session(self) -> str:
@@ -176,6 +178,8 @@ class SessionPathProvider(PathProvider):
         correctly if the session was used in a previous run.
         """
         self._session = value
+        self._time_resolved_path = self._base_dir / self._session / self._date
+        self._time_resolved_path.mkdir(parents=True, exist_ok=True)
         self._counters = self._scan_existing()
 
     @property
@@ -239,7 +243,7 @@ class SessionPathProvider(PathProvider):
             Discriminator for the counter bucket — typically a plan name
             (e.g. ``"live_stream"``, ``"snap"``).
             ``None`` maps to ``"default"``.
-        group :
+        group : str | None
             Writer group name (e.g. ``"default"``).  When provided the
             filename becomes ``<key>_<group>_<counter>`` and the counter
             is tracked independently per ``(key, group)`` pair so that
