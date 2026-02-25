@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeVar
 
 from redsun.log import Loggable
+from redsun.storage.metadata import clear_metadata, snapshot_metadata
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -43,6 +44,10 @@ class SourceInfo:
         Running count of frames written so far.
     collection_counter : int
         Frames reported in the current collection cycle.
+    completed : bool
+        Whether this source has signalled completion.
+        Defaults to ``False``; set to ``True`` when the source calls
+        [`FrameSink.close`][redsun.storage.FrameSink.close].
     stream_resource_uid : str
         UID of the current ``StreamResource`` document.
     """
@@ -54,6 +59,7 @@ class SourceInfo:
     capacity: int = 0
     frames_written: int = 0
     collection_counter: int = 0
+    completed: bool = False
     stream_resource_uid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
@@ -426,7 +432,7 @@ class Writer(abc.ABC, Loggable):
             if not self._sources:
                 return 0
             return min(s.frames_written for s in self._sources.values())
-        if name not in self._sources:
+        if name not in self._sources.keys():
             raise KeyError(f"Unknown source {name!r}")
         return self._sources[name].frames_written
 
@@ -455,8 +461,6 @@ class Writer(abc.ABC, Loggable):
         RuntimeError
             If [`uri`][redsun.storage.Writer.uri] has not been set yet.
         """
-        from redsun.storage.metadata import clear_metadata, snapshot_metadata
-
         if not self._uri:
             clear_metadata()
             raise RuntimeError(
@@ -480,12 +484,10 @@ class Writer(abc.ABC, Loggable):
         name : str
             Source name signalling completion.
         """
-        self._sources.pop(name, None)
-        if not self._sources:
+        self._sources[name].completed = True
+        if all(s.completed for s in self._sources.values()):
             self._finalize()
             self._is_open = False
-            from redsun.storage.metadata import clear_metadata
-
             clear_metadata()
             self.logger.debug("All sources complete; backend finalised.")
 
