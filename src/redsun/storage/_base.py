@@ -430,42 +430,6 @@ class Writer(abc.ABC, Loggable):
             raise KeyError(f"Unknown source {name!r}")
         return self._sources[name].frames_written
 
-    def update_metadata(self, name: str, metadata: dict[str, Any]) -> None:
-        """Update metadata of a specific device.
-
-        Devices that are not capable of writing data but can still contribute
-        via metadata (e.g. a motor specifying the current position of a stage,
-        the step size of a scan, etc.) can provide such information to the
-        writer which can then be included in the final written output.
-
-        !!! note
-
-            This method is optional and should be exposed in a plan
-            via the `prepare` method of a device.
-
-            Devices that wish to participate in this metadata provision
-            must retrieve a shared writer instance via `make_writer`.
-
-        !!! warning
-
-            The metadata *must* be JSON-serializable.
-
-        Parameters
-        ----------
-        name : str
-            Device name.
-        metadata : dict[str, Any]
-            Metadata to associate with this device.  Base writers ignore
-            this field, but subclasses may use it to store backend-specific
-            information (e.g. OME-Zarr axis labels or physical units).
-        """
-        if self._is_open:
-            raise RuntimeError(
-                f"Cannot update metadata on writer ({self._name!r}, {self.mimetype!r}) "
-                "while it is open."
-            )
-        self._metadata[name] = metadata
-
     def reset_collection_state(self, name: str) -> None:
         """Reset the stream-document counters for *name*.
 
@@ -491,12 +455,16 @@ class Writer(abc.ABC, Loggable):
         RuntimeError
             If [`uri`][redsun.storage.Writer.uri] has not been set yet.
         """
+        from redsun.storage.metadata import clear_metadata, snapshot_metadata
+
         if not self._uri:
+            clear_metadata()
             raise RuntimeError(
                 f"Writer ({self._name!r}, {self.mimetype!r}) has no URI. "
                 "StoragePresenter must call set_uri() before kickoff()."
             )
         if not self._is_open:
+            self._metadata = snapshot_metadata()
             self._is_open = True
 
     def complete(self, name: str) -> None:
@@ -516,6 +484,9 @@ class Writer(abc.ABC, Loggable):
         if not self._sources:
             self._finalize()
             self._is_open = False
+            from redsun.storage.metadata import clear_metadata
+
+            clear_metadata()
             self.logger.debug("All sources complete; backend finalised.")
 
     @abc.abstractmethod

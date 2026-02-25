@@ -1,0 +1,47 @@
+"""Module-level metadata registry for device contributions.
+
+Non-imaging devices (motors, lights, etc.) call
+:func:`register_metadata` during their ``prepare()`` method to
+contribute acquisition-time metadata.  Writer backends snapshot the
+registry at :meth:`~redsun.storage.Writer.kickoff` and clear it when
+the last source completes via :meth:`~redsun.storage.Writer.complete`.
+"""
+
+from __future__ import annotations
+
+import copy
+from typing import Any
+
+_registry: dict[str, dict[str, Any]] = {}
+
+
+def register_metadata(name: str, metadata: dict[str, Any]) -> None:
+    """Stage metadata for device *name*.
+
+    Parameters
+    ----------
+    name : str
+        Device name used as the registry key.
+    metadata : dict[str, Any]
+        JSON-serializable metadata contributed by the device.
+    """
+    _registry[name] = metadata
+
+
+def snapshot_metadata() -> dict[str, dict[str, Any]]:
+    """Return a shallow copy of the current registry.
+
+    Called by :meth:`~redsun.storage.Writer.kickoff` to capture
+    the accumulated metadata before opening the backend.
+    """
+    return copy.deepcopy(_registry)
+
+
+def clear_metadata() -> None:
+    """Clear the registry.
+
+    Called by :meth:`~redsun.storage.Writer.complete` after the last
+    source finalises, and by :meth:`~redsun.storage.Writer.kickoff`
+    if the backend fails to open.
+    """
+    _registry.clear()

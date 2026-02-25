@@ -14,18 +14,23 @@ from redsun.storage import (
     PathInfo,
     PrepareInfo,
     SessionPathProvider,
+    clear_metadata,
+    register_metadata,
 )
 from redsun.storage._base import FrameSink, Writer
 from redsun.storage._zarr import ZarrWriter
 from redsun.storage.device import make_writer
+from redsun.storage.metadata import _registry, snapshot_metadata
 
 
 @pytest.fixture(autouse=True)
 def clean_registry():
-    """Clear the Writer registry before and after each test."""
+    """Clear the Writer registry and metadata registry before and after each test."""
     Writer._registry.clear()
+    clear_metadata()
     yield
     Writer._registry.clear()
+    clear_metadata()
 
 
 @pytest.fixture
@@ -311,19 +316,6 @@ class TestWriter:
         w._sources["a"].frames_written = 1
         assert w.get_indices_written() == 0
 
-    def test_update_metadata_stores_dict(self) -> None:
-        w = self._make_writer()
-        w.update_metadata("motor", {"position": 1.5, "units": "mm"})
-        assert w._metadata["motor"] == {"position": 1.5, "units": "mm"}
-
-    def test_update_metadata_while_open_raises(self) -> None:
-        w = self._make_writer()
-        w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
-        w.kickoff()
-        with pytest.raises(RuntimeError, match="open"):
-            w.update_metadata("motor", {"position": 1.5})
-
     def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
@@ -397,6 +389,53 @@ class TestWriterRegistry:
             _OtherWriter.get("default")
 
 
+class TestMetadataRegistry:
+    def test_register_stores_metadata(self) -> None:
+        register_metadata("motor", {"position": 1.5, "units": "mm"})
+        assert _registry["motor"] == {"position": 1.5, "units": "mm"}
+
+    def test_register_overwrites(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        register_metadata("motor", {"position": 2.0})
+        assert _registry["motor"]["position"] == 2.0
+
+    def test_snapshot_is_copy(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        snap = snapshot_metadata()
+        snap["motor"]["position"] = 99.0
+        assert _registry["motor"]["position"] == 1.5
+
+    def test_clear_empties_registry(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        clear_metadata()
+        assert _registry == {}
+
+    def test_writer_snapshots_on_kickoff(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        w = _ConcreteWriter("default")
+        w.set_uri("file:///tmp/test.zarr")
+        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
+        w.kickoff()
+        assert w._metadata == {"motor": {"position": 1.5}}
+
+    def test_metadata_cleared_after_complete(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        w = _ConcreteWriter("default")
+        w.set_uri("file:///tmp/test.zarr")
+        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
+        w.kickoff()
+        w.complete("cam")
+        assert _registry == {}
+
+    def test_metadata_cleared_on_kickoff_uri_error(self) -> None:
+        register_metadata("motor", {"position": 1.5})
+        w = _ConcreteWriter("default")
+        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
+        with pytest.raises(RuntimeError, match="no URI"):
+            w.kickoff()
+        assert _registry == {}
+
+
 class TestPrepareInfo:
     def test_defaults(self) -> None:
         pi = PrepareInfo()
@@ -452,7 +491,7 @@ class TestZarrWriterKickoff:
         writer = ZarrWriter.get("default")
         writer.set_uri(uri)
         writer.prepare("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
-        writer.update_metadata("motor", {"position": 1.5})
+        register_metadata("motor", {"position": 1.5})
         with patch("redsun.storage._zarr.ZarrStream") as mock_stream_cls:
             writer.kickoff()
             mock_stream_cls.return_value.write_custom_metadata.assert_called_once()

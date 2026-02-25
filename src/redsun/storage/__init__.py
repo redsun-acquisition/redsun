@@ -13,6 +13,7 @@ from redsun.storage._path import (
     PathProvider,
     SessionPathProvider,
 )
+from redsun.storage.metadata import clear_metadata, register_metadata
 
 
 @dataclass
@@ -39,6 +40,9 @@ __all__ = [
     "FilenameProvider",
     "PathProvider",
     "SessionPathProvider",
+    # metadata registry
+    "register_metadata",
+    "clear_metadata",
     # prepare
     "PrepareInfo",
 ]

@@ -134,12 +134,18 @@ class ZarrWriter(Writer):
         """
         if self.is_open:
             return
-        self._stream_settings.arrays = list(self._array_settings.values())
-        self._stream = ZarrStream(self._stream_settings)
-        if len(self._metadata) > 0:
-            metadata = json.dumps(self._metadata)
-            self._stream.write_custom_metadata(metadata)
-        super().kickoff()  # sets is_open, enforces URI guard
+        super().kickoff()  # snapshots metadata, enforces URI guard, sets _is_open
+        try:
+            self._stream_settings.arrays = list(self._array_settings.values())
+            self._stream = ZarrStream(self._stream_settings)
+            if self._metadata:
+                self._stream.write_custom_metadata(json.dumps(self._metadata))
+        except Exception:
+            self._is_open = False
+            from redsun.storage.metadata import clear_metadata
+
+            clear_metadata()
+            raise
 
     def _finalize(self) -> None:
         """Close the Zarr stream and clear per-acquisition array settings."""
