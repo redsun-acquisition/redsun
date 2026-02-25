@@ -5,11 +5,6 @@
 
 """Storage infrastructure for redsun devices.
 
-This subpackage provides the primitives for storage:
-
-- [`Writer`][redsun.storage.Writer] — abstract base class for storage backends
-- [`FrameSink`][redsun.storage.FrameSink] — device-facing handle for pushing frames
-- [`SourceInfo`][redsun.storage.SourceInfo] — per-source runtime acquisition state
 - [`PathInfo`][redsun.storage.PathInfo] — storage path and configuration for one device
 - [`FilenameProvider`][redsun.storage.FilenameProvider] — protocol for filename callables
 - [`PathProvider`][redsun.storage.PathProvider] — protocol for path-info callables
@@ -18,7 +13,6 @@ This subpackage provides the primitives for storage:
 - [`StorageInfo`][redsun.storage.StorageInfo] — fully resolved storage location produced by the application
 - [`PrepareInfo`][redsun.storage.PrepareInfo] — typed container passed to `prepare` methods
 - [`HasStorage`][redsun.storage.HasStorage] — protocol for devices that declare storage capability
-- [`make_writer`][redsun.storage.make_writer] — return the singleton writer for a URI and MIME type
 
 Devices declare storage capability by implementing `storage_info()`:
 
@@ -34,8 +28,6 @@ class MyDetector:
 
 from __future__ import annotations
 
-from redsun.storage._base import FrameSink, SourceInfo, Writer
-from redsun.storage._factory import make_writer
 from redsun.storage._info import (
     DeviceStorageInfo,
     HasStorage,
@@ -48,18 +40,8 @@ from redsun.storage._path import (
     PathProvider,
     SessionPathProvider,
 )
-from redsun.storage.protocols import (
-    DeviceMetadata,
-    PDeviceStorageInfo,
-    PStorageInfo,
-    StorageMetadata,
-)
 
 __all__ = [
-    # base
-    "Writer",
-    "SourceInfo",
-    "FrameSink",
     # path
     "PathInfo",
     "FilenameProvider",
@@ -69,13 +51,6 @@ __all__ = [
     "DeviceStorageInfo",
     "StorageInfo",
     "PrepareInfo",
-    # protocols
-    "PDeviceStorageInfo",
-    "PStorageInfo",
-    "DeviceMetadata",
-    "StorageMetadata",
-    # factory
-    "make_writer",
     # has storage
     "HasStorage",
 ]

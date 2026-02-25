@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from redsun.storage.zarr import ZarrWriter
+from redsun.storage._zarr import ZarrWriter
 
 from redsun.storage import (
     DeviceStorageInfo,
@@ -22,7 +22,7 @@ from redsun.storage import (
     Writer,
     make_writer,
 )
-from redsun.storage.zarr import ZarrWriter
+from redsun.storage._zarr import ZarrWriter
 
 
 @pytest.fixture
@@ -317,7 +317,7 @@ class TestZarrWriterImportGuard:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """ZarrWriter.__init__ must raise ImportError when acquire-zarr is absent."""
-        import redsun.storage.zarr as zarr_mod
+        import redsun.storage._zarr as zarr_mod
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
         with pytest.raises(ImportError, match="acquire-zarr"):
