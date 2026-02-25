@@ -29,11 +29,7 @@ def register_metadata(name: str, metadata: dict[str, Any]) -> None:
 
 
 def snapshot_metadata() -> dict[str, dict[str, Any]]:
-    """Return a shallow copy of the current registry.
-
-    Called by :meth:`~redsun.storage.Writer.kickoff` to capture
-    the accumulated metadata before opening the backend.
-    """
+    """Return a copy of the current registry."""
     return copy.deepcopy(_registry)
 
 
