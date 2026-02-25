@@ -1,10 +1,10 @@
 """Module-level metadata registry for device contributions.
 
 Non-imaging devices (motors, lights, etc.) call
-:func:`register_metadata` during their ``prepare()`` method to
-contribute acquisition-time metadata.  Writer backends snapshot the
-registry at :meth:`~redsun.storage.Writer.kickoff` and clear it when
-the last source completes via :meth:`~redsun.storage.Writer.complete`.
+[`register_metadata`][redsun.storage.metadata.register_metadata]
+during their ``prepare()`` method to contribute acquisition-time metadata.
+Writer backends snapshot the registry at [`Writer.kickoff`][redsun.storage.Writer.kickoff]
+and clear it when the last source completes via [`Writer.complete`][redsun.storage.Writer.complete].
 """
 
 from __future__ import annotations
