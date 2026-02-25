@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from redsun.storage._path import (
     FilenameProvider,
@@ -14,6 +15,9 @@ from redsun.storage._path import (
     SessionPathProvider,
 )
 from redsun.storage.metadata import clear_metadata, register_metadata
+
+if TYPE_CHECKING:
+    from redsun.storage._base import Writer
 
 
 @dataclass
@@ -34,15 +38,22 @@ class PrepareInfo:
     """Whether the device should prepare to write indefinitely (e.g. for live streaming)."""
 
 
+@runtime_checkable
+class HasWriter(Protocol):
+    """Protocol for devices that have an associated writer."""
+
+    def get_writer(self) -> Writer:
+        """Get the writer associated of this device."""
+        ...
+
+
 __all__ = [
-    # path
     "PathInfo",
     "FilenameProvider",
     "PathProvider",
     "SessionPathProvider",
-    # metadata registry
     "register_metadata",
     "clear_metadata",
-    # prepare
     "PrepareInfo",
+    "HasWriter",
 ]
