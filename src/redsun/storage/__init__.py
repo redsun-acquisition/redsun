@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
+from redsun.storage._base import Writer
 from redsun.storage._path import (
     FilenameProvider,
     PathInfo,
@@ -15,9 +16,6 @@ from redsun.storage._path import (
     SessionPathProvider,
 )
 from redsun.storage.metadata import clear_metadata, register_metadata
-
-if TYPE_CHECKING:
-    from redsun.storage._base import Writer
 
 
 @dataclass
@@ -56,4 +54,5 @@ __all__ = [
     "clear_metadata",
     "PrepareInfo",
     "HasWriter",
+    "Writer",
 ]
