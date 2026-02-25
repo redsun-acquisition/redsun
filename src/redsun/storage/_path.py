@@ -161,8 +161,6 @@ class SessionPathProvider(PathProvider):
         self._capacity = capacity
         self._date = datetime.datetime.now().strftime("%Y_%m_%d")
         self._counters: dict[str, int] = self._scan_existing()
-        self._time_resolved_path = self._base_dir / self._session / self._date
-        self._time_resolved_path.mkdir(parents=True, exist_ok=True)
 
     @property
     def session(self) -> str:
@@ -196,6 +194,8 @@ class SessionPathProvider(PathProvider):
         correctly if the directory was used in a previous run.
         """
         self._base_dir = value
+        self._time_resolved_path = self._base_dir / self._session / self._date
+        self._time_resolved_path.mkdir(parents=True, exist_ok=True)
         self._counters = self._scan_existing()
 
     def _scan_existing(self) -> dict[str, int]:
