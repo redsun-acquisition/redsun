@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING
 
 from redsun.storage._base import Writer
+from redsun.storage.metadata import clear_metadata
 from redsun.storage.utils import from_uri
 
 try:
@@ -138,15 +139,16 @@ class ZarrWriter(Writer):
         super().kickoff()  # snapshots metadata, enforces URI guard, sets _is_open
         try:
             self._stream_settings.arrays = list(self._array_settings.values())
-            self._stream = ZarrStream(self._stream_settings)
             if self._metadata:
-                self._stream.write_custom_metadata(json.dumps(self._metadata))
-        except Exception:
+                # write any additional metadata
+                # before opening the stream
+                flatten_md = json.dumps(self._metadata)
+                self._stream_settings.custom_metadata = flatten_md
+            self._stream = ZarrStream(self._stream_settings)
+        except Exception as e:
             self._is_open = False
-            from redsun.storage.metadata import clear_metadata
-
             clear_metadata()
-            raise
+            raise e
 
     def _finalize(self) -> None:
         """Close the Zarr stream and clear per-acquisition array settings."""

@@ -387,33 +387,6 @@ class Writer(abc.ABC, Loggable):
         """
         ...
 
-    def clear_source(self, name: str, *, raise_if_missing: bool = False) -> None:
-        """Remove a registered data source.
-
-        Parameters
-        ----------
-        name : str
-            Source name to remove.
-        raise_if_missing : bool
-            If ``True``, raise ``KeyError`` when the source is absent.
-
-        Raises
-        ------
-        RuntimeError
-            If the writer is currently open.
-        KeyError
-            If *raise_if_missing* is ``True`` and the source is absent.
-        """
-        if self._is_open:
-            raise RuntimeError("Cannot clear sources while writer is open.")
-        try:
-            del self._sources[name]
-            self.logger.debug(f"Cleared source {name!r}")
-        except KeyError as exc:
-            self.logger.error(f"Source {name!r} not found.")
-            if raise_if_missing:
-                raise exc
-
     def get_indices_written(self, name: str | None = None) -> int:
         """Return the number of frames written for a source.
 
@@ -499,7 +472,7 @@ class Writer(abc.ABC, Loggable):
         after each plan is finished.
         """
         self._sources.clear()
-        self.logger.debug("Cleared all sources.")
+        self.logger.debug("Source cache reset.")
 
     @abc.abstractmethod
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:

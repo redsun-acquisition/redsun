@@ -323,21 +323,6 @@ class TestWriter:
         assert not w.is_open
         assert w._finalized
 
-    def test_clear_source(self) -> None:
-        w = self._make_writer()
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.clear_source("cam")
-        assert "cam" not in w._sources
-
-    def test_clear_missing_source_silent(self) -> None:
-        w = self._make_writer()
-        w.clear_source("nonexistent")
-
-    def test_clear_missing_source_raises_if_requested(self) -> None:
-        w = self._make_writer()
-        with pytest.raises(KeyError):
-            w.clear_source("nonexistent", raise_if_missing=True)
-
     def test_get_indices_written_min_across_sources(self) -> None:
         w = self._make_writer()
         w.prepare("a", "a-stream", np.dtype("uint8"), (2, 2))
