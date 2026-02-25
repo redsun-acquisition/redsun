@@ -52,16 +52,20 @@ class PathInfo:
 class FilenameProvider(Protocol):
     """Callable that produces a filename stem for a given key."""
 
-    def __call__(self, key: str | None = None) -> str:
-        """Return a filename stem for *key*.
+    def __call__(self, key: str | None = None, group: str | None = None) -> str:
+        """Return a filename stem for *key* and *group*.
 
         Parameters
         ----------
         key : str | None
-            Discriminator passed by the caller — typically a device name
-            (when called from a writer) or a plan name (when called from a
-            presenter).  Implementations may ignore it if the filename is
-            key-agnostic.
+            Discriminator passed by the caller — typically a plan name
+            (when called from a presenter) or a device name (when called
+            from a writer).  Implementations may ignore it if the filename
+            is key-agnostic.
+        group : str | None
+            Writer group name (e.g. ``'default'``).  When provided,
+            implementations should embed it in the filename so that
+            outputs from different writer groups do not collide.
 
         Returns
         -------
@@ -75,15 +79,19 @@ class FilenameProvider(Protocol):
 class PathProvider(Protocol):
     """Callable that produces [`PathInfo`][redsun.storage.PathInfo] for a given key."""
 
-    def __call__(self, key: str | None = None) -> PathInfo:
-        """Return path information for *key*.
+    def __call__(self, key: str | None = None, group: str | None = None) -> PathInfo:
+        """Return path information for *key* and *group*.
 
         Parameters
         ----------
         key : str | None
-            Discriminator passed by the caller — typically a device name
-            (when called from a writer) or a plan name (when called from a
-            presenter).
+            Discriminator passed by the caller — typically a plan name
+            (when called from a presenter) or a device name (when called
+            from a writer).
+        group : str | None
+            Writer group name (e.g. ``'default'``).  When provided,
+            the path should reflect the group so that outputs from
+            different writer groups do not collide.
 
         Returns
         -------
@@ -129,9 +137,10 @@ class SessionPathProvider(PathProvider):
     ```python
         provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
         info = provider("live_stream")
-        info.store_uri                    # output: 'file:///data/exp1/2026_02_24/live_stream_00000'
-        provider("live_stream").store_uri # output: 'file:///data/exp1/2026_02_24/live_stream_00001'
-        provider("snap").store_uri        # output: 'file:///data/exp1/2026_02_24/snap_00000'
+        info.store_uri                              # 'file:///data/exp1/2026_02_24/live_stream_00000'
+        provider("live_stream").store_uri           # 'file:///data/exp1/2026_02_24/live_stream_00001'
+        provider("snap").store_uri                  # 'file:///data/exp1/2026_02_24/snap_00000'
+        provider("live_stream", group="cam").store_uri  # 'file:///data/exp1/2026_02_24/live_stream_cam_00000'
     ```
     """
 
@@ -221,38 +230,45 @@ class SessionPathProvider(PathProvider):
                 counters[key] = n + 1
         return counters
 
-    def __call__(self, key: str | None = None) -> PathInfo:
+    def __call__(self, key: str | None = None, group: str | None = None) -> PathInfo:
         """Return a fresh [`PathInfo`][redsun.storage.PathInfo] for *key* and advance its counter.
 
         Parameters
         ----------
         key :
             Discriminator for the counter bucket — typically a plan name
-            (e.g. ``"live_stream"``, ``"snap"``) when called from a
-            presenter, or a device name when called from a writer.
+            (e.g. ``"live_stream"``, ``"snap"``).
             ``None`` maps to ``"default"``.
+        group :
+            Writer group name (e.g. ``"default"``).  When provided the
+            filename becomes ``<key>_<group>_<counter>`` and the counter
+            is tracked independently per ``(key, group)`` pair so that
+            different writer groups never collide.
 
         Returns
         -------
         [`PathInfo`][redsun.storage.PathInfo]
             Path rooted at
-            ``<base_dir>/<session>/<YYYY_MM_DD>/<key>_<counter>``.
+            ``<base_dir>/<session>/<YYYY_MM_DD>/<key>[_<group>]_<counter>``.
         """
         resolved_key = key or "default"
-        current = self._counters.get(resolved_key, 0)
+        bucket = f"{resolved_key}_{group}" if group else resolved_key
+        current = self._counters.get(bucket, 0)
 
         if len(str(current)) > self._max_digits:
             raise ValueError(
-                f"Counter for key {resolved_key!r} exceeded "
+                f"Counter for key {bucket!r} exceeded "
                 f"maximum of {self._max_digits} digits"
             )
 
         padded = f"{current:0{self._max_digits}}"
-        filename = f"{resolved_key}_{padded}"
+        stem = (
+            f"{resolved_key}_{group}_{padded}" if group else f"{resolved_key}_{padded}"
+        )
         directory = self._base_dir / self._session / self._date
-        store_uri = f"file://{directory.as_posix()}/{filename}"
+        store_uri = f"file://{directory.as_posix()}/{stem}"
 
-        self._counters[resolved_key] = current + 1
+        self._counters[bucket] = current + 1
 
         return PathInfo(
             store_uri=store_uri,

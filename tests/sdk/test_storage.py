@@ -184,6 +184,37 @@ class TestSessionPathProvider:
         assert "snap_00001" in info.store_uri
         assert new_dir.as_posix() in info.store_uri
 
+    def test_group_embedded_in_stem(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        info = p("live_stream", group="cam")
+        assert info.store_uri.endswith("live_stream_cam_00000")
+
+    def test_group_counter_independent_from_no_group(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        p("snap")
+        p("snap")
+        info_grouped = p("snap", group="cam")
+        assert info_grouped.store_uri.endswith("snap_cam_00000")
+        info_plain = p("snap")
+        assert info_plain.store_uri.endswith("snap_00002")
+
+    def test_different_groups_have_independent_counters(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        p("snap", group="cam_a")
+        p("snap", group="cam_a")
+        info = p("snap", group="cam_b")
+        assert info.store_uri.endswith("snap_cam_b_00000")
+
+    def test_group_array_key_is_plain_key(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        info = p("live_stream", group="cam")
+        assert info.array_key == "live_stream"
+
+    def test_none_group_behaves_as_no_group(self, tmp_path: Path) -> None:
+        p = SessionPathProvider(base_dir=tmp_path, session="s")
+        info = p("snap", group=None)
+        assert info.store_uri.endswith("snap_00000")
+
 
 class TestWriter:
     def _make_writer(self, name: str = "default") -> _ConcreteWriter:
