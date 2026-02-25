@@ -17,7 +17,6 @@ from event_model.documents import Document
 from psygnal import Signal, SignalInstance
 
 from redsun.log import Loggable
-from redsun.storage import StorageInfo
 
 if TYPE_CHECKING:
     from bluesky.protocols import HasName
@@ -56,17 +55,6 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     _signals = dip.Factory(dict[str, SignalCache])
     _callbacks = dip.Factory(dict[str, CallbackType])
     _config = dip.Singleton(_FrozenConfig)
-    _storage_info = StorageInfo()
-
-    @property
-    def storage_info(self) -> StorageInfo:
-        """The application-level storage information."""
-        return self._storage_info
-
-    @storage_info.setter
-    def storage_info(self, info: StorageInfo) -> None:
-        self._storage_info = info
-
     @property
     def schema_version(self) -> float:
         """The plugin schema version specified in the configuration."""

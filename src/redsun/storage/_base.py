@@ -173,7 +173,7 @@ class Writer(abc.ABC, Loggable):
         self._lock = th.Lock()
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
-        self._metadata: dict[str, dict[str, Any]]
+        self._metadata: dict[str, dict[str, Any]] = {}
 
     @classmethod
     def get(cls: type[_W], name: str = "default") -> _W:
@@ -459,6 +459,11 @@ class Writer(abc.ABC, Loggable):
             this field, but subclasses may use it to store backend-specific
             information (e.g. OME-Zarr axis labels or physical units).
         """
+        if self._is_open:
+            raise RuntimeError(
+                f"Cannot update metadata on writer ({self._name!r}, {self.mimetype!r}) "
+                "while it is open."
+            )
         self._metadata[name] = metadata
 
     def reset_collection_state(self, name: str) -> None:

@@ -1,4 +1,4 @@
-from redsun.storage import Writer
+from redsun.storage._base import Writer
 
 
 def get_available_writers() -> dict[str, dict[str, Writer]]:
