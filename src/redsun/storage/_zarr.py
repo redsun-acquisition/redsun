@@ -78,8 +78,9 @@ class ZarrWriter(Writer):
         uri : str
             New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
         """
-        super().set_uri(uri)  # enforces the is_open guard, stores self._uri
-        self._stream_settings.store_path = from_uri(uri)
+        # enforces the is_open guard, stores self._uri
+        super().set_uri(uri)
+        self._stream_settings.store_path = from_uri(uri) + ".zarr"
 
     def _on_prepare(self, name: str) -> None:
         """Pre-declare Zarr array dimensions for source *name*.
