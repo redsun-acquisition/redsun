@@ -39,6 +39,7 @@ def make_writer(
     ValueError
         If *mimetype* is not a recognised format.
     """
+    # TODO: this try catch is wrong, need rethinking
     try:
         if mimetype == "application/x-zarr":
             return ZarrWriter.get(name)
