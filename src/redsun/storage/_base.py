@@ -491,6 +491,16 @@ class Writer(abc.ABC, Loggable):
             clear_metadata()
             self.logger.debug("All sources complete; backend finalised.")
 
+    def clear_sources(self) -> None:
+        """Remove all registered sources.
+
+        A presenter in charge of monitoring
+        writing progress should take care to call this
+        after each plan is finished.
+        """
+        self._sources.clear()
+        self.logger.debug("Cleared all sources.")
+
     @abc.abstractmethod
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
         """Write one frame to the backend.
