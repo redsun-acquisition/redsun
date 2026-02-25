@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from redsun.storage._base import Writer
 
 

@@ -226,7 +226,7 @@ class SessionPathProvider(PathProvider):
 
         Parameters
         ----------
-        key :
+        key : str | None
             Discriminator for the counter bucket — typically a plan name
             (e.g. ``"live_stream"``, ``"snap"``) when called from a
             presenter, or a device name when called from a writer.
