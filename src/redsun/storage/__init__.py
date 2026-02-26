@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
 
 from redsun.storage._base import Writer
 from redsun.storage._path import (
@@ -36,15 +35,6 @@ class PrepareInfo:
     """Whether the device should prepare to write indefinitely (e.g. for live streaming)."""
 
 
-@runtime_checkable
-class HasWriter(Protocol):
-    """Protocol for devices that have an associated writer."""
-
-    def get_writer(self) -> Writer:
-        """Get the writer associated of this device."""
-        ...
-
-
 __all__ = [
     "PathInfo",
     "FilenameProvider",
@@ -53,6 +43,5 @@ __all__ = [
     "register_metadata",
     "clear_metadata",
     "PrepareInfo",
-    "HasWriter",
     "Writer",
 ]

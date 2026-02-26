@@ -1,6 +1,3 @@
-from .mock_presenters import MockController, BrokenController
+from .mock_presenters import BrokenController, MockController
 
-__all__ = [
-    "MockController",
-    "BrokenController"
-]
+__all__ = ["MockController", "BrokenController"]

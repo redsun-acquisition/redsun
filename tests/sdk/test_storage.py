@@ -21,6 +21,7 @@ from redsun.storage._base import FrameSink, Writer
 from redsun.storage._zarr import ZarrWriter
 from redsun.storage.device import make_writer
 from redsun.storage.metadata import _registry, snapshot_metadata
+from redsun.storage.utils import from_uri
 
 
 @pytest.fixture(autouse=True)
@@ -87,7 +88,10 @@ class TestSessionPathProvider:
     def test_uri_structure(self, current_date: str, tmp_path: Path) -> None:
         p = SessionPathProvider(base_dir=tmp_path, session="exp1")
         info = p("live_stream")
-        assert info.store_uri == f"file://{tmp_path.as_posix()}/exp1/{current_date}/live_stream_00000"
+        assert (
+            info.store_uri
+            == f"file://{tmp_path.as_posix()}/exp1/{current_date}/live_stream_00000"
+        )
 
     def test_counter_increments_per_key(self, tmp_path: Path) -> None:
         p = SessionPathProvider(base_dir=tmp_path, session="s")
@@ -130,7 +134,9 @@ class TestSessionPathProvider:
         expected = Path.home() / "redsun-storage"
         assert p.base_dir == expected
 
-    def test_scan_existing_on_construction(self, current_date: str, tmp_path: Path) -> None:
+    def test_scan_existing_on_construction(
+        self, current_date: str, tmp_path: Path
+    ) -> None:
         date_dir = tmp_path / "s" / current_date
         date_dir.mkdir(parents=True)
         (date_dir / "snap_00000").mkdir()
@@ -148,7 +154,9 @@ class TestSessionPathProvider:
         p = SessionPathProvider(base_dir=tmp_path, session="s")
         assert p("snap").store_uri.endswith("snap_00000")
 
-    def test_scan_ignores_unparseable_entries(self, current_date: str, tmp_path: Path) -> None:
+    def test_scan_ignores_unparseable_entries(
+        self, current_date: str, tmp_path: Path
+    ) -> None:
         date_dir = tmp_path / "s" / current_date
         date_dir.mkdir(parents=True)
         (date_dir / "nodigit_abc").mkdir()
@@ -474,6 +482,7 @@ class TestZarrWriterImportGuard:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import redsun.storage._zarr as zarr_mod
+
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
         with pytest.raises(ImportError, match="acquire-zarr"):
             ZarrWriter("default")
@@ -496,17 +505,18 @@ class TestZarrWriterKickoff:
         assert writer.is_open
 
     def test_set_uri_updates_store_path(self, tmp_path: Path) -> None:
-        uri = tmp_path.as_uri() + "/scan.zarr"
+        uri = tmp_path.as_uri() + "/scan"
         writer = ZarrWriter.get("default")
         writer.set_uri(uri)
-        from redsun.storage.utils import from_uri
-        assert writer._stream_settings.store_path == from_uri(uri)
+        assert writer._stream_settings.store_path == from_uri(uri) + ".zarr"
 
     def test_metadata_written_on_kickoff(self, tmp_path: Path) -> None:
-        uri = tmp_path.as_uri() + "/scan.zarr"
+        uri = tmp_path.as_uri() + "/scan"
         writer = ZarrWriter.get("default")
         writer.set_uri(uri)
-        writer.prepare("cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64))
+        writer.prepare(
+            "cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64)
+        )
         register_metadata("motor", {"position": 1.5})
         with patch("redsun.storage._zarr.ZarrStream") as mock_stream_cls:
             writer.kickoff()

@@ -1,6 +1,6 @@
-from .mock_motors import MyMotor, NonDerivedMotor
-from .mock_detectors import MockDetector, MockDetectorWithStorage, NonDerivedDetector
 from .broken_device import BrokenDevice
+from .mock_detectors import MockDetector, MockDetectorWithStorage, NonDerivedDetector
+from .mock_motors import MyMotor, NonDerivedMotor
 
 __all__ = [
     "MyMotor",

@@ -2,7 +2,9 @@ from typing import Any
 
 from attrs import define, field, setters, validators
 from bluesky.protocols import Descriptor, Reading
+
 from redsun.device import Device
+
 
 @define(kw_only=True)
 class MockDetector(Device):
@@ -19,18 +21,14 @@ class MockDetector(Device):
     string: str
 
     @sensor_shape.validator
-    def _validate_sensor_shape(
-        self, _: Any, value: tuple[int, ...]
-    ) -> None:
+    def _validate_sensor_shape(self, _: Any, value: tuple[int, ...]) -> None:
         if not all(isinstance(val, int) for val in value):
             raise ValueError("All values in the tuple must be integers.")
         if len(value) != 2:
             raise ValueError("The tuple must contain exactly two values.")
 
     @pixel_size.validator
-    def _validate_pixel_size(
-        self, _: Any, value: tuple[float, ...]
-    ) -> None:
+    def _validate_pixel_size(self, _: Any, value: tuple[float, ...]) -> None:
         if not all(isinstance(val, float) for val in value):
             raise ValueError("All values in the tuple must be floats.")
         if len(value) != 3:
@@ -84,7 +82,7 @@ class NonDerivedDetector:
     @property
     def parent(self) -> None:
         return None
-    
+
     @property
     def name(self) -> str:
         return self._name

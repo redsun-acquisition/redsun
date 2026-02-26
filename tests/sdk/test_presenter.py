@@ -1,8 +1,10 @@
-import pytest
 from collections.abc import Mapping
+
+import pytest
+
 from redsun.device import Device
 from redsun.presenter import Presenter
-from redsun.virtual import VirtualContainer, IsProvider, IsInjectable
+from redsun.virtual import IsInjectable, IsProvider, VirtualContainer
 
 
 @pytest.fixture

@@ -28,8 +28,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         assert "pending" in repr(comp)
 
@@ -37,8 +43,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         device = comp.build()
         assert device.name == "m"
@@ -48,8 +60,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         with pytest.raises(RuntimeError, match="not been instantiated"):
             _ = comp.instance
@@ -58,8 +76,12 @@ class TestComponentWrappers:
         from mock_pkg.controller import MockController
 
         comp = _PresenterComponent(
-            MockController, "ctrl",
-            string="s", integer=1, floating=0.0, boolean=False,
+            MockController,
+            "ctrl",
+            string="s",
+            integer=1,
+            floating=0.0,
+            boolean=False,
         )
         presenter = comp.build({})
         assert presenter is comp.instance
@@ -86,12 +108,22 @@ class TestAppContainerMeta:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in TestApp._device_components
@@ -108,8 +140,14 @@ class TestAppContainerMeta:
 
         class Base(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         class Child(Base):
@@ -127,12 +165,22 @@ class TestAppContainerBuild:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -193,6 +241,7 @@ class TestAppContainerBuild:
 
     def test_virtual_container_carries_config(self) -> None:
         """After build(), virtual_container.configuration holds base config fields."""
+
         class EmptyApp(AppContainer):
             pass
 
@@ -206,9 +255,7 @@ class TestAppContainerBuild:
 class TestFromConfig:
     """Tests for YAML-based dynamic container creation."""
 
-    def test_from_config_motor(
-        self, mock_entry_points: Any, config_path: Path
-    ) -> None:
+    def test_from_config_motor(self, mock_entry_points: Any, config_path: Path) -> None:
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
         )
@@ -259,8 +306,12 @@ class TestComponentFieldSyntax:
         class TestApp(AppContainer):
             motor = device(
                 MyMotor,
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         assert "motor" in TestApp._device_components
@@ -272,7 +323,10 @@ class TestComponentFieldSyntax:
         class TestApp(AppContainer):
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "ctrl" in TestApp._presenter_components
@@ -297,12 +351,20 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -320,12 +382,21 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in TestApp._device_components
@@ -342,14 +413,22 @@ class TestComponentFieldSyntax:
 
         class Base(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         class Child(Base):
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in Child._device_components
@@ -387,7 +466,9 @@ class TestConfigField:
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = device(
-                MyMotor, from_config="motor", egu="um",
+                MyMotor,
+                from_config="motor",
+                egu="um",
             )
 
         comp = TestApp._device_components["motor"]
@@ -419,15 +500,22 @@ class TestConfigField:
                 motor = device(MyMotor, from_config="motor")
 
     def test_from_config_missing_section_warns(
-        self, config_path: Path, caplog: pytest.LogCaptureFixture,
+        self,
+        config_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             missing = device(
-                MyMotor, from_config="missing",
-                axis=["Y"], step_size={"Y": 0.2},
-                egu="deg", integer=0, floating=0.0, string="fallback",
+                MyMotor,
+                from_config="missing",
+                axis=["Y"],
+                step_size={"Y": 0.2},
+                egu="deg",
+                integer=0,
+                floating=0.0,
+                string="fallback",
             )
 
         assert "No config section 'missing'" in caplog.text
@@ -469,6 +557,7 @@ class TestAppConfig:
     def test_redsun_config_no_component_fields(self) -> None:
         """RedSunConfig must not expose devices/presenters/views."""
         from redsun.virtual import RedSunConfig
+
         assert "devices" not in RedSunConfig.__annotations__
         assert "presenters" not in RedSunConfig.__annotations__
         assert "views" not in RedSunConfig.__annotations__
@@ -487,8 +576,13 @@ class TestQtAppContainer:
 
         class _TestQtApp(QtAppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             v = view(MockQtView)
 
@@ -531,9 +625,14 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, alias="cam",
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                alias="cam",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         app = TestApp()
@@ -549,8 +648,12 @@ class TestComponentNaming:
         class TestApp(AppContainer):
             motor = device(
                 MyMotor,
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         app = TestApp()
@@ -565,12 +668,21 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = presenter(
-                MockController, alias="my_ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                alias="my_ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -585,9 +697,14 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             my_motor = device(
-                MyMotor, alias="detector",
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                alias="detector",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         assert "detector" in TestApp._device_components
