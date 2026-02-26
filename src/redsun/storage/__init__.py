@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from redsun.storage._base import Writer
+from redsun.storage._base import FrameSink, Writer
 from redsun.storage._path import (
     FilenameProvider,
     PathInfo,
@@ -41,6 +41,7 @@ __all__ = [
     "PathProvider",
     "SessionPathProvider",
     "register_metadata",
+    "FrameSink",
     "clear_metadata",
     "PrepareInfo",
     "Writer",

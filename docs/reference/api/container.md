@@ -13,6 +13,4 @@
 
 ::: redsun.containers._config.AppConfig
 
-::: redsun.containers._config.StorageConfig
-
 ::: redsun.qt.QtAppContainer

@@ -133,6 +133,7 @@ def continous(
     @continous
     def my_plan() -> MsgGenerator[None]: ...
 
+
     @continous(togglable=True, pausable=True)
     def my_plan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
     ```
