@@ -3,7 +3,7 @@
 !!! warning
     Storage support is under active development. Expect breaking changes.
 
-Redsun provides a session-scoped storage layer that lets devices write acquired
+`redsun` provides a session-scoped storage layer that lets devices write acquired
 frames to disk without managing their own file handles or knowing where data
 lands.
 
@@ -15,14 +15,14 @@ automatically write into the same store.
 
 ```mermaid
 graph TD
-    D1["Device A\nmake_writer('application/x-zarr')"] --> W[ZarrWriter singleton\nname='default']
-    D2["Device B\nmake_writer('application/x-zarr')"] --> W
-    D3["Device C\n(no storage)"] -. unaffected .-> W
-    SP[FileStoragePresenter] -->|set_uri + clear_sources| W
+    D1["Device A -> make_writer('application/x-zarr')"] --> W[ZarrWriter singleton name='default']
+    D2["Device B -> make_writer('application/x-zarr')"] --> W
+    D3["Device C (no storage)"] -. unaffected .-> W
+    SP[Presenter] -->|set_uri + clear_sources| W
 ```
 
 Storage is **opt-in per device** — devices that don't call `make_writer` are
-completely unaffected.
+unaffected.
 
 ---
 
@@ -45,7 +45,7 @@ class MyCamera(Device):
             capacity = 0 if value.write_forever else value.capacity
             self._sink = self._writer.prepare(
                 name=self.name,
-                data_key="camera-image",
+                data_key=f"{self.name}-image",
                 dtype=np.dtype("uint16"),
                 shape=(512, 512),
                 capacity=capacity,
@@ -81,11 +81,15 @@ The writer snapshots the metadata registry at `kickoff()`.
 
 ## Presenter side
 
-A dedicated `FileStoragePresenter` handles URI assignment before each plan:
+Writer management is delegated to the presenter layer, where
+a component should be in charge of updating the new URI location
+before each plan is executed.
 
 ```python
 from redsun.storage import SessionPathProvider
 from redsun.storage.presenter import get_available_writers
+
+# ... in your presenter code:
 
 writers = get_available_writers()
 # {"application/x-zarr": {"default": <ZarrWriter>}}
@@ -115,9 +119,17 @@ collide.
 
 The Zarr backend requires the optional `acquire-zarr` package:
 
-```bash
-pip install redsun[zarr]
-```
+=== "uv (reccomended)"
+
+    ```bash
+    uv pip install redsun[zarr]
+    ```
+
+=== "pip"
+
+    ```bash
+    pip install redsun[zarr]
+    ```
 
 The import is deferred — sessions without imaging devices have no dependency
 on `acquire-zarr`.

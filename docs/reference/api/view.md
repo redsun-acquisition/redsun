@@ -16,7 +16,7 @@
         - create_plan_widget
         - PlanWidget
         - ActionButton
-        - InfoDialog
+        - PlanInfoDialog
 
 ::: redsun.view.qt._widget_factory
     options:

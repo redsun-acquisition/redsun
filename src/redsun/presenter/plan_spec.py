@@ -90,43 +90,34 @@ _PARAM_KIND_MAP: dict[Any, ParamKind] = {
 
 @dataclass
 class ParamDescription:
-    """Description of a single plan parameter.
-
-    Parameters
-    ----------
-    name : str
-        Name of the parameter.
-    kind : ParamKind
-        Kind of the parameter (mirrors `inspect.Parameter.kind`).
-    annotation : Any
-        Unwrapped type annotation (`Annotated` metadata has been stripped).
-    default : Any
-        Default value of the parameter (may be `inspect.Parameter.empty`).
-    choices : list[str] | None
-        String labels for selectable values. Set for `Literal` types (the
-        literal values) and for `PDevice`-backed parameters (the names of
-        matching registered devices).
-    multiselect : bool
-        If True, the widget should allow multiple simultaneous selections
-        (applies to ``Sequence[PDevice]`` parameters).
-    hidden : bool
-        If True, this parameter should not be exposed as a normal input widget.
-    actions : Sequence[Action] | Action | None
-        Action metadata extracted from the parameter's default value.
-    device_proto : type[PDevice] | None
-        The `PDevice` protocol/class for model-backed parameters.
-        Used by `resolve_arguments` to look up live device instances.
-    """
+    """Description of a single plan parameter."""
 
     name: str
+    """Name of the parameter, as declared in the plan signature."""
+
     kind: ParamKind
+    """Kind of the parameter, mirroring `inspect.Parameter.kind`."""
+
     annotation: Any
+    """Unwrapped type annotation; `Annotated` metadata has been stripped."""
+
     default: Any
+    """Default value of the parameter, or `inspect.Parameter.empty` if none."""
+
     choices: list[str] | None = None
+    """String labels for selectable values; used for `Literal` and `PDevice`-backed parameters."""
+
     multiselect: bool = False
+    """Whether the parameter allows multiple simultaneous selections (e.g. for `Sequence[PDevice]`)."""
+
     hidden: bool = False
+    """Whether this parameter should be hidden from the UI (e.g. because it's only for metadata, not user input)."""
+
     actions: Sequence[Action] | Action | None = None
+    """Action metadata extracted from the parameter's default value, if any."""
+
     device_proto: type[PDevice] | None = None
+    """The `PDevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
 
     @property
     def has_default(self) -> bool:
@@ -136,29 +127,22 @@ class ParamDescription:
 
 @dataclass(eq=False)
 class PlanSpec:
-    """Structured description of a plan's signature and type hints.
-
-    Parameters
-    ----------
-    name : str
-        Plan name (``__name__`` of the underlying callable).
-    docs : str
-        Plan docstring, used to populate the info dialog in the UI.
-    parameters : list[ParamDescription]
-        Ordered list of parameter descriptions.
-    togglable : bool
-        Whether the plan runs as an infinite loop that can be stopped via a
-        toggle button. Default is False.
-    pausable : bool
-        Whether a running togglable plan can be paused and resumed.
-        Default is False.
-    """
+    """Structured description of a plan's signature and type hints."""
 
     name: str
+    """Plan name (``__name__`` of the underlying callable)."""
+
     docs: str
+    """Plan docstring, or a default message if no docstring is available."""
+
     parameters: list[ParamDescription]
+    """Ordered list of parameter descriptions, one per plan parameter."""
+
     togglable: bool = False
+    """Whether the plan runs as an infinite loop that can be stopped via a toggle button."""
+
     pausable: bool = False
+    """Whether a running togglable plan can be paused and resumed."""
 
 
 class _FieldsFromAnnotation(NamedTuple):

@@ -8,7 +8,7 @@ This module provides the building blocks for a plan parameter form:
   plan (parameter form, run/pause buttons, action buttons).
 - `create_plan_widget` — factory that builds a complete `PlanWidget` from
   a `PlanSpec` and wires up the caller-supplied callbacks.
-- `InfoDialog` — a simple Markdown-rendering dialog for displaying plan docs.
+- `PlanInfoDialog` — a simple Markdown-rendering dialog for displaying the plan docstring (if available).
 - `create_param_widget` — re-exported from `_widget_factory` for convenience.
 """
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ActionButton",
     "PlanWidget",
-    "InfoDialog",
+    "PlanInfoDialog",
     "create_plan_widget",
     "create_param_widget",
 ]
@@ -48,14 +48,14 @@ class ActionButton(QtW.QPushButton):
     Parameters
     ----------
     action : Action
-        The action metadata to associate with this button.
+        The action to associate with this button.
     parent : QtWidgets.QWidget | None, optional
         The parent widget. Default is ``None``.
 
     Attributes
     ----------
     action : Action
-        The action metadata associated with this button.
+        The action associated with this button.
     """
 
     def __init__(self, action: Action, parent: QtW.QWidget | None = None) -> None:
@@ -81,35 +81,28 @@ class ActionButton(QtW.QPushButton):
 
 @dataclass(frozen=True)
 class PlanWidget:
-    """Container for all Qt widgets that represent a single plan.
-
-    Parameters
-    ----------
-    spec : PlanSpec
-        The plan specification.
-    group_box : QtWidgets.QWidget
-        The top-level page widget suitable for stacking in a
-        ``QStackedWidget``.
-    run_button : QtWidgets.QPushButton
-        The button to run (or stop) the plan.
-    container : magicgui.widgets.Container
-        The container holding the parameter input widgets.
-    action_buttons : dict[str, ActionButton]
-        Mapping of action names to their buttons for direct access.
-    actions_group : QtWidgets.QGroupBox | None
-        The group box containing action buttons, or ``None`` if the plan has
-        no actions.
-    pause_button : QtWidgets.QPushButton | None
-        The pause/resume button, or ``None`` if the plan is not pausable.
-    """
+    """Container for all Qt widgets that represent a single plan."""
 
     spec: PlanSpec
+    """The plan specification that this widget represents."""
+
     group_box: QtW.QWidget
+    """The top-level page widget suitable for stacking in a QStackedWidget."""
+
     run_button: QtW.QPushButton
+    """The button to run (or stop) the plan."""
+
     container: mgw.Container[mgw_bases.ValueWidget[Any]]
+    """The magicgui Container holding the parameter input widgets."""
+
     action_buttons: dict[str, ActionButton]
+    """Mapping of action names to their buttons for direct access."""
+
     actions_group: QtW.QGroupBox | None = None
+    """The group box containing action buttons, or None if the plan has no actions."""
+
     pause_button: QtW.QPushButton | None = None
+    """The pause/resume button, or None if the plan is not pausable."""
 
     def toggle(self, status: bool) -> None:
         """Update UI state when a togglable plan starts or stops.
@@ -117,7 +110,7 @@ class PlanWidget:
         Parameters
         ----------
         status : bool
-            ``True`` when the plan is starting; ``False`` when stopping.
+            `True` when the plan is starting; `False` when stopping.
         """
         self.run_button.setText("Stop" if status else "Run")
         if self.pause_button:
@@ -132,7 +125,7 @@ class PlanWidget:
         Parameters
         ----------
         status : bool
-            ``True`` when pausing; ``False`` when resuming.
+            `True` when pausing; `False` when resuming.
         """
         if self.pause_button:
             self.pause_button.setText("Resume" if status else "Pause")
@@ -162,7 +155,7 @@ class PlanWidget:
             self.actions_group.setEnabled(enabled)
 
     def get_action_button(self, action_name: str) -> ActionButton | None:
-        """Return the ``ActionButton`` for *action_name*, or ``None`` if absent.
+        """Return the `ActionButton` for `action_name`, or `None` if absent.
 
         Parameters
         ----------
@@ -172,7 +165,7 @@ class PlanWidget:
         return self.action_buttons.get(action_name)
 
     def has_actions(self) -> bool:
-        """Return ``True`` if this plan has at least one action button."""
+        """Return `True` if this plan has at least one action button."""
         return bool(self.action_buttons)
 
     @property
@@ -346,7 +339,7 @@ def create_plan_widget(
     )
 
 
-class InfoDialog(QtW.QDialog):
+class PlanInfoDialog(QtW.QDialog):
     """Dialog to provide information to the user.
 
     Parameters
