@@ -139,12 +139,12 @@ class ZarrWriter(Writer):
         super().kickoff()  # snapshots metadata, enforces URI guard, sets _is_open
         try:
             self._stream_settings.arrays = list(self._array_settings.values())
+            self._stream = ZarrStream(self._stream_settings)
             if self._metadata:
                 # write any additional metadata
                 # before opening the stream
                 flatten_md = json.dumps(self._metadata)
-                self._stream_settings.custom_metadata = flatten_md
-            self._stream = ZarrStream(self._stream_settings)
+                self._stream.write_custom_metadata(flatten_md, overwrite=True)
         except Exception as e:
             self._is_open = False
             clear_metadata()
