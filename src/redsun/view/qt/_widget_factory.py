@@ -1,3 +1,29 @@
+"""Widget factory for plan parameter forms.
+
+Maps a `ParamDescription` to an appropriate magicgui widget via a
+table-driven factory registry (`_WIDGET_FACTORY_MAP`).
+
+`create_param_widget` is the public entry point.  It walks
+`_WIDGET_FACTORY_MAP` — an ordered list of ``(predicate, factory)``
+pairs — and calls the first factory whose predicate matches the given
+`ParamDescription`.
+
+Extending the system
+--------------------
+To add support for a new annotation shape, define a predicate and a
+factory function and insert a ``(predicate, factory)`` tuple at the
+right priority position in `_WIDGET_FACTORY_MAP`.  Nothing else needs
+to change.
+
+Unresolvable annotations
+------------------------
+`create_plan_spec` pre-validates that every required parameter can be
+mapped to a widget.  Plans with unresolvable required parameters raise
+`UnresolvableAnnotationError` and are skipped by the presenter.
+`create_param_widget` therefore raises `RuntimeError` (not a silent
+fallback) if all factory entries fail.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable

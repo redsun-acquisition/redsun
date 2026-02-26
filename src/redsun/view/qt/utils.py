@@ -1,3 +1,17 @@
+"""Qt widget utilities for plan-based UIs.
+
+This module provides the building blocks for a plan parameter form:
+
+- `ActionButton` — a `QPushButton` that carries `Action` metadata and
+  auto-updates its label when toggled.
+- `PlanWidget` — a frozen dataclass owning all Qt widgets for a single
+  plan (parameter form, run/pause buttons, action buttons).
+- `create_plan_widget` — factory that builds a complete `PlanWidget` from
+  a `PlanSpec` and wires up the caller-supplied callbacks.
+- `InfoDialog` — a simple Markdown-rendering dialog for displaying plan docs.
+- `create_param_widget` — re-exported from `_widget_factory` for convenience.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

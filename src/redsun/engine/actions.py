@@ -1,3 +1,21 @@
+"""Engine actions: decorators and types for continuous, interactive plans.
+
+A *continuous* plan is one that runs in an infinite loop until explicitly stopped,
+and may support pause/resume and in-flight actions (user-triggered side effects
+while the plan is running).
+
+This module provides:
+
+- `SRLatch` — an asyncio set-reset latch used to synchronise plan execution with
+  external signals.
+- `continous` — a decorator that marks a plan function as continuous and records
+  its ``togglable`` and ``pausable`` capabilities.
+- `Action` — a dataclass carrying metadata (name, description, toggle state) for
+  a single in-flight action.
+- `ContinousPlan` — a `typing.Protocol` used for static typing and runtime
+  ``isinstance`` checks on decorated plans.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -22,25 +40,24 @@ R_co = TypeVar("R_co", covariant=True)
 
 
 class SRLatch:
-    """An Event-like class that behaves as a set-reset latch.
+    """An asyncio Event-like object that behaves as a set-reset latch.
 
-    Wraps two asyncio.Event objects to allow waiting
-    for either the set or reset state of the latch.
-    At object creation, the latch is in the reset state.
+    Wraps two `asyncio.Event` objects to allow waiting for either the *set*
+    or the *reset* state of the latch.  At construction the latch starts in
+    the **reset** state.
     """
 
     def __init__(self) -> None:
         self._flag: bool = False
         self._set_event: asyncio.Event = asyncio.Event()
         self._reset_event: asyncio.Event = asyncio.Event()
-
-        # reset the latch
         self._reset_event.set()
 
     def set(self) -> None:
         """Set the internal flag to True.
 
-        All coroutines waiting for the flag to be set will be awakened.
+        All coroutines waiting in `wait_for_set` are awakened.
+        No-op if the flag is already set.
         """
         if not self._flag:
             self._flag = True
@@ -50,7 +67,8 @@ class SRLatch:
     def reset(self) -> None:
         """Reset the internal flag to False.
 
-        All coroutines waiting for the flag to be reset will be awakened.
+        All coroutines waiting in `wait_for_reset` are awakened.
+        No-op if the flag is already reset.
         """
         if self._flag:
             self._flag = False
@@ -64,8 +82,8 @@ class SRLatch:
     async def wait_for_set(self) -> None:
         """Wait until the internal flag is set.
 
-        If the flag is already set, return immediately.
-        Otherwise, block until another coroutine calls set().
+        Returns immediately if the flag is already set; otherwise blocks
+        until another coroutine calls `set`.
         """
         if self._flag:
             return
@@ -74,8 +92,8 @@ class SRLatch:
     async def wait_for_reset(self) -> None:
         """Wait until the internal flag is reset.
 
-        If the flag is already reset, return immediately.
-        Otherwise, block until another coroutine calls reset().
+        Returns immediately if the flag is already reset; otherwise blocks
+        until another coroutine calls `reset`.
         """
         if not self._flag:
             return
@@ -104,44 +122,46 @@ def continous(
     togglable: bool = True,
     pausable: bool = False,
 ) -> Callable[[Callable[P, R_co]], ContinousPlan[P, R_co]] | ContinousPlan[P, R_co]:
-    """Mark a plan as continous.
+    """Mark a plan as continuous.
 
-    A "continous" plan informs the view to provide UI elements
-    that allow the user to start, stop, pause, and resume the plan execution.
+    A *continuous* plan informs the view to provide UI controls that allow
+    the user to start, stop, pause, and resume plan execution.
+
+    Can be used with or without arguments:
+
+    ```python
+    @continous
+    def my_plan() -> MsgGenerator[None]: ...
+
+    @continous(togglable=True, pausable=True)
+    def my_plan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
+    ```
 
     Parameters
     ----------
     togglable : bool, optional
-        Whether the plan is togglable (i.e. an infinite loop that the run engine can stop.)
+        Whether the plan runs as an infinite loop that the run engine can
+        stop via a toggle button. Default is True.
     pausable : bool, optional
-        Whether the plan is pausable (i.e. can be paused and resumed by the run engine.)
+        Whether the plan can be paused and resumed by the run engine.
+        Default is False.
 
     Returns
     -------
-    ``Callable[[Callable[P, R_co]], ContinousPlan[P, R_co]]``
-        A decorator that marks the plan as continous.
-
-    Example
-    -------
-    ```python
-        @continous(togglable=True, pausable=True)
-        def my_plan(
-                detectors: Sequence[DetectorProtocol]
-            ) -> MsgGenerator[None]:
-            ...
-    ```
+    ContinousPlan
+        The decorated plan function, typed as a `ContinousPlan`.
 
     Notes
     -----
-    This does not modify the function signature; instead it stores the
-    information on the underlying function object (in ``__actions__``),
-    to be retrieved later by inspection.
+    The decorator does not modify the function signature. It stores
+    ``togglable`` and ``pausable`` as attributes on the function object
+    (``__togglable__`` and ``__pausable__``), to be retrieved later by
+    `create_plan_spec`.
     """
 
     def decorator(func: Callable[P, R_co]) -> ContinousPlan[P, R_co]:
         setattr(func, "__togglable__", togglable)
         setattr(func, "__pausable__", pausable)
-
         return cast("ContinousPlan[P, R_co]", func)
 
     if func is None:
@@ -152,41 +172,33 @@ def continous(
 
 @dataclass(kw_only=True)
 class Action:
-    """Action container.
+    """Metadata for an in-flight action on a continuous plan.
 
-    Provides metadata about an action that
-    can be performed on a continous plan.
-    Encapsulates an `asyncio.Event` synchronization
-    primitive to signal when the action has been triggered.
+    An `Action` is a user-triggerable side effect that can be fired while a
+    continuous plan is running.  It encapsulates an `SRLatch` synchronisation
+    primitive so the plan can ``await`` the action being triggered.
 
     !!! warning
+        The internal `SRLatch` is created lazily on first access of
+        `event_map`, so `Action` objects can be constructed without a running
+        event loop.  The latch must only be accessed from within a plan.
 
-        The internal SR-latch is created lazily at first
-        access of the `event_map` property, so that the `Action` object can be
-        be created without an event loop running.
-        This is necessary because the internal `asyncio.Event`
-        objects need to be created within a plan,
-        but the `Action` themselves are provided before plan execution.
-
-    Can be subclassed to add more fields as needed.
+    Subclass freely to add domain-specific fields.
 
     Attributes
     ----------
     name : str
         The name of the action.
-    description : str, optional
-        A brief description of the action.
-        Usable to populate tooltips in the UI.
-        Defaults to an empty string (no description).
-    togglable : bool, optional
-        Whether the action is togglable.
-        Allows the UI to represent the action
-        as a toggle button.
-        Default is False (one-shot action).
-    toggle_states : tuple[str, str], optional
-        The labels for the two states of the toggle action.
-        Unused if `togglable` is False.
-        Default is ("On", "Off").
+    description : str
+        A brief description shown as a tooltip in the UI.
+        Defaults to an empty string.
+    togglable : bool
+        Whether the action is represented as a toggle button in the UI.
+        Default is False (one-shot).
+    toggle_states : tuple[str, str]
+        Labels for the two toggle states (on, off).
+        Only used when ``togglable`` is True.
+        Default is ``("On", "Off")``.
     """
 
     name: str
@@ -197,7 +209,7 @@ class Action:
 
     @property
     def event_map(self) -> dict[str, SRLatch]:
-        """Returns the latch associated to this action as a single-item dict."""
+        """Return the latch for this action as a single-entry dict keyed by name."""
         if not self._latch:
             self._latch = SRLatch()
         return {self.name: self._latch}
@@ -205,24 +217,23 @@ class Action:
 
 @runtime_checkable
 class ContinousPlan(Protocol[P, R_co]):
-    """
-    Plan that has been marked as continous.
+    """Protocol for plans decorated with `continous`.
 
-    "Actioned" means that the internal flow of the plan can be influenced
-    by external actions, typically triggered by user interaction.
+    Used both for static typing (as the return type of the `continous`
+    decorator) and for runtime ``isinstance`` checks:
 
-    Used both for static typing (decorator return type) and for runtime checks:
-
-    >>> if isinstance(f, ContinousPlan):
-    >>>     print(f.__actions__)
+    ```python
+    if isinstance(f, ContinousPlan):
+        print(f.__togglable__, f.__pausable__)
+    ```
 
     Attributes
     ----------
     __togglable__ : bool
-        Whether the function is togglable (i.e. an infinite loop that the run engine can stop.)
+        Whether the plan is togglable (i.e. runs as an infinite loop that
+        the run engine can stop).
     __pausable__ : bool
-        Whether the function is pausable (i.e. can be paused and resumed by the run engine.)
-
+        Whether the plan can be paused and resumed by the run engine.
     """
 
     __togglable__: bool
@@ -238,5 +249,6 @@ class ContinousPlan(Protocol[P, R_co]):
 __all__ = [
     "Action",
     "ContinousPlan",
+    "SRLatch",
     "continous",
 ]

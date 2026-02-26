@@ -1,4 +1,14 @@
-"""Plan specification: inspect a MsgGenerator signature into a structured PlanSpec."""
+"""Plan specification: inspect a plan's signature into a structured `PlanSpec`.
+
+This module provides `create_plan_spec`, which inspects a Bluesky
+``MsgGenerator`` function and returns a `PlanSpec` — a structured
+description of the plan's parameters that the view layer can use to
+automatically generate a parameter form.
+
+The annotation dispatch system is table-driven: `_ANN_HANDLER_MAP` maps
+``(predicate, handler)`` pairs that convert raw type annotations into
+`ParamDescription` fields (choices, device_proto, multiselect).
+"""
 
 from __future__ import annotations
 
@@ -29,7 +39,17 @@ from redsun.presenter.utils import get_choice_list, isdevice, isdevicesequence
 
 
 class UnresolvableAnnotationError(TypeError):
-    """Raised when a plan parameter's annotation cannot be mapped to a widget."""
+    """Raised when a plan parameter's annotation cannot be mapped to a widget.
+
+    Parameters
+    ----------
+    plan_name : str
+        Name of the plan that contains the unresolvable parameter.
+    param_name : str
+        Name of the parameter whose annotation could not be resolved.
+    annotation : Any
+        The annotation that could not be resolved.
+    """
 
     def __init__(self, plan_name: str, param_name: str, annotation: Any) -> None:
         self.plan_name = plan_name
@@ -45,9 +65,9 @@ class UnresolvableAnnotationError(TypeError):
 
 
 class ParamKind(IntEnum):
-    """Public mirror of ``inspect._ParameterKind`` as a proper ``IntEnum``.
+    """Public mirror of `inspect._ParameterKind` as a stable `IntEnum`.
 
-    Using our own enum keeps the public API stable and allows use in
+    Using a dedicated enum keeps the public API stable and allows use in
     ``match``/``case`` statements without importing private stdlib symbols.
     """
 
@@ -77,25 +97,25 @@ class ParamDescription:
     name : str
         Name of the parameter.
     kind : ParamKind
-        Kind of the parameter (from ``inspect.Parameter``).
+        Kind of the parameter (mirrors `inspect.Parameter.kind`).
     annotation : Any
-        Unwrapped type annotation (``Annotated`` metadata has been stripped).
+        Unwrapped type annotation (`Annotated` metadata has been stripped).
     default : Any
-        Default value of the parameter (may be ``inspect.Parameter.empty``).
+        Default value of the parameter (may be `inspect.Parameter.empty`).
     choices : list[str] | None
-        String labels for selectable values.
-        Set for ``Literal`` types (the literal values) and for
-        ``PDevice``-backed parameters (the names of matching registered devices).
+        String labels for selectable values. Set for `Literal` types (the
+        literal values) and for `PDevice`-backed parameters (the names of
+        matching registered devices).
     multiselect : bool
-        If ``True``, the widget should allow multiple simultaneous selections
+        If True, the widget should allow multiple simultaneous selections
         (applies to ``Sequence[PDevice]`` parameters).
     hidden : bool
-        If ``True``, this parameter should not be exposed as a normal input widget.
+        If True, this parameter should not be exposed as a normal input widget.
     actions : Sequence[Action] | Action | None
         Action metadata extracted from the parameter's default value.
     device_proto : type[PDevice] | None
-        The concrete ``PDevice`` protocol/class for model-backed parameters.
-        Used by ``resolve_arguments`` to look up live device instances.
+        The `PDevice` protocol/class for model-backed parameters.
+        Used by `resolve_arguments` to look up live device instances.
     """
 
     name: str
@@ -116,21 +136,22 @@ class ParamDescription:
 
 @dataclass(eq=False)
 class PlanSpec:
-    """Description of a plan's signature & type hints.
+    """Structured description of a plan's signature and type hints.
 
     Parameters
     ----------
-    name: str
-        Plan name (``__name__`` of the underlying function).
+    name : str
+        Plan name (``__name__`` of the underlying callable).
     docs : str
-        Plan docstring.
-    parameters: list[ParamDescription]
-        Ordered list of parameter specifications.
+        Plan docstring, used to populate the info dialog in the UI.
+    parameters : list[ParamDescription]
+        Ordered list of parameter descriptions.
     togglable : bool
-        Whether the plan is togglable (e.g. an infinite loop that the run
-        engine can stop via a toggle button).
+        Whether the plan runs as an infinite loop that can be stopped via a
+        toggle button. Default is False.
     pausable : bool
-        Whether a running togglable plan can be paused/resumed.
+        Whether a running togglable plan can be paused and resumed.
+        Default is False.
     """
 
     name: str
@@ -144,7 +165,7 @@ class _FieldsFromAnnotation(NamedTuple):
     """Structured result returned by each annotation handler.
 
     Fields not relevant to a particular annotation shape should be left
-    at their defaults (``None`` / ``False``).
+    at their defaults (None / False).
     """
 
     choices: list[str] | None = None

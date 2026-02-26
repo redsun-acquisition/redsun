@@ -1,55 +1,38 @@
 """Descriptor-driven tree view for displaying and editing device settings.
 
-The `DescriptorTreeView` is a self-contained ``QTreeWidget``-based
-widget that renders bluesky-compatible ``describe_configuration`` /
-``read_configuration`` dicts as a two-column property tree.
+`DescriptorTreeView` is a self-contained `QTreeWidget`-based widget that
+renders Bluesky-compatible ``describe_configuration`` / ``read_configuration``
+dicts as a two-column property tree.
 
 The design is inspired by the ``ParameterTree`` widget from the
-`pyqtgraph <https://github.com/pyqtgraph/pyqtgraph>`_ library.
+[pyqtgraph](https://github.com/pyqtgraph/pyqtgraph) library (MIT licence,
+© 2012 University of North Carolina at Chapel Hill, Luke Campagnola).
 
-    Copyright (c) 2012  University of North Carolina at Chapel Hill
-    Luke Campagnola ('luke.campagnola@%s.com' % 'gmail')
+Layout (two columns: *Setting* | *Value*):
 
-    The MIT License
-    Permission is hereby granted, free of charge, to any person obtaining
-    a copy of this software and associated documentation files (the
-    "Software"), to deal in the Software without restriction, including
-    without limitation the rights to use, copy, modify, merge, publish,
-    distribute, sublicense, and/or sell copies of the Software, and to
-    permit persons to whom the Software is furnished to do so, subject to
-    the following conditions:
-    The above copyright notice and this permission notice shall be included
-    in all copies or substantial portions of the Software.
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+▾ source          <- GROUP row, spans both columns, bold
+    property  [widget]
+    …
+```
 
-Layout (two columns: *Setting* | *Value*)::
+The ``source`` field of a Bluesky `Descriptor` is used as the group label.
+When it carries the ``:readonly`` suffix (e.g. ``"settings:readonly"``) the
+value cell is rendered as a greyed `QLabel` and cannot be edited.
 
-    ▾ source          <- GROUP row, spans both columns, bold
-        property  [widget]
-        …
+The device-name root level is omitted — present one `DescriptorTreeView`
+per device, e.g. inside a `QTabWidget`.
 
-The ``source`` field of a :class:`~bluesky.protocols.Descriptor` is used as
-the group label.  When it carries the ``:readonly`` suffix (e.g.
-``"settings:readonly"``) the value cell is a greyed ``QLabel`` and cannot be
-edited.
-
-The device-name root level is intentionally omitted — callers are expected to
-present one :class:`DescriptorTreeView` per device (e.g. in a ``QTabWidget``).
-
-Supported ``dtype`` -> widget mappings
+Supported ``dtype`` → widget mappings
 --------------------------------------
-- ``"integer"``  -> [QSpinBox][qtpy.QtWidgets.QSpinBox]
-- ``"number"``   -> [QDoubleSpinBox][qtpy.QtWidgets.QDoubleSpinBox]
-- ``"string"``   -> [QLineEdit][qtpy.QtWidgets.QLineEdit] or
-                   [QComboBox][qtpy.QtWidgets.QComboBox] when ``choices`` are provided
-- ``"boolean"``  -> [QComboBox][qtpy.QtWidgets.QComboBox] (True / False)
-- ``"array"``    -> read-only [QLabel][qtpy.QtWidgets.QLabel]
+
+| dtype | Widget |
+|-------|--------|
+| ``"integer"`` | `QSpinBox` |
+| ``"number"`` | `QDoubleSpinBox` |
+| ``"string"`` | `QLineEdit`, or `QComboBox` when ``choices`` are present |
+| ``"boolean"`` | `QComboBox` (True / False) |
+| ``"array"`` | read-only `QLabel` |
 """
 
 from __future__ import annotations
@@ -315,7 +298,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._build()
 
     def update_reading(self, key: str, reading: Reading[Any]) -> None:
-        r"""Push a live value update for *key* into the corresponding widget.
+        """Push a live value update for *key* into the corresponding widget.
 
         Parameters
         ----------
@@ -365,7 +348,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.sigPropertyChanged.emit(key, value)
 
     def _build(self) -> None:
-        r"""Populate the tree from ``self._descriptors`` and ``self._readings``.
+        """Populate the tree from ``self._descriptors`` and ``self._readings``.
 
         Groups descriptors by ``source`` (stripping the optional
         ``:readonly`` suffix), then creates one bold top-level

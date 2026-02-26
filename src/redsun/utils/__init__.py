@@ -1,3 +1,9 @@
+"""General-purpose utilities for redsun.
+
+Currently exposes `find_signals`, a helper for locating named signals
+in a `VirtualContainer` without needing to know the owner's instance name.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -17,25 +23,27 @@ __all__ = [
 def find_signals(
     container: VirtualContainer, signal_names: Iterable[str]
 ) -> dict[str, SignalInstance]:
-    """Find signals in the virtual container by name, regardless of owner.
+    """Find signals in a `VirtualContainer` by name, regardless of owner.
 
-    Searches all registered signal caches for each name in
-    ``signal_names``, returning a mapping of signal name to instance.
-    Names not found in any cache are omitted from the result. This
-    avoids coupling to the owner's instance name, which is set at
-    runtime by the application container.
+    Searches all registered signal caches for each name in *signal_names*
+    and returns the first match found.  Names not present in any cache are
+    omitted from the result.
+
+    This helper avoids coupling callers to the owner's instance name, which
+    is assigned at runtime by the application container.
 
     Parameters
     ----------
-    container :
+    container : VirtualContainer
         The virtual container holding registered signals.
-    signal_names :
-        The signal names to look for (e.g. ``["sigMotorMove", "sigConfigChanged"]``).
+    signal_names : Iterable[str]
+        Signal names to look up (e.g. ``["sigMotorMove", "sigConfigChanged"]``).
 
     Returns
     -------
     dict[str, SignalInstance]
         Mapping of signal name to signal instance for each name found.
+        Names that are not found in any cache are omitted.
     """
     result: dict[str, SignalInstance] = {}
     remaining = set(signal_names)
