@@ -78,7 +78,9 @@ class _MockDetector:
         return s
 
 
-class MockMotorDevice:
+class MockMotorDevice(PDevice):
+    parent = None
+
     def __init__(
         self,
         name: str,
@@ -88,11 +90,16 @@ class MockMotorDevice:
         step_sizes: dict[str, float] = None,
         limits: dict[str, tuple[float, float]] | None = None,
     ) -> None:
-        self.name = name
+        self._name = name
         self.egu = egu
         self.axis = axis
         self.step_sizes = step_sizes or {ax: 0.1 for ax in axis}
         self.limits = limits
+
+    @property
+    def name(self) -> str:
+        """Device name."""
+        return self._name
 
     def set(self, value: Any, **kwargs: Any) -> Status:
         s = Status()
