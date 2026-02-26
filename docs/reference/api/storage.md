@@ -25,3 +25,10 @@
 ::: redsun.storage.StorageDescriptor
 
 ::: redsun.storage.HasStorage
+
+## Protocols
+
+::: redsun.storage.protocols
+    options:
+      members:
+        - HasWriter
