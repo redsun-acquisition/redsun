@@ -184,28 +184,21 @@ class Action:
         `event_map`, so `Action` objects can be constructed without a running
         event loop.  The latch must only be accessed from within a plan.
 
-    Subclass freely to add domain-specific fields.
-
-    Attributes
-    ----------
-    name : str
-        The name of the action.
-    description : str
-        A brief description shown as a tooltip in the UI.
-        Defaults to an empty string.
-    togglable : bool
-        Whether the action is represented as a toggle button in the UI.
-        Default is False (one-shot).
-    toggle_states : tuple[str, str]
-        Labels for the two toggle states (on, off).
-        Only used when ``togglable`` is True.
-        Default is ``("On", "Off")``.
+    Subclassable to add additional fields for domain-specific use cases.
     """
 
     name: str
+    """Name of the action."""
+
     description: str = field(default="")
+    """Brief description of the action, usable as UI tooltip."""
+
     togglable: bool = field(default=False)
+    """Whether the action is togglable or not."""
+
     toggle_states: tuple[str, str] = field(default=("On", "Off"))
+    """Labels for the toggle states (on, off). Only used if `togglable` is True."""
+
     _latch: SRLatch | None = field(init=False, default=None, repr=False)
 
     @property

@@ -37,7 +37,7 @@ class View(PView, ABC):
     ----------
     name : str
         Identity key of the view. Passed as positional-only argument.
-    kwargs : ``Any``, optional
+    kwargs : Any, optional
         Additional keyword arguments for view subclasses.
     """
 

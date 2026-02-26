@@ -404,7 +404,7 @@ def _is_magicgui_resolvable(ann: Any) -> bool:
     This is a pure-Python check with no Qt dependency, safe to call at plan
     construction time before a ``QApplication`` exists.
 
-    We do **not** include ``Any`` in the resolvable set, because magicgui
+    We do **not** include `Any` in the resolvable set, because magicgui
     silently produces a ``LineEdit`` for it — the same opaque behaviour we
     are trying to eliminate.
     """

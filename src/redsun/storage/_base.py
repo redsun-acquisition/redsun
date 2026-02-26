@@ -145,24 +145,33 @@ class Writer(abc.ABC, Loggable):
 
     Call order per acquisition:
 
-    1. ``set_uri(uri)`` — called by a presenter before the plan
-    2. ``register(source_name, data_key, dtype, shape, capacity)`` — called
-       by each device in its own ``prepare()``; returns a
-       [`FrameSink`][redsun.storage.FrameSink]
-    3. ``kickoff()`` — opens the backend
-    4. ``sink.write(frame)`` — push frames (thread-safe)
-    5. ``sink.close()`` — signals completion for this source
+    1. ``set_uri(uri)``
+        - called by a presenter before the plan
+    2. ``register(source_name, data_key, dtype, shape, capacity)``
+        - called by each device in its own ``prepare()``
+        - returns a [`FrameSink`][redsun.storage.FrameSink]
+    3. ``kickoff()``
+        - opens the backend
+    4. ``sink.write(frame)``
+        - push frames (thread-safe)
+    5. ``sink.close()``
+        - signals completion for this source
 
-    Subclasses must implement:
+    Subclasses must implement the following methods and properties:
 
     - [`mimetype`][redsun.storage.Writer.mimetype] — MIME type string
-    - [`_on_register`][redsun.storage.Writer._on_register] — backend-specific
-      setup after a source is registered (e.g. pre-declare Zarr array
-      dimensions); called at the end of ``register``
-    - [`kickoff`][redsun.storage.Writer.kickoff] — open the backend;
-      must call ``super().kickoff()``
-    - [`_write_frame`][redsun.storage.Writer._write_frame] — write one frame to the backend
-    - [`_finalize`][redsun.storage.Writer._finalize] — close the backend when all sources are done
+    - [`kickoff`][redsun.storage.Writer.kickoff]
+        - open the backend
+        - must call ``super().kickoff()`` to set ``is_open`` and enforce the URI guard
+    - [`_on_prepare`][redsun.storage.Writer._on_prepare] (private)
+        - backend-specific setup after a source is registered (e.g. pre-declare Zarr array
+          dimensions); called at the end of [`prepare`][redsun.storage.Writer.prepare]
+    - [`_write_frame`][redsun.storage.Writer._write_frame]
+        - write one frame to the backend
+    - [`_finalize`][redsun.storage.Writer._finalize]
+        - close the backend when all sources are done
+    - [`_class_mimetype`][redsun.storage.Writer._class_mimetype] (class method)
+        - return the MIME type string for this subclass; used for registry keys
 
     Parameters
     ----------
@@ -229,7 +238,7 @@ class Writer(abc.ABC, Loggable):
     def release(cls, name: str = "default") -> None:
         """Remove the registry entry for *(name, cls.mimetype)*.
 
-        Called by ``StoragePresenter`` at application shutdown.
+        Called by a presenter at application shutdown.
         Devices should not call this directly.
 
         Parameters
@@ -285,7 +294,7 @@ class Writer(abc.ABC, Loggable):
     def set_uri(self, uri: str) -> None:
         """Update the store URI for the next acquisition.
 
-        Called by ``StoragePresenter`` before each acquisition and
+        Called by a presenter before each acquisition and
         whenever the user changes the output directory.  The writer
         must not be open when this is called.
 
@@ -375,7 +384,7 @@ class Writer(abc.ABC, Loggable):
     def _on_prepare(self, name: str) -> None:
         """Backend-specific hook called after a source is registered.
 
-        Invoked at the end of [`register`][redsun.storage.Writer.register]
+        Invoked at the end of [`prepare`][redsun.storage.Writer.prepare]
         once ``self._sources[name]`` is fully populated.  Subclasses use
         this to pre-declare backend structures — for example, ``ZarrWriter``
         builds its ``ArraySettings`` here from the source dtype and shape.
@@ -438,7 +447,7 @@ class Writer(abc.ABC, Loggable):
             clear_metadata()
             raise RuntimeError(
                 f"Writer ({self._name!r}, {self.mimetype!r}) has no URI. "
-                "StoragePresenter must call set_uri() before kickoff()."
+                "A presenter must call set_uri() before kickoff()."
             )
         if not self._is_open:
             self._metadata = snapshot_metadata()

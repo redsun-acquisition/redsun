@@ -19,10 +19,12 @@
 
 ::: redsun.presenter.plan_spec.ParamDescription
     options:
+      show_root_heading: true
       show_docstring_parameters: false
 
 ::: redsun.presenter.plan_spec.PlanSpec
     options:
+      show_root_heading: true
       show_docstring_parameters: false
 
 ## Utilities

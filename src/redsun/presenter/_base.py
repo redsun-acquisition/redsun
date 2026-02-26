@@ -26,8 +26,8 @@ class PPresenter(Protocol):  # pragma: no cover
     Notes
     -----
     Access to the virtual container is optional and should be acquired
-    by implementing :class:`~redsun.virtual.IsProvider` or
-    :class:`~redsun.virtual.IsInjectable`.
+    by implementing [`IsProvider`][redsun.virtual.IsProvider] or
+    [`IsInjectable`][redsun.virtual.IsInjectable].
     """
 
     name: str

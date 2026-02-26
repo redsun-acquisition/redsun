@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -22,30 +22,21 @@ class PathInfo:
         For local file storage, the `store_uri` must be converted to
         a concrete filesystem path before use. This is the responsibility
         of the backend writer.
-
-    Attributes
-    ----------
-    store_uri : str
-        URI of the store root.  For local Zarr this is a ``file://`` URI.
-        Example: ``"file:///data/2026_02_24/live_stream_00000.zarr"``.
-    array_key : str
-        Key (array name) within the store for this device's data.
-        Defaults to the key passed to the provider (usually the device name).
-    capacity : int
-        Maximum number of frames to accept.  ``0`` means unlimited.
-    mimetype_hint : str
-        MIME type hint for the backend.  Consumers may use this to select
-        the correct reader.
-    extra : dict[str, Any]
-        Optional backend-specific metadata (e.g. OME-Zarr axis labels,
-        physical units).  Base writers ignore this field.
     """
 
     store_uri: str
+    """URI of the storage root."""
     array_key: str
+    """Key (array name) within the store for this device's data."""
+
     capacity: int = 0
+    """Capacity in frames.  ``0`` means unlimited."""
+
     mimetype_hint: str = "application/x-zarr"
-    extra: dict[str, Any] = field(default_factory=dict)
+    """MIME type hint for the backend.  Consumers may use this to select the correct reader."""
+
+    extra: dict[str, Any] = {}
+    """Optional backend-specific metadata (e.g. OME-Zarr axis labels, physical units).  Base writers ignore this field."""
 
 
 @runtime_checkable
@@ -137,9 +128,9 @@ class SessionPathProvider(PathProvider):
     ```python
         provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
         info = provider("live_stream")
-        info.store_uri                              # 'file:///data/exp1/2026_02_24/live_stream_00000'
-        provider("live_stream").store_uri           # 'file:///data/exp1/2026_02_24/live_stream_00001'
-        provider("snap").store_uri                  # 'file:///data/exp1/2026_02_24/snap_00000'
+        info.store_uri                                  # 'file:///data/exp1/2026_02_24/live_stream_00000'
+        provider("live_stream").store_uri               # 'file:///data/exp1/2026_02_24/live_stream_00001'
+        provider("snap").store_uri                      # 'file:///data/exp1/2026_02_24/snap_00000'
         provider("live_stream", group="cam").store_uri  # 'file:///data/exp1/2026_02_24/live_stream_cam_00000'
     ```
     """
@@ -251,7 +242,7 @@ class SessionPathProvider(PathProvider):
 
         Returns
         -------
-        [`PathInfo`][redsun.storage.PathInfo]
+        PathInfo
             Path rooted at
             ``<base_dir>/<session>/<YYYY_MM_DD>/<key>[_<group>]_<counter>``.
         """

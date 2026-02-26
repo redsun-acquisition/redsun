@@ -36,8 +36,8 @@ def snapshot_metadata() -> dict[str, dict[str, Any]]:
 def clear_metadata() -> None:
     """Clear the registry.
 
-    Called by :meth:`~redsun.storage.Writer.complete` after the last
-    source finalises, and by :meth:`~redsun.storage.Writer.kickoff`
+    Called by [`Writer.complete`][redsun.storage.Writer.complete] after the last
+    source finalises, and by [`Writer.kickoff`][redsun.storage.Writer.kickoff]
     if the backend fails to open.
     """
     _registry.clear()
