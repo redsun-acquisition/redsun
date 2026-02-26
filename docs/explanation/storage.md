@@ -1,126 +1,130 @@
 # Storage
 
 !!! warning
+    Storage support is under active development. Expect breaking changes.
 
-    This support is very barebone and might be reworked entirely. Expect breaking changes.
-
-Redsun provides an optional, session-scoped storage layer that lets devices write acquired frames to disk without managing their own file handles or knowing where data lands. The design follows the same dependency injection principle as the rest of the container: devices declare intent, the container supplies the implementation.
+Redsun provides a session-scoped storage layer that lets devices write acquired
+frames to disk without managing their own file handles or knowing where data
+lands.
 
 ## Overview
 
-A single shared [`Writer`][redsun.storage.Writer] instance is constructed once per session and injected into every device that opts in. All devices within a session write to the same store, each under its own array key, so data from multiple cameras or detectors ends up in one coherent file.
+Writers are **singletons keyed by `(name, mimetype)`**. Any device that calls
+`make_writer` with the same key gets the same instance, so multiple devices
+automatically write into the same store.
 
 ```mermaid
 graph TD
-    YAML[YAML config storage section] -->|_build_writer| W[Writer shared instance]
-    W -->|injected via StorageDescriptor| D1[Device A storage = writer]
-    W -->|injected via StorageDescriptor| D2[Device B storage = writer]
-    D3[Device C no StorageDescriptor] -. unaffected .-> W
+    D1["Device A\nmake_writer('application/x-zarr')"] --> W[ZarrWriter singleton\nname='default']
+    D2["Device B\nmake_writer('application/x-zarr')"] --> W
+    D3["Device C\n(no storage)"] -. unaffected .-> W
+    SP[FileStoragePresenter] -->|set_uri + clear_sources| W
 ```
 
-Storage is fully **opt-in** at two levels:
+Storage is **opt-in per device** — devices that don't call `make_writer` are
+completely unaffected.
 
-- **Session level** — no `storage:` section in the YAML means no writer is built and no injection occurs.
-- **Device level** — only devices that declare `storage = StorageDescriptor()` in their class body receive the writer. Devices without the descriptor are unaffected.
+---
 
-## Opting in as a device author
+## Device side
 
-Declare the descriptor as a class attribute:
-
-```python
-from redsun.storage import StorageDescriptor, StorageProxy
-
-class MyDetector(Device):
-    storage = StorageDescriptor()
-```
-
-`storage` starts as `None` and is set by the container at build time. Device code must guard against `None` before use:
+Imaging devices acquire a writer at `__init__` time and use it in `prepare`:
 
 ```python
-def prepare(self, value: PrepareKwargs) -> Status:
-    s = Status()
-    if self.storage is None:
-        s.set_exception(RuntimeError("No storage backend configured."))
+from redsun.storage import PrepareInfo
+from redsun.storage.device import make_writer
+
+class MyCamera(Device):
+    def __init__(self, name: str, /) -> None:
+        super().__init__(name)
+        self._writer = make_writer("application/x-zarr")
+
+    def prepare(self, value: PrepareInfo) -> Status:
+        s = Status()
+        try:
+            capacity = 0 if value.write_forever else value.capacity
+            self._sink = self._writer.prepare(
+                name=self.name,
+                data_key="camera-image",
+                dtype=np.dtype("uint16"),
+                shape=(512, 512),
+                capacity=capacity,
+            )
+        except Exception as e:
+            s.set_exception(e)
+        else:
+            s.set_finished()
         return s
-    ...
-    self._sink = self.storage.prepare(self.name, capacity)
-    ...
+
+    def kickoff(self) -> Status:
+        self._writer.kickoff()
+        ...
 ```
 
-The [`StorageProxy`][redsun.storage.StorageProxy] protocol is the full interface available on `self.storage` after injection — `update_source`, `prepare`, `kickoff`, `get_indices_written`, `collect_stream_docs`.
+Non-imaging devices (motors, lights, etc.) contribute metadata instead of
+frames:
 
-## Session configuration
+```python
+from redsun.storage import PrepareInfo, register_metadata
 
-Add a `storage:` section to the session YAML. Only `backend` and `base_path` need to be specified for most use cases:
-
-```yaml
-schema_version: 1.0
-session: my-experiment
-frontend: pyqt
-
-storage:
-  backend: zarr
-  base_path: /data/scans        # C:/data/scans on Windows
-  filename_provider: auto_increment
+class MyMotor(Device):
+    def prepare(self, value: PrepareInfo) -> Status:
+        s = Status()
+        register_metadata(self.name, {"position": self._pos, "egu": "mm"})
+        s.set_finished()
+        return s
 ```
 
-All fields and their defaults:
+The writer snapshots the metadata registry at `kickoff()`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `backend` | `str` | `"zarr"` | Storage backend. Currently only `"zarr"` is supported. |
-| `base_path` | `str` | `~/redsun-storage/<session>` | Base directory for all stores this session. Created automatically if absent. Plain filesystem path — no URI syntax needed. |
-| `filename_provider` | `str` | `"auto_increment"` | Filename strategy (see below). |
-| `filename` | `str` | `"scan"` | Static filename — only used when `filename_provider` is `"static"`. |
+---
 
-### Filename strategies
+## Presenter side
 
-`filename_provider` controls how individual store names are generated within `base_path`:
+A dedicated `FileStoragePresenter` handles URI assignment before each plan:
 
-=== "auto_increment (default)"
+```python
+from redsun.storage import SessionPathProvider
+from redsun.storage.presenter import get_available_writers
 
-    Stores are named `scan_00000`, `scan_00001`, … — predictable and human-readable. Never overwrites previous data.
+writers = get_available_writers()
+# {"application/x-zarr": {"default": <ZarrWriter>}}
 
-    ```yaml
-    storage:
-      backend: zarr
-      base_path: /data/scans
-      filename_provider: auto_increment
-    ```
+provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
 
-    Produces: `/data/scans/scan_00000.zarr`, `/data/scans/scan_00001.zarr`, …
-
-### Default store location
-
-When `base_path` is omitted, Redsun creates stores under `~/redsun-storage/<session>`:
-
-```yaml
-session: my-experiment
-storage:
-  backend: zarr
-  # → ~/redsun-storage/my-experiment/scan_00000.zarr
+for mimetype, groups in writers.items():
+    for group_name, writer in groups.items():
+        path_info = provider(plan_name, group_name)
+        writer.clear_sources()
+        writer.set_uri(path_info.store_uri)
 ```
 
-The directory is created automatically on first use.
+`SessionPathProvider` produces auto-incrementing URIs of the form:
 
-## How injection works
+```
+file:///data/exp1/2026_02_25/live_stream_00000
+file:///data/exp1/2026_02_25/live_stream_00001
+```
 
-During [`build()`][redsun.containers.container.AppContainer.build], after all devices are constructed, the container checks each device for a [`StorageDescriptor`][redsun.storage.StorageDescriptor] anywhere in its class hierarchy (full MRO walk). Devices that have one receive the shared writer via `setattr`. The check is performed by [`HasStorage`][redsun.storage.HasStorage], a protocol in `redsun.storage` whose metaclass overrides `__instancecheck__` to inspect the class rather than the instance value — this correctly identifies opted-in devices even when `storage` is currently `None`.
+The counter increments independently per plan name, so different plans never
+collide.
 
-!!! note "Future: per-plan override"
-    The filename provider is currently fixed for the lifetime of the session.
-    A future release will expose a way to swap strategies at plan time — for
-    example to use a static name for background acquisitions and auto-increment
-    for experimental runs.
+---
 
 ## Backend dependencies
 
-The `zarr` backend requires the optional `acquire-zarr` package, installed via:
+The Zarr backend requires the optional `acquire-zarr` package:
 
 ```bash
 pip install redsun[zarr]
 ```
 
-The import is deferred until the writer is actually built, so sessions without a `storage:` section have no dependency on `acquire-zarr`.
+The import is deferred — sessions without imaging devices have no dependency
+on `acquire-zarr`.
 
-Future backends (`hdf5`, `ome-zarr`, `tiff`) will follow the same optional-extra pattern.
+---
+
+## See also
+
+- [Storage architecture](architecture/storage.md) — full lifecycle, custom backends
+- [`redsun.storage` API reference](../reference/api/storage.md)
