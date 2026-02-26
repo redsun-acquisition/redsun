@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -35,7 +35,7 @@ class PathInfo:
     mimetype_hint: str = "application/x-zarr"
     """MIME type hint for the backend.  Consumers may use this to select the correct reader."""
 
-    extra: dict[str, Any] = {}
+    extra: dict[str, Any] = field(default_factory=dict)
     """Optional backend-specific metadata (e.g. OME-Zarr axis labels, physical units).  Base writers ignore this field."""
 
 
