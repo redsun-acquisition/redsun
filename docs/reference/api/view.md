@@ -14,9 +14,12 @@
     options:
       members:
         - create_plan_widget
-        - PlanWidget
         - ActionButton
         - PlanInfoDialog
+
+::: redsun.view.qt.utils.PlanWidget
+    options:
+      show_docstring_parameters: false
 
 ::: redsun.view.qt._widget_factory
     options:

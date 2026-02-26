@@ -15,5 +15,4 @@
 - **[Presenters](architecture/presenters.md)**
 - **[Plans](architecture/plans.md)**
 - **[Qt widgets](architecture/qt-widgets.md)**
-- **[Storage](architecture/storage.md)**
 - **[Virtual container](architecture/virtual.md)**

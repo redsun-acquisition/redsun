@@ -86,7 +86,6 @@ nav = [
             { "Presenters" = "explanation/architecture/presenters.md" },
             { "Plans" = "explanation/architecture/plans.md" },
             { "Qt widgets" = "explanation/architecture/qt-widgets.md" },
-            { "Storage" = "explanation/architecture/storage.md" },
             { "Virtual container" = "explanation/architecture/virtual.md" },
         ]},
     ]},

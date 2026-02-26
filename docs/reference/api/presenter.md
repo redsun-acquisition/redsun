@@ -14,10 +14,16 @@
         - create_plan_spec
         - collect_arguments
         - resolve_arguments
-        - PlanSpec
-        - ParamDescription
         - ParamKind
         - UnresolvableAnnotationError
+
+::: redsun.presenter.plan_spec.ParamDescription
+    options:
+      show_docstring_parameters: false
+
+::: redsun.presenter.plan_spec.PlanSpec
+    options:
+      show_docstring_parameters: false
 
 ## Utilities
 
