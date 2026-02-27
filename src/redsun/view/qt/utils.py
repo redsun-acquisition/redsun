@@ -102,20 +102,8 @@ class PlanWidget:
     device widget's ``changed`` signal.
     """
 
-    device_sub_groups: dict[str, QtW.QGroupBox]
-    """Mapping of parameter name → sub-``QGroupBox`` inside the Devices group.
-
-    Used to apply validation styling (e.g. red border) per device parameter.
-    """
-
     action_buttons: dict[str, ActionButton]
     """Mapping of action names to their buttons for direct access."""
-
-    devices_group: QtW.QGroupBox | None = None
-    """The outer Devices ``QGroupBox``, or ``None`` if the plan has no device params.
-
-    Stylesheet applied here with child objectName selectors avoids Qt style propagation.
-    """
 
     actions_group: QtW.QGroupBox | None = None
     """The group box containing action buttons, or None if the plan has no actions."""
@@ -137,8 +125,6 @@ class PlanWidget:
         if self.actions_group:
             self.actions_group.setEnabled(status)
         self.container.enabled = not status
-        if self.devices_group is not None:
-            self.devices_group.setEnabled(not status)
 
     def pause(self, status: bool) -> None:
         """Update UI state when a plan is paused or resumed.
@@ -163,8 +149,6 @@ class PlanWidget:
         self.group_box.setEnabled(enabled)
         self.run_button.setEnabled(enabled)
         self.container.enabled = enabled
-        if self.devices_group is not None:
-            self.devices_group.setEnabled(enabled)
 
     def enable_actions(self, enabled: bool = True) -> None:
         """Enable or disable the actions group box.
@@ -241,29 +225,22 @@ def _build_param_widgets(
 
 def _build_devices_group(
     device_widgets: list[mgw_bases.ValueWidget[Any]],
-) -> tuple[QtW.QGroupBox | None, dict[str, QtW.QGroupBox] | None]:
+) -> QtW.QGroupBox | None:
     """Build the *Devices* group box.
 
     Each device parameter gets its own titled sub-group box containing
     its widget (a ``DeviceSequenceEdit`` checkbox list for multi-select,
-    or a ``ComboBox`` for single-select).
-
-    Returns
-    -------
-    devices_group :
-        The outer ``QGroupBox``, or ``None`` if there are no device parameters.
-    sub_groups :
-        Mapping of parameter name → inner ``QGroupBox``, or ``None``.
+    or a ``ComboBox`` for single-select).  Returns ``None`` when there
+    are no device parameters.
     """
     if not device_widgets:
-        return None, None
+        return None
 
     devices_group = QtW.QGroupBox("Devices")
     devices_layout = QtW.QVBoxLayout(devices_group)
     devices_layout.setContentsMargins(4, 4, 4, 4)
     devices_layout.setSpacing(4)
 
-    sub_groups: dict[str, QtW.QGroupBox] = {}
     for w in device_widgets:
         label_text: str = getattr(w, "label", w.name)
         sub_group = QtW.QGroupBox(label_text)
@@ -272,10 +249,8 @@ def _build_devices_group(
         native: QtW.QWidget = w.native
         sub_layout.addWidget(native)
         devices_layout.addWidget(sub_group)
-        sub_group.setObjectName(f"device_sub_{w.name}")
-        sub_groups[w.name] = sub_group
 
-    return devices_group, sub_groups
+    return devices_group
 
 
 def _build_params_group(
@@ -417,7 +392,7 @@ def create_plan_widget(
     all_widgets = device_widgets + param_widgets
     container = mgw.Container(widgets=all_widgets)
 
-    devices_group, device_sub_groups = _build_devices_group(device_widgets)
+    devices_group = _build_devices_group(device_widgets)
     params_group = _build_params_group(param_widgets)
 
     if devices_group is not None:
@@ -448,8 +423,6 @@ def create_plan_widget(
         pause_button=pause_button,
         container=container,
         device_widgets=device_widgets,
-        device_sub_groups=device_sub_groups or {},
-        devices_group=devices_group,
         actions_group=actions_group,
         action_buttons=action_buttons,
     )
