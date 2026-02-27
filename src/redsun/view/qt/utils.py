@@ -111,6 +111,12 @@ class PlanWidget:
     action_buttons: dict[str, ActionButton]
     """Mapping of action names to their buttons for direct access."""
 
+    devices_group: QtW.QGroupBox | None = None
+    """The outer Devices ``QGroupBox``, or ``None`` if the plan has no device params.
+
+    Stylesheet applied here with child objectName selectors avoids Qt style propagation.
+    """
+
     actions_group: QtW.QGroupBox | None = None
     """The group box containing action buttons, or None if the plan has no actions."""
 
@@ -131,6 +137,8 @@ class PlanWidget:
         if self.actions_group:
             self.actions_group.setEnabled(status)
         self.container.enabled = not status
+        if self.devices_group is not None:
+            self.devices_group.setEnabled(not status)
 
     def pause(self, status: bool) -> None:
         """Update UI state when a plan is paused or resumed.
@@ -155,6 +163,8 @@ class PlanWidget:
         self.group_box.setEnabled(enabled)
         self.run_button.setEnabled(enabled)
         self.container.enabled = enabled
+        if self.devices_group is not None:
+            self.devices_group.setEnabled(enabled)
 
     def enable_actions(self, enabled: bool = True) -> None:
         """Enable or disable the actions group box.
@@ -258,7 +268,7 @@ def _build_devices_group(
         label_text: str = getattr(w, "label", w.name)
         sub_group = QtW.QGroupBox(label_text)
         sub_layout = QtW.QVBoxLayout(sub_group)
-        sub_layout.setContentsMargins(4, 16, 4, 4)
+        sub_layout.setContentsMargins(4, 20, 4, 4)
         native: QtW.QWidget = w.native
         sub_layout.addWidget(native)
         devices_layout.addWidget(sub_group)
@@ -439,6 +449,7 @@ def create_plan_widget(
         container=container,
         device_widgets=device_widgets,
         device_sub_groups=device_sub_groups or {},
+        devices_group=devices_group,
         actions_group=actions_group,
         action_buttons=action_buttons,
     )
