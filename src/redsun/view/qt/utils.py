@@ -95,6 +95,19 @@ class PlanWidget:
     container: mgw.Container[mgw_bases.ValueWidget[Any]]
     """The magicgui Container holding the parameter input widgets."""
 
+    device_widgets: list[mgw_bases.ValueWidget[Any]]
+    """Device parameter widgets (``DeviceSequenceEdit`` or ``ComboBox``).
+
+    Exposed so callers can connect validation logic directly to each
+    device widget's ``changed`` signal.
+    """
+
+    device_sub_groups: dict[str, QtW.QGroupBox]
+    """Mapping of parameter name → sub-``QGroupBox`` inside the Devices group.
+
+    Used to apply validation styling (e.g. red border) per device parameter.
+    """
+
     action_buttons: dict[str, ActionButton]
     """Mapping of action names to their buttons for direct access."""
 
@@ -218,33 +231,40 @@ def _build_param_widgets(
 
 def _build_devices_group(
     device_widgets: list[mgw_bases.ValueWidget[Any]],
-) -> QtW.QGroupBox | None:
+) -> tuple[QtW.QGroupBox | None, dict[str, QtW.QGroupBox] | None]:
     """Build the *Devices* group box.
 
     Each device parameter gets its own titled sub-group box containing
     its widget (a ``DeviceSequenceEdit`` checkbox list for multi-select,
-    or a ``ComboBox`` for single-select).  Returns ``None`` when there are
-    no device parameters.
+    or a ``ComboBox`` for single-select).
+
+    Returns
+    -------
+    devices_group :
+        The outer ``QGroupBox``, or ``None`` if there are no device parameters.
+    sub_groups :
+        Mapping of parameter name → inner ``QGroupBox``, or ``None``.
     """
     if not device_widgets:
-        return None
+        return None, None
 
     devices_group = QtW.QGroupBox("Devices")
     devices_layout = QtW.QVBoxLayout(devices_group)
     devices_layout.setContentsMargins(4, 4, 4, 4)
     devices_layout.setSpacing(4)
 
+    sub_groups: dict[str, QtW.QGroupBox] = {}
     for w in device_widgets:
         label_text: str = getattr(w, "label", w.name)
         sub_group = QtW.QGroupBox(label_text)
         sub_layout = QtW.QVBoxLayout(sub_group)
         sub_layout.setContentsMargins(4, 4, 4, 4)
-
         native: QtW.QWidget = w.native
         sub_layout.addWidget(native)
         devices_layout.addWidget(sub_group)
+        sub_groups[w.name] = sub_group
 
-    return devices_group
+    return devices_group, sub_groups
 
 
 def _build_params_group(
@@ -386,7 +406,7 @@ def create_plan_widget(
     all_widgets = device_widgets + param_widgets
     container = mgw.Container(widgets=all_widgets)
 
-    devices_group = _build_devices_group(device_widgets)
+    devices_group, device_sub_groups = _build_devices_group(device_widgets)
     params_group = _build_params_group(param_widgets)
 
     if devices_group is not None:
@@ -416,6 +436,8 @@ def create_plan_widget(
         run_button=run_button,
         pause_button=pause_button,
         container=container,
+        device_widgets=device_widgets,
+        device_sub_groups=device_sub_groups or {},
         actions_group=actions_group,
         action_buttons=action_buttons,
     )
