@@ -163,13 +163,6 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
     Inherits from ``magicgui.widgets.bases.ValueWidget`` so it is accepted
     transparently by ``mgw.Container`` and the rest of the magicgui machinery.
 
-    Layout::
-
-        ☑ mmcore
-        ☐ camera2
-        ☑ camera3
-                    2 / 3 selected
-
     Parameters
     ----------
     name : str
