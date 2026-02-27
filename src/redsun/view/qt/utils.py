@@ -178,19 +178,105 @@ class PlanWidget:
         return {w.name: w.value for w in self.container}
 
 
-def _build_param_container(
+def _build_param_widgets(
     spec: PlanSpec,
-) -> mgw.Container[mgw_bases.ValueWidget[Any]]:
-    """Build a magicgui ``Container`` of input widgets for *spec*."""
+) -> tuple[
+    list[mgw_bases.ValueWidget[Any]],   # device widgets (multiselect or single)
+    list[mgw_bases.ValueWidget[Any]],   # plain parameter widgets
+]:
+    """Partition *spec* parameters into device widgets and plain parameter widgets.
+
+    Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``, ``*args: PDevice``
+    and bare ``PDevice`` parameters.  Everything else (scalars, Literals, …) goes
+    into the plain parameters list.
+
+    Returns
+    -------
+    device_widgets : list
+        One magicgui widget per device parameter, in signature order.
+    param_widgets : list
+        One magicgui widget per non-device parameter, in signature order.
+    """
+    from redsun.presenter.plan_spec import ParamKind
+    from redsun.presenter.utils import isdevice, isdeviceset, isdevicesequence
+
+    device_widgets: list[mgw_bases.ValueWidget[Any]] = []
     param_widgets: list[mgw_bases.ValueWidget[Any]] = []
+
     for p in spec.parameters:
         if p.hidden or p.actions is not None:
             continue
         if p.kind is ParamKind.VAR_KEYWORD:
             continue
-        w = create_param_widget(p)
-        param_widgets.append(cast("mgw_bases.ValueWidget[Any]", w))
-    return mgw.Container(widgets=param_widgets)
+        w = cast("mgw_bases.ValueWidget[Any]", create_param_widget(p))
+        is_device_param = (
+            p.device_proto is not None
+            or isdevicesequence(p.annotation)
+            or isdeviceset(p.annotation)
+            or (p.kind is ParamKind.VAR_POSITIONAL and isdevice(p.annotation))
+        )
+        if is_device_param:
+            device_widgets.append(w)
+        else:
+            param_widgets.append(w)
+
+    return device_widgets, param_widgets
+
+
+def _build_devices_group(
+    device_widgets: list[mgw_bases.ValueWidget[Any]],
+) -> QtW.QGroupBox | None:
+    """Build the *Devices* group box.
+
+    Each device parameter gets its own titled sub-group box containing
+    its widget (a ``DeviceSequenceEdit`` checkbox list for multi-select,
+    or a ``ComboBox`` for single-select).  Returns ``None`` when there are
+    no device parameters.
+    """
+    from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
+
+    if not device_widgets:
+        return None
+
+    devices_group = QtW.QGroupBox("Devices")
+    devices_layout = QtW.QVBoxLayout(devices_group)
+    devices_layout.setContentsMargins(4, 4, 4, 4)
+    devices_layout.setSpacing(4)
+
+    for w in device_widgets:
+        label_text: str = getattr(w, "label", w.name)
+        sub_group = QtW.QGroupBox(label_text)
+        sub_layout = QtW.QVBoxLayout(sub_group)
+        sub_layout.setContentsMargins(4, 4, 4, 4)
+
+        native: QtW.QWidget = w.native  # type: ignore[union-attr]
+        sub_layout.addWidget(native)
+        devices_layout.addWidget(sub_group)
+
+    return devices_group
+
+
+def _build_params_group(
+    param_widgets: list[mgw_bases.ValueWidget[Any]],
+) -> QtW.QGroupBox | None:
+    """Build the *Parameters* group box using a ``QFormLayout``.
+
+    Each plain parameter (scalar, Literal, …) is added as a labelled
+    form row.  Returns ``None`` when there are no plain parameters.
+    """
+    if not param_widgets:
+        return None
+
+    params_group = QtW.QGroupBox("Parameters")
+    params_form = QtW.QFormLayout(params_group)
+    params_form.setContentsMargins(4, 6, 4, 4)
+
+    for w in param_widgets:
+        native: QtW.QWidget = w.native  # type: ignore[union-attr]
+        label_text: str = getattr(w, "label", w.name)
+        params_form.addRow(label_text, native)
+
+    return params_group
 
 
 def _build_run_buttons(
@@ -302,15 +388,20 @@ def create_plan_widget(
     page_layout.setContentsMargins(4, 4, 4, 4)
     page_layout.setSpacing(4)
 
-    # Parameters group
-    params_group = QtW.QGroupBox("Parameters")
-    params_form = QtW.QFormLayout(params_group)
-    page_layout.addWidget(params_group)
+    # Build device + parameter widgets and assemble the two group boxes
+    device_widgets, param_widgets = _build_param_widgets(spec)
 
-    container = _build_param_container(spec)
-    native_container: QtW.QWidget = container.native
-    native_container.adjustSize()
-    params_form.addRow(native_container)
+    # Combine into one flat list for the container (preserves .parameters access)
+    all_widgets = device_widgets + param_widgets
+    container = mgw.Container(widgets=all_widgets)
+
+    devices_group = _build_devices_group(device_widgets)
+    params_group = _build_params_group(param_widgets)
+
+    if devices_group is not None:
+        page_layout.addWidget(devices_group)
+    if params_group is not None:
+        page_layout.addWidget(params_group)
 
     run_button, pause_button = _build_run_buttons(
         spec,

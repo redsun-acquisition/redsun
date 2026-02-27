@@ -35,7 +35,7 @@ from beartype.door import LiteralTypeHint, TypeHint
 
 from redsun.device import PDevice
 from redsun.engine.actions import Action
-from redsun.presenter.utils import get_choice_list, isdevice, isdevicesequence
+from redsun.presenter.utils import get_choice_list, isdevice, isdeviceset, isdevicesequence
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -116,6 +116,10 @@ class ParamDescription:
     actions: Sequence[Action] | Action | None = None
     """Action metadata extracted from the parameter's default value, if any."""
 
+    is_device_set: bool = False
+    """Whether the annotation is a set-like collection (``Set[PDevice]``) rather than a sequence.
+    Affects how resolved values are coerced before being passed to the plan."""
+
     device_proto: type[PDevice] | None = None
     """The `PDevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
 
@@ -154,6 +158,7 @@ class _FieldsFromAnnotation(NamedTuple):
 
     choices: list[str] | None = None
     multiselect: bool = False
+    is_device_set: bool = False
     device_proto: type[PDevice] | None = None
 
 
@@ -177,6 +182,22 @@ def _handle_device_sequence(
     return _FieldsFromAnnotation(
         choices=matching,
         multiselect=True,
+        device_proto=elem_ann,
+    )
+
+
+def _handle_device_set(
+    ann: Any,
+    devices: cabc.Mapping[str, PDevice],
+) -> _FieldsFromAnnotation:
+    elem_ann: Any = get_args(ann)[0]
+    matching = [key for key, obj in devices.items() if isinstance(obj, elem_ann)]
+    if not matching:
+        return _FieldsFromAnnotation()
+    return _FieldsFromAnnotation(
+        choices=matching,
+        multiselect=True,
+        is_device_set=True,
         device_proto=elem_ann,
     )
 
@@ -230,22 +251,27 @@ _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
         lambda ann, _: isinstance(TypeHint(ann), LiteralTypeHint),
         _handle_literal,
     ),
-    # 2. Sequence[PDevice] → multi-select device widget
+    # 2. Set[PDevice] / AbstractSet[PDevice] / FrozenSet[PDevice] → multi-select (set semantics)
+    (
+        lambda ann, _: isdeviceset(ann),
+        _handle_device_set,
+    ),
+    # 3. Sequence[PDevice] → multi-select device widget
     (
         lambda ann, _: isdevicesequence(ann),
         _handle_device_sequence,
     ),
-    # 3. *args: PDevice  (VAR_POSITIONAL + bare device type) → multi-select
+    # 4. *args: PDevice  (VAR_POSITIONAL + bare device type) → multi-select
     (
         lambda ann, kind: kind is ParamKind.VAR_POSITIONAL and isdevice(ann),
         _handle_var_positional_device,
     ),
-    # 4. Bare PDevice type → single-select device widget
+    # 5. Bare PDevice type → single-select device widget
     (
         lambda ann, _: isdevice(ann),
         _handle_device,
     ),
-    # 5. Catch-all fallback → no choices, no model
+    # 6. Catch-all fallback → no choices, no model
     (
         lambda ann, kind: True,
         lambda ann, devices: _FieldsFromAnnotation(),
@@ -534,6 +560,7 @@ def create_plan_spec(
                 default=param.default,
                 choices=fields.choices,
                 multiselect=fields.multiselect,
+                is_device_set=fields.is_device_set,
                 actions=actions_meta,
                 device_proto=fields.device_proto,
                 hidden=False,
@@ -651,17 +678,19 @@ def resolve_arguments(
         val = values[p.name]
 
         if p.choices is not None and p.device_proto is not None:
-            # Coerce widget value (string or sequence of strings) → list of labels
+            # Coerce widget value (string, sequence, or set of strings) → list of labels
             if isinstance(val, str):
                 labels = [val]
-            elif isinstance(val, cabc.Sequence) and not isinstance(val, (str, bytes)):
+            elif isinstance(val, (cabc.Sequence, cabc.Set)) and not isinstance(val, (str, bytes)):
                 labels = [str(v) for v in val]
             else:
                 labels = [str(val)]
 
             device_list = get_choice_list(devices, p.device_proto, labels)
 
-            if p.kind is ParamKind.VAR_POSITIONAL or isdevicesequence(p.annotation):
+            if p.is_device_set:
+                resolved[p.name] = set(device_list)
+            elif p.kind is ParamKind.VAR_POSITIONAL or isdevicesequence(p.annotation):
                 resolved[p.name] = device_list
             else:
                 resolved[p.name] = device_list[0] if device_list else None

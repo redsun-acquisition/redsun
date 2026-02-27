@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, get_args
 from magicgui import widgets as mgw
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
-from redsun.presenter.utils import isdevice, isdevicesequence, issequence
+from redsun.presenter.utils import isdevice, isdeviceset, isdevicesequence, issequence
 
 if TYPE_CHECKING:
     from qtpy import QtWidgets
@@ -44,12 +44,13 @@ def _is_hidden_or_action(p: ParamDescription) -> bool:
 
 
 def _is_multiselect_device(p: ParamDescription) -> bool:
-    """Return true for Sequence[PDevice] or variadic *args: PDevice parameters."""
+    """Return true for Sequence[PDevice], Set[PDevice], or variadic *args: PDevice parameters."""
     if p.choices is None:
         return False
     is_ann_model_seq = isdevicesequence(p.annotation)
+    is_ann_model_set = isdeviceset(p.annotation)
     is_var_model = p.kind is ParamKind.VAR_POSITIONAL and isdevice(p.annotation)
-    return is_ann_model_seq or is_var_model
+    return is_ann_model_seq or is_ann_model_set or is_var_model
 
 
 def _is_singleselect_device(p: ParamDescription) -> bool:
@@ -63,6 +64,7 @@ def _is_literal_choices(p: ParamDescription) -> bool:
         p.choices is not None
         and not isdevice(p.annotation)
         and not isdevicesequence(p.annotation)
+        and not isdeviceset(p.annotation)
     )
 
 
@@ -71,6 +73,7 @@ def _is_non_device_sequence(p: ParamDescription) -> bool:
     return (
         issequence(p.annotation)
         and not isdevicesequence(p.annotation)
+        and not isdeviceset(p.annotation)
         and not isinstance(p.annotation, (str, bytes))
     )
 

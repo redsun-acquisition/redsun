@@ -7,7 +7,7 @@ into live `PDevice` instances.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, Sequence, Set as AbstractSet
 from typing import Any, TypeVar, get_args, get_origin
 
 from redsun.device import PDevice
@@ -15,6 +15,7 @@ from redsun.device import PDevice
 __all__ = [
     "get_choice_list",
     "isdevice",
+    "isdeviceset",
     "isdevicesequence",
     "issequence",
 ]
@@ -82,6 +83,20 @@ def issequence(ann: Any) -> bool:
 def isdevicesequence(ann: Any) -> bool:
     """Return True if *ann* is ``Sequence[T]`` where *T* is a `PDevice` subtype."""
     if not issequence(ann):
+        return False
+    args = get_args(ann)
+    return len(args) == 1 and _is_pdevice_annotation(args[0])
+
+
+def isdeviceset(ann: Any) -> bool:
+    """Return True if *ann* is ``Set[T]`` (or ``AbstractSet[T]``, ``FrozenSet[T]``) where *T* is a `PDevice` subtype."""
+    origin = get_origin(ann)
+    if origin is None:
+        return False
+    try:
+        if not issubclass(origin, AbstractSet):
+            return False
+    except TypeError:
         return False
     args = get_args(ann)
     return len(args) == 1 and _is_pdevice_annotation(args[0])
