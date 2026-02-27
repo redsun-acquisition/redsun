@@ -102,6 +102,11 @@ class PlanWidget:
     device widget's ``changed`` signal.
     """
 
+    params_widget: QtW.QWidget
+    """Widget wrapping devices_group + params_group; disable this to lock
+    all parameter inputs without affecting the run/stop/pause buttons.
+    """
+
     action_buttons: dict[str, ActionButton]
     """Mapping of action names to their buttons for direct access."""
 
@@ -124,7 +129,7 @@ class PlanWidget:
             self.pause_button.setEnabled(status)
         if self.actions_group:
             self.actions_group.setEnabled(status)
-        self.container.enabled = not status
+        self.params_widget.setEnabled(not status)
 
     def pause(self, status: bool) -> None:
         """Update UI state when a plan is paused or resumed.
@@ -148,7 +153,7 @@ class PlanWidget:
         """
         self.group_box.setEnabled(enabled)
         self.run_button.setEnabled(enabled)
-        self.container.enabled = enabled
+        self.params_widget.setEnabled(enabled)
 
     def enable_actions(self, enabled: bool = True) -> None:
         """Enable or disable the actions group box.
@@ -395,10 +400,15 @@ def create_plan_widget(
     devices_group = _build_devices_group(device_widgets)
     params_group = _build_params_group(param_widgets)
 
+    params_widget = QtW.QWidget()
+    params_layout = QtW.QVBoxLayout(params_widget)
+    params_layout.setContentsMargins(0, 0, 0, 0)
+    params_layout.setSpacing(4)
     if devices_group is not None:
-        page_layout.addWidget(devices_group)
+        params_layout.addWidget(devices_group)
     if params_group is not None:
-        page_layout.addWidget(params_group)
+        params_layout.addWidget(params_group)
+    page_layout.addWidget(params_widget)
 
     run_button, pause_button = _build_run_buttons(
         spec,
@@ -423,6 +433,7 @@ def create_plan_widget(
         pause_button=pause_button,
         container=container,
         device_widgets=device_widgets,
+        params_widget=params_widget,
         actions_group=actions_group,
         action_buttons=action_buttons,
     )
