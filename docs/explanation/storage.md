@@ -138,5 +138,4 @@ on `acquire-zarr`.
 
 ## See also
 
-- [Storage architecture](architecture/storage.md) — full lifecycle, custom backends
 - [`redsun.storage` API reference](../reference/api/storage.md)
