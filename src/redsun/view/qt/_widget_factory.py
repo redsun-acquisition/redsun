@@ -43,8 +43,6 @@ def _is_hidden_or_action(p: ParamDescription) -> bool:
 
 def _is_multiselect_device(p: ParamDescription) -> bool:
     """Return true for Sequence[PDevice], Set[PDevice], or variadic *args: PDevice parameters."""
-    if p.choices is None:
-        return False
     is_ann_model_seq = isdevicesequence(p.annotation)
     is_ann_model_set = isdeviceset(p.annotation)
     is_var_model = p.kind is ParamKind.VAR_POSITIONAL and isdevice(p.annotation)
@@ -53,7 +51,7 @@ def _is_multiselect_device(p: ParamDescription) -> bool:
 
 def _is_singleselect_device(p: ParamDescription) -> bool:
     """Return true for single PDevice parameters with a choices list."""
-    return p.choices is not None and isdevice(p.annotation)
+    return isdevice(p.annotation)
 
 
 def _is_literal_choices(p: ParamDescription) -> bool:
@@ -88,7 +86,7 @@ def _make_dummy(p: ParamDescription) -> mgw.Widget:
 
 def _make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
     """DeviceSequenceEdit checkbox-list for Sequence[PDevice] / Set[PDevice] parameters."""
-    assert p.choices is not None
+    choices = p.choices or []
     initial: list[str] = []
     if p.has_default:
         d = p.default
@@ -96,16 +94,16 @@ def _make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
             initial = [d]
         elif isinstance(d, (list, tuple, set, frozenset)):
             initial = list(d)
-    return DeviceSequenceEdit(name=p.name, choices=p.choices, value=initial)
+    return DeviceSequenceEdit(name=p.name, choices=choices, value=initial)
 
 
 def _make_singleselect_device(p: ParamDescription) -> mgw.Widget:
     """ComboBox widget for single PDevice selection."""
-    assert p.choices is not None
+    choices = p.choices or []
     return mgw.ComboBox(
         name=p.name,
-        choices=p.choices,
-        value=p.default if p.has_default else p.choices[0],
+        choices=choices,
+        value=p.default if p.has_default and p.default in choices else (choices[0] if choices else None),
     )
 
 
