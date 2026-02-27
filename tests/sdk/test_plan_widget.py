@@ -286,16 +286,16 @@ class TestPlanWidgetControlAPI:
         assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
-    def test_toggle_true_disables_container(self) -> None:
+    def test_toggle_true_disables_params_widget(self) -> None:
         pw = _make_minimal_plan_widget(_simple_spec())
         pw.toggle(True)
-        assert not pw.container.enabled
+        assert not pw.params_widget.isEnabled()
 
-    def test_toggle_false_enables_container(self) -> None:
+    def test_toggle_false_enables_params_widget(self) -> None:
         pw = _make_minimal_plan_widget(_simple_spec())
         pw.toggle(True)
         pw.toggle(False)
-        assert pw.container.enabled
+        assert pw.params_widget.isEnabled()
 
     def test_toggle_enables_actions_group(self) -> None:
         pw = _make_minimal_plan_widget(_action_spec())

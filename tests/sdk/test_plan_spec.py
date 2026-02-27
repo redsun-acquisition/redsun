@@ -29,6 +29,7 @@ from redsun.presenter.plan_spec import (
     resolve_arguments,
 )
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
+from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 
 
@@ -793,7 +794,7 @@ class TestCreateParamWidget:
         w = create_param_widget(p)
         assert isinstance(w, mgw.ComboBox)
 
-    def test_multiselect_device_creates_select(self) -> None:
+    def test_multiselect_device_creates_device_sequence_edit(self) -> None:
         p = self._param(
             "dets",
             Sequence[_DetectorProtocol],
@@ -802,7 +803,7 @@ class TestCreateParamWidget:
             device_proto=_DetectorProtocol,
         )
         w = create_param_widget(p)
-        assert isinstance(w, mgw.Select)
+        assert isinstance(w, DeviceSequenceEdit)
 
     def test_path_creates_file_edit(self) -> None:
         w = create_param_widget(self._param("output", Path))
