@@ -258,10 +258,11 @@ def _build_devices_group(
         label_text: str = getattr(w, "label", w.name)
         sub_group = QtW.QGroupBox(label_text)
         sub_layout = QtW.QVBoxLayout(sub_group)
-        sub_layout.setContentsMargins(4, 4, 4, 4)
+        sub_layout.setContentsMargins(4, 16, 4, 4)
         native: QtW.QWidget = w.native
         sub_layout.addWidget(native)
         devices_layout.addWidget(sub_group)
+        sub_group.setObjectName(f"device_sub_{w.name}")
         sub_groups[w.name] = sub_group
 
     return devices_group, sub_groups
