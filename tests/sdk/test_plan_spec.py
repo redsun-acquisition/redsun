@@ -707,7 +707,6 @@ class TestResolveArguments:
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,
-                is_device_set=True,
                 device_proto=_DetectorProtocol,
             )
         )

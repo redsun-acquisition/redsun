@@ -121,10 +121,6 @@ class ParamDescription:
     actions: Sequence[Action] | Action | None = None
     """Action metadata extracted from the parameter's default value, if any."""
 
-    is_device_set: bool = False
-    """Whether the annotation is a set-like collection (``Set[PDevice]``) rather than a sequence.
-    Affects how resolved values are coerced before being passed to the plan."""
-
     device_proto: type[PDevice] | None = None
     """The `PDevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
 
@@ -163,7 +159,6 @@ class _FieldsFromAnnotation(NamedTuple):
 
     choices: list[str] | None = None
     multiselect: bool = False
-    is_device_set: bool = False
     device_proto: type[PDevice] | None = None
 
 
@@ -202,7 +197,6 @@ def _handle_device_set(
     return _FieldsFromAnnotation(
         choices=matching,
         multiselect=True,
-        is_device_set=True,
         device_proto=elem_ann,
     )
 
@@ -565,7 +559,6 @@ def create_plan_spec(
                 default=param.default,
                 choices=fields.choices,
                 multiselect=fields.multiselect,
-                is_device_set=fields.is_device_set,
                 actions=actions_meta,
                 device_proto=fields.device_proto,
                 hidden=False,
@@ -695,10 +688,10 @@ def resolve_arguments(
 
             device_list = get_choice_list(devices, p.device_proto, labels)
 
-            if p.is_device_set:
-                resolved[p.name] = set(device_list)
-            elif p.kind is ParamKind.VAR_POSITIONAL or isdevicesequence(p.annotation):
+            if p.kind is ParamKind.VAR_POSITIONAL or isdevicesequence(p.annotation):
                 resolved[p.name] = device_list
+            elif isdeviceset(p.annotation):
+                resolved[p.name] = set(device_list)
             else:
                 resolved[p.name] = device_list[0] if device_list else None
         else:
