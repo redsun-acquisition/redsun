@@ -10,7 +10,6 @@ import pytest
 from redsun.containers import (
     AppConfig,
     AppContainer,
-    StorageConfig,
     device,
     presenter,
     view,
@@ -29,8 +28,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         assert "pending" in repr(comp)
 
@@ -38,8 +43,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         device = comp.build()
         assert device.name == "m"
@@ -49,8 +60,14 @@ class TestComponentWrappers:
         from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
-            MyMotor, "m", axis=["X"], step_size={"X": 0.1},
-            egu="mm", integer=1, floating=1.0, string="s",
+            MyMotor,
+            "m",
+            axis=["X"],
+            step_size={"X": 0.1},
+            egu="mm",
+            integer=1,
+            floating=1.0,
+            string="s",
         )
         with pytest.raises(RuntimeError, match="not been instantiated"):
             _ = comp.instance
@@ -59,8 +76,12 @@ class TestComponentWrappers:
         from mock_pkg.controller import MockController
 
         comp = _PresenterComponent(
-            MockController, "ctrl",
-            string="s", integer=1, floating=0.0, boolean=False,
+            MockController,
+            "ctrl",
+            string="s",
+            integer=1,
+            floating=0.0,
+            boolean=False,
         )
         presenter = comp.build({})
         assert presenter is comp.instance
@@ -87,12 +108,22 @@ class TestAppContainerMeta:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in TestApp._device_components
@@ -109,8 +140,14 @@ class TestAppContainerMeta:
 
         class Base(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         class Child(Base):
@@ -128,12 +165,22 @@ class TestAppContainerBuild:
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
-                MyMotor, "motor", axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                "motor",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -194,6 +241,7 @@ class TestAppContainerBuild:
 
     def test_virtual_container_carries_config(self) -> None:
         """After build(), virtual_container.configuration holds base config fields."""
+
         class EmptyApp(AppContainer):
             pass
 
@@ -207,9 +255,7 @@ class TestAppContainerBuild:
 class TestFromConfig:
     """Tests for YAML-based dynamic container creation."""
 
-    def test_from_config_motor(
-        self, mock_entry_points: Any, config_path: Path
-    ) -> None:
+    def test_from_config_motor(self, mock_entry_points: Any, config_path: Path) -> None:
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
         )
@@ -260,8 +306,12 @@ class TestComponentFieldSyntax:
         class TestApp(AppContainer):
             motor = device(
                 MyMotor,
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         assert "motor" in TestApp._device_components
@@ -273,7 +323,10 @@ class TestComponentFieldSyntax:
         class TestApp(AppContainer):
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "ctrl" in TestApp._presenter_components
@@ -298,12 +351,20 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -321,12 +382,21 @@ class TestComponentFieldSyntax:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = _PresenterComponent(
-                MockController, "ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                "ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in TestApp._device_components
@@ -343,14 +413,22 @@ class TestComponentFieldSyntax:
 
         class Base(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         class Child(Base):
             ctrl = presenter(
                 MockController,
-                string="s", integer=1, floating=0.0, boolean=False,
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         assert "motor" in Child._device_components
@@ -388,7 +466,9 @@ class TestConfigField:
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = device(
-                MyMotor, from_config="motor", egu="um",
+                MyMotor,
+                from_config="motor",
+                egu="um",
             )
 
         comp = TestApp._device_components["motor"]
@@ -420,15 +500,22 @@ class TestConfigField:
                 motor = device(MyMotor, from_config="motor")
 
     def test_from_config_missing_section_warns(
-        self, config_path: Path, caplog: pytest.LogCaptureFixture,
+        self,
+        config_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             missing = device(
-                MyMotor, from_config="missing",
-                axis=["Y"], step_size={"Y": 0.2},
-                egu="deg", integer=0, floating=0.0, string="fallback",
+                MyMotor,
+                from_config="missing",
+                axis=["Y"],
+                step_size={"Y": 0.2},
+                egu="deg",
+                integer=0,
+                floating=0.0,
+                string="fallback",
             )
 
         assert "No config section 'missing'" in caplog.text
@@ -470,6 +557,7 @@ class TestAppConfig:
     def test_redsun_config_no_component_fields(self) -> None:
         """RedSunConfig must not expose devices/presenters/views."""
         from redsun.virtual import RedSunConfig
+
         assert "devices" not in RedSunConfig.__annotations__
         assert "presenters" not in RedSunConfig.__annotations__
         assert "views" not in RedSunConfig.__annotations__
@@ -488,8 +576,13 @@ class TestQtAppContainer:
 
         class _TestQtApp(QtAppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             v = view(MockQtView)
 
@@ -532,9 +625,14 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, alias="cam",
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                alias="cam",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         app = TestApp()
@@ -550,8 +648,12 @@ class TestComponentNaming:
         class TestApp(AppContainer):
             motor = device(
                 MyMotor,
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         app = TestApp()
@@ -566,12 +668,21 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             motor = device(
-                MyMotor, axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
             ctrl = presenter(
-                MockController, alias="my_ctrl",
-                string="s", integer=1, floating=0.0, boolean=False,
+                MockController,
+                alias="my_ctrl",
+                string="s",
+                integer=1,
+                floating=0.0,
+                boolean=False,
             )
 
         app = TestApp()
@@ -586,235 +697,15 @@ class TestComponentNaming:
 
         class TestApp(AppContainer):
             my_motor = device(
-                MyMotor, alias="detector",
-                axis=["X"], step_size={"X": 0.1},
-                egu="mm", integer=1, floating=1.0, string="s",
+                MyMotor,
+                alias="detector",
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
             )
 
         assert "detector" in TestApp._device_components
         assert "my_motor" not in TestApp._device_components
-
-
-class TestStorageInjection:
-    """Tests for storage writer injection into devices."""
-
-    @pytest.fixture
-    def mock_writer(self):
-        """Patch _build_writer to return a MagicMock, avoiding acquire-zarr dependency."""
-        from unittest.mock import MagicMock, patch
-
-        from redsun.storage import Writer
-
-        writer = MagicMock(spec=Writer)
-        with patch("redsun.containers.container._build_writer", return_value=writer):
-            yield writer
-
-    def test_storage_injected_into_device_with_descriptor(
-        self, tmp_path: Path, mock_writer: Any
-    ) -> None:
-        """Writer is injected into a device that declares StorageDescriptor."""
-        from mock_pkg.device import MockDetectorWithStorage
-
-        class TestApp(AppContainer):
-            cam = device(
-                MockDetectorWithStorage,
-                sensor_shape=(512, 512),
-                pixel_size=(6.5, 6.5, 6.5),
-                exposure=100.0,
-                egu="ms",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp(session="test-session")
-        app._config["storage"] = StorageConfig(
-            backend="zarr",
-            base_path=str(tmp_path),
-            filename_provider="auto_increment",
-        )
-        app.build()
-
-        cam = app.devices["cam"]
-        assert cam.storage is mock_writer
-
-    def test_storage_not_injected_into_device_without_descriptor(
-        self, tmp_path: Path, mock_writer: Any
-    ) -> None:
-        """Devices without StorageDescriptor are unaffected by storage config."""
-        from mock_pkg.device import MyMotor
-
-        class TestApp(AppContainer):
-            motor = device(
-                MyMotor,
-                axis=["X"],
-                step_size={"X": 1.0},
-                egu="um",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp(session="test-session")
-        app._config["storage"] = StorageConfig(
-            backend="zarr",
-            base_path=str(tmp_path),
-            filename_provider="auto_increment",
-        )
-        app.build()
-
-        motor = app.devices["motor"]
-        assert not hasattr(motor, "storage")
-
-    def test_storage_none_when_no_config(self) -> None:
-        """Without a storage section, device.storage is not injected."""
-        from mock_pkg.device import MockDetectorWithStorage
-
-        class TestApp(AppContainer):
-            cam = device(
-                MockDetectorWithStorage,
-                sensor_shape=(512, 512),
-                pixel_size=(6.5, 6.5, 6.5),
-                exposure=100.0,
-                egu="ms",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp()
-        app.build()
-
-        cam = app.devices["cam"]
-        assert not hasattr(cam, "storage")
-
-    def test_storage_injected_via_inheritance(
-        self, tmp_path: Path, mock_writer: Any
-    ) -> None:
-        """StorageDescriptor declared on a base class is still found via MRO."""
-        from mock_pkg.device import MockDetectorWithStorage
-
-        class ExtendedDetector(MockDetectorWithStorage):
-            """Subclass that inherits StorageDescriptor from MockDetectorWithStorage."""
-
-            pass
-
-        class TestApp(AppContainer):
-            cam = device(
-                ExtendedDetector,
-                sensor_shape=(512, 512),
-                pixel_size=(6.5, 6.5, 6.5),
-                exposure=100.0,
-                egu="ms",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp(session="test-session")
-        app._config["storage"] = StorageConfig(
-            backend="zarr",
-            base_path=str(tmp_path),
-            filename_provider="auto_increment",
-        )
-        app.build()
-
-        cam = app.devices["cam"]
-        assert cam.storage is mock_writer  # type: ignore[union-attr]
-
-    def test_storage_injected_from_yaml_in_declarative_path(
-        self, tmp_path: Path, mock_writer: Any
-    ) -> None:
-        """Storage section in YAML is picked up automatically in the declarative path.
-
-        Previously AppContainerMeta loaded the YAML only to resolve component
-        kwargs and never wrote non-component top-level keys (storage, session,
-        schema_version) into _config.  AppContainer.__init__ now reads those
-        keys from the YAML when _config_path is set, closing the gap with the
-        from_config() path.
-        """
-        from mock_pkg.device import MockDetectorWithStorage
-
-        cfg_file = tmp_path / "app.yaml"
-        cfg_file.write_text(
-            "schema_version: 1.0\n"
-            "session: declarative-session\n"
-            "frontend: pyqt\n"
-            "storage:\n"
-            "  backend: zarr\n"
-            "  base_path: /tmp/redsun-test\n"
-        )
-
-        class TestApp(AppContainer, config=str(cfg_file)):
-            cam = device(
-                MockDetectorWithStorage,
-                sensor_shape=(512, 512),
-                pixel_size=(6.5, 6.5, 6.5),
-                exposure=100.0,
-                egu="ms",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp()
-        # storage must have been read from the YAML — not set manually
-        assert app._config.get("storage") == {"backend": "zarr", "base_path": "/tmp/redsun-test"}
-        app.build()
-
-        cam = app.devices["cam"]
-        assert cam.storage is mock_writer  # type: ignore[union-attr]
-
-    def test_default_base_path_uses_session_name(self) -> None:
-        """When base_path is omitted, _build_writer is called with the session name."""
-        from unittest.mock import MagicMock, patch
-
-        from mock_pkg.device import MockDetectorWithStorage
-
-        from redsun.storage import Writer
-
-        writer = MagicMock(spec=Writer)
-
-        class TestApp(AppContainer):
-            cam = device(
-                MockDetectorWithStorage,
-                sensor_shape=(512, 512),
-                pixel_size=(6.5, 6.5, 6.5),
-                exposure=100.0,
-                egu="ms",
-                integer=1,
-                floating=1.0,
-                string="test",
-            )
-
-        app = TestApp(session="my-session")
-        app._config["storage"] = StorageConfig(backend="zarr")
-
-        with patch(
-            "redsun.containers.container._build_writer", return_value=writer
-        ) as mock_build:
-            app.build()
-
-        mock_build.assert_called_once()
-        _, called_session = mock_build.call_args.args
-        assert called_session == "my-session"
-
-    def test_build_writer_creates_session_directory(self, tmp_path: Path) -> None:
-        """_build_writer creates ~/redsun-storage/<session> when base_path is omitted."""
-        from pathlib import Path as _Path
-        from unittest.mock import patch
-
-        from redsun.containers.container import _build_writer
-
-        storage_cfg = StorageConfig(backend="zarr")
-
-        with patch.object(_Path, "home", return_value=tmp_path):
-            # _build_writer will try to import ZarrWriter; catch the ImportError
-            # since acquire-zarr is not installed in the test environment
-            try:
-                _build_writer(storage_cfg, "my-session")
-            except ImportError:
-                pass
-
-        expected = tmp_path / "redsun-storage" / "my-session"
-        assert expected.exists()

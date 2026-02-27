@@ -5,8 +5,8 @@ from concurrent.futures import Future, wait
 from time import sleep
 from typing import Any
 
-import pytest
 import bluesky.plan_stubs as bps
+import pytest
 from bluesky.plans import count
 from ophyd.sim import det1
 
@@ -165,7 +165,7 @@ def test_engine_wrapper_run(RE: RunEngine) -> None:
 
     result = fut.result()
 
-    assert type(result) == tuple
+    assert type(result) is tuple
     assert len(result) == 1
 
 
@@ -176,7 +176,7 @@ def test_engine_wrapper_run_with_result(RE: RunEngine) -> None:
 
     result = fut.result()
 
-    assert type(result) == RunEngineResult
+    assert type(result) is RunEngineResult
     assert result.exit_status == "success"
 
     RE._call_returns_result = False

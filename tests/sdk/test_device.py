@@ -1,6 +1,8 @@
 import time
-from bluesky.protocols import Descriptor, Reading
 from typing import Any
+
+from bluesky.protocols import Descriptor, Reading
+
 from redsun.device import Device, PDevice
 
 

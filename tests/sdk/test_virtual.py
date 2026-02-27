@@ -1,9 +1,9 @@
 import logging
 
 import pytest
-
-from redsun.virtual import Signal, VirtualContainer, IsProvider, IsInjectable
 from event_model import DocumentRouter
+
+from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 logger = logging.getLogger("redsun")
 logger.setLevel(logging.DEBUG)
@@ -255,7 +255,6 @@ def test_register_signals_all_signals_survive(bus: VirtualContainer) -> None:
 
 def test_virtual_container_configuration(bus: VirtualContainer) -> None:
     """Test that configuration can be set and read back from VirtualContainer."""
-
     bus._set_configuration(
         {"schema_version": 1.0, "session": "redsun", "frontend": "unknown"}
     )

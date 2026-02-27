@@ -1,11 +1,10 @@
 from typing import Mapping
 
-from redsun.presenter import Presenter
 from redsun.device import PDevice
+from redsun.presenter import Presenter
 
 
 class MockController(Presenter):
-
     def __init__(
         self,
         name: str,
@@ -24,7 +23,6 @@ class MockController(Presenter):
 
 
 class BrokenController(Presenter):
-
     def __init__(
         self,
         name: str,
@@ -39,7 +37,6 @@ class BrokenController(Presenter):
 
 
 class NonDerivedController:
-
     def __init__(
         self,
         name: str,

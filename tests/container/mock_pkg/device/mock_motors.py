@@ -1,6 +1,7 @@
 from typing import Any
 
 from attrs import define, field, setters, validators
+
 from redsun.device import Device
 
 

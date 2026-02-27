@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from importlib.metadata import EntryPoint
 from pathlib import Path
 from typing import Any, Generator
 from unittest import mock
 
 import pytest
-from importlib.metadata import EntryPoint
 
 # Add the test directory to sys.path so mock_pkg is importable
 _tests_dir = str(Path(__file__).parent)
@@ -39,7 +39,8 @@ def mock_entry_points() -> Generator[Any, None, None]:
     ``container.py`` resolves the manifest via::
 
         pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-        with as_file(pkg_manifest) as manifest_path: ...
+        with as_file(pkg_manifest) as manifest_path:
+            ...
 
     We mock ``files()`` to return the mock_pkg directory (a real ``Path``)
     and ``as_file`` to be a no-op context manager yielding the path as-is.

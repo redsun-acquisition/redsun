@@ -26,30 +26,23 @@ from typing import (
 
 import yaml
 
-from redsun.device import Device
-from redsun.presenter import Presenter
-from redsun.storage import (
-    AutoIncrementFilenameProvider,
-    HasStorage,
-    StaticPathProvider,
-    Writer,
-)
-from redsun.view import View
-from redsun.virtual import (
-    HasShutdown,
-    IsInjectable,
-    IsProvider,
-    VirtualContainer,
-)
-
-from ._config import AppConfig, StorageConfig
-from .components import (
+from redsun.containers._config import AppConfig
+from redsun.containers.components import (
     _DeviceComponent,
     _DeviceField,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
     _ViewField,
+)
+from redsun.device import Device
+from redsun.presenter import Presenter
+from redsun.view import View
+from redsun.virtual import (
+    HasShutdown,
+    IsInjectable,
+    IsProvider,
+    VirtualContainer,
 )
 
 if TYPE_CHECKING:
@@ -152,75 +145,6 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
             return _check_view_protocol(imported_class)
         case _:
             _assert_never(group)
-
-
-def _build_writer(cfg: StorageConfig, session: str) -> Writer:
-    """Build a storage writer from a ``StorageConfig`` mapping.
-
-    Parameters
-    ----------
-    cfg : StorageConfig
-        Storage section from the application configuration.
-    session : str
-        Session name, used to derive the default storage directory
-        (``~/redsun-storage/<session>``).
-
-    Returns
-    -------
-    Writer
-        Configured writer instance ready for injection.
-    """
-    backend = cfg.get("backend", "zarr")
-    raw_path = cfg.get("base_path")
-    if raw_path is None:
-        base_dir = Path.home() / "redsun-storage" / session
-    else:
-        base_dir = Path(raw_path)
-    base_dir.mkdir(parents=True, exist_ok=True)
-    base_uri = base_dir.as_uri()
-
-    # TODO: expose per-plan override;
-    # this should be managed by a presenter component,
-    # but it would mean decentralizing everything...
-    # maybe a built-in stack to manage this is the way to go?
-    strategy = cfg.get("filename_provider", "auto_increment")
-
-    filename_provider: AutoIncrementFilenameProvider
-    if strategy == "auto_increment":
-        # TODO: this is weak... but this whole
-        # storage system is at this time; will need
-        # proper rework to decentralize it; see
-        # the todo before
-        suffix = f".{backend}"
-        filename_provider = AutoIncrementFilenameProvider(
-            base_dir=base_dir, suffix=suffix
-        )
-    else:
-        raise ValueError(
-            f"Unknown filename provider strategy {strategy!r}. Supported: 'auto_increment'"
-        )
-
-    path_provider = StaticPathProvider(filename_provider, base_uri=base_uri)
-
-    if backend == "zarr":
-        try:
-            from redsun.storage._zarr import ZarrWriter
-        except ImportError:
-            raise ImportError(
-                "The 'zarr' storage backend requires the 'acquire-zarr' package. "
-                "Install it with: pip install redsun[zarr]"
-            )
-        return ZarrWriter("redsun-writer", path_provider, base_dir)
-
-    raise ValueError(f"Unknown storage backend {backend!r}. Supported backends: 'zarr'")
-
-
-def _inject_storage(devices: dict[str, Device], writer: Writer) -> None:
-    """Inject *writer* into every device that carries a ``StorageDescriptor``."""
-    for name, device in devices.items():
-        if isinstance(device, HasStorage):
-            device.storage = writer
-            logger.debug(f"Injected storage writer into device '{name}'")
 
 
 T = TypeVar("T")
@@ -515,18 +439,6 @@ class AppContainer(metaclass=AppContainerMeta):
             except Exception as e:
                 logger.error(f"Failed to build device '{name}': {e}")
 
-        # inject storage writer if configured
-        storage_cfg = self._config.get("storage")
-        if storage_cfg is not None:
-            try:
-                writer = _build_writer(
-                    storage_cfg, self._config.get("session", "redsun")
-                )
-                _inject_storage(built_devices, writer)
-                logger.debug("Storage writer built and injected")
-            except Exception as e:
-                logger.error(f"Failed to build storage writer: {e}")
-
         # build presenters
         for comp_name, presenter_component in self._presenter_components.items():
             try:
@@ -630,10 +542,6 @@ class AppContainer(metaclass=AppContainerMeta):
             session=config.get("session", "Redsun"),
             frontend=frontend,
         )
-
-        storage_cfg = config.get("storage")
-        if storage_cfg is not None:
-            instance._config["storage"] = storage_cfg
 
         return instance
 

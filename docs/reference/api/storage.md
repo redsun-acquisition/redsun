@@ -1,27 +1,65 @@
 # Storage
 
+## Writer
+
 ::: redsun.storage.Writer
+    options:
+      filters: ["!^__", "_on_prepare", "_write_frame", "_finalize"]
 
 ::: redsun.storage.FrameSink
 
-::: redsun.storage.SourceInfo
+## Path providers
 
 ::: redsun.storage.PathInfo
+    options:
+      show_root_heading: true
+      show_docstring_parameters: false
 
 ::: redsun.storage.FilenameProvider
+    options:
+      show_root_heading: true
+      filters: ["__call__"]
 
 ::: redsun.storage.PathProvider
+    options:
+      show_root_heading: true
+      filters: ["__call__"]
 
-::: redsun.storage.StaticFilenameProvider
+::: redsun.storage.SessionPathProvider
+    options:
+      show_root_heading: true
+      filters: ["__call__"]
 
-::: redsun.storage.UUIDFilenameProvider
+## Metadata
 
-::: redsun.storage.AutoIncrementFilenameProvider
+::: redsun.storage.metadata
 
-::: redsun.storage.StaticPathProvider
+::: redsun.storage.register_metadata
 
-::: redsun.storage.StorageProxy
+::: redsun.storage.clear_metadata
 
-::: redsun.storage.StorageDescriptor
+## Factory & utilities
 
-::: redsun.storage.HasStorage
+::: redsun.storage.PrepareInfo
+    options:
+      show_root_heading: true
+      show_docstring_parameters: false
+
+::: redsun.storage.device.make_writer
+    options:
+      show_root_heading: true
+
+::: redsun.storage.presenter.get_available_writers
+    options:
+      show_root_heading: true
+
+::: redsun.storage.utils.from_uri
+    options:
+      show_root_heading: true
+
+## Protocols
+
+::: redsun.storage.protocols
+    options:
+      members:
+        - HasWriter

@@ -1,19 +1,13 @@
-# SPDX-License-Identifier: Apache-2.0
-# The design of this module is heavily inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
-# ophyd-async is licensed under the BSD 3-Clause License.
-# No source code from ophyd-async has been copied; the backend writer pattern
-# was studied and independently re-implemented using acquire-zarr for redsun.
-
 """Zarr-based storage writer using acquire-zarr."""
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
+import json
 from typing import TYPE_CHECKING
 
-from redsun.storage._base import FrameSink, Writer
-from redsun.storage._path import from_uri
+from redsun.storage._base import Writer
+from redsun.storage.metadata import clear_metadata
+from redsun.storage.utils import from_uri
 
 try:
     from acquire_zarr import (
@@ -33,79 +27,74 @@ if TYPE_CHECKING:
     import numpy as np
     import numpy.typing as npt
 
-    from redsun.storage._path import PathProvider
-
 
 class ZarrWriter(Writer):
-    """Zarr storage backend using `acquire-zarr`.
+    """Zarr storage backend using ``acquire-zarr``.
 
-    Writes detector frames to a Zarr v3 store.  Multiple devices share
-    one `ZarrWriter` instance; each device is assigned its own array
-    within the store, keyed by device name.
+    Writes detector frames to a Zarr v3 store via ``acquire-zarr``'s
+    ``ZarrStream``.  All devices that share the same store group name
+    contribute their sources to a single ``ZarrStream`` instance, so
+    their arrays land in one Zarr store on disk.
 
-    The store URI is resolved by the
-    [`PathProvider`][redsun.storage.PathProvider]
-    supplied at construction time.  Devices call
-    [`Writer.prepare`][redsun.storage.Writer.prepare] without any path
-    arguments — path resolution is entirely internal.
+    The store path is not known at construction time.  It is supplied
+    (and can be updated between acquisitions) via
+    [`set_uri`][redsun.storage.Writer.set_uri], which rebuilds
+    ``StreamSettings.store_path`` without disturbing registered sources
+    or the registry entry.
 
     Parameters
     ----------
     name : str
-        Unique name for this writer (used for logging).
-    path_provider : PathProvider
-        Callable that returns [`PathInfo`][redsun.storage.PathInfo] for each
-        device.  Called once per device per
-        [`prepare`][redsun.storage.Writer.prepare] invocation.
-    base_dir : Path
-        Filesystem directory under which all stores for this writer are
-        created.  ``kickoff()`` ensures this directory exists before
-        opening the stream, so the caller does not need to ``mkdir`` it
-        in advance.
+        Store group name.  See [`Writer`][redsun.storage.Writer] for
+        full semantics.  Defaults to ``"default"``.
     """
 
-    def __init__(self, name: str, path_provider: PathProvider, base_dir: Path) -> None:
+    def __init__(self, name: str = "default") -> None:
         if not _ACQUIRE_ZARR_AVAILABLE:
             raise ImportError(
                 "ZarrWriter requires the 'acquire-zarr' package. "
                 "Install it with: pip install redsun[zarr]"
             )
         super().__init__(name)
-        self._path_provider = path_provider
-        self._base_dir = base_dir
         self._stream_settings = StreamSettings()
-        self._dimensions: dict[str, list[Dimension]] = {}
         self._array_settings: dict[str, ArraySettings] = {}
+        self._stream: ZarrStream | None = None
 
-    @property
-    def mimetype(self) -> str:
-        """Return the MIME type for Zarr storage."""
+    @classmethod
+    def _class_mimetype(cls) -> str:
+        """Return the Zarr MIME type string (class-level accessor)."""
         return "application/x-zarr"
 
-    def prepare(self, name: str, capacity: int = 0) -> FrameSink:
-        """Prepare Zarr storage for *name* and return a frame sink.
+    def set_uri(self, uri: str) -> None:
+        """Update the store path from *uri*.
 
-        Resolves the store path via the
-        [`PathProvider`][redsun.storage.PathProvider],
-        pre-declares spatial and temporal dimensions for the source, and
-        returns a [`FrameSink`][redsun.storage.FrameSink] bound to *name*.
+        Translates the URI to a filesystem path via ``from_uri`` and
+        stores it in ``StreamSettings.store_path``.  The stream itself
+        is not opened here — that happens in ``kickoff``.
+
+        Must not be called while the writer is open.
+
+        Parameters
+        ----------
+        uri : str
+            New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
+        """
+        # enforces the is_open guard, stores self._uri
+        super().set_uri(uri)
+        self._stream_settings.store_path = from_uri(uri) + ".zarr"
+
+    def _on_prepare(self, name: str) -> None:
+        """Pre-declare Zarr array dimensions for source *name*.
+
+        Called by the base ``prepare`` after ``self._sources[name]`` is
+        populated.  Builds the ``ArraySettings`` (dimensions, dtype,
+        output key) that ``kickoff`` will pass to ``ZarrStream``.
 
         Parameters
         ----------
         name : str
-            Source name (device name).
-        capacity : int
-            Maximum frames (`0` = unlimited).
-
-        Returns
-        -------
-        FrameSink
-            Bound sink; call `sink.write(frame)` to push frames.
+            Source name just registered.
         """
-        path_info = self._path_provider(name)
-        self._store_path = path_info.store_uri
-        self._stream_settings.store_path = from_uri(path_info.store_uri)
-
         source = self._sources[name]
         height, width = source.shape
 
@@ -113,7 +102,7 @@ class ZarrWriter(Writer):
             Dimension(
                 name="t",
                 kind=DimensionType.TIME,
-                array_size_px=capacity,
+                array_size_px=source.capacity,
                 chunk_size_px=1,
                 shard_size_chunks=2,
             ),
@@ -132,28 +121,46 @@ class ZarrWriter(Writer):
                 shard_size_chunks=2,
             ),
         ]
-        self._dimensions[name] = dimensions
         self._array_settings[name] = ArraySettings(
             dimensions=dimensions,
             data_type=source.dtype,
             output_key=source.name,
         )
 
-        return super().prepare(name, capacity)
-
     def kickoff(self) -> None:
-        """Open the Zarr stream for writing.  No-op if already open."""
+        """Open the Zarr stream for writing.
+
+        The first device to call `kickoff` triggers stream creation.
+        Since the stream is shared across all devices with the same store group name,
+        it is a no-op for subsequent devices that call `kickoff` while the stream is already open.
+        """
         if self.is_open:
             return
-        self._base_dir.mkdir(parents=True, exist_ok=True)
-        self._stream_settings.arrays = list(self._array_settings.values())
-        self._stream = ZarrStream(self._stream_settings)
-        super().kickoff()
+        super().kickoff()  # snapshots metadata, enforces URI guard, sets _is_open
+        try:
+            self._stream_settings.arrays = list(self._array_settings.values())
+            self._stream = ZarrStream(self._stream_settings)
+            if self._metadata:
+                # write any additional metadata
+                # before opening the stream
+                flatten_md = json.dumps(self._metadata)
+                self._stream.write_custom_metadata(flatten_md, overwrite=True)
+        except Exception as e:
+            self._is_open = False
+            clear_metadata()
+            raise e
 
     def _finalize(self) -> None:
-        """Close the Zarr stream."""
-        self._stream.close()
+        """Close the Zarr stream and clear per-acquisition array settings."""
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+        self._array_settings.clear()
 
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
-        """Append *frame* to the Zarr stream under the array key for *name*."""
+        """Append *frame* to the stream under the array key for *name*."""
+        if self._stream is None:
+            raise RuntimeError(
+                f"ZarrWriter ({self._name!r}) is not open; call kickoff() first."
+            )
         self._stream.append(frame, key=name)

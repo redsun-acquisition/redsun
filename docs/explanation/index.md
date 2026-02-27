@@ -13,5 +13,6 @@
 - **[Devices](architecture/devices.md)**
 - **[In-process devices](architecture/in-process-device.md)**
 - **[Presenters](architecture/presenters.md)**
-- **[Storage](architecture/storage.md)**
+- **[Plans](architecture/plans.md)**
+- **[Qt widgets](architecture/qt-widgets.md)**
 - **[Virtual container](architecture/virtual.md)**

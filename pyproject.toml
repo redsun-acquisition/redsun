@@ -31,6 +31,7 @@ dependencies = [
     "psygnal>=0.15.1",
     "typing-extensions>=4.15.0",
     "dependency-injector>=4.48.3",
+    "beartype>=0.22.9",
 ]
 requires-python = ">=3.10"
 
@@ -86,7 +87,10 @@ include = [
 [tool.mypy]
 files = "."
 exclude = ["docs", "tests"]
-disable_error_code = ["import-untyped"]
+disable_error_code = [
+    "import-untyped",
+    "no-untyped-call"
+]
 pretty = true
 
 # Use strict defaults
@@ -108,7 +112,6 @@ omit = [
 
 [tool.ruff]
 fix = true
-extend-exclude = ["docs", "tests"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -121,6 +124,16 @@ extend-select = [
     "FA102", # force __future__ imports
 ] 
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = [
+    # ignore missing docstrings in tests
+    "D101", 
+    "D102", 
+    "D103",
+    # ignore type check imports in tests
+    "TC"
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

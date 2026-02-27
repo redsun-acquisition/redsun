@@ -13,7 +13,7 @@ from bluesky.utils import MsgGenerator
 
 from redsun.device import Device, PDevice
 from redsun.presenter import PPresenter
-from redsun.virtual import Signal, VirtualContainer, IsProvider
+from redsun.virtual import IsProvider, Signal, VirtualContainer
 
 
 class MockDetector(Device):

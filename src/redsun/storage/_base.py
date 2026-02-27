@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-# The design of this module is heavily inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
-# ophyd-async is licensed under the BSD 3-Clause License.
-# No source code from ophyd-async has been copied; the architectural patterns
-# (shared writer, FrameSink, SourceInfo, stream document generation) were
-# studied and independently re-implemented to fit the redsun model.
-
 """Abstract base classes for storage writers."""
 
 from __future__ import annotations
@@ -14,12 +6,14 @@ import abc
 import threading as th
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from redsun.log import Loggable
+from redsun.storage.metadata import clear_metadata, snapshot_metadata
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import Any
 
     import numpy as np
     import numpy.typing as npt
@@ -29,7 +23,10 @@ if TYPE_CHECKING:
 
 @dataclass
 class SourceInfo:
-    """Metadata for a registered data source.
+    """Runtime acquisition state for a registered data source.
+
+    Tracks per-source counters and identifiers used during an acquisition.
+    This dataclass is internal to [`Writer`][redsun.storage.Writer].
 
     Attributes
     ----------
@@ -41,48 +38,47 @@ class SourceInfo:
         Shape of individual frames from the source.
     data_key : str
         Bluesky data key for stream documents.
-    mimetype : str
-        MIME type hint for the storage backend.
+    capacity : int
+        Maximum frames to accept. ``0`` means unlimited.
     frames_written : int
         Running count of frames written so far.
     collection_counter : int
         Frames reported in the current collection cycle.
+    completed : bool
+        Whether this source has signalled completion.
+        Defaults to ``False``; set to ``True`` when the source calls
+        [`FrameSink.close`][redsun.storage.FrameSink.close].
     stream_resource_uid : str
-        UID of the current `StreamResource` document.
-    extra : dict[str, Any]
-        Optional extra metadata for backend-specific use (e.g. OME-Zarr
-        axis labels, physical units).  Base [`Writer`][redsun.storage.Writer]
-        ignores this field; specialised subclasses may read it.
+        UID of the current ``StreamResource`` document.
     """
 
     name: str
     dtype: np.dtype[np.generic]
     shape: tuple[int, ...]
     data_key: str
-    mimetype: str = "application/octet-stream"
+    capacity: int = 0
     frames_written: int = 0
     collection_counter: int = 0
+    completed: bool = False
     stream_resource_uid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    extra: dict[str, Any] = field(default_factory=dict)
 
 
 class FrameSink:
     """Device-facing handle for pushing frames to a storage backend.
 
-    Returned by [`Writer.prepare`][redsun.storage.Writer.prepare].
+    Returned by [`Writer.register`][redsun.storage.Writer.register].
     Devices write frames by calling [`write`][redsun.storage.FrameSink.write];
-    the sink routes each frame to the correct array inside the shared
-    [`Writer`][redsun.storage.Writer] and updates the frame counter atomically.
+    the sink routes each frame to the backend and updates the frame counter
+    atomically.
 
-    Calling [`close`][redsun.storage.FrameSink.close] is equivalent to calling
-    [`Writer.complete`][redsun.storage.Writer.complete] for this source — it
-    signals that no more frames will arrive and triggers backend finalisation
-    once all active sinks have been closed.
+    Calling [`close`][redsun.storage.FrameSink.close] signals that no more
+    frames will arrive from this source and triggers backend finalisation
+    once all sources are complete.
 
     Parameters
     ----------
     writer : Writer
-        The shared writer that owns this sink.
+        The writer that owns this sink.
     name : str
         Source name this sink is bound to.
     """
@@ -92,15 +88,15 @@ class FrameSink:
         self._name = name
 
     def write(self, frame: npt.NDArray[np.generic]) -> None:
-        """Push *frame* to the storage backend.
+        """Push ``frame`` to the storage backend.
 
-        Thread-safe; multiple sinks may call `write` concurrently.
+        Thread-safe.
 
         Parameters
         ----------
         frame : npt.NDArray[np.generic]
-            Array data to write.  dtype and shape must match the source
-            registration from [`Writer.update_source`][redsun.storage.Writer.update_source].
+            Array data to write. dtype and shape must match those declared
+            in [`Writer.register`][redsun.storage.Writer.register].
         """
         with self._writer._lock:
             self._writer._write_frame(self._name, frame)
@@ -110,97 +106,256 @@ class FrameSink:
         """Signal that no more frames will be written from this sink.
 
         Delegates to [`Writer.complete`][redsun.storage.Writer.complete].
-        The backend is finalised once all active sinks have called `close`.
         """
         self._writer.complete(self._name)
 
 
 _W = TypeVar("_W", bound="Writer")
 
+#: Composite registry key: (group name, mimetype).
+_WriterKey = tuple[str, str]
+
 
 class Writer(abc.ABC, Loggable):
-    """Abstract base class for data writers.
+    """Abstract base class for storage backend writers.
 
-    This interface loosely follows the Bluesky `Flyable` protocol while
-    remaining generic — methods do not need to return a `Status` object;
-    that is left to the device that owns the writer.
+    Writers are long-lived singletons, created once when the application
+    starts and reused across every acquisition.  The class-level registry
+    is keyed by a **composite key** ``(name, mimetype)`` where:
 
-    A single `Writer` instance is shared by all devices in a session.
-    Each device registers itself as a *source* via
-    [`update_source`][redsun.storage.Writer.update_source] and obtains
-    a dedicated [`FrameSink`][redsun.storage.FrameSink] via
-    [`prepare`][redsun.storage.Writer.prepare].
+    - ``mimetype`` identifies the storage format and determines which
+      ``Writer`` subclass handles serialisation (e.g.
+      ``"application/x-zarr"`` maps to ``ZarrWriter``).
+    - ``name`` is a **store group name** that distinguishes multiple
+      independent stores that share the same format.  Use ``"default"``
+      for the common single-store case.  This is *not* a device name —
+      many devices may contribute sources to the same writer by
+      referencing the same ``(name, mimetype)`` key.
+
+    Example keys:
+
+        ("default", "application/x-zarr")  # the normal single-store case
+        ("live", "application/x-zarr")     # a separate live-preview store
+        ("default", "application/x-hdf5")  # a different format entirely
+
+    URI setting is controlled by the Presenter layer
+    via [`set_uri`][redsun.storage.Writer.set_uri].
+    Subclasses must override ``set_uri`` to perform any backend-specific path
+    translation without disturbing the registry.
 
     Call order per acquisition:
 
-    1. `update_source(name, dtype, shape)` — register the device
-    2. `prepare(name, capacity)` — returns a [`FrameSink`][redsun.storage.FrameSink]
-    3. `kickoff()` — opens the backend
-    4. `sink.write(frame)` — push frames (thread-safe)
-    5. `sink.close()` — signals completion (calls [`complete`][redsun.storage.Writer.complete])
+    1. ``set_uri(uri)``
+        - called by a presenter before the plan
+    2. ``register(source_name, data_key, dtype, shape, capacity)``
+        - called by each device in its own ``prepare()``
+        - returns a [`FrameSink`][redsun.storage.FrameSink]
+    3. ``kickoff()``
+        - opens the backend
+    4. ``sink.write(frame)``
+        - push frames (thread-safe)
+    5. ``sink.close()``
+        - signals completion for this source
 
-    Subclasses must implement:
+    Subclasses must implement the following methods and properties:
 
-    - [`mimetype`][redsun.storage.Writer.mimetype] — MIME type string for this backend
-    - [`prepare`][redsun.storage.Writer.prepare] — source-specific setup; must call `super().prepare()`
-    - [`kickoff`][redsun.storage.Writer.kickoff] — open the backend; must call `super().kickoff()`
-    - `_write_frame` — write one frame to the backend
-    - `_finalize` — close the backend when all sources are complete
+    - [`mimetype`][redsun.storage.Writer.mimetype] — MIME type string
+    - [`kickoff`][redsun.storage.Writer.kickoff]
+        - open the backend
+        - must call ``super().kickoff()`` to set ``is_open`` and enforce the URI guard
+    - [`_on_prepare`][redsun.storage.Writer._on_prepare] (private)
+        - backend-specific setup after a source is registered (e.g. pre-declare Zarr array
+          dimensions); called at the end of [`prepare`][redsun.storage.Writer.prepare]
+    - [`_write_frame`][redsun.storage.Writer._write_frame]
+        - write one frame to the backend
+    - [`_finalize`][redsun.storage.Writer._finalize]
+        - close the backend when all sources are done
+    - [`_class_mimetype`][redsun.storage.Writer._class_mimetype] (class method)
+        - return the MIME type string for this subclass; used for registry keys
 
     Parameters
     ----------
     name : str
-        Unique name for this writer instance (used for logging).
+        Store group name.  See class docstring for semantics.
     """
+
+    _registry: dict[_WriterKey, "Writer"] = {}
+    _registry_lock: th.Lock = th.Lock()
 
     def __init__(self, name: str) -> None:
         self._name = name
-        self._store_path = ""
+        self._uri: str = ""
         self._lock = th.Lock()
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
-        self._active_sinks: set[str] = set()
+        self._metadata: dict[str, dict[str, Any]] = {}
+
+    @classmethod
+    def get(cls: type[_W], name: str = "default") -> _W:
+        """Return the singleton writer for *(name, cls.mimetype)*.
+
+        Creates a new instance on first call; returns the existing one
+        on every subsequent call for the same ``(name, mimetype)`` pair.
+        The URI is *not* set here — call
+        [`set_uri`][redsun.storage.Writer.set_uri] separately.
+
+        This method is normally not called directly by devices or
+        application code.  Use
+        [`make_writer`][redsun.storage.make_writer] instead, which
+        resolves the correct subclass from the mimetype string.
+
+        Parameters
+        ----------
+        name : str
+            Store group name.  Defaults to ``"default"``.
+
+        Returns
+        -------
+        Writer
+            Singleton instance for ``(name, cls.mimetype)``.
+
+        Raises
+        ------
+        TypeError
+            If the existing registry entry is not an instance of ``cls``.
+        """
+        # cls.mimetype is an abstract property; each concrete subclass
+        # provides a fixed string (e.g. ZarrWriter.mimetype == "application/x-zarr").
+        # We access it via the class directly to avoid needing an instance.
+        key: _WriterKey = (name, cls._class_mimetype())
+        with cls._registry_lock:
+            if key not in cls._registry:
+                cls._registry[key] = cls(name)
+            instance = cls._registry[key]
+        if not isinstance(instance, cls):
+            raise TypeError(
+                f"Registry entry for {key!r} is {type(instance).__name__!r}, "
+                f"expected {cls.__name__!r}"
+            )
+        return instance
+
+    @classmethod
+    def release(cls, name: str = "default") -> None:
+        """Remove the registry entry for *(name, cls.mimetype)*.
+
+        Called by a presenter at application shutdown.
+        Devices should not call this directly.
+
+        Parameters
+        ----------
+        name : str
+            Store group name.  Defaults to ``"default"``.
+        """
+        key: _WriterKey = (name, cls._class_mimetype())
+        with cls._registry_lock:
+            cls._registry.pop(key, None)
+
+    @classmethod
+    @abc.abstractmethod
+    def _class_mimetype(cls) -> str:
+        """Return the MIME type string for this subclass.
+
+        Used by [`get`][redsun.storage.Writer.get] and
+        [`release`][redsun.storage.Writer.release] to build the registry
+        key before any instance exists.  Must return the same value as
+        the instance property [`mimetype`][redsun.storage.Writer.mimetype].
+
+        Subclasses implement this as a one-liner::
+
+            @classmethod
+            def _class_mimetype(cls) -> str:
+                return "application/x-zarr"
+        """
+        ...
 
     @property
     def is_open(self) -> bool:
-        """Return whether the writer is currently open."""
+        """Return whether the backend is currently open."""
         return self._is_open
 
     @property
-    def name(self) -> str:
-        """Return the name of this writer."""
-        return self._name
+    def uri(self) -> str:
+        """The current store URI.
+
+        Empty string until
+        [`set_uri`][redsun.storage.Writer.set_uri] has been called.
+        """
+        return self._uri
 
     @property
-    @abc.abstractmethod
     def mimetype(self) -> str:
-        """Return the MIME type string for this backend."""
-        ...
+        """The MIME type string for this backend.
 
-    def update_source(
+        Must return the same value as
+        [`_class_mimetype`][redsun.storage.Writer._class_mimetype].
+        """
+        return self._class_mimetype()
+
+    def set_uri(self, uri: str) -> None:
+        """Update the store URI for the next acquisition.
+
+        Called by a presenter before each acquisition and
+        whenever the user changes the output directory.  The writer
+        must not be open when this is called.
+
+        Subclasses should override this to perform any backend-specific
+        path translation (e.g. rebuilding ``StreamSettings.store_path``
+        for ``ZarrWriter``) and must call ``super().set_uri(uri)``.
+
+        Parameters
+        ----------
+        uri : str
+            New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
+
+        Raises
+        ------
+        RuntimeError
+            If the writer is currently open.
+        """
+        if self._is_open:
+            raise RuntimeError(
+                f"Cannot change URI on writer ({self._name!r}, {self.mimetype!r}) "
+                "while it is open."
+            )
+        self._uri = uri
+        self.logger.debug(f"URI updated to {uri!r}")
+
+    def prepare(
         self,
         name: str,
         data_key: str,
         dtype: np.dtype[np.generic],
         shape: tuple[int, ...],
-        extra: dict[str, Any] | None = None,
-    ) -> None:
-        """Register or update a data source.
+        capacity: int = 0,
+    ) -> FrameSink:
+        """Register a data source and return a ready ``FrameSink``.
+
+        Called by each device inside its own ``prepare()`` method, once
+        per acquisition.  Replaces the former two-step
+        ``update_source`` + ``prepare`` sequence.
+
+        Safe to call multiple times on the same source name — counters
+        are reset on each call, making it suitable for repeated
+        acquisitions without recreating the writer.
 
         Parameters
         ----------
         name : str
-            Source name (typically the device name).
+            Source name, typically the device name.  Multiple devices
+            may register distinct source names on the same writer.
         data_key : str
-            Bluesky data key for stream documents used
-            in `collect_stream_docs`.
+            Bluesky data key used in stream documents.
         dtype : np.dtype[np.generic]
             NumPy data type of the frames.
         shape : tuple[int, ...]
-            Shape of individual frames.
-        extra : dict[str, Any] | None
-            Optional backend-specific metadata forwarded to
-            [`SourceInfo`][redsun.storage.SourceInfo].
+            Shape of each individual frame.
+        capacity : int
+            Maximum number of frames to accept.  ``0`` means unlimited.
+
+        Returns
+        -------
+        FrameSink
+            Bound sink ready to accept frames via ``sink.write(frame)``.
 
         Raises
         ------
@@ -208,45 +363,38 @@ class Writer(abc.ABC, Loggable):
             If the writer is currently open.
         """
         if self._is_open:
-            raise RuntimeError("Cannot update sources while writer is open.")
-
+            raise RuntimeError(
+                f"Cannot register source {name!r} on writer "
+                f"({self._name!r}, {self.mimetype!r}) while it is open."
+            )
         self._sources[name] = SourceInfo(
             name=name,
             dtype=dtype,
             shape=shape,
             data_key=data_key,
-            mimetype=self.mimetype,
-            extra=extra or {},
+            capacity=capacity,
         )
-        self.logger.debug(f"Updated source '{name}' with shape {shape}")
+        self.logger.debug(
+            f"Registered source {name!r} — shape={shape}, capacity={capacity}"
+        )
+        self._on_prepare(name)
+        return FrameSink(self, name)
 
-    def clear_source(self, name: str, *, raise_if_missing: bool = False) -> None:
-        """Remove a registered data source.
+    @abc.abstractmethod
+    def _on_prepare(self, name: str) -> None:
+        """Backend-specific hook called after a source is registered.
+
+        Invoked at the end of [`prepare`][redsun.storage.Writer.prepare]
+        once ``self._sources[name]`` is fully populated.  Subclasses use
+        this to pre-declare backend structures — for example, ``ZarrWriter``
+        builds its ``ArraySettings`` here from the source dtype and shape.
 
         Parameters
         ----------
         name : str
-            Source name to remove.
-        raise_if_missing : bool
-            If `True`, raise `KeyError` when the source is absent.
-
-        Raises
-        ------
-        RuntimeError
-            If the writer is currently open.
-        KeyError
-            If *raise_if_missing* is `True` and the source is absent.
+            The source name just registered.
         """
-        if self._is_open:
-            raise RuntimeError("Cannot clear sources while writer is open.")
-
-        try:
-            del self._sources[name]
-            self.logger.debug(f"Cleared source '{name}'")
-        except KeyError as exc:
-            self.logger.error(f"Source '{name}' not found.")
-            if raise_if_missing:
-                raise exc
+        ...
 
     def get_indices_written(self, name: str | None = None) -> int:
         """Return the number of frames written for a source.
@@ -254,8 +402,8 @@ class Writer(abc.ABC, Loggable):
         Parameters
         ----------
         name : str | None
-            Source name.  If `None`, returns the minimum across all
-            sources (useful for synchronisation checks).
+            Source name.  If ``None``, returns the minimum across all
+            registered sources (useful for synchronisation checks).
 
         Raises
         ------
@@ -266,13 +414,12 @@ class Writer(abc.ABC, Loggable):
             if not self._sources:
                 return 0
             return min(s.frames_written for s in self._sources.values())
-
-        if name not in self._sources:
-            raise KeyError(f"Unknown source '{name}'")
+        if name not in self._sources.keys():
+            raise KeyError(f"Unknown source {name!r}")
         return self._sources[name].frames_written
 
     def reset_collection_state(self, name: str) -> None:
-        """Reset the collection counter for a new acquisition.
+        """Reset the stream-document counters for *name*.
 
         Parameters
         ----------
@@ -287,64 +434,54 @@ class Writer(abc.ABC, Loggable):
     def kickoff(self) -> None:
         """Open the storage backend for a new acquisition.
 
-        Subclasses must call `super().kickoff()` to set
-        [`is_open`][redsun.storage.Writer.is_open].
-        Subsequent calls while already open must be no-ops.
-        """
-        if not self._is_open:
-            self._is_open = True
-
-    @abc.abstractmethod
-    def prepare(self, name: str, capacity: int = 0) -> FrameSink:
-        """Prepare storage for a specific source and return a frame sink.
-
-        Called once per device per acquisition.  Resets per-source counters
-        and returns a [`FrameSink`][redsun.storage.FrameSink] bound to *name*.
-
-        Parameters
-        ----------
-        name : str
-            Source name.
-        capacity : int
-            Maximum frames to accept (`0` = unlimited).
-
-        Returns
-        -------
-        FrameSink
-            Bound sink; call `sink.write(frame)` to push frames.
+        Subclasses must call ``super().kickoff()`` to set
+        [`is_open`][redsun.storage.Writer.is_open] and to enforce the
+        URI guard.  Subsequent calls while already open must be no-ops.
 
         Raises
         ------
-        KeyError
-            If *name* has not been registered via
-            [`update_source`][redsun.storage.Writer.update_source].
+        RuntimeError
+            If [`uri`][redsun.storage.Writer.uri] has not been set yet.
         """
-        source = self._sources[name]
-        source.frames_written = 0
-        source.collection_counter = 0
-        source.stream_resource_uid = str(uuid.uuid4())
-        self._active_sinks.add(name)
-        return FrameSink(self, name)
+        if not self._uri:
+            clear_metadata()
+            raise RuntimeError(
+                f"Writer ({self._name!r}, {self.mimetype!r}) has no URI. "
+                "A presenter must call set_uri() before kickoff()."
+            )
+        if not self._is_open:
+            self._metadata = snapshot_metadata()
+            self._is_open = True
 
     def complete(self, name: str) -> None:
-        """Mark acquisition complete for *name*.
+        """Mark acquisition complete for source *name*.
 
         Called automatically by [`FrameSink.close`][redsun.storage.FrameSink.close].
-        The backend is finalised once all active sinks have called `close`.
+        When the last registered source calls ``complete``, the backend
+        is finalised and ``is_open`` is reset.  The writer instance
+        remains in the registry and is ready for the next acquisition.
 
         Parameters
         ----------
         name : str
-            Source name.
+            Source name signalling completion.
         """
-        self._active_sinks.discard(name)
-        if not self._active_sinks:
+        self._sources[name].completed = True
+        if all(s.completed for s in self._sources.values()):
             self._finalize()
             self._is_open = False
+            clear_metadata()
+            self.logger.debug("All sources complete; backend finalised.")
 
-    # ------------------------------------------------------------------
-    # Backend hooks (subclass responsibility)
-    # ------------------------------------------------------------------
+    def clear_sources(self) -> None:
+        """Remove all registered sources.
+
+        A presenter in charge of monitoring
+        writing progress should take care to call this
+        after each plan is finished.
+        """
+        self._sources.clear()
+        self.logger.debug("Source cache reset.")
 
     @abc.abstractmethod
     def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
@@ -364,19 +501,15 @@ class Writer(abc.ABC, Loggable):
 
     @abc.abstractmethod
     def _finalize(self) -> None:
-        """Close the backend after all sinks have been closed."""
+        """Close the backend after all sources have completed."""
         ...
-
-    # ------------------------------------------------------------------
-    # Stream document generation
-    # ------------------------------------------------------------------
 
     def collect_stream_docs(
         self,
         name: str,
         indices_written: int,
     ) -> Iterator[StreamAsset]:
-        """Yield `StreamResource` and `StreamDatum` documents for *name*.
+        """Yield ``StreamResource`` and ``StreamDatum`` documents for *name*.
 
         Parameters
         ----------
@@ -388,7 +521,8 @@ class Writer(abc.ABC, Loggable):
         Yields
         ------
         StreamAsset
-            Tuples of `("stream_resource", doc)` or `("stream_datum", doc)`.
+            Tuples of ``("stream_resource", doc)`` or
+            ``("stream_datum", doc)``.
 
         Raises
         ------
@@ -396,7 +530,7 @@ class Writer(abc.ABC, Loggable):
             If *name* is not registered.
         """
         if name not in self._sources:
-            raise KeyError(f"Unknown source '{name}'")
+            raise KeyError(f"Unknown source {name!r}")
 
         source = self._sources[name]
 
@@ -411,10 +545,10 @@ class Writer(abc.ABC, Loggable):
         if source.collection_counter == 0:
             stream_resource: StreamResource = {
                 "data_key": source.data_key,
-                "mimetype": source.mimetype,
+                "mimetype": self.mimetype,
                 "parameters": {"array_name": source.name},
                 "uid": source.stream_resource_uid,
-                "uri": self._store_path,
+                "uri": self.uri,
             }
             yield ("stream_resource", stream_resource)
 
