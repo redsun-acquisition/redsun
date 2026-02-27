@@ -35,7 +35,12 @@ from beartype.door import LiteralTypeHint, TypeHint
 
 from redsun.device import PDevice
 from redsun.engine.actions import Action
-from redsun.presenter.utils import get_choice_list, isdevice, isdeviceset, isdevicesequence
+from redsun.presenter.utils import (
+    get_choice_list,
+    isdevice,
+    isdevicesequence,
+    isdeviceset,
+)
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -681,7 +686,9 @@ def resolve_arguments(
             # Coerce widget value (string, sequence, or set of strings) → list of labels
             if isinstance(val, str):
                 labels = [val]
-            elif isinstance(val, (cabc.Sequence, cabc.Set)) and not isinstance(val, (str, bytes)):
+            elif isinstance(val, (cabc.Sequence, cabc.Set)) and not isinstance(
+                val, (str, bytes)
+            ):
                 labels = [str(v) for v in val]
             else:
                 labels = [str(val)]

@@ -23,6 +23,7 @@ from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action
 from redsun.presenter.plan_spec import ParamKind
+from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset
 from redsun.view.qt._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
@@ -181,10 +182,10 @@ class PlanWidget:
 def _build_param_widgets(
     spec: PlanSpec,
 ) -> tuple[
-    list[mgw_bases.ValueWidget[Any]],   # device widgets (multiselect or single)
-    list[mgw_bases.ValueWidget[Any]],   # plain parameter widgets
+    list[mgw_bases.ValueWidget[Any]],  # device widgets (multiselect or single)
+    list[mgw_bases.ValueWidget[Any]],  # plain parameter widgets
 ]:
-    """Partition *spec* parameters into device widgets and plain parameter widgets.
+    """Arrange *spec* parameters into device widgets and plain parameter widgets.
 
     Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``, ``*args: PDevice``
     and bare ``PDevice`` parameters.  Everything else (scalars, Literals, …) goes
@@ -197,9 +198,6 @@ def _build_param_widgets(
     param_widgets : list
         One magicgui widget per non-device parameter, in signature order.
     """
-    from redsun.presenter.plan_spec import ParamKind
-    from redsun.presenter.utils import isdevice, isdeviceset, isdevicesequence
-
     device_widgets: list[mgw_bases.ValueWidget[Any]] = []
     param_widgets: list[mgw_bases.ValueWidget[Any]] = []
 
@@ -233,8 +231,6 @@ def _build_devices_group(
     or a ``ComboBox`` for single-select).  Returns ``None`` when there are
     no device parameters.
     """
-    from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
-
     if not device_widgets:
         return None
 
@@ -249,7 +245,7 @@ def _build_devices_group(
         sub_layout = QtW.QVBoxLayout(sub_group)
         sub_layout.setContentsMargins(4, 4, 4, 4)
 
-        native: QtW.QWidget = w.native  # type: ignore[union-attr]
+        native: QtW.QWidget = w.native
         sub_layout.addWidget(native)
         devices_layout.addWidget(sub_group)
 
@@ -272,7 +268,7 @@ def _build_params_group(
     params_form.setContentsMargins(4, 6, 4, 4)
 
     for w in param_widgets:
-        native: QtW.QWidget = w.native  # type: ignore[union-attr]
+        native: QtW.QWidget = w.native
         label_text: str = getattr(w, "label", w.name)
         params_form.addRow(label_text, native)
 

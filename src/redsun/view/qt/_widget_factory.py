@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, get_args
 from magicgui import widgets as mgw
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
-from redsun.presenter.utils import isdevice, isdeviceset, isdevicesequence, issequence
+from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
 
 if TYPE_CHECKING:
     from qtpy import QtWidgets

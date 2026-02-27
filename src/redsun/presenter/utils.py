@@ -7,7 +7,8 @@ into live `PDevice` instances.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence, Set as AbstractSet
+from collections.abc import Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from typing import Any, TypeVar, get_args, get_origin
 
 from redsun.device import PDevice
