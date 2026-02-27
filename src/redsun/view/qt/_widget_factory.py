@@ -27,15 +27,13 @@ fallback) if all factory entries fail.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, TypeAlias, get_args
+from typing import Any, TypeAlias, get_args
 
 from magicgui import widgets as mgw
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
-
-if TYPE_CHECKING:
-    from qtpy import QtWidgets
+from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 
 
 def _is_hidden_or_action(p: ParamDescription) -> bool:
@@ -88,19 +86,17 @@ def _make_dummy(p: ParamDescription) -> mgw.Widget:
     return mgw.LineEdit(name=p.name)
 
 
-def _make_multiselect(p: ParamDescription) -> mgw.Widget:
-    """Select widget allowing multiple device selections."""
+def _make_device_sequence_edit(p: ParamDescription) -> DeviceSequenceEdit:
+    """DeviceSequenceEdit checkbox-list for Sequence[PDevice] / Set[PDevice] parameters."""
     assert p.choices is not None
-    w = mgw.Select(
-        name=p.name,
-        choices=p.choices,
-        allow_multiple=True,
-        annotation=p.annotation,
-        value=p.default if p.has_default else p.choices[0],
-    )
-    inner: QtWidgets.QListWidget = w.native
-    inner.setFixedWidth(inner.sizeHintForColumn(0) + inner.frameWidth() * 2 + 5)
-    return w
+    initial: list[str] = []
+    if p.has_default:
+        d = p.default
+        if isinstance(d, str):
+            initial = [d]
+        elif isinstance(d, (list, tuple, set, frozenset)):
+            initial = list(d)
+    return DeviceSequenceEdit(name=p.name, choices=p.choices, value=initial)
 
 
 def _make_singleselect_device(p: ParamDescription) -> mgw.Widget:
@@ -155,11 +151,11 @@ def _make_generic(p: ParamDescription) -> mgw.Widget:
 
 
 _WidgetPredicate: TypeAlias = Callable[[ParamDescription], bool]
-_WidgetFactory: TypeAlias = Callable[[ParamDescription], mgw.Widget]
+_WidgetFactory: TypeAlias = Callable[[ParamDescription], mgw.Widget | DeviceSequenceEdit]
 
 _WIDGET_FACTORY_MAP: list[tuple[_WidgetPredicate, _WidgetFactory]] = [
     (_is_hidden_or_action, _make_dummy),
-    (_is_multiselect_device, _make_multiselect),
+    (_is_multiselect_device, _make_device_sequence_edit),
     (_is_singleselect_device, _make_singleselect_device),
     (_is_literal_choices, _make_literal_combobox),
     (_is_non_device_sequence, _make_list_edit),
@@ -171,7 +167,7 @@ def _try_factory_entry(
     predicate: _WidgetPredicate,
     factory: _WidgetFactory,
     param: ParamDescription,
-) -> mgw.Widget | None:
+) -> mgw.Widget | DeviceSequenceEdit | None:
     """Attempt one (predicate, factory) entry; return None on any exception."""
     try:
         if predicate(param):
@@ -181,7 +177,7 @@ def _try_factory_entry(
         return None
 
 
-def create_param_widget(param: ParamDescription) -> mgw.Widget:
+def create_param_widget(param: ParamDescription) -> mgw.Widget | DeviceSequenceEdit:
     """Create a magicgui widget for *param* via the factory registry.
 
     Parameters
