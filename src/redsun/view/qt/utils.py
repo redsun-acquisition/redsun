@@ -23,7 +23,6 @@ from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action
 from redsun.presenter.plan_spec import ParamKind
-from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset
 from redsun.view.qt._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
@@ -207,12 +206,8 @@ def _build_param_widgets(
         if p.kind is ParamKind.VAR_KEYWORD:
             continue
         w = cast("mgw_bases.ValueWidget[Any]", create_param_widget(p))
-        is_device_param = (
-            p.device_proto is not None
-            or isdevicesequence(p.annotation)
-            or isdeviceset(p.annotation)
-            or (p.kind is ParamKind.VAR_POSITIONAL and isdevice(p.annotation))
-        )
+        # device_proto is set by plan_spec for all PDevice-backed params
+        is_device_param = p.device_proto is not None
         if is_device_param:
             device_widgets.append(w)
         else:

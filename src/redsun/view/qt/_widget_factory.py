@@ -86,7 +86,7 @@ def _make_dummy(p: ParamDescription) -> mgw.Widget:
     return mgw.LineEdit(name=p.name)
 
 
-def _make_device_sequence_edit(p: ParamDescription) -> DeviceSequenceEdit:
+def _make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
     """DeviceSequenceEdit checkbox-list for Sequence[PDevice] / Set[PDevice] parameters."""
     assert p.choices is not None
     initial: list[str] = []
@@ -151,7 +151,7 @@ def _make_generic(p: ParamDescription) -> mgw.Widget:
 
 
 _WidgetPredicate: TypeAlias = Callable[[ParamDescription], bool]
-_WidgetFactory: TypeAlias = Callable[[ParamDescription], mgw.Widget | DeviceSequenceEdit]
+_WidgetFactory: TypeAlias = Callable[[ParamDescription], mgw.Widget]
 
 _WIDGET_FACTORY_MAP: list[tuple[_WidgetPredicate, _WidgetFactory]] = [
     (_is_hidden_or_action, _make_dummy),
@@ -167,7 +167,7 @@ def _try_factory_entry(
     predicate: _WidgetPredicate,
     factory: _WidgetFactory,
     param: ParamDescription,
-) -> mgw.Widget | DeviceSequenceEdit | None:
+) -> mgw.Widget | None:
     """Attempt one (predicate, factory) entry; return None on any exception."""
     try:
         if predicate(param):
@@ -177,7 +177,7 @@ def _try_factory_entry(
         return None
 
 
-def create_param_widget(param: ParamDescription) -> mgw.Widget | DeviceSequenceEdit:
+def create_param_widget(param: ParamDescription) -> mgw.Widget:
     """Create a magicgui widget for *param* via the factory registry.
 
     Parameters
