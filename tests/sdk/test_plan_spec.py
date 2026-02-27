@@ -3,10 +3,11 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Sequence
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import Any, FrozenSet, Literal, Protocol, Set, runtime_checkable
 
 import pytest
 from bluesky.protocols import Locatable, Location, Movable, Readable, Stageable
@@ -27,7 +28,7 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
     resolve_arguments,
 )
-from redsun.presenter.utils import isdevice, isdevicesequence, issequence
+from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
 from redsun.view.qt._widget_factory import create_param_widget
 
 
@@ -166,6 +167,22 @@ class TestTypePredicates:
     def test_isdevicesequence_false_for_bare_type(self) -> None:
         assert not isdevicesequence(_DetectorProtocol)
 
+    def test_isdeviceset_true(self) -> None:
+        assert isdeviceset(Set[_DetectorProtocol])
+        assert isdeviceset(Set[_MotorProtocol])
+        assert isdeviceset(AbstractSet[_DetectorProtocol])
+        assert isdeviceset(FrozenSet[_DetectorProtocol])
+
+    def test_isdeviceset_false_for_primitive_set(self) -> None:
+        assert not isdeviceset(Set[int])
+        assert not isdeviceset(FrozenSet[str])
+
+    def test_isdeviceset_false_for_bare_type(self) -> None:
+        assert not isdeviceset(_DetectorProtocol)
+
+    def test_isdeviceset_false_for_sequence(self) -> None:
+        assert not isdeviceset(Sequence[_DetectorProtocol])
+
     def test_issequence_true_for_generic_alias(self) -> None:
         assert issequence(Sequence[int])
         assert issequence(list[float])
@@ -259,6 +276,18 @@ class TestCreatePlanSpec:
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
         def plan(dets: Sequence[_DetectorProtocol]) -> MsgGenerator[None]:
+            yield  # type: ignore
+
+        spec = create_plan_spec(plan, one_detector)
+        p = spec.parameters[0]
+        assert p.choices == ["cam"]
+        assert p.multiselect
+        assert p.device_proto is _DetectorProtocol
+
+    def test_set_device_param_is_multiselect(
+        self, one_detector: dict[str, _MockDetector]
+    ) -> None:
+        def plan(dets: Set[_DetectorProtocol]) -> MsgGenerator[None]:
             yield  # type: ignore
 
         spec = create_plan_spec(plan, one_detector)
@@ -445,6 +474,18 @@ class TestDispatchAnnotation:
     ) -> None:
         fields = _dispatch_annotation(
             Sequence[_DetectorProtocol],
+            ParamKind.POSITIONAL_OR_KEYWORD,
+            one_detector,
+        )
+        assert fields.choices == ["cam"]
+        assert fields.multiselect is True
+        assert fields.device_proto is _DetectorProtocol
+
+    def test_device_set_dispatched(
+        self, one_detector: dict[str, _MockDetector]
+    ) -> None:
+        fields = _dispatch_annotation(
+            Set[_DetectorProtocol],
             ParamKind.POSITIONAL_OR_KEYWORD,
             one_detector,
         )
@@ -654,6 +695,24 @@ class TestResolveArguments:
         )
         resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
         assert resolved["dets"] == [one_detector["cam"]]
+
+    def test_device_set_labels_resolved(
+        self, one_detector: dict[str, _MockDetector]
+    ) -> None:
+        spec = self._make_spec(
+            ParamDescription(
+                name="dets",
+                kind=ParamKind.POSITIONAL_OR_KEYWORD,
+                annotation=Set[_DetectorProtocol],
+                default=Parameter.empty,
+                choices=["cam"],
+                multiselect=True,
+                is_device_set=True,
+                device_proto=_DetectorProtocol,
+            )
+        )
+        resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
+        assert resolved["dets"] == {one_detector["cam"]}
 
     def test_unknown_label_resolves_to_none_for_single(
         self, one_motor: dict[str, MockMotorDevice]
