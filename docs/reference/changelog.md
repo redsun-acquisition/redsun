@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.9.0] - 27-02-2026
+
+### Added
+- Migrated code from `redsun-mimir` to here
+  -  In particular the whole plan specification and action system
+  -  Some things still require additional tests, although have been empirically tested in `redsun-mimir`
+- `DeviceSequenceEdit`: new `ValueWidget` subclass rendering `Sequence[PDevice]` and `Set[PDevice]`
+  parameters as a checkbox list with a live selection count label.
+- `PlanWidget.device_widgets`: exposes device parameter widgets for external validation.
+- `PlanWidget.params_widget`: single `QWidget` wrapping the Devices and Parameters group boxes;
+  disabled atomically during plan execution so all inputs lock without affecting run/stop/pause buttons.
+- `Set[PDevice]` / `AbstractSet[PDevice]` annotation support in plan spec: `isdeviceset` predicate
+  and `_handle_device_set` handler; `resolve_arguments` coerces to `set()` for set-typed params.
+- `HasWriter` protocol expressing the ability of a device to encapsulate a writer.
+- `SessionPathProvider` with automatic run-number increment, replacing `AutoIncrementFileProvider`.
+- Metadata registry on `Writer`; metadata collected at `prepare` time is written immediately after
+  stream open.
+- `clear_sources` mechanism for presenters to explicitly clear writer sources after a plan finishes.
+- `group` parameter on path providers for sub-group addressing within a Zarr store.
+
+### Changed
+- Storage layer migrated to per-device `Writer` instances identified by URI (singleton via `get()`).
+- Device preparation migrated from `StorageInfo`/`StorageConfig` dict-based API to `PrepareInfo`.
+- `make_writer` signature updated to `(uri, mimetype)`.
+- Shareable plan-spec and widget infrastructure migrated from redsun-mimir into the SDK.
+- `create_plan_widget` now splits device and scalar parameters into separate "Devices" and
+  "Parameters" group boxes.
+- Widget factory predicates now match on annotation shape rather than `choices is not None`;
+  empty-choices case produces a valid empty widget instead of raising `RuntimeError`.
+- `_try_factory_entry` now only swallows predicate errors; factory crashes propagate immediately.
+- `is_device_set` removed from `ParamDescription`; set coercion derived from annotation directly
+  via `isdeviceset(p.annotation)`, symmetric with how `isdevicesequence` was already handled.
+
 ## [0.8.2] - 23-02-2026
 
 ### Changed
@@ -183,6 +216,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.9.0]: https://github.com/redsun-acquisition/redsun/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/redsun-acquisition/redsun/compare/v0.8.0...v0.8.2
 [0.8.0]: https://github.com/redsun-acquisition/redsun/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/redsun-acquisition/redsun/compare/v0.7.0...v0.7.2
