@@ -148,8 +148,8 @@ class _QCheckboxBackend(protocols.ValueWidgetProtocol):
     def _mgui_bind_parent_change_callback(self, callback: Callable[..., Any]) -> None:
         self._event_filter.parentChanged.connect(callback)
 
-    def _mgui_render(self) -> None:  # type: ignore[override]  # pragma: no cover
-        raise NotImplementedError("render() is not supported for DeviceSequenceEdit")
+    def _mgui_render(self) -> Any:  # pragma: no cover
+        raise NotImplementedError
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +182,6 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         Human-readable label shown in the parent container.  Defaults to *name*.
     """
 
-    _widget: _QCheckboxBackend
-
     def __init__(
         self,
         name: str = "",
@@ -202,7 +200,7 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
 
     def get_value(self) -> list[str]:
         """Return names of currently checked devices in registry order."""
-        return self._widget._mgui_get_value()
+        return self._widget._mgui_get_value()  # type: ignore[no-any-return]
 
     def set_value(self, value: list[str]) -> None:
         """Set checked devices from a list (or set/frozenset) of names."""

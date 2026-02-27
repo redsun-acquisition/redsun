@@ -166,13 +166,18 @@ def _try_factory_entry(
     factory: _WidgetFactory,
     param: ParamDescription,
 ) -> mgw.Widget | None:
-    """Attempt one (predicate, factory) entry; return None on any exception."""
+    """Evaluate predicate; if it matches, call factory (errors propagate).
+
+    Only predicate evaluation is guarded — a factory crash is a real bug
+    and must not be silently swallowed.
+    """
     try:
-        if predicate(param):
-            return factory(param)
-        return None
+        matched = predicate(param)
     except Exception:
         return None
+    if matched:
+        return factory(param)
+    return None
 
 
 def create_param_widget(param: ParamDescription) -> mgw.Widget:
