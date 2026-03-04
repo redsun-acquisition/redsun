@@ -83,6 +83,11 @@ class ZarrWriter(Writer):
         super().set_uri(uri)
         self._stream_settings.store_path = from_uri(uri) + ".zarr"
 
+    # TODO: the dimension settings should be configurable,
+    # possibly from the presenter side. So the API should
+    # allow the presenter to specify the dimension types and chunk sizes.
+    # Maybe a per-backend dataclass with specific settings
+    # that the presenter/view can populate and pass to the writer?
     def _on_prepare(self, name: str) -> None:
         """Pre-declare Zarr array dimensions for source *name*.
 
