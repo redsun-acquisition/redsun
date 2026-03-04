@@ -37,9 +37,9 @@ def make_key(name: str, property_name: str) -> str:
 
     Parameters
     ----------
-    name :
+    name : str
         Runtime device instance name.
-    property_name :
+    property_name : str
         Individual setting name.
 
     Returns
@@ -51,11 +51,11 @@ def make_key(name: str, property_name: str) -> str:
 
 
 def parse_key(key: str) -> tuple[str, str]:
-    r"""Parse a canonical device property key into its components.
+    """Parse a canonical device property key into its components.
 
     Parameters
     ----------
-    key :
+    key : str
         Key in the form ``{name}-{property_name}``.
 
     Returns
@@ -116,9 +116,16 @@ def make_descriptor(
     units: str | None = ...,
     readonly: bool = ...,
 ) -> Descriptor: ...
+@overload
 def make_descriptor(
     source: str,
-    dtype: Literal["number", "integer", "string", "array"],
+    dtype: Literal["boolean"],
+    *,
+    readonly: bool = ...,
+) -> Descriptor: ...
+def make_descriptor(
+    source: str,
+    dtype: Literal["number", "integer", "string", "array", "boolean"],
     *,
     low: float | int | None = None,
     high: float | int | None = None,
@@ -133,7 +140,7 @@ def make_descriptor(
     ----------
     source : str
         Human-readable source label (e.g. `"settings"`).
-    dtype : Literal["number", "integer", "string", "array"]
+    dtype : Literal["number", "integer", "string", "array", "boolean"]
         Data type of the field.
     low : float | int | None
         Lower control limit (`"number"`` or `"integer"` only).
@@ -172,6 +179,8 @@ def make_descriptor(
             if shape is None:
                 raise ValueError("'shape' is required when dtype='array'.")
             d["shape"] = shape
+        case _:
+            ...  # nothing to do
     return d
 
 
