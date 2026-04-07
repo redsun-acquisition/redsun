@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [0.9.1] - 06-03-2026
+
+- Moved documentation dependencies to separate group
+- Added support for `boolean` dtype descriptor
+- Updated lockfile
+
 ## [0.9.0] - 27-02-2026
 
 ### Added
@@ -216,6 +222,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.9.1]: https://github.com/redsun-acquisition/redsun/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/redsun-acquisition/redsun/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/redsun-acquisition/redsun/compare/v0.8.0...v0.8.2
 [0.8.0]: https://github.com/redsun-acquisition/redsun/compare/v0.7.2...v0.8.0
