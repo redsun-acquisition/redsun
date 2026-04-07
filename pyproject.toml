@@ -55,7 +55,7 @@ dev = [
 
 [project.optional-dependencies]
 zarr = [
-    "acquire-zarr>=0.6.0",
+    "acquire-zarr>=0.7.0",
 ]
 pyqt = [
     "magicgui>=0.10.1",
