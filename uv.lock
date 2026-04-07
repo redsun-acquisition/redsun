@@ -1749,7 +1749,7 @@ docs = [
 requires-dist = [
     { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.7.0" },
     { name = "bluesky", specifier = ">=1.14.6" },
-    { name = "dependency-injector", specifier = ">=4.48.3" },
+    { name = "dependency-injector", specifier = ">=4.49.0" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.1" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.1" },
     { name = "platformdirs", specifier = ">=4.3.8" },
@@ -1767,7 +1767,7 @@ provides-extras = ["pyqt", "pyside", "zarr"]
 dev = [
     { name = "attrs", specifier = ">=25.4.0" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
-    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "mypy", specifier = ">=1.20.0" },
     { name = "ophyd", specifier = ">=1.11.0" },
     { name = "pre-commit", specifier = ">=4.5.0" },
     { name = "pytest", specifier = ">=9.0.2" },

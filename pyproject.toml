@@ -30,14 +30,14 @@ dependencies = [
     "bluesky>=1.14.6",
     "psygnal>=0.15.1",
     "typing-extensions>=4.15.0",
-    "dependency-injector>=4.48.3",
+    "dependency-injector>=4.49.0",
 ]
 requires-python = ">=3.10"
 
 [dependency-groups]
 dev = [
     "redsun[pyqt,zarr]",
-    "mypy>=1.19.1",
+    "mypy>=1.20.0",
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -93,16 +93,9 @@ disable_error_code = [
     "no-untyped-call"
 ]
 pretty = true
-
-# Use strict defaults
 strict = true
 warn_unreachable = true
 warn_no_return = true
-
-[[tool.mypy.overrides]]
-# Don't require test functions to include types
-module = "tests.*"
-disable_error_code = "attr-defined"
 
 [tool.coverage.run]
 source = ["redsun"]
