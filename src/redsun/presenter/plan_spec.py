@@ -245,7 +245,10 @@ _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     # 1. Literal[...] → fixed string choices (no model look-up)
     (
-        lambda ann, _: get_origin(ann) is Literal,
+        # get_origin returns Literal at runtime;
+        # mypy cannot prove the identity holds statically;
+        # we simply keep mypy silent
+        lambda ann, _: get_origin(ann) is Literal,  # type: ignore[comparison-overlap]
         _handle_literal,
     ),
     # 2. Set[PDevice] / AbstractSet[PDevice] / FrozenSet[PDevice] → multi-select (set semantics)
