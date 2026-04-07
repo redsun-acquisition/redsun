@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import (
     Annotated,
     Any,
+    Literal,
     Mapping,
     NamedTuple,
     Sequence,
@@ -30,8 +31,6 @@ from typing import (
     get_origin,
     get_type_hints,
 )
-
-from beartype.door import LiteralTypeHint, TypeHint
 
 from redsun.device import PDevice
 from redsun.engine.actions import Action
@@ -166,8 +165,7 @@ def _handle_literal(
     ann: Any,
     _: cabc.Mapping[str, PDevice],
 ) -> _FieldsFromAnnotation:
-    th = TypeHint(ann)
-    choices = [str(a) for a in th.args]
+    choices = [str(a) for a in get_args(ann)]
     return _FieldsFromAnnotation(choices=choices)
 
 
@@ -247,7 +245,7 @@ _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     # 1. Literal[...] → fixed string choices (no model look-up)
     (
-        lambda ann, _: isinstance(TypeHint(ann), LiteralTypeHint),
+        lambda ann, _: get_origin(ann) is Literal,
         _handle_literal,
     ),
     # 2. Set[PDevice] / AbstractSet[PDevice] / FrozenSet[PDevice] → multi-select (set semantics)
