@@ -8,10 +8,6 @@
         - presenter
         - view
 
-::: redsun.containers.container.AppContainerMeta
-    options:
-      show_root_heading: true
-
 ::: redsun.containers.container.AppContainer
     options:
       show_root_heading: true

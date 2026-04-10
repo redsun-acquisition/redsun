@@ -103,7 +103,9 @@ def _make_singleselect_device(p: ParamDescription) -> mgw.Widget:
     return mgw.ComboBox(
         name=p.name,
         choices=choices,
-        value=p.default if p.has_default and p.default in choices else (choices[0] if choices else None),
+        value=p.default
+        if p.has_default and p.default in choices
+        else (choices[0] if choices else None),
     )
 
 

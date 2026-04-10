@@ -113,7 +113,7 @@ def my_app() -> None:
 
 The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
 
-The [`AppContainerMeta`][redsun.containers.container.AppContainerMeta] metaclass collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:
+`AppContainer.__init_subclass__` collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:
 
 - validate component types at class creation time;
 - inherit and override components from base classes;
