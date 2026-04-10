@@ -2002,7 +2002,7 @@ Each accepts the component class as its first positional argument, followed by o
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.</p>
-<p>The <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainerMeta&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainerMeta"><code>AppContainerMeta</code></a> metaclass collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:</p>
+<p><code>AppContainer.__init_subclass__</code> collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:</p>
 <ul>
 <li>validate component types at class creation time;</li>
 <li>inherit and override components from base classes;</li>
