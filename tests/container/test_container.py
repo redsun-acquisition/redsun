@@ -99,8 +99,8 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
 
-class TestAppContainerMeta:
-    """Tests for metaclass component collection."""
+class TestComponentCollection:
+    """Tests for component collection via __init_subclass__."""
 
     def test_collects_components(self) -> None:
         from mock_pkg.controller import MockController

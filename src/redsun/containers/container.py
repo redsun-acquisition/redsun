@@ -1,7 +1,7 @@
 """Application container for MVP architecture.
 
-Provides `AppContainer` and its metaclass `AppContainerMeta`
-for declarative component registration and dependency-ordered instantiation.
+Provides `AppContainer` for declarative component registration
+and dependency-ordered instantiation.
 """
 
 from __future__ import annotations
@@ -149,8 +149,6 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
 
 T = TypeVar("T")
 
-__all__ = ["AppContainerMeta", "AppContainer"]
-
 logger = logging.getLogger("redsun")
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
@@ -192,56 +190,48 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
     return ret_cls
 
 
-class AppContainerMeta(type):
-    """Metaclass that auto-collects component wrappers from class attributes."""
+class AppContainer:
+    """Application container for MVP architecture."""
 
-    _device_components: dict[str, _DeviceComponent]
-    _presenter_components: dict[str, _PresenterComponent]
-    _view_components: dict[str, _ViewComponent]
-    _config_path: Path | None
+    __slots__ = (
+        "_config",
+        "_virtual_container",
+        "_is_built",
+    )
 
-    def __new__(
-        mcs,
-        name: str,
-        bases: tuple[type, ...],
-        namespace: dict[str, Any],
+    _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
+    _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
+    _view_components: ClassVar[dict[str, _ViewComponent]] = {}
+    _config_path: ClassVar[Path | None] = None
+
+    def __init_subclass__(
+        cls,
         config: str | Path | None = None,
         **kwargs: Any,
-    ) -> AppContainerMeta:
-        """Create the class and collect component wrappers.
+    ) -> None:
+        """Collect component wrappers from class attributes.
 
         Parameters
         ----------
         config : str | Path | None
             Path to a YAML configuration file for component kwargs.
         """
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        super().__init_subclass__(**kwargs)
 
-        config_path: Path | None = None
         if config is not None:
-            config_path = Path(config)
-        else:
-            for base in bases:
-                if hasattr(base, "_config_path") and base._config_path is not None:
-                    if isinstance(base._config_path, str):
-                        config_path = Path(base._config_path)
-                    elif isinstance(base._config_path, Path):
-                        config_path = base._config_path
-                    config_path = base._config_path
-                    break
-        cls._config_path = config_path
+            cls._config_path = Path(config)
 
         devices: dict[str, _DeviceComponent] = {}
         presenters: dict[str, _PresenterComponent] = {}
         views: dict[str, _ViewComponent] = {}
 
-        for base in bases:
-            if hasattr(base, "_device_components"):
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
                 devices.update(base._device_components)
-            if hasattr(base, "_presenter_components"):
                 presenters.update(base._presenter_components)
-            if hasattr(base, "_view_components"):
                 views.update(base._view_components)
+
+        namespace = vars(cls)
 
         for attr_name, attr_value in namespace.items():
             if attr_name.startswith("_"):
@@ -262,8 +252,8 @@ class AppContainerMeta(type):
 
         if component_fields:
             config_data: dict[str, Any] = {}
-            if config_path is not None:
-                config_data = _load_yaml(config_path)
+            if cls._config_path is not None:
+                config_data = _load_yaml(cls._config_path)
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -276,7 +266,7 @@ class AppContainerMeta(type):
                 if field.from_config is not None:
                     if not config_data:
                         raise TypeError(
-                            f"Component field '{attr_name}' in {name} has "
+                            f"Component field '{attr_name}' in {cls.__name__} has "
                             f"from_config set but no config path was "
                             f"provided to the container class"
                         )
@@ -289,7 +279,7 @@ class AppContainerMeta(type):
                     if cfg_section is _sentinel:
                         logger.warning(
                             f"No config section '{field.from_config}' found in "
-                            f"'{section_key}' for component field '{attr_name}' in {name}, "
+                            f"'{section_key}' for component field '{attr_name}' in {cls.__name__}, "
                             f"using inline kwargs only"
                         )
                         kw = field.kwargs
@@ -316,27 +306,11 @@ class AppContainerMeta(type):
 
         if devices or presenters or views:
             logger.debug(
-                f"Collected from {name}: "
+                f"Collected from {cls.__name__}: "
                 f"{len(devices)} devices, "
                 f"{len(presenters)} presenters, "
                 f"{len(views)} views"
             )
-
-        return cls
-
-
-class AppContainer(metaclass=AppContainerMeta):
-    """Application container for MVP architecture."""
-
-    _device_components: ClassVar[dict[str, _DeviceComponent]]
-    _presenter_components: ClassVar[dict[str, _PresenterComponent]]
-    _view_components: ClassVar[dict[str, _ViewComponent]]
-
-    __slots__ = (
-        "_config",
-        "_virtual_container",
-        "_is_built",
-    )
 
     def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
         self._config: AppConfig = {
@@ -649,4 +623,4 @@ class AppContainer(metaclass=AppContainerMeta):
         return plugins
 
 
-__all__ = ["AppContainerMeta", "AppContainer", "Frontend"]
+__all__ = ["AppContainer", "Frontend"]
