@@ -8,11 +8,11 @@ import pytest
 
 from redsun.device import (
     AcquisitionController,
-    AcquisitionWriter,
     AttrR,
     AttrRW,
     AttrT,
     AttrW,
+    DataWriter,
     Device,
     FlyerController,
     PDevice,
@@ -111,9 +111,12 @@ class _AcquisitionControllerImpl:
     def disarm(self) -> None: ...
 
 
-class _AcquisitionWriterImpl:
+class _DataWriterImpl:
     def open(self, name: str, exposures_per_event: int = 1) -> dict[str, Any]:
         return {}
+
+    def get_indices_written(self) -> int:
+        return 0
 
     def observe_indices_written(self, timeout: float) -> Any: ...
 
@@ -306,7 +309,7 @@ def test_acquisition_controller_missing_method() -> None:
 
 
 def test_acquisition_writer_structural_compliance() -> None:
-    assert isinstance(_AcquisitionWriterImpl(), AcquisitionWriter)
+    assert isinstance(_DataWriterImpl(), DataWriter)
 
 
 def test_flyer_controller_structural_compliance() -> None:

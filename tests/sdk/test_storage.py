@@ -17,7 +17,7 @@ from redsun.storage import (
     clear_metadata,
     register_metadata,
 )
-from redsun.storage._base import FrameSink, Writer
+from redsun.storage._base import Writer
 from redsun.storage._zarr import ZarrWriter
 from redsun.storage.device import make_writer
 from redsun.storage.metadata import _registry, snapshot_metadata
@@ -51,16 +51,16 @@ class _ConcreteWriter(Writer):
     def _class_mimetype(cls) -> str:
         return "application/x-test"
 
-    def _on_prepare(self, name: str) -> None:
+    def _on_register(self, name: str) -> None:
         self._frames.setdefault(name, [])
 
-    def kickoff(self) -> None:
-        super().kickoff()
+    def _open_backend(self) -> None:
+        pass
 
     def _write_frame(self, name: str, frame: Any) -> None:
         self._frames[name].append(frame)
 
-    def _finalize(self) -> None:
+    def _close_backend(self) -> None:
         self._finalized = True
 
 
@@ -242,109 +242,121 @@ class TestWriter:
     def test_set_uri_while_open_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (4, 4))
+        w.open("cam")
         with pytest.raises(RuntimeError, match="open"):
             w.set_uri("file:///tmp/other.zarr")
 
-    def test_prepare_returns_sink(self) -> None:
+    def test_register_creates_source_info(self) -> None:
         w = self._make_writer()
-        sink = w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
-        assert isinstance(sink, FrameSink)
-        assert hasattr(sink, "write")
-        assert hasattr(sink, "close")
-
-    def test_prepare_registers_source(self) -> None:
-        w = self._make_writer()
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (512, 512))
+        w.register("cam", np.dtype("uint8"), (512, 512))
         assert "cam" in w._sources
         assert w._sources["cam"].shape == (512, 512)
 
-    def test_prepare_while_open_raises(self) -> None:
+    def test_register_while_open_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (4, 4))
+        w.open("cam")
         with pytest.raises(RuntimeError, match="open"):
-            w.prepare("cam2", "cam2-buffer_stream", np.dtype("uint8"), (4, 4))
+            w.register("cam2", np.dtype("uint8"), (4, 4))
 
-    def test_prepare_resets_counters_on_repeat(self) -> None:
+    def test_register_resets_counters_on_repeat(self) -> None:
         w = self._make_writer()
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
+        w.register("cam", np.dtype("uint8"), (4, 4))
         w._sources["cam"].frames_written = 5
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
+        w.register("cam", np.dtype("uint8"), (4, 4))
         assert w._sources["cam"].frames_written == 0
 
-    def test_kickoff_sets_open(self) -> None:
+    def test_open_without_register_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
-        w.kickoff()
+        with pytest.raises(KeyError, match="not registered"):
+            w.open("cam")
+
+    def test_open_sets_is_open(self) -> None:
+        w = self._make_writer()
+        w.set_uri("file:///tmp/test.zarr")
+        w.register("cam", np.dtype("uint8"), (4, 4))
+        w.open("cam")
         assert w.is_open
 
-    def test_kickoff_without_uri_raises(self) -> None:
+    def test_open_without_uri_raises(self) -> None:
         w = self._make_writer()
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (4, 4))
+        w.register("cam", np.dtype("uint8"), (4, 4))
         with pytest.raises(RuntimeError, match="no URI"):
-            w.kickoff()
+            w.open("cam")
 
-    def test_frame_written_via_sink(self) -> None:
+    def test_open_returns_data_key_dict(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        sink = w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        result = w.open("cam")
+        assert "cam" in result
+        assert result["cam"]["shape"] == [2, 2]
+
+    def test_open_backend_called_only_on_first_open(self) -> None:
+        """Calling open() a second time (different source) must not re-open backend."""
+        w = self._make_writer()
+        w.set_uri("file:///tmp/test.zarr")
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.register("cam2", np.dtype("uint8"), (2, 2))
+        w.open("cam")
+        assert w.is_open
+        # second open() must succeed and not raise
+        w.open("cam2")
+        assert w.is_open
+
+    def test_frame_written_via_write_frame(self) -> None:
+        w = self._make_writer()
+        w.set_uri("file:///tmp/test.zarr")
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
         frame = np.zeros((2, 2), dtype="uint8")
-        sink.write(frame)
+        w.write_frame("cam", frame)
         assert w.get_indices_written("cam") == 1
         assert w._frames["cam"][0] is frame
 
-    def test_complete_finalizes_when_last_source(self) -> None:
+    def test_close_finalizes_backend(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
-        w.complete("cam")
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
+        w.close()
         assert not w.is_open
         assert w._finalized
 
-    def test_complete_does_not_release_from_registry(self) -> None:
-        """Writer stays in registry after completion — it is long-lived."""
+    def test_close_does_not_release_from_registry(self) -> None:
+        """Writer stays in registry after close — it is long-lived."""
         w = _ConcreteWriter.get("default")
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
-        w.complete("cam")
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
+        w.close()
         key = ("default", "application/x-test")
         assert key in Writer._registry
         assert Writer._registry[key] is w
 
-    def test_complete_with_multiple_sources_only_finalizes_on_last(self) -> None:
+    def test_close_when_not_open_is_noop(self) -> None:
         w = self._make_writer()
-        w.set_uri("file:///tmp/test.zarr")
-        w.prepare("a", "a-stream", np.dtype("uint8"), (2, 2))
-        w.prepare("b", "b-stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
-        w.complete("a")
-        assert w.is_open
+        w.close()  # must not raise
         assert not w._finalized
-        w.complete("b")
-        assert not w.is_open
-        assert w._finalized
 
     def test_get_indices_written_min_across_sources(self) -> None:
         w = self._make_writer()
-        w.prepare("a", "a-stream", np.dtype("uint8"), (2, 2))
-        w.prepare("b", "b-stream", np.dtype("uint8"), (2, 2))
         w.set_uri("file:///tmp/test.zarr")
-        w.kickoff()
+        w.register("a", np.dtype("uint8"), (2, 2))
+        w.register("b", np.dtype("uint8"), (2, 2))
+        w.open("a")
+        w.open("b")
         w._sources["a"].frames_written = 1
         assert w.get_indices_written() == 0
 
     def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
         w._sources["cam"].frames_written = 3
         docs = list(w.collect_stream_docs("cam", 3))
         kinds = [d[0] for d in docs]
@@ -354,8 +366,8 @@ class TestWriter:
     def test_collect_stream_docs_mimetype_from_writer(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
         w._sources["cam"].frames_written = 1
         docs = list(w.collect_stream_docs("cam", 1))
         resource = next(d for kind, d in docs if kind == "stream_resource")
@@ -364,8 +376,8 @@ class TestWriter:
     def test_collect_stream_docs_no_duplicate_resource(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-buffer_stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
         w._sources["cam"].frames_written = 2
         docs1 = list(w.collect_stream_docs("cam", 2))
         assert any(d[0] == "stream_resource" for d in docs1)
@@ -434,29 +446,29 @@ class TestMetadataRegistry:
         clear_metadata()
         assert _registry == {}
 
-    def test_writer_snapshots_on_kickoff(self) -> None:
+    def test_writer_snapshots_on_open(self) -> None:
         register_metadata("motor", {"position": 1.5})
         w = _ConcreteWriter("default")
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
         assert w._metadata == {"motor": {"position": 1.5}}
 
-    def test_metadata_cleared_after_complete(self) -> None:
+    def test_metadata_cleared_after_close(self) -> None:
         register_metadata("motor", {"position": 1.5})
         w = _ConcreteWriter("default")
         w.set_uri("file:///tmp/test.zarr")
-        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
-        w.kickoff()
-        w.complete("cam")
+        w.register("cam", np.dtype("uint8"), (2, 2))
+        w.open("cam")
+        w.close()
         assert _registry == {}
 
-    def test_metadata_cleared_on_kickoff_uri_error(self) -> None:
+    def test_metadata_cleared_on_open_uri_error(self) -> None:
         register_metadata("motor", {"position": 1.5})
         w = _ConcreteWriter("default")
-        w.prepare("cam", "cam-stream", np.dtype("uint8"), (2, 2))
+        w.register("cam", np.dtype("uint8"), (2, 2))
         with pytest.raises(RuntimeError, match="no URI"):
-            w.kickoff()
+            w.open("cam")
         assert _registry == {}
 
 
@@ -488,20 +500,19 @@ class TestZarrWriterImportGuard:
             ZarrWriter("default")
 
 
-class TestZarrWriterKickoff:
-    def test_kickoff(self, tmp_path: Path) -> None:
+class TestZarrWriterOpen:
+    def test_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan.zarr"
         writer = ZarrWriter.get("default")
         writer.set_uri(uri)
-        writer.prepare(
+        writer.register(
             "cam",
-            "cam-buffer_stream",
             dtype=np.dtype("uint16"),
             shape=(64, 64),
             capacity=10,
         )
         with patch("redsun.storage._zarr.ZarrStream"):
-            writer.kickoff()
+            writer.open("cam")
         assert writer.is_open
 
     def test_set_uri_updates_store_path(self, tmp_path: Path) -> None:
@@ -510,16 +521,14 @@ class TestZarrWriterKickoff:
         writer.set_uri(uri)
         assert writer._stream_settings.store_path == from_uri(uri) + ".zarr"
 
-    def test_metadata_written_on_kickoff(self, tmp_path: Path) -> None:
+    def test_metadata_written_on_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan"
         writer = ZarrWriter.get("default")
         writer.set_uri(uri)
-        writer.prepare(
-            "cam", "cam-buffer_stream", dtype=np.dtype("uint16"), shape=(64, 64)
-        )
+        writer.register("cam", dtype=np.dtype("uint16"), shape=(64, 64))
         register_metadata("motor", {"position": 1.5})
         with patch("redsun.storage._zarr.ZarrStream") as mock_stream_cls:
-            writer.kickoff()
+            writer.open("cam")
             mock_stream_cls.return_value.write_custom_metadata.assert_called_once()
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -14,6 +15,8 @@ else:
 from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
+    import numpy as np
+    import numpy.typing as npt
     from bluesky.protocols import StreamAsset, SyncOrAsync, SyncOrAsyncIterator
     from event_model import DataKey
 
@@ -154,8 +157,8 @@ class AcquisitionController(Protocol):
 
 
 @runtime_checkable
-class AcquisitionWriter(Protocol):
-    """Persistence-side acquisition logic.
+class DataWriter(Protocol):
+    """Persistence-side acquisition logic for a single device.
 
     Responsible for opening storage, monitoring write progress, emitting
     stream documents, and closing storage.  Completely decoupled from
@@ -183,6 +186,10 @@ class AcquisitionWriter(Protocol):
         SyncOrAsync[dict[str, DataKey]]
             Bluesky data-key descriptors for the written datasets.
         """
+        ...
+
+    def get_indices_written(self) -> SyncOrAsync[int]:
+        """Return the number of indices written so far."""
         ...
 
     def observe_indices_written(
@@ -228,6 +235,56 @@ class AcquisitionWriter(Protocol):
 
 
 @runtime_checkable
+class MultiSourceDataWriter(DataWriter, Protocol):
+    """Persistence-side acquisition logic for a shared multi-source backend.
+
+    Extends :class:`DataWriter` with source registration and direct frame
+    writing.  Intended to be satisfied by storage backend classes (e.g.
+    ``ZarrWriter``) that accept frames from multiple devices into a single
+    store.
+
+    The wider ``get_indices_written(name=None)`` and
+    ``observe_indices_written(timeout, *, name=None)`` signatures live on
+    the concrete class; they satisfy :class:`DataWriter`'s narrower protocol
+    structurally without being redeclared here.
+    """
+
+    def register(
+        self,
+        name: str,
+        dtype: np.dtype[np.generic],
+        shape: tuple[int, ...],
+        capacity: int = 0,
+    ) -> None:
+        """Pre-register a data source before :meth:`open` is called.
+
+        Parameters
+        ----------
+        name:
+            Source name, typically the device name.
+        dtype:
+            NumPy data type of the frames.
+        shape:
+            Shape of each individual frame.
+        capacity:
+            Maximum number of frames to accept.  ``0`` means unlimited.
+        """
+        ...
+
+    def write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
+        """Push one frame for *name* to the storage backend (thread-safe).
+
+        Parameters
+        ----------
+        name:
+            Source name, as passed to :meth:`register`.
+        frame:
+            Array data to write.
+        """
+        ...
+
+
+@runtime_checkable
 class FlyerController(Protocol[T_contra]):
     """Motion-based trigger logic for fly scans.
 
@@ -265,3 +322,21 @@ class FlyerController(Protocol[T_contra]):
     def stop(self) -> SyncOrAsync[None]:
         """Abort motion and clean up."""
         ...
+
+
+@dataclass
+class PrepareInfo:
+    """Plan-time information passed to device ``prepare()`` methods.
+
+    !!! warning
+
+        These are still experimental. New fields may be added
+        or existing fields may change.
+
+    """
+
+    capacity: int = 0
+    """Number of frames to prepare for.  ``0`` means unlimited."""
+
+    write_forever: bool = False
+    """Whether the device should prepare to write indefinitely (e.g. for live streaming)."""

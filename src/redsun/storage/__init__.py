@@ -5,9 +5,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from redsun.storage._base import FrameSink, Writer
+from redsun.device._acquisition import PrepareInfo
+from redsun.storage._base import Writer
 from redsun.storage._path import (
     FilenameProvider,
     PathInfo,
@@ -16,32 +15,12 @@ from redsun.storage._path import (
 )
 from redsun.storage.metadata import clear_metadata, register_metadata
 
-
-@dataclass
-class PrepareInfo:
-    """Plan-time information passed to device ``prepare()`` methods.
-
-    !!! warning
-
-        These are still experimental. New fields may be added
-        or existing fields may change.
-
-    """
-
-    capacity: int = 0
-    """Number of frames to prepare for.  ``0`` means unlimited."""
-
-    write_forever: bool = False
-    """Whether the device should prepare to write indefinitely (e.g. for live streaming)."""
-
-
 __all__ = [
     "PathInfo",
     "FilenameProvider",
     "PathProvider",
     "SessionPathProvider",
     "register_metadata",
-    "FrameSink",
     "clear_metadata",
     "PrepareInfo",
     "Writer",
