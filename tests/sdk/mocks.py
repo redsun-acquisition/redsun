@@ -12,7 +12,7 @@ from bluesky.utils import MsgGenerator
 
 from redsun.device import Device, PDevice, SoftAttrR, SoftAttrRW
 from redsun.presenter import PPresenter
-from redsun.virtual import IsProvider, Signal, VirtualContainer
+from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 
 class MockDetector(Device):
@@ -57,7 +57,7 @@ class MockMotor(Device):
         self.z = SoftAttrRW[float](f"{name}-z", 0.0, units=step_egu)
 
 
-class MockController(PPresenter, IsProvider):
+class MockController(PPresenter, IsProvider, IsInjectable):
     """Mock controller/presenter that optionally provides dependencies."""
 
     sigBar = Signal()
