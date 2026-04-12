@@ -27,13 +27,11 @@ class MockDetector(Device):
         pixel_size: tuple[int, int, int] = (1, 1, 1),
     ) -> None:
         super().__init__(name)
-        self.sensor_size: SoftAttrR[tuple[int, int]] = SoftAttrR(
+        self.sensor_size = SoftAttrR[tuple[int, int]](
             f"{name}-sensor_size", sensor_size
         )
-        self.exposure_egu: SoftAttrR[str] = SoftAttrR(
-            f"{name}-exposure_egu", exposure_egu
-        )
-        self.pixel_size: SoftAttrR[tuple[int, int, int]] = SoftAttrR(
+        self.exposure_egu = SoftAttrR(f"{name}-exposure_egu", exposure_egu)
+        self.pixel_size = SoftAttrR[tuple[int, int, int]](
             f"{name}-pixel_size", pixel_size
         )
 
