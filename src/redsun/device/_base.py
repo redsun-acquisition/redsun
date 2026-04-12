@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from bluesky.protocols import Configurable, HasName, HasParent
 
 if TYPE_CHECKING:
-    from bluesky.protocols import Descriptor, Reading
+    from bluesky.protocols import Descriptor, Reading, SyncOrAsync
 
 
 @runtime_checkable
@@ -22,10 +22,18 @@ class Device(PDevice, abc.ABC):
     Users may subclass from this device and implement their own
     configuration properties and methods.
 
+    Subclasses that expose attributes as :class:`~redsun.device.AttrR` /
+    :class:`~redsun.device.AttrRW` signals do not need to override
+    :meth:`describe_configuration` or :meth:`read_configuration`; the
+    default implementations return empty dicts.  Subclasses that manage
+    configuration manually should override both methods.  Either sync or
+    async implementations are accepted.
+
     Parameters
     ----------
     name : str
-        Name of the device. Serves as a unique identifier for the object created from it.
+        Name of the device. Serves as a unique identifier for the object
+        created from it.
     kwargs : Any, optional
         Additional keyword arguments for device subclasses.
     """
@@ -35,33 +43,47 @@ class Device(PDevice, abc.ABC):
         self._name = name
         super().__init__(**kwargs)
 
-    @abc.abstractmethod
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        """Provide a description of the device configuration.
+    def describe_configuration(self) -> SyncOrAsync[dict[str, Descriptor]]:
+        """Return a description of the device configuration.
 
-        Subclasses should override this method to provide their own
-        configuration description compatible with the Bluesky event model.
+        The default implementation returns an empty dict, which is
+        appropriate for devices that expose configuration through typed
+        attributes (:class:`~redsun.device.AttrR` /
+        :class:`~redsun.device.AttrRW`) rather than through this method
+        directly.
 
-        Returns
-        -------
-        dict[str, Descriptor]
-            A dictionary with the description of each field of the device configuration.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        """Provide a description of the device configuration.
-
-        Subclasses should override this method to provide their own
-        configuration reading compatible with the Bluesky event model.
+        Subclasses that manage configuration manually should override
+        this method and return a dict compatible with the Bluesky event
+        model.  Both sync and async overrides are accepted.
 
         Returns
         -------
-        dict[str, Reading[Any]]
-            A dictionary with the reading of each field of the device configuration.
+        SyncOrAsync[dict[str, Descriptor]]
+            A dictionary with the descriptor of each configuration field,
+            or an awaitable that resolves to one.
         """
-        raise NotImplementedError
+        return {}
+
+    def read_configuration(self) -> SyncOrAsync[dict[str, Reading[Any]]]:
+        """Return the current values of the device configuration.
+
+        The default implementation returns an empty dict, which is
+        appropriate for devices that expose configuration through typed
+        attributes (:class:`~redsun.device.AttrR` /
+        :class:`~redsun.device.AttrRW`) rather than through this method
+        directly.
+
+        Subclasses that manage configuration manually should override
+        this method and return a dict compatible with the Bluesky event
+        model.  Both sync and async overrides are accepted.
+
+        Returns
+        -------
+        SyncOrAsync[dict[str, Reading[Any]]]
+            A dictionary with the current reading of each configuration
+            field, or an awaitable that resolves to one.
+        """
+        return {}
 
     @property
     def name(self) -> str:

@@ -1,7 +1,6 @@
 from typing import Any
 
 from attrs import define, field, setters, validators
-from bluesky.protocols import Descriptor, Reading
 
 from redsun.device import Device
 
@@ -38,12 +37,6 @@ class MockDetector(Device):
         super().__init__(name)
         self.__attrs_init__(**kwargs)
 
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        raise NotImplementedError()
-
     @property
     def parent(self) -> None:
         return None
@@ -72,12 +65,6 @@ class NonDerivedDetector:
     def __init__(self, name: str, /, **kwargs: Any) -> None:
         self._name = name
         self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        raise NotImplementedError()
 
     @property
     def parent(self) -> None:

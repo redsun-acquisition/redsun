@@ -34,12 +34,6 @@ class MyMotor(Device):
         super().__init__(name)
         self.__attrs_init__(**kwargs)
 
-    def read_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
-
     @property
     def parent(self) -> None:
         return None
@@ -59,12 +53,6 @@ class NonDerivedMotor:
     def __init__(self, name: str, /, **kwargs: Any) -> None:
         self._name = name
         self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
 
     @property
     def parent(self) -> None:
