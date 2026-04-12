@@ -1,4 +1,5 @@
 from .broken_device import BrokenDevice
+from .mock_async import MockOAMotor
 from .mock_detectors import MockDetector, MockDetectorWithStorage, NonDerivedDetector
 from .mock_motors import MyMotor, NonDerivedMotor
 
@@ -9,4 +10,5 @@ __all__ = [
     "NonDerivedMotor",
     "NonDerivedDetector",
     "BrokenDevice",
+    "MockOAMotor",
 ]

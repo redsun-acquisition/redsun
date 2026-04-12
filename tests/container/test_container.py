@@ -709,3 +709,162 @@ class TestComponentNaming:
 
         assert "detector" in TestApp._device_components
         assert "my_motor" not in TestApp._device_components
+
+
+class TestChildDevices:
+    """Tests for devices that host child sub-device attributes."""
+
+    def test_device_with_child_registers_in_container(self) -> None:
+        """A device whose __init__ creates child Device instances builds correctly."""
+        from mock_pkg.device import MyMotor
+
+        class MotorWithChild(MyMotor):
+            """Motor that owns a child axis device."""
+
+            def __init__(self, name: str, /, **kwargs: Any) -> None:
+                super().__init__(name, **kwargs)
+                # child device shares the parent name as a namespace prefix
+                self.aux = MyMotor(
+                    f"{name}-aux",
+                    axis=["A"],
+                    step_size={"A": 0.05},
+                    egu="deg",
+                )
+
+        class TestApp(AppContainer):
+            motor = device(
+                MotorWithChild,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=0,
+                floating=0.0,
+                string="parent",
+            )
+
+        app = TestApp()
+        app.build()
+        assert "motor" in app.devices
+        parent = app.devices["motor"]
+        assert parent.name == "motor"
+        # the child device is accessible as an attribute of the parent
+        assert hasattr(parent, "aux")
+        assert parent.aux.name == "motor-aux"
+
+    def test_child_device_signals_are_functional(self) -> None:
+        """Child device SoftAttr signals work independently from the parent."""
+        from mock_pkg.device import MyMotor
+
+        class MotorWithChild(MyMotor):
+            def __init__(self, name: str, /, **kwargs: Any) -> None:
+                super().__init__(name, **kwargs)
+                self.aux = MyMotor(
+                    f"{name}-aux",
+                    axis=["A"],
+                    step_size={"A": 0.05},
+                    egu="deg",
+                )
+
+        class TestApp(AppContainer):
+            stage = device(
+                MotorWithChild,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=0,
+                floating=0.0,
+                string="",
+            )
+
+        app = TestApp()
+        app.build()
+        parent = app.devices["stage"]
+        # parent step_size descriptor includes units from egu
+        parent_desc = parent.step_size.describe()
+        assert "stage-step_size" in parent_desc
+        assert parent_desc["stage-step_size"]["units"] == "mm"
+        # child step_size descriptor has its own units
+        child_desc = parent.aux.step_size.describe()
+        assert "stage-aux-step_size" in child_desc
+        assert child_desc["stage-aux-step_size"]["units"] == "deg"
+
+    def test_child_device_satisfies_pdevice(self) -> None:
+        """A child Device instance on a parent satisfies PDevice."""
+        from mock_pkg.device import MyMotor
+
+        from redsun.device import PDevice
+
+        child = MyMotor(
+            "parent-child",
+            axis=["Y"],
+            step_size={"Y": 0.2},
+            egu="um",
+            integer=0,
+            floating=0.0,
+            string="",
+        )
+        assert isinstance(child, PDevice)
+        assert child.parent is None
+        assert child.name == "parent-child"
+
+
+class TestOphyAsyncDevices:
+    """Tests for ophyd-async devices registered in the container."""
+
+    def test_oa_device_builds_in_container(self) -> None:
+        """An ophyd-async StandardReadable can be declared and built."""
+        from mock_pkg.device import MockOAMotor
+
+        class TestApp(AppContainer):
+            motor = device(MockOAMotor, units="mm")
+
+        app = TestApp()
+        app.build()
+        assert "motor" in app.devices
+        assert app.devices["motor"].name == "motor"
+
+    def test_oa_device_satisfies_pdevice(self) -> None:
+        """An ophyd-async StandardReadable satisfies PDevice structurally."""
+        from mock_pkg.device import MockOAMotor
+
+        from redsun.device import PDevice
+
+        m = MockOAMotor("oa_motor")
+        assert isinstance(m, PDevice)
+        assert m.name == "oa_motor"
+        assert m.parent is None
+
+    def test_oa_device_alias_in_container(self) -> None:
+        """The alias kwarg works for ophyd-async devices."""
+        from mock_pkg.device import MockOAMotor
+
+        class TestApp(AppContainer):
+            oa = device(MockOAMotor, alias="oa_stage", units="um")
+
+        app = TestApp()
+        app.build()
+        assert "oa_stage" in app.devices
+        assert "oa" not in app.devices
+        assert app.devices["oa_stage"].name == "oa_stage"
+
+    def test_oa_device_units_in_descriptor(self) -> None:
+        """Units are embedded in the signal descriptor, not as a separate attribute."""
+        from mock_pkg.device import MockOAMotor
+
+        m = MockOAMotor("cam", units="nm")
+        # signals carry units in their descriptor source string prefix;
+        # actual unit metadata is readable once connected
+        assert hasattr(m, "x")
+        assert hasattr(m, "y")
+        # verify there is no top-level 'units' attribute leaking
+        assert not hasattr(m, "units")
+
+    async def test_oa_device_descriptor_contains_units(self) -> None:
+        """After connecting (mock), descriptor documents contain 'units'."""
+        from mock_pkg.device import MockOAMotor
+
+        m = MockOAMotor("stage", units="mm")
+        await m.connect(mock=True)
+        desc = await m.x.describe()
+        assert "stage-x" in desc
+        assert desc["stage-x"]["units"] == "mm"

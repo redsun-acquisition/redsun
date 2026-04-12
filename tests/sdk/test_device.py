@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
 import pytest
-from bluesky.protocols import Descriptor, Reading
 
 from redsun.device import (
     AcquisitionController,
@@ -26,79 +24,30 @@ from redsun.device import (
 )
 
 # ---------------------------------------------------------------------------
-# Helpers — manual-override style (legacy approach, still supported)
+# Helpers — signal-bearing device
 # ---------------------------------------------------------------------------
 
 
-class SimpleDevice(Device):
-    """Device that manually implements configuration methods."""
-
-    def __init__(self, name: str, value: int = 42) -> None:
-        super().__init__(name)
-        self.value = value
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        return {
-            "value": {
-                "source": self.name,
-                "dtype": "integer",
-                "shape": [],
-            }
-        }
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        return {
-            "value": {
-                "value": self.value,
-                "timestamp": time.time(),
-            }
-        }
-
-
-class ComplexDevice(Device):
-    """Device with multiple manually-declared configuration fields."""
+class SignalDevice(Device):
+    """Device that exposes configuration through typed soft attributes."""
 
     def __init__(
         self,
         name: str,
-        sensor_size: tuple[int, int] = (10, 10),
-        pixel_size: tuple[float, float] = (1.0, 1.0),
+        *,
+        value: int = 42,
+        label: str = "default",
+        position: float = 0.0,
+        units: str = "mm",
     ) -> None:
         super().__init__(name)
-        self.sensor_size = sensor_size
-        self.pixel_size = pixel_size
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        return {
-            "sensor_size": {
-                "source": self.name,
-                "dtype": "array",
-                "shape": [2],
-            },
-            "pixel_size": {
-                "source": self.name,
-                "dtype": "array",
-                "shape": [2],
-                "units": "μm",
-            },
-        }
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        timestamp = time.time()
-        return {
-            "sensor_size": {
-                "value": self.sensor_size,
-                "timestamp": timestamp,
-            },
-            "pixel_size": {
-                "value": self.pixel_size,
-                "timestamp": timestamp,
-            },
-        }
+        self.value = SoftAttrRW[int](f"{name}-value", value)
+        self.label = SoftAttrR[str](f"{name}-label", label)
+        self.position = SoftAttrRW[float](f"{name}-position", position, units=units)
 
 
 class MinimalDevice(Device):
-    """Device that relies on the base-class defaults for configuration."""
+    """Device that relies entirely on base-class defaults (no signals)."""
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
@@ -184,57 +133,56 @@ class _FlyerControllerImpl:
 
 
 # ---------------------------------------------------------------------------
-# Device base class — manual override style
+# Device base class — signal-bearing style
 # ---------------------------------------------------------------------------
 
 
-def test_simple_device() -> None:
-    device = SimpleDevice("test_device")
-
+def test_signal_device_identity() -> None:
+    device = SignalDevice("cam")
     assert isinstance(device, PDevice)
-    assert device.name == "test_device"
+    assert device.name == "cam"
     assert device.parent is None
-    assert device.value == 42
-
-    descriptor = device.describe_configuration()
-    assert "value" in descriptor
-    assert descriptor["value"]["source"] == "test_device"
-    assert descriptor["value"]["dtype"] == "integer"
-    assert descriptor["value"]["shape"] == []
-
-    reading = device.read_configuration()
-    assert "value" in reading
-    assert reading["value"]["value"] == 42
-    assert isinstance(reading["value"]["timestamp"], float)
 
 
-def test_device_with_custom_value() -> None:
-    device = SimpleDevice("custom_device", value=100)
-
-    assert device.name == "custom_device"
-    assert device.value == 100
-    assert device.read_configuration()["value"]["value"] == 100
-
-
-def test_complex_device() -> None:
-    device = ComplexDevice(
-        "complex_device", sensor_size=(20, 30), pixel_size=(2.5, 2.5)
-    )
-
-    assert isinstance(device, PDevice)
-    descriptor = device.describe_configuration()
-    assert descriptor["sensor_size"]["dtype"] == "array"
-    assert descriptor["sensor_size"]["shape"] == [2]
-    assert descriptor["pixel_size"]["units"] == "μm"
-
-    reading = device.read_configuration()
-    assert reading["sensor_size"]["value"] == (20, 30)
-    assert reading["pixel_size"]["value"] == (2.5, 2.5)
+def test_signal_device_default_configuration_empty() -> None:
+    """describe_configuration and read_configuration stay empty for signal devices."""
+    device = SignalDevice("cam")
+    assert device.describe_configuration() == {}
+    assert device.read_configuration() == {}
 
 
-def test_device_protocol_compliance() -> None:
-    device = SimpleDevice("protocol_test")
+def test_signal_device_value_descriptor() -> None:
+    device = SignalDevice("cam", value=7)
+    desc = device.value.describe()
+    assert "cam-value" in desc
+    assert desc["cam-value"]["dtype"] == "integer"
+    assert desc["cam-value"]["shape"] == []
 
+
+def test_signal_device_position_descriptor_carries_units() -> None:
+    device = SignalDevice("stage", units="um")
+    desc = device.position.describe()
+    assert "stage-position" in desc
+    assert desc["stage-position"]["units"] == "um"
+
+
+def test_signal_device_value_read_write_round_trip() -> None:
+    device = SignalDevice("cam", value=1)
+    s = device.value.set(99)
+    s.wait(timeout=1.0)
+    assert s.success
+    assert device.value.get_value() == 99
+
+
+def test_signal_device_label_is_read_only() -> None:
+    """SoftAttrR does not have a set() method."""
+    device = SignalDevice("cam", label="test")
+    assert not hasattr(device.label, "set")
+    assert device.label.get_value() == "test"
+
+
+def test_signal_device_satisfies_pdevice() -> None:
+    device = SignalDevice("cam")
     assert isinstance(device, PDevice)
     assert hasattr(device, "name")
     assert hasattr(device, "parent")
@@ -242,15 +190,9 @@ def test_device_protocol_compliance() -> None:
     assert hasattr(device, "read_configuration")
 
 
-# ---------------------------------------------------------------------------
-# Device base class — default (signal-bearing) style
-# ---------------------------------------------------------------------------
-
-
 def test_minimal_device_instantiation() -> None:
-    """A Device subclass with no configuration overrides is now valid."""
+    """A Device subclass with no signals is valid."""
     device = MinimalDevice("minimal")
-
     assert isinstance(device, PDevice)
     assert device.name == "minimal"
     assert device.parent is None
@@ -259,7 +201,6 @@ def test_minimal_device_instantiation() -> None:
 def test_minimal_device_default_configuration() -> None:
     """Default describe_configuration and read_configuration return empty dicts."""
     device = MinimalDevice("minimal")
-
     assert device.describe_configuration() == {}
     assert device.read_configuration() == {}
 
@@ -389,12 +330,12 @@ def test_flyer_controller_missing_method() -> None:
 
 
 def test_soft_attr_r_satisfies_attr_r() -> None:
-    attr = SoftAttrR("device-value", 42)
+    attr = SoftAttrR[int]("device-value", 42)
     assert isinstance(attr, AttrR)
 
 
 def test_soft_attr_rw_satisfies_attr_rw() -> None:
-    attr = SoftAttrRW("device-value", 0.0)
+    attr = SoftAttrRW[float]("device-value", 0.0)
     assert isinstance(attr, AttrRW)
     assert isinstance(attr, AttrR)
     assert isinstance(attr, AttrW)
@@ -406,12 +347,12 @@ def test_soft_attr_t_satisfies_attr_t() -> None:
 
 
 def test_soft_attr_r_get_value() -> None:
-    attr = SoftAttrR("dev-x", 7)
+    attr = SoftAttrR[int]("dev-x", 7)
     assert attr.get_value() == 7
 
 
 def test_soft_attr_r_read() -> None:
-    attr = SoftAttrR("dev-x", 3.14, units="mm")
+    attr = SoftAttrR[float]("dev-x", 3.14, units="mm")
     reading = attr.read()
     assert "dev-x" in reading
     assert reading["dev-x"]["value"] == 3.14
@@ -419,7 +360,7 @@ def test_soft_attr_r_read() -> None:
 
 
 def test_soft_attr_r_describe_scalar() -> None:
-    attr = SoftAttrR("dev-x", 1.0, units="mm")
+    attr = SoftAttrR[float]("dev-x", 1.0, units="mm")
     desc = attr.describe()
     assert "dev-x" in desc
     assert desc["dev-x"]["dtype"] == "number"
@@ -429,24 +370,24 @@ def test_soft_attr_r_describe_scalar() -> None:
 
 
 def test_soft_attr_r_describe_bool() -> None:
-    attr = SoftAttrR("dev-enabled", False)
+    attr = SoftAttrR[bool]("dev-enabled", False)
     assert attr.describe()["dev-enabled"]["dtype"] == "boolean"
 
 
 def test_soft_attr_r_describe_int() -> None:
-    attr = SoftAttrR("dev-count", 0)
+    attr = SoftAttrR[int]("dev-count", 0)
     assert attr.describe()["dev-count"]["dtype"] == "integer"
 
 
 def test_soft_attr_r_describe_array() -> None:
-    attr = SoftAttrR("dev-pos", [0.0, 1.0, 2.0])
+    attr = SoftAttrR[list[float]]("dev-pos", [0.0, 1.0, 2.0])
     desc = attr.describe()["dev-pos"]
     assert desc["dtype"] == "array"
     assert desc["shape"] == [3]
 
 
 def test_soft_attr_r_subscribe_called_immediately() -> None:
-    attr = SoftAttrR("dev-x", 10)
+    attr = SoftAttrR[int]("dev-x", 10)
     received: list[Any] = []
     attr.subscribe(received.append)
     assert len(received) == 1
@@ -454,7 +395,7 @@ def test_soft_attr_r_subscribe_called_immediately() -> None:
 
 
 def test_soft_attr_r_subscribe_notified_on_change() -> None:
-    attr = SoftAttrRW("dev-x", 0)
+    attr = SoftAttrRW[int]("dev-x", 0)
     received: list[Any] = []
     attr.subscribe(received.append)
     attr.set(99)
@@ -462,7 +403,7 @@ def test_soft_attr_r_subscribe_notified_on_change() -> None:
 
 
 def test_soft_attr_r_clear_sub() -> None:
-    attr = SoftAttrRW("dev-x", 0)
+    attr = SoftAttrRW[int]("dev-x", 0)
     received: list[Any] = []
     attr.subscribe(received.append)
     attr.clear_sub(received.append)
@@ -471,7 +412,7 @@ def test_soft_attr_r_clear_sub() -> None:
 
 
 def test_soft_attr_rw_set_updates_value() -> None:
-    attr = SoftAttrRW("dev-x", 0.0)
+    attr = SoftAttrRW[float]("dev-x", 0.0)
     s = attr.set(42.0)
     s.wait(timeout=1.0)
     assert s.success
@@ -493,5 +434,166 @@ def test_soft_attr_t_trigger_calls_action() -> None:
 
 
 def test_soft_attr_r_name() -> None:
-    attr = SoftAttrR("my-device-speed", 0.0)
+    attr = SoftAttrR[float]("my-device-speed", 0.0)
     assert attr.name == "my-device-speed"
+
+
+# ---------------------------------------------------------------------------
+# Child devices
+# ---------------------------------------------------------------------------
+
+
+class AxisDevice(Device):
+    """Single-axis device used as a child in composite device tests."""
+
+    def __init__(self, name: str, *, units: str = "mm") -> None:
+        super().__init__(name)
+        self.position = SoftAttrRW[float](f"{name}-position", 0.0, units=units)
+
+
+class CompositeDevice(Device):
+    """Device that owns two child AxisDevice instances."""
+
+    def __init__(self, name: str, *, units: str = "mm") -> None:
+        super().__init__(name)
+        self.x = AxisDevice(f"{name}-x", units=units)
+        self.y = AxisDevice(f"{name}-y", units=units)
+        self.enabled = SoftAttrRW[bool](f"{name}-enabled", True)
+
+
+def test_composite_device_children_are_accessible() -> None:
+    dev = CompositeDevice("stage")
+    assert hasattr(dev, "x")
+    assert hasattr(dev, "y")
+    assert dev.x.name == "stage-x"
+    assert dev.y.name == "stage-y"
+
+
+def test_composite_device_children_satisfy_pdevice() -> None:
+    dev = CompositeDevice("stage")
+    assert isinstance(dev.x, PDevice)
+    assert isinstance(dev.y, PDevice)
+
+
+def test_composite_device_children_parent_is_none() -> None:
+    """Children created independently have parent=None (no parent link by default)."""
+    dev = CompositeDevice("stage")
+    assert dev.x.parent is None
+    assert dev.y.parent is None
+
+
+def test_composite_device_child_signals_have_descriptor_units() -> None:
+    dev = CompositeDevice("stage", units="um")
+    x_desc = dev.x.position.describe()
+    assert "stage-x-position" in x_desc
+    assert x_desc["stage-x-position"]["units"] == "um"
+
+    y_desc = dev.y.position.describe()
+    assert "stage-y-position" in y_desc
+    assert y_desc["stage-y-position"]["units"] == "um"
+
+
+def test_composite_device_child_signal_set_does_not_affect_sibling() -> None:
+    dev = CompositeDevice("stage")
+    dev.x.position.set(5.0).wait(timeout=1.0)
+    assert dev.x.position.get_value() == pytest.approx(5.0)
+    assert dev.y.position.get_value() == pytest.approx(0.0)
+
+
+def test_composite_own_attr_independent_from_children() -> None:
+    dev = CompositeDevice("stage")
+    dev.enabled.set(False).wait(timeout=1.0)
+    assert dev.enabled.get_value() is False
+    # children unaffected
+    assert dev.x.position.get_value() == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# ophyd-async devices
+# ---------------------------------------------------------------------------
+
+
+def test_oa_standard_readable_satisfies_pdevice() -> None:
+    """ophyd_async.core.StandardReadable satisfies PDevice structurally."""
+    from ophyd_async.core import StandardReadable, soft_signal_rw
+
+    class OAMotor(StandardReadable):
+        def __init__(self, name: str, /, *, units: str = "mm") -> None:
+            self.x = soft_signal_rw(float, units=units)
+            self.y = soft_signal_rw(float, units=units)
+            super().__init__(name=name)
+
+    m = OAMotor("oa_motor")
+    assert isinstance(m, PDevice)
+    assert m.name == "oa_motor"
+    assert m.parent is None
+
+
+def test_oa_device_has_no_egu_attribute() -> None:
+    """Units must come from descriptors only — no top-level egu attribute."""
+    from ophyd_async.core import StandardReadable, soft_signal_rw
+
+    class OADetector(StandardReadable):
+        def __init__(self, name: str, /, *, exposure_units: str = "ms") -> None:
+            self.exposure = soft_signal_rw(float, units=exposure_units)
+            super().__init__(name=name)
+
+    det = OADetector("cam")
+    assert not hasattr(det, "egu")
+    assert not hasattr(det, "exposure_units")
+
+
+async def test_oa_device_descriptor_carries_units() -> None:
+    """After mock-connect, signal descriptors contain the configured units."""
+    from ophyd_async.core import StandardReadable, soft_signal_rw
+
+    class OAMotor(StandardReadable):
+        def __init__(self, name: str, /, *, units: str = "mm") -> None:
+            self.x = soft_signal_rw(float, units=units)
+            super().__init__(name=name)
+
+    m = OAMotor("stage", units="um")
+    await m.connect(mock=True)
+    desc = await m.x.describe()
+    assert "stage-x" in desc
+    assert desc["stage-x"]["units"] == "um"
+
+
+async def test_oa_device_read_write_round_trip() -> None:
+    """Mock-connected soft signal supports set/get round-trip."""
+    from ophyd_async.core import StandardReadable, soft_signal_rw
+
+    class OAMotor(StandardReadable):
+        def __init__(self, name: str, /) -> None:
+            self.x = soft_signal_rw(float, units="mm")
+            super().__init__(name=name)
+
+    m = OAMotor("stage")
+    await m.connect(mock=True)
+    await m.x.set(42.0)
+    reading = await m.x.read()
+    assert reading["stage-x"]["value"] == pytest.approx(42.0)
+
+
+async def test_oa_child_device_descriptor_scoped_by_name() -> None:
+    """Child ophyd-async devices scope their signal names under the parent name."""
+    from ophyd_async.core import Device as OADevice
+    from ophyd_async.core import StandardReadable, soft_signal_rw
+
+    class OAAxis(OADevice):
+        def __init__(self, name: str = "") -> None:
+            self.position = soft_signal_rw(float, units="mm")
+            super().__init__(name=name)
+
+    class OAStage(StandardReadable):
+        def __init__(self, name: str, /) -> None:
+            self.x = OAAxis()
+            self.y = OAAxis()
+            super().__init__(name=name)
+
+    stage = OAStage("stage")
+    await stage.connect(mock=True)
+    desc = await stage.x.position.describe()
+    # ophyd-async prefixes child signal names with the parent device name
+    assert "stage-x-position" in desc
+    assert desc["stage-x-position"]["units"] == "mm"

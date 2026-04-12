@@ -22,7 +22,7 @@ models:
     serial_number: "5678"
     sensor_size: [20, 20]
     pixel_size: [2, 2, 2]
-    exposure_egu: s
+    exposure_units: s
   Single axis motor:
     plugin_name: mocks
     plugin_id: mock_motor
@@ -34,7 +34,7 @@ models:
     axes:
       - X
       - Y
-    step_egu: mm
+    units: mm
 views:
   MockWidget:
     plugin_name: mocks

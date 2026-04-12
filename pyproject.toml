@@ -47,6 +47,8 @@ dev = [
     "ophyd>=1.11.0",
     "griffe-fieldz>=0.4.0",
     "attrs>=25.4.0",
+    "ophyd-async>=0.12.3",
+    "pytest-asyncio>=1.3.0",
 ]
 docs = [
     "mike>=2.1.3",
@@ -150,6 +152,7 @@ testpaths = [
     "tests",
 ]
 addopts = "-p no:warnings"
+asyncio_mode = "auto"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",
 ]

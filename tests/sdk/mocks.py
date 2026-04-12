@@ -16,21 +16,28 @@ from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 
 class MockDetector(Device):
-    """Mock detector device using soft attributes."""
+    """Mock detector device using soft attributes.
+
+    The EGU for ``exposure`` is embedded in the descriptor document
+    (``describe()["<name>-exposure"]["units"]``), not as a separate signal.
+    """
 
     def __init__(
         self,
         name: str,
         *,
         sensor_size: tuple[int, int] = (1024, 1024),
-        exposure_egu: str = "ms",
+        exposure: float = 1.0,
+        exposure_units: str = "ms",
         pixel_size: tuple[int, int, int] = (1, 1, 1),
     ) -> None:
         super().__init__(name)
         self.sensor_size = SoftAttrR[tuple[int, int]](
             f"{name}-sensor_size", sensor_size
         )
-        self.exposure_egu = SoftAttrR(f"{name}-exposure_egu", exposure_egu)
+        self.exposure = SoftAttrRW[float](
+            f"{name}-exposure", exposure, units=exposure_units
+        )
         self.pixel_size = SoftAttrR[tuple[int, int, int]](
             f"{name}-pixel_size", pixel_size
         )
@@ -39,22 +46,39 @@ class MockDetector(Device):
 class MockMotor(Device):
     """Mock motor device with per-axis soft attributes.
 
-    Each axis (x, y, z) is an independent read-write attribute component,
-    reflecting the design principle that axes are first-class signal objects
-    rather than items in a list.
+    Each axis (x, y, z) is an independent read-write attribute component.
+    The EGU is embedded in each axis descriptor (``units`` field) rather
+    than exposed as a separate signal.
     """
 
     def __init__(
         self,
         name: str,
         *,
-        step_egu: str = "μm",
+        units: str = "μm",
     ) -> None:
         super().__init__(name)
-        self.step_egu: SoftAttrR = SoftAttrR[str](f"{name}-step_egu", step_egu)
-        self.x = SoftAttrRW[float](f"{name}-x", 0.0, units=step_egu)
-        self.y = SoftAttrRW[float](f"{name}-y", 0.0, units=step_egu)
-        self.z = SoftAttrRW[float](f"{name}-z", 0.0, units=step_egu)
+        self.x = SoftAttrRW[float](f"{name}-x", 0.0, units=units)
+        self.y = SoftAttrRW[float](f"{name}-y", 0.0, units=units)
+        self.z = SoftAttrRW[float](f"{name}-z", 0.0, units=units)
+
+
+class MockDeviceWithChild(Device):
+    """Mock device that owns a child :class:`MockMotor`.
+
+    Used to verify that devices hosting sub-device attributes behave
+    correctly inside the container and plan-spec machinery.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        units: str = "μm",
+    ) -> None:
+        super().__init__(name)
+        self.stage = MockMotor(f"{name}-stage", units=units)
+        self.enabled = SoftAttrRW[bool](f"{name}-enabled", True)
 
 
 class MockController(PPresenter, IsProvider, IsInjectable):
@@ -88,4 +112,4 @@ class MockController(PPresenter, IsProvider, IsInjectable):
 
 
 mock_detector = MockDetector("detector", sensor_size=(1024, 1024))
-mock_motor = MockMotor("motor", step_egu="μm")
+mock_motor = MockMotor("motor", units="μm")
