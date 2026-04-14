@@ -1,15 +1,22 @@
 """General-purpose utilities for redsun.
 
-Currently exposes `find_signals`, a helper for locating named signals
-in a `VirtualContainer` without needing to know the owner's instance name.
+Exposes:
+- `find_signals` — locate named signals in a `VirtualContainer`.
+- `resolve_sync_or_async` — resolve a ``SyncOrAsync[T]`` value to ``T``.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import asyncio
+import inspect
+from typing import TYPE_CHECKING, TypeVar, cast
+
+from redsun.engine import get_shared_loop
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Coroutine, Iterable
+    from concurrent.futures import Future
+    from typing import Any
 
     from psygnal import SignalInstance
 
@@ -17,7 +24,11 @@ if TYPE_CHECKING:
 
 __all__ = [
     "find_signals",
+    "resolve_sync_or_async",
 ]
+
+
+T = TypeVar("T")
 
 
 def find_signals(
@@ -54,3 +65,27 @@ def find_signals(
         if not remaining:
             break
     return result
+
+
+def resolve_sync_or_async(value: T | Coroutine[Any, Any, T]) -> T:
+    """Resolve a ``SyncOrAsync[T]`` value to its concrete ``T``.
+
+    If *value* is not a coroutine it is returned directly. If it is,
+    it will submitted to the global shared event loop running
+    in a background thread.
+
+    Parameters
+    ----------
+    value :
+        Either a plain value ``T`` or an ``Awaitable[T]``.
+
+    Returns
+    -------
+    T
+        The resolved value.
+    """
+    if inspect.iscoroutine(value):
+        loop = get_shared_loop()
+        future: Future[T] = asyncio.run_coroutine_threadsafe(value, loop)
+        return future.result()
+    return cast("T", value)
