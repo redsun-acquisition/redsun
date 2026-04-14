@@ -19,12 +19,12 @@ T_contra = TypeVar("T_contra", contravariant=True)
 class AttrR(Readable[T], Subscribable[T], Protocol[T]):
     """Read-only device attribute.
 
-    Composes :class:`~bluesky.protocols.Readable` and
-    :class:`~bluesky.protocols.Subscribable` with a convenience
-    :meth:`get_value` for direct value access without unpacking a
-    reading dictionary.
+    Composes [`Readable`][bluesky.protocols.Readable] and
+    [`Subscribable`][bluesky.protocols.Subscribable] with a convenience
+    [`get_value`][] for direct value access without unpacking a reading
+    dictionary.
 
-    Structurally compatible with ``ophyd_async.core.SignalR``.
+    Structurally compatible with `ophyd_async.core.SignalR`.
     """
 
     def get_value(self) -> SyncOrAsync[T]:
@@ -43,7 +43,7 @@ class AttrR(Readable[T], Subscribable[T], Protocol[T]):
 class AttrW(HasName, Movable[T_contra], Protocol[T_contra]):
     """Write-only device attribute.
 
-    Structurally compatible with ``ophyd_async.core.SignalW``.
+    Structurally compatible with `ophyd_async.core.SignalW`.
     """
 
 
@@ -51,7 +51,7 @@ class AttrW(HasName, Movable[T_contra], Protocol[T_contra]):
 class AttrRW(AttrR[T], AttrW[T], Protocol[T]):
     """Read-write device attribute.
 
-    Structurally compatible with ``ophyd_async.core.SignalRW``.
+    Structurally compatible with `ophyd_async.core.SignalRW`.
     """
 
 
@@ -62,5 +62,5 @@ class AttrT(HasName, Triggerable, Protocol):
     An executable attribute that fires a discrete action on the device
     and returns a status object tracking its completion.
 
-    Structurally compatible with ``ophyd_async.core.SignalX``.
+    Structurally compatible with `ophyd_async.core.SignalX`.
     """
