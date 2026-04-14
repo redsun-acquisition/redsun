@@ -2036,7 +2036,6 @@ zarr = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "attrs" },
     { name = "griffe-fieldz" },
     { name = "mypy" },
     { name = "ophyd" },
@@ -2077,7 +2076,6 @@ provides-extras = ["pyqt", "pyside", "zarr"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "attrs", specifier = ">=25.4.0" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
     { name = "mypy", specifier = ">=1.20.0" },
     { name = "ophyd", specifier = ">=1.11.0" },

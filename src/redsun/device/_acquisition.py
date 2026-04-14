@@ -252,11 +252,18 @@ class ControllableDataWriter(DataWriter, Protocol):
     devices into a single store and whose write location can be set by a
     presenter before each acquisition.
 
-    The wider ``get_indices_written(name=None)`` and
-    ``observe_indices_written(timeout, *, name=None)`` signatures live on
-    the concrete class; they satisfy [`DataWriter`][redsun.device.DataWriter]'s
-    narrower protocol structurally without being redeclared here.
+    The wider ``get_indices_written(name=None)`` signature takes an optional
+    *name* argument identifying which source to query (the narrower
+    [`DataWriter`][redsun.device.DataWriter] protocol does not accept it, but
+    multi-source backends need it).
     """
+
+    def get_indices_written(
+        self,
+        name: str | None = None,
+    ) -> SyncOrAsync[int]:
+        """Return the number of indices written for *name* (or globally if ``None``)."""
+        ...
 
     def register(
         self,

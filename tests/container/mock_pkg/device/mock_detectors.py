@@ -1,9 +1,8 @@
-from attrs import define, setters
+from __future__ import annotations
 
 from redsun.device import Device, SoftAttrR, SoftAttrRW
 
 
-@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
 class MockDetector(Device):
     """Mock detector device.
 
@@ -12,13 +11,6 @@ class MockDetector(Device):
     is embedded in its descriptor (``units`` field) rather than exposed as a
     separate signal.
     """
-
-    exposure: SoftAttrRW[float]
-    sensor_shape: SoftAttrR[tuple[int, int]]
-    pixel_size: SoftAttrR[tuple[float, float, float]]
-    integer: SoftAttrRW[int]
-    floating: SoftAttrRW[float]
-    string: SoftAttrRW[str]
 
     def __init__(
         self,
@@ -34,21 +26,18 @@ class MockDetector(Device):
         string: str = "",
     ) -> None:
         super().__init__(name)
-        self.__attrs_init__(
-            exposure=SoftAttrRW[float](exposure, units=egu),
-            sensor_shape=SoftAttrR[tuple[int, int]](
-                tuple(sensor_shape),  # type: ignore[arg-type]
-            ),
-            pixel_size=SoftAttrR[tuple[float, float, float]](
-                tuple(pixel_size),  # type: ignore[arg-type]
-            ),
-            integer=SoftAttrRW[int](integer),
-            floating=SoftAttrRW[float](floating),
-            string=SoftAttrRW[str](string),
+        self.exposure = SoftAttrRW[float](exposure, units=egu)
+        self.sensor_shape = SoftAttrR[tuple[int, int]](
+            tuple(sensor_shape),  # type: ignore[arg-type]
         )
+        self.pixel_size = SoftAttrR[tuple[float, float, float]](
+            tuple(pixel_size),  # type: ignore[arg-type]
+        )
+        self.integer = SoftAttrRW[int](integer)
+        self.floating = SoftAttrRW[float](floating)
+        self.string = SoftAttrRW[str](string)
 
 
-@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
 class MockDetectorWithStorage(MockDetector):
     """Mock detector that declares storage capability via ``storage_info()``."""
 
@@ -56,16 +45,12 @@ class MockDetectorWithStorage(MockDetector):
         super().__init__(name, **kwargs)
 
 
-@define(kw_only=True, slots=False)
 class NonDerivedDetector:
-    """Mock non-derived detector for structural protocol testing."""
+    """Mock non-derived detector for structural protocol testing.
 
-    exposure: SoftAttrRW[float]
-    sensor_shape: SoftAttrR[tuple[int, int]]
-    pixel_size: SoftAttrR[tuple[float, float, float]]
-    integer: SoftAttrRW[int]
-    floating: SoftAttrRW[float]
-    string: SoftAttrRW[str]
+    Not a [`Device`][redsun.device.Device] subclass — used to verify that
+    structural protocols are satisfied purely by duck typing.
+    """
 
     def __init__(
         self,
@@ -81,20 +66,18 @@ class NonDerivedDetector:
         string: str = "",
     ) -> None:
         self._name = name
-        self.__attrs_init__(
-            exposure=SoftAttrRW[float](exposure, name=f"{name}-exposure", units=egu),
-            sensor_shape=SoftAttrR[tuple[int, int]](
-                tuple(sensor_shape),  # type: ignore[arg-type]
-                name=f"{name}-sensor_shape",
-            ),
-            pixel_size=SoftAttrR[tuple[float, float, float]](
-                tuple(pixel_size),  # type: ignore[arg-type]
-                name=f"{name}-pixel_size",
-            ),
-            integer=SoftAttrRW[int](integer, name=f"{name}-integer"),
-            floating=SoftAttrRW[float](floating, name=f"{name}-floating"),
-            string=SoftAttrRW[str](string, name=f"{name}-string"),
+        self.exposure = SoftAttrRW[float](exposure, name=f"{name}-exposure", units=egu)
+        self.sensor_shape = SoftAttrR[tuple[int, int]](
+            tuple(sensor_shape),  # type: ignore[arg-type]
+            name=f"{name}-sensor_shape",
         )
+        self.pixel_size = SoftAttrR[tuple[float, float, float]](
+            tuple(pixel_size),  # type: ignore[arg-type]
+            name=f"{name}-pixel_size",
+        )
+        self.integer = SoftAttrRW[int](integer, name=f"{name}-integer")
+        self.floating = SoftAttrRW[float](floating, name=f"{name}-floating")
+        self.string = SoftAttrRW[str](string, name=f"{name}-string")
 
     @property
     def parent(self) -> None:

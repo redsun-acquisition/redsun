@@ -27,14 +27,19 @@ class HasWriterLogic(Protocol):
     """
 
     @property
-    def writer_logic(self) -> DataWriter:
-        """Return the writer logic associated with this device.
+    def writer_logic(self) -> DataWriter | None:
+        """Return the writer logic associated with this device, or ``None``.
+
+        ``None`` indicates the writer has not yet been injected (e.g. in
+        headless or test scenarios).  Callers should check for ``None``
+        before using the writer.
 
         Returns
         -------
-        DataWriter
-            The storage writer paired with this device.  May implement the
-            richer [`ControllableDataWriter`][redsun.device.ControllableDataWriter]
+        DataWriter | None
+            The storage writer paired with this device, or ``None``.  May
+            implement the richer
+            [`ControllableDataWriter`][redsun.device.ControllableDataWriter]
             interface if the backend supports multi-source writes.
         """
         ...
