@@ -13,17 +13,20 @@ intended for:
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar
 
 from redsun.engine import Status
 from redsun.utils.descriptors import make_reading
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from bluesky.protocols import Descriptor, Reading
+    from event_model.documents import Dtype
 
 T = TypeVar("T")
 
-_DTYPE_MAP: dict[type, _DType] = {
+_DTYPE_MAP: dict[type, Dtype] = {
     bool: "boolean",
     int: "integer",
     float: "number",
@@ -31,7 +34,7 @@ _DTYPE_MAP: dict[type, _DType] = {
 }
 
 
-def _infer_dtype(value: Any) -> _DType:
+def _infer_dtype(value: Any) -> Dtype:
     """Infer a bluesky dtype string from a Python value."""
     # bool must be checked before int because bool is a subclass of int.
     for py_type, dtype in _DTYPE_MAP.items():
