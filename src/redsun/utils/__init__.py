@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from redsun.engine import get_shared_loop
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Iterable
+    from collections.abc import Awaitable, Iterable
     from concurrent.futures import Future
-    from typing import Any
 
     from psygnal import SignalInstance
 
@@ -67,17 +66,21 @@ def find_signals(
     return result
 
 
-def resolve_sync_or_async(value: T | Coroutine[Any, Any, T]) -> T:
+@overload
+def resolve_sync_or_async(value: Awaitable[T]) -> T: ...
+@overload
+def resolve_sync_or_async(value: T) -> T: ...
+def resolve_sync_or_async(value: Any) -> Any:
     """Resolve a ``SyncOrAsync[T]`` value to its concrete ``T``.
 
     If *value* is not a coroutine it is returned directly. If it is,
-    it will submitted to the global shared event loop running
+    it will be submitted to the global shared event loop running
     in a background thread.
 
     Parameters
     ----------
     value :
-        Either a plain value ``T`` or an ``Awaitable[T]``.
+        Either a plain value ``T`` or a ``Coroutine[Any, Any, T]``.
 
     Returns
     -------
@@ -86,6 +89,6 @@ def resolve_sync_or_async(value: T | Coroutine[Any, Any, T]) -> T:
     """
     if inspect.iscoroutine(value):
         loop = get_shared_loop()
-        future: Future[T] = asyncio.run_coroutine_threadsafe(value, loop)
+        future: Future[Any] = asyncio.run_coroutine_threadsafe(value, loop)
         return future.result()
-    return cast("T", value)
+    return value
