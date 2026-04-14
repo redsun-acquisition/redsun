@@ -20,6 +20,18 @@ Dates are specified in the format `DD-MM-YYYY`.
   by the parent device on attribute assignment.
 - `PDevice.set_name()` — added to the minimal device protocol; structurally compatible with
   `ophyd_async.core.Device`.
+- `HasChildren` — `@runtime_checkable` structural protocol for objects that expose a
+  `children()` iterator; satisfied by `Device` and any ophyd-async device that provides
+  the same method.
+- `get_shared_loop()` (`redsun.engine`) — returns the single `asyncio` event loop created
+  at module import time. All `RunEngine` instances use it by default; presenters and other
+  sync-context components can call `asyncio.run_coroutine_threadsafe(coro, get_shared_loop())`
+  to schedule coroutines onto the running engine loop.
+- `DescriptorTreeView` grouped constructor form — accepts a `groups` argument of type
+  `list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]` built by the presenter
+  layer. When provided, the tree groups rows by device name (one header per device, leaf
+  labels strip the device-name prefix) instead of the `source` field prefix used by the flat
+  `(descriptors, readings)` form.
 
 ### Changed
 
