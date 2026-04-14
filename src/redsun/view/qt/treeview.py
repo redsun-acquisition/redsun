@@ -65,17 +65,17 @@ def _make_value_widget(
 
     Parameters
     ----------
-    key:
+    key : str
         Canonical ``name-property`` key (used when emitting changes).
-    descriptor:
+    descriptor : Descriptor
         Bluesky descriptor for this setting.
-    initial_value:
+    initial_value : Any
         Current reading value.
-    on_changed:
-        Callable ``(key, value) -> None`` invoked when the user commits a change.
-    readonly:
+    on_changed : Callable[[str, Any], None]
+        Callable invoked when the user commits a change.
+    readonly : bool
         If ``True``, return a plain greyed label.
-    parent:
+    parent : QtWidgets.QWidget
         Qt parent for the created widget.
     """
     if readonly or descriptor.get("dtype") == "array":
@@ -181,7 +181,17 @@ def _set_label_text(
     value: Any,
     descriptor: Descriptor,
 ) -> None:
-    """Update *label* text with value + optional unit suffix."""
+    """Update *label* text with value + optional unit suffix.
+
+    Parameters
+    ----------
+    label : QtWidgets.QLabel
+        Label widget to update.
+    value : Any
+        New value to display.
+    descriptor : Descriptor
+        Bluesky descriptor; ``units`` is read from it when present.
+    """
     units: str = (descriptor.get("units", "") or "") if descriptor else ""
     suffix = f" {units}" if units else ""
     if isinstance(value, (list, tuple)):
@@ -193,7 +203,17 @@ def _set_label_text(
 def _update_widget_value(
     widget: QtWidgets.QWidget, value: Any, descriptor: Descriptor
 ) -> None:
-    """Push a new *value* into an existing editor/display widget without re-emitting."""
+    """Push a new *value* into an existing editor/display widget without re-emitting.
+
+    Parameters
+    ----------
+    widget : QtWidgets.QWidget
+        The editor or display widget to update.
+    value : Any
+        New value to display or set.
+    descriptor : Descriptor
+        Bluesky descriptor for this setting.
+    """
     if isinstance(widget, QtWidgets.QLabel):
         _set_label_text(widget, value, descriptor)
     elif isinstance(widget, QtWidgets.QSpinBox):
@@ -232,31 +252,45 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
     The device-name root level is omitted — use one widget per device,
     e.g. inside a ``QTabWidget``.
 
-    Example
-    -------
+    Two construction forms are supported:
+
+    **Flat form** — a single device's pre-resolved dicts, grouped by the
+    ``source`` field prefix of each descriptor:
 
     ```python
-        view = DescriptorTreeView(
-            device.describe_configuration(),
-            device.read_configuration(),
-            parent,
-        )
-        view.sigPropertyChanged.connect(on_property_changed)
+    view = DescriptorTreeView(
+        device.describe_configuration(),
+        device.read_configuration(),
+        parent,
+    )
+    ```
+
+    **Grouped form** — data collected from a device tree by the presenter
+    layer, one tuple per device; groups tree rows by device name rather
+    than source prefix:
+
+    ```python
+    groups = [
+        ("stage-x", stage.x.describe_configuration(), stage.x.read_configuration()),
+        ("stage-y", stage.y.describe_configuration(), stage.y.read_configuration()),
+    ]
+    view = DescriptorTreeView(groups, parent)
     ```
 
     Parameters
     ----------
-    descriptors: dict[str, Descriptor]
-        Flat ``describe_configuration()`` dict keyed by
-        ``name-property`` canonical keys.
-    readings: dict[str, Reading[Any]]
-        Flat ``read_configuration()`` dict matching the same keys.
-    parent: QtWidgets.QWidget | None
-        Optional parent widget.
+    descriptors_or_groups : dict[str, Descriptor] or list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]
+        Either a flat descriptor dict (first form) or a list of
+        ``(device_name, descriptors, readings)`` tuples (second form).
+    readings_or_parent : dict[str, Reading[Any]] or QtWidgets.QWidget or None
+        Flat reading dict when using the first form; optional parent
+        widget when using the second form.
+    parent : QtWidgets.QWidget, optional
+        Optional parent widget (first form only).
 
     Signals
     -------
-    sigPropertyChanged: Signal[str, Any]
+    sigPropertyChanged : Signal[str, Any]
         Emitted when the user commits an edit.
         Carries ``(key: str, value: Any)``.
     """
@@ -265,16 +299,36 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
     def __init__(
         self,
-        descriptors: dict[str, Descriptor],
-        readings: dict[str, Reading[Any]],
+        descriptors: dict[str, Descriptor] | None = None,
+        readings: dict[str, Reading[Any]] | None = None,
+        groups: list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]
+        | None = None,
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
-        self._descriptors = descriptors
+        if groups is not None:
+            # grouped form: [(device_name, descriptors, readings), ...]
+            _descriptors: dict[str, Descriptor] = {}
+            _readings: dict[str, Reading[Any]] = {}
+            group_keys: list[tuple[str, list[str]]] = []
+            for dev_name, desc, read in groups:
+                _descriptors.update(desc)
+                _readings.update(read)
+                if desc:
+                    group_keys.append((dev_name, list(desc.keys())))
+            self._groups: list[tuple[str, list[str]]] | None = group_keys
+            descriptors = _descriptors
+            readings = _readings
+        else:
+            # flat form: (descriptors, readings)
+            descriptors = descriptors or {}
+            readings = readings or {}
+            self._groups = None
+
+        self._descriptors: dict[str, Descriptor] = descriptors
         self._readings: dict[str, Any] = {k: v["value"] for k, v in readings.items()}
-        self._pending: dict[str, Any] = {}  # key -> old value
-        # key -> the widget embedded in the Value column
+        self._pending: dict[str, Any] = {}
         self._widgets: dict[str, QtWidgets.QWidget] = {}
 
         self.setColumnCount(2)
@@ -302,9 +356,9 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
         Parameters
         ----------
-        key:
+        key : str
             Canonical ``name-property`` key.
-        reading:
+        reading : Reading[Any]
             New reading dict; only ``reading["value"]`` is used.
         """
         value = reading["value"]
@@ -320,9 +374,9 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
         Parameters
         ----------
-        key:
+        key : str
             Canonical key of the setting that was attempted.
-        success:
+        success : bool
             ``True`` → keep the new value; ``False`` → revert to the
             pre-edit value and refresh the widget.
         """
@@ -347,71 +401,104 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._readings[key] = value
         self.sigPropertyChanged.emit(key, value)
 
+    def _add_leaf(
+        self,
+        group_item: QtWidgets.QTreeWidgetItem,
+        full_key: str,
+        prop: str,
+        desc: Descriptor,
+        readonly: bool,
+    ) -> None:
+        """Append one leaf row (setting + value widget) to *group_item*."""
+        child = QtWidgets.QTreeWidgetItem()
+        child.setText(0, prop)
+        child.setTextAlignment(
+            0,
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
+        )
+        tip_parts = [f"dtype: {desc.get('dtype', '?')}"]
+        if "units" in desc:
+            tip_parts.append(f"units: {desc['units']}")
+        if readonly:
+            tip_parts.append("(read-only)")
+        tip = " | ".join(tip_parts)
+        child.setToolTip(0, tip)
+        child.setToolTip(1, tip)
+        group_item.addChild(child)
+        initial = self._readings.get(full_key)
+        widget = _make_value_widget(
+            full_key, desc, initial, self._on_changed, readonly, self
+        )
+        self.setItemWidget(child, 1, widget)
+        self._widgets[full_key] = widget
+
+    def _make_group_item(self, label: str) -> QtWidgets.QTreeWidgetItem:
+        """Create and register a bold top-level group header item."""
+        item = QtWidgets.QTreeWidgetItem([label])
+        item.setFirstColumnSpanned(True)
+        font = item.font(0)
+        font.setBold(True)
+        item.setFont(0, font)
+        item.setExpanded(True)
+        self.addTopLevelItem(item)
+        return item
+
     def _build(self) -> None:
         """Populate the tree from ``self._descriptors`` and ``self._readings``.
 
-        Groups descriptors by ``source`` (stripping the optional
-        ``:readonly`` suffix), then creates one bold top-level
-        ``QTreeWidgetItem`` per group and one child item per setting.
+        Delegates to :meth:`_build_from_groups` when device-name groups are
+        available (set by :meth:`from_device`), otherwise falls back to
+        :meth:`_build_from_sources` which groups by the ``source`` field
+        prefix of each descriptor.
         """
         self.clear()
         self._widgets.clear()
+        if self._groups is not None:
+            self._build_from_groups()
+        else:
+            self._build_from_sources()
+        self.expandAll()
+        self.resizeColumnToContents(0)
 
-        # group by source: source -> [(full_key, prop_name, descriptor, readonly)]
+    def _build_from_groups(self) -> None:
+        """Build tree with one top-level group per device name.
+
+        Used when the tree was constructed via :meth:`from_device`.
+        The group label is the device's :attr:`~redsun.device.Device.name`;
+        the leaf label strips that name prefix from the full key so only the
+        bare property name is shown (e.g. ``stage-x-position`` → ``position``
+        under the ``Stage X`` group).
+        """
+        assert self._groups is not None
+        for device_name, keys in self._groups:
+            label = device_name.replace("-", " ").title()
+            group_item = self._make_group_item(label)
+            prefix = f"{device_name}-"
+            for full_key in keys:
+                desc = self._descriptors[full_key]
+                prop = (
+                    full_key[len(prefix) :] if full_key.startswith(prefix) else full_key
+                )
+                source_raw: str = desc.get("source", "")
+                readonly = ":readonly" in source_raw
+                self._add_leaf(group_item, full_key, prop, desc, readonly)
+
+    def _build_from_sources(self) -> None:
+        """Build tree grouped by the ``source`` field prefix of each descriptor.
+
+        This is the legacy path used when :meth:`__init__` is called directly
+        with pre-built flat dicts rather than via :meth:`from_device`.
+        """
         groups: dict[str, list[tuple[str, str, Descriptor, bool]]] = {}
         for full_key, desc in self._descriptors.items():
-            # strip the device prefix  (name\\property → prop)
             prop = full_key.split("-", 1)[-1] if "-" in full_key else full_key
-
             source_raw: str = desc.get("source", "unknown")
             parts = source_raw.split(":", 1)
             source = parts[0]
             readonly = len(parts) > 1 and parts[1] == "readonly"
-
             groups.setdefault(source, []).append((full_key, prop, desc, readonly))
 
         for source, leaves in groups.items():
-            # --- group header row ---
-            group_item = QtWidgets.QTreeWidgetItem([source.title()])
-            group_item.setFirstColumnSpanned(True)
-            font = group_item.font(0)
-            font.setBold(True)
-            group_item.setFont(0, font)
-            group_item.setExpanded(True)
-            self.addTopLevelItem(group_item)
-
-            # --- leaf rows ---
+            group_item = self._make_group_item(source.title())
             for full_key, prop, desc, readonly in leaves:
-                child = QtWidgets.QTreeWidgetItem()
-                child.setText(0, prop)
-                child.setTextAlignment(
-                    0,
-                    QtCore.Qt.AlignmentFlag.AlignLeft
-                    | QtCore.Qt.AlignmentFlag.AlignVCenter,
-                )
-                # tooltip
-                tip_parts = [f"dtype: {desc.get('dtype', '?')}"]
-                if "units" in desc:
-                    tip_parts.append(f"units: {desc['units']}")
-                if readonly:
-                    tip_parts.append("(read-only)")
-                child.setToolTip(0, " | ".join(tip_parts))
-                child.setToolTip(1, " | ".join(tip_parts))
-
-                group_item.addChild(child)
-
-                # build the value widget
-                initial = self._readings.get(full_key)
-                widget = _make_value_widget(
-                    full_key,
-                    desc,
-                    initial,
-                    self._on_changed,
-                    readonly,
-                    self,
-                )
-                self.setItemWidget(child, 1, widget)
-                self._widgets[full_key] = widget
-
-        self.expandAll()
-        self.resizeColumnToContents(0)
+                self._add_leaf(group_item, full_key, prop, desc, readonly)
