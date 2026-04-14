@@ -1,3 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# The protocols in this file are structurally inspired by ophyd-async
+# (https://github.com/bluesky/ophyd-async, SPDX-License-Identifier: BSD-3-Clause),
+# developed by the Bluesky collaboration.
+# In particular: DataWriter mirrors DetectorWriter, AcquisitionController mirrors
+# DetectorController, FlyerController mirrors FlyerController, and TriggerInfo /
+# TriggerType mirror their ophyd-async equivalents.
+
 from __future__ import annotations
 
 import sys
@@ -235,13 +243,14 @@ class DataWriter(Protocol):
 
 
 @runtime_checkable
-class MultiSourceDataWriter(DataWriter, Protocol):
+class ControllableDataWriter(DataWriter, Protocol):
     """Persistence-side acquisition logic for a shared multi-source backend.
 
-    Extends :class:`DataWriter` with source registration and direct frame
-    writing.  Intended to be satisfied by storage backend classes (e.g.
-    ``ZarrWriter``) that accept frames from multiple devices into a single
-    store.
+    Extends :class:`DataWriter` with source registration, direct frame
+    writing, and URI configuration.  Intended to be satisfied by storage
+    backend classes (e.g. ``ZarrWriter``) that accept frames from multiple
+    devices into a single store and whose write location can be set by a
+    presenter before each acquisition.
 
     The wider ``get_indices_written(name=None)`` and
     ``observe_indices_written(timeout, *, name=None)`` signatures live on
@@ -280,6 +289,19 @@ class MultiSourceDataWriter(DataWriter, Protocol):
             Source name, as passed to :meth:`register`.
         frame:
             Array data to write.
+        """
+        ...
+
+    def set_uri(self, uri: str) -> None:
+        """Update the store URI for the next acquisition.
+
+        Called by a presenter before the plan starts to set the write
+        location.  Must be called before :meth:`open`.
+
+        Parameters
+        ----------
+        uri:
+            New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
         """
         ...
 

@@ -6,7 +6,6 @@ import json
 from typing import TYPE_CHECKING
 
 from redsun.storage._base import Writer
-from redsun.storage.metadata import clear_metadata
 from redsun.storage.utils import from_uri
 
 try:
@@ -148,7 +147,6 @@ class ZarrWriter(Writer):
                 self._stream.write_custom_metadata(flatten_md, overwrite=True)
         except Exception as e:
             self._is_open = False
-            clear_metadata()
             raise e
 
     def _close_backend(self) -> None:

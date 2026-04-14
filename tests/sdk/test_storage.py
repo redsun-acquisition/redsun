@@ -10,28 +10,18 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+from redsun.device import ControllableDataWriter
 from redsun.storage import (
+    HasMetadata,
+    HasWriterLogic,
     PathInfo,
     PrepareInfo,
     SessionPathProvider,
-    clear_metadata,
-    register_metadata,
+    handle_descriptor_metadata,
 )
 from redsun.storage._base import Writer
 from redsun.storage._zarr import ZarrWriter
-from redsun.storage.device import make_writer
-from redsun.storage.metadata import _registry, snapshot_metadata
 from redsun.storage.utils import from_uri
-
-
-@pytest.fixture(autouse=True)
-def clean_registry():
-    """Clear the Writer registry and metadata registry before and after each test."""
-    Writer._registry.clear()
-    clear_metadata()
-    yield
-    Writer._registry.clear()
-    clear_metadata()
 
 
 @pytest.fixture
@@ -326,17 +316,6 @@ class TestWriter:
         assert not w.is_open
         assert w._finalized
 
-    def test_close_does_not_release_from_registry(self) -> None:
-        """Writer stays in registry after close — it is long-lived."""
-        w = _ConcreteWriter.get("default")
-        w.set_uri("file:///tmp/test.zarr")
-        w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
-        w.close()
-        key = ("default", "application/x-test")
-        assert key in Writer._registry
-        assert Writer._registry[key] is w
-
     def test_close_when_not_open_is_noop(self) -> None:
         w = self._make_writer()
         w.close()  # must not raise
@@ -386,90 +365,140 @@ class TestWriter:
         assert not any(d[0] == "stream_resource" for d in docs2)
 
 
-class TestWriterRegistry:
-    def test_get_returns_same_instance(self) -> None:
-        w1 = _ConcreteWriter.get("default")
-        w2 = _ConcreteWriter.get("default")
-        assert w1 is w2
+class TestWriterMetadata:
+    def _make_writer(self) -> _ConcreteWriter:
+        return _ConcreteWriter()
 
-    def test_different_names_return_different_instances(self) -> None:
-        w1 = _ConcreteWriter.get("default")
-        w2 = _ConcreteWriter.get("live")
-        assert w1 is not w2
+    def test_update_metadata_accumulates(self) -> None:
+        w = self._make_writer()
+        w.update_metadata({"exposure": 0.01, "roi": [0, 0, 512, 512]})
+        assert w._metadata == {"exposure": 0.01, "roi": [0, 0, 512, 512]}
 
-    def test_registry_key_is_name_and_mimetype(self) -> None:
-        _ConcreteWriter.get("default")
-        assert ("default", "application/x-test") in Writer._registry
+    def test_update_metadata_overwrites_same_key(self) -> None:
+        w = self._make_writer()
+        w.update_metadata({"exposure": 0.01})
+        w.update_metadata({"exposure": 0.05})
+        assert w._metadata["exposure"] == 0.05
 
-    def test_release_removes_from_registry(self) -> None:
-        _ConcreteWriter.get("default")
-        _ConcreteWriter.release("default")
-        assert ("default", "application/x-test") not in Writer._registry
+    def test_update_metadata_merges(self) -> None:
+        w = self._make_writer()
+        w.update_metadata({"exposure": 0.01})
+        w.update_metadata({"roi": [0, 0, 512, 512]})
+        assert w._metadata == {"exposure": 0.01, "roi": [0, 0, 512, 512]}
 
-    def test_get_after_release_returns_fresh_instance(self) -> None:
-        w1 = _ConcreteWriter.get("default")
-        _ConcreteWriter.release("default")
-        w2 = _ConcreteWriter.get("default")
-        assert w1 is not w2
-
-    def test_wrong_subclass_raises_type_error(self) -> None:
-        """Registering one subclass and fetching with another raises TypeError."""
-        _ConcreteWriter.get("default")
-
-        class _OtherWriter(_ConcreteWriter):
-            @classmethod
-            def _class_mimetype(cls) -> str:
-                return "application/x-test"
-
-        with pytest.raises(TypeError):
-            _OtherWriter.get("default")
-
-
-class TestMetadataRegistry:
-    def test_register_stores_metadata(self) -> None:
-        register_metadata("motor", {"position": 1.5, "units": "mm"})
-        assert _registry["motor"] == {"position": 1.5, "units": "mm"}
-
-    def test_register_overwrites(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        register_metadata("motor", {"position": 2.0})
-        assert _registry["motor"]["position"] == 2.0
-
-    def test_snapshot_is_copy(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        snap = snapshot_metadata()
-        snap["motor"]["position"] = 99.0
-        assert _registry["motor"]["position"] == 1.5
-
-    def test_clear_empties_registry(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        clear_metadata()
-        assert _registry == {}
-
-    def test_writer_snapshots_on_open(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        w = _ConcreteWriter("default")
+    def test_metadata_available_at_open(self) -> None:
+        w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
+        w.update_metadata({"exposure": 0.01})
         w.open("cam")
-        assert w._metadata == {"motor": {"position": 1.5}}
+        assert w._metadata == {"exposure": 0.01}
 
-    def test_metadata_cleared_after_close(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        w = _ConcreteWriter("default")
+    def test_metadata_cleared_on_close(self) -> None:
+        w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
+        w.update_metadata({"exposure": 0.01})
         w.open("cam")
         w.close()
-        assert _registry == {}
+        assert w._metadata == {}
 
-    def test_metadata_cleared_on_open_uri_error(self) -> None:
-        register_metadata("motor", {"position": 1.5})
-        w = _ConcreteWriter("default")
+    def test_clear_metadata(self) -> None:
+        w = self._make_writer()
+        w.update_metadata({"exposure": 0.01, "roi": [0, 0, 512, 512]})
+        w.clear_metadata()
+        assert w._metadata == {}
+
+    def test_metadata_not_cleared_by_failed_open(self) -> None:
+        """A failed open (no URI) must not wipe accumulated metadata."""
+        w = self._make_writer()
         w.register("cam", np.dtype("uint8"), (2, 2))
+        w.update_metadata({"exposure": 0.01})
         with pytest.raises(RuntimeError, match="no URI"):
             w.open("cam")
-        assert _registry == {}
+        assert w._metadata == {"exposure": 0.01}
+
+
+class TestProtocolConformance:
+    def test_concrete_writer_is_controllable_data_writer(self) -> None:
+        w = _ConcreteWriter("default")
+        assert isinstance(w, ControllableDataWriter)
+
+    def test_zarr_writer_is_controllable_data_writer(self) -> None:
+        w = ZarrWriter("default")
+        assert isinstance(w, ControllableDataWriter)
+
+    def test_has_writer_logic_structural_check(self) -> None:
+        class _FakeDevice:
+            @property
+            def writer_logic(self) -> _ConcreteWriter:
+                return _ConcreteWriter()
+
+        assert isinstance(_FakeDevice(), HasWriterLogic)
+
+    def test_device_without_writer_logic_fails_check(self) -> None:
+        class _NoWriter:
+            pass
+
+        assert not isinstance(_NoWriter(), HasWriterLogic)
+
+
+class TestProtocols:
+    def test_writer_satisfies_has_metadata(self) -> None:
+        w = _ConcreteWriter()
+        assert isinstance(w, HasMetadata)
+
+    def test_object_without_update_metadata_fails_has_metadata(self) -> None:
+        class _NoMeta:
+            pass
+
+        assert not isinstance(_NoMeta(), HasMetadata)
+
+
+class TestHandleDescriptorMetadata:
+    def _make_device(self, writer: _ConcreteWriter) -> object:
+        class _FakeDevice:
+            @property
+            def writer_logic(self) -> _ConcreteWriter:
+                return writer
+
+        return _FakeDevice()
+
+    def test_sets_metadata_on_matching_writer(self) -> None:
+        writer = _ConcreteWriter()
+        devices = {"cam": self._make_device(writer)}
+        doc = {"configuration": {"cam": {"exposure": 0.01, "roi": [0, 0, 512, 512]}}}
+        handle_descriptor_metadata(doc, devices)
+        assert writer._metadata["cam"] == {"exposure": 0.01, "roi": [0, 0, 512, 512]}
+
+    def test_skips_unknown_devices(self) -> None:
+        doc = {"configuration": {"unknown": {"x": 1}}}
+        handle_descriptor_metadata(doc, {})  # must not raise
+
+    def test_skips_devices_without_writer_logic(self) -> None:
+        class _NoWriter:
+            pass
+
+        doc = {"configuration": {"motor": {"position": 1.5}}}
+        handle_descriptor_metadata(doc, {"motor": _NoWriter()})  # must not raise
+
+    def test_skips_writers_without_update_metadata(self) -> None:
+        class _MinimalWriter:
+            pass
+
+        class _Device:
+            @property
+            def writer_logic(self) -> _MinimalWriter:
+                return _MinimalWriter()
+
+        doc = {"configuration": {"cam": {"exposure": 0.01}}}
+        handle_descriptor_metadata(doc, {"cam": _Device()})  # must not raise
+
+    def test_empty_configuration_is_noop(self) -> None:
+        writer = _ConcreteWriter()
+        devices = {"cam": self._make_device(writer)}
+        handle_descriptor_metadata({"configuration": {}}, devices)
+        assert writer._metadata == {}
 
 
 class TestPrepareInfo:
@@ -503,7 +532,7 @@ class TestZarrWriterImportGuard:
 class TestZarrWriterOpen:
     def test_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan.zarr"
-        writer = ZarrWriter.get("default")
+        writer = ZarrWriter("default")
         writer.set_uri(uri)
         writer.register(
             "cam",
@@ -517,36 +546,16 @@ class TestZarrWriterOpen:
 
     def test_set_uri_updates_store_path(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan"
-        writer = ZarrWriter.get("default")
+        writer = ZarrWriter("default")
         writer.set_uri(uri)
         assert writer._stream_settings.store_path == from_uri(uri) + ".zarr"
 
     def test_metadata_written_on_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan"
-        writer = ZarrWriter.get("default")
+        writer = ZarrWriter("default")
         writer.set_uri(uri)
         writer.register("cam", dtype=np.dtype("uint16"), shape=(64, 64))
-        register_metadata("motor", {"position": 1.5})
+        writer.update_metadata({"motor": {"position": 1.5}})
         with patch("redsun.storage._zarr.ZarrStream") as mock_stream_cls:
             writer.open("cam")
             mock_stream_cls.return_value.write_custom_metadata.assert_called_once()
-
-
-class TestMakeWriter:
-    def test_raises_for_unknown_mimetype(self) -> None:
-        with pytest.raises(ValueError, match="Unsupported mimetype"):
-            make_writer("application/x-unknown")
-
-    def test_returns_zarr_writer(self) -> None:
-        w = make_writer("application/x-zarr")
-        assert isinstance(w, ZarrWriter)
-
-    def test_same_name_returns_same_instance(self) -> None:
-        w1 = make_writer("application/x-zarr", name="default")
-        w2 = make_writer("application/x-zarr", name="default")
-        assert w1 is w2
-
-    def test_different_names_return_different_instances(self) -> None:
-        w1 = make_writer("application/x-zarr", name="default")
-        w2 = make_writer("application/x-zarr", name="live")
-        assert w1 is not w2

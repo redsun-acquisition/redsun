@@ -1,3 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# The Writer interface is structurally inspired by ophyd-async
+# (https://github.com/bluesky/ophyd-async, SPDX-License-Identifier: BSD-3-Clause),
+# developed by the Bluesky collaboration.
+# In particular: the open / close / collect_stream_docs lifecycle and the
+# StreamResource / StreamDatum document pattern are modelled after DetectorWriter.
+
 """Abstract base classes for storage writers."""
 
 from __future__ import annotations
@@ -6,10 +13,10 @@ import abc
 import threading as th
 import time
 import uuid
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
+from redsun.device._acquisition import ControllableDataWriter
 from redsun.log import Loggable
-from redsun.storage.metadata import clear_metadata, snapshot_metadata
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -77,27 +84,14 @@ class SourceInfo:
         self.stream_resource_uid: str = str(uuid.uuid4())
 
 
-_W = TypeVar("_W", bound="Writer")
-
-#: Composite registry key: (group name, mimetype).
-_WriterKey = tuple[str, str]
-
-
-class Writer(abc.ABC, Loggable):
+class Writer(ControllableDataWriter, abc.ABC, Loggable):
     """Abstract base class for storage backend writers.
 
-    Writers are long-lived singletons, created once when the application
-    starts and reused across every acquisition.  The class-level registry
-    is keyed by a **composite key** ``(name, mimetype)`` where:
-
-    - ``mimetype`` identifies the storage format and determines which
-      ``Writer`` subclass handles serialisation (e.g.
-      ``"application/x-zarr"`` maps to ``ZarrWriter``).
-    - ``name`` is a **store group name** that distinguishes multiple
-      independent stores that share the same format.  Use ``"default"``
-      for the common single-store case.  This is *not* a device name —
-      many devices may contribute sources to the same writer by
-      referencing the same ``(name, mimetype)`` key.
+    Writers are created once (typically at application start via dependency
+    injection) and reused across every acquisition.  A single writer
+    instance may be shared by multiple devices that all write to the same
+    backend store; each device registers its own named source via
+    :meth:`register`.
 
     Call order per acquisition:
 
@@ -128,11 +122,9 @@ class Writer(abc.ABC, Loggable):
     Parameters
     ----------
     name : str
-        Store group name.  See class docstring for semantics.
+        Store group name.  Distinguishes multiple independent stores of the
+        same format.  Use ``"default"`` for the common single-store case.
     """
-
-    _registry: dict[_WriterKey, "Writer"] = {}
-    _registry_lock: th.Lock = th.Lock()
 
     def __init__(self, name: str) -> None:
         self._name = name
@@ -141,53 +133,6 @@ class Writer(abc.ABC, Loggable):
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, dict[str, Any]] = {}
-
-    @classmethod
-    def get(cls: type[_W], name: str = "default") -> _W:
-        """Return the singleton writer for *(name, cls.mimetype)*.
-
-        Creates a new instance on first call; returns the existing one
-        on every subsequent call for the same ``(name, mimetype)`` pair.
-
-        Parameters
-        ----------
-        name : str
-            Store group name.  Defaults to ``"default"``.
-
-        Returns
-        -------
-        Writer
-            Singleton instance for ``(name, cls.mimetype)``.
-
-        Raises
-        ------
-        TypeError
-            If the existing registry entry is not an instance of ``cls``.
-        """
-        key: _WriterKey = (name, cls._class_mimetype())
-        with cls._registry_lock:
-            if key not in cls._registry:
-                cls._registry[key] = cls(name)
-            instance = cls._registry[key]
-        if not isinstance(instance, cls):
-            raise TypeError(
-                f"Registry entry for {key!r} is {type(instance).__name__!r}, "
-                f"expected {cls.__name__!r}"
-            )
-        return instance
-
-    @classmethod
-    def release(cls, name: str = "default") -> None:
-        """Remove the registry entry for *(name, cls.mimetype)*.
-
-        Parameters
-        ----------
-        name : str
-            Store group name.  Defaults to ``"default"``.
-        """
-        key: _WriterKey = (name, cls._class_mimetype())
-        with cls._registry_lock:
-            cls._registry.pop(key, None)
 
     @classmethod
     @abc.abstractmethod
@@ -237,6 +182,36 @@ class Writer(abc.ABC, Loggable):
             )
         self._uri = uri
         self.logger.debug(f"URI updated to {uri!r}")
+
+    def update_metadata(self, metadata: dict[str, Any]) -> None:
+        """Merge *metadata* into the writer's accumulated metadata.
+
+        Metadata persists on the writer instance across ``open()``/``close()``
+        cycles within the same run.  It is cleared by :meth:`close` (or
+        explicitly by :meth:`clear_metadata`), so each new run starts with a
+        clean slate and devices re-populate it during their ``prepare()`` call.
+
+        This method is **not** part of the :class:`ControllableDataWriter`
+        protocol.  Callers should check for its presence via the
+        :class:`~redsun.storage.HasMetadata` protocol before calling.
+
+        Parameters
+        ----------
+        metadata:
+            Key/value pairs to merge.  Existing keys are overwritten.
+            Values must be JSON-serialisable for backends that store metadata
+            as JSON (e.g. ``ZarrWriter``).
+        """
+        self._metadata.update(metadata)
+
+    def clear_metadata(self) -> None:
+        """Remove all accumulated metadata.
+
+        Called automatically by :meth:`close`.  May also be called explicitly
+        if metadata needs to be reset before a new run without closing the
+        backend.
+        """
+        self._metadata.clear()
 
     def register(
         self,
@@ -332,12 +307,10 @@ class Writer(abc.ABC, Loggable):
             raise KeyError(f"Source {name!r} not registered. Call register() first.")
         if not self._is_open:
             if not self._uri:
-                clear_metadata()
                 raise RuntimeError(
                     f"Writer ({self._name!r}, {self.mimetype!r}) has no URI. "
                     "A presenter must call set_uri() before open()."
                 )
-            self._metadata = snapshot_metadata()
             self._is_open = True
             self._open_backend()
         source = self._sources[name]
@@ -457,7 +430,7 @@ class Writer(abc.ABC, Loggable):
             return
         self._close_backend()
         self._is_open = False
-        clear_metadata()
+        self.clear_metadata()
         self.logger.debug("Backend closed.")
 
     @abc.abstractmethod
