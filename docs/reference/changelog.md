@@ -11,6 +11,39 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- `SoftAttr` — public base class for `SoftAttrR`, `SoftAttrRW`, and `SoftAttrT`,
+  providing the shared `name` property and `set_name()` method.
+- `Device.children()` — iterate over registered child devices as `(attr_name, device)` pairs.
+- `Device.set_name(name)` — update a device's name and propagate recursively to child
+  devices and `SoftAttr*` fields.
+- `SoftAttrR.set_name()` / `SoftAttrT.set_name()` (via `SoftAttr`) — called automatically
+  by the parent device on attribute assignment.
+- `PDevice.set_name()` — added to the minimal device protocol; structurally compatible with
+  `ophyd_async.core.Device`.
+
+### Changed
+
+- **`SoftAttrR`, `SoftAttrRW`, `SoftAttrT` constructor signatures changed (breaking).**
+  `initial_value` (or `action` for `SoftAttrT`) is now the first positional argument;
+  `name` is now keyword-only with a default of `""`.
+
+  ```python
+  # Before
+  SoftAttrRW[float](f"{name}-position", 0.0, units="mm")
+
+  # After — inside a Device (name auto-injected on assignment)
+  SoftAttrRW[float](0.0, units="mm")
+
+  # After — standalone use
+  SoftAttrRW[float](0.0, name="stage-position", units="mm")
+  ```
+
+- **attrs-decorated `Device` subclasses must add `on_setattr=setters.NO_OP` (breaking).**
+  Without it, attrs generates a `__setattr__` on the subclass that shadows
+  `Device.__setattr__`, silently skipping child registration and name injection.
+- `Device.parent` now returns the actual parent `Device` (or `None` for root devices)
+  instead of always `None`.
+
 - `AttrR[T]`, `AttrRW[T]`, `AttrW[T]`, `AttrT` structural protocols mirroring ophyd-async
   `SignalR` / `SignalRW` / `SignalW` / `SignalX` via the same bluesky protocols
   (`Readable`, `Subscribable`, `Movable`, `Triggerable`).
