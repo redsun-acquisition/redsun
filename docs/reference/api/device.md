@@ -30,3 +30,21 @@
     options:
       members:
         - HasCache
+
+## Attributes
+
+::: redsun.device.AttrR
+
+::: redsun.device.AttrRW
+
+::: redsun.device.AttrW
+
+::: redsun.device.AttrT
+
+## Soft attributes
+
+::: redsun.device.SoftAttrR
+
+::: redsun.device.SoftAttrRW
+
+::: redsun.device.SoftAttrT
