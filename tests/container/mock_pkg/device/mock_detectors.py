@@ -1,48 +1,53 @@
-from typing import Any
+from attrs import define
 
-from attrs import define, field, setters, validators
-from bluesky.protocols import Descriptor, Reading
-
-from redsun.device import Device
+from redsun.device import Device, SoftAttrR, SoftAttrRW
 
 
-@define(kw_only=True)
+@define(kw_only=True, slots=False)
 class MockDetector(Device):
-    """Mock detector device."""
+    """Mock detector device.
 
-    exposure: float = field(validator=validators.instance_of(float))
-    egu: str = field(
-        default="s", validator=validators.instance_of(str), on_setattr=setters.frozen
-    )
-    sensor_shape: tuple[int, int] = field(converter=tuple, on_setattr=setters.frozen)
-    pixel_size: tuple[float, float, float] = field(converter=tuple)
-    integer: int
-    floating: float
-    string: str
+    Attributes are :class:`~redsun.device.SoftAttrRW` /
+    :class:`~redsun.device.SoftAttrR` instances.  The EGU for ``exposure``
+    is embedded in its descriptor (``units`` field) rather than exposed as a
+    separate signal.
+    """
 
-    @sensor_shape.validator
-    def _validate_sensor_shape(self, _: Any, value: tuple[int, ...]) -> None:
-        if not all(isinstance(val, int) for val in value):
-            raise ValueError("All values in the tuple must be integers.")
-        if len(value) != 2:
-            raise ValueError("The tuple must contain exactly two values.")
+    exposure: SoftAttrRW[float]
+    sensor_shape: SoftAttrR[tuple[int, int]]
+    pixel_size: SoftAttrR[tuple[float, float, float]]
+    integer: SoftAttrRW[int]
+    floating: SoftAttrRW[float]
+    string: SoftAttrRW[str]
 
-    @pixel_size.validator
-    def _validate_pixel_size(self, _: Any, value: tuple[float, ...]) -> None:
-        if not all(isinstance(val, float) for val in value):
-            raise ValueError("All values in the tuple must be floats.")
-        if len(value) != 3:
-            raise ValueError("The tuple must contain exactly three values.")
-
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        name: str,
+        /,
+        *,
+        exposure: float = 1.0,
+        egu: str = "s",
+        sensor_shape: tuple[int, int] = (1, 1),
+        pixel_size: tuple[float, float, float] = (1.0, 1.0, 1.0),
+        integer: int = 0,
+        floating: float = 0.0,
+        string: str = "",
+    ) -> None:
         super().__init__(name)
-        self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        raise NotImplementedError()
+        self.__attrs_init__(
+            exposure=SoftAttrRW[float](f"{name}-exposure", exposure, units=egu),
+            sensor_shape=SoftAttrR[tuple[int, int]](
+                f"{name}-sensor_shape",
+                tuple(sensor_shape),  # type: ignore[arg-type]
+            ),
+            pixel_size=SoftAttrR[tuple[float, float, float]](
+                f"{name}-pixel_size",
+                tuple(pixel_size),  # type: ignore[arg-type]
+            ),
+            integer=SoftAttrRW[int](f"{name}-integer", integer),
+            floating=SoftAttrRW[float](f"{name}-floating", floating),
+            string=SoftAttrRW[str](f"{name}-string", string),
+        )
 
     @property
     def parent(self) -> None:
@@ -53,7 +58,7 @@ class MockDetector(Device):
 class MockDetectorWithStorage(MockDetector):
     """Mock detector that declares storage capability via ``storage_info()``."""
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(self, name: str, /, **kwargs: float | str | tuple) -> None:
         super().__init__(name, **kwargs)
 
 
@@ -61,23 +66,41 @@ class MockDetectorWithStorage(MockDetector):
 class NonDerivedDetector:
     """Mock non-derived detector for structural protocol testing."""
 
-    exposure: float
-    egu: str
-    sensor_shape: tuple[int, int]
-    pixel_size: tuple[float, float, float]
-    integer: int
-    floating: float
-    string: str
+    exposure: SoftAttrRW[float]
+    sensor_shape: SoftAttrR[tuple[int, int]]
+    pixel_size: SoftAttrR[tuple[float, float, float]]
+    integer: SoftAttrRW[int]
+    floating: SoftAttrRW[float]
+    string: SoftAttrRW[str]
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        name: str,
+        /,
+        *,
+        exposure: float = 1.0,
+        egu: str = "s",
+        sensor_shape: tuple[int, int] = (1, 1),
+        pixel_size: tuple[float, float, float] = (1.0, 1.0, 1.0),
+        integer: int = 0,
+        floating: float = 0.0,
+        string: str = "",
+    ) -> None:
         self._name = name
-        self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        raise NotImplementedError()
+        self.__attrs_init__(
+            exposure=SoftAttrRW[float](f"{name}-exposure", exposure, units=egu),
+            sensor_shape=SoftAttrR[tuple[int, int]](
+                f"{name}-sensor_shape",
+                tuple(sensor_shape),  # type: ignore[arg-type]
+            ),
+            pixel_size=SoftAttrR[tuple[float, float, float]](
+                f"{name}-pixel_size",
+                tuple(pixel_size),  # type: ignore[arg-type]
+            ),
+            integer=SoftAttrRW[int](f"{name}-integer", integer),
+            floating=SoftAttrRW[float](f"{name}-floating", floating),
+            string=SoftAttrRW[str](f"{name}-string", string),
+        )
 
     @property
     def parent(self) -> None:

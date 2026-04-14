@@ -8,7 +8,7 @@ models:
     plugin_name: mocks
     plugin_id: mock_detector
     sensor_size: [10, 10]
-    exposure_egu: s
+    exposure_units: s
   Single axis motor:
     plugin_name: mocks
     plugin_id: mock_motor
@@ -20,4 +20,4 @@ models:
     axes:
       - X
       - Y
-    step_egu: mm
+    units: mm

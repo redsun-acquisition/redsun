@@ -3,7 +3,7 @@ name: CI Pipeline
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
     branches:
       - main
   pull_request:

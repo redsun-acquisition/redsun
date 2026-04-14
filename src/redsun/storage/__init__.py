@@ -1,48 +1,31 @@
 # SPDX-License-Identifier: Apache-2.0
-# The file and path providers are inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
-# ophyd-async is licensed under the BSD 3-Clause License.
+# Portions of this package are structurally inspired by ophyd-async
+# (https://github.com/bluesky/ophyd-async, SPDX-License-Identifier: BSD-3-Clause),
+# developed by the Bluesky collaboration.
+# See storage/_path.py (path/filename providers) and storage/_base.py (Writer)
+# for the specific files where this inspiration applies.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from redsun.storage._base import FrameSink, Writer
+from redsun.device._acquisition import PrepareInfo
+from redsun.storage._base import Writer
+from redsun.storage._metadata_callback import handle_descriptor_metadata
 from redsun.storage._path import (
     FilenameProvider,
     PathInfo,
     PathProvider,
     SessionPathProvider,
 )
-from redsun.storage.metadata import clear_metadata, register_metadata
-
-
-@dataclass
-class PrepareInfo:
-    """Plan-time information passed to device ``prepare()`` methods.
-
-    !!! warning
-
-        These are still experimental. New fields may be added
-        or existing fields may change.
-
-    """
-
-    capacity: int = 0
-    """Number of frames to prepare for.  ``0`` means unlimited."""
-
-    write_forever: bool = False
-    """Whether the device should prepare to write indefinitely (e.g. for live streaming)."""
-
+from redsun.storage.protocols import HasMetadata, HasWriterLogic
 
 __all__ = [
-    "PathInfo",
     "FilenameProvider",
+    "HasMetadata",
+    "HasWriterLogic",
+    "PathInfo",
     "PathProvider",
-    "SessionPathProvider",
-    "register_metadata",
-    "FrameSink",
-    "clear_metadata",
     "PrepareInfo",
+    "SessionPathProvider",
     "Writer",
+    "handle_descriptor_metadata",
 ]

@@ -6,7 +6,6 @@ import json
 from typing import TYPE_CHECKING
 
 from redsun.storage._base import Writer
-from redsun.storage.metadata import clear_metadata
 from redsun.storage.utils import from_uri
 
 try:
@@ -70,7 +69,7 @@ class ZarrWriter(Writer):
 
         Translates the URI to a filesystem path via ``from_uri`` and
         stores it in ``StreamSettings.store_path``.  The stream itself
-        is not opened here — that happens in ``kickoff``.
+        is not opened here — that happens in :meth:`_open_backend`.
 
         Must not be called while the writer is open.
 
@@ -88,12 +87,13 @@ class ZarrWriter(Writer):
     # allow the presenter to specify the dimension types and chunk sizes.
     # Maybe a per-backend dataclass with specific settings
     # that the presenter/view can populate and pass to the writer?
-    def _on_prepare(self, name: str) -> None:
+    def _on_register(self, name: str) -> None:
         """Pre-declare Zarr array dimensions for source *name*.
 
-        Called by the base ``prepare`` after ``self._sources[name]`` is
-        populated.  Builds the ``ArraySettings`` (dimensions, dtype,
-        output key) that ``kickoff`` will pass to ``ZarrStream``.
+        Called by the base :meth:`~redsun.storage.Writer.register` after
+        ``self._sources[name]`` is populated.  Builds the
+        ``ArraySettings`` (dimensions, dtype, output key) that
+        :meth:`_open_backend` will pass to ``ZarrStream``.
 
         Parameters
         ----------
@@ -132,30 +132,24 @@ class ZarrWriter(Writer):
             output_key=source.name,
         )
 
-    def kickoff(self) -> None:
+    def _open_backend(self) -> None:
         """Open the Zarr stream for writing.
 
-        The first device to call `kickoff` triggers stream creation.
-        Since the stream is shared across all devices with the same store group name,
-        it is a no-op for subsequent devices that call `kickoff` while the stream is already open.
+        Called once by :meth:`~redsun.storage.Writer.open` when the
+        first source is opened.  Creates the ``ZarrStream`` from all
+        array settings accumulated via :meth:`_on_register`.
         """
-        if self.is_open:
-            return
-        super().kickoff()  # snapshots metadata, enforces URI guard, sets _is_open
         try:
             self._stream_settings.arrays = list(self._array_settings.values())
             self._stream = ZarrStream(self._stream_settings)
             if self._metadata:
-                # write any additional metadata
-                # before opening the stream
                 flatten_md = json.dumps(self._metadata)
                 self._stream.write_custom_metadata(flatten_md, overwrite=True)
         except Exception as e:
             self._is_open = False
-            clear_metadata()
             raise e
 
-    def _finalize(self) -> None:
+    def _close_backend(self) -> None:
         """Close the Zarr stream and clear per-acquisition array settings."""
         if self._stream is not None:
             self._stream.close()
@@ -166,6 +160,6 @@ class ZarrWriter(Writer):
         """Append *frame* to the stream under the array key for *name*."""
         if self._stream is None:
             raise RuntimeError(
-                f"ZarrWriter ({self._name!r}) is not open; call kickoff() first."
+                f"ZarrWriter ({self._name!r}) is not open; call open() first."
             )
         self._stream.append(frame, key=name)

@@ -36,7 +36,6 @@ from redsun.view.qt._widget_factory import create_param_widget
 @runtime_checkable
 class _MotorProtocol(PDevice, Locatable[Any], Protocol):
     axis: list[str]
-    egu: str
     step_sizes: dict[str, float]
 
 
@@ -87,15 +86,15 @@ class MockMotorDevice(PDevice):
         self,
         name: str,
         /,
-        egu: str = "mm",
         axis: list[str] = ["X", "Y"],
         step_sizes: dict[str, float] = None,
+        units: str = "mm",
         limits: dict[str, tuple[float, float]] | None = None,
     ) -> None:
         self._name = name
-        self.egu = egu
         self.axis = axis
         self.step_sizes = step_sizes or {ax: 0.1 for ax in axis}
+        self.units = units
         self.limits = limits
 
     @property
@@ -125,7 +124,7 @@ def mock_motor(name: str = "stage") -> MockMotorDevice:
         name,
         axis=["X", "Y", "Z"],
         step_sizes={"X": 1.0, "Y": 1.0, "Z": 1.0},
-        egu="um",
+        units="um",
     )
 
 

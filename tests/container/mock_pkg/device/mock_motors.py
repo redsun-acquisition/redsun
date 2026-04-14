@@ -1,44 +1,52 @@
-from typing import Any
+from typing import Literal
 
-from attrs import define, field, setters, validators
+from attrs import define
 
-from redsun.device import Device
+from redsun.device import Device, SoftAttrR, SoftAttrRW
+
+Axis = Literal["X", "Y", "Z"]
 
 
-@define(kw_only=True)
+@define(kw_only=True, slots=False)
 class MyMotor(Device):
-    """Mock motor device."""
+    """Mock motor device.
 
-    axis: list[str] = field(factory=list, on_setattr=setters.frozen)
-    step_size: dict[str, float] = field(factory=dict)
-    egu: str = field(validator=validators.instance_of(str), on_setattr=setters.frozen)
-    integer: int
-    floating: float
-    string: str
+    Attributes are :class:`~redsun.device.SoftAttrR` /
+    :class:`~redsun.device.SoftAttrRW` instances.  The EGU for positions
+    is embedded in the ``step_size`` descriptor (``units`` field) rather
+    than exposed as a separate signal.
+    """
 
-    @axis.validator
-    def _validate_axis(self, _: str, value: list[str]) -> None:
-        if not all(isinstance(val, str) for val in value):
-            raise ValueError("All values in the list must be strings.")
-        if len(value) == 0:
-            raise ValueError("The list must contain at least one element.")
+    axis: SoftAttrR[list[Axis]]
+    step_size: SoftAttrRW[dict[Axis, float]]
+    integer: SoftAttrRW[int]
+    floating: SoftAttrRW[float]
+    string: SoftAttrRW[str]
 
-    @step_size.validator
-    def _validate_step_size(self, _: str, value: dict[str, float]) -> None:
-        if not all(isinstance(val, float) for val in value.values()):
-            raise ValueError("All values in the dictionary must be floats.")
-        if len(value) == 0:
-            raise ValueError("The dictionary must contain at least one element.")
-
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        name: str,
+        /,
+        *,
+        axis: list[Axis] | None = None,
+        step_size: dict[Axis, float] | None = None,
+        egu: str = "mm",
+        integer: int = 0,
+        floating: float = 0.0,
+        string: str = "",
+    ) -> None:
         super().__init__(name)
-        self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
+        _axis: list[Axis] = axis or ["X"]
+        _step_size: dict[Axis, float] = step_size or {ax: 0.1 for ax in _axis}
+        self.__attrs_init__(
+            axis=SoftAttrR[list[Axis]](f"{name}-axis", _axis),
+            step_size=SoftAttrRW[dict[Axis, float]](
+                f"{name}-step_size", _step_size, units=egu
+            ),
+            integer=SoftAttrRW[int](f"{name}-integer", integer),
+            floating=SoftAttrRW[float](f"{name}-floating", floating),
+            string=SoftAttrRW[str](f"{name}-string", string),
+        )
 
     @property
     def parent(self) -> None:
@@ -49,22 +57,36 @@ class MyMotor(Device):
 class NonDerivedMotor:
     """Mock non-derived motor for structural protocol testing."""
 
-    axis: list[str]
-    step_size: dict[str, float]
-    egu: str
-    integer: int
-    floating: float
-    string: str
+    axis: SoftAttrR[list[Axis]]
+    step_size: SoftAttrRW[dict[Axis, float]]
+    integer: SoftAttrRW[int]
+    floating: SoftAttrRW[float]
+    string: SoftAttrRW[str]
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        name: str,
+        /,
+        *,
+        axis: list[Axis] | None = None,
+        step_size: dict[Axis, float] | None = None,
+        egu: str = "mm",
+        integer: int = 0,
+        floating: float = 0.0,
+        string: str = "",
+    ) -> None:
         self._name = name
-        self.__attrs_init__(**kwargs)
-
-    def read_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
-
-    def describe_configuration(self) -> dict[str, Any]:
-        raise NotImplementedError()
+        _axis: list[Axis] = axis or ["X"]
+        _step_size: dict[Axis, float] = step_size or {ax: 0.1 for ax in _axis}
+        self.__attrs_init__(
+            axis=SoftAttrR[list[Axis]](f"{name}-axis", _axis),
+            step_size=SoftAttrRW[dict[Axis, float]](
+                f"{name}-step_size", _step_size, units=egu
+            ),
+            integer=SoftAttrRW[int](f"{name}-integer", integer),
+            floating=SoftAttrRW[float](f"{name}-floating", floating),
+            string=SoftAttrRW[str](f"{name}-string", string),
+        )
 
     @property
     def parent(self) -> None:

@@ -82,7 +82,6 @@ nav = [
         { "Session storage" = "explanation/storage.md" },
         { "Architecture" = [
             { "Devices" = "explanation/architecture/devices.md" },
-            { "In-process devices" = "explanation/architecture/in-process-device.md" },
             { "Presenters" = "explanation/architecture/presenters.md" },
             { "Plans" = "explanation/architecture/plans.md" },
             { "Qt widgets" = "explanation/architecture/qt-widgets.md" },

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-# The file and path providers are inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async), developed by the Bluesky collaboration.
-# ophyd-async is licensed under the BSD 3-Clause License.
+# The path and filename providers in this file are structurally inspired by ophyd-async
+# (https://github.com/bluesky/ophyd-async, SPDX-License-Identifier: BSD-3-Clause),
+# developed by the Bluesky collaboration.
 
 """Path and filename providers for storage backends."""
 

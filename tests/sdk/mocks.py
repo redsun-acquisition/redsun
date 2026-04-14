@@ -7,82 +7,81 @@ from functools import partial
 from typing import Any
 
 from bluesky.plan_stubs import close_run, open_run
-from bluesky.protocols import Descriptor, Reading
 from bluesky.run_engine import RunEngine
 from bluesky.utils import MsgGenerator
 
-from redsun.device import Device, PDevice
+from redsun.device import Device, PDevice, SoftAttrR, SoftAttrRW
 from redsun.presenter import PPresenter
-from redsun.virtual import IsProvider, Signal, VirtualContainer
+from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 
 class MockDetector(Device):
-    """Mock detector device."""
+    """Mock detector device using soft attributes.
+
+    The EGU for ``exposure`` is embedded in the descriptor document
+    (``describe()["<name>-exposure"]["units"]``), not as a separate signal.
+    """
 
     def __init__(
         self,
         name: str,
         *,
         sensor_size: tuple[int, int] = (1024, 1024),
-        exposure_egu: str = "ms",
+        exposure: float = 1.0,
+        exposure_units: str = "ms",
         pixel_size: tuple[int, int, int] = (1, 1, 1),
     ) -> None:
         super().__init__(name)
-        self.sensor_size = sensor_size
-        self.exposure_egu = exposure_egu
-        self.pixel_size = pixel_size
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        return {
-            "sensor_size": {
-                "source": f"{self.name}.sensor_size",
-                "dtype": "array",
-                "shape": [2],
-            }
-        }
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        return {
-            "sensor_size": {
-                "value": self.sensor_size,
-                "timestamp": 0.0,
-            }
-        }
+        self.sensor_size = SoftAttrR[tuple[int, int]](
+            f"{name}-sensor_size", sensor_size
+        )
+        self.exposure = SoftAttrRW[float](
+            f"{name}-exposure", exposure, units=exposure_units
+        )
+        self.pixel_size = SoftAttrR[tuple[int, int, int]](
+            f"{name}-pixel_size", pixel_size
+        )
 
 
 class MockMotor(Device):
-    """Mock motor device."""
+    """Mock motor device with per-axis soft attributes.
+
+    Each axis (x, y, z) is an independent read-write attribute component.
+    The EGU is embedded in each axis descriptor (``units`` field) rather
+    than exposed as a separate signal.
+    """
 
     def __init__(
         self,
         name: str,
         *,
-        step_egu: str = "\u03bcm",
-        axes: list[str] | None = None,
+        units: str = "μm",
     ) -> None:
         super().__init__(name)
-        self.step_egu = step_egu
-        self.axes = axes or ["X"]
-
-    def describe_configuration(self) -> dict[str, Descriptor]:
-        return {
-            "step_egu": {
-                "source": f"{self.name}.step_egu",
-                "dtype": "string",
-                "shape": [],
-            }
-        }
-
-    def read_configuration(self) -> dict[str, Reading[Any]]:
-        return {
-            "step_egu": {
-                "value": self.step_egu,
-                "timestamp": 0.0,
-            }
-        }
+        self.x = SoftAttrRW[float](f"{name}-x", 0.0, units=units)
+        self.y = SoftAttrRW[float](f"{name}-y", 0.0, units=units)
+        self.z = SoftAttrRW[float](f"{name}-z", 0.0, units=units)
 
 
-class MockController(PPresenter, IsProvider):
+class MockDeviceWithChild(Device):
+    """Mock device that owns a child :class:`MockMotor`.
+
+    Used to verify that devices hosting sub-device attributes behave
+    correctly inside the container and plan-spec machinery.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        units: str = "μm",
+    ) -> None:
+        super().__init__(name)
+        self.stage = MockMotor(f"{name}-stage", units=units)
+        self.enabled = SoftAttrRW[bool](f"{name}-enabled", True)
+
+
+class MockController(PPresenter, IsProvider, IsInjectable):
     """Mock controller/presenter that optionally provides dependencies."""
 
     sigBar = Signal()
@@ -113,4 +112,4 @@ class MockController(PPresenter, IsProvider):
 
 
 mock_detector = MockDetector("detector", sensor_size=(1024, 1024))
-mock_motor = MockMotor("motor", step_egu="\u03bcm", axes=["X", "Y", "Z"])
+mock_motor = MockMotor("motor", units="μm")

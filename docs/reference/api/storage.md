@@ -4,9 +4,7 @@
 
 ::: redsun.storage.Writer
     options:
-      filters: ["!^__", "_on_prepare", "_write_frame", "_finalize"]
-
-::: redsun.storage.FrameSink
+      filters: ["!^__", "!^_"]
 
 ## Path providers
 
@@ -30,24 +28,17 @@
       show_root_heading: true
       filters: ["__call__"]
 
-## Metadata
+## Protocols
 
-::: redsun.storage.metadata
+::: redsun.storage.HasWriterLogic
 
-::: redsun.storage.register_metadata
+::: redsun.storage.HasMetadata
 
-::: redsun.storage.clear_metadata
+## Metadata callback
 
-## Factory & utilities
+::: redsun.storage.handle_descriptor_metadata
 
-::: redsun.storage.PrepareInfo
-    options:
-      show_root_heading: true
-      show_docstring_parameters: false
-
-::: redsun.storage.device.make_writer
-    options:
-      show_root_heading: true
+## Presenter utilities
 
 ::: redsun.storage.presenter.get_available_writers
     options:
@@ -56,10 +47,3 @@
 ::: redsun.storage.utils.from_uri
     options:
       show_root_heading: true
-
-## Protocols
-
-::: redsun.storage.protocols
-    options:
-      members:
-        - HasWriter

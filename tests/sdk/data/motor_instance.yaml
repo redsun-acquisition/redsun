@@ -11,4 +11,4 @@ models:
     axes:
       - X
       - Y
-    step_egu: mm
+    units: mm
