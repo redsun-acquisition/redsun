@@ -160,7 +160,7 @@ class MyCallback:
 The function iterates the descriptor's `configuration` section, looks up each
 device name in `devices`, checks whether it satisfies `HasWriterLogic` and
 whether its writer satisfies [`HasMetadata`][redsun.storage.HasMetadata]
-(i.e. has `set_metadata`), and forwards the configuration snapshot.
+(i.e. implements `update_metadata`), and forwards the configuration snapshot.
 
 Bluesky emits one descriptor per stream name per run, so this function fires
 once per run for a given stream.

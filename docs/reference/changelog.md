@@ -10,46 +10,60 @@ Dates are specified in the format `DD-MM-YYYY`.
 ## [Unreleased]
 
 ### Added
-- `ControllableDataWriter` protocol (replaces `MultiSourceDataWriter`): extends `DataWriter`
-  with `register()`, `write_frame()`, and `set_uri()` — the full interface for shared
-  multi-source backends such as `ZarrWriter`.
-- `Writer` now formally inherits `ControllableDataWriter`, making the protocol relationship
-  explicit rather than structural-only.
-- `Writer.update_metadata(metadata)`: accumulates a `dict` of metadata entries to be written
-  into the backend at `open()` time.
-- `Writer.clear_metadata()`: public method to reset accumulated metadata; called automatically
-  by `Writer.close()`.
+
+- `AttrR[T]`, `AttrRW[T]`, `AttrW[T]`, `AttrT` structural protocols mirroring ophyd-async
+  `SignalR` / `SignalRW` / `SignalW` / `SignalX` via the same bluesky protocols
+  (`Readable`, `Subscribable`, `Movable`, `Triggerable`).
+- `SoftAttrR[T]`, `SoftAttrRW[T]`, `SoftAttrT` — in-memory concrete implementations of
+  the above, intended for simulation devices and test fixtures.
+- `AcquisitionController` protocol: hardware-side acquisition logic (arm, disarm, prepare,
+  wait); mirrors `ophyd_async.core.DetectorController`.
+- `DataWriter` protocol: persistence-side acquisition logic for a single device (open,
+  close, collect stream docs); mirrors `ophyd_async.core.DetectorWriter`.
+  `ControllableDataWriter` extends it further with `register()`, `write_frame()`, and
+  `set_uri()` for shared multi-source backends.
+- `FlyerController[T]` protocol: motion and trigger sequencing for fly scans; mirrors
+  `ophyd_async.core.FlyerController`.
+- `TriggerInfo` protocol and `TriggerType` enum: trigger configuration passed to devices
+  at prepare time; mirror their ophyd-async equivalents.
+- `PrepareInfo` dataclass: plan-time information (`capacity`, `write_forever`) passed to
+  device `prepare()` methods.
+- `Writer.update_metadata(metadata)`: accumulates a `dict` of metadata entries written into
+  the backend at `open()` time.
+- `Writer.clear_metadata()`: resets accumulated metadata; called automatically by
+  `Writer.close()` so each run starts clean.
 - `HasWriterLogic` protocol: structural check for devices that expose a `writer_logic`
   property; replaces the removed `HasWriter`.
 - `HasMetadata` protocol: structural check for writers that implement `update_metadata()`
   and `clear_metadata()`.
 - `handle_descriptor_metadata(doc, devices)`: standalone helper for bluesky callbacks that
-  forwards descriptor configuration into associated writers via the `HasWriterLogic` and
-  `HasMetadata` protocols.
-- SPDX attribution comment blocks on `device/_acquisition.py`, `storage/_base.py`,
-  `storage/_path.py`, and `storage/__init__.py` citing ophyd-async (BSD-3-Clause) as the
-  structural inspiration for the relevant interfaces.
+  forwards descriptor configuration into associated writers via `HasWriterLogic` and
+  `HasMetadata`.
 
 ### Changed
+
+- `Writer` now formally inherits `ControllableDataWriter`.
 - `get_available_writers()` now takes a `devices: Mapping[str, Any]` argument and discovers
   unique `Writer` instances via `HasWriterLogic`, replacing the removed class-level registry.
 - Metadata lifecycle moved from a global module-level registry to per-instance accumulation:
-  devices call `writer.update_metadata()` in `prepare()`; metadata is cleared automatically
-  on `Writer.close()` so each run starts clean.
-- All cross-references in new and modified docstrings use mkdocstrings markdown link syntax
-  (`[Name][full.path.Name]`) instead of reStructuredText (`:class:`, `:meth:`, `:attr:`).
-- Changed CI to allow allow for RC releases
+  devices call `writer.update_metadata()` in `prepare()`; metadata is cleared on
+  `Writer.close()`.
+- `AppContainerMeta` metaclass replaced with `__init_subclass__` for container subclass
+  registration.
+- Dropped `beartype` as a runtime dependency.
+- Bumped `acquire-zarr`.
+- Updated CI tag pattern to support release candidates (e.g. `v0.10.0rc0`).
 
 ### Removed
-- `MultiSourceDataWriter` — renamed to `ControllableDataWriter`.
+
 - `HasWriter` protocol — replaced by `HasWriterLogic`.
-- `Writer.get()` and `Writer.release()` class methods, and the underlying `Writer._registry`
-  singleton store: writers are now created once by the application and injected into devices
-  at construction time.
-- `storage/metadata.py` and its global `register_metadata` / `clear_metadata` / `snapshot_metadata`
+- `Writer.get()` and `Writer.release()` class methods and the underlying `Writer._registry`
+  singleton: writers are now created once by the application and injected into devices at
+  construction time.
+- `storage/metadata.py` and its `register_metadata` / `clear_metadata` / `snapshot_metadata`
   functions — superseded by `Writer.update_metadata()` and `Writer.clear_metadata()`.
 - `storage/device.py` and its `make_writer()` factory shim — writers are now provided via
-  dependency injection rather than fetched from a global registry.
+  dependency injection.
 
 ## [0.9.1] - 06-03-2026
 
