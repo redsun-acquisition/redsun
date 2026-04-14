@@ -32,6 +32,27 @@ class PDevice(HasName, HasParent, Configurable[Any], Protocol):  # pragma: no co
         ...
 
 
+@runtime_checkable
+class HasChildren(Protocol):
+    """Structural protocol for devices that expose a child-device iterator.
+
+    Satisfied by any object that implements
+    [`children()`][redsun.device.Device.children].
+    [`Device`][redsun.device.Device] satisfies this protocol; so does any
+    ophyd-async device that provides the same method.
+    """
+
+    def children(self) -> Iterator[tuple[str, Device]]:
+        """Iterate over registered child devices.
+
+        Yields
+        ------
+        tuple[str, Device]
+            ``(attribute_name, child_device)`` pairs.
+        """
+        ...
+
+
 class Device(PDevice, abc.ABC):
     """Base class for devices.
 

@@ -8,7 +8,7 @@ from ._acquisition import (
     TriggerType,
 )
 from ._attrs import AttrR, AttrRW, AttrT, AttrW
-from ._base import Device, PDevice
+from ._base import Device, HasChildren, PDevice
 from ._soft import SoftAttr, SoftAttrR, SoftAttrRW, SoftAttrT
 
 __all__ = [
@@ -21,6 +21,7 @@ __all__ = [
     "DataWriter",
     "Device",
     "FlyerController",
+    "HasChildren",
     "PDevice",
     "PrepareInfo",
     "SoftAttr",
