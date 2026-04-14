@@ -36,7 +36,24 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
     return scan_id + 1
 
 
-__all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
+_shared_loop: asyncio.AbstractEventLoop | None = None
+
+
+def get_shared_loop() -> asyncio.AbstractEventLoop:
+    """Return the background event loop.
+
+    Returns
+    -------
+    asyncio.AbstractEventLoop
+        The shared event loop.
+    """
+    global _shared_loop
+    if _shared_loop is None:
+        _shared_loop = asyncio.new_event_loop()
+    return _shared_loop
+
+
+__all__ = ["RunEngine", "RunEngineResult", "get_shared_loop", "register_bound_command"]
 
 REResultType = RunEngineResult | tuple[str, ...]
 
@@ -178,7 +195,7 @@ class RunEngine(BlueskyRunEngine):
         self,
         md: dict[str, Any] | None = None,
         *,
-        loop: asyncio.AbstractEventLoop | None = None,
+        loop: asyncio.AbstractEventLoop = get_shared_loop(),
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,
@@ -327,7 +344,7 @@ class RunEngine(BlueskyRunEngine):
         task_name = completed_task.get_name()
         return task_name, latch_map[task_name]
 
-    async def _stash(self: RunEngine, msg: Msg) -> Status:
+    async def _stash(self, msg: Msg) -> Status:
         """Instruct the run engine to stash the given readings in the model cache.
 
         Parameters
