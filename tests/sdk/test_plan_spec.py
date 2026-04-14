@@ -54,6 +54,9 @@ class _MockDetector:
     def __init__(self, name: str) -> None:
         self.name = name
 
+    def set_name(self, name: str) -> None:
+        self.name = name
+
     def describe_configuration(self) -> dict[str, Any]:
         return {}
 
@@ -101,6 +104,9 @@ class MockMotorDevice(PDevice):
     def name(self) -> str:
         """Device name."""
         return self._name
+
+    def set_name(self, name: str) -> None:
+        self._name = name
 
     def set(self, value: Any, **kwargs: Any) -> Status:
         s = Status()

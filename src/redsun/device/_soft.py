@@ -1,8 +1,8 @@
 """In-memory (soft) implementations of the device attribute protocols.
 
 These classes provide a concrete, transport-free implementation of
-:class:`~redsun.device.AttrR`, :class:`~redsun.device.AttrRW` and
-:class:`~redsun.device.AttrT` backed by a plain Python value.  They are
+[`AttrR`][redsun.device.AttrR], [`AttrRW`][redsun.device.AttrRW] and
+[`AttrT`][redsun.device.AttrT] backed by a plain Python value.  They are
 intended for:
 
 - Test fixtures and simulation devices that do not talk to real hardware.
@@ -13,17 +13,20 @@ intended for:
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 from redsun.engine import Status
 from redsun.utils.descriptors import make_reading
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from bluesky.protocols import Descriptor, Reading
+    from event_model.documents import Dtype
 
 T = TypeVar("T")
 
-_DTYPE_MAP: dict[type, _DType] = {
+_DTYPE_MAP: dict[type, Dtype] = {
     bool: "boolean",
     int: "integer",
     float: "number",
@@ -31,7 +34,7 @@ _DTYPE_MAP: dict[type, _DType] = {
 }
 
 
-def _infer_dtype(value: Any) -> _DType:
+def _infer_dtype(value: Any) -> Dtype:
     """Infer a bluesky dtype string from a Python value."""
     # bool must be checked before int because bool is a subclass of int.
     for py_type, dtype in _DTYPE_MAP.items():
@@ -42,62 +45,89 @@ def _infer_dtype(value: Any) -> _DType:
     return "string"
 
 
-_DType = Literal["boolean", "integer", "number", "string", "array"]
-
-
 def _infer_shape(value: Any) -> list[int | None]:
     if isinstance(value, (list, tuple)):
         return [len(value)]
     return []
 
 
-class SoftAttrR(Generic[T]):
-    """Read-only in-memory device attribute.
+class SoftAttr:
+    """Base class for all in-memory (soft) device attributes.
 
-    Satisfies :class:`~redsun.device.AttrR` structurally.
+    Provides the shared [`name`][] property and [`set_name`][] method
+    used by [`SoftAttrR`][redsun.device.SoftAttrR],
+    [`SoftAttrRW`][redsun.device.SoftAttrRW], and
+    [`SoftAttrT`][redsun.device.SoftAttrT].
 
     Parameters
     ----------
-    name:
-        Fully-qualified attribute name, e.g. ``"laser-intensity"``.
-        This string is used as the key in :meth:`read` and
-        :meth:`describe` dictionaries.
-    initial_value:
-        Starting value.  The bluesky ``dtype`` and ``shape`` fields in
-        :meth:`describe` are inferred from this value's type.
-    units:
-        Optional physical unit string included in the descriptor.
+    name : str
+        Fully-qualified attribute name. Injected automatically when
+        assigned to an attribute of a [`Device`][redsun.device.Device].
     """
 
-    def __init__(
-        self,
-        name: str,
-        initial_value: T,
-        *,
-        units: str | None = None,
-    ) -> None:
+    def __init__(self, *, name: str = "") -> None:
         self._name = name
-        self._value: T = initial_value
-        self._units = units
-        self._dtype: _DType = _infer_dtype(initial_value)
-        self._shape: list[int | None] = _infer_shape(initial_value)
-        self._callbacks: list[Callable[[dict[str, Reading[T]]], None]] = []
 
     @property
     def name(self) -> str:
         """Fully-qualified attribute name."""
         return self._name
 
+    def set_name(self, name: str) -> None:
+        """Update the attribute name.
+
+        Called automatically by the parent [`Device`][redsun.device.Device]
+        on attribute assignment and when
+        [`set_name`][redsun.device.Device.set_name] is called on the parent.
+        """
+        self._name = name
+
+
+class SoftAttrR(SoftAttr, Generic[T]):
+    """Read-only in-memory device attribute.
+
+    Satisfies [`AttrR`][redsun.device.AttrR] structurally.
+
+    Parameters
+    ----------
+    initial_value : T
+        Starting value. The bluesky ``dtype`` and ``shape`` fields in
+        [`describe`][] are inferred from this value's type.
+    name : str
+        Fully-qualified attribute name, e.g. ``"laser-intensity"``.
+        Used as the key in [`read`][] and [`describe`][] dictionaries.
+        When assigned to an attribute of a [`Device`][redsun.device.Device],
+        the name is injected automatically; passing it explicitly is only
+        needed for standalone use.
+    units : str, optional
+        Optional physical unit string included in the descriptor.
+    """
+
+    def __init__(
+        self,
+        initial_value: T,
+        *,
+        name: str = "",
+        units: str | None = None,
+    ) -> None:
+        super().__init__(name=name)
+        self._value: T = initial_value
+        self._units = units
+        self._dtype: Dtype = _infer_dtype(initial_value)
+        self._shape: list[int | None] = _infer_shape(initial_value)
+        self._callbacks: list[Callable[[dict[str, Reading[T]]], None]] = []
+
     def get_value(self) -> T:
         """Return the current value directly."""
         return self._value
 
     def read(self) -> dict[str, Reading[T]]:
-        """Return a bluesky reading keyed by :attr:`name`."""
+        """Return a bluesky reading keyed by [`name`][]."""
         return {self._name: make_reading(self._value, time.time())}
 
     def describe(self) -> dict[str, Descriptor]:
-        """Return a bluesky descriptor keyed by :attr:`name`."""
+        """Return a bluesky descriptor keyed by [`name`][]."""
         d: Descriptor = {
             "source": f"soft://{self._name}",
             "dtype": self._dtype,
@@ -125,16 +155,17 @@ class SoftAttrR(Generic[T]):
 class SoftAttrRW(SoftAttrR[T]):
     """Read-write in-memory device attribute.
 
-    Extends :class:`SoftAttrR` with a :meth:`set` method.
-    Satisfies :class:`~redsun.device.AttrRW` structurally.
+    Extends [`SoftAttrR`][redsun.device.SoftAttrR] with a [`set`][] method.
+    Satisfies [`AttrRW`][redsun.device.AttrRW] structurally.
 
     Parameters
     ----------
-    name:
-        Fully-qualified attribute name.
-    initial_value:
+    initial_value : T
         Starting value.
-    units:
+    name : str
+        Fully-qualified attribute name. Injected automatically when
+        assigned to an attribute of a [`Device`][redsun.device.Device].
+    units : str, optional
         Optional physical unit string.
     """
 
@@ -143,7 +174,7 @@ class SoftAttrRW(SoftAttrR[T]):
 
         Parameters
         ----------
-        value:
+        value : T
             New value to store.
 
         Returns
@@ -158,34 +189,31 @@ class SoftAttrRW(SoftAttrR[T]):
         return s
 
 
-class SoftAttrT:
+class SoftAttrT(SoftAttr):
     """Trigger in-memory device attribute.
 
-    Satisfies :class:`~redsun.device.AttrT` structurally.
+    Satisfies [`AttrT`][redsun.device.AttrT] structurally.
 
     Parameters
     ----------
-    name:
-        Fully-qualified attribute name.
-    action:
-        Zero-argument callable invoked on each :meth:`trigger` call.
+    action : Callable[[], None], optional
+        Zero-argument callable invoked on each [`trigger`][] call.
         If ``None`` the trigger is a no-op.
+    name : str
+        Fully-qualified attribute name. Injected automatically when
+        assigned to an attribute of a [`Device`][redsun.device.Device].
     """
 
     def __init__(
         self,
-        name: str,
         action: Callable[[], None] | None = None,
+        *,
+        name: str = "",
     ) -> None:
-        self._name = name
+        super().__init__(name=name)
         self._action: Callable[[], None] = (
             action if action is not None else lambda: None
         )
-
-    @property
-    def name(self) -> str:
-        """Fully-qualified attribute name."""
-        return self._name
 
     def trigger(self) -> Status:
         """Execute the action and return a completed status.

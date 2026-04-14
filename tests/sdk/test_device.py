@@ -41,9 +41,9 @@ class SignalDevice(Device):
         units: str = "mm",
     ) -> None:
         super().__init__(name)
-        self.value = SoftAttrRW[int](f"{name}-value", value)
-        self.label = SoftAttrR[str](f"{name}-label", label)
-        self.position = SoftAttrRW[float](f"{name}-position", position, units=units)
+        self.value = SoftAttrRW[int](value)
+        self.label = SoftAttrR[str](label)
+        self.position = SoftAttrRW[float](position, units=units)
 
 
 class MinimalDevice(Device):
@@ -51,6 +51,22 @@ class MinimalDevice(Device):
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
+
+
+class ChildDevice(Device):
+    """Minimal child device for hierarchy tests."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+
+
+class ParentDevice(Device):
+    """Device that owns a ChildDevice and a SoftAttrRW."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.sub = ChildDevice(name)
+        self.speed = SoftAttrRW[float](0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -333,29 +349,29 @@ def test_flyer_controller_missing_method() -> None:
 
 
 def test_soft_attr_r_satisfies_attr_r() -> None:
-    attr = SoftAttrR[int]("device-value", 42)
+    attr = SoftAttrR[int](42, name="device-value")
     assert isinstance(attr, AttrR)
 
 
 def test_soft_attr_rw_satisfies_attr_rw() -> None:
-    attr = SoftAttrRW[float]("device-value", 0.0)
+    attr = SoftAttrRW[float](0.0, name="device-value")
     assert isinstance(attr, AttrRW)
     assert isinstance(attr, AttrR)
     assert isinstance(attr, AttrW)
 
 
 def test_soft_attr_t_satisfies_attr_t() -> None:
-    attr = SoftAttrT("device-trigger")
+    attr = SoftAttrT(name="device-trigger")
     assert isinstance(attr, AttrT)
 
 
 def test_soft_attr_r_get_value() -> None:
-    attr = SoftAttrR[int]("dev-x", 7)
+    attr = SoftAttrR[int](7, name="dev-x")
     assert attr.get_value() == 7
 
 
 def test_soft_attr_r_read() -> None:
-    attr = SoftAttrR[float]("dev-x", 3.14, units="mm")
+    attr = SoftAttrR[float](3.14, name="dev-x", units="mm")
     reading = attr.read()
     assert "dev-x" in reading
     assert reading["dev-x"]["value"] == 3.14
@@ -363,7 +379,7 @@ def test_soft_attr_r_read() -> None:
 
 
 def test_soft_attr_r_describe_scalar() -> None:
-    attr = SoftAttrR[float]("dev-x", 1.0, units="mm")
+    attr = SoftAttrR[float](1.0, name="dev-x", units="mm")
     desc = attr.describe()
     assert "dev-x" in desc
     assert desc["dev-x"]["dtype"] == "number"
@@ -373,24 +389,24 @@ def test_soft_attr_r_describe_scalar() -> None:
 
 
 def test_soft_attr_r_describe_bool() -> None:
-    attr = SoftAttrR[bool]("dev-enabled", False)
+    attr = SoftAttrR[bool](False, name="dev-enabled")
     assert attr.describe()["dev-enabled"]["dtype"] == "boolean"
 
 
 def test_soft_attr_r_describe_int() -> None:
-    attr = SoftAttrR[int]("dev-count", 0)
+    attr = SoftAttrR[int](0, name="dev-count")
     assert attr.describe()["dev-count"]["dtype"] == "integer"
 
 
 def test_soft_attr_r_describe_array() -> None:
-    attr = SoftAttrR[list[float]]("dev-pos", [0.0, 1.0, 2.0])
+    attr = SoftAttrR[list[float]]([0.0, 1.0, 2.0], name="dev-pos")
     desc = attr.describe()["dev-pos"]
     assert desc["dtype"] == "array"
     assert desc["shape"] == [3]
 
 
 def test_soft_attr_r_subscribe_called_immediately() -> None:
-    attr = SoftAttrR[int]("dev-x", 10)
+    attr = SoftAttrR[int](10, name="dev-x")
     received: list[Any] = []
     attr.subscribe(received.append)
     assert len(received) == 1
@@ -398,7 +414,7 @@ def test_soft_attr_r_subscribe_called_immediately() -> None:
 
 
 def test_soft_attr_r_subscribe_notified_on_change() -> None:
-    attr = SoftAttrRW[int]("dev-x", 0)
+    attr = SoftAttrRW[int](0, name="dev-x")
     received: list[Any] = []
     attr.subscribe(received.append)
     attr.set(99)
@@ -406,7 +422,7 @@ def test_soft_attr_r_subscribe_notified_on_change() -> None:
 
 
 def test_soft_attr_r_clear_sub() -> None:
-    attr = SoftAttrRW[int]("dev-x", 0)
+    attr = SoftAttrRW[int](0, name="dev-x")
     received: list[Any] = []
     attr.subscribe(received.append)
     attr.clear_sub(received.append)
@@ -415,7 +431,7 @@ def test_soft_attr_r_clear_sub() -> None:
 
 
 def test_soft_attr_rw_set_updates_value() -> None:
-    attr = SoftAttrRW[float]("dev-x", 0.0)
+    attr = SoftAttrRW[float](0.0, name="dev-x")
     s = attr.set(42.0)
     s.wait(timeout=1.0)
     assert s.success
@@ -423,7 +439,7 @@ def test_soft_attr_rw_set_updates_value() -> None:
 
 
 def test_soft_attr_t_trigger_no_op() -> None:
-    attr = SoftAttrT("dev-trigger")
+    attr = SoftAttrT(name="dev-trigger")
     s = attr.trigger()
     s.wait(timeout=1.0)
     assert s.success
@@ -431,14 +447,66 @@ def test_soft_attr_t_trigger_no_op() -> None:
 
 def test_soft_attr_t_trigger_calls_action() -> None:
     called: list[bool] = []
-    attr = SoftAttrT("dev-trigger", action=lambda: called.append(True))
+    attr = SoftAttrT(action=lambda: called.append(True), name="dev-trigger")
     attr.trigger().wait(timeout=1.0)
     assert called == [True]
 
 
 def test_soft_attr_r_name() -> None:
-    attr = SoftAttrR[float]("my-device-speed", 0.0)
+    attr = SoftAttrR[float](0.0, name="my-device-speed")
     assert attr.name == "my-device-speed"
+
+
+# ---------------------------------------------------------------------------
+# SoftAttr* — new signature and set_name
+# ---------------------------------------------------------------------------
+
+
+def test_soft_attr_r_positional_value_no_name() -> None:
+    attr = SoftAttrR[int](42)
+    assert attr.name == ""
+    assert attr.get_value() == 42
+
+
+def test_soft_attr_r_name_keyword() -> None:
+    attr = SoftAttrR[int](42, name="dev-x")
+    assert attr.name == "dev-x"
+    assert "dev-x" in attr.read()
+    assert "dev-x" in attr.describe()
+
+
+def test_soft_attr_r_set_name_updates_read_describe() -> None:
+    attr = SoftAttrR[float](3.14, units="mm")
+    attr.set_name("stage-pos")
+    assert attr.name == "stage-pos"
+    assert "stage-pos" in attr.read()
+    assert "stage-pos" in attr.describe()
+    assert attr.describe()["stage-pos"]["units"] == "mm"
+
+
+def test_soft_attr_rw_inherits_set_name() -> None:
+    attr = SoftAttrRW[int](0)
+    attr.set_name("dev-count")
+    assert attr.name == "dev-count"
+
+
+def test_soft_attr_t_positional_action_no_name() -> None:
+    called: list[int] = []
+    attr = SoftAttrT(action=lambda: called.append(1))
+    assert attr.name == ""
+    attr.trigger()
+    assert called == [1]
+
+
+def test_soft_attr_t_name_keyword() -> None:
+    attr = SoftAttrT(name="dev-trig")
+    assert attr.name == "dev-trig"
+
+
+def test_soft_attr_t_set_name() -> None:
+    attr = SoftAttrT()
+    attr.set_name("dev-fire")
+    assert attr.name == "dev-fire"
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +519,7 @@ class AxisDevice(Device):
 
     def __init__(self, name: str, *, units: str = "mm") -> None:
         super().__init__(name)
-        self.position = SoftAttrRW[float](f"{name}-position", 0.0, units=units)
+        self.position = SoftAttrRW[float](0.0, units=units)
 
 
 class CompositeDevice(Device):
@@ -459,9 +527,9 @@ class CompositeDevice(Device):
 
     def __init__(self, name: str, *, units: str = "mm") -> None:
         super().__init__(name)
-        self.x = AxisDevice(f"{name}-x", units=units)
-        self.y = AxisDevice(f"{name}-y", units=units)
-        self.enabled = SoftAttrRW[bool](f"{name}-enabled", True)
+        self.x = AxisDevice(name, units=units)
+        self.y = AxisDevice(name, units=units)
+        self.enabled = SoftAttrRW[bool](True)
 
 
 def test_composite_device_children_are_accessible() -> None:
@@ -478,11 +546,11 @@ def test_composite_device_children_satisfy_pdevice() -> None:
     assert isinstance(dev.y, PDevice)
 
 
-def test_composite_device_children_parent_is_none() -> None:
-    """Children created independently have parent=None (no parent link by default)."""
+def test_composite_device_children_parent_is_set() -> None:
+    """Children assigned as attributes have parent wired to the composite device."""
     dev = CompositeDevice("stage")
-    assert dev.x.parent is None
-    assert dev.y.parent is None
+    assert dev.x.parent is dev
+    assert dev.y.parent is dev
 
 
 def test_composite_device_child_signals_have_descriptor_units() -> None:
@@ -509,6 +577,62 @@ def test_composite_own_attr_independent_from_children() -> None:
     assert dev.enabled.get_value() is False
     # children unaffected
     assert dev.x.position.get_value() == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# Device — child device support and name propagation
+# ---------------------------------------------------------------------------
+
+
+def test_child_device_registered_in_children() -> None:
+    parent = ParentDevice("parent")
+    children = dict(parent.children())
+    assert "sub" in children
+    assert children["sub"] is parent.sub
+
+
+def test_child_device_parent_reference() -> None:
+    parent = ParentDevice("parent")
+    assert parent.sub.parent is parent
+
+
+def test_root_device_parent_is_none() -> None:
+    assert MinimalDevice("root").parent is None
+
+
+def test_child_device_name_propagated_on_assignment() -> None:
+    parent = ParentDevice("stage")
+    assert parent.sub.name == "stage-sub"
+
+
+def test_soft_attr_name_injected_on_assignment() -> None:
+    parent = ParentDevice("cam")
+    assert parent.speed.name == "cam-speed"
+
+
+def test_set_name_propagates_to_child_device() -> None:
+    parent = ParentDevice("old")
+    parent.set_name("new")
+    assert parent.name == "new"
+    assert parent.sub.name == "new-sub"
+
+
+def test_set_name_propagates_to_soft_attr() -> None:
+    parent = ParentDevice("cam")
+    parent.set_name("sensor")
+    assert parent.speed.name == "sensor-speed"
+
+
+def test_soft_attr_auto_named_via_direct_setattr() -> None:
+    """SoftAttr name injected even via direct assignment after __init__."""
+
+    class DynDevice(Device):
+        def __init__(self, name: str) -> None:
+            super().__init__(name)
+
+    d = DynDevice("dev")
+    d.velocity = SoftAttrRW[float](1.0)  # type: ignore[attr-defined]
+    assert d.velocity.name == "dev-velocity"  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------

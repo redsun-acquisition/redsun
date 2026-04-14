@@ -55,8 +55,8 @@ from redsun.device import Device, SoftAttrRW
 class MyStage(Device):
     def __init__(self, name: str, /) -> None:
         super().__init__(name)
-        self.position = SoftAttrRW(f"{name}-position", initial_value=0.0, units="mm")
-        self.velocity = SoftAttrRW(f"{name}-velocity", initial_value=1.0, units="mm/s")
+        self.position = SoftAttrRW(0.0, units="mm")    # named "stage-position"
+        self.velocity = SoftAttrRW(1.0, units="mm/s")  # named "stage-velocity"
 
     def read(self):
         return {**self.position.read(), **self.velocity.read()}
@@ -72,6 +72,57 @@ RE(bp.count([stage.position]))
 
 # Aggregated — pass the whole device once read/describe are overridden
 RE(bp.count([stage]))
+```
+
+### Child devices
+
+When a `Device` instance is assigned as an attribute of another `Device`, it is
+automatically registered as a child: [`parent`][redsun.device.Device.parent] is
+set on the child and it appears in [`children()`][redsun.device.Device.children]:
+
+```python
+from redsun.device import Device, SoftAttrRW
+
+class Axis(Device):
+    def __init__(self, name: str, *, units: str = "mm") -> None:
+        super().__init__(name)
+        self.position = SoftAttrRW(0.0, units=units)  # named "<axis_name>-position"
+
+class XYStage(Device):
+    def __init__(self, name: str, *, units: str = "mm") -> None:
+        super().__init__(name)
+        self.x = Axis(name, units=units)  # set_name called → "stage-x"
+        self.y = Axis(name, units=units)  # set_name called → "stage-y"
+
+stage = XYStage("stage")
+assert stage.x.parent is stage
+assert stage.x.name == "stage-x"
+assert stage.x.position.name == "stage-x-position"
+
+for attr, child in stage.children():
+    print(attr, child.name)  # x stage-x / y stage-y
+```
+
+Calling [`set_name("new_stage")`][redsun.device.Device.set_name] propagates
+recursively to both axes and all `SoftAttr*` fields within each axis.
+
+For attrs-decorated `Device` subclasses, add `on_setattr=setters.NO_OP` to the
+`@define` decorator. Without it, attrs generates its own `__setattr__` on the
+subclass that shadows `Device.__setattr__`, silently skipping child registration
+and name injection:
+
+```python
+from attrs import define, setters
+from redsun.device import Device, SoftAttrRW
+
+@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
+class MyDetector(Device):
+    exposure: SoftAttrRW[float]
+
+    def __init__(self, name: str, /, *, exposure: float = 1.0) -> None:
+        super().__init__(name)
+        self.__attrs_init__(exposure=SoftAttrRW[float](exposure))
+        # exposure.name is now "mydetector-exposure"
 ```
 
 ### ophyd-async device compatibility

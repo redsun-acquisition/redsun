@@ -1,14 +1,14 @@
-from attrs import define
+from attrs import define, setters
 
 from redsun.device import Device, SoftAttrR, SoftAttrRW
 
 
-@define(kw_only=True, slots=False)
+@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
 class MockDetector(Device):
     """Mock detector device.
 
-    Attributes are :class:`~redsun.device.SoftAttrRW` /
-    :class:`~redsun.device.SoftAttrR` instances.  The EGU for ``exposure``
+    Attributes are [`SoftAttrRW`][redsun.device.SoftAttrRW] /
+    [`SoftAttrR`][redsun.device.SoftAttrR] instances. The EGU for ``exposure``
     is embedded in its descriptor (``units`` field) rather than exposed as a
     separate signal.
     """
@@ -35,26 +35,20 @@ class MockDetector(Device):
     ) -> None:
         super().__init__(name)
         self.__attrs_init__(
-            exposure=SoftAttrRW[float](f"{name}-exposure", exposure, units=egu),
+            exposure=SoftAttrRW[float](exposure, units=egu),
             sensor_shape=SoftAttrR[tuple[int, int]](
-                f"{name}-sensor_shape",
                 tuple(sensor_shape),  # type: ignore[arg-type]
             ),
             pixel_size=SoftAttrR[tuple[float, float, float]](
-                f"{name}-pixel_size",
                 tuple(pixel_size),  # type: ignore[arg-type]
             ),
-            integer=SoftAttrRW[int](f"{name}-integer", integer),
-            floating=SoftAttrRW[float](f"{name}-floating", floating),
-            string=SoftAttrRW[str](f"{name}-string", string),
+            integer=SoftAttrRW[int](integer),
+            floating=SoftAttrRW[float](floating),
+            string=SoftAttrRW[str](string),
         )
 
-    @property
-    def parent(self) -> None:
-        return None
 
-
-@define(kw_only=True, slots=False)
+@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
 class MockDetectorWithStorage(MockDetector):
     """Mock detector that declares storage capability via ``storage_info()``."""
 
@@ -88,18 +82,18 @@ class NonDerivedDetector:
     ) -> None:
         self._name = name
         self.__attrs_init__(
-            exposure=SoftAttrRW[float](f"{name}-exposure", exposure, units=egu),
+            exposure=SoftAttrRW[float](exposure, name=f"{name}-exposure", units=egu),
             sensor_shape=SoftAttrR[tuple[int, int]](
-                f"{name}-sensor_shape",
                 tuple(sensor_shape),  # type: ignore[arg-type]
+                name=f"{name}-sensor_shape",
             ),
             pixel_size=SoftAttrR[tuple[float, float, float]](
-                f"{name}-pixel_size",
                 tuple(pixel_size),  # type: ignore[arg-type]
+                name=f"{name}-pixel_size",
             ),
-            integer=SoftAttrRW[int](f"{name}-integer", integer),
-            floating=SoftAttrRW[float](f"{name}-floating", floating),
-            string=SoftAttrRW[str](f"{name}-string", string),
+            integer=SoftAttrRW[int](integer, name=f"{name}-integer"),
+            floating=SoftAttrRW[float](floating, name=f"{name}-floating"),
+            string=SoftAttrRW[str](string, name=f"{name}-string"),
         )
 
     @property
