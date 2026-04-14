@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Added
+- `ControllableDataWriter` protocol (replaces `MultiSourceDataWriter`): extends `DataWriter`
+  with `register()`, `write_frame()`, and `set_uri()` — the full interface for shared
+  multi-source backends such as `ZarrWriter`.
+- `Writer` now formally inherits `ControllableDataWriter`, making the protocol relationship
+  explicit rather than structural-only.
+- `Writer.update_metadata(metadata)`: accumulates a `dict` of metadata entries to be written
+  into the backend at `open()` time.
+- `Writer.clear_metadata()`: public method to reset accumulated metadata; called automatically
+  by `Writer.close()`.
+- `HasWriterLogic` protocol: structural check for devices that expose a `writer_logic`
+  property; replaces the removed `HasWriter`.
+- `HasMetadata` protocol: structural check for writers that implement `update_metadata()`
+  and `clear_metadata()`.
+- `handle_descriptor_metadata(doc, devices)`: standalone helper for bluesky callbacks that
+  forwards descriptor configuration into associated writers via the `HasWriterLogic` and
+  `HasMetadata` protocols.
+- SPDX attribution comment blocks on `device/_acquisition.py`, `storage/_base.py`,
+  `storage/_path.py`, and `storage/__init__.py` citing ophyd-async (BSD-3-Clause) as the
+  structural inspiration for the relevant interfaces.
+
+### Changed
+- `get_available_writers()` now takes a `devices: Mapping[str, Any]` argument and discovers
+  unique `Writer` instances via `HasWriterLogic`, replacing the removed class-level registry.
+- Metadata lifecycle moved from a global module-level registry to per-instance accumulation:
+  devices call `writer.update_metadata()` in `prepare()`; metadata is cleared automatically
+  on `Writer.close()` so each run starts clean.
+- All cross-references in new and modified docstrings use mkdocstrings markdown link syntax
+  (`[Name][full.path.Name]`) instead of reStructuredText (`:class:`, `:meth:`, `:attr:`).
+
+### Removed
+- `MultiSourceDataWriter` — renamed to `ControllableDataWriter`.
+- `HasWriter` protocol — replaced by `HasWriterLogic`.
+- `Writer.get()` and `Writer.release()` class methods, and the underlying `Writer._registry`
+  singleton store: writers are now created once by the application and injected into devices
+  at construction time.
+- `storage/metadata.py` and its global `register_metadata` / `clear_metadata` / `snapshot_metadata`
+  functions — superseded by `Writer.update_metadata()` and `Writer.clear_metadata()`.
+- `storage/device.py` and its `make_writer()` factory shim — writers are now provided via
+  dependency injection rather than fetched from a global registry.
+
 ## [0.9.1] - 06-03-2026
 
 - Moved documentation dependencies to separate group
