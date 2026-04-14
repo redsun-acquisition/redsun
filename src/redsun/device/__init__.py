@@ -9,7 +9,7 @@ from ._acquisition import (
 )
 from ._attrs import AttrR, AttrRW, AttrT, AttrW
 from ._base import Device, PDevice
-from ._soft import SoftAttrR, SoftAttrRW, SoftAttrT
+from ._soft import SoftAttr, SoftAttrR, SoftAttrRW, SoftAttrT
 
 __all__ = [
     "AcquisitionController",
@@ -23,6 +23,7 @@ __all__ = [
     "FlyerController",
     "PDevice",
     "PrepareInfo",
+    "SoftAttr",
     "SoftAttrR",
     "SoftAttrRW",
     "SoftAttrT",

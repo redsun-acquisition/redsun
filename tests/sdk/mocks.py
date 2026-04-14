@@ -32,15 +32,9 @@ class MockDetector(Device):
         pixel_size: tuple[int, int, int] = (1, 1, 1),
     ) -> None:
         super().__init__(name)
-        self.sensor_size = SoftAttrR[tuple[int, int]](
-            f"{name}-sensor_size", sensor_size
-        )
-        self.exposure = SoftAttrRW[float](
-            f"{name}-exposure", exposure, units=exposure_units
-        )
-        self.pixel_size = SoftAttrR[tuple[int, int, int]](
-            f"{name}-pixel_size", pixel_size
-        )
+        self.sensor_size = SoftAttrR[tuple[int, int]](sensor_size)
+        self.exposure = SoftAttrRW[float](exposure, units=exposure_units)
+        self.pixel_size = SoftAttrR[tuple[int, int, int]](pixel_size)
 
 
 class MockMotor(Device):
@@ -58,9 +52,9 @@ class MockMotor(Device):
         units: str = "μm",
     ) -> None:
         super().__init__(name)
-        self.x = SoftAttrRW[float](f"{name}-x", 0.0, units=units)
-        self.y = SoftAttrRW[float](f"{name}-y", 0.0, units=units)
-        self.z = SoftAttrRW[float](f"{name}-z", 0.0, units=units)
+        self.x = SoftAttrRW[float](0.0, units=units)
+        self.y = SoftAttrRW[float](0.0, units=units)
+        self.z = SoftAttrRW[float](0.0, units=units)
 
 
 class MockDeviceWithChild(Device):
@@ -77,8 +71,8 @@ class MockDeviceWithChild(Device):
         units: str = "μm",
     ) -> None:
         super().__init__(name)
-        self.stage = MockMotor(f"{name}-stage", units=units)
-        self.enabled = SoftAttrRW[bool](f"{name}-enabled", True)
+        self.stage = MockMotor(name, units=units)
+        self.enabled = SoftAttrRW[bool](True)
 
 
 class MockController(PPresenter, IsProvider, IsInjectable):
