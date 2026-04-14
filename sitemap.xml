@@ -1,87 +1,13 @@
+{#-
+  This file was automatically generated - do not edit
+-#}
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  {%- for page in pages -%}
+    {%- if page.canonical_url %}
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/</loc>
+        <loc>{{ page.canonical_url }}</loc>
       </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/storage/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/devices/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/in-process-device/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/plans/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/presenters/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/qt-widgets/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/virtual/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/changelog/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/container/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/device/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/engine/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/log/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/presenter/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/storage/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/utils/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/view/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/virtual/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
-      </url>
+    {%- endif -%}
+  {%- endfor %}
 </urlset>
