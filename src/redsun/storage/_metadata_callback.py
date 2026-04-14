@@ -22,16 +22,16 @@ def handle_descriptor_metadata(
     Intended to be called from within a bluesky callback's ``descriptor``
     handler.  For each device name found in the descriptor's
     ``configuration`` section, the function checks whether the
-    corresponding device implements :class:`~redsun.storage.HasWriterLogic`
-    and whether its writer implements :class:`~redsun.storage.HasMetadata`.
+    corresponding device implements [`HasWriterLogic`][redsun.storage.HasWriterLogic]
+    and whether its writer implements [`HasMetadata`][redsun.storage.HasMetadata].
     When both conditions hold, the configuration snapshot is forwarded to
-    the writer via :meth:`~redsun.storage.HasMetadata.set_metadata`.
+    the writer via [`update_metadata`][redsun.storage.HasMetadata.update_metadata].
 
     Because bluesky emits one descriptor per stream name per run, this
     function will typically be called once per run.  The writer accumulates
     all metadata set through this path and applies it on each subsequent
-    :meth:`~redsun.storage.Writer.open` call; the accumulated metadata is
-    cleared on :meth:`~redsun.storage.Writer.close` so the next run starts
+    [`open`][redsun.storage.Writer.open] call; the accumulated metadata is
+    cleared on [`close`][redsun.storage.Writer.close] so the next run starts
     with a clean slate.
 
     Parameters

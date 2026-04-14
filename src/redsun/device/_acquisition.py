@@ -69,10 +69,10 @@ class TriggerInfo(Protocol):
         ``kickoff``/``complete`` pair (e.g. dark, flat, projection
         sequences in tomography).
     trigger:
-        Hardware trigger mode. See :class:`TriggerType`.
+        Hardware trigger mode. See [`TriggerType`][redsun.device.TriggerType].
     deadtime:
         Minimum dead time between exposures in seconds.  Required when
-        ``trigger`` is anything other than :attr:`TriggerType.INTERNAL`.
+        ``trigger`` is anything other than [`TriggerType.INTERNAL`][redsun.device.TriggerType.INTERNAL].
     livetime:
         Requested exposure duration in seconds, or ``None`` to use the
         device default.
@@ -134,7 +134,7 @@ class AcquisitionController(Protocol):
     def prepare(self, trigger_info: TriggerInfo) -> SyncOrAsync[None]:
         """Configure the device for the upcoming acquisition.
 
-        Called once before the first :meth:`arm` of a scan.
+        Called once before the first [`arm`][redsun.device.AcquisitionController.arm] of a scan.
 
         Parameters
         ----------
@@ -246,16 +246,16 @@ class DataWriter(Protocol):
 class ControllableDataWriter(DataWriter, Protocol):
     """Persistence-side acquisition logic for a shared multi-source backend.
 
-    Extends :class:`DataWriter` with source registration, direct frame
-    writing, and URI configuration.  Intended to be satisfied by storage
-    backend classes (e.g. ``ZarrWriter``) that accept frames from multiple
+    Extends [`DataWriter`][redsun.device.DataWriter] with source registration,
+    direct frame writing, and URI configuration.  Intended to be satisfied by
+    storage backend classes (e.g. ``ZarrWriter``) that accept frames from multiple
     devices into a single store and whose write location can be set by a
     presenter before each acquisition.
 
     The wider ``get_indices_written(name=None)`` and
     ``observe_indices_written(timeout, *, name=None)`` signatures live on
-    the concrete class; they satisfy :class:`DataWriter`'s narrower protocol
-    structurally without being redeclared here.
+    the concrete class; they satisfy [`DataWriter`][redsun.device.DataWriter]'s
+    narrower protocol structurally without being redeclared here.
     """
 
     def register(
@@ -265,7 +265,7 @@ class ControllableDataWriter(DataWriter, Protocol):
         shape: tuple[int, ...],
         capacity: int = 0,
     ) -> None:
-        """Pre-register a data source before :meth:`open` is called.
+        """Pre-register a data source before [`open`][redsun.device.DataWriter.open] is called.
 
         Parameters
         ----------
@@ -286,7 +286,7 @@ class ControllableDataWriter(DataWriter, Protocol):
         Parameters
         ----------
         name:
-            Source name, as passed to :meth:`register`.
+            Source name, as passed to [`register`][redsun.device.ControllableDataWriter.register].
         frame:
             Array data to write.
         """
@@ -296,7 +296,7 @@ class ControllableDataWriter(DataWriter, Protocol):
         """Update the store URI for the next acquisition.
 
         Called by a presenter before the plan starts to set the write
-        location.  Must be called before :meth:`open`.
+        location.  Must be called before [`open`][redsun.device.DataWriter.open].
 
         Parameters
         ----------
@@ -318,7 +318,7 @@ class FlyerController(Protocol[T_contra]):
     Type Parameters
     ---------------
     T_contra:
-        The type of the value accepted by :meth:`prepare` — typically
+        The type of the value accepted by [`prepare`][redsun.device.FlyerController.prepare] — typically
         a scan-path or sequencer-table description.  Contravariant
         because it only appears in input position.
     """

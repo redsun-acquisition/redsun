@@ -91,7 +91,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     injection) and reused across every acquisition.  A single writer
     instance may be shared by multiple devices that all write to the same
     backend store; each device registers its own named source via
-    :meth:`register`.
+    [`register`][redsun.storage.Writer.register].
 
     Call order per acquisition:
 
@@ -187,13 +187,13 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         """Merge *metadata* into the writer's accumulated metadata.
 
         Metadata persists on the writer instance across ``open()``/``close()``
-        cycles within the same run.  It is cleared by :meth:`close` (or
-        explicitly by :meth:`clear_metadata`), so each new run starts with a
-        clean slate and devices re-populate it during their ``prepare()`` call.
+        cycles within the same run.  It is cleared by [`close`][redsun.storage.Writer.close] (or
+        explicitly by [`clear_metadata`][redsun.storage.Writer.clear_metadata]), so each new run
+        starts with a clean slate and devices re-populate it during their ``prepare()`` call.
 
-        This method is **not** part of the :class:`ControllableDataWriter`
+        This method is **not** part of the [`ControllableDataWriter`][redsun.device.ControllableDataWriter]
         protocol.  Callers should check for its presence via the
-        :class:`~redsun.storage.HasMetadata` protocol before calling.
+        [`HasMetadata`][redsun.storage.HasMetadata] protocol before calling.
 
         Parameters
         ----------
@@ -207,7 +207,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def clear_metadata(self) -> None:
         """Remove all accumulated metadata.
 
-        Called automatically by :meth:`close`.  May also be called explicitly
+        Called automatically by [`close`][redsun.storage.Writer.close].  May also be called explicitly
         if metadata needs to be reset before a new run without closing the
         backend.
         """
@@ -220,7 +220,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         shape: tuple[int, ...],
         capacity: int = 0,
     ) -> None:
-        """Register a data source before :meth:`open` is called.
+        """Register a data source before [`open`][redsun.storage.Writer.open] is called.
 
         Safe to call multiple times on the same source name — counters
         are reset on each call, making it suitable for repeated
@@ -263,7 +263,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _on_register(self, name: str) -> None:
         """Backend-specific hook called after a source is registered.
 
-        Invoked at the end of :meth:`register` once
+        Invoked at the end of [`register`][redsun.storage.Writer.register] once
         ``self._sources[name]`` is fully populated.
 
         Parameters
@@ -280,14 +280,14 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     ) -> dict[str, DataKey]:
         """Open the backend (on first call) and return describe output.
 
-        Uses dtype/shape pre-registered via :meth:`register` for *name*.
+        Uses dtype/shape pre-registered via [`register`][redsun.storage.Writer.register] for *name*.
         Subsequent calls while already open are a no-op for the backend
         and simply return the DataKey dict for *name*.
 
         Parameters
         ----------
         name : str
-            Source name as passed to :meth:`register`.
+            Source name as passed to [`register`][redsun.storage.Writer.register].
         exposures_per_event : int
             Number of hardware exposures per logical event.
 
@@ -301,7 +301,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         KeyError
             If *name* has not been registered.
         RuntimeError
-            If :attr:`uri` has not been set.
+            If [`uri`][redsun.storage.Writer.uri] has not been set.
         """
         if name not in self._sources:
             raise KeyError(f"Source {name!r} not registered. Call register() first.")
@@ -326,7 +326,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _open_backend(self) -> None:
         """Physically open the storage backend.
 
-        Called once by :meth:`open` when the first source is opened.
+        Called once by [`open`][redsun.storage.Writer.open] when the first source is opened.
         Subclasses implement stream/file creation here.
         """
         ...
@@ -422,9 +422,9 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def close(self) -> None:
         """Finalise and close the storage backend.
 
-        Flushes any remaining state, calls :meth:`_close_backend`, resets
+        Flushes any remaining state, calls `_close_backend`, resets
         ``is_open``, and clears acquisition metadata.  The writer instance
-        remains in the registry and is ready for the next acquisition.
+        remains alive and is ready for the next acquisition.
         """
         if not self._is_open:
             return
@@ -437,7 +437,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _close_backend(self) -> None:
         """Close the storage backend.
 
-        Called by :meth:`close` after all sources are done.
+        Called by [`close`][redsun.storage.Writer.close] after all sources are done.
         """
         ...
 

@@ -23,7 +23,7 @@ class HasWriterLogic(Protocol):
     configuration.
 
     The ``writer_logic`` attribute should be populated at device construction
-    time by injecting the shared :class:`~redsun.storage.Writer` instance.
+    time by injecting the shared [`Writer`][redsun.storage.Writer] instance.
     """
 
     @property
@@ -34,8 +34,8 @@ class HasWriterLogic(Protocol):
         -------
         DataWriter
             The storage writer paired with this device.  May implement the
-            richer :class:`~redsun.device.ControllableDataWriter` interface
-            if the backend supports multi-source writes.
+            richer [`ControllableDataWriter`][redsun.device.ControllableDataWriter]
+            interface if the backend supports multi-source writes.
         """
         ...
 
@@ -44,7 +44,7 @@ class HasWriterLogic(Protocol):
 class HasMetadata(Protocol):
     """Protocol for writers that accept externally-supplied metadata.
 
-    Implemented by :class:`~redsun.storage.Writer` (and therefore by every
+    Implemented by [`Writer`][redsun.storage.Writer] (and therefore by every
     concrete backend such as ``ZarrWriter``).  Used by helper functions and
     callbacks to forward device configuration into the active writer without
     a hard dependency on the concrete class.
