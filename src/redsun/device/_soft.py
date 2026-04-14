@@ -13,7 +13,7 @@ intended for:
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 from redsun.engine import Status
 from redsun.utils.descriptors import make_reading
@@ -43,9 +43,6 @@ def _infer_dtype(value: Any) -> Dtype:
     if isinstance(value, (list, tuple)):
         return "array"
     return "string"
-
-
-_DType = Literal["boolean", "integer", "number", "string", "array"]
 
 
 def _infer_shape(value: Any) -> list[int | None]:
@@ -117,7 +114,7 @@ class SoftAttrR(SoftAttr, Generic[T]):
         super().__init__(name=name)
         self._value: T = initial_value
         self._units = units
-        self._dtype: _DType = _infer_dtype(initial_value)
+        self._dtype: Dtype = _infer_dtype(initial_value)
         self._shape: list[int | None] = _infer_shape(initial_value)
         self._callbacks: list[Callable[[dict[str, Reading[T]]], None]] = []
 
