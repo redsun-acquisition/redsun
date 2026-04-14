@@ -38,6 +38,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   on `Writer.close()` so each run starts clean.
 - All cross-references in new and modified docstrings use mkdocstrings markdown link syntax
   (`[Name][full.path.Name]`) instead of reStructuredText (`:class:`, `:meth:`, `:attr:`).
+- Changed CI to allow allow for RC releases
 
 ### Removed
 - `MultiSourceDataWriter` — renamed to `ControllableDataWriter`.
