@@ -6,6 +6,7 @@ and dependency-ordered instantiation.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from enum import Enum, unique
 from importlib import import_module
@@ -36,6 +37,7 @@ from redsun.containers.components import (
     _ViewField,
 )
 from redsun.device import Device
+from redsun.engine import get_shared_loop
 from redsun.presenter import Presenter
 from redsun.view import View
 from redsun.virtual import (
@@ -78,19 +80,11 @@ def _assert_never(arg: Never) -> Never:
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
-    """Check if a class implements the device protocol."""
-    if Device in cls.mro():
-        return True
-
-    required_methods = ["read_configuration", "describe_configuration"]
-    required_properties = ["name", "parent"]
-
-    is_compliant = all(
-        hasattr(cls, attr) for attr in [*required_methods, *required_properties]
-    )
-    if is_compliant:
-        Device.register(cls)
-    return True
+    """Check if a class is an ophyd-async Device subclass."""
+    try:
+        return issubclass(cls, Device)
+    except TypeError:
+        return False
 
 
 def _check_presenter_protocol(cls: type) -> TypeGuard[type[Presenter]]:
@@ -197,6 +191,7 @@ class AppContainer:
         "_config",
         "_virtual_container",
         "_is_built",
+        "_built_devices",
     )
 
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
@@ -320,6 +315,7 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._is_built: bool = False
+        self._built_devices: dict[str, Device] = {}
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -443,6 +439,7 @@ class AppContainer:
             if isinstance(component.instance, IsInjectable):
                 component.instance.inject_dependencies(self._virtual_container)
 
+        self._built_devices = built_devices
         self._is_built = True
         logger.info(
             f"Container built: "
@@ -452,6 +449,34 @@ class AppContainer:
         )
 
         return self
+
+    def connect_devices(self, mock: bool = False) -> None:
+        """Connect all devices via ophyd-async's async connect lifecycle.
+
+        Call after [`build`][redsun.containers.container.AppContainer.build].
+        Use ``mock=True`` in tests to skip hardware communication.
+
+        Parameters
+        ----------
+        mock : bool
+            If ``True``, connect using mock backends (no hardware required).
+
+        Raises
+        ------
+        RuntimeError
+            If called before [`build`][redsun.containers.container.AppContainer.build].
+        """
+        if not self._is_built:
+            raise RuntimeError("Call build() before connect_devices()")
+
+        async def _connect_all() -> asyncio.Future[list[None]]:
+            future = asyncio.gather(
+                *[device.connect(mock=mock) for device in self._built_devices.values()]
+            )
+            return future
+
+        future = asyncio.run_coroutine_threadsafe(_connect_all(), get_shared_loop())
+        future.result()
 
     def shutdown(self) -> None:
         """Shutdown all presenters that implement ``HasShutdown``."""

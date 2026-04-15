@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 
 class _DeviceField:
-    """Sentinel returned by [`device`][redsun.containers.device]. Resolved by the metaclass into a ``_DeviceComponent``."""
+    """Sentinel returned by [`declare_device`][redsun.containers.declare_device]. Resolved by the metaclass into a ``_DeviceComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
@@ -30,7 +30,7 @@ class _DeviceField:
 
 
 class _PresenterField:
-    """Sentinel returned by [`presenter`][redsun.containers.presenter]. Resolved by the metaclass into a ``_PresenterComponent``."""
+    """Sentinel returned by [`declare_presenter`][redsun.containers.declare_presenter]. Resolved by the metaclass into a ``_PresenterComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
@@ -48,7 +48,7 @@ class _PresenterField:
 
 
 class _ViewField:
-    """Sentinel returned by [`view`][redsun.containers.view]. Resolved by the metaclass into a ``_ViewComponent``."""
+    """Sentinel returned by [`declare_view`][redsun.containers.declare_view]. Resolved by the metaclass into a ``_ViewComponent``."""
 
     __slots__ = ("cls", "alias", "from_config", "kwargs")
 
@@ -65,7 +65,7 @@ class _ViewField:
         self.kwargs = kwargs
 
 
-def device(
+def declare_device(
     cls: type,
     /,
     alias: str | None = None,
@@ -78,7 +78,7 @@ def device(
 
     ```python
     class MyApp(AppContainer):
-        motor = device(MyMotor, axis=["X"])
+        motor = declare_device(MyMotor, axis=["X"])
     ```
 
     The container will create an instance of `MyMotor` with the specified kwargs when the
@@ -98,7 +98,7 @@ def device(
     return _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
-def view(
+def declare_view(
     cls: type,
     /,
     alias: str | None = None,
@@ -109,7 +109,7 @@ def view(
 
     ```python
     class MyApp(AppContainer):
-        ui = view(MyView)
+        ui = declare_view(MyView)
     ```
 
     Parameters
@@ -126,7 +126,7 @@ def view(
     return _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
 
-def presenter(
+def declare_presenter(
     cls: type,
     /,
     alias: str | None = None,
@@ -137,7 +137,7 @@ def presenter(
 
     ```python
     class MyApp(AppContainer):
-        ctrl = presenter(MyCtrl, gain=1.0)
+        ctrl = declare_presenter(MyCtrl, gain=1.0)
     ```
 
     Parameters
@@ -211,4 +211,4 @@ class _ViewComponent(_ComponentBase[View]):
         return self.instance
 
 
-__all__ = ["device", "presenter", "view"]
+__all__ = ["declare_device", "declare_presenter", "declare_view"]

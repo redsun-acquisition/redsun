@@ -10,16 +10,18 @@
 from __future__ import annotations
 
 import abc
+import asyncio
 import threading as th
 import time
 import uuid
 from typing import TYPE_CHECKING
 
-from redsun.device._acquisition import ControllableDataWriter
+from ophyd_async.core import DetectorWriter, TriggerInfo
+
 from redsun.log import Loggable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import AsyncGenerator, AsyncIterator
     from typing import Any
 
     import numpy as np
@@ -29,11 +31,34 @@ if TYPE_CHECKING:
     from event_model.documents import StreamDatum, StreamResource
 
 
+class PrepareInfo(TriggerInfo):
+    """[`TriggerInfo`][ophyd_async.core.TriggerInfo] extended with storage-coordination fields.
+
+    Drop-in replacement for the pre-ophyd-async ``PrepareInfo`` dataclass.
+    Passes through all ophyd-async trigger parameters and adds
+    ``write_forever`` so that storage presenters can distinguish bounded
+    acquisitions from continuous streams without a separate message type.
+
+    Parameters
+    ----------
+    number_of_events :
+        Number of frames (events) to acquire per trigger group.
+        Forwarded directly to ``TriggerInfo``.
+    write_forever :
+        When ``True``, the writer keeps writing until explicitly stopped
+        rather than stopping after *number_of_events* frames.
+    **kwargs
+        All other keyword arguments are forwarded to ``TriggerInfo``.
+    """
+
+    write_forever: bool = False
+
+
 class SourceInfo:
     """Runtime acquisition state for a registered data source.
 
     Tracks per-source counters and identifiers used during an acquisition.
-    This class is internal to [`Writer`][redsun.storage.Writer].
+    This class is internal to [`SharedDetectorWriter`][redsun.storage.SharedDetectorWriter].
 
     Attributes
     ----------
@@ -84,14 +109,16 @@ class SourceInfo:
         self.stream_resource_uid: str = str(uuid.uuid4())
 
 
-class Writer(ControllableDataWriter, abc.ABC, Loggable):
-    """Abstract base class for storage backend writers.
+class SharedDetectorWriter(DetectorWriter, abc.ABC, Loggable):
+    """Abstract multi-source storage backend extending ophyd-async's `DetectorWriter`.
+
+    Extends [`DetectorWriter`][ophyd_async.core.DetectorWriter] with source
+    registration so that multiple devices can write to a single shared backend
+    store.  Each device registers its own named source via
+    [`register`][redsun.storage.SharedDetectorWriter.register].
 
     Writers are created once (typically at application start via dependency
-    injection) and reused across every acquisition.  A single writer
-    instance may be shared by multiple devices that all write to the same
-    backend store; each device registers its own named source via
-    [`register`][redsun.storage.Writer.register].
+    injection) and reused across every acquisition.
 
     Call order per acquisition:
 
@@ -99,25 +126,25 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         - called by a presenter before the plan
     2. ``register(source_name, dtype, shape, capacity)``
         - called by each device in its own ``prepare()``
-    3. ``open(source_name)``
+    3. ``await open(source_name)``
         - called by each device; backend opens on the first call
         - returns ``{source_name: DataKey(...)}``
     4. ``write_frame(source_name, frame)``
-        - push frames (thread-safe)
-    5. ``close()``
+        - push frames (thread-safe, sync)
+    5. ``await close()``
         - finalise and close backend; called once all devices are done
 
     Subclasses must implement:
 
-    - [`_class_mimetype`][redsun.storage.Writer._class_mimetype]
-    - [`_on_register`][redsun.storage.Writer._on_register]
+    - [`_class_mimetype`][redsun.storage.SharedDetectorWriter._class_mimetype]
+    - [`_on_register`][redsun.storage.SharedDetectorWriter._on_register]
         - backend-specific setup after a source is registered
-    - [`_open_backend`][redsun.storage.Writer._open_backend]
-        - physically open the backend (called once on first ``open()``)
-    - [`_write_frame`][redsun.storage.Writer._write_frame]
-        - write one frame to the backend
-    - [`_close_backend`][redsun.storage.Writer._close_backend]
-        - close the backend
+    - [`_open_backend`][redsun.storage.SharedDetectorWriter._open_backend]
+        - physically open the backend (sync; called via ``asyncio.to_thread``)
+    - [`_write_frame`][redsun.storage.SharedDetectorWriter._write_frame]
+        - write one frame to the backend (sync, called under lock)
+    - [`_close_backend`][redsun.storage.SharedDetectorWriter._close_backend]
+        - close the backend (sync; called via ``asyncio.to_thread``)
 
     Parameters
     ----------
@@ -126,13 +153,13 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         same format.  Use ``"default"`` for the common single-store case.
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, **_: object) -> None:
         self._name = name
         self._uri: str = ""
         self._lock = th.Lock()
         self._is_open = False
         self._sources: dict[str, SourceInfo] = {}
-        self._metadata: dict[str, dict[str, Any]] = {}
+        self._metadata: dict[str, Any] = {}
 
     @classmethod
     @abc.abstractmethod
@@ -187,12 +214,15 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         """Merge *metadata* into the writer's accumulated metadata.
 
         Metadata persists on the writer instance across ``open()``/``close()``
-        cycles within the same run.  It is cleared by [`close`][redsun.storage.Writer.close] (or
-        explicitly by [`clear_metadata`][redsun.storage.Writer.clear_metadata]), so each new run
-        starts with a clean slate and devices re-populate it during their ``prepare()`` call.
+        cycles within the same run.  It is cleared by
+        [`close`][redsun.storage.SharedDetectorWriter.close] (or explicitly by
+        [`clear_metadata`][redsun.storage.SharedDetectorWriter.clear_metadata]),
+        so each new run starts with a clean slate and devices re-populate it
+        during their ``prepare()`` call.
 
-        This method is **not** part of the [`ControllableDataWriter`][redsun.device.ControllableDataWriter]
-        protocol.  Callers should check for its presence via the
+        This method is **not** part of the
+        [`DetectorWriter`][ophyd_async.core.DetectorWriter] ABC.  Callers
+        should check for its presence via the
         [`HasMetadata`][redsun.storage.HasMetadata] protocol before calling.
 
         Parameters
@@ -207,9 +237,9 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def clear_metadata(self) -> None:
         """Remove all accumulated metadata.
 
-        Called automatically by [`close`][redsun.storage.Writer.close].  May also be called explicitly
-        if metadata needs to be reset before a new run without closing the
-        backend.
+        Called automatically by [`close`][redsun.storage.SharedDetectorWriter.close].
+        May also be called explicitly if metadata needs to be reset before a
+        new run without closing the backend.
         """
         self._metadata.clear()
 
@@ -220,7 +250,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         shape: tuple[int, ...],
         capacity: int = 0,
     ) -> None:
-        """Register a data source before [`open`][redsun.storage.Writer.open] is called.
+        """Register a data source before [`open`][redsun.storage.SharedDetectorWriter.open] is called.
 
         Safe to call multiple times on the same source name — counters
         are reset on each call, making it suitable for repeated
@@ -263,8 +293,8 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _on_register(self, name: str) -> None:
         """Backend-specific hook called after a source is registered.
 
-        Invoked at the end of [`register`][redsun.storage.Writer.register] once
-        ``self._sources[name]`` is fully populated.
+        Invoked at the end of [`register`][redsun.storage.SharedDetectorWriter.register]
+        once ``self._sources[name]`` is fully populated.
 
         Parameters
         ----------
@@ -273,21 +303,23 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         """
         ...
 
-    def open(
+    async def open(
         self,
         name: str,
         exposures_per_event: int = 1,
     ) -> dict[str, DataKey]:
         """Open the backend (on first call) and return describe output.
 
-        Uses dtype/shape pre-registered via [`register`][redsun.storage.Writer.register] for *name*.
+        Uses dtype/shape pre-registered via
+        [`register`][redsun.storage.SharedDetectorWriter.register] for *name*.
         Subsequent calls while already open are a no-op for the backend
         and simply return the DataKey dict for *name*.
 
         Parameters
         ----------
         name : str
-            Source name as passed to [`register`][redsun.storage.Writer.register].
+            Source name as passed to
+            [`register`][redsun.storage.SharedDetectorWriter.register].
         exposures_per_event : int
             Number of hardware exposures per logical event.
 
@@ -301,7 +333,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         KeyError
             If *name* has not been registered.
         RuntimeError
-            If [`uri`][redsun.storage.Writer.uri] has not been set.
+            If [`uri`][redsun.storage.SharedDetectorWriter.uri] has not been set.
         """
         if name not in self._sources:
             raise KeyError(f"Source {name!r} not registered. Call register() first.")
@@ -312,7 +344,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
                     "A presenter must call set_uri() before open()."
                 )
             self._is_open = True
-            self._open_backend()
+            await asyncio.to_thread(self._open_backend)
         source = self._sources[name]
         data_key: DataKey = {
             "source": self._uri,
@@ -326,13 +358,14 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _open_backend(self) -> None:
         """Physically open the storage backend.
 
-        Called once by [`open`][redsun.storage.Writer.open] when the first source is opened.
-        Subclasses implement stream/file creation here.
+        Called once by [`open`][redsun.storage.SharedDetectorWriter.open] when
+        the first source is opened.  Subclasses implement stream/file creation
+        here.  Runs in a thread pool via ``asyncio.to_thread``.
         """
         ...
 
     def write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
-        """Push one frame for *name* to the backend (thread-safe).
+        """Push one frame for *name* to the backend (thread-safe, sync).
 
         Parameters
         ----------
@@ -358,7 +391,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         """
         ...
 
-    def get_indices_written(self, name: str | None = None) -> int:
+    async def get_indices_written(self, name: str | None = None) -> int:
         """Return the number of frames written for a source.
 
         Parameters
@@ -385,7 +418,7 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         timeout: float,
         *,
         name: str | None = None,
-    ) -> Iterator[int]:
+    ) -> AsyncGenerator[int, None]:
         """Yield the running frame count as frames are written.
 
         Parameters
@@ -406,29 +439,102 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         TimeoutError
             If no new frames arrive within *timeout* seconds.
         """
-        deadline = time.monotonic() + timeout
-        last = self.get_indices_written(name)
-        while True:
-            current = self.get_indices_written(name)
-            if current != last:
-                yield current
-                last = current
-                deadline = time.monotonic() + timeout
-            if time.monotonic() > deadline:
-                label = name if name is not None else "<all>"
-                raise TimeoutError(f"No new frames from {label!r} within {timeout}s")
-            time.sleep(0.01)
 
-    def close(self) -> None:
+        async def _gen() -> AsyncGenerator[int, None]:
+            deadline = time.monotonic() + timeout
+            last = await self.get_indices_written(name)
+            yield last
+            while True:
+                if time.monotonic() > deadline:
+                    label = name if name is not None else "<all>"
+                    raise TimeoutError(
+                        f"No new frames from {label!r} within {timeout}s"
+                    )
+                await asyncio.sleep(0.01)
+                current = await self.get_indices_written(name)
+                if current != last:
+                    last = current
+                    yield current
+                    deadline = time.monotonic() + timeout
+
+        return _gen()
+
+    def collect_stream_docs(
+        self,
+        name: str,
+        indices_written: int,
+    ) -> AsyncIterator[StreamAsset]:
+        """Yield ``StreamResource`` and ``StreamDatum`` documents for *name*.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+        indices_written : int
+            Number of frames to report in this call.
+
+        Yields
+        ------
+        StreamAsset
+            Tuples of ``("stream_resource", doc)`` or
+            ``("stream_datum", doc)``.
+
+        Raises
+        ------
+        KeyError
+            If *name* is not registered.
+        """
+
+        async def _gen() -> AsyncGenerator[StreamAsset, None]:
+            if name not in self._sources:
+                raise KeyError(f"Unknown source {name!r}")
+
+            source = self._sources[name]
+
+            if indices_written == 0:
+                return
+
+            frames_to_report = min(indices_written, source.frames_written)
+
+            if source.collection_counter >= frames_to_report:
+                return
+
+            if source.collection_counter == 0:
+                stream_resource: StreamResource = {
+                    "data_key": source.data_key,
+                    "mimetype": self.mimetype,
+                    "parameters": {"array_name": source.name},
+                    "uid": source.stream_resource_uid,
+                    "uri": self.uri,
+                }
+                yield ("stream_resource", stream_resource)
+
+            stream_datum: StreamDatum = {
+                "descriptor": "",
+                "indices": {
+                    "start": source.collection_counter,
+                    "stop": frames_to_report,
+                },
+                "seq_nums": {"start": 0, "stop": 0},
+                "stream_resource": source.stream_resource_uid,
+                "uid": f"{source.stream_resource_uid}/{source.collection_counter}",
+            }
+            yield ("stream_datum", stream_datum)
+
+            source.collection_counter = frames_to_report
+
+        return _gen()
+
+    async def close(self) -> None:
         """Finalise and close the storage backend.
 
-        Flushes any remaining state, calls `_close_backend`, resets
+        Flushes any remaining state, calls ``_close_backend``, resets
         ``is_open``, and clears acquisition metadata.  The writer instance
         remains alive and is ready for the next acquisition.
         """
         if not self._is_open:
             return
-        self._close_backend()
+        await asyncio.to_thread(self._close_backend)
         self._is_open = False
         self.clear_metadata()
         self.logger.debug("Backend closed.")
@@ -437,7 +543,8 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
     def _close_backend(self) -> None:
         """Close the storage backend.
 
-        Called by [`close`][redsun.storage.Writer.close] after all sources are done.
+        Called by [`close`][redsun.storage.SharedDetectorWriter.close] after
+        all sources are done.  Runs in a thread pool via ``asyncio.to_thread``.
         """
         ...
 
@@ -460,62 +567,3 @@ class Writer(ControllableDataWriter, abc.ABC, Loggable):
         """
         self._sources.clear()
         self.logger.debug("Source cache reset.")
-
-    def collect_stream_docs(
-        self,
-        name: str,
-        indices_written: int,
-    ) -> Iterator[StreamAsset]:
-        """Yield ``StreamResource`` and ``StreamDatum`` documents for *name*.
-
-        Parameters
-        ----------
-        name : str
-            Source name.
-        indices_written : int
-            Number of frames to report in this call.
-
-        Yields
-        ------
-        StreamAsset
-            Tuples of ``("stream_resource", doc)`` or
-            ``("stream_datum", doc)``.
-
-        Raises
-        ------
-        KeyError
-            If *name* is not registered.
-        """
-        if name not in self._sources:
-            raise KeyError(f"Unknown source {name!r}")
-
-        source = self._sources[name]
-
-        if indices_written == 0:
-            return
-
-        frames_to_report = min(indices_written, source.frames_written)
-
-        if source.collection_counter >= frames_to_report:
-            return
-
-        if source.collection_counter == 0:
-            stream_resource: StreamResource = {
-                "data_key": source.data_key,
-                "mimetype": self.mimetype,
-                "parameters": {"array_name": source.name},
-                "uid": source.stream_resource_uid,
-                "uri": self.uri,
-            }
-            yield ("stream_resource", stream_resource)
-
-        stream_datum: StreamDatum = {
-            "descriptor": "",
-            "indices": {"start": source.collection_counter, "stop": frames_to_report},
-            "seq_nums": {"start": 0, "stop": 0},
-            "stream_resource": source.stream_resource_uid,
-            "uid": f"{source.stream_resource_uid}/{source.collection_counter}",
-        }
-        yield ("stream_datum", stream_datum)
-
-        source.collection_counter = frames_to_report

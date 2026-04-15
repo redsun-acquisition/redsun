@@ -1,6 +1,7 @@
 from typing import Mapping
 
-from redsun.device import PDevice
+from ophyd_async.core import Device
+
 from redsun.presenter import Presenter
 
 
@@ -8,7 +9,7 @@ class MockController(Presenter):
     def __init__(
         self,
         name: str,
-        devices: Mapping[str, PDevice],
+        devices: Mapping[str, Device],
         /,
         string: str = "",
         integer: int = 0,
@@ -26,7 +27,7 @@ class BrokenController(Presenter):
     def __init__(
         self,
         name: str,
-        devices: Mapping[str, PDevice],
+        devices: Mapping[str, Device],
         /,
         string: str = "",
         integer: int = 0,
@@ -34,22 +35,3 @@ class BrokenController(Presenter):
         boolean: bool = False,
     ) -> None:
         raise Exception("Broken controller")
-
-
-class NonDerivedController:
-    def __init__(
-        self,
-        name: str,
-        devices: dict[str, PDevice],
-        /,
-        string: str = "",
-        integer: int = 0,
-        floating: float = 0.0,
-        boolean: bool = False,
-    ) -> None:
-        self.name = name
-        self.devices = devices
-        self.string = string
-        self.integer = integer
-        self.floating = floating
-        self.boolean = boolean

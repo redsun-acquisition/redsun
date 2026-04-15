@@ -10,16 +10,15 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from redsun.device import ControllableDataWriter
+import redsun.storage._zarr as zarr_mod
 from redsun.storage import (
     HasMetadata,
     HasWriterLogic,
     PathInfo,
-    PrepareInfo,
     SessionPathProvider,
+    SharedDetectorWriter,
     handle_descriptor_metadata,
 )
-from redsun.storage._base import Writer
 from redsun.storage._zarr import ZarrWriter
 from redsun.storage.utils import from_uri
 
@@ -29,8 +28,8 @@ def current_date() -> str:
     return datetime.datetime.now().strftime("%Y_%m_%d")
 
 
-class _ConcreteWriter(Writer):
-    """Minimal Writer subclass for testing the abstract base."""
+class _ConcreteWriter(SharedDetectorWriter):
+    """Minimal SharedDetectorWriter subclass for testing the abstract base."""
 
     def __init__(self, name: str = "default") -> None:
         super().__init__(name)
@@ -229,11 +228,11 @@ class TestWriter:
         w.set_uri("file:///tmp/test.zarr")
         assert w.uri == "file:///tmp/test.zarr"
 
-    def test_set_uri_while_open_raises(self) -> None:
+    async def test_set_uri_while_open_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (4, 4))
-        w.open("cam")
+        await w.open("cam")
         with pytest.raises(RuntimeError, match="open"):
             w.set_uri("file:///tmp/other.zarr")
 
@@ -243,11 +242,11 @@ class TestWriter:
         assert "cam" in w._sources
         assert w._sources["cam"].shape == (512, 512)
 
-    def test_register_while_open_raises(self) -> None:
+    async def test_register_while_open_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (4, 4))
-        w.open("cam")
+        await w.open("cam")
         with pytest.raises(RuntimeError, match="open"):
             w.register("cam2", np.dtype("uint8"), (4, 4))
 
@@ -258,110 +257,109 @@ class TestWriter:
         w.register("cam", np.dtype("uint8"), (4, 4))
         assert w._sources["cam"].frames_written == 0
 
-    def test_open_without_register_raises(self) -> None:
+    async def test_open_without_register_raises(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         with pytest.raises(KeyError, match="not registered"):
-            w.open("cam")
+            await w.open("cam")
 
-    def test_open_sets_is_open(self) -> None:
+    async def test_open_sets_is_open(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (4, 4))
-        w.open("cam")
+        await w.open("cam")
         assert w.is_open
 
-    def test_open_without_uri_raises(self) -> None:
+    async def test_open_without_uri_raises(self) -> None:
         w = self._make_writer()
         w.register("cam", np.dtype("uint8"), (4, 4))
         with pytest.raises(RuntimeError, match="no URI"):
-            w.open("cam")
+            await w.open("cam")
 
-    def test_open_returns_data_key_dict(self) -> None:
+    async def test_open_returns_data_key_dict(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        result = w.open("cam")
+        result = await w.open("cam")
         assert "cam" in result
         assert result["cam"]["shape"] == [2, 2]
 
-    def test_open_backend_called_only_on_first_open(self) -> None:
+    async def test_open_backend_called_only_on_first_open(self) -> None:
         """Calling open() a second time (different source) must not re-open backend."""
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
         w.register("cam2", np.dtype("uint8"), (2, 2))
-        w.open("cam")
+        await w.open("cam")
         assert w.is_open
-        # second open() must succeed and not raise
-        w.open("cam2")
+        await w.open("cam2")
         assert w.is_open
 
-    def test_frame_written_via_write_frame(self) -> None:
+    async def test_frame_written_via_write_frame(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
+        await w.open("cam")
         frame = np.zeros((2, 2), dtype="uint8")
         w.write_frame("cam", frame)
-        assert w.get_indices_written("cam") == 1
+        assert await w.get_indices_written("cam") == 1
         assert w._frames["cam"][0] is frame
 
-    def test_close_finalizes_backend(self) -> None:
+    async def test_close_finalizes_backend(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
-        w.close()
+        await w.open("cam")
+        await w.close()
         assert not w.is_open
         assert w._finalized
 
-    def test_close_when_not_open_is_noop(self) -> None:
+    async def test_close_when_not_open_is_noop(self) -> None:
         w = self._make_writer()
-        w.close()  # must not raise
+        await w.close()
         assert not w._finalized
 
-    def test_get_indices_written_min_across_sources(self) -> None:
+    async def test_get_indices_written_min_across_sources(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("a", np.dtype("uint8"), (2, 2))
         w.register("b", np.dtype("uint8"), (2, 2))
-        w.open("a")
-        w.open("b")
+        await w.open("a")
+        await w.open("b")
         w._sources["a"].frames_written = 1
-        assert w.get_indices_written() == 0
+        assert await w.get_indices_written() == 0
 
-    def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
+    async def test_collect_stream_docs_emits_resource_then_datum(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
+        await w.open("cam")
         w._sources["cam"].frames_written = 3
-        docs = list(w.collect_stream_docs("cam", 3))
+        docs = [doc async for doc in w.collect_stream_docs("cam", 3)]
         kinds = [d[0] for d in docs]
         assert "stream_resource" in kinds
         assert "stream_datum" in kinds
 
-    def test_collect_stream_docs_mimetype_from_writer(self) -> None:
+    async def test_collect_stream_docs_mimetype_from_writer(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
+        await w.open("cam")
         w._sources["cam"].frames_written = 1
-        docs = list(w.collect_stream_docs("cam", 1))
+        docs = [doc async for doc in w.collect_stream_docs("cam", 1)]
         resource = next(d for kind, d in docs if kind == "stream_resource")
         assert resource["mimetype"] == "application/x-test"
 
-    def test_collect_stream_docs_no_duplicate_resource(self) -> None:
+    async def test_collect_stream_docs_no_duplicate_resource(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
-        w.open("cam")
+        await w.open("cam")
         w._sources["cam"].frames_written = 2
-        docs1 = list(w.collect_stream_docs("cam", 2))
+        docs1 = [doc async for doc in w.collect_stream_docs("cam", 2)]
         assert any(d[0] == "stream_resource" for d in docs1)
         w._sources["cam"].frames_written = 4
-        docs2 = list(w.collect_stream_docs("cam", 4))
+        docs2 = [doc async for doc in w.collect_stream_docs("cam", 4)]
         assert not any(d[0] == "stream_resource" for d in docs2)
 
 
@@ -386,21 +384,21 @@ class TestWriterMetadata:
         w.update_metadata({"roi": [0, 0, 512, 512]})
         assert w._metadata == {"exposure": 0.01, "roi": [0, 0, 512, 512]}
 
-    def test_metadata_available_at_open(self) -> None:
+    async def test_metadata_available_at_open(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
         w.update_metadata({"exposure": 0.01})
-        w.open("cam")
+        await w.open("cam")
         assert w._metadata == {"exposure": 0.01}
 
-    def test_metadata_cleared_on_close(self) -> None:
+    async def test_metadata_cleared_on_close(self) -> None:
         w = self._make_writer()
         w.set_uri("file:///tmp/test.zarr")
         w.register("cam", np.dtype("uint8"), (2, 2))
         w.update_metadata({"exposure": 0.01})
-        w.open("cam")
-        w.close()
+        await w.open("cam")
+        await w.close()
         assert w._metadata == {}
 
     def test_clear_metadata(self) -> None:
@@ -409,24 +407,24 @@ class TestWriterMetadata:
         w.clear_metadata()
         assert w._metadata == {}
 
-    def test_metadata_not_cleared_by_failed_open(self) -> None:
+    async def test_metadata_not_cleared_by_failed_open(self) -> None:
         """A failed open (no URI) must not wipe accumulated metadata."""
         w = self._make_writer()
         w.register("cam", np.dtype("uint8"), (2, 2))
         w.update_metadata({"exposure": 0.01})
         with pytest.raises(RuntimeError, match="no URI"):
-            w.open("cam")
+            await w.open("cam")
         assert w._metadata == {"exposure": 0.01}
 
 
 class TestProtocolConformance:
-    def test_concrete_writer_is_controllable_data_writer(self) -> None:
+    def test_concrete_writer_is_shared_detector_writer(self) -> None:
         w = _ConcreteWriter("default")
-        assert isinstance(w, ControllableDataWriter)
+        assert isinstance(w, SharedDetectorWriter)
 
-    def test_zarr_writer_is_controllable_data_writer(self) -> None:
+    def test_zarr_writer_is_shared_detector_writer(self) -> None:
         w = ZarrWriter("default")
-        assert isinstance(w, ControllableDataWriter)
+        assert isinstance(w, SharedDetectorWriter)
 
     def test_has_writer_logic_structural_check(self) -> None:
         class _FakeDevice:
@@ -473,14 +471,14 @@ class TestHandleDescriptorMetadata:
 
     def test_skips_unknown_devices(self) -> None:
         doc = {"configuration": {"unknown": {"x": 1}}}
-        handle_descriptor_metadata(doc, {})  # must not raise
+        handle_descriptor_metadata(doc, {})
 
     def test_skips_devices_without_writer_logic(self) -> None:
         class _NoWriter:
             pass
 
         doc = {"configuration": {"motor": {"position": 1.5}}}
-        handle_descriptor_metadata(doc, {"motor": _NoWriter()})  # must not raise
+        handle_descriptor_metadata(doc, {"motor": _NoWriter()})
 
     def test_skips_writers_without_update_metadata(self) -> None:
         class _MinimalWriter:
@@ -492,7 +490,7 @@ class TestHandleDescriptorMetadata:
                 return _MinimalWriter()
 
         doc = {"configuration": {"cam": {"exposure": 0.01}}}
-        handle_descriptor_metadata(doc, {"cam": _Device()})  # must not raise
+        handle_descriptor_metadata(doc, {"cam": _Device()})
 
     def test_empty_configuration_is_noop(self) -> None:
         writer = _ConcreteWriter()
@@ -501,28 +499,10 @@ class TestHandleDescriptorMetadata:
         assert writer._metadata == {}
 
 
-class TestPrepareInfo:
-    def test_defaults(self) -> None:
-        pi = PrepareInfo()
-        assert pi.capacity == 0
-        assert pi.write_forever is False
-
-    def test_custom_values(self) -> None:
-        pi = PrepareInfo(capacity=100, write_forever=True)
-        assert pi.capacity == 100
-        assert pi.write_forever is True
-
-    def test_instances_are_independent(self) -> None:
-        pi1 = PrepareInfo(capacity=10)
-        pi2 = PrepareInfo(capacity=20)
-        assert pi1.capacity != pi2.capacity
-
-
 class TestZarrWriterImportGuard:
     def test_import_error_without_acquire_zarr(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import redsun.storage._zarr as zarr_mod
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
         with pytest.raises(ImportError, match="acquire-zarr"):
@@ -530,7 +510,7 @@ class TestZarrWriterImportGuard:
 
 
 class TestZarrWriterOpen:
-    def test_open(self, tmp_path: Path) -> None:
+    async def test_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan.zarr"
         writer = ZarrWriter("default")
         writer.set_uri(uri)
@@ -541,7 +521,7 @@ class TestZarrWriterOpen:
             capacity=10,
         )
         with patch("redsun.storage._zarr.ZarrStream"):
-            writer.open("cam")
+            await writer.open("cam")
         assert writer.is_open
 
     def test_set_uri_updates_store_path(self, tmp_path: Path) -> None:
@@ -550,12 +530,12 @@ class TestZarrWriterOpen:
         writer.set_uri(uri)
         assert writer._stream_settings.store_path == from_uri(uri) + ".zarr"
 
-    def test_metadata_written_on_open(self, tmp_path: Path) -> None:
+    async def test_metadata_written_on_open(self, tmp_path: Path) -> None:
         uri = tmp_path.as_uri() + "/scan"
         writer = ZarrWriter("default")
         writer.set_uri(uri)
         writer.register("cam", dtype=np.dtype("uint16"), shape=(64, 64))
         writer.update_metadata({"motor": {"position": 1.5}})
         with patch("redsun.storage._zarr.ZarrStream") as mock_stream_cls:
-            writer.open("cam")
+            await writer.open("cam")
             mock_stream_cls.return_value.write_custom_metadata.assert_called_once()

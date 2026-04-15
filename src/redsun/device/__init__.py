@@ -1,33 +1,53 @@
-from ._acquisition import (
-    AcquisitionController,
-    ControllableDataWriter,
-    DataWriter,
+"""redsun device layer — re-exports from ophyd-async.
+
+The redsun device layer delegates entirely to ophyd-async.
+Import device primitives from here; do not import from ophyd_async directly
+within redsun application code.
+"""
+
+from __future__ import annotations
+
+from ophyd_async.core import (
+    AsyncStatus,
+    DetectorController,
+    DetectorTrigger,
+    DetectorWriter,
+    Device,
     FlyerController,
-    PrepareInfo,
+    SignalR,
+    SignalRW,
+    SignalW,
+    SignalX,
+    StandardDetector,
+    StandardFlyer,
+    StandardReadable,
+    StandardReadableFormat,
     TriggerInfo,
-    TriggerType,
+    WatchableAsyncStatus,
+    soft_signal_r_and_setter,
+    soft_signal_rw,
 )
-from ._attrs import AttrR, AttrRW, AttrT, AttrW
-from ._base import Device, HasChildren, PDevice
-from ._soft import SoftAttr, SoftAttrR, SoftAttrRW, SoftAttrT
+
+from .protocols import HasCache
 
 __all__ = [
-    "AcquisitionController",
-    "AttrR",
-    "AttrRW",
-    "AttrT",
-    "AttrW",
-    "ControllableDataWriter",
-    "DataWriter",
+    "AsyncStatus",
+    "DetectorController",
+    "DetectorTrigger",
+    "DetectorWriter",
     "Device",
     "FlyerController",
-    "HasChildren",
-    "PDevice",
-    "PrepareInfo",
-    "SoftAttr",
-    "SoftAttrR",
-    "SoftAttrRW",
-    "SoftAttrT",
+    "HasCache",
+    "SignalR",
+    "SignalRW",
+    "SignalW",
+    "SignalX",
+    "StandardDetector",
+    "StandardFlyer",
+    "StandardReadable",
+    "StandardReadableFormat",
     "TriggerInfo",
-    "TriggerType",
+    "WatchableAsyncStatus",
+    "soft_signal_r_and_setter",
+    "soft_signal_rw",
 ]
