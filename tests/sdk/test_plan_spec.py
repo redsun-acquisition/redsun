@@ -9,13 +9,19 @@ from inspect import Parameter
 from pathlib import Path
 from typing import Any, FrozenSet, Literal, Protocol, Set, runtime_checkable
 
+import numpy as np
 import pytest
-from bluesky.protocols import Locatable, Location, Movable, Readable, Stageable
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
 
-from redsun.device import PDevice
-from redsun.engine import Status
+from redsun.device import (
+    Device,
+    SignalR,
+    SignalRW,
+    StandardReadable,
+    soft_signal_r_and_setter,
+    soft_signal_rw,
+)
 from redsun.engine.actions import Action, continous
 from redsun.presenter.plan_spec import (
     ParamDescription,
@@ -34,104 +40,64 @@ from redsun.view.qt._widget_factory import create_param_widget
 
 
 @runtime_checkable
-class _MotorProtocol(PDevice, Locatable[Any], Protocol):
-    axis: list[str]
-    step_sizes: dict[str, float]
+class _MotorProtocol(Protocol):
+    """Motor protocol: requires child axis sub-devices."""
+
+    x: Device
+    y: Device
 
 
 @runtime_checkable
-class _DetectorProtocol(PDevice, Movable[Any], Readable[Any], Stageable, Protocol):
-    roi: tuple[int, int, int, int]
-    sensor_shape: tuple[int, int]
+class _DetectorProtocol(Protocol):
+    """Detector protocol: ROI is settable; sensor shape is fixed."""
+
+    roi: SignalRW[np.ndarray]
+    sensor_shape: SignalR[np.ndarray]
 
 
-class _MockDetector:
-    name: str
-    parent = None
-    roi = (0, 0, 512, 512)
-    sensor_shape = (512, 512)
+class _MockAxis(Device):
+    """Minimal single-axis device for motor protocol tests."""
+
+    position: SignalRW[float]
+
+    def __init__(self, name: str = "") -> None:
+        self.position = soft_signal_rw(float, initial_value=0.0, units="mm")
+        super().__init__(name=name)
+
+
+class _MockDetector(StandardReadable):
+    """Mock detector satisfying [`_DetectorProtocol`][tests.sdk.test_plan_spec._DetectorProtocol]."""
+
+    roi: SignalRW[tuple[int, int, int, int]]
+    sensor_shape: SignalR[tuple[int, int]]
 
     def __init__(self, name: str) -> None:
-        self.name = name
-
-    def set_name(self, name: str) -> None:
-        self.name = name
-
-    def describe_configuration(self) -> dict[str, Any]:
-        return {}
-
-    def read_configuration(self) -> dict[str, Any]:
-        return {}
-
-    def describe(self) -> dict[str, Any]:
-        return {}
-
-    def read(self) -> dict[str, Any]:
-        return {}
-
-    def stage(self) -> Status:
-        s = Status()
-        return s
-
-    def unstage(self) -> Status:
-        s = Status()
-        return s
-
-    def set(self, value: object) -> Status:
-        s = Status()
-        return s
+        with self.add_children_as_readables():
+            self.roi = soft_signal_rw(
+                np.ndarray, initial_value=np.array([0, 0, 512, 512], dtype=np.int32)
+            )
+            self.sensor_shape, _ = soft_signal_r_and_setter(
+                np.ndarray, initial_value=np.array([512, 512], dtype=np.int32)
+            )
+        super().__init__(name=name)
 
 
-class MockMotorDevice(PDevice):
-    parent = None
+class MockMotorDevice(StandardReadable):
+    """Mock motor satisfying [`_MotorProtocol`][tests.sdk.test_plan_spec._MotorProtocol]."""
 
-    def __init__(
-        self,
-        name: str,
-        /,
-        axis: list[str] = ["X", "Y"],
-        step_sizes: dict[str, float] = None,
-        units: str = "mm",
-        limits: dict[str, tuple[float, float]] | None = None,
-    ) -> None:
-        self._name = name
-        self.axis = axis
-        self.step_sizes = step_sizes or {ax: 0.1 for ax in axis}
-        self.units = units
-        self.limits = limits
+    x: _MockAxis
+    y: _MockAxis
 
-    @property
-    def name(self) -> str:
-        """Device name."""
-        return self._name
-
-    def set_name(self, name: str) -> None:
-        self._name = name
-
-    def set(self, value: Any, **kwargs: Any) -> Status:
-        s = Status()
-        return s
-
-    def locate(self) -> Location[float]:
-        """Locate mock model."""
-        return {}
-
-    def read_configuration(self) -> dict[str, Any]:
-        return {}
-
-    def describe_configuration(self) -> dict[str, Any]:
-        return {}
+    def __init__(self, name: str, /) -> None:
+        self.x = _MockAxis()
+        self.y = _MockAxis()
+        super().__init__(name=name)
 
 
 @pytest.fixture
 def mock_motor(name: str = "stage") -> MockMotorDevice:
-    """Single-axis mock motor device."""
-    return MockMotorDevice(
-        name,
-        axis=["X", "Y", "Z"],
-        step_sizes={"X": 1.0, "Y": 1.0, "Z": 1.0},
-        units="um",
-    )
+    """Single mock motor device."""
+    return MockMotorDevice(name)
 
 
 @pytest.fixture

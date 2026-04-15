@@ -10,9 +10,9 @@ import pytest
 from redsun.containers import (
     AppConfig,
     AppContainer,
-    device,
-    presenter,
-    view,
+    declare_device,
+    declare_presenter,
+    declare_view,
 )
 from redsun.containers.components import (
     _DeviceComponent,
@@ -304,7 +304,7 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -321,7 +321,7 @@ class TestComponentFieldSyntax:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer):
-            ctrl = presenter(
+            ctrl = declare_presenter(
                 MockController,
                 string="s",
                 integer=1,
@@ -340,7 +340,7 @@ class TestComponentFieldSyntax:
         _ = QApplication.instance() or QApplication([])
 
         class TestApp(AppContainer):
-            v = view(MockQtView)
+            v = declare_view(MockQtView)
 
         assert "v" in TestApp._view_components
         assert isinstance(TestApp._view_components["v"], _ViewComponent)
@@ -350,7 +350,7 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -359,7 +359,7 @@ class TestComponentFieldSyntax:
                 floating=1.0,
                 string="s",
             )
-            ctrl = presenter(
+            ctrl = declare_presenter(
                 MockController,
                 string="s",
                 integer=1,
@@ -381,7 +381,7 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -412,7 +412,7 @@ class TestComponentFieldSyntax:
         from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -423,7 +423,7 @@ class TestComponentFieldSyntax:
             )
 
         class Child(Base):
-            ctrl = presenter(
+            ctrl = declare_presenter(
                 MockController,
                 string="s",
                 integer=1,
@@ -442,7 +442,7 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = device(MyMotor, from_config="motor")
+            motor = declare_device(MyMotor, from_config="motor")
 
         comp = TestApp._device_components["motor"]
         assert comp.kwargs["axis"] == ["X"]
@@ -454,7 +454,7 @@ class TestConfigField:
         from mock_pkg.controller import MockController
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            ctrl = presenter(MockController, from_config="ctrl")
+            ctrl = declare_presenter(MockController, from_config="ctrl")
 
         comp = TestApp._presenter_components["ctrl"]
         assert comp.kwargs["string"] == "config ctrl"
@@ -465,7 +465,7 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 from_config="motor",
                 egu="um",
@@ -481,8 +481,8 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = device(MyMotor, from_config="motor")
-            ctrl = presenter(MockController, from_config="ctrl")
+            motor = declare_device(MyMotor, from_config="motor")
+            ctrl = declare_presenter(MockController, from_config="ctrl")
 
         app = TestApp()
         app.build()
@@ -497,7 +497,7 @@ class TestConfigField:
         with pytest.raises(TypeError, match="no config path was provided"):
 
             class TestApp(AppContainer):
-                motor = device(MyMotor, from_config="motor")
+                motor = declare_device(MyMotor, from_config="motor")
 
     def test_from_config_missing_section_warns(
         self,
@@ -507,7 +507,7 @@ class TestConfigField:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            missing = device(
+            missing = declare_device(
                 MyMotor,
                 from_config="missing",
                 axis=["Y"],
@@ -575,7 +575,7 @@ class TestQtAppContainer:
         from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -584,7 +584,7 @@ class TestQtAppContainer:
                 floating=1.0,
                 string="s",
             )
-            v = view(MockQtView)
+            v = declare_view(MockQtView)
 
         app = _TestQtApp()
         assert app._qt_app is None
@@ -624,7 +624,7 @@ class TestComponentNaming:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 alias="cam",
                 axis=["X"],
@@ -646,7 +646,7 @@ class TestComponentNaming:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -667,7 +667,7 @@ class TestComponentNaming:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            motor = device(
+            motor = declare_device(
                 MyMotor,
                 axis=["X"],
                 step_size={"X": 0.1},
@@ -676,7 +676,7 @@ class TestComponentNaming:
                 floating=1.0,
                 string="s",
             )
-            ctrl = presenter(
+            ctrl = declare_presenter(
                 MockController,
                 alias="my_ctrl",
                 string="s",
@@ -696,7 +696,7 @@ class TestComponentNaming:
         from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
-            my_motor = device(
+            my_motor = declare_device(
                 MyMotor,
                 alias="detector",
                 axis=["X"],
@@ -724,23 +724,10 @@ class TestChildDevices:
             def __init__(self, name: str, /, **kwargs: Any) -> None:
                 super().__init__(name, **kwargs)
                 # child device shares the parent name as a namespace prefix
-                self.aux = MyMotor(
-                    f"{name}-aux",
-                    axis=["A"],
-                    step_size={"A": 0.05},
-                    egu="deg",
-                )
+                self.aux = MyMotor(f"{name}-aux", egu="deg")
 
         class TestApp(AppContainer):
-            motor = device(
-                MotorWithChild,
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=0,
-                floating=0.0,
-                string="parent",
-            )
+            motor = declare_device(MotorWithChild, egu="mm", string="parent")
 
         app = TestApp()
         app.build()
@@ -751,59 +738,45 @@ class TestChildDevices:
         assert hasattr(parent, "aux")
         assert parent.aux.name == "motor-aux"
 
-    def test_child_device_signals_are_functional(self) -> None:
-        """Child device SoftAttr signals work independently from the parent."""
+    async def test_child_device_signals_are_functional(self) -> None:
+        """Child device signals work independently from the parent."""
         from mock_pkg.device import MyMotor
 
         class MotorWithChild(MyMotor):
             def __init__(self, name: str, /, **kwargs: Any) -> None:
                 super().__init__(name, **kwargs)
-                self.aux = MyMotor(
-                    f"{name}-aux",
-                    axis=["A"],
-                    step_size={"A": 0.05},
-                    egu="deg",
-                )
+                self.aux = MyMotor(f"{name}-aux", egu="deg")
 
         class TestApp(AppContainer):
-            stage = device(
-                MotorWithChild,
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=0,
-                floating=0.0,
-                string="",
-            )
+            stage = declare_device(MotorWithChild, egu="mm")
 
         app = TestApp()
         app.build()
+        app.connect_devices(mock=True)
         parent = app.devices["stage"]
         # parent step_size descriptor includes units from egu
-        parent_desc = parent.step_size.describe()
+        parent_desc = await parent.step_size.describe()
         assert "stage-step_size" in parent_desc
         assert parent_desc["stage-step_size"]["units"] == "mm"
         # child step_size descriptor has its own units
-        child_desc = parent.aux.step_size.describe()
+        child_desc = await parent.aux.step_size.describe()
         assert "stage-aux-step_size" in child_desc
         assert child_desc["stage-aux-step_size"]["units"] == "deg"
 
-    def test_child_device_satisfies_pdevice(self) -> None:
-        """A child Device instance on a parent satisfies PDevice."""
+    def test_child_device_satisfies_device(self) -> None:
+        """A child Device instance on a parent satisfies ophyd-async Device."""
         from mock_pkg.device import MyMotor
 
-        from redsun.device import PDevice
+        from redsun.device import Device
 
         child = MyMotor(
             "parent-child",
-            axis=["Y"],
-            step_size={"Y": 0.2},
             egu="um",
             integer=0,
             floating=0.0,
             string="",
         )
-        assert isinstance(child, PDevice)
+        assert isinstance(child, Device)
         assert child.parent is None
         assert child.name == "parent-child"
 
@@ -816,21 +789,21 @@ class TestOphyAsyncDevices:
         from mock_pkg.device import MockOAMotor
 
         class TestApp(AppContainer):
-            motor = device(MockOAMotor, units="mm")
+            motor = declare_device(MockOAMotor, units="mm")
 
         app = TestApp()
         app.build()
         assert "motor" in app.devices
         assert app.devices["motor"].name == "motor"
 
-    def test_oa_device_satisfies_pdevice(self) -> None:
-        """An ophyd-async StandardReadable satisfies PDevice structurally."""
+    def test_oa_device_satisfies_device(self) -> None:
+        """An ophyd-async StandardReadable satisfies ophyd-async Device."""
         from mock_pkg.device import MockOAMotor
 
-        from redsun.device import PDevice
+        from redsun.device import Device
 
         m = MockOAMotor("oa_motor")
-        assert isinstance(m, PDevice)
+        assert isinstance(m, Device)
         assert m.name == "oa_motor"
         assert m.parent is None
 
@@ -839,7 +812,7 @@ class TestOphyAsyncDevices:
         from mock_pkg.device import MockOAMotor
 
         class TestApp(AppContainer):
-            oa = device(MockOAMotor, alias="oa_stage", units="um")
+            oa = declare_device(MockOAMotor, alias="oa_stage", units="um")
 
         app = TestApp()
         app.build()

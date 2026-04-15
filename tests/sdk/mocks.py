@@ -9,70 +9,88 @@ from typing import Any
 from bluesky.plan_stubs import close_run, open_run
 from bluesky.run_engine import RunEngine
 from bluesky.utils import MsgGenerator
+from ophyd_async.core import Device, SignalRW, StandardReadable, soft_signal_rw
 
-from redsun.device import Device, PDevice, SoftAttrR, SoftAttrRW
 from redsun.presenter import PPresenter
 from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 
-class MockDetector(Device):
-    """Mock detector device using soft attributes.
+class MockDetector(StandardReadable):
+    """Mock detector device using soft signals.
 
     The EGU for ``exposure`` is embedded in the descriptor document
     (``describe()["<name>-exposure"]["units"]``), not as a separate signal.
     """
 
+    exposure: SignalRW[float]
+    integer: SignalRW[int]
+    floating: SignalRW[float]
+
     def __init__(
         self,
         name: str,
         *,
-        sensor_size: tuple[int, int] = (1024, 1024),
         exposure: float = 1.0,
         exposure_units: str = "ms",
-        pixel_size: tuple[int, int, int] = (1, 1, 1),
+        integer: int = 0,
+        floating: float = 0.0,
+        **_: Any,
     ) -> None:
-        super().__init__(name)
-        self.sensor_size = SoftAttrR[tuple[int, int]](sensor_size)
-        self.exposure = SoftAttrRW[float](exposure, units=exposure_units)
-        self.pixel_size = SoftAttrR[tuple[int, int, int]](pixel_size)
+        with self.add_children_as_readables():
+            self.exposure = soft_signal_rw(
+                float, initial_value=exposure, units=exposure_units
+            )
+            self.integer = soft_signal_rw(int, initial_value=integer)
+            self.floating = soft_signal_rw(float, initial_value=floating)
+        super().__init__(name=name)
 
 
-class MockMotor(Device):
-    """Mock motor device with per-axis soft attributes.
+class MockMotor(StandardReadable):
+    """Mock motor device with per-axis soft signals.
 
-    Each axis (x, y, z) is an independent read-write attribute component.
+    Each axis (x, y, z) is an independent read-write signal component.
     The EGU is embedded in each axis descriptor (``units`` field) rather
     than exposed as a separate signal.
     """
+
+    x: SignalRW[float]
+    y: SignalRW[float]
+    z: SignalRW[float]
 
     def __init__(
         self,
         name: str,
         *,
         units: str = "μm",
+        **_: Any,
     ) -> None:
-        super().__init__(name)
-        self.x = SoftAttrRW[float](0.0, units=units)
-        self.y = SoftAttrRW[float](0.0, units=units)
-        self.z = SoftAttrRW[float](0.0, units=units)
+        with self.add_children_as_readables():
+            self.x = soft_signal_rw(float, initial_value=0.0, units=units)
+            self.y = soft_signal_rw(float, initial_value=0.0, units=units)
+            self.z = soft_signal_rw(float, initial_value=0.0, units=units)
+        super().__init__(name=name)
 
 
-class MockDeviceWithChild(Device):
-    """Mock device that owns a child :class:`MockMotor`.
+class MockDeviceWithChild(StandardReadable):
+    """Mock device that owns a child [`MockMotor`][tests.sdk.mocks.MockMotor].
 
     Used to verify that devices hosting sub-device attributes behave
     correctly inside the container and plan-spec machinery.
     """
 
+    stage: MockMotor
+    enabled: SignalRW[bool]
+
     def __init__(
         self,
         name: str,
         *,
         units: str = "μm",
     ) -> None:
-        super().__init__(name)
         self.stage = MockMotor(name, units=units)
-        self.enabled = SoftAttrRW[bool](True)
+        with self.add_children_as_readables():
+            self.enabled = soft_signal_rw(bool, initial_value=True)
+        super().__init__(name=name)
 
 
 class MockController(PPresenter, IsProvider, IsInjectable):
@@ -84,9 +102,9 @@ class MockController(PPresenter, IsProvider, IsInjectable):
     def __init__(
         self,
         name: str,
-        devices: Mapping[str, PDevice],
+        devices: Mapping[str, Device],
         /,
-        **kwargs: Any,
+        **_: Any,
     ) -> None:
         self.name = name
         self.devices = devices
@@ -105,5 +123,5 @@ class MockController(PPresenter, IsProvider, IsInjectable):
     def shutdown(self) -> None: ...
 
 
-mock_detector = MockDetector("detector", sensor_size=(1024, 1024))
+mock_detector = MockDetector("detector")
 mock_motor = MockMotor("motor", units="μm")
