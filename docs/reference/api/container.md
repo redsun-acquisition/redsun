@@ -4,9 +4,9 @@
     show_root_heading: true
     options:
       members:
-        - device
-        - presenter
-        - view
+        - declare_device
+        - declare_presenter
+        - declare_view
 
 ::: redsun.containers.container.AppContainer
     options:

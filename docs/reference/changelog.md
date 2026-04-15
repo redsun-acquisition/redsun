@@ -13,6 +13,9 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - `get_shared_loop()` (`redsun.engine`) — returns the single `asyncio` event loop created
   at module import time.
+- `AppContainer.connect_devices(mock=False)` — connects all registered ophyd-async devices
+  via their async connect lifecycle. Call after `build()`. Pass `mock=True` to skip hardware
+  communication in tests.
 - `DescriptorTreeView` grouped constructor form — accepts a `groups` argument of type
   `list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]` built by the presenter
   layer. When provided, the tree groups rows by device name (one header per device, leaf
@@ -21,15 +24,25 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- Removed custom device layer in favor of `ophyd-async`
-- Storage API temporarly reworked to make it compatible with `ophyd-async<0.17` - other changes required to better support multi-source data writers via `DetectorDataLogic`
+- **Custom device layer removed**, `redsun.device` now re-exports ophyd-async primitives
+  directly. Removed: `PDevice`, `HasChildren`, `AttrR`, `AttrRW`, `AttrW`, `AttrT`,
+  `SoftAttrR`, `SoftAttrRW`, `SoftAttrT`, `AcquisitionController`, `DataWriter`,
+  `ControllableDataWriter`, `TriggerType`, `PrepareInfo`. Use their ophyd-async equivalents
+  (`Device`, `StandardReadable`, `SignalR/RW/W/X`, `soft_signal_rw`,
+  `soft_signal_r_and_setter`, `DetectorController`, `DetectorWriter`, `TriggerInfo`,
+  `DetectorTrigger`).
+- `device()`, `presenter()`, `view()` field specifiers renamed to `declare_device()`,
+  `declare_presenter()`, `declare_view()` for clarity. Update all container subclasses and
+  imports accordingly.
+- Storage API temporarily reworked to make it compatible with `ophyd-async<0.17`; further
+  changes planned to support multi-source data writers via `DetectorDataLogic`.
 - `AppContainerMeta` metaclass replaced with `__init_subclass__` for container subclass
   registration.
 - Dropped `beartype` as a runtime dependency.
 - Updated CI tag pattern to support release candidates (e.g. `v0.10.0rc0`).
 
 ### Removed
-- Removed `attrs` from dev dependencies - and drop support for it in favor of `ophyd-async`
+- Removed `attrs` from dev dependencies — drop support for it in favor of `ophyd-async`.
 
 ## [0.9.1] - 06-03-2026
 

@@ -2,131 +2,127 @@
 
 A `Device` class represents an interface with a hardware device.
 
-The definition of a device is quite fluid, as there are many ways that it can interact with the hardware depending on your needs.
-
-All devices must inherit from the [`Device`][redsun.device.Device] base class, either:
-
-- directly, via inheritance;
-- indirectly, following structural subtyping ([PEP 544](https://peps.python.org/pep-0544/)) via the [`PDevice`][redsun.device.PDevice] protocol.
-
-Each device requires a positional-only argument `name` that serves as a unique identifier for a `redsun` session; additional initialization parameters can be provided as
-keyword-only arguments.
+`redsun` delegates the device layer entirely to [ophyd-async](https://bluesky.github.io/ophyd-async/).
+The `redsun.device` module is a re-export namespace — all device primitives are imported from
+`ophyd_async.core` and re-exported so that application code never needs to import from
+`ophyd_async` directly.
 
 ```python
-
-from redsun.device import Device
-
-class MyDevice(Device)
-
-    def __init__(self, name: str, /, int_param: int, str_param: str) -> None:
-        ... # your implementation
+from redsun.device import Device, StandardReadable, SignalRW, soft_signal_rw
 ```
 
+## Choosing a base class
 
-## Attribute API and ophyd-async alignment
+ophyd-async provides several base classes depending on the complexity of your device:
 
-Redsun provides a set of structural protocols — [`AttrR`][redsun.device.AttrR], [`AttrRW`][redsun.device.AttrRW], [`AttrW`][redsun.device.AttrW], and [`AttrT`][redsun.device.AttrT] — designed to structurally match the signal types in [ophyd-async](https://bluesky.github.io/ophyd-async/). Because both sides are defined in terms of the same bluesky protocols, redsun attributes and ophyd-async signals satisfy the same structural contracts and can be used interchangeably in plans.
+| Base class | Use when |
+|------------|----------|
+| [`Device`][redsun.device.Device] | bare async device with no built-in read/describe logic |
+| [`StandardReadable`][redsun.device.StandardReadable] | readable device that composes signals into `read()` / `describe()` automatically |
+| [`StandardDetector`][redsun.device.StandardDetector] | detector with a controller/writer split and a built-in trigger/acquire/collect lifecycle |
+| [`StandardFlyer`][redsun.device.StandardFlyer] | flyer device that runs asynchronously and emits data at completion |
 
-| redsun protocol | ophyd-async equivalent | bluesky protocols |
-|-----------------|------------------------|-------------------|
-| `AttrR[T]` | `SignalR[T]` | `Readable[T]`, `Subscribable[T]` |
-| `AttrW[T]` | `SignalW[T]` | `HasName`, `Movable[T]` |
-| `AttrRW[T]` | `SignalRW[T]` | `Readable[T]`, `Subscribable[T]`, `Movable[T]` |
-| `AttrT` | `SignalX` | `HasName`, `Triggerable` |
+For most simple devices, [`StandardReadable`][redsun.device.StandardReadable] is the right starting point.
 
-[`SoftAttrR`][redsun.device.SoftAttrR], [`SoftAttrRW`][redsun.device.SoftAttrRW], and [`SoftAttrT`][redsun.device.SoftAttrT] are in-memory concrete implementations useful for simulation and testing.
+## Signals
 
-### Standalone attributes
+Signals are the typed, named attributes of a device. ophyd-async provides four signal types:
 
-Each attribute is itself a bluesky-readable object and can be passed directly to a plan without going through its parent device:
+| Signal type | bluesky protocols | Description |
+|-------------|-------------------|-------------|
+| [`SignalR[T]`][redsun.device.SignalR] | `Readable[T]`, `Subscribable[T]` | read-only |
+| [`SignalW[T]`][redsun.device.SignalW] | `HasName`, `Movable[T]` | write-only |
+| [`SignalRW[T]`][redsun.device.SignalRW] | `Readable[T]`, `Subscribable[T]`, `Movable[T]` | read-write |
+| [`SignalX`][redsun.device.SignalX] | `HasName`, `Triggerable` | trigger / execute |
+
+### Soft signals
+
+For simulation and testing, soft signals hold their value in memory.
+Use [`soft_signal_rw`][redsun.device.soft_signal_rw] to create a read-write soft signal and
+[`soft_signal_r_and_setter`][redsun.device.soft_signal_r_and_setter] to create a read-only signal
+paired with a programmatic setter:
+
+```python
+from redsun.device import StandardReadable, soft_signal_rw
+
+class MyStage(StandardReadable):
+    def __init__(self, name: str) -> None:
+        self.position = soft_signal_rw(float, initial_value=0.0, units="mm")
+        self.velocity = soft_signal_rw(float, initial_value=1.0, units="mm/s")
+        super().__init__(name)
+```
+
+Signals added before the `super().__init__()` call are automatically picked up by
+`StandardReadable` and included in `read()` / `describe()`.
+
+### Standalone signals
+
+Each signal is itself a bluesky-readable object and can be passed directly to a plan
+without going through its parent device:
 
 ```python
 import bluesky.plans as bp
 
 stage = MyStage("stage")
-RE(bp.count([stage.position]))  # read only the position attribute
+RE(bp.count([stage.position]))  # read only the position signal
+RE(bp.count([stage]))           # read all signals registered by StandardReadable
 ```
 
-`Device.read_configuration()` and `describe_configuration()` return `{}` by default — the base class does not aggregate attributes automatically. To make a whole device readable, override `read()` and `describe()` to collect the attributes you need:
+## Detectors
+
+[`StandardDetector`][redsun.device.StandardDetector] separates hardware control from data writing
+through the [`DetectorController`][redsun.device.DetectorController] and
+[`DetectorWriter`][redsun.device.DetectorWriter] protocols:
 
 ```python
-from redsun.device import Device, SoftAttrRW
+from redsun.device import (
+    StandardDetector,
+    DetectorController,
+    DetectorWriter,
+    TriggerInfo,
+    DetectorTrigger,
+)
 
-class MyStage(Device):
-    def __init__(self, name: str, /) -> None:
-        super().__init__(name)
-        self.position = SoftAttrRW(0.0, units="mm")    # named "stage-position"
-        self.velocity = SoftAttrRW(1.0, units="mm/s")  # named "stage-velocity"
+class MyController(DetectorController):
+    async def prepare(self, trigger_info: TriggerInfo) -> None: ...
+    async def arm(self) -> None: ...
+    async def disarm(self) -> None: ...
+    async def wait_for_idle(self) -> None: ...
 
-    def read(self):
-        return {**self.position.read(), **self.velocity.read()}
+    @property
+    def trigger_types(self) -> tuple[DetectorTrigger, ...]: ...
 
-    def describe(self):
-        return {**self.position.describe(), **self.velocity.describe()}
-
-
-stage = MyStage("stage")
-
-# Standalone — pass one attribute directly
-RE(bp.count([stage.position]))
-
-# Aggregated — pass the whole device once read/describe are overridden
-RE(bp.count([stage]))
+class MyDetector(StandardDetector):
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            controller=MyController(),
+            writer=MyWriter(),
+            name=name,
+        )
 ```
 
-### Child devices
+## Connecting devices
 
-When a `Device` instance is assigned as an attribute of another `Device`, it is
-automatically registered as a child: [`parent`][redsun.device.Device.parent] is
-set on the child and it appears in [`children()`][redsun.device.Device.children]:
+ophyd-async devices must be connected before use — this initialises their signal backends
+and verifies hardware communication. Use
+[`AppContainer.connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
+after calling [`build()`][redsun.containers.container.AppContainer.build]:
 
 ```python
-from redsun.device import Device, SoftAttrRW
-
-class Axis(Device):
-    def __init__(self, name: str, *, units: str = "mm") -> None:
-        super().__init__(name)
-        self.position = SoftAttrRW(0.0, units=units)  # named "<axis_name>-position"
-
-class XYStage(Device):
-    def __init__(self, name: str, *, units: str = "mm") -> None:
-        super().__init__(name)
-        self.x = Axis(name, units=units)  # set_name called → "stage-x"
-        self.y = Axis(name, units=units)  # set_name called → "stage-y"
-
-stage = XYStage("stage")
-assert stage.x.parent is stage
-assert stage.x.name == "stage-x"
-assert stage.x.position.name == "stage-x-position"
-
-for attr, child in stage.children():
-    print(attr, child.name)  # x stage-x / y stage-y
+app = MyApp()
+app.build()
+app.connect_devices()     # connects all registered devices
+app.run()
 ```
 
-Calling [`set_name("new_stage")`][redsun.device.Device.set_name] propagates
-recursively to both axes and all `SoftAttr*` fields within each axis.
-
-For attrs-decorated `Device` subclasses, add `on_setattr=setters.NO_OP` to the
-`@define` decorator. Without it, attrs generates its own `__setattr__` on the
-subclass that shadows `Device.__setattr__`, silently skipping child registration
-and name injection:
+Pass `mock=True` to skip hardware communication in tests:
 
 ```python
-from attrs import define, setters
-from redsun.device import Device, SoftAttrRW
-
-@define(kw_only=True, slots=False, on_setattr=setters.NO_OP)
-class MyDetector(Device):
-    exposure: SoftAttrRW[float]
-
-    def __init__(self, name: str, /, *, exposure: float = 1.0) -> None:
-        super().__init__(name)
-        self.__attrs_init__(exposure=SoftAttrRW[float](exposure))
-        # exposure.name is now "mydetector-exposure"
+app.connect_devices(mock=True)
 ```
 
-### ophyd-async device compatibility
+## redsun-specific protocols
 
-Devices from ophyd-async can be registered in a redsun container directly.
-[`StandardReadable`](https://bluesky.github.io/ophyd-async/main/reference/ophyd_async.core.html#ophyd_async.core.StandardReadable) and `StandardDetector` satisfy [`PDevice`][redsun.device.PDevice] structurally and require no adaptation.
-Bare `ophyd_async.core.Device` does not satisfy `PDevice` because it does not implement `Configurable`; use `StandardReadable` or provide `read_configuration` / `describe_configuration` overrides.
+The only redsun-specific protocol in the device layer is
+[`HasCache`][redsun.device.HasCache], which expresses that a device can cache its most
+recent reading for use in the presenter layer.

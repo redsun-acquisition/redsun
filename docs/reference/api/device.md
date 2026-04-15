@@ -1,18 +1,23 @@
 # Device
 
+The `redsun.device` module re-exports the ophyd-async device primitives.
+Import from here rather than directly from `ophyd_async` in application code.
+
 ## Base classes
 
 ::: redsun.device.Device
 
-::: redsun.device.PDevice
+::: redsun.device.StandardReadable
+
+::: redsun.device.StandardDetector
+
+::: redsun.device.StandardFlyer
 
 ## Acquisition protocols
 
-::: redsun.device.AcquisitionController
+::: redsun.device.DetectorController
 
-::: redsun.device.DataWriter
-
-::: redsun.device.ControllableDataWriter
+::: redsun.device.DetectorWriter
 
 ::: redsun.device.FlyerController
 
@@ -20,9 +25,29 @@
 
 ::: redsun.device.TriggerInfo
 
-::: redsun.device.TriggerType
+::: redsun.device.DetectorTrigger
 
-::: redsun.device.PrepareInfo
+## Signals
+
+::: redsun.device.SignalR
+
+::: redsun.device.SignalRW
+
+::: redsun.device.SignalW
+
+::: redsun.device.SignalX
+
+## Soft signals
+
+::: redsun.device.soft_signal_rw
+
+::: redsun.device.soft_signal_r_and_setter
+
+## Status
+
+::: redsun.device.AsyncStatus
+
+::: redsun.device.WatchableAsyncStatus
 
 ## Protocols
 
@@ -30,21 +55,3 @@
     options:
       members:
         - HasCache
-
-## Attributes
-
-::: redsun.device.AttrR
-
-::: redsun.device.AttrRW
-
-::: redsun.device.AttrW
-
-::: redsun.device.AttrT
-
-## Soft attributes
-
-::: redsun.device.SoftAttrR
-
-::: redsun.device.SoftAttrRW
-
-::: redsun.device.SoftAttrT

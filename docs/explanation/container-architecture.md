@@ -79,7 +79,7 @@ graph LR
 
 `redsun` builds three types of components:
 
-- **Devices**: objects interfacing with real hardware components that implement Bluesky's device protocols via [`Device`][redsun.device.Device].
+- **Devices**: objects interfacing with real hardware components that subclass [`Device`][redsun.device.Device] (or one of the higher-level ophyd-async base classes such as [`StandardReadable`][redsun.device.StandardReadable] or [`StandardDetector`][redsun.device.StandardDetector]).
 - **View**: UI components that implement [`View`][redsun.view.View] to display data and capture user interactions.
 - **Presenter**: business logic components that implement [`Presenter`][redsun.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
@@ -90,23 +90,23 @@ This separation ensures that hardware drivers, UI components, and business logic
 `redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
 
 Components are declared as class attributes using the layer-specific field specifiers:
-[`device()`][redsun.device],
-[`presenter()`][redsun.containers.components.presenter], and
-[`view()`][redsun.containers.view].
+[`declare_device()`][redsun.containers.components.declare_device],
+[`declare_presenter()`][redsun.containers.components.declare_presenter], and
+[`declare_view()`][redsun.containers.components.declare_view].
 Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
 
 When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
-from redsun.containers import device, presenter, view
+from redsun.containers import declare_device, declare_presenter, declare_view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer):
-        motor = device(MyMotor, axis=["X", "Y"])
-        ctrl = presenter(MyController, gain=1.0)
-        ui = view(MyView)
+        motor = declare_device(MyMotor, axis=["X", "Y"])
+        ctrl = declare_presenter(MyController, gain=1.0)
+        ui = declare_view(MyView)
 
     MyApp().run()
 ```
@@ -123,7 +123,7 @@ The class is defined inside a function so that the Qt imports and any heavy devi
 
 Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
 
-1. `alias` — if an explicit `alias` is passed to `device()`, `presenter()`, or `view()`, that value is used regardless of everything else.
+1. `alias` — if an explicit `alias` is passed to `declare_device()`, `declare_presenter()`, or `declare_view()`, that value is used regardless of everything else.
 2. attribute name — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
 3. YAML key — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
 
@@ -131,8 +131,8 @@ Examples in the declarative flow:
 
 ```python
 class MyApp(QtAppContainer):
-    motor = device(MyMotor)                       # name → "motor"
-    cam = device(MyCamera, alias="detector")      # name → "detector"
+    motor = declare_device(MyMotor)                       # name → "motor"
+    cam = declare_device(MyCamera, alias="detector")      # name → "detector"
 ```
 
 In the dynamic flow:
@@ -149,21 +149,22 @@ devices:
 Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each field specifier call:
 
 ```python
-from redsun.containers import device, presenter, view
+from redsun.containers import declare_device, declare_presenter, declare_view
 from redsun.qt import QtAppContainer
 
 
 def my_app() -> None:
     class MyApp(QtAppContainer, config="app_config.yaml"):
-        motor = device(MyMotor, from_config="motor")
-        ctrl = presenter(MyController, from_config="ctrl")
-        ui = view(MyView, from_config="ui")
+        motor = declare_device(MyMotor, from_config="motor")
+        ctrl = declare_presenter(MyController, from_config="ctrl")
+        ui = declare_view(MyView, from_config="ui")
 
     MyApp().run()
 
     # alternatively, you can first build and then run the app
     app = MyApp()
     app.build()
+    app.connect_devices()
     app.run()
 ```
 
@@ -171,7 +172,7 @@ The configuration file provides base keyword arguments for each component. These
 
 ## Build order
 
-When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in three phases:
+When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in three phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:
 
 **Phase 1 — construction**:
 
@@ -206,7 +207,7 @@ The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] 
 The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
 
 ```python
-from redsun.containers import device, presenter, view
+from redsun.containers import declare_device, declare_presenter, declare_view
 from redsun.qt import QtAppContainer
 
 # these are user-developed classes
@@ -218,9 +219,9 @@ from my_package.view import MyView
 
 
 class MyApp(QtAppContainer, config="config.yaml"):
-    motor = device(MyMotor, from_config="motor")
-    ctrl = presenter(MyPresenter, from_config="ctrl")
-    ui = view(MyView, from_config="ui")
+    motor = declare_device(MyMotor, from_config="motor")
+    ctrl = declare_presenter(MyPresenter, from_config="ctrl")
+    ui = declare_view(MyView, from_config="ui")
 
 MyApp().run()
 ```
