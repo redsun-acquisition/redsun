@@ -2,7 +2,7 @@
 
 These functions are used by `create_plan_spec` to classify parameter
 annotations and by `resolve_arguments` to resolve string device names
-into live `PDevice` instances.
+into live [`Device`][ophyd_async.core.Device] instances.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from typing import Any, TypeVar, get_args, get_origin
 
-from redsun.device import PDevice
+from ophyd_async.core import Device as OADevice
 
 __all__ = [
     "get_choice_list",
@@ -21,26 +21,26 @@ __all__ = [
     "issequence",
 ]
 
-P = TypeVar("P", bound=PDevice)
+D = TypeVar("D", bound=OADevice)
 
 
 def get_choice_list(
-    devices: Mapping[str, PDevice], proto: type[P], choices: Sequence[str]
-) -> list[P]:
+    devices: Mapping[str, OADevice], proto: type[D], choices: Sequence[str]
+) -> list[D]:
     """Filter a device registry to those that match a protocol and are in *choices*.
 
     Parameters
     ----------
-    devices : Mapping[str, PDevice]
+    devices : Mapping[str, OADevice]
         Mapping of device names to device instances.
-    proto : type[P]
-        Protocol or class to match against via ``isinstance``.
+    proto : type[D]
+        Class to match against via ``isinstance``.
     choices : Sequence[str]
         Subset of device names to consider.
 
     Returns
     -------
-    list[P]
+    list[D]
         Device instances whose name is in *choices* and that satisfy *proto*.
     """
     return [
@@ -50,17 +50,21 @@ def get_choice_list(
     ]
 
 
-def _is_pdevice_annotation(ann: Any) -> bool:
-    """Return True if *ann* has `PDevice` in its MRO.
+def _is_device_annotation(ann: Any) -> bool:
+    """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a ``@runtime_checkable Protocol``.
 
-    This is the correct way to ask "is this annotation a device
-    protocol/class?" when working with *type* objects rather than
-    instances.  ``isinstance(ann, PDevice)`` checks whether the type
-    object itself satisfies the structural protocol — which it never
-    does.  Checking the MRO is fast, safe, and works for both concrete
-    classes and Protocol subclasses.
+    Python 3.11 forbids Protocols from inheriting non-Protocol concrete classes,
+    so device-protocol annotations (e.g. ``_MotorProtocol``) cannot inherit from
+    ``Device`` directly.  As a pragmatic extension, any ``@runtime_checkable``
+    Protocol is accepted here — the actual per-device structural check is
+    performed later via ``isinstance(device, proto)``.
     """
-    return PDevice in getattr(ann, "__mro__", ())
+    try:
+        if issubclass(ann, OADevice):
+            return True
+    except TypeError:
+        return False
+    return isinstance(ann, type) and getattr(ann, "_is_runtime_protocol", False)
 
 
 def issequence(ann: Any) -> bool:
@@ -82,15 +86,15 @@ def issequence(ann: Any) -> bool:
 
 
 def isdevicesequence(ann: Any) -> bool:
-    """Return True if *ann* is ``Sequence[T]`` where *T* is a `PDevice` subtype."""
+    """Return True if *ann* is ``Sequence[T]`` where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
     if not issequence(ann):
         return False
     args = get_args(ann)
-    return len(args) == 1 and _is_pdevice_annotation(args[0])
+    return len(args) == 1 and _is_device_annotation(args[0])
 
 
 def isdeviceset(ann: Any) -> bool:
-    """Return True if *ann* is ``Set[T]`` (or ``AbstractSet[T]``, ``FrozenSet[T]``) where *T* is a `PDevice` subtype."""
+    """Return True if *ann* is ``Set[T]`` (or ``AbstractSet[T]``, ``FrozenSet[T]``) where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
     origin = get_origin(ann)
     if origin is None:
         return False
@@ -100,12 +104,12 @@ def isdeviceset(ann: Any) -> bool:
     except TypeError:
         return False
     args = get_args(ann)
-    return len(args) == 1 and _is_pdevice_annotation(args[0])
+    return len(args) == 1 and _is_device_annotation(args[0])
 
 
 def isdevice(ann: Any) -> bool:
-    """Return True if *ann* is a class or Protocol that subclasses `PDevice`.
+    """Return True if *ann* is a class that subclasses [`Device`][ophyd_async.core.Device].
 
     Operates on type annotations (the class itself), not on instances.
     """
-    return _is_pdevice_annotation(ann)
+    return _is_device_annotation(ann)

@@ -7,7 +7,7 @@ automatically generate a parameter form.
 
 The annotation dispatch system is table-driven: `_ANN_HANDLER_MAP` maps
 ``(predicate, handler)`` pairs that convert raw type annotations into
-`ParamDescription` fields (choices, device_proto, multiselect).
+`ParamDescription` fields (choices, ``device_proto``, ``multiselect``).
 """
 
 from __future__ import annotations
@@ -32,7 +32,8 @@ from typing import (
     get_type_hints,
 )
 
-from redsun.device import PDevice
+from ophyd_async.core import Device as OADevice
+
 from redsun.engine.actions import Action
 from redsun.presenter.utils import (
     get_choice_list,
@@ -62,7 +63,7 @@ class UnresolvableAnnotationError(TypeError):
         super().__init__(
             f"Plan {plan_name!r}: cannot resolve annotation for parameter "
             f"{param_name!r} ({annotation!r}). "
-            f"Supported types are: Literal, PDevice subtype, Sequence[PDevice], "
+            f"Supported types are: Literal, OADevice subtype, Sequence[OADevice], "
             f"Path, and magicgui-supported primitives (int, float, str, bool, …). "
             f"The plan will be skipped."
         )
@@ -109,10 +110,10 @@ class ParamDescription:
     """Default value of the parameter, or `inspect.Parameter.empty` if none."""
 
     choices: list[str] | None = None
-    """String labels for selectable values; used for `Literal` and `PDevice`-backed parameters."""
+    """String labels for selectable values; used for `Literal` and `OADevice`-backed parameters."""
 
     multiselect: bool = False
-    """Whether the parameter allows multiple simultaneous selections (e.g. for `Sequence[PDevice]`)."""
+    """Whether the parameter allows multiple simultaneous selections (e.g. for `Sequence[OADevice]`)."""
 
     hidden: bool = False
     """Whether this parameter should be hidden from the UI (e.g. because it's only for metadata, not user input)."""
@@ -120,8 +121,8 @@ class ParamDescription:
     actions: Sequence[Action] | Action | None = None
     """Action metadata extracted from the parameter's default value, if any."""
 
-    device_proto: type[PDevice] | None = None
-    """The `PDevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
+    device_proto: type[OADevice] | None = None
+    """The `OADevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
 
     @property
     def has_default(self) -> bool:
@@ -158,12 +159,12 @@ class _FieldsFromAnnotation(NamedTuple):
 
     choices: list[str] | None = None
     multiselect: bool = False
-    device_proto: type[PDevice] | None = None
+    device_proto: type[OADevice] | None = None
 
 
 def _handle_literal(
     ann: Any,
-    _: cabc.Mapping[str, PDevice],
+    _: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     choices = [str(a) for a in get_args(ann)]
     return _FieldsFromAnnotation(choices=choices)
@@ -171,7 +172,7 @@ def _handle_literal(
 
 def _handle_device_sequence(
     ann: Any,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     elem_ann: Any = get_args(ann)[0]
     matching = [key for key, obj in devices.items() if isinstance(obj, elem_ann)]
@@ -186,7 +187,7 @@ def _handle_device_sequence(
 
 def _handle_device_set(
     ann: Any,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     elem_ann: Any = get_args(ann)[0]
     matching = [key for key, obj in devices.items() if isinstance(obj, elem_ann)]
@@ -201,7 +202,7 @@ def _handle_device_set(
 
 def _handle_device(
     ann: Any,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     matching = [key for key, obj in devices.items() if isinstance(obj, ann)]
     if not matching:
@@ -215,7 +216,7 @@ def _handle_device(
 
 def _handle_var_positional_device(
     ann: Any,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     matching = [key for key, obj in devices.items() if isinstance(obj, ann)]
     if not matching:
@@ -239,7 +240,7 @@ def _handle_var_positional_device(
 # at the appropriate priority. Nothing else needs to change.
 # ---------------------------------------------------------------------------
 
-_AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, PDevice]], _FieldsFromAnnotation]
+_AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, OADevice]], _FieldsFromAnnotation]
 _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
@@ -251,22 +252,22 @@ _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
         lambda ann, _: get_origin(ann) is Literal,  # type: ignore[comparison-overlap]
         _handle_literal,
     ),
-    # 2. Set[PDevice] / AbstractSet[PDevice] / FrozenSet[PDevice] → multi-select (set semantics)
+    # 2. Set[OADevice] / AbstractSet[OADevice] / FrozenSet[OADevice] → multi-select (set semantics)
     (
         lambda ann, _: isdeviceset(ann),
         _handle_device_set,
     ),
-    # 3. Sequence[PDevice] → multi-select device widget
+    # 3. Sequence[OADevice] → multi-select device widget
     (
         lambda ann, _: isdevicesequence(ann),
         _handle_device_sequence,
     ),
-    # 4. *args: PDevice  (VAR_POSITIONAL + bare device type) → multi-select
+    # 4. *args: OADevice  (VAR_POSITIONAL + bare device type) → multi-select
     (
         lambda ann, kind: kind is ParamKind.VAR_POSITIONAL and isdevice(ann),
         _handle_var_positional_device,
     ),
-    # 5. Bare PDevice type → single-select device widget
+    # 5. Bare OADevice type → single-select device widget
     (
         lambda ann, _: isdevice(ann),
         _handle_device,
@@ -284,7 +285,7 @@ def _try_dispatch_entry(
     handler: _AnnHandler,
     ann: Any,
     kind: ParamKind,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation | None:
     """Attempt one ``(predicate, handler)`` entry; return ``None`` on any exception.
 
@@ -303,7 +304,7 @@ def _try_dispatch_entry(
 def _dispatch_annotation(
     ann: Any,
     kind: ParamKind,
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
     """Walk ``_ANN_HANDLER_MAP`` and call the first matching handler.
 
@@ -447,7 +448,7 @@ def _is_magicgui_resolvable(ann: Any) -> bool:
 
 def create_plan_spec(
     plan: cabc.Callable[..., cabc.Generator[Any, Any, Any]],
-    devices: cabc.Mapping[str, PDevice],
+    devices: cabc.Mapping[str, OADevice],
 ) -> PlanSpec:
     """Inspect *plan* and return a ``PlanSpec`` with one ``ParamDescription`` per parameter.
 
@@ -456,9 +457,9 @@ def create_plan_spec(
     plan : Callable[..., Any]
         The plan function (or bound method) to inspect.
         Must be a generator function whose return annotation is a ``MsgGenerator``.
-    devices : Mapping[str, PDevice]
+    devices : Mapping[str, OADevice]
         Registry of active devices; used to compute ``choices`` for parameters
-        annotated with a ``PDevice`` subtype.
+        annotated with a ``OADevice`` subtype.
 
     Returns
     -------
@@ -638,14 +639,14 @@ def collect_arguments(
 def resolve_arguments(
     spec: PlanSpec,
     param_values: Mapping[str, Any],
-    devices: Mapping[str, PDevice],
+    devices: Mapping[str, OADevice],
 ) -> dict[str, Any]:
     """Resolve raw UI parameter values into plan-callable values.
 
     Handles:
     * **Action parameters** — injected from metadata when absent from the UI.
     * **Model-backed parameters** — string labels are resolved to live
-      ``PDevice`` instances via the ``devices`` registry.
+      ``OADevice`` instances via the ``devices`` registry.
     * **Everything else** — passed through unchanged.
 
     Parameters
@@ -654,7 +655,7 @@ def resolve_arguments(
         The plan specification containing parameter metadata.
     param_values : Mapping[str, Any]
         Raw parameter values from the UI.
-    devices : Mapping[str, PDevice]
+    devices : Mapping[str, OADevice]
         Active device registry.
 
     Returns
