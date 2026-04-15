@@ -7,6 +7,7 @@ from typing import Literal
 
 import pytest
 from bluesky.utils import MsgGenerator
+from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action, continous
 from redsun.presenter.plan_spec import PlanSpec, create_plan_spec
@@ -207,7 +208,6 @@ class TestCreatePlanWidget:
         assert not _make_minimal_plan_widget(_simple_spec()).has_actions()
 
     def test_group_box_is_qwidget(self) -> None:
-        from qtpy import QtWidgets as QtW
 
         pw = _make_minimal_plan_widget(_simple_spec())
         assert isinstance(pw.group_box, QtW.QWidget)

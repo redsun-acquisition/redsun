@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
+from mock_pkg.controller import MockController
+from mock_pkg.device import MockOAMotor, MyMotor
+from mock_pkg.view import MockQtView
+from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
     AppConfig,
@@ -19,13 +24,15 @@ from redsun.containers.components import (
     _PresenterComponent,
     _ViewComponent,
 )
+from redsun.device import Device
+from redsun.qt import QtAppContainer
+from redsun.virtual import RedSunConfig
 
 
 class TestComponentWrappers:
     """Tests for _DeviceComponent, _PresenterComponent, _ViewComponent."""
 
     def test_device_component_pending_repr(self) -> None:
-        from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
             MyMotor,
@@ -40,7 +47,6 @@ class TestComponentWrappers:
         assert "pending" in repr(comp)
 
     def test_device_component_build(self) -> None:
-        from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
             MyMotor,
@@ -57,7 +63,6 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     def test_instance_before_build_raises(self) -> None:
-        from mock_pkg.device import MyMotor
 
         comp = _DeviceComponent(
             MyMotor,
@@ -73,7 +78,6 @@ class TestComponentWrappers:
             _ = comp.instance
 
     def test_presenter_component_build(self) -> None:
-        from mock_pkg.controller import MockController
 
         comp = _PresenterComponent(
             MockController,
@@ -89,8 +93,6 @@ class TestComponentWrappers:
 
     @pytest.mark.qt
     def test_view_component_build(self) -> None:
-        from mock_pkg.view import MockQtView
-        from qtpy.QtWidgets import QApplication
 
         _ = QApplication.instance() or QApplication([])
         comp = _ViewComponent(MockQtView, "v")
@@ -103,8 +105,6 @@ class TestComponentCollection:
     """Tests for component collection via __init_subclass__."""
 
     def test_collects_components(self) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
@@ -136,7 +136,6 @@ class TestComponentCollection:
         assert len(AppContainer._view_components) == 0
 
     def test_inherits_components_from_base(self) -> None:
-        from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
             motor = _DeviceComponent(
@@ -160,8 +159,6 @@ class TestAppContainerBuild:
     """Tests for the build lifecycle."""
 
     def test_build_devices_and_presenters(self) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = _DeviceComponent(
@@ -268,7 +265,6 @@ class TestFromConfig:
     def test_from_config_returns_qt_container(
         self, mock_entry_points: Any, config_path: Path
     ) -> None:
-        from redsun.qt import QtAppContainer
 
         container = AppContainer.from_config(
             str(config_path / "mock_motor_config.yaml")
@@ -287,7 +283,6 @@ class TestFromConfig:
     def test_from_config_unknown_frontend_raises(
         self, mock_entry_points: Any, config_path: Path, tmp_path: Path
     ) -> None:
-        import yaml
 
         cfg = {"frontend": "unknown_frontend"}
         cfg_file = tmp_path / "bad.yaml"
@@ -301,7 +296,6 @@ class TestComponentFieldSyntax:
     """Tests for the ``component()`` field-specifier syntax."""
 
     def test_component_field_collects_device(self) -> None:
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -318,7 +312,6 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._device_components["motor"], _DeviceComponent)
 
     def test_component_field_collects_presenter(self) -> None:
-        from mock_pkg.controller import MockController
 
         class TestApp(AppContainer):
             ctrl = declare_presenter(
@@ -334,8 +327,6 @@ class TestComponentFieldSyntax:
 
     @pytest.mark.qt
     def test_component_field_collects_view(self) -> None:
-        from mock_pkg.view import MockQtView
-        from qtpy.QtWidgets import QApplication
 
         _ = QApplication.instance() or QApplication([])
 
@@ -346,8 +337,6 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._view_components["v"], _ViewComponent)
 
     def test_component_field_build_lifecycle(self) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -377,8 +366,6 @@ class TestComponentFieldSyntax:
         assert "ctrl" in app.presenters
 
     def test_component_field_mixed_with_direct_wrapper(self) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -408,8 +395,6 @@ class TestComponentFieldSyntax:
         assert "ctrl" in app.presenters
 
     def test_component_field_inherits_from_base(self) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class Base(AppContainer):
             motor = declare_device(
@@ -439,7 +424,6 @@ class TestConfigField:
     """Tests for the ``config()`` field and ``from_config`` kwarg loading."""
 
     def test_from_config_loads_device_kwargs(self, config_path: Path) -> None:
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = declare_device(MyMotor, from_config="motor")
@@ -451,7 +435,6 @@ class TestConfigField:
         assert comp.kwargs["string"] == "from config"
 
     def test_from_config_loads_presenter_kwargs(self, config_path: Path) -> None:
-        from mock_pkg.controller import MockController
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             ctrl = declare_presenter(MockController, from_config="ctrl")
@@ -462,7 +445,6 @@ class TestConfigField:
         assert comp.kwargs["boolean"] is True
 
     def test_from_config_inline_overrides(self, config_path: Path) -> None:
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = declare_device(
@@ -477,8 +459,6 @@ class TestConfigField:
         assert comp.kwargs["integer"] == 42
 
     def test_from_config_build_lifecycle(self, config_path: Path) -> None:
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = declare_device(MyMotor, from_config="motor")
@@ -492,7 +472,6 @@ class TestConfigField:
         assert "ctrl" in app.presenters
 
     def test_from_config_without_config_field_raises(self) -> None:
-        from mock_pkg.device import MyMotor
 
         with pytest.raises(TypeError, match="no config path was provided"):
 
@@ -504,7 +483,6 @@ class TestConfigField:
         config_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             missing = declare_device(
@@ -527,7 +505,6 @@ class TestAppConfig:
     """Tests for AppConfig TypedDict and RedSunConfig inheritance."""
 
     def test_app_config_has_schema_version(self) -> None:
-        from redsun.containers import AppConfig
 
         cfg: AppConfig = {
             "schema_version": 1.0,
@@ -556,8 +533,6 @@ class TestAppConfig:
 
     def test_redsun_config_no_component_fields(self) -> None:
         """RedSunConfig must not expose devices/presenters/views."""
-        from redsun.virtual import RedSunConfig
-
         assert "devices" not in RedSunConfig.__annotations__
         assert "presenters" not in RedSunConfig.__annotations__
         assert "views" not in RedSunConfig.__annotations__
@@ -568,11 +543,6 @@ class TestQtAppContainer:
     """Tests for QtAppContainer lifecycle correctness."""
 
     def test_build_before_run_creates_qapplication(self) -> None:
-        from mock_pkg.device import MyMotor
-        from mock_pkg.view import MockQtView
-        from qtpy.QtWidgets import QApplication
-
-        from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
             motor = declare_device(
@@ -598,9 +568,6 @@ class TestQtAppContainer:
         assert "v" in app.views
 
     def test_run_reuses_qapplication_created_by_build(self) -> None:
-        from qtpy.QtWidgets import QApplication
-
-        from redsun.qt import QtAppContainer
 
         class _TestQtApp(QtAppContainer):
             pass
@@ -621,7 +588,6 @@ class TestComponentNaming:
 
     def test_device_alias_overrides_attr_name(self) -> None:
         """Alias takes priority over the attribute name as device name."""
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -643,7 +609,6 @@ class TestComponentNaming:
 
     def test_device_attr_name_used_when_no_alias(self) -> None:
         """Attribute name is used when alias is None."""
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -663,8 +628,6 @@ class TestComponentNaming:
 
     def test_presenter_alias_overrides_attr_name(self) -> None:
         """Alias takes priority over the attribute name for presenters."""
-        from mock_pkg.controller import MockController
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             motor = declare_device(
@@ -693,7 +656,6 @@ class TestComponentNaming:
 
     def test_alias_baked_into_component_dict_key(self) -> None:
         """Metaclass stores the component under the alias, not the attr name."""
-        from mock_pkg.device import MyMotor
 
         class TestApp(AppContainer):
             my_motor = declare_device(
@@ -716,7 +678,6 @@ class TestChildDevices:
 
     def test_device_with_child_registers_in_container(self) -> None:
         """A device whose __init__ creates child Device instances builds correctly."""
-        from mock_pkg.device import MyMotor
 
         class MotorWithChild(MyMotor):
             """Motor that owns a child axis device."""
@@ -740,7 +701,6 @@ class TestChildDevices:
 
     async def test_child_device_signals_are_functional(self) -> None:
         """Child device signals work independently from the parent."""
-        from mock_pkg.device import MyMotor
 
         class MotorWithChild(MyMotor):
             def __init__(self, name: str, /, **kwargs: Any) -> None:
@@ -765,10 +725,6 @@ class TestChildDevices:
 
     def test_child_device_satisfies_device(self) -> None:
         """A child Device instance on a parent satisfies ophyd-async Device."""
-        from mock_pkg.device import MyMotor
-
-        from redsun.device import Device
-
         child = MyMotor(
             "parent-child",
             egu="um",
@@ -786,7 +742,6 @@ class TestOphyAsyncDevices:
 
     def test_oa_device_builds_in_container(self) -> None:
         """An ophyd-async StandardReadable can be declared and built."""
-        from mock_pkg.device import MockOAMotor
 
         class TestApp(AppContainer):
             motor = declare_device(MockOAMotor, units="mm")
@@ -798,10 +753,6 @@ class TestOphyAsyncDevices:
 
     def test_oa_device_satisfies_device(self) -> None:
         """An ophyd-async StandardReadable satisfies ophyd-async Device."""
-        from mock_pkg.device import MockOAMotor
-
-        from redsun.device import Device
-
         m = MockOAMotor("oa_motor")
         assert isinstance(m, Device)
         assert m.name == "oa_motor"
@@ -809,7 +760,6 @@ class TestOphyAsyncDevices:
 
     def test_oa_device_alias_in_container(self) -> None:
         """The alias kwarg works for ophyd-async devices."""
-        from mock_pkg.device import MockOAMotor
 
         class TestApp(AppContainer):
             oa = declare_device(MockOAMotor, alias="oa_stage", units="um")
@@ -822,8 +772,6 @@ class TestOphyAsyncDevices:
 
     def test_oa_device_units_in_descriptor(self) -> None:
         """Units are embedded in the signal descriptor, not as a separate attribute."""
-        from mock_pkg.device import MockOAMotor
-
         m = MockOAMotor("cam", units="nm")
         # signals carry units in their descriptor source string prefix;
         # actual unit metadata is readable once connected
@@ -834,8 +782,6 @@ class TestOphyAsyncDevices:
 
     async def test_oa_device_descriptor_contains_units(self) -> None:
         """After connecting (mock), descriptor documents contain 'units'."""
-        from mock_pkg.device import MockOAMotor
-
         m = MockOAMotor("stage", units="mm")
         await m.connect(mock=True)
         desc = await m.x.describe()

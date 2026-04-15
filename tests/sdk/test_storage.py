@@ -10,6 +10,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
+import redsun.storage._zarr as zarr_mod
 from redsun.storage import (
     HasMetadata,
     HasWriterLogic,
@@ -502,7 +503,6 @@ class TestZarrWriterImportGuard:
     def test_import_error_without_acquire_zarr(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import redsun.storage._zarr as zarr_mod
 
         monkeypatch.setattr(zarr_mod, "_ACQUIRE_ZARR_AVAILABLE", False)
         with pytest.raises(ImportError, match="acquire-zarr"):

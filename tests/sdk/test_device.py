@@ -12,6 +12,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
+import redsun.device as dev
 from redsun.device import AsyncStatus, DetectorWriter, HasCache
 
 # ---------------------------------------------------------------------------
@@ -21,8 +22,6 @@ from redsun.device import AsyncStatus, DetectorWriter, HasCache
 
 def test_device_re_exports_are_importable() -> None:
     """Every symbol listed in redsun.device.__all__ is importable."""
-    import redsun.device as dev
-
     for name in dev.__all__:
         assert hasattr(dev, name), f"redsun.device missing re-export: {name}"
 
