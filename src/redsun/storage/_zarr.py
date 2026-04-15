@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from redsun.storage._base import Writer
+from redsun.storage import SharedDetectorWriter
 from redsun.storage.utils import from_uri
 
 try:
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
 
 
-class ZarrWriter(Writer):
+class ZarrWriter(SharedDetectorWriter):
     """Zarr storage backend using ``acquire-zarr``.
 
     Writes detector frames to a Zarr v3 store via ``acquire-zarr``'s
@@ -37,24 +37,24 @@ class ZarrWriter(Writer):
 
     The store path is not known at construction time.  It is supplied
     (and can be updated between acquisitions) via
-    [`set_uri`][redsun.storage.Writer.set_uri], which rebuilds
+    [`set_uri`][redsun.storage.SharedDetectorWriter.set_uri], which rebuilds
     ``StreamSettings.store_path`` without disturbing registered sources
     or the registry entry.
 
     Parameters
     ----------
     name : str
-        Store group name.  See [`Writer`][redsun.storage.Writer] for
+        Store group name.  See [`SharedDetectorWriter`][redsun.storage.SharedDetectorWriter] for
         full semantics.  Defaults to ``"default"``.
     """
 
-    def __init__(self, name: str = "default") -> None:
+    def __init__(self, name: str = "default", **kwargs: object) -> None:
         if not _ACQUIRE_ZARR_AVAILABLE:
             raise ImportError(
                 "ZarrWriter requires the 'acquire-zarr' package. "
                 "Install it with: pip install redsun[zarr]"
             )
-        super().__init__(name)
+        super().__init__(name, **kwargs)
         self._stream_settings = StreamSettings()
         self._array_settings: dict[str, ArraySettings] = {}
         self._stream: ZarrStream | None = None
@@ -90,7 +90,7 @@ class ZarrWriter(Writer):
     def _on_register(self, name: str) -> None:
         """Pre-declare Zarr array dimensions for source *name*.
 
-        Called by the base :meth:`~redsun.storage.Writer.register` after
+        Called by the base [`register`][redsun.storage.SharedDetectorWriter.register] after
         ``self._sources[name]`` is populated.  Builds the
         ``ArraySettings`` (dimensions, dtype, output key) that
         :meth:`_open_backend` will pass to ``ZarrStream``.
@@ -135,9 +135,9 @@ class ZarrWriter(Writer):
     def _open_backend(self) -> None:
         """Open the Zarr stream for writing.
 
-        Called once by :meth:`~redsun.storage.Writer.open` when the
+        Called once by [`open`][redsun.storage.SharedDetectorWriter.open] when the
         first source is opened.  Creates the ``ZarrStream`` from all
-        array settings accumulated via :meth:`_on_register`.
+        array settings accumulated via [`_on_register`][redsun.storage._zarr.ZarrWriter._on_register].
         """
         try:
             self._stream_settings.arrays = list(self._array_settings.values())
