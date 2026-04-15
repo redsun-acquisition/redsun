@@ -11,22 +11,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- `SoftAttr` — public base class for `SoftAttrR`, `SoftAttrRW`, and `SoftAttrT`,
-  providing the shared `name` property and `set_name()` method.
-- `Device.children()` — iterate over registered child devices as `(attr_name, device)` pairs.
-- `Device.set_name(name)` — update a device's name and propagate recursively to child
-  devices and `SoftAttr*` fields.
-- `SoftAttrR.set_name()` / `SoftAttrT.set_name()` (via `SoftAttr`) — called automatically
-  by the parent device on attribute assignment.
-- `PDevice.set_name()` — added to the minimal device protocol; structurally compatible with
-  `ophyd_async.core.Device`.
-- `HasChildren` — `@runtime_checkable` structural protocol for objects that expose a
-  `children()` iterator; satisfied by `Device` and any ophyd-async device that provides
-  the same method.
 - `get_shared_loop()` (`redsun.engine`) — returns the single `asyncio` event loop created
-  at module import time. All `RunEngine` instances use it by default; presenters and other
-  sync-context components can call `asyncio.run_coroutine_threadsafe(coro, get_shared_loop())`
-  to schedule coroutines onto the running engine loop.
+  at module import time.
 - `DescriptorTreeView` grouped constructor form — accepts a `groups` argument of type
   `list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]` built by the presenter
   layer. When provided, the tree groups rows by device name (one header per device, leaf
@@ -35,80 +21,15 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- **`SoftAttrR`, `SoftAttrRW`, `SoftAttrT` constructor signatures changed (breaking).**
-  `initial_value` (or `action` for `SoftAttrT`) is now the first positional argument;
-  `name` is now keyword-only with a default of `""`.
-
-  ```python
-  # Before
-  SoftAttrRW[float](f"{name}-position", 0.0, units="mm")
-
-  # After — inside a Device (name auto-injected on assignment)
-  SoftAttrRW[float](0.0, units="mm")
-
-  # After — standalone use
-  SoftAttrRW[float](0.0, name="stage-position", units="mm")
-  ```
-
-- **attrs-decorated `Device` subclasses must add `on_setattr=setters.NO_OP` (breaking).**
-  Without it, attrs generates a `__setattr__` on the subclass that shadows
-  `Device.__setattr__`, silently skipping child registration and name injection.
-- `Device.parent` now returns the actual parent `Device` (or `None` for root devices)
-  instead of always `None`.
-
-- `AttrR[T]`, `AttrRW[T]`, `AttrW[T]`, `AttrT` structural protocols mirroring ophyd-async
-  `SignalR` / `SignalRW` / `SignalW` / `SignalX` via the same bluesky protocols
-  (`Readable`, `Subscribable`, `Movable`, `Triggerable`).
-- `SoftAttrR[T]`, `SoftAttrRW[T]`, `SoftAttrT` — in-memory concrete implementations of
-  the above, intended for simulation devices and test fixtures.
-- `AcquisitionController` protocol: hardware-side acquisition logic (arm, disarm, prepare,
-  wait); mirrors `ophyd_async.core.DetectorController`.
-- `DataWriter` protocol: persistence-side acquisition logic for a single device (open,
-  close, collect stream docs); mirrors `ophyd_async.core.DetectorWriter`.
-  `ControllableDataWriter` extends it further with `register()`, `write_frame()`, and
-  `set_uri()` for shared multi-source backends.
-- `FlyerController[T]` protocol: motion and trigger sequencing for fly scans; mirrors
-  `ophyd_async.core.FlyerController`.
-- `TriggerInfo` protocol and `TriggerType` enum: trigger configuration passed to devices
-  at prepare time; mirror their ophyd-async equivalents.
-- `PrepareInfo` dataclass: plan-time information (`capacity`, `write_forever`) passed to
-  device `prepare()` methods.
-- `Writer.update_metadata(metadata)`: accumulates a `dict` of metadata entries written into
-  the backend at `open()` time.
-- `Writer.clear_metadata()`: resets accumulated metadata; called automatically by
-  `Writer.close()` so each run starts clean.
-- `HasWriterLogic` protocol: structural check for devices that expose a `writer_logic`
-  property; replaces the removed `HasWriter`.
-- `HasMetadata` protocol: structural check for writers that implement `update_metadata()`
-  and `clear_metadata()`.
-- `handle_descriptor_metadata(doc, devices)`: standalone helper for bluesky callbacks that
-  forwards descriptor configuration into associated writers via `HasWriterLogic` and
-  `HasMetadata`.
-
-### Changed
-
-- `Writer` now formally inherits `ControllableDataWriter`.
-- `get_available_writers()` now takes a `devices: Mapping[str, Any]` argument and discovers
-  unique `Writer` instances via `HasWriterLogic`, replacing the removed class-level registry.
-- Metadata lifecycle moved from a global module-level registry to per-instance accumulation:
-  devices call `writer.update_metadata()` in `prepare()`; metadata is cleared on
-  `Writer.close()`.
+- Removed custom device layer in favor of `ophyd-async`
+- Storage API temporarly reworked to make it compatible with `ophyd-async<0.17` - other changes required to better support multi-source data writers via `DetectorDataLogic`
 - `AppContainerMeta` metaclass replaced with `__init_subclass__` for container subclass
   registration.
 - Dropped `beartype` as a runtime dependency.
-- Bumped `acquire-zarr`.
 - Updated CI tag pattern to support release candidates (e.g. `v0.10.0rc0`).
 
 ### Removed
-
-- `HasWriter` protocol — replaced by `HasWriterLogic`.
-- `Writer.get()` and `Writer.release()` class methods and the underlying `Writer._registry`
-  singleton: writers are now created once by the application and injected into devices at
-  construction time.
-- `storage/metadata.py` and its `register_metadata` / `clear_metadata` / `snapshot_metadata`
-  functions — superseded by `Writer.update_metadata()` and `Writer.clear_metadata()`.
-- `storage/device.py` and its `make_writer()` factory shim — writers are now provided via
-  dependency injection.
+- Removed `attrs` from dev dependencies - and drop support for it in favor of `ophyd-async`
 
 ## [0.9.1] - 06-03-2026
 
