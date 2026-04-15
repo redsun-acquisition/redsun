@@ -27,7 +27,7 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "platformdirs>=4.3.8",
     "pyyaml>=6.0.3",
-    "bluesky>=1.14.6",
+    "bluesky>=1.15.0",
     "psygnal>=0.15.1",
     "typing-extensions>=4.15.0",
     "dependency-injector>=4.49.0",
