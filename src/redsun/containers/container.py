@@ -192,6 +192,7 @@ class AppContainer:
         "_virtual_container",
         "_is_built",
         "_built_devices",
+        "_devices_connected",
     )
 
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
@@ -316,6 +317,7 @@ class AppContainer:
         self._virtual_container: VirtualContainer | None = None
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
+        self._devices_connected: bool = False
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -477,6 +479,7 @@ class AppContainer:
 
         future = asyncio.run_coroutine_threadsafe(_connect_all(), get_shared_loop())
         future.result()
+        self._devices_connected = True
 
     def shutdown(self) -> None:
         """Shutdown all presenters that implement ``HasShutdown``."""
@@ -494,9 +497,11 @@ class AppContainer:
         logger.info("Container shutdown complete")
 
     def run(self) -> None:
-        """Build if needed and start the application."""
+        """Build and connect devices if needed, then start the application."""
         if not self._is_built:
             self.build()
+        if not self._devices_connected:
+            self.connect_devices()
 
         frontend = self._config.get("frontend", "pyqt")
         logger.info(f"Starting application with frontend: {frontend}")

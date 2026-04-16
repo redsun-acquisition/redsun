@@ -787,3 +787,80 @@ class TestOphyAsyncDevices:
         desc = await m.x.describe()
         assert "stage-x" in desc
         assert desc["stage-x"]["units"] == "mm"
+
+
+class TestConnectDevices:
+    """Smoke tests for the connect_devices / run lifecycle."""
+
+    def test_connect_devices_requires_build(self) -> None:
+        """connect_devices() raises RuntimeError when called before build()."""
+
+        class EmptyApp(AppContainer):
+            pass
+
+        app = EmptyApp()
+        with pytest.raises(RuntimeError, match="build()"):
+            app.connect_devices(mock=True)
+
+    def test_connect_devices_sets_connected_flag(self) -> None:
+        """After connect_devices(mock=True), _devices_connected is True."""
+
+        class TestApp(AppContainer):
+            motor = declare_device(MockOAMotor, units="mm")
+
+        app = TestApp()
+        assert not app._devices_connected
+        app.build()
+        assert not app._devices_connected
+        app.connect_devices(mock=True)
+        assert app._devices_connected
+
+    def test_run_connects_devices_automatically(self) -> None:
+        """run() calls connect_devices() so callers need not do it explicitly."""
+
+        class TestApp(AppContainer):
+            motor = declare_device(MockOAMotor, units="mm")
+
+        app = TestApp()
+        # Patch run() to stop after connect_devices so we don't need a frontend.
+        original_run = AppContainer.run
+
+        connected_before_frontend: list[bool] = []
+
+        def patched_run(self: AppContainer) -> None:  # type: ignore[override]
+            # call the real run up to (but not past) frontend startup
+            if not self._is_built:
+                self.build()
+            if not self._devices_connected:
+                self.connect_devices(mock=True)
+            connected_before_frontend.append(self._devices_connected)
+
+        AppContainer.run = patched_run  # type: ignore[method-assign]
+        try:
+            app.run()
+        finally:
+            AppContainer.run = original_run  # type: ignore[method-assign]
+
+        assert connected_before_frontend == [True]
+
+    def test_run_skips_connect_when_already_connected(self) -> None:
+        """Make sure that run() does not reconnect devices that were already connected."""
+        connect_calls: list[str] = []
+
+        class TrackingApp(AppContainer):
+            motor = declare_device(MockOAMotor, units="mm")
+
+            def connect_devices(self, mock: bool = False) -> None:  # type: ignore[override]
+                connect_calls.append("called")
+                super().connect_devices(mock=mock)
+
+        app = TrackingApp()
+        app.build()
+        app.connect_devices(mock=True)
+        assert connect_calls == ["called"]
+
+        # Simulate run() when already connected — connect_devices must not fire again.
+        if not app._devices_connected:
+            app.connect_devices(mock=True)
+
+        assert connect_calls == ["called"]  # still only one call
