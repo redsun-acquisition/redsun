@@ -10,7 +10,7 @@ from ophyd_async.core import (
     StreamResourceInfo,
 )
 
-from redsun.storage._new_base import SourceInfo
+from redsun.storage._base import SourceInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from ophyd_async.core import StreamableDataProvider
 
-    from redsun.storage._new_base import DataWriter
+    from redsun.storage._base import DataWriter
 
 
 class WriterDataLogic(DetectorDataLogic):
@@ -94,3 +94,8 @@ class WriterDataLogic(DetectorDataLogic):
         """
         info = SourceInfo(dtype_numpy=dtype_numpy, shape=shape, capacity=capacity)
         self._writer.register(datakey_name, info)
+
+    @property
+    def writer(self) -> DataWriter:
+        """The data writer used by this data logic."""
+        return self._writer

@@ -1,165 +1,164 @@
-"""Zarr-based storage writer using acquire-zarr."""
-
 from __future__ import annotations
 
-import json
-from typing import TYPE_CHECKING
+from itertools import count
+from typing import TYPE_CHECKING, Any
 
-from redsun.storage import SharedDetectorWriter
-from redsun.storage.utils import from_uri
+from redsun.storage import DataWriter
 
 try:
-    from acquire_zarr import (
-        ArraySettings,
-        Dimension,
-        DimensionType,
-        StreamSettings,
-        ZarrStream,
-    )
+    import acquire_zarr as az
 
     _ACQUIRE_ZARR_AVAILABLE = True
 except ImportError:
     _ACQUIRE_ZARR_AVAILABLE = False
 
-
 if TYPE_CHECKING:
-    import numpy as np
+    from pathlib import PurePath
+    from typing import Any
+
     import numpy.typing as npt
 
+    from redsun.storage import SourceInfo
 
-class ZarrWriter(SharedDetectorWriter):
-    """Zarr storage backend using ``acquire-zarr``.
+DTYPE_MAP: dict[str, az.DataType] = {
+    "uint8": az.DataType.UINT8,
+    "uint16": az.DataType.UINT16,
+    "uint32": az.DataType.UINT32,
+    "uint64": az.DataType.UINT64,
+    "int8": az.DataType.INT8,
+    "int16": az.DataType.INT16,
+    "int32": az.DataType.INT32,
+    "int64": az.DataType.INT64,
+    "float32": az.DataType.FLOAT32,
+    "float64": az.DataType.FLOAT64,
+}
 
-    Writes detector frames to a Zarr v3 store via ``acquire-zarr``'s
-    ``ZarrStream``.  All devices that share the same store group name
-    contribute their sources to a single ``ZarrStream`` instance, so
-    their arrays land in one Zarr store on disk.
 
-    The store path is not known at construction time.  It is supplied
-    (and can be updated between acquisitions) via
-    [`set_uri`][redsun.storage.SharedDetectorWriter.set_uri], which rebuilds
-    ``StreamSettings.store_path`` without disturbing registered sources
-    or the registry entry.
+class ZarrDataWriter(DataWriter):
+    """[`acquire-zarr`](https://acquire-project.github.io/acquire-docs/stable/) data writer."""
 
-    Parameters
-    ----------
-    name : str
-        Store group name.  See [`SharedDetectorWriter`][redsun.storage.SharedDetectorWriter] for
-        full semantics.  Defaults to ``"default"``.
-    """
-
-    def __init__(self, name: str = "default", **kwargs: object) -> None:
+    def __init__(self) -> None:
         if not _ACQUIRE_ZARR_AVAILABLE:
             raise ImportError(
-                "ZarrWriter requires the 'acquire-zarr' package. "
+                "ZarrDataWriter requires the 'acquire-zarr' package. "
                 "Install it with: pip install redsun[zarr]"
             )
-        super().__init__(name, **kwargs)
-        self._stream_settings = StreamSettings()
-        self._array_settings: dict[str, ArraySettings] = {}
-        self._stream: ZarrStream | None = None
+        self._stream_settings = az.StreamSettings()
+        self._array_settings: dict[str, az.ArraySettings] = {}
+        self._stream: az.ZarrStream | None = None
+        self._sources: dict[str, SourceInfo] = {}
+        self._metadata: dict[str, Any] = {}
+        self._counter = count()
 
-    @classmethod
-    def _class_mimetype(cls) -> str:
-        """Return the Zarr MIME type string (class-level accessor)."""
+    @property
+    def is_open(self) -> bool:
+        return self._stream is not None and self._stream.is_active()
+
+    @property
+    def metadata(self) -> dict[str, Any]:
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value: dict[str, object]) -> None:
+        self._metadata.update(value)
+
+    @property
+    def sources(self) -> dict[str, SourceInfo]:
+        return self._sources
+
+    @property
+    def mimetype(self) -> str:
         return "application/x-zarr"
 
-    def set_uri(self, uri: str) -> None:
-        """Update the store path from *uri*.
-
-        Translates the URI to a filesystem path via ``from_uri`` and
-        stores it in ``StreamSettings.store_path``.  The stream itself
-        is not opened here — that happens in :meth:`_open_backend`.
-
-        Must not be called while the writer is open.
-
-        Parameters
-        ----------
-        uri : str
-            New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
-        """
-        # enforces the is_open guard, stores self._uri
-        super().set_uri(uri)
-        self._stream_settings.store_path = from_uri(uri) + ".zarr"
+    @property
+    def file_extension(self) -> str:
+        return "zarr"
 
     # TODO: the dimension settings should be configurable,
     # possibly from the presenter side. So the API should
     # allow the presenter to specify the dimension types and chunk sizes.
     # Maybe a per-backend dataclass with specific settings
     # that the presenter/view can populate and pass to the writer?
-    def _on_register(self, name: str) -> None:
-        """Pre-declare Zarr array dimensions for source *name*.
+    def register(self, datakey: str, info: SourceInfo) -> None:
 
-        Called by the base [`register`][redsun.storage.SharedDetectorWriter.register] after
-        ``self._sources[name]`` is populated.  Builds the
-        ``ArraySettings`` (dimensions, dtype, output key) that
-        :meth:`_open_backend` will pass to ``ZarrStream``.
-
-        Parameters
-        ----------
-        name : str
-            Source name just registered.
-        """
-        source = self._sources[name]
-        height, width = source.shape
+        # acquire-zarr uses 0 to indicate unlimited capacity
+        actual_capacity = info.capacity if info.capacity is not None else 0
+        height, width = info.shape
 
         dimensions = [
-            Dimension(
+            az.Dimension(
                 name="t",
-                kind=DimensionType.TIME,
-                array_size_px=source.capacity,
+                kind=az.DimensionType.TIME,
+                array_size_px=actual_capacity,
                 chunk_size_px=1,
                 shard_size_chunks=2,
             ),
-            Dimension(
+            az.Dimension(
                 name="y",
-                kind=DimensionType.SPACE,
+                kind=az.DimensionType.SPACE,
                 array_size_px=height,
                 chunk_size_px=max(1, height // 4),
                 shard_size_chunks=2,
             ),
-            Dimension(
+            az.Dimension(
                 name="x",
-                kind=DimensionType.SPACE,
+                kind=az.DimensionType.SPACE,
                 array_size_px=width,
                 chunk_size_px=max(1, width // 4),
                 shard_size_chunks=2,
             ),
         ]
-        self._array_settings[name] = ArraySettings(
+
+        self._array_settings[datakey] = az.ArraySettings(
             dimensions=dimensions,
-            data_type=source.dtype,
-            output_key=source.name,
+            data_type=DTYPE_MAP[info.dtype_numpy],
+            output_key=datakey,
         )
+        self._sources[datakey] = info
 
-    def _open_backend(self) -> None:
-        """Open the Zarr stream for writing.
+    def unregister(self, datakey: str) -> None:
+        self._array_settings.pop(datakey, None)
+        self._sources.pop(datakey, None)
 
-        Called once by [`open`][redsun.storage.SharedDetectorWriter.open] when the
-        first source is opened.  Creates the ``ZarrStream`` from all
-        array settings accumulated via [`_on_register`][redsun.storage._zarr.ZarrWriter._on_register].
-        """
+    def open(self, path: PurePath) -> None:
+        if self._stream is not None and self._stream.is_active():
+            raise RuntimeError(
+                f"Stream is already open at {self._stream_settings.store_path!r}."
+            )
         try:
+            self._stream_settings.store_path = str(path)
             self._stream_settings.arrays = list(self._array_settings.values())
-            self._stream = ZarrStream(self._stream_settings)
-            if self._metadata:
-                flatten_md = json.dumps(self._metadata)
-                self._stream.write_custom_metadata(flatten_md, overwrite=True)
+            self._stream = az.ZarrStream(self._stream_settings)
         except Exception as e:
-            self._is_open = False
             raise e
 
-    def _close_backend(self) -> None:
-        """Close the Zarr stream and clear per-acquisition array settings."""
-        if self._stream is not None:
+    def close(self) -> None:
+        # need to make sure that
+        # the stream is both open
+        # and sources have been
+        # unregistered before closing
+        if (
+            self._stream is not None
+            and self._stream.is_active()
+            and len(self.sources) == 0
+        ):
             self._stream.close()
             self._stream = None
+        else:
+            err_msg = ""
+            if self._stream is None or not self._stream.is_active():
+                err_msg = "Stream is not open."
+            if len(self.sources) > 0:
+                err_msg = "Sources are still registered."
+            raise RuntimeError(err_msg)
         self._array_settings.clear()
+        self._counter = count()
 
-    def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
-        """Append *frame* to the stream under the array key for *name*."""
+    def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
         if self._stream is None:
-            raise RuntimeError(
-                f"ZarrWriter ({self._name!r}) is not open; call open() first."
-            )
-        self._stream.append(frame, key=name)
+            raise RuntimeError("Stream is not open. Call open() before writing.")
+        self._stream.append(data, key=datakey)
+        self._update_count(next(self._counter))
+
+
+__all__ = ["ZarrDataWriter"]
