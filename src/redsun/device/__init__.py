@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from ophyd_async.core import (
     AsyncStatus,
-    DetectorController,
+    DetectorArmLogic,
+    DetectorDataLogic,
     DetectorTrigger,
-    DetectorWriter,
+    DetectorTriggerLogic,
     Device,
     FlyerController,
     SignalR,
@@ -32,9 +33,10 @@ from .protocols import HasCache
 
 __all__ = [
     "AsyncStatus",
-    "DetectorController",
+    "DetectorArmLogic",
+    "DetectorDataLogic",
     "DetectorTrigger",
-    "DetectorWriter",
+    "DetectorTriggerLogic",
     "Device",
     "FlyerController",
     "HasCache",

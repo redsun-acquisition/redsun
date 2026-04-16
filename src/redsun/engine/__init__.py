@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ._status import Status
+from bluesky.protocols import Status
+
 from ._wrapper import (
     RunEngine,
     RunEngineResult,

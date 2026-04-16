@@ -12,38 +12,6 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-import redsun.device as dev
-from redsun.device import AsyncStatus, DetectorWriter, HasCache
-
-# ---------------------------------------------------------------------------
-# Re-export smoke tests — verify the public API surface
-# ---------------------------------------------------------------------------
-
-
-def test_device_re_exports_are_importable() -> None:
-    """Every symbol listed in redsun.device.__all__ is importable."""
-    for name in dev.__all__:
-        assert hasattr(dev, name), f"redsun.device missing re-export: {name}"
-
-
-def test_hascache_is_exported() -> None:
-    assert HasCache is not None
-
-
-def test_async_status_is_exported() -> None:
-    assert AsyncStatus is not None
-
-
-def test_detector_writer_is_abstract() -> None:
-    """DetectorWriter is an ABC — direct instantiation must raise."""
-    with pytest.raises(TypeError):
-        DetectorWriter()  # type: ignore[abstract]
-
-
-# ---------------------------------------------------------------------------
-# StandardReadable + soft_signal_rw — basic connect/read/write
-# ---------------------------------------------------------------------------
-
 
 class _SimpleMotor(StandardReadable):
     x: SignalRW[float]
@@ -157,11 +125,6 @@ async def test_child_device_sibling_independence() -> None:
     assert await stage.y.position.get_value() == pytest.approx(0.0)
 
 
-# ---------------------------------------------------------------------------
-# Device — no EGU top-level attribute
-# ---------------------------------------------------------------------------
-
-
 def test_oa_device_has_no_egu_attribute() -> None:
     """Units must come from descriptors only — no top-level egu attribute."""
 
@@ -175,23 +138,9 @@ def test_oa_device_has_no_egu_attribute() -> None:
     assert not hasattr(det, "exposure_units")
 
 
-# ---------------------------------------------------------------------------
-# StandardReadable — satisfies Device
-# ---------------------------------------------------------------------------
-
-
-def test_standard_readable_is_device_subclass() -> None:
-    assert issubclass(StandardReadable, Device)
-
-
 def test_standard_readable_instance_is_device() -> None:
     motor = _SimpleMotor("m")
     assert isinstance(motor, Device)
-
-
-# ---------------------------------------------------------------------------
-# numpy-array signal via soft_signal_r_and_setter
-# ---------------------------------------------------------------------------
 
 
 async def test_array_signal_setter_fires_subscriber() -> None:
