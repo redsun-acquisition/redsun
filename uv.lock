@@ -1160,7 +1160,7 @@ wheels = [
 
 [[package]]
 name = "ophyd-async"
-version = "0.16"
+version = "0.17a2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bluesky" },
@@ -1174,9 +1174,9 @@ dependencies = [
     { name = "stamina" },
     { name = "velocity-profile" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/08/2d/cd178f31c4efb7f2a1b2787900d62b70b478111c5db51a625307f5fb9b15/ophyd_async-0.16.tar.gz", hash = "sha256:c8a3671c704da77c7a7b7c5343b972230f743b1029a100f6c5780123fb0df33d", size = 545367, upload-time = "2026-02-17T16:39:37.897Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/e3/a84a0ee3e2e4436bd435859a7f59b75c29ec4a53b74ccdf12501f54afb64/ophyd_async-0.17a2.tar.gz", hash = "sha256:c5c9fec5eb9eb65b40778db9ddc57c4af791ba3a79a546c76d898c87d9bb72b0", size = 553000, upload-time = "2026-03-23T14:09:51.515Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/ab/0c92e9824c9e54df5a06b5759957fc23c30489c2aabef5653dd9057b3f61/ophyd_async-0.16-py3-none-any.whl", hash = "sha256:017d837767b63cdc20af1851275495b6bb0db195a887e0bd989dc7a17e0f0c79", size = 208499, upload-time = "2026-02-17T16:39:36.542Z" },
+    { url = "https://files.pythonhosted.org/packages/34/6a/68cf0ccf958ddae11d6da56905cd71c5c8101a581abb67f8c7574b95823f/ophyd_async-0.17a2-py3-none-any.whl", hash = "sha256:9e7e05d8fbd34ddc9fb907cbcab1b9fbd54fa9aa2d4a26615302d3841200ffeb", size = 207210, upload-time = "2026-03-23T14:09:49.894Z" },
 ]
 
 [[package]]
@@ -1781,7 +1781,7 @@ requires-dist = [
     { name = "dependency-injector", specifier = ">=4.49.0" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.1" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.1" },
-    { name = "ophyd-async", specifier = ">=0.16" },
+    { name = "ophyd-async", specifier = ">=0.17a2" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "psygnal", specifier = ">=0.15.1" },
     { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.10.2" },
