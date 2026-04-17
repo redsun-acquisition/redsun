@@ -44,12 +44,13 @@ class ZarrDataWriter(DataWriter):
                 "ZarrDataWriter requires the 'acquire-zarr' package. "
                 "Install it with: pip install redsun[zarr]"
             )
+        super().__init__()
         self._stream_settings = az.StreamSettings()
         self._array_settings: dict[str, az.ArraySettings] = {}
         self._stream: az.ZarrStream | None = None
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, Any] = {}
-        self._counter = count()
+        self._counter = count(1)
         self._store_path: PurePath | None = None
 
     @property
@@ -160,7 +161,7 @@ class ZarrDataWriter(DataWriter):
                 err_msg = "Sources are still registered."
             raise RuntimeError(err_msg)
         self._array_settings.clear()
-        self._counter = count()
+        self._counter = count(1)
 
     def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
         if self._stream is None:
