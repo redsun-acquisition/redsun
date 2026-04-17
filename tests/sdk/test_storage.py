@@ -17,6 +17,7 @@ import pytest
 from bluesky.run_engine import RunEngine as BlueskyRunEngine
 from ophyd_async.core import (
     DetectorDataLogic,
+    SignalRW,
     StandardDetector,
     StaticFilenameProvider,
     StaticPathProvider,
@@ -37,7 +38,6 @@ from redsun.storage.logics import (
     FrameWriterArmLogic,
     FrameWriterDataLogic,
     FrameWriterTriggerLogic,
-    NDArrayInfo,
 )
 from redsun.storage.presenter import get_available_writers
 from redsun.storage.protocols import HasMetadata, HasWriterLogic
@@ -95,26 +95,25 @@ class _ConcreteDataWriter(DataWriter):
         self._write_counter = count(1)
 
 
-async def _make_nd_array_info(
-    height: int = 64,
-    width: int = 64,
+async def _make_trigger_logic_info(
     x: int = 0,
     y: int = 0,
+    height: int = 64,
+    width: int = 64,
     dtype: str = "uint8",
-) -> NDArrayInfo:
-    x_sig = soft_signal_rw(int, initial_value=x)
-    y_sig = soft_signal_rw(int, initial_value=y)
-    h_sig = soft_signal_rw(int, initial_value=height)
-    w_sig = soft_signal_rw(int, initial_value=width)
+) -> tuple[SignalRW[np.ndarray[tuple[int, ...], np.dtype[np.uint64]]], SignalRW[str]]:
+
+    shape_sig = soft_signal_rw(
+        np.ndarray[tuple[int, ...], np.dtype[np.uint64]],
+        initial_value=np.array([x, y, height, width], dtype=np.uint64),
+    )
     dt_sig = soft_signal_rw(str, initial_value=dtype)
+
     await asyncio.gather(
-        x_sig.connect(mock=False),
-        y_sig.connect(mock=False),
-        h_sig.connect(mock=False),
-        w_sig.connect(mock=False),
+        shape_sig.connect(mock=False),
         dt_sig.connect(mock=False),
     )
-    return NDArrayInfo(x=x_sig, y=y_sig, height=h_sig, width=w_sig, numpy_dtype=dt_sig)
+    return shape_sig, dt_sig
 
 
 class TestSourceInfo:
@@ -233,9 +232,11 @@ class TestFrameWriterArmLogic:
 
 class TestFrameWriterTriggerLogic:
     async def test_prepare_internal_registers_source(self) -> None:
-        info = await _make_nd_array_info(height=64, width=64)
+        shape, dtype = await _make_trigger_logic_info(height=64, width=64)
         writer = _ConcreteDataWriter()
-        logic = FrameWriterTriggerLogic(datakey_name="cam", writer=writer, info=info)
+        logic = FrameWriterTriggerLogic(
+            datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
+        )
         await logic.prepare_internal(num=10, livetime=0.0, deadtime=0.0)
         assert "cam" in writer.sources
         src = writer.sources["cam"]
@@ -244,16 +245,20 @@ class TestFrameWriterTriggerLogic:
         assert src.dtype_numpy == "uint8"
 
     async def test_prepare_internal_respects_roi_offset(self) -> None:
-        info = await _make_nd_array_info(height=64, width=64, x=8, y=16)
+        shape, dtype = await _make_trigger_logic_info(height=64, width=64, x=8, y=16)
         writer = _ConcreteDataWriter()
-        logic = FrameWriterTriggerLogic(datakey_name="cam", writer=writer, info=info)
+        logic = FrameWriterTriggerLogic(
+            datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
+        )
         await logic.prepare_internal(num=1, livetime=0.0, deadtime=0.0)
         assert writer.sources["cam"].shape == (64 - 16, 64 - 8)
 
     async def test_default_trigger_info_returns_zero_events(self) -> None:
-        info = await _make_nd_array_info()
+        shape, dtype = await _make_trigger_logic_info()
         writer = _ConcreteDataWriter()
-        logic = FrameWriterTriggerLogic(datakey_name="cam", writer=writer, info=info)
+        logic = FrameWriterTriggerLogic(
+            datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
+        )
         ti = await logic.default_trigger_info()
         assert isinstance(ti, TriggerInfo)
         assert ti.number_of_events == 0
@@ -263,27 +268,13 @@ class TestFrameWriterDataLogic:
     def test_writer_property(self, tmp_path: Path) -> None:
         writer = _ConcreteDataWriter()
         pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
-        info = NDArrayInfo(
-            x=soft_signal_rw(int),
-            y=soft_signal_rw(int),
-            height=soft_signal_rw(int),
-            width=soft_signal_rw(int),
-            numpy_dtype=soft_signal_rw(str),
-        )
-        logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+        logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
         assert logic.writer is writer
 
     def test_get_hinted_fields_returns_datakey(self, tmp_path: Path) -> None:
         writer = _ConcreteDataWriter()
         pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
-        info = NDArrayInfo(
-            x=soft_signal_rw(int),
-            y=soft_signal_rw(int),
-            height=soft_signal_rw(int),
-            width=soft_signal_rw(int),
-            numpy_dtype=soft_signal_rw(str),
-        )
-        logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+        logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
         assert logic.get_hinted_fields("cam") == ["cam"]
 
 
@@ -291,14 +282,7 @@ def test_writer_data_logic_is_detector_data_logic(tmp_path: Path) -> None:
     """FrameWriterDataLogic must satisfy the ophyd-async DetectorDataLogic protocol."""
     writer = _ConcreteDataWriter()
     pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
-    info = NDArrayInfo(
-        x=soft_signal_rw(int),
-        y=soft_signal_rw(int),
-        height=soft_signal_rw(int),
-        width=soft_signal_rw(int),
-        numpy_dtype=soft_signal_rw(str),
-    )
-    logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+    logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
     assert isinstance(logic, DetectorDataLogic)
 
 
@@ -417,15 +401,15 @@ class TestZarrDataWriterImportGuard:
 async def detector_setup(
     tmp_path: Path,
 ) -> tuple[StandardDetector, _ConcreteDataWriter]:
-    info = await _make_nd_array_info(height=64, width=64)
+    shape, dtype = await _make_trigger_logic_info(height=64, width=64)
     writer = _ConcreteDataWriter()
     pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
 
     arm_logic = FrameWriterArmLogic(datakey_name="cam", writer=writer)
     trigger_logic = FrameWriterTriggerLogic(
-        datakey_name="cam", writer=writer, info=info
+        datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
     )
-    data_logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+    data_logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
 
     det = StandardDetector(name="cam")
     det.add_detector_logics(arm_logic, trigger_logic, data_logic)
@@ -503,15 +487,15 @@ class TestDetectorCompliance:
 async def zarr_detector_setup(
     tmp_path: Path,
 ) -> tuple[StandardDetector, ZarrDataWriter]:
-    info = await _make_nd_array_info(height=64, width=64)
+    shape, dtype = await _make_trigger_logic_info(height=64, width=64)
     writer = ZarrDataWriter()
     pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
 
     arm_logic = FrameWriterArmLogic(datakey_name="cam", writer=writer)
     trigger_logic = FrameWriterTriggerLogic(
-        datakey_name="cam", writer=writer, info=info
+        datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
     )
-    data_logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+    data_logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
 
     det = StandardDetector(name="cam")
     det.add_detector_logics(arm_logic, trigger_logic, data_logic)
@@ -576,16 +560,20 @@ async def test_two_detectors_share_zarr_writer(tmp_path: Path) -> None:
     writer = ZarrDataWriter()
     pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
 
-    info1 = await _make_nd_array_info(height=64, width=64)
-    info2 = await _make_nd_array_info(height=32, width=32)
+    shape1, dtype1 = await _make_trigger_logic_info(height=64, width=64)
+    shape2, dtype2 = await _make_trigger_logic_info(height=32, width=32)
 
     arm1 = FrameWriterArmLogic(datakey_name="det1", writer=writer)
-    trigger1 = FrameWriterTriggerLogic(datakey_name="det1", writer=writer, info=info1)
-    data1 = FrameWriterDataLogic(writer=writer, info=info1, path_provider=pp)
+    trigger1 = FrameWriterTriggerLogic(
+        datakey_name="det1", writer=writer, shape=shape1, numpy_dtype=dtype1
+    )
+    data1 = FrameWriterDataLogic(writer=writer, path_provider=pp)
 
     arm2 = FrameWriterArmLogic(datakey_name="det2", writer=writer)
-    trigger2 = FrameWriterTriggerLogic(datakey_name="det2", writer=writer, info=info2)
-    data2 = FrameWriterDataLogic(writer=writer, info=info2, path_provider=pp)
+    trigger2 = FrameWriterTriggerLogic(
+        datakey_name="det2", writer=writer, shape=shape2, numpy_dtype=dtype2
+    )
+    data2 = FrameWriterDataLogic(writer=writer, path_provider=pp)
 
     det1 = StandardDetector(name="det1")
     det1.add_detector_logics(arm1, trigger1, data1)
@@ -695,15 +683,15 @@ def bluesky_re() -> BlueskyRunEngine:
 async def fly_scan_det(
     tmp_path: Path,
 ) -> tuple[StandardDetector, _ConcreteDataWriter, _SimAutoWriteArmLogic]:
-    info = await _make_nd_array_info(height=32, width=32)
+    shape, dtype = await _make_trigger_logic_info(height=32, width=32)
     writer = _ConcreteDataWriter()
     pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
 
     arm_logic = _SimAutoWriteArmLogic(datakey_name="cam", writer=writer)
     trigger_logic = FrameWriterTriggerLogic(
-        datakey_name="cam", writer=writer, info=info
+        datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
     )
-    data_logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+    data_logic = FrameWriterDataLogic(writer=writer, path_provider=pp)
 
     det = StandardDetector(name="cam")
     det.add_detector_logics(arm_logic, trigger_logic, data_logic)

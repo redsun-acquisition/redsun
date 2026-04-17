@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from ophyd_async.core import PathProvider, StreamableDataProvider
 
     from redsun.storage._base import DataWriter
-    from redsun.storage.logics._common import NDArrayInfo
 
 
 @dataclass
@@ -25,9 +24,6 @@ class FrameWriterDataLogic(DetectorDataLogic):
 
     writer: DataWriter
     """The data writer to use for this logic."""
-
-    info: NDArrayInfo
-    """Array information for the source frames."""
 
     path_provider: PathProvider
     """Path provider to use for generating output file paths."""
