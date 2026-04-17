@@ -25,11 +25,6 @@ class FrameWriterArmLogic(DetectorArmLogic):
 
     async def disarm(self) -> None:
         if self.writer.is_open:
-            # unregister the source
-            # for this datakey
             self.writer.unregister(self.datakey_name)
-
-        # if there are no more sources,
-        # we can close the writer
-        if len(self.writer.sources) == 0:
-            self.writer.close()
+            if len(self.writer.sources) == 0:
+                self.writer.close()
