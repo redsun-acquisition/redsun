@@ -251,7 +251,7 @@ class TestFrameWriterTriggerLogic:
             datakey_name="cam", writer=writer, shape=shape, numpy_dtype=dtype
         )
         await logic.prepare_internal(num=1, livetime=0.0, deadtime=0.0)
-        assert writer.sources["cam"].shape == (64 - 16, 64 - 8)
+        assert writer.sources["cam"].shape == (64 - 8, 64 - 16)
 
     async def test_default_trigger_info_returns_zero_events(self) -> None:
         shape, dtype = await _make_trigger_logic_info()
