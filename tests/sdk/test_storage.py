@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+from collections import defaultdict
+from itertools import count
 from pathlib import Path, PurePath
 from typing import Any
 
+import bluesky.plan_stubs as bps
+import bluesky.preprocessors as bpp
 import numpy as np
 import numpy.typing as npt
 import pytest
+from bluesky.run_engine import RunEngine as BlueskyRunEngine
 from ophyd_async.core import (
     DetectorDataLogic,
     StandardDetector,
@@ -17,6 +23,7 @@ from ophyd_async.core import (
     TriggerInfo,
     soft_signal_rw,
 )
+from ophyd_async.testing import assert_emitted
 
 from redsun.storage import (
     DataWriter,
@@ -25,6 +32,7 @@ from redsun.storage import (
     handle_descriptor_metadata,
 )
 from redsun.storage._factory import WriterType
+from redsun.storage._zarr import ZarrDataWriter
 from redsun.storage.logics import (
     FrameWriterArmLogic,
     FrameWriterDataLogic,
@@ -33,10 +41,6 @@ from redsun.storage.logics import (
 )
 from redsun.storage.presenter import get_available_writers
 from redsun.storage.protocols import HasMetadata, HasWriterLogic
-
-# ---------------------------------------------------------------------------
-# Minimal concrete DataWriter for tests (no local imports)
-# ---------------------------------------------------------------------------
 
 
 class _ConcreteDataWriter(DataWriter):
@@ -48,6 +52,7 @@ class _ConcreteDataWriter(DataWriter):
         self._is_open = False
         self._written: dict[str, list[Any]] = {}
         self._path: PurePath | None = None
+        self._write_counter = count(1)
 
     @property
     def is_open(self) -> bool:
@@ -83,14 +88,11 @@ class _ConcreteDataWriter(DataWriter):
 
     def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
         self._written[datakey].append(data)
+        self._update_count(next(self._write_counter))
 
     def close(self) -> None:
         self._is_open = False
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+        self._write_counter = count(1)
 
 
 async def _make_nd_array_info(
@@ -115,11 +117,6 @@ async def _make_nd_array_info(
     return NDArrayInfo(x=x_sig, y=y_sig, height=h_sig, width=w_sig, numpy_dtype=dt_sig)
 
 
-# ---------------------------------------------------------------------------
-# SourceInfo
-# ---------------------------------------------------------------------------
-
-
 class TestSourceInfo:
     def test_defaults(self) -> None:
         info = SourceInfo(dtype_numpy="uint8", shape=(512, 512), capacity=None)
@@ -130,11 +127,6 @@ class TestSourceInfo:
         assert info.dtype_numpy == "float32"
         assert info.shape == (64, 128)
         assert info.capacity == 10
-
-
-# ---------------------------------------------------------------------------
-# DataWriter base class behaviour
-# ---------------------------------------------------------------------------
 
 
 class TestDataWriter:
@@ -192,11 +184,6 @@ class TestDataWriter:
         assert w._written["cam"][0] is frame
 
 
-# ---------------------------------------------------------------------------
-# FrameWriterArmLogic
-# ---------------------------------------------------------------------------
-
-
 class TestFrameWriterArmLogic:
     async def test_arm_opens_writer(self) -> None:
         writer = _ConcreteDataWriter()
@@ -244,11 +231,6 @@ class TestFrameWriterArmLogic:
         await logic.wait_for_idle()
 
 
-# ---------------------------------------------------------------------------
-# FrameWriterTriggerLogic
-# ---------------------------------------------------------------------------
-
-
 class TestFrameWriterTriggerLogic:
     async def test_prepare_internal_registers_source(self) -> None:
         info = await _make_nd_array_info(height=64, width=64)
@@ -275,11 +257,6 @@ class TestFrameWriterTriggerLogic:
         ti = await logic.default_trigger_info()
         assert isinstance(ti, TriggerInfo)
         assert ti.number_of_events == 0
-
-
-# ---------------------------------------------------------------------------
-# FrameWriterDataLogic
-# ---------------------------------------------------------------------------
 
 
 class TestFrameWriterDataLogic:
@@ -310,11 +287,6 @@ class TestFrameWriterDataLogic:
         assert logic.get_hinted_fields("cam") == ["cam"]
 
 
-# ---------------------------------------------------------------------------
-# Smoke test 1 — FrameWriterDataLogic satisfies DetectorDataLogic
-# ---------------------------------------------------------------------------
-
-
 def test_writer_data_logic_is_detector_data_logic(tmp_path: Path) -> None:
     """FrameWriterDataLogic must satisfy the ophyd-async DetectorDataLogic protocol."""
     writer = _ConcreteDataWriter()
@@ -330,21 +302,11 @@ def test_writer_data_logic_is_detector_data_logic(tmp_path: Path) -> None:
     assert isinstance(logic, DetectorDataLogic)
 
 
-# ---------------------------------------------------------------------------
-# Smoke test 2 — create_writer factory returns a DataWriter
-# ---------------------------------------------------------------------------
-
-
 def test_create_writer_returns_data_writer() -> None:
     """Factory must return a DataWriter subclass with correct mimetype."""
     writer = create_writer(WriterType.ZARR)
     assert isinstance(writer, DataWriter)
     assert writer.mimetype == "application/x-zarr"
-
-
-# ---------------------------------------------------------------------------
-# Protocols
-# ---------------------------------------------------------------------------
 
 
 class TestHasWriterLogic:
@@ -381,11 +343,6 @@ class TestHasMetadata:
         assert not isinstance(_NoMeta(), HasMetadata)
 
 
-# ---------------------------------------------------------------------------
-# handle_descriptor_metadata
-# ---------------------------------------------------------------------------
-
-
 class TestHandleDescriptorMetadata:
     def _make_device(self, writer: _ConcreteDataWriter) -> object:
         class _FakeDevice:
@@ -409,11 +366,6 @@ class TestHandleDescriptorMetadata:
     def test_empty_configuration_is_noop(self) -> None:
         doc: dict[str, Any] = {"configuration": {}}
         handle_descriptor_metadata(doc, {})
-
-
-# ---------------------------------------------------------------------------
-# get_available_writers
-# ---------------------------------------------------------------------------
 
 
 class TestGetAvailableWriters:
@@ -448,11 +400,6 @@ class TestGetAvailableWriters:
         assert result == {}
 
 
-# ---------------------------------------------------------------------------
-# ZarrDataWriter — import guard
-# ---------------------------------------------------------------------------
-
-
 class TestZarrDataWriterImportGuard:
     def test_import_error_without_acquire_zarr(
         self, monkeypatch: pytest.MonkeyPatch
@@ -464,11 +411,6 @@ class TestZarrDataWriterImportGuard:
             from redsun.storage._zarr import ZarrDataWriter
 
             ZarrDataWriter()
-
-
-# ---------------------------------------------------------------------------
-# StandardDetector compliance test
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -555,3 +497,252 @@ class TestDetectorCompliance:
         assert writer.is_open
         await det.unstage()
         assert not writer.is_open
+
+
+@pytest.fixture
+async def zarr_detector_setup(
+    tmp_path: Path,
+) -> tuple[StandardDetector, ZarrDataWriter]:
+    info = await _make_nd_array_info(height=64, width=64)
+    writer = ZarrDataWriter()
+    pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
+
+    arm_logic = FrameWriterArmLogic(datakey_name="cam", writer=writer)
+    trigger_logic = FrameWriterTriggerLogic(
+        datakey_name="cam", writer=writer, info=info
+    )
+    data_logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+
+    det = StandardDetector(name="cam")
+    det.add_detector_logics(arm_logic, trigger_logic, data_logic)
+    await det.connect(mock=True)
+    return det, writer
+
+
+class TestZarrDetectorLifecycle:
+    """Zarr-backed detector lifecycle via arm/trigger/data logic classes."""
+
+    async def test_prepare_registers_zarr_source(
+        self, zarr_detector_setup: tuple[StandardDetector, ZarrDataWriter]
+    ) -> None:
+        det, writer = zarr_detector_setup
+        await det.stage()
+        await det.prepare(TriggerInfo(number_of_events=5))
+        assert "cam" in writer.sources
+        src = writer.sources["cam"]
+        assert src.shape == (64, 64)
+        assert src.capacity == 5
+
+    async def test_arm_opens_zarr_stream(
+        self, zarr_detector_setup: tuple[StandardDetector, ZarrDataWriter]
+    ) -> None:
+        det, writer = zarr_detector_setup
+        await det.stage()
+        await det.prepare(TriggerInfo(number_of_events=1))
+        assert det._arm_logic is not None
+        await det._arm_logic.arm()
+        assert writer.is_open
+
+    async def test_write_frame_and_full_lifecycle(
+        self, zarr_detector_setup: tuple[StandardDetector, ZarrDataWriter]
+    ) -> None:
+        det, writer = zarr_detector_setup
+        await det.stage()
+        await det.prepare(TriggerInfo(number_of_events=1))
+        assert det._arm_logic is not None
+        await det._arm_logic.arm()
+        assert writer.is_open
+
+        frame = np.zeros((64, 64), dtype="uint8")
+        writer.write("cam", frame)
+
+        await det.unstage()
+        assert not writer.is_open
+        assert "cam" not in writer.sources
+
+
+async def test_two_detectors_share_zarr_writer(tmp_path: Path) -> None:
+    """Two StandardDetectors sharing one ZarrDataWriter write to the same store.
+
+    Lifecycle (simulating a bluesky plan):
+      stage -> prepare -> arm -> write -> unstage
+
+    Key invariants verified:
+    - Both sources are registered before the stream is opened.
+    - The first arm() opens the stream; the second is a no-op.
+    - After the first unstage(), the stream stays open (second source remains).
+    - After the second unstage(), all sources are gone and the stream closes.
+    """
+    writer = ZarrDataWriter()
+    pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
+
+    info1 = await _make_nd_array_info(height=64, width=64)
+    info2 = await _make_nd_array_info(height=32, width=32)
+
+    arm1 = FrameWriterArmLogic(datakey_name="det1", writer=writer)
+    trigger1 = FrameWriterTriggerLogic(datakey_name="det1", writer=writer, info=info1)
+    data1 = FrameWriterDataLogic(writer=writer, info=info1, path_provider=pp)
+
+    arm2 = FrameWriterArmLogic(datakey_name="det2", writer=writer)
+    trigger2 = FrameWriterTriggerLogic(datakey_name="det2", writer=writer, info=info2)
+    data2 = FrameWriterDataLogic(writer=writer, info=info2, path_provider=pp)
+
+    det1 = StandardDetector(name="det1")
+    det1.add_detector_logics(arm1, trigger1, data1)
+    det2 = StandardDetector(name="det2")
+    det2.add_detector_logics(arm2, trigger2, data2)
+
+    await asyncio.gather(det1.connect(mock=True), det2.connect(mock=True))
+
+    # ── stage ──────────────────────────────────────────────────────────────
+    await det1.stage()
+    await det2.stage()
+
+    # ── prepare: both sources must be registered before the first arm ──────
+    await det1.prepare(TriggerInfo(number_of_events=4))
+    await det2.prepare(TriggerInfo(number_of_events=4))
+
+    assert "det1" in writer.sources
+    assert "det2" in writer.sources
+    assert not writer.is_open
+
+    # ── arm: first arm opens the zarr stream with both arrays configured ───
+    await arm1.arm()
+    assert writer.is_open
+
+    await arm2.arm()  # no-op: stream already open
+    assert writer.is_open
+
+    # ── write one frame per detector ───────────────────────────────────────
+    writer.write("det1", np.zeros((64, 64), dtype="uint8"))
+    writer.write("det2", np.zeros((32, 32), dtype="uint8"))
+
+    # ── unstage det1: unregisters det1, stream stays open for det2 ────────
+    await det1.unstage()
+    assert "det1" not in writer.sources
+    assert "det2" in writer.sources
+    assert writer.is_open
+
+    # ── unstage det2: last source gone → stream closes ────────────────────
+    await det2.unstage()
+    assert "det2" not in writer.sources
+    assert not writer.is_open
+
+
+class _SimAutoWriteArmLogic(FrameWriterArmLogic):
+    """Extends FrameWriterArmLogic with automatic frame writing for fly scan tests.
+
+    After arming (which opens the writer), a background task writes dummy zero
+    frames at *delay* second intervals, pausing halfway through to split the
+    emitted stream_datum documents into two batches (mirroring the SimBlobDetector
+    fly-scan test pattern).
+    """
+
+    def __init__(
+        self, datakey_name: str, writer: DataWriter, delay: float = 0.01
+    ) -> None:
+        super().__init__(datakey_name=datakey_name, writer=writer)
+        self._delay = delay
+        self._task: asyncio.Task[None] | None = None
+
+    async def arm(self) -> None:
+        await super().arm()
+        self._task = asyncio.create_task(self._write_frames())
+
+    async def wait_for_idle(self) -> None:
+        if self._task is not None:
+            await self._task
+
+    async def disarm(self) -> None:
+        if self._task is not None:
+            self._task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+            self._task = None
+        await super().disarm()
+
+    async def _write_frames(self) -> None:
+        info = self.writer.sources.get(self.datakey_name)
+        if info is None or info.capacity is None:
+            return
+        half = info.capacity // 2
+        # first half: spaced out so they land before the mid-scan pause
+        for _ in range(half):
+            await asyncio.sleep(self._delay)
+            self.writer.write(
+                self.datakey_name, np.zeros(info.shape, dtype=info.dtype_numpy)
+            )
+        # pause so collect_while_completing flushes an intermediate batch;
+        # must be > flush_period (0.1 s) so the wait times out once before completion
+        await asyncio.sleep(0.2)
+        # second half: written synchronously in one event-loop tick so they
+        # land in a single batch regardless of OS timer granularity
+        for _ in range(info.capacity - half):
+            self.writer.write(
+                self.datakey_name, np.zeros(info.shape, dtype=info.dtype_numpy)
+            )
+
+
+@pytest.fixture
+def bluesky_re() -> BlueskyRunEngine:
+    """Return a standard bluesky RunEngine on its own event loop."""
+    loop = asyncio.new_event_loop()
+    loop.set_debug(True)
+    return BlueskyRunEngine({}, call_returns_result=True, loop=loop)
+
+
+@pytest.fixture
+async def fly_scan_det(
+    tmp_path: Path,
+) -> tuple[StandardDetector, _ConcreteDataWriter, _SimAutoWriteArmLogic]:
+    info = await _make_nd_array_info(height=32, width=32)
+    writer = _ConcreteDataWriter()
+    pp = StaticPathProvider(StaticFilenameProvider("scan"), PurePath(tmp_path))
+
+    arm_logic = _SimAutoWriteArmLogic(datakey_name="cam", writer=writer)
+    trigger_logic = FrameWriterTriggerLogic(
+        datakey_name="cam", writer=writer, info=info
+    )
+    data_logic = FrameWriterDataLogic(writer=writer, info=info, path_provider=pp)
+
+    det = StandardDetector(name="cam")
+    det.add_detector_logics(arm_logic, trigger_logic, data_logic)
+    await det.connect(mock=False)
+    return det, writer, arm_logic
+
+
+def test_fly_scan_lifecycle(
+    fly_scan_det: tuple[StandardDetector, _ConcreteDataWriter, _SimAutoWriteArmLogic],
+    bluesky_re: BlueskyRunEngine,
+) -> None:
+    """Fly scan plan lifecycle with FrameWriter logic classes and _ConcreteDataWriter.
+
+    Verifies that the standard bluesky fly-scan protocol
+    (stage → prepare → declare_stream → kickoff → collect_while_completing → unstage)
+    produces the expected stream document sequence.
+
+    The _SimAutoWriteArmLogic writes 4 frames with a mid-scan pause, causing
+    collect_while_completing to flush two separate stream_datum batches.
+    """
+    det, _writer, _arm = fly_scan_det
+    RE = bluesky_re
+
+    docs: dict[str, list[Any]] = defaultdict(list)
+    RE.subscribe(lambda name, doc: docs[name].append(doc))
+
+    @bpp.stage_decorator([det])
+    @bpp.run_decorator()
+    def fly_plan():
+        yield from bps.prepare(det, TriggerInfo(number_of_events=4), wait=True)
+        yield from bps.declare_stream(det, name="primary")
+        yield from bps.kickoff(det, wait=True)
+        yield from bps.collect_while_completing(
+            flyers=[det], dets=[det], flush_period=0.1
+        )
+
+    RE(fly_plan())
+    assert_emitted(
+        docs, start=1, descriptor=1, stream_resource=1, stream_datum=2, stop=1
+    )
+    assert docs["stream_datum"][0]["indices"] == {"start": 0, "stop": 2}
+    assert docs["stream_datum"][1]["indices"] == {"start": 2, "stop": 4}
