@@ -1,7 +1,6 @@
 """Custom Bluesky plan stubs for redsun plans.
 
 These stubs extend the standard `bluesky.plan_stubs` with redsun-specific
-operations such as device-cache management (`stash`, `clear_cache`) and
 action-based flow control (`wait_for_actions`, `read_while_waiting`).
 
 All functions are generator functions that yield `Msg` objects and are
@@ -14,8 +13,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import bluesky.plan_stubs as bps
-from bluesky.protocols import Triggerable
-from bluesky.utils import Msg, maybe_await, short_uid
+from bluesky.utils import Msg, maybe_await
 
 if TYPE_CHECKING:
     import asyncio
@@ -27,12 +25,10 @@ if TYPE_CHECKING:
         Descriptor,
         Movable,
         Readable,
-        Reading,
         Status,
     )
     from bluesky.utils import MsgGenerator
 
-    from redsun.device.protocols import HasCache
     from redsun.engine.actions import SRLatch
 
 SIXTY_FPS: Final[float] = 1.0 / 60.0
@@ -149,116 +145,6 @@ def read_while_waiting(
         )
         yield from bps.trigger_and_read(objs, name=stream_name)
     return event
-
-
-def read_and_stash(
-    objs: Sequence[Readable[Any]],
-    cache_objs: Sequence[HasCache],
-    *,
-    stream: str = "primary",
-    group: str | None = None,
-    wait: bool = False,
-) -> MsgGenerator[dict[str, Reading[Any]]]:
-    """Trigger, read, and stash readings from one or more devices.
-
-    Triggers all `Triggerable` devices in *objs*, reads each device, stashes
-    the reading into the corresponding `HasCache` object in *cache_objs*, and
-    emits a Bluesky ``create``/``save`` pair to record the event.
-
-    Parameters
-    ----------
-    objs : Sequence[Readable[Any]]
-        Devices to read from.
-    cache_objs : Sequence[HasCache]
-        Cache objects paired with *objs* (same order) to stash readings into.
-    stream : str, optional
-        Bluesky stream name. Default is ``"primary"``.
-    group : str | None, optional
-        Identifier for the stash group. Auto-generated if None.
-    wait : bool, optional
-        Whether to wait for all stash operations to complete before
-        returning. Default is False.
-
-    Returns
-    -------
-    dict[str, Reading[Any]]
-        Combined readings from all devices.
-    """
-
-    def inner_trigger() -> MsgGenerator[None]:
-        grp = short_uid("trigger")
-        no_wait = True
-        for obj in objs:
-            if isinstance(obj, Triggerable):
-                no_wait = False
-                yield from bps.trigger(obj, group=grp)
-        if not no_wait:
-            yield from bps.wait(group=grp)
-
-    ret: dict[str, Reading[Any]] = {}
-
-    if any(isinstance(obj, Triggerable) for obj in objs):
-        yield from inner_trigger()
-
-    yield from bps.create(stream)
-    for obj, cache_obj in zip(objs, cache_objs):
-        reading = yield from bps.read(obj)
-        yield from stash(cache_obj, reading, group=group, wait=wait)
-        ret.update(reading)
-
-    yield from bps.save()
-    return ret
-
-
-def stash(
-    obj: HasCache,
-    reading: dict[str, Reading[Any]],
-    *,
-    group: str | None,
-    wait: bool,
-) -> MsgGenerator[None]:
-    """Stash a reading into a `HasCache` device.
-
-    Parameters
-    ----------
-    obj : HasCache
-        The cache object to stash the reading into.
-    reading : dict[str, Reading[Any]]
-        The reading to stash, typically from `bps.read`.
-    group : str | None
-        Identifier for the stash group. A unique id is generated if None.
-    wait : bool
-        Whether to wait for the stash operation to complete.
-    """
-    if not group:
-        group = short_uid("stash")
-
-    yield Msg("stash", obj, reading, group=group)
-    if wait:
-        yield from bps.wait(group=group)
-
-
-def clear_cache(
-    obj: HasCache, *, group: str | None = None, wait: bool = False
-) -> MsgGenerator[None]:
-    """Clear the cache of a `HasCache` device.
-
-    Parameters
-    ----------
-    obj : HasCache
-        The cache object to clear.
-    group : str | None, optional
-        Identifier for the clear operation. Auto-generated if None.
-    wait : bool, optional
-        Whether to wait for the clear operation to complete.
-        Default is False.
-    """
-    if not group:
-        group = short_uid("clear_cache")
-
-    yield Msg("clear_cache", obj, group=group)
-    if wait:
-        yield from bps.wait(group=group)
 
 
 def describe(
