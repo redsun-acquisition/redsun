@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from redsun.storage._base import DataWriter
 from redsun.storage.protocols import HasWriterLogic
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
+
+    from redsun.storage._base import DataWriter
 
 
 def get_available_writers(
@@ -37,8 +38,7 @@ def get_available_writers(
     result: dict[str, dict[str, DataWriter]] = {}
     for device in devices.values():
         if isinstance(device, HasWriterLogic):
-            writer = device.writer_logic
-            if isinstance(writer, DataWriter) and id(writer) not in seen_ids:
-                seen_ids.add(id(writer))
-                result.setdefault(writer.mimetype, {})[type(writer).__name__] = writer
+            writer = device.writer
+            seen_ids.add(id(writer))
+            result.setdefault(writer.mimetype, {})[type(writer).__name__] = writer
     return result

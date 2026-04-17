@@ -68,14 +68,24 @@ class DataWriter(abc.ABC):
         return self._count_sig
 
     @abc.abstractmethod
-    def open(self, path: PurePath) -> None:
-        """Open the data writer, preparing it for writing.
+    def set_store_path(self, path: PurePath) -> None:
+        """Set the directory path where output files should be written.
 
         Parameters
         ----------
         path : Path
             The directory path where output files should be written.
         """
+        ...
+
+    @abc.abstractmethod
+    def is_path_set(self) -> bool:
+        """Check if the store path has been set."""
+        ...
+
+    @abc.abstractmethod
+    def open(self) -> None:
+        """Open the data writer, preparing it for writing."""
         ...
 
     @abc.abstractmethod

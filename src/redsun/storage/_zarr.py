@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itertools import count
+from pathlib import PurePath
 from typing import TYPE_CHECKING, Any
 
 from redsun.storage import DataWriter
@@ -49,6 +50,7 @@ class ZarrDataWriter(DataWriter):
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, Any] = {}
         self._counter = count()
+        self._store_path: PurePath | None = None
 
     @property
     def is_open(self) -> bool:
@@ -120,13 +122,19 @@ class ZarrDataWriter(DataWriter):
         self._array_settings.pop(datakey, None)
         self._sources.pop(datakey, None)
 
-    def open(self, path: PurePath) -> None:
-        if self._stream is not None and self._stream.is_active():
+    def set_store_path(self, path: PurePath) -> None:
+        self._store_path = path
+
+    def is_path_set(self) -> bool:
+        return self._store_path is not None
+
+    def open(self) -> None:
+        if self.is_open:
             raise RuntimeError(
-                f"Stream is already open at {self._stream_settings.store_path!r}."
+                f"Stream already open at {self._stream_settings.store_path!r}."
             )
         try:
-            self._stream_settings.store_path = str(path)
+            self._stream_settings.store_path = str(self._store_path)
             self._stream_settings.arrays = list(self._array_settings.values())
             self._stream = az.ZarrStream(self._stream_settings)
         except Exception as e:

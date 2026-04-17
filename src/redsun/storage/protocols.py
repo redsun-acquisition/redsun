@@ -15,20 +15,10 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class HasWriterLogic(Protocol):
-    """Protocol for devices that are paired with a storage writer.
-
-    Implementing this protocol allows the storage presenter and metadata
-    helper functions to discover the writer associated with a device
-    automatically, without requiring explicit wiring in the application
-    configuration.
-
-    The ``writer_logic`` attribute should be populated at device construction
-    time by injecting the shared
-    [`DataWriter`][redsun.storage.DataWriter] instance.
-    """
+    """Protocol for devices that are paired with a storage writer."""
 
     @property
-    def writer_logic(self) -> DataWriter | None:
+    def writer(self) -> DataWriter:
         """Return the writer logic associated with this device, or ``None``.
 
         ``None`` indicates the writer has not yet been injected (e.g. in
