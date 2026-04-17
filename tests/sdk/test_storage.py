@@ -653,7 +653,7 @@ class _SimAutoWriteArmLogic(FrameWriterArmLogic):
         if self._task is not None:
             await self._task
 
-    async def disarm(self) -> None:
+    async def disarm(self, on_unstage: bool) -> None:
         if self._task is not None:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
