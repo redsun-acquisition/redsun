@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from redsun.device import Device
+from ophyd_async.core import Device
 
 
 class HiddenModel(Device):

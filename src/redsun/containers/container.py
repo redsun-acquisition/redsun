@@ -26,6 +26,7 @@ from typing import (
 )
 
 import yaml
+from ophyd_async.core import Device
 
 from redsun.containers._config import AppConfig
 from redsun.containers.components import (
@@ -36,7 +37,6 @@ from redsun.containers.components import (
     _ViewComponent,
     _ViewField,
 )
-from redsun.device import Device
 from redsun.engine import get_shared_loop
 from redsun.presenter import Presenter
 from redsun.view import View

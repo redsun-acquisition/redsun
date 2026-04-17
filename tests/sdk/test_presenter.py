@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 
 import pytest
+from ophyd_async.core import Device
 
-from redsun.device import Device
 from redsun.presenter import Presenter
 from redsun.virtual import IsInjectable, IsProvider, VirtualContainer
 

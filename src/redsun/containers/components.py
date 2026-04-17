@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
-from redsun.device import Device
+from ophyd_async.core import Device
+
 from redsun.presenter import Presenter
 from redsun.view import View
 
