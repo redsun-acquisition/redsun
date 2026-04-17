@@ -1781,7 +1781,7 @@ requires-dist = [
     { name = "dependency-injector", specifier = ">=4.49.0" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.1" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.1" },
-    { name = "ophyd-async", specifier = ">=0.17a2" },
+    { name = "ophyd-async", specifier = ">=0.17a3" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "psygnal", specifier = ">=0.15.1" },
     { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.10.2" },
