@@ -23,7 +23,7 @@ class FrameWriterArmLogic(DetectorArmLogic):
     async def wait_for_idle(self) -> None:
         pass
 
-    async def disarm(self) -> None:
+    async def disarm(self, on_unstage: bool = False) -> None:
         if self.writer.is_open:
             self.writer.unregister(self.datakey_name)
             if len(self.writer.sources) == 0:
