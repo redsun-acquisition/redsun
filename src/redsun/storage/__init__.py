@@ -13,12 +13,12 @@ class WriterType(StrEnum):
     """acquire-zarr stream writer."""
 
 
-def create_writer(wtype: WriterType) -> DataWriter:
+def create_writer(wtype: WriterType | str) -> DataWriter:
     """Construct a new [`DataWriter`][redsun.storage.DataWriter].
 
     Parameters
     ----------
-    wtype : WriterType
+    wtype : WriterType | str
         Writer type identifier.  See `WriterType` for supported values.
 
     Returns
@@ -26,6 +26,7 @@ def create_writer(wtype: WriterType) -> DataWriter:
     DataWriter
         A freshly constructed writer instance.
     """
+    wtype = WriterType(wtype)
     match wtype:
         case WriterType.ZARR:
             from redsun.storage._zarr import (
