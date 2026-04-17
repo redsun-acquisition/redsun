@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
 from ophyd_async.core import (
     DetectorDataLogic,
     StreamResourceDataProvider,
@@ -35,22 +36,23 @@ class FrameWriterDataLogic(DetectorDataLogic):
         return [datakey_name]
 
     async def prepare_unbounded(self, datakey_name: str) -> StreamableDataProvider:
+        path_info = self.path_provider(datakey_name)
+        extension = self.writer.file_extension
         if not self.writer.is_path_set():
-            path_info = self.path_provider(datakey_name)
             write_path = path_info.directory_path / ".".join(
-                [path_info.filename, self.writer.file_extension]
+                [path_info.filename, extension]
             )
-            extension = self.writer.file_extension
             self.writer.set_store_path(write_path)
 
         shape = self.writer.sources[datakey_name].shape
         capacity = self.writer.sources[datakey_name].capacity
+        dtype_numpy = np.dtype(self.writer.sources[datakey_name].dtype_numpy).str
 
         data_resource = StreamResourceInfo(
             data_key=datakey_name,
             shape=(capacity, *shape),
             chunk_shape=shape,
-            dtype_numpy=self.writer.sources[datakey_name].dtype_numpy,
+            dtype_numpy=dtype_numpy,
             parameters={},
         )
 
