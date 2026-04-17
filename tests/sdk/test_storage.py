@@ -28,10 +28,10 @@ from ophyd_async.testing import assert_emitted
 from redsun.storage import (
     DataWriter,
     SourceInfo,
+    WriterType,
     create_writer,
     handle_descriptor_metadata,
 )
-from redsun.storage._factory import WriterType
 from redsun.storage._zarr import ZarrDataWriter
 from redsun.storage.logics import (
     FrameWriterArmLogic,
