@@ -9,11 +9,14 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class HasShutdown(Protocol):  # pragma: no cover
-    """Protocol marking your class as capable of shutting down."""
+    """Protocol marking your class as capable of shutting down synchronously."""
 
     @abstractmethod
     def shutdown(self) -> None:
-        """Shutdown an object. Performs cleanup operations."""
+        """Shutdown an object. Perform cleanup operations.
+
+        For use in presenters.
+        """
         ...
 
 
