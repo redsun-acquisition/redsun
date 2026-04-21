@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from threading import Thread
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
 
 from bluesky.run_engine import _ensure_event_loop_running
 
@@ -11,14 +11,42 @@ if TYPE_CHECKING:
     from concurrent.futures import Future
     from typing import Any, Literal
 
-_shared_loop: asyncio.AbstractEventLoop | None = None
-_loop_thread: Thread | None = None
-
 R = TypeVar("R")
 
 
-# TODO: this should be made into a factory
-# class to prevent the usage of global variables...
+class _LoopFactory:
+    """Factory for a shared background event loop.
+
+    Not public API.
+    """
+
+    _loop: ClassVar[asyncio.AbstractEventLoop | None] = None
+    _thread: ClassVar[Thread | None] = None
+
+    def __call__(self) -> asyncio.AbstractEventLoop:
+        if _LoopFactory._loop is None:
+            loop = asyncio.new_event_loop()
+            thread = Thread(target=loop.run_forever, daemon=True)
+            thread.start()
+
+            # this is a hack to make sure that the internal function
+            # that caches the event loop associated with the current thread
+            # is already aware of the loop we just created
+            _ensure_event_loop_running.loop_to_thread[loop] = thread  # type: ignore
+
+            _LoopFactory._loop = loop
+            _LoopFactory._thread = thread
+        return _LoopFactory._loop
+
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        return self()
+
+
+_loop_factory = _LoopFactory()
+#: Global factory for shared background event loop. Not public.
+
+
 def get_shared_loop() -> asyncio.AbstractEventLoop:
     """Return the background event loop.
 
@@ -27,23 +55,7 @@ def get_shared_loop() -> asyncio.AbstractEventLoop:
     asyncio.AbstractEventLoop
         The shared event loop.
     """
-    global _shared_loop
-    global _loop_thread
-    if _shared_loop is None:
-        # at first call of this function,
-        # creates a new event loop and starts it in a background thread;
-        # subsequent calls will return the same event loop.
-        # this will be the same event loop of all
-        # RunEngine instances that use the default value of the loop parameter.
-        _shared_loop = asyncio.new_event_loop()
-        _loop_thread = Thread(target=_shared_loop.run_forever, daemon=True)
-        _loop_thread.start()
-
-        # this is a hack to make sure that the internal function
-        # that caches the event loop associated with the current thread
-        # is already aware of the loop we just created
-        _ensure_event_loop_running.loop_to_thread[_shared_loop] = _loop_thread  # type: ignore
-    return _shared_loop
+    return _loop_factory()
 
 
 @overload
@@ -72,10 +84,7 @@ def run_coro(
         The result of the coroutine.
     """
     future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
-    if return_future:
-        return future
-    else:
-        return future.result()
+    return future if return_future else future.result()
 
 
 __all__ = [

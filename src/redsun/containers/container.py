@@ -28,6 +28,7 @@ from typing import (
 import yaml
 from ophyd_async.core import Device
 
+from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers.components import (
     _DeviceComponent,
@@ -37,7 +38,6 @@ from redsun.containers.components import (
     _ViewComponent,
     _ViewField,
 )
-from redsun.engine import get_shared_loop
 from redsun.presenter import Presenter
 from redsun.view import View
 from redsun.virtual import (
@@ -390,6 +390,10 @@ class AppContainer:
             logger.warning("Container already built, skipping rebuild")
             return self
 
+        # ensure the background loop
+        # is running
+        _ = _loop_factory()
+
         logger.info("Building application container...")
 
         self._virtual_container = VirtualContainer()
@@ -471,14 +475,12 @@ class AppContainer:
         if not self._is_built:
             raise RuntimeError("Call build() before connect_devices()")
 
-        async def _connect_all() -> asyncio.Future[list[None]]:
-            future = asyncio.gather(
+        async def _connect_all(mock: bool) -> None:
+            await asyncio.gather(
                 *[device.connect(mock=mock) for device in self._built_devices.values()]
             )
-            return future
 
-        future = asyncio.run_coroutine_threadsafe(_connect_all(), get_shared_loop())
-        future.result()
+        run_coro(_connect_all(mock))
         self._devices_connected = True
 
     def shutdown(self) -> None:

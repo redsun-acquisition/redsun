@@ -200,3 +200,30 @@ def make_reading(value: T, timestamp: float) -> Reading[T]:
     Reading[T]
     """
     return {"value": value, "timestamp": timestamp}
+
+
+def parse_map_key(input: str, map_prefix: str) -> tuple[str, str, str]:
+    """Split a descriptor or reading key coming from a [`DeviceMap`][redsun.device.DeviceMap] into its components.
+
+    Parameters
+    ----------
+    input : str
+        The input key to parse, expected to be in the form ``{name}-{map_prefix}-{key}``.
+    map_prefix : str
+        The prefix used in the key to identify the map (e.g. "axis").
+
+    Returns
+    -------
+    tuple[str, str, str]
+        A tuple of the form ``(name, map_key, key)``, where:
+        - `name` is the device name (the part before the first hyphen).
+        - `map_key` is the key identifying the map (the part between the first and second hyphens).
+        - `key` is the specific property key (the part after the second hyphen).
+    """
+    ret = input.split("-", 2)
+    if len(ret) != 3 or ret[1] != map_prefix:
+        raise ValueError(
+            f"Input {input!r} does not conform to the expected "
+            f"'{{name}}-{map_prefix}-{{key}}' format."
+        )
+    return ret[0], ret[1], ret[2]

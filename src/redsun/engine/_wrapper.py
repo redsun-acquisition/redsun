@@ -10,7 +10,7 @@ from bluesky.run_engine import (
 )
 from bluesky.run_engine import RunEngineResult
 
-from redsun.utils.aio import get_shared_loop
+from redsun.aio import get_shared_loop
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping

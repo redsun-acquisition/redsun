@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping, MutableMapping
+from collections.abc import Iterator, MutableMapping
 from typing import TYPE_CHECKING, TypeVar
 
 from ophyd_async.core import Device
@@ -20,32 +20,34 @@ class DeviceMap(MutableMapping[str, DeviceT], Device):
 
     def __init__(
         self,
-        children: Mapping[str, DeviceT] | None = None,
+        children: MutableMapping[str, DeviceT] | None = None,
         name: str = "",
         connector: DeviceConnector | None = None,
     ) -> None:
-        self._children: dict[str, DeviceT] = children if children is not None else {}
+        self._children: MutableMapping[str, DeviceT] = (
+            children if children is not None else {}
+        )
         super().__init__(name, connector)
 
     def __getitem__(self, key: str) -> DeviceT:
-        return super().__getitem__(key)
+        return self._children[key]
 
     def __setitem__(self, key: str, value: DeviceT) -> None:
         # Check the types on entry to dict to make sure we can't accidentally
         # make a non-integer named child
         if not isinstance(key, str):
-            msg = f"Expected str, got {type(key)}"
+            msg = f"Expected str, got {type(key)}"  # type: ignore[unreachable]
             raise TypeError(msg)
         if not isinstance(value, Device):
-            msg = f"Expected Device, got {value}"
+            msg = f"Expected Device, got {value}"  # type: ignore[unreachable]
             raise TypeError(msg)
         self._children[key] = value
         value.parent = self
 
-    def __delitem__(self, key: int) -> None:
+    def __delitem__(self, key: str) -> None:
         del self._children[key]
 
-    def __iter__(self) -> Iterator[int]:
+    def __iter__(self) -> Iterator[str]:
         yield from self._children
 
     def __len__(self) -> int:
