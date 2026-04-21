@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from threading import Thread
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, overload
 
 from bluesky.run_engine import _ensure_event_loop_running
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from concurrent.futures import Future
-    from typing import Any
+    from typing import Any, Literal
 
 _shared_loop: asyncio.AbstractEventLoop | None = None
 _loop_thread: Thread | None = None
@@ -46,6 +46,14 @@ def get_shared_loop() -> asyncio.AbstractEventLoop:
     return _shared_loop
 
 
+@overload
+def run_coro(
+    coro: Coroutine[Any, Any, R], return_future: Literal[False] = ...
+) -> R: ...
+@overload
+def run_coro(
+    coro: Coroutine[Any, Any, R], return_future: Literal[True] = ...
+) -> Future[R]: ...
 def run_coro(
     coro: Coroutine[Any, Any, R], return_future: bool = False
 ) -> R | Future[R]:
