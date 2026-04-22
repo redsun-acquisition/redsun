@@ -335,7 +335,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
     ) -> None:
         """Append one leaf row (setting + value widget) to *group_item*."""
         child = QtWidgets.QTreeWidgetItem()
-        units: str = desc.get("units", "") or ""
+        units = desc.get("units", "") or ""
         label = f"{prop} ({units})" if units else prop
         child.setText(0, label)
         child.setTextAlignment(
