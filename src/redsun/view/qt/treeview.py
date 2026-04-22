@@ -323,7 +323,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
         owner, property = key.split("-", 1)
-        self.sigPropertyChanged.emit(key, value)
+        self.sigPropertyChanged.emit(owner, property, value)
 
     def _add_leaf(
         self,
