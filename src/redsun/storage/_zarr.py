@@ -51,7 +51,7 @@ class ZarrDataWriter(DataWriter, Loggable):
         self._stream: az.ZarrStream | None = None
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, Any] = {}
-        self._counter = count(0)
+        self._counter = count(1)
         self._store_path: PurePath | None = None
 
     @property
@@ -162,7 +162,8 @@ class ZarrDataWriter(DataWriter, Loggable):
                 err_msg = "Sources are still registered."
             raise RuntimeError(err_msg)
         self._array_settings.clear()
-        self._counter = count(0)
+        self._counter = count(1)
+        self._update_count(0)
         if reset_path:
             self._store_path = None
 
