@@ -4,6 +4,7 @@ from itertools import count
 from pathlib import PurePath
 from typing import TYPE_CHECKING, Any
 
+from redsun.log import Loggable
 from redsun.storage import DataWriter
 
 try:
@@ -35,7 +36,7 @@ DTYPE_MAP: dict[str, az.DataType] = {
 }
 
 
-class ZarrDataWriter(DataWriter):
+class ZarrDataWriter(DataWriter, Loggable):
     """[`acquire-zarr`](https://acquire-project.github.io/acquire-docs/stable/) data writer."""
 
     def __init__(self) -> None:
@@ -50,7 +51,7 @@ class ZarrDataWriter(DataWriter):
         self._stream: az.ZarrStream | None = None
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, Any] = {}
-        self._counter = count(1)
+        self._counter = count(0)
         self._store_path: PurePath | None = None
 
     @property
@@ -161,7 +162,7 @@ class ZarrDataWriter(DataWriter):
                 err_msg = "Sources are still registered."
             raise RuntimeError(err_msg)
         self._array_settings.clear()
-        self._counter = count(1)
+        self._counter = count(0)
         if reset_path:
             self._store_path = None
 
