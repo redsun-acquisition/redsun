@@ -25,7 +25,6 @@
 ::: redsun.engine.plan_stubs
     options:
       members:
-        - set_property
         - wait_for_actions
         - read_while_waiting
         - read_and_stash
