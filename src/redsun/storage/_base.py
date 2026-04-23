@@ -126,6 +126,12 @@ class DataWriter(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def close(self) -> None:
-        """Close the data writer, finalizing any pending operations."""
+    def close(self, reset_path: bool = False) -> None:
+        """Close the data writer.
+
+        Parameters
+        ----------
+        reset_path : bool, optional
+            If True, also reset the store path to an unset state. Default is False.
+        """
         ...

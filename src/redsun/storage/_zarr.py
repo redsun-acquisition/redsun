@@ -141,7 +141,7 @@ class ZarrDataWriter(DataWriter):
         except Exception as e:
             raise e
 
-    def close(self) -> None:
+    def close(self, reset_path: bool = False) -> None:
         # need to make sure that
         # the stream is both open
         # and sources have been
@@ -162,6 +162,8 @@ class ZarrDataWriter(DataWriter):
             raise RuntimeError(err_msg)
         self._array_settings.clear()
         self._counter = count(1)
+        if reset_path:
+            self._store_path = None
 
     def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
         if self._stream is None:
