@@ -84,16 +84,12 @@ class ZarrDataWriter(DataWriter, Loggable):
     # Maybe a per-backend dataclass with specific settings
     # that the presenter/view can populate and pass to the writer?
     def register(self, datakey: str, info: SourceInfo) -> None:
-
-        # acquire-zarr uses 0 to indicate unlimited capacity
-        actual_capacity = info.capacity if info.capacity is not None else 0
         height, width = info.shape
-
         dimensions = [
             az.Dimension(
                 name="t",
                 kind=az.DimensionType.TIME,
-                array_size_px=actual_capacity,
+                array_size_px=info.capacity,
                 chunk_size_px=1,
                 shard_size_chunks=2,
             ),

@@ -24,8 +24,8 @@ class SourceInfo:
     shape: tuple[int, ...]
     """Shape of individual frames from the source."""
 
-    capacity: int | None
-    """Maximum frames to accept. None means unlimited."""
+    capacity: int
+    """Maximum frames to accept. 0 means unlimited."""
 
 
 class DataWriter(abc.ABC):
