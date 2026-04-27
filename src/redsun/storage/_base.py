@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from ophyd_async.core import soft_signal_r_and_setter
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import PurePath
     from typing import Any
 
@@ -27,6 +28,14 @@ class SourceInfo:
     capacity: int
     """Maximum frames to accept. 0 means unlimited."""
 
+    image_counter: SignalR[int] = field(init=False)
+    update_counter: Callable[[int], None] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.image_counter, self.update_counter = soft_signal_r_and_setter(
+            int, initial_value=0
+        )
+
 
 class DataWriter(abc.ABC):
     """Abstract base class for data writers.
@@ -34,9 +43,6 @@ class DataWriter(abc.ABC):
     To be used in conjunction with ophyd-async logic
     composition.
     """
-
-    def __init__(self) -> None:
-        self._count_sig, self._update_count = soft_signal_r_and_setter(int)
 
     @property
     @abc.abstractmethod
@@ -62,10 +68,9 @@ class DataWriter(abc.ABC):
         """MIME type to use for output files."""
         ...
 
-    @property
-    def image_counter(self) -> SignalR[int]:
-        """Signal for the number of images written."""
-        return self._count_sig
+    @abc.abstractmethod
+    def get_counter(self, datakey: str) -> SignalR[int]:
+        """Get the read-only signal for the image counter of a registered data source."""
 
     @abc.abstractmethod
     def set_store_path(self, path: PurePath) -> None:

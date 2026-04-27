@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     import numpy.typing as npt
+    from ophyd_async.core import SignalR
 
     from redsun.storage import SourceInfo
 
@@ -51,7 +52,7 @@ class ZarrDataWriter(DataWriter, Loggable):
         self._stream: az.ZarrStream | None = None
         self._sources: dict[str, SourceInfo] = {}
         self._metadata: dict[str, Any] = {}
-        self._counter = count(1)
+        self._counters: dict[str, count[int]] = {}
         self._store_path: PurePath | None = None
 
     @property
@@ -77,6 +78,9 @@ class ZarrDataWriter(DataWriter, Loggable):
     @property
     def file_extension(self) -> str:
         return "zarr"
+
+    def get_counter(self, datakey: str) -> SignalR[int]:
+        return self._sources[datakey].image_counter
 
     # TODO: the dimension settings should be configurable,
     # possibly from the presenter side. So the API should
@@ -115,10 +119,12 @@ class ZarrDataWriter(DataWriter, Loggable):
             output_key=datakey,
         )
         self._sources[datakey] = info
+        self._counters[datakey] = count(1)
 
     def unregister(self, datakey: str) -> None:
         self._array_settings.pop(datakey, None)
         self._sources.pop(datakey, None)
+        self._counters.pop(datakey, None)
 
     def set_store_path(self, path: PurePath) -> None:
         self._store_path = path
@@ -158,8 +164,10 @@ class ZarrDataWriter(DataWriter, Loggable):
                 err_msg = "Sources are still registered."
             raise RuntimeError(err_msg)
         self._array_settings.clear()
-        self._counter = count(1)
-        self._update_count(0)
+        for info in self._sources.values():
+            info.update_counter(0)
+        self._sources.clear()
+        self._counters.clear()
         if reset_path:
             self._store_path = None
 
@@ -167,7 +175,7 @@ class ZarrDataWriter(DataWriter, Loggable):
         if self._stream is None:
             raise RuntimeError("Stream is not open. Call open() before writing.")
         self._stream.append(data, key=datakey)
-        self._update_count(next(self._counter))
+        self._sources[datakey].update_counter(next(self._counters[datakey]))
 
 
 __all__ = ["ZarrDataWriter"]
