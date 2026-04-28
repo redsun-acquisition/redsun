@@ -79,7 +79,9 @@ jobs:
 
   upload_coverage:
     name: Upload coverage
-    if: always()
+    # disabled pending rewrite
+    # of the test suite
+    if: false
     needs: [test]
     runs-on: ubuntu-latest
     steps:
