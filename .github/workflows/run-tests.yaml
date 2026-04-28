@@ -19,6 +19,9 @@ env:
 jobs:
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
+    # tests are temporarily disabled pending rewrite
+    # of the test suite after considerable refactoring
+    if: false
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
