@@ -1,569 +1,142 @@
-# SPDX-License-Identifier: Apache-2.0
-# The Writer interface is structurally inspired by ophyd-async
-# (https://github.com/bluesky/ophyd-async, SPDX-License-Identifier: BSD-3-Clause),
-# developed by the Bluesky collaboration.
-# In particular: the open / close / collect_stream_docs lifecycle and the
-# StreamResource / StreamDatum document pattern are modelled after DetectorWriter.
-
-"""Abstract base classes for storage writers."""
-
 from __future__ import annotations
 
 import abc
-import asyncio
-import threading as th
-import time
-import uuid
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from ophyd_async.core import DetectorWriter, TriggerInfo
-
-from redsun.log import Loggable
+from ophyd_async.core import soft_signal_r_and_setter
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, AsyncIterator
+    from collections.abc import Callable
+    from pathlib import PurePath
     from typing import Any
 
-    import numpy as np
     import numpy.typing as npt
-    from bluesky.protocols import StreamAsset
-    from event_model import DataKey
-    from event_model.documents import StreamDatum, StreamResource
+    from ophyd_async.core import SignalR
 
 
-class PrepareInfo(TriggerInfo):
-    """[`TriggerInfo`][ophyd_async.core.TriggerInfo] extended with storage-coordination fields.
-
-    Drop-in replacement for the pre-ophyd-async ``PrepareInfo`` dataclass.
-    Passes through all ophyd-async trigger parameters and adds
-    ``write_forever`` so that storage presenters can distinguish bounded
-    acquisitions from continuous streams without a separate message type.
-
-    Parameters
-    ----------
-    number_of_events :
-        Number of frames (events) to acquire per trigger group.
-        Forwarded directly to ``TriggerInfo``.
-    write_forever :
-        When ``True``, the writer keeps writing until explicitly stopped
-        rather than stopping after *number_of_events* frames.
-    **kwargs
-        All other keyword arguments are forwarded to ``TriggerInfo``.
-    """
-
-    write_forever: bool = False
-
-
+@dataclass
 class SourceInfo:
-    """Runtime acquisition state for a registered data source.
+    """Runtime acquisition state for a registered data source."""
 
-    Tracks per-source counters and identifiers used during an acquisition.
-    This class is internal to [`SharedDetectorWriter`][redsun.storage.SharedDetectorWriter].
+    dtype_numpy: str
+    """NumPy data type as string of the source frames."""
 
-    Attributes
-    ----------
-    name : str
-        Name of the data source (e.g. the device name).
-    dtype : np.dtype[np.generic]
-        NumPy data type of the source frames.
-    shape : tuple[int, ...]
-        Shape of individual frames from the source.
-    data_key : str
-        Bluesky data key for stream documents.
-    capacity : int
-        Maximum frames to accept. ``0`` means unlimited.
-    frames_written : int
-        Running count of frames written so far.
-    collection_counter : int
-        Frames reported in the current collection cycle.
-    stream_resource_uid : str
-        UID of the current ``StreamResource`` document.
+    shape: tuple[int, ...]
+    """Shape of individual frames from the source."""
+
+    capacity: int
+    """Maximum frames to accept. 0 means unlimited."""
+
+    image_counter: SignalR[int] = field(init=False)
+    update_counter: Callable[[int], None] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self.image_counter, self.update_counter = soft_signal_r_and_setter(
+            int, initial_value=0
+        )
+
+
+class DataWriter(abc.ABC):
+    """Abstract base class for data writers.
+
+    To be used in conjunction with ophyd-async logic
+    composition.
     """
-
-    __slots__ = (
-        "name",
-        "dtype",
-        "shape",
-        "data_key",
-        "capacity",
-        "frames_written",
-        "collection_counter",
-        "stream_resource_uid",
-    )
-
-    def __init__(
-        self,
-        name: str,
-        dtype: np.dtype[np.generic],
-        shape: tuple[int, ...],
-        data_key: str,
-        capacity: int = 0,
-    ) -> None:
-        self.name = name
-        self.dtype = dtype
-        self.shape = shape
-        self.data_key = data_key
-        self.capacity = capacity
-        self.frames_written: int = 0
-        self.collection_counter: int = 0
-        self.stream_resource_uid: str = str(uuid.uuid4())
-
-
-class SharedDetectorWriter(DetectorWriter, abc.ABC, Loggable):
-    """Abstract multi-source storage backend extending ophyd-async's `DetectorWriter`.
-
-    Extends [`DetectorWriter`][ophyd_async.core.DetectorWriter] with source
-    registration so that multiple devices can write to a single shared backend
-    store.  Each device registers its own named source via
-    [`register`][redsun.storage.SharedDetectorWriter.register].
-
-    Writers are created once (typically at application start via dependency
-    injection) and reused across every acquisition.
-
-    Call order per acquisition:
-
-    1. ``set_uri(uri)``
-        - called by a presenter before the plan
-    2. ``register(source_name, dtype, shape, capacity)``
-        - called by each device in its own ``prepare()``
-    3. ``await open(source_name)``
-        - called by each device; backend opens on the first call
-        - returns ``{source_name: DataKey(...)}``
-    4. ``write_frame(source_name, frame)``
-        - push frames (thread-safe, sync)
-    5. ``await close()``
-        - finalise and close backend; called once all devices are done
-
-    Subclasses must implement:
-
-    - [`_class_mimetype`][redsun.storage.SharedDetectorWriter._class_mimetype]
-    - [`_on_register`][redsun.storage.SharedDetectorWriter._on_register]
-        - backend-specific setup after a source is registered
-    - [`_open_backend`][redsun.storage.SharedDetectorWriter._open_backend]
-        - physically open the backend (sync; called via ``asyncio.to_thread``)
-    - [`_write_frame`][redsun.storage.SharedDetectorWriter._write_frame]
-        - write one frame to the backend (sync, called under lock)
-    - [`_close_backend`][redsun.storage.SharedDetectorWriter._close_backend]
-        - close the backend (sync; called via ``asyncio.to_thread``)
-
-    Parameters
-    ----------
-    name : str
-        Store group name.  Distinguishes multiple independent stores of the
-        same format.  Use ``"default"`` for the common single-store case.
-    """
-
-    def __init__(self, name: str, **_: object) -> None:
-        self._name = name
-        self._uri: str = ""
-        self._lock = th.Lock()
-        self._is_open = False
-        self._sources: dict[str, SourceInfo] = {}
-        self._metadata: dict[str, Any] = {}
-
-    @classmethod
-    @abc.abstractmethod
-    def _class_mimetype(cls) -> str:
-        """Return the MIME type string for this subclass.
-
-        Subclasses implement this as a one-liner::
-
-            @classmethod
-            def _class_mimetype(cls) -> str:
-                return "application/x-zarr"
-        """
-        ...
 
     @property
+    @abc.abstractmethod
     def is_open(self) -> bool:
-        """Return whether the backend is currently open."""
-        return self._is_open
+        """Indicates whether the data writer is currently open."""
+        ...
 
     @property
-    def uri(self) -> str:
-        """The current store URI."""
-        return self._uri
+    @abc.abstractmethod
+    def sources(self) -> dict[str, SourceInfo]:
+        """Dictionary of registered data sources, keyed by source name."""
+        ...
 
     @property
+    @abc.abstractmethod
+    def file_extension(self) -> str:
+        """File extension to use for output files."""
+        ...
+
+    @property
+    @abc.abstractmethod
     def mimetype(self) -> str:
-        """The MIME type string for this backend."""
-        return self._class_mimetype()
-
-    def set_uri(self, uri: str) -> None:
-        """Update the store URI for the next acquisition.
-
-        Parameters
-        ----------
-        uri : str
-            New store URI (e.g. ``"file:///data/2026_02_25/scan_00001"``).
-
-        Raises
-        ------
-        RuntimeError
-            If the writer is currently open.
-        """
-        if self._is_open:
-            raise RuntimeError(
-                f"Cannot change URI on writer ({self._name!r}, {self.mimetype!r}) "
-                "while it is open."
-            )
-        self._uri = uri
-        self.logger.debug(f"URI updated to {uri!r}")
-
-    def update_metadata(self, metadata: dict[str, Any]) -> None:
-        """Merge *metadata* into the writer's accumulated metadata.
-
-        Metadata persists on the writer instance across ``open()``/``close()``
-        cycles within the same run.  It is cleared by
-        [`close`][redsun.storage.SharedDetectorWriter.close] (or explicitly by
-        [`clear_metadata`][redsun.storage.SharedDetectorWriter.clear_metadata]),
-        so each new run starts with a clean slate and devices re-populate it
-        during their ``prepare()`` call.
-
-        This method is **not** part of the
-        [`DetectorWriter`][ophyd_async.core.DetectorWriter] ABC.  Callers
-        should check for its presence via the
-        [`HasMetadata`][redsun.storage.HasMetadata] protocol before calling.
-
-        Parameters
-        ----------
-        metadata:
-            Key/value pairs to merge.  Existing keys are overwritten.
-            Values must be JSON-serialisable for backends that store metadata
-            as JSON (e.g. ``ZarrWriter``).
-        """
-        self._metadata.update(metadata)
-
-    def clear_metadata(self) -> None:
-        """Remove all accumulated metadata.
-
-        Called automatically by [`close`][redsun.storage.SharedDetectorWriter.close].
-        May also be called explicitly if metadata needs to be reset before a
-        new run without closing the backend.
-        """
-        self._metadata.clear()
-
-    def register(
-        self,
-        name: str,
-        dtype: np.dtype[np.generic],
-        shape: tuple[int, ...],
-        capacity: int = 0,
-    ) -> None:
-        """Register a data source before [`open`][redsun.storage.SharedDetectorWriter.open] is called.
-
-        Safe to call multiple times on the same source name — counters
-        are reset on each call, making it suitable for repeated
-        acquisitions without recreating the writer.
-
-        Parameters
-        ----------
-        name : str
-            Source name, typically the device name.
-        dtype : np.dtype[np.generic]
-            NumPy data type of the frames.
-        shape : tuple[int, ...]
-            Shape of each individual frame.
-        capacity : int
-            Maximum number of frames to accept.  ``0`` means unlimited.
-
-        Raises
-        ------
-        RuntimeError
-            If the writer is currently open.
-        """
-        if self._is_open:
-            raise RuntimeError(
-                f"Cannot register source {name!r} on writer "
-                f"({self._name!r}, {self.mimetype!r}) while it is open."
-            )
-        self._sources[name] = SourceInfo(
-            name=name,
-            dtype=dtype,
-            shape=shape,
-            data_key=name,
-            capacity=capacity,
-        )
-        self.logger.debug(
-            f"Registered source {name!r} — shape={shape}, capacity={capacity}"
-        )
-        self._on_register(name)
+        """MIME type to use for output files."""
+        ...
 
     @abc.abstractmethod
-    def _on_register(self, name: str) -> None:
-        """Backend-specific hook called after a source is registered.
+    def get_counter(self, datakey: str) -> SignalR[int]:
+        """Get the read-only signal for the image counter of a registered data source."""
 
-        Invoked at the end of [`register`][redsun.storage.SharedDetectorWriter.register]
-        once ``self._sources[name]`` is fully populated.
+    @abc.abstractmethod
+    def set_store_path(self, path: PurePath) -> None:
+        """Set the directory path where output files should be written.
 
         Parameters
         ----------
-        name : str
-            The source name just registered.
+        path : Path
+            The directory path where output files should be written.
         """
         ...
 
-    async def open(
-        self,
-        name: str,
-        exposures_per_event: int = 1,
-    ) -> dict[str, DataKey]:
-        """Open the backend (on first call) and return describe output.
+    @abc.abstractmethod
+    def is_path_set(self) -> bool:
+        """Check if the store path has been set."""
+        ...
 
-        Uses dtype/shape pre-registered via
-        [`register`][redsun.storage.SharedDetectorWriter.register] for *name*.
-        Subsequent calls while already open are a no-op for the backend
-        and simply return the DataKey dict for *name*.
+    @abc.abstractmethod
+    def open(self) -> None:
+        """Open the data writer, preparing it for writing."""
+        ...
+
+    @abc.abstractmethod
+    def register(self, datakey: str, info: SourceInfo) -> None:
+        """Register a data source with the writer.
 
         Parameters
         ----------
-        name : str
-            Source name as passed to
-            [`register`][redsun.storage.SharedDetectorWriter.register].
-        exposures_per_event : int
-            Number of hardware exposures per logical event.
-
-        Returns
-        -------
-        dict[str, DataKey]
-            Bluesky data-key descriptor for *name*.
-
-        Raises
-        ------
-        KeyError
-            If *name* has not been registered.
-        RuntimeError
-            If [`uri`][redsun.storage.SharedDetectorWriter.uri] has not been set.
-        """
-        if name not in self._sources:
-            raise KeyError(f"Source {name!r} not registered. Call register() first.")
-        if not self._is_open:
-            if not self._uri:
-                raise RuntimeError(
-                    f"Writer ({self._name!r}, {self.mimetype!r}) has no URI. "
-                    "A presenter must call set_uri() before open()."
-                )
-            self._is_open = True
-            await asyncio.to_thread(self._open_backend)
-        source = self._sources[name]
-        data_key: DataKey = {
-            "source": self._uri,
-            "dtype": "array",
-            "shape": list(source.shape),
-            "external": "STREAM:",
-        }
-        return {name: data_key}
-
-    @abc.abstractmethod
-    def _open_backend(self) -> None:
-        """Physically open the storage backend.
-
-        Called once by [`open`][redsun.storage.SharedDetectorWriter.open] when
-        the first source is opened.  Subclasses implement stream/file creation
-        here.  Runs in a thread pool via ``asyncio.to_thread``.
+        datakey : str
+            Source key for the data to be registered.
+        info : SourceInfo
+            Information about the data source.
         """
         ...
 
-    def write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
-        """Push one frame for *name* to the backend (thread-safe, sync).
-
-        Parameters
-        ----------
-        name : str
-            Source name.
-        frame : npt.NDArray[np.generic]
-            Array data to write.
-        """
-        with self._lock:
-            self._write_frame(name, frame)
-            self._sources[name].frames_written += 1
-
     @abc.abstractmethod
-    def _write_frame(self, name: str, frame: npt.NDArray[np.generic]) -> None:
-        """Write one frame to the backend (called under lock).
+    def unregister(self, datakey: str) -> None:
+        """Unregister a data source from the writer.
 
         Parameters
         ----------
-        name : str
-            Source name.
-        frame : npt.NDArray[np.generic]
-            Frame data to write.
+        datakey : str
+            Source key for the data to be unregistered.
         """
         ...
 
-    async def get_indices_written(self, name: str | None = None) -> int:
-        """Return the number of frames written for a source.
-
-        Parameters
-        ----------
-        name : str | None
-            Source name.  If ``None``, returns the minimum across all
-            registered sources (useful for synchronisation checks).
-
-        Raises
-        ------
-        KeyError
-            If *name* is not registered.
-        """
-        if name is None:
-            if not self._sources:
-                return 0
-            return min(s.frames_written for s in self._sources.values())
-        if name not in self._sources:
-            raise KeyError(f"Unknown source {name!r}")
-        return self._sources[name].frames_written
-
-    def observe_indices_written(
-        self,
-        timeout: float,
-        *,
-        name: str | None = None,
-    ) -> AsyncGenerator[int, None]:
-        """Yield the running frame count as frames are written.
-
-        Parameters
-        ----------
-        timeout : float
-            Maximum seconds to wait for the next new frame before raising.
-        name : str | None
-            Source name to observe.  ``None`` observes the minimum across
-            all registered sources.
-
-        Yields
-        ------
-        int
-            Running total of frames written.
-
-        Raises
-        ------
-        TimeoutError
-            If no new frames arrive within *timeout* seconds.
-        """
-
-        async def _gen() -> AsyncGenerator[int, None]:
-            deadline = time.monotonic() + timeout
-            last = await self.get_indices_written(name)
-            yield last
-            while True:
-                if time.monotonic() > deadline:
-                    label = name if name is not None else "<all>"
-                    raise TimeoutError(
-                        f"No new frames from {label!r} within {timeout}s"
-                    )
-                await asyncio.sleep(0.01)
-                current = await self.get_indices_written(name)
-                if current != last:
-                    last = current
-                    yield current
-                    deadline = time.monotonic() + timeout
-
-        return _gen()
-
-    def collect_stream_docs(
-        self,
-        name: str,
-        indices_written: int,
-    ) -> AsyncIterator[StreamAsset]:
-        """Yield ``StreamResource`` and ``StreamDatum`` documents for *name*.
-
-        Parameters
-        ----------
-        name : str
-            Source name.
-        indices_written : int
-            Number of frames to report in this call.
-
-        Yields
-        ------
-        StreamAsset
-            Tuples of ``("stream_resource", doc)`` or
-            ``("stream_datum", doc)``.
-
-        Raises
-        ------
-        KeyError
-            If *name* is not registered.
-        """
-
-        async def _gen() -> AsyncGenerator[StreamAsset, None]:
-            if name not in self._sources:
-                raise KeyError(f"Unknown source {name!r}")
-
-            source = self._sources[name]
-
-            if indices_written == 0:
-                return
-
-            frames_to_report = min(indices_written, source.frames_written)
-
-            if source.collection_counter >= frames_to_report:
-                return
-
-            if source.collection_counter == 0:
-                stream_resource: StreamResource = {
-                    "data_key": source.data_key,
-                    "mimetype": self.mimetype,
-                    "parameters": {"array_name": source.name},
-                    "uid": source.stream_resource_uid,
-                    "uri": self.uri,
-                }
-                yield ("stream_resource", stream_resource)
-
-            stream_datum: StreamDatum = {
-                "descriptor": "",
-                "indices": {
-                    "start": source.collection_counter,
-                    "stop": frames_to_report,
-                },
-                "seq_nums": {"start": 0, "stop": 0},
-                "stream_resource": source.stream_resource_uid,
-                "uid": f"{source.stream_resource_uid}/{source.collection_counter}",
-            }
-            yield ("stream_datum", stream_datum)
-
-            source.collection_counter = frames_to_report
-
-        return _gen()
-
-    async def close(self) -> None:
-        """Finalise and close the storage backend.
-
-        Flushes any remaining state, calls ``_close_backend``, resets
-        ``is_open``, and clears acquisition metadata.  The writer instance
-        remains alive and is ready for the next acquisition.
-        """
-        if not self._is_open:
-            return
-        await asyncio.to_thread(self._close_backend)
-        self._is_open = False
-        self.clear_metadata()
-        self.logger.debug("Backend closed.")
-
     @abc.abstractmethod
-    def _close_backend(self) -> None:
-        """Close the storage backend.
+    def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
+        """Write data to the store.
 
-        Called by [`close`][redsun.storage.SharedDetectorWriter.close] after
-        all sources are done.  Runs in a thread pool via ``asyncio.to_thread``.
+        Parameters
+        ----------
+        datakey : str
+            Source key for the data.
+        data : npt.NDArray[Any]
+            The data to be written, as a NumPy array.
         """
         ...
 
-    def reset_collection_state(self, name: str) -> None:
-        """Reset the stream-document counters for *name*.
+    @abc.abstractmethod
+    def close(self, reset_path: bool = False) -> None:
+        """Close the data writer.
 
         Parameters
         ----------
-        name : str
-            Source name to reset.
+        reset_path : bool, optional
+            If True, also reset the store path to an unset state. Default is False.
         """
-        source = self._sources[name]
-        source.collection_counter = 0
-        source.stream_resource_uid = str(uuid.uuid4())
-
-    def clear_sources(self) -> None:
-        """Remove all registered sources.
-
-        A presenter should call this after each plan finishes.
-        """
-        self._sources.clear()
-        self.logger.debug("Source cache reset.")
+        ...

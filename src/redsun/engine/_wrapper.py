@@ -1,28 +1,21 @@
-"""Wrapper for the [`bluesky.run_engine.RunEngine`]() class to allow execution without blocking the main thread."""
-
 from __future__ import annotations
 
 import asyncio
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import partial
-from threading import Thread
 from typing import TYPE_CHECKING, Any
 
 from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
-from bluesky.run_engine import (
-    RunEngineResult,
-    _ensure_event_loop_running,
-)
+from bluesky.run_engine import RunEngineResult
 
-from redsun.device.protocols import HasCache
+from redsun.aio import get_shared_loop
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping
     from typing import Iterable, Literal, TypeAlias
 
-    from bluesky.protocols import Reading, Status
     from bluesky.utils import Msg, Subscribers
 
     from redsun.engine.actions import SRLatch
@@ -38,37 +31,6 @@ if TYPE_CHECKING:
 def default_scan_id_source(md: dict[str, Any]) -> int:
     scan_id: int = md.get("scan_id", 0)
     return scan_id + 1
-
-
-_shared_loop: asyncio.AbstractEventLoop | None = None
-_loop_thread: Thread | None = None
-
-
-def get_shared_loop() -> asyncio.AbstractEventLoop:
-    """Return the background event loop.
-
-    Returns
-    -------
-    asyncio.AbstractEventLoop
-        The shared event loop.
-    """
-    global _shared_loop
-    global _loop_thread
-    if _shared_loop is None:
-        # at first call of this function,
-        # creates a new event loop and starts it in a background thread;
-        # subsequent calls will return the same event loop.
-        # this will be the same event loop of all
-        # RunEngine instances that use the default value of the loop parameter.
-        _shared_loop = asyncio.new_event_loop()
-        _loop_thread = Thread(target=_shared_loop.run_forever, daemon=True)
-        _loop_thread.start()
-
-        # this is a hack to make sure that the internal function
-        # that caches the event loop associated with the current thread
-        # is already aware of the loop we just created
-        _ensure_event_loop_running.loop_to_thread[_shared_loop] = _loop_thread  # type: ignore
-    return _shared_loop
 
 
 __all__ = ["RunEngine", "RunEngineResult", "get_shared_loop", "register_bound_command"]
@@ -209,6 +171,11 @@ class RunEngine(BlueskyRunEngine):
 
     """
 
+    # TODO: using get_shared_loop() like this is a bit
+    # fragile; there should be a private function that ensures
+    # the shared loop is created only once at application startup
+    # and properly cleaned up at shutdown; this is just a quick solution to
+    # get the shared loop working for now
     def __init__(
         self,
         md: dict[str, Any] | None = None,
@@ -243,8 +210,6 @@ class RunEngine(BlueskyRunEngine):
         self._command_registry.update(
             {
                 "wait_for_actions": self._wait_for_actions,
-                "stash": self._stash,
-                "clear_cache": self._clear_cache,
             }
         )
 
@@ -361,67 +326,6 @@ class RunEngine(BlueskyRunEngine):
         completed_task = done.pop()
         task_name = completed_task.get_name()
         return task_name, latch_map[task_name]
-
-    async def _stash(self, msg: Msg) -> Status:
-        """Instruct the run engine to stash the given readings in the model cache.
-
-        Parameters
-        ----------
-        msg: Msg
-            The message containing the readings to stash.
-            Expected message format:
-
-            Msg("stash", obj, readings)
-
-            - obj: the model object to stash the readings for (implements `HasCache` protocol).
-            - readings: a dict of readings to stash in the model cache.
-        """
-        obj = msg.obj
-        if not isinstance(obj, HasCache):
-            raise TypeError(
-                f"Object {obj} does not support caching. It must implement the HasCache protocol."
-            )
-        if len(msg.args) != 1:
-            raise RuntimeError(
-                "Expected only one positional argument in the message after the object."
-            )
-        readings: dict[str, Reading[Any]] = msg.args[0]
-        group: str | None = dict(msg.kwargs).get("group", None)
-        if not group:
-            raise RuntimeError("Expected a 'group' keyword argument in the message.")
-        status = obj.stash(readings)
-
-        self._add_status_to_group(obj, status, group, action="stash")
-
-        return status
-
-    async def _clear_cache(self, msg: Msg) -> Status:
-        """Instruct the run engine to clear the model cache.
-
-        Parameters
-        ----------
-        msg: Msg
-            The message containing the object whose cache to clear.
-            Expected message format:
-
-            Msg("clear_cache", obj, name)
-
-            - obj: the model object to clear the cache for (implements `HasCache` protocol).
-            - name: the device name associated with the cache to clear.
-        """
-        obj = msg.obj
-        if not isinstance(obj, HasCache):
-            raise TypeError(
-                f"Object {obj} does not support caching. It must implement the HasCache protocol."
-            )
-        group: str | None = dict(msg.kwargs).get("group", None)
-        if not group:
-            raise RuntimeError("Expected a 'group' keyword argument in the message.")
-        status = obj.clear()
-
-        self._add_status_to_group(obj, status, group, action="clear")
-
-        return status
 
 
 def register_bound_command(

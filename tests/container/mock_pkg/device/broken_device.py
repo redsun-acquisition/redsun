@@ -1,4 +1,4 @@
-from redsun.device import Device
+from ophyd_async.core import Device
 
 
 class BrokenDevice(Device):

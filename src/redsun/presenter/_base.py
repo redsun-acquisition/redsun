@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from typing import Any
 
-    from redsun.device import Device
+    from ophyd_async.core import Device
 
 __all__ = ["PPresenter", "Presenter"]
 

@@ -13,8 +13,7 @@ import numpy as np
 import pytest
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
-
-from redsun.device import (
+from ophyd_async.core import (
     Device,
     SignalR,
     SignalRW,
@@ -22,6 +21,7 @@ from redsun.device import (
     soft_signal_r_and_setter,
     soft_signal_rw,
 )
+
 from redsun.engine.actions import Action, continous
 from redsun.presenter.plan_spec import (
     ParamDescription,

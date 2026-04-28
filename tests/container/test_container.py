@@ -10,6 +10,7 @@ import yaml
 from mock_pkg.controller import MockController
 from mock_pkg.device import MockOAMotor, MyMotor
 from mock_pkg.view import MockQtView
+from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
@@ -24,7 +25,6 @@ from redsun.containers.components import (
     _PresenterComponent,
     _ViewComponent,
 )
-from redsun.device import Device
 from redsun.qt import QtAppContainer
 from redsun.virtual import RedSunConfig
 
