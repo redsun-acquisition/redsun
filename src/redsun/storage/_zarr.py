@@ -129,6 +129,9 @@ class ZarrDataWriter(DataWriter, Loggable):
     def set_store_path(self, path: PurePath) -> None:
         self._store_path = path
 
+    def get_store_path(self) -> PurePath | None:
+        return self._store_path
+
     def is_path_set(self) -> bool:
         return self._store_path is not None
 

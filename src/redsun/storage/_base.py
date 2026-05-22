@@ -84,6 +84,11 @@ class DataWriter(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def get_store_path(self) -> PurePath | None:
+        """Get the currently set store path, or None if not set."""
+        ...
+
+    @abc.abstractmethod
     def is_path_set(self) -> bool:
         """Check if the store path has been set."""
         ...
