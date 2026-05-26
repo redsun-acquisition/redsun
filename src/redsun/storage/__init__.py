@@ -3,7 +3,6 @@ from __future__ import annotations
 from enum import StrEnum
 
 from redsun.storage._base import DataWriter, SourceInfo
-from redsun.storage._metadata_callback import handle_descriptor_metadata
 
 
 class WriterType(StrEnum):
