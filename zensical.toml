@@ -114,7 +114,7 @@ show_symbol_type_heading = true
 show_symbol_type_toc = true
 filters = ["!^_", "!^__"]
 
-[project.plugins.mkdocstrings.handlers.python.options.extensions]
+[[project.plugins.mkdocstrings.handlers.python.options.extensions]]
 griffe_fieldz = { add_fields_to = "docstring-attributes", include_inherited = false, include_private = false, remove_fields_from_members = true, strip_annotated = true }
 
 [project.markdown_extensions]
