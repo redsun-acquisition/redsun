@@ -84,6 +84,11 @@ class DataWriter(abc.ABC):
         ...
 
     @abc.abstractmethod
+    def reset_store_path(self) -> None:
+        """Reset the store path to an unset state."""
+        ...
+
+    @abc.abstractmethod
     def get_store_path(self) -> PurePath | None:
         """Get the currently set store path, or None if not set."""
         ...

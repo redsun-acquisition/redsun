@@ -132,6 +132,11 @@ class ZarrDataWriter(DataWriter, Loggable):
     def get_store_path(self) -> PurePath | None:
         return self._store_path
 
+    def reset_store_path(self) -> None:
+        if self.is_open:
+            raise RuntimeError("Cannot reset store path while the stream is open.")
+        self._store_path = None
+
     def is_path_set(self) -> bool:
         return self._store_path is not None
 
