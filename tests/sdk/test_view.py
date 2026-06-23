@@ -32,7 +32,7 @@ def test_base_view(bus: VirtualContainer) -> None:
 
 
 @pytest.mark.qt
-def test_presenter_is_provider(bus: VirtualContainer) -> None:
+def test_presenter_is_provider() -> None:
     """Test that a presenter can optionally implement IsProvider."""
 
     class ProviderView(QtView):
@@ -42,10 +42,14 @@ def test_presenter_is_provider(bus: VirtualContainer) -> None:
         ) -> None:
             super().__init__(name)
 
-        def register_providers(self, container: VirtualContainer) -> None:
+        def register_providers(self, _: VirtualContainer) -> None:
             pass  # would register DI providers here
 
-    app = QtW.QApplication.instance() or QtW.QApplication([])
+        @property
+        def view_position(self) -> ViewPosition:
+            return ViewPosition.CENTER
+
+    app = QtW.QApplication([])
     assert app is not None
 
     view = ProviderView("view")
@@ -53,7 +57,7 @@ def test_presenter_is_provider(bus: VirtualContainer) -> None:
     assert issubclass(ProviderView, IsProvider)
 
 
-def test_view_is_injectable(bus: VirtualContainer) -> None:
+def test_view_is_injectable() -> None:
     """Test that a view can optionally implement IsInjectable."""
 
     class InjectableView(View, IsInjectable):
@@ -64,7 +68,7 @@ def test_view_is_injectable(bus: VirtualContainer) -> None:
         def view_position(self) -> ViewPosition:
             return ViewPosition.LEFT
 
-        def inject_dependencies(self, container: VirtualContainer) -> None:
+        def inject_dependencies(self, _: VirtualContainer) -> None:
             pass  # would pull providers from container here
 
     view = InjectableView("injectable_view")
@@ -73,7 +77,7 @@ def test_view_is_injectable(bus: VirtualContainer) -> None:
 
 
 @pytest.mark.qt
-def test_base_qt_view(bus: VirtualContainer) -> None:
+def test_base_qt_view() -> None:
     """Test basic QtView functionality."""
 
     class TestQtView(QtView):
