@@ -83,7 +83,7 @@ def run_coro(
     R
         The result of the coroutine.
     """
-    future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
+    future = asyncio.run_coroutine_threadsafe(coro, _loop_factory())
     return future if return_future else future.result()
 
 
