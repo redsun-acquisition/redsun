@@ -1,189 +1,120 @@
 from __future__ import annotations
 
-from itertools import count
-from pathlib import PurePath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
+import numpy as np
 
 from redsun.log import Loggable
-from redsun.storage import DataWriter
+from redsun.storage.utils import from_uri
+
+from ._base import BaseDataStore
 
 try:
-    import acquire_zarr as az
-
-    _ACQUIRE_ZARR_AVAILABLE = True
-except ImportError:
-    _ACQUIRE_ZARR_AVAILABLE = False
-
-if TYPE_CHECKING:
-    from pathlib import PurePath
     from typing import Any
 
+    import acquire_zarr as az
     import numpy.typing as npt
-    from ophyd_async.core import SignalR
 
-    from redsun.storage import SourceInfo
+    DTYPE_MAP: dict[str, az.DataType] = {
+        "uint8": az.DataType.UINT8,
+        "uint16": az.DataType.UINT16,
+        "uint32": az.DataType.UINT32,
+        "uint64": az.DataType.UINT64,
+        "int8": az.DataType.INT8,
+        "int16": az.DataType.INT16,
+        "int32": az.DataType.INT32,
+        "int64": az.DataType.INT64,
+        "float32": az.DataType.FLOAT32,
+        "float64": az.DataType.FLOAT64,
+    }
 
-DTYPE_MAP: dict[str, az.DataType] = {
-    "uint8": az.DataType.UINT8,
-    "uint16": az.DataType.UINT16,
-    "uint32": az.DataType.UINT32,
-    "uint64": az.DataType.UINT64,
-    "int8": az.DataType.INT8,
-    "int16": az.DataType.INT16,
-    "int32": az.DataType.INT32,
-    "int64": az.DataType.INT64,
-    "float32": az.DataType.FLOAT32,
-    "float64": az.DataType.FLOAT64,
-}
+except ImportError:
+    raise ImportError(
+        "The `acquire-zarr` package is required for ZarrDataStore. "
+        "Please install it with `pip install redsun[zarr]`."
+    )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ophyd_async.core import PathProvider
+
+    from redsun.storage._base import StreamSpec
 
 
-class ZarrDataWriter(DataWriter, Loggable):
-    """[`acquire-zarr`](https://acquire-project.github.io/acquire-docs/stable/) data writer."""
-
-    def __init__(self) -> None:
-        if not _ACQUIRE_ZARR_AVAILABLE:
-            raise ImportError(
-                "ZarrDataWriter requires the 'acquire-zarr' package. "
-                "Install it with: pip install redsun[zarr]"
-            )
-        super().__init__()
-        self._stream_settings = az.StreamSettings()
-        self._array_settings: dict[str, az.ArraySettings] = {}
-        self._stream: az.ZarrStream | None = None
-        self._sources: dict[str, SourceInfo] = {}
-        self._metadata: dict[str, Any] = {}
-        self._counters: dict[str, count[int]] = {}
-        self._store_path: PurePath | None = None
-
-    @property
-    def is_open(self) -> bool:
-        return self._stream is not None and self._stream.is_active()
-
-    @property
-    def metadata(self) -> dict[str, Any]:
-        return self._metadata
-
-    @metadata.setter
-    def metadata(self, value: dict[str, object]) -> None:
-        self._metadata.update(value)
-
-    @property
-    def sources(self) -> dict[str, SourceInfo]:
-        return self._sources
+class ZarrDataStore(BaseDataStore, Loggable):
+    """Implementation of a Zarr-based data store through [`acquire-zarr`](https://acquire-project.github.io/acquire-docs/stable/)."""
 
     @property
     def mimetype(self) -> str:
+        """The MIME type of the data store, e.g. ``"application/x-hdf5"``."""
         return "application/x-zarr"
 
     @property
-    def file_extension(self) -> str:
+    def extension(self) -> str:
+        """The file extension for the data store, e.g. ``"zarr"``."""
         return "zarr"
 
-    def get_counter(self, datakey: str) -> SignalR[int]:
-        return self._sources[datakey].image_counter
+    def __init__(self, path_provider: PathProvider) -> None:
+        super().__init__(path_provider)
+        self._stream: az.ZarrStream | None = None
 
-    # TODO: the dimension settings should be configurable,
-    # possibly from the presenter side. So the API should
-    # allow the presenter to specify the dimension types and chunk sizes.
-    # Maybe a per-backend dataclass with specific settings
-    # that the presenter/view can populate and pass to the writer?
-    def register(self, datakey: str, info: SourceInfo) -> None:
-        height, width = info.shape
+    def _array_settings(self, spec: StreamSpec) -> az.ArraySettings:
+        height, width = spec.shape
+        p = spec.parameters
+        shard = int(p.get("shard_chunks", 2))
+        # capacity None -> unbounded time axis (0 array_size_px in acquire-zarr).
+        t_size = spec.capacity if spec.capacity is not None else 0
         dimensions = [
             az.Dimension(
                 name="t",
                 kind=az.DimensionType.TIME,
-                array_size_px=info.capacity,
-                chunk_size_px=1,
-                shard_size_chunks=2,
+                array_size_px=t_size,
+                chunk_size_px=int(p.get("chunk_t", 1)),
+                shard_size_chunks=shard,
             ),
             az.Dimension(
                 name="y",
                 kind=az.DimensionType.SPACE,
                 array_size_px=height,
-                chunk_size_px=max(1, height // 4),
-                shard_size_chunks=2,
+                chunk_size_px=int(p.get("chunk_y", max(1, height // 4))),
+                shard_size_chunks=shard,
             ),
             az.Dimension(
                 name="x",
                 kind=az.DimensionType.SPACE,
                 array_size_px=width,
-                chunk_size_px=max(1, width // 4),
-                shard_size_chunks=2,
+                chunk_size_px=int(p.get("chunk_x", max(1, width // 4))),
+                shard_size_chunks=shard,
             ),
         ]
-
-        self._array_settings[datakey] = az.ArraySettings(
+        return az.ArraySettings(
             dimensions=dimensions,
-            data_type=DTYPE_MAP[info.dtype_numpy],
-            output_key=datakey,
+            data_type=DTYPE_MAP[np.dtype(spec.dtype_numpy).name],
+            output_key=spec.data_key,
         )
-        self._sources[datakey] = info
-        self._counters[datakey] = count(1)
 
-    def unregister(self, datakey: str) -> None:
-        self._array_settings.pop(datakey, None)
-        self._sources.pop(datakey, None)
-        self._counters.pop(datakey, None)
+    async def _backend_open(self, uri: str, specs: Sequence[StreamSpec]) -> None:
+        settings = az.StreamSettings()
+        settings.store_path = from_uri(uri)
+        settings.arrays = [self._array_settings(s) for s in specs]
+        self._stream = az.ZarrStream(settings)
+        self.logger.debug(
+            "Opened zarr store at %s with keys %s",
+            settings.store_path,
+            [s.data_key for s in specs],
+        )
 
-    def set_store_path(self, path: PurePath) -> None:
-        self._store_path = path
-
-    def get_store_path(self) -> PurePath | None:
-        return self._store_path
-
-    def reset_store_path(self) -> None:
-        if self.is_open:
-            raise RuntimeError("Cannot reset store path while the stream is open.")
-        self._store_path = None
-
-    def is_path_set(self) -> bool:
-        return self._store_path is not None
-
-    def open(self) -> None:
-        if self.is_open:
-            raise RuntimeError(
-                f"Stream already open at {self._stream_settings.store_path!r}."
-            )
-        try:
-            self._stream_settings.store_path = str(self._store_path)
-            self._stream_settings.arrays = list(self._array_settings.values())
-            self._stream = az.ZarrStream(self._stream_settings)
-        except Exception as e:
-            raise e
-
-    def close(self, reset_path: bool = False) -> None:
-        # need to make sure that
-        # the stream is both open
-        # and sources have been
-        # unregistered before closing
-        if (
-            self._stream is not None
-            and self._stream.is_active()
-            and len(self.sources) == 0
-        ):
-            self._stream.close()
-            self._stream = None
-        else:
-            err_msg = ""
-            if self._stream is None or not self._stream.is_active():
-                err_msg = "Stream is not open."
-            if len(self.sources) > 0:
-                err_msg = "Sources are still registered."
-            raise RuntimeError(err_msg)
-        self._array_settings.clear()
-        for info in self._sources.values():
-            info.update_counter(0)
-        self._sources.clear()
-        self._counters.clear()
-        if reset_path:
-            self._store_path = None
-
-    def write(self, datakey: str, data: npt.NDArray[Any]) -> None:
+    async def _backend_write(self, key: str, frame: npt.NDArray[Any]) -> None:
         if self._stream is None:
-            raise RuntimeError("Stream is not open. Call open() before writing.")
-        self._stream.append(data, key=datakey)
-        self._sources[datakey].update_counter(next(self._counters[datakey]))
+            raise RuntimeError("Zarr stream is not open.")
+        self._stream.append(frame, key)
+
+    async def _backend_close(self) -> None:
+        if self._stream is not None:
+            self._stream.close()
+            self.logger.debug("Closed zarr store.")
+            self._stream = None
 
 
-__all__ = ["ZarrDataWriter"]
+__all__ = ["ZarrDataStore"]
