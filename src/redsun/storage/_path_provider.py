@@ -145,7 +145,7 @@ class SessionPathProvider(PathProvider):
     ) -> None:
         self._plan = "unknown"
         self._session = session
-        self._base_dir = base_dir or Path.home() / "redsun-storage"
+        self._base_dir = (base_dir or Path.home() / "redsun-storage").expanduser()
         self._max_digits = max_digits
         self._date = datetime.now().strftime("%Y-%m-%d")
         self._filenames = PlanFilenameProvider(max_digits=max_digits)
