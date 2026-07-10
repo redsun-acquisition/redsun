@@ -47,8 +47,8 @@ class MemoryIO(StorageIO):
     def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
         return StreamResourceInfo(
             data_key=spec.data_key,
-            shape=(spec.capacity, *spec.shape),
-            chunk_shape=spec.shape,
+            shape=spec.shape,
+            chunk_shape=(1, *spec.shape),
             dtype_numpy=np.dtype(spec.dtype).str,
             parameters={},
         )
