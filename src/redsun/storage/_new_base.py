@@ -225,7 +225,7 @@ class BaseStorage(SinkFactory):
 
     async def _release(self, data_key: str) -> None:
         """Retire one stream; the last one out closes the store."""
-        self._router.pop(data_key)
+        self._router.delete(data_key)
         if self._store is not None:
             try:
                 await self._store.release(data_key)
