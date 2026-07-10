@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 from ophyd_async.core import StreamResourceInfo
@@ -173,9 +174,9 @@ class BaseStorage(SinkFactory):
 
     async def reset(self) -> None:
         """Force teardown of the backend in the current burst."""
-        for gen in self._sinks.values():
+        for gen in list(self._sinks.values()):
             await gen.aclose()
-        for key in self._router.spec.keys():
+        for key in list(self._router.spec.keys()):
             await self._release(key)
 
     async def _pusher(self, data_key: str, capacity: int | None) -> FrameGenerator:
@@ -209,17 +210,13 @@ class BaseStorage(SinkFactory):
             # this assert is only for type-narrowing
             assert self._path is not None
             try:
-                # TODO: directory_path is PurePath,
-                # not Path, so mkdir is not part of the protocol
-                # from type-checking perspective; need to
-                # find a better way to ensure type correctness here...
-                # ... or if it's too complex, just leave the type ignore and document it.
-                self._path.directory_path.mkdir(parents=True, exist_ok=True)  # type: ignore[attr-defined]
+                # wrap the PurePath in a Path object to use mkdir()
+                Path(self._path.directory_path).mkdir(parents=True, exist_ok=True)
                 self._store = await self._io.open(self._path, dict(self._router.spec))
             except BaseException as exc:
                 self._fsm.open_failed(exc)
                 raise
-            self._fsm.open_succeded()
+            self._fsm.open_succeeded()
         else:
             await self._fsm.await_open()
         store = self._store
