@@ -23,9 +23,7 @@ def path_data() -> PathData:
     )
 
 
-def test_session_path_provider_initialization(
-    tmp_path: Path, path_data: PathData
-) -> None:
+def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> None:
 
     expected_directory = tmp_path / path_data.session / path_data.date
     expected_filename = f"{path_data.plan}_00000"
@@ -37,7 +35,7 @@ def test_session_path_provider_initialization(
     assert path_info.filename == expected_filename
 
 
-def test_session_path_provider_setters(tmp_path: Path, path_data: PathData) -> None:
+def test_path_provider_setters(tmp_path: Path, path_data: PathData) -> None:
 
     new_path = Path.home() / "new_storage"
     new_plan = "new_plan"
