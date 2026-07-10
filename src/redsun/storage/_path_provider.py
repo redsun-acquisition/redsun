@@ -79,7 +79,10 @@ class PlanFilenameProvider(FilenameProvider):
             self._counters[plan] = next_count
 
     def __call__(self, datakey_name: str | None = None) -> str:
-        """Mint the next filename for the active plan, incrementing its counter.
+        """Return the next filename for the active plan.
+
+        Each call uses up the current counter value and increments it,
+        so the same filename is never returned twice.
 
         `datakey_name` is ignored: per-key naming is the responsibility of the backend.
         """
@@ -97,8 +100,9 @@ class SessionPathProvider(PathProvider):
     base_dir / session_name / YYYY-MM-DD/ <plan>_<counter>{.ext}
     ```
 
-    where the date is evaluated at mint time and the counter
-    is monotonic per `(session, plan)` *accross* dates: the date
+    where the date is evaluated when a path is requested (not when
+    the provider is constructed) and the counter only ever increases,
+    per `(session, plan)`, *across* dates: the date
     directory groups files, it does not scope the counter.
 
     Parameters
@@ -143,11 +147,8 @@ class SessionPathProvider(PathProvider):
         max_digits: int = 5,
         now: Callable[[], datetime] | None = None,
     ) -> None:
-        self._plan = "unknown"
         self._session = session
         self._base_dir = (base_dir or Path.home() / "redsun-storage").expanduser()
-        self._max_digits = max_digits
-        self._date = datetime.now().strftime("%Y-%m-%d")
         self._filenames = PlanFilenameProvider(max_digits=max_digits)
         self._now = now or datetime.now
 
@@ -158,7 +159,9 @@ class SessionPathProvider(PathProvider):
         base_dir_sig, base_dir_setter = soft_signal_r_and_setter(
             str, initial_value=str(self._base_dir)
         )
-        plan_sig, plan_setter = soft_signal_r_and_setter(str, initial_value=self._plan)
+        plan_sig, plan_setter = soft_signal_r_and_setter(
+            str, initial_value=self._filenames.plan
+        )
 
         self._signals = PathSignals(base_dir=base_dir_sig, plan=plan_sig)
         self._setters = _SignalSetters(base_dir=base_dir_setter, plan=plan_setter)
@@ -180,8 +183,8 @@ class SessionPathProvider(PathProvider):
         """Recover per-plan counters from files under the session directory.
 
         Walks every date directory and raises each plan's counter to one
-        past the highest number found, so minting never reuses a number
-        present on disk.
+        past the highest number found, so newly generated filenames never
+        reuse a number already present on disk.
         """
         directory = self._base_dir / self._session
         if not directory.exists():
@@ -196,11 +199,10 @@ class SessionPathProvider(PathProvider):
                 self._filenames.bump(match.group("plan"), int(match.group("count")) + 1)
 
     def __call__(self, datakey_name: str | None = None) -> PathInfo:
-        """Mint the `PathInfo` for the next burst, ticking the plan counter.
+        """Create the `PathInfo` for the next burst, ticking the plan counter.
 
-        Called by the storage orchestrator once per burst, at the first
-        registration. `datakey_name` is accepted for `PathProvider`
-        protocol compatibility and ignored. No directory is created.
+        Each call produces a new, unique path: the active plan's counter
+        value is used up and incremented.
         """
         directory = self._base_dir / self._session / self._now().strftime("%Y-%m-%d")
         return PathInfo(directory_path=directory, filename=self._filenames())

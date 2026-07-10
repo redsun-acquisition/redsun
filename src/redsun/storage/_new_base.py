@@ -147,7 +147,11 @@ class BaseStorage(SinkFactory):
         self._router.add(spec)
 
     async def __call__(self, data_key: str) -> FrameGenerator:
-        """Mint the frame sink for the given data key."""
+        """Create the frame sink for the given data key.
+
+        Only one live sink per key can exist at a time; the returned
+        generator is primed and ready to receive frames via ``asend``.
+        """
         spec = self._router.spec.get(data_key)
         if spec is None:
             raise KeyError(f"Data key {data_key!r} is not registered.")
@@ -241,5 +245,5 @@ class BaseStorage(SinkFactory):
         elif not self._router.spec:
             # burst died before any frame flowed: no store, but the
             # burst identity must still be retired so the next burst
-            # mints a fresh number.
+            # gets a fresh path with a new counter value.
             self._path = None
