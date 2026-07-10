@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import acquire_zarr as az
 import numpy as np
+from ophyd_async.core import StreamResourceInfo
 
 from .._base import OpenStore, StorageIO
 
@@ -81,6 +82,21 @@ class AcquireZarrIO(StorageIO):
         return (
             max(1, height // self._chunk_divisor),
             max(1, width // self._chunk_divisor),
+        )
+
+    def uri(self, path: PathInfo, data_key: str) -> str:
+        """Return a URI for a data key in a Zarr store."""
+        return f"{path.directory_path}{path.filename}.{self.extension}"
+
+    def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
+        """Describe the stream with the true on-disk chunk layout."""
+        chunk_y, chunk_x = self._spatial_chunks(spec)
+        return StreamResourceInfo(
+            data_key=spec.data_key,
+            shape=spec.shape,
+            chunk_shape=(self._chunk_t, chunk_y, chunk_x),
+            dtype_numpy=np.dtype(spec.dtype).str,
+            parameters={"path": spec.data_key},
         )
 
     def _array_settings(self, spec: StreamSpec) -> az.ArraySettings:
