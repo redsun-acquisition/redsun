@@ -52,18 +52,18 @@ async def test_fsm_invalid_open() -> None:
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.open_succeeded()
-        assert exc_info.value.state == StorageState.UNSEALED
-        assert exc_info.value.verb == "confirm open"
+    assert exc_info.value.state == StorageState.UNSEALED
+    assert exc_info.value.verb == "confirm open"
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.open_failed(RuntimeError())
-        assert exc_info.value.state == StorageState.UNSEALED
-        assert exc_info.value.verb == "fail open"
+    assert exc_info.value.state == StorageState.UNSEALED
+    assert exc_info.value.verb == "fail open"
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.begin_close()
-        assert exc_info.value.state == StorageState.UNSEALED
-        assert exc_info.value.verb == "close"
+    assert exc_info.value.state == StorageState.UNSEALED
+    assert exc_info.value.verb == "close"
 
 
 async def test_state_machine_open_failed() -> None:
@@ -92,7 +92,7 @@ async def test_fsm_await_open_with_exception() -> None:
 
     with pytest.raises(RuntimeError) as exc_info:
         await fsm.await_open()
-        assert str(exc_info.value) == "Test exception"
+    assert str(exc_info.value) == "Test exception"
 
 
 async def test_fsm_seal_after_closing() -> None:
@@ -110,8 +110,8 @@ async def test_fsm_seal_after_closing() -> None:
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.try_seal()
-        assert exc_info.value.state == StorageState.CLOSING
-        assert exc_info.value.verb == "seal"
+    assert exc_info.value.state == StorageState.CLOSING
+    assert exc_info.value.verb == "seal"
 
 
 async def test_fsm_open_after_open() -> None:
@@ -126,13 +126,13 @@ async def test_fsm_open_after_open() -> None:
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.open_succeeded()
-        assert exc_info.value.state == StorageState.OPEN
-        assert exc_info.value.verb == "confirm open"
+    assert exc_info.value.state == StorageState.OPEN
+    assert exc_info.value.verb == "confirm open"
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.open_failed(RuntimeError())
-        assert exc_info.value.state == StorageState.OPEN
-        assert exc_info.value.verb == "fail open"
+    assert exc_info.value.state == StorageState.OPEN
+    assert exc_info.value.verb == "fail open"
 
 
 async def test_fsm_close_after_unsealed() -> None:
@@ -141,10 +141,10 @@ async def test_fsm_close_after_unsealed() -> None:
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.begin_close()
-        assert exc_info.value.state == StorageState.UNSEALED
-        assert exc_info.value.verb == "close"
+    assert exc_info.value.state == StorageState.UNSEALED
+    assert exc_info.value.verb == "close"
 
     with pytest.raises(InvalidStoreState) as exc_info:
         fsm.close_finished()
-        assert exc_info.value.state == StorageState.UNSEALED
-        assert exc_info.value.verb == "close"
+    assert exc_info.value.state == StorageState.UNSEALED
+    assert exc_info.value.verb == "finish close"
