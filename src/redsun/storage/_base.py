@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
@@ -51,12 +52,15 @@ class StreamSpec:
 class OpenStore(Protocol):
     """Hot write path of a multi-stream storage backend."""
 
+    @abc.abstractmethod
     async def write(self, data_key: str, frame: npt.NDArray[Any]) -> None:
         """Write a single frame to the storage backend for the given data key."""
 
+    @abc.abstractmethod
     async def release(self, data_key: str) -> None:
         """Release the stream for the given data key."""
 
+    @abc.abstractmethod
     async def close(self) -> None:
         """Close the storage backend, finalizing all resources."""
 
@@ -70,12 +74,15 @@ class StorageIO(Protocol):
     extension: ClassVar[str]
     """File extension for the storage backend, e.g. ``"h5"``."""
 
+    @abc.abstractmethod
     async def open(self, path: PathInfo, specs: Mapping[str, StreamSpec]) -> OpenStore:
         """Open a new storage backend instance at the given path with the given stream specifications."""
 
+    @abc.abstractmethod
     def uri(self, path: PathInfo, data_key: str) -> str:
         """Compute the resource URI for `data_key`."""
 
+    @abc.abstractmethod
     def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
         """Convert a `StreamSpec` to a `StreamResourceInfo` object."""
 
