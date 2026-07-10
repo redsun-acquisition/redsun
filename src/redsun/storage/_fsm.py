@@ -103,7 +103,7 @@ class StorageStateMachine:
             raise InvalidStoreState(self._state, "seal")
         return False
 
-    def open_succeded(self) -> None:
+    def open_succeeded(self) -> None:
         """Call to ensure that transition SEALING -> OPEN is done and any waiters are notified.
 
         Raises
@@ -130,7 +130,7 @@ class StorageStateMachine:
             If the store is not in SEALING state.
         """
         if self._state is not StorageState.SEALING:
-            raise InvalidStoreState(self._state, "confirm open")
+            raise InvalidStoreState(self._state, "fail open")
         self._state = StorageState.UNSEALED
         self._open_exc = exc
         self._opened.set()
