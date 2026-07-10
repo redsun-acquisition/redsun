@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     from ophyd_async.core import SignalR
 
-    from ._new_base import StreamSpec
+    from ._base import StreamSpec
 
 
 @dataclass(slots=True)
