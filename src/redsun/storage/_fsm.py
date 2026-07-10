@@ -114,6 +114,7 @@ class StorageStateMachine:
         if self._state is not StorageState.SEALING:
             raise InvalidStoreState(self._state, "confirm open")
         self._state = StorageState.OPEN
+        self._closed.clear()
         self._opened.set()
 
     def open_failed(self, exc: BaseException) -> None:
