@@ -86,7 +86,7 @@ class AcquireZarrIO(StorageIO):
 
     def uri(self, path: PathInfo, data_key: str) -> str:
         """Return a URI for a data key in a Zarr store."""
-        return f"{path.directory_path}{path.filename}.{self.extension}"
+        return f"{path.directory_uri}{path.filename}.{self.extension}"
 
     def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
         """Describe the stream with the true on-disk chunk layout."""
