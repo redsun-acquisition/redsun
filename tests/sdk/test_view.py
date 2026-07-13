@@ -49,7 +49,7 @@ def test_presenter_is_provider() -> None:
         def view_position(self) -> ViewPosition:
             return ViewPosition.CENTER
 
-    app = QtW.QApplication([])
+    app = QtW.QApplication.instance() or QtW.QApplication([])
     assert app is not None
 
     view = ProviderView("view")
