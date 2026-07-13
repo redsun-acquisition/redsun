@@ -10,6 +10,16 @@ import os
 import sys
 
 import pytest
+from qtpy.QtWidgets import QApplication
+
+
+@pytest.fixture(scope="session")
+def qapp() -> QApplication:
+    app = QApplication.instance() or QApplication([])
+
+    # make mypy happy
+    assert isinstance(app, QApplication)
+    return app
 
 
 def _has_display() -> bool:

@@ -92,9 +92,8 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.qt
-    def test_view_component_build(self) -> None:
+    def test_view_component_build(self, qapp: QApplication) -> None:
 
-        _ = QApplication.instance() or QApplication([])
         comp = _ViewComponent(MockQtView, "v")
         view = comp.build()
         assert view is comp.instance
@@ -326,9 +325,7 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.qt
-    def test_component_field_collects_view(self) -> None:
-
-        _ = QApplication.instance() or QApplication([])
+    def test_component_field_collects_view(self, qapp: QApplication) -> None:
 
         class TestApp(AppContainer):
             v = declare_view(MockQtView)
