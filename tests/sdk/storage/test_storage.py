@@ -99,7 +99,7 @@ class TestCapacity:
     async def test_bounded_capacity(
         self, storage: BaseStorage, io: MemoryIO, capacity: int
     ) -> None:
-        await storage.register(spec("cam", capacity=2))
+        await storage.register(spec("cam", capacity=capacity))
         sink = await storage("cam")
 
         for i in range(capacity - 1):
