@@ -147,3 +147,17 @@ class TestMultiKey:
         assert ("release", "median") in io.stores[0].calls
         assert io.stores[0].calls[-1] == ("close", "")
         assert storage._fsm.state is StorageState.UNSEALED
+
+
+class TestCounterOrder:
+    @pytest.mark.parametrize("num_frames", [1, 5, 10, 20])
+    async def test_counter_advances_on_write(
+        self, storage: BaseStorage, num_frames: int
+    ) -> None:
+        await storage.register(spec("cam"))
+        counter = storage.signal_for("cam")
+        sink = await storage("cam")
+
+        for i in range(num_frames):
+            await sink.asend(frame(i))
+            assert await counter.get_value() == i + 1
