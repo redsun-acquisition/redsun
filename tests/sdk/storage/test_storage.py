@@ -95,11 +95,55 @@ class TestSingleKeyStorage:
 
 
 class TestCapacity:
-    async def test_bounded_capacity(self, storage: BaseStorage, io: MemoryIO) -> None:
+    @pytest.mark.parametrize("capacity", [1, 2, 3, 5])
+    async def test_bounded_capacity(
+        self, storage: BaseStorage, io: MemoryIO, capacity: int
+    ) -> None:
         await storage.register(spec("cam", capacity=2))
         sink = await storage("cam")
+
+        for i in range(capacity - 1):
+            await sink.asend(frame(i))
+
         with pytest.raises(StopAsyncIteration):
-            for i in range(2):
-                await sink.asend(frame(i))
+            await sink.asend(frame(capacity - 1))
+
         assert len(io.stores) == 1
-        assert len(io.stores[0].arrays["cam"]) == 3
+        assert len(io.stores[0].arrays["cam"]) == capacity
+
+    async def test_unbounded_capacity(self, storage: BaseStorage, io: MemoryIO) -> None:
+        await storage.register(spec("cam", capacity=None))
+        sink = await storage("cam")
+        for i in range(20):
+            await sink.asend(frame(i))
+        assert len(io.stores) == 1
+        assert len(io.stores[0].arrays["cam"]) == 20
+
+    async def test_zero_capacity_rejected(self, storage: BaseStorage) -> None:
+        with pytest.raises(ValueError):
+            await storage.register(spec("cam", capacity=0))
+
+
+class TestMultiKey:
+    async def test_close_until_all_released(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.register(spec("cam"))
+        await storage.register(spec("median"))
+
+        cam = await storage("cam")
+        median = await storage("median")
+
+        await cam.asend(frame())
+        await median.asend(frame())
+
+        await cam.aclose()
+        assert ("release", "cam") in io.stores[0].calls
+        assert ("release", "median") not in io.stores[0].calls
+        assert io.stores[0].calls[-1] != ("close", "")
+        assert storage._fsm.state is StorageState.OPEN
+
+        await median.aclose()
+        assert ("release", "median") in io.stores[0].calls
+        assert io.stores[0].calls[-1] == ("close", "")
+        assert storage._fsm.state is StorageState.UNSEALED
