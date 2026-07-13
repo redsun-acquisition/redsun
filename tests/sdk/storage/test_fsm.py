@@ -23,8 +23,12 @@ def path_data() -> PathData:
     )
 
 
-async def test_fsm_cycle() -> None:
-    fsm = StorageStateMachine()
+@pytest.fixture(scope="function")
+def fsm() -> StorageStateMachine:
+    return StorageStateMachine()
+
+
+async def test_fsm_cycle(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     assert fsm.try_seal() is True
@@ -46,8 +50,7 @@ async def test_fsm_cycle() -> None:
     assert fsm.state == StorageState.UNSEALED
 
 
-async def test_fsm_invalid_open() -> None:
-    fsm = StorageStateMachine()
+async def test_fsm_invalid_open(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     with pytest.raises(InvalidStoreState) as exc_info:
@@ -66,8 +69,7 @@ async def test_fsm_invalid_open() -> None:
     assert exc_info.value.verb == "close"
 
 
-async def test_state_machine_open_failed() -> None:
-    fsm = StorageStateMachine()
+async def test_state_machine_open_failed(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     assert fsm.try_seal() is True
@@ -80,8 +82,7 @@ async def test_state_machine_open_failed() -> None:
     assert fsm._open_exc is exc
 
 
-async def test_fsm_await_open_with_exception() -> None:
-    fsm = StorageStateMachine()
+async def test_fsm_await_open_with_exception(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     assert fsm.try_seal() is True
@@ -95,8 +96,7 @@ async def test_fsm_await_open_with_exception() -> None:
     assert str(exc_info.value) == "Test exception"
 
 
-async def test_fsm_seal_after_closing() -> None:
-    fsm = StorageStateMachine()
+async def test_fsm_seal_after_closing(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     assert fsm.try_seal() is True
@@ -114,8 +114,7 @@ async def test_fsm_seal_after_closing() -> None:
     assert exc_info.value.verb == "seal"
 
 
-async def test_fsm_open_after_open() -> None:
-    fsm = StorageStateMachine()
+async def test_fsm_open_after_open(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     assert fsm.try_seal() is True
@@ -135,8 +134,7 @@ async def test_fsm_open_after_open() -> None:
     assert exc_info.value.verb == "fail open"
 
 
-async def test_fsm_close_after_unsealed() -> None:
-    fsm = StorageStateMachine()
+async def test_fsm_close_after_unsealed(fsm: StorageStateMachine) -> None:
     assert fsm.state == StorageState.UNSEALED
 
     with pytest.raises(InvalidStoreState) as exc_info:
