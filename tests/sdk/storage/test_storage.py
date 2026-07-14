@@ -1,20 +1,54 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 from redsun.storage import SessionPathProvider, StreamSpec
-from redsun.storage._base import BaseStorage
+from redsun.storage._base import BaseStorage, OpenStore
 from redsun.storage._fsm import InvalidStoreState, StorageState
-from redsun.storage.backends._memory import MemoryIO
+from redsun.storage.backends._memory import MemoryIO, MemoryStore
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
     from typing import Any
 
     import numpy.typing as npt
+    from ophyd_async.core import PathInfo
+
+    from redsun.storage._base import FrameSender
+
+
+class _GatedStore(MemoryStore):
+    def __init__(
+        self, path: PathInfo, specs: Mapping[str, StreamSpec], gate: asyncio.Event
+    ) -> None:
+        super().__init__(path, specs)
+        self.gate = gate
+
+    async def write(self, data_key: str, frame: npt.NDArray[Any]) -> None:
+        await self.gate.wait()
+        await super().write(data_key, frame)
+
+
+class GatedIO(MemoryIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.gate = asyncio.Event()
+
+    async def open(self, path: PathInfo, specs: Mapping[str, StreamSpec]) -> OpenStore:
+        store = _GatedStore(path, specs, self.gate)
+        self.stores.append(store)
+        return store
+
+    def set_gate(self) -> None:
+        self.gate.set()
+
+    def clear_gate(self) -> None:
+        self.gate.clear()
 
 
 def spec(data_key: str, capacity: int | None = None) -> StreamSpec:
@@ -161,3 +195,37 @@ class TestCounterOrder:
         for i in range(num_frames):
             await sink.asend(frame(i))
             assert await counter.get_value() == i + 1
+
+    async def test_counter_does_not_advance_until_write_returns(
+        self, provider: SessionPathProvider
+    ) -> None:
+        """Ensure that the counter does not advance until the write operation completes."""
+        io = GatedIO()
+
+        async def send_frame_with_delay(
+            sink: FrameSender, frame: npt.NDArray[Any], delay: float
+        ) -> None:
+            await asyncio.sleep(delay)
+            await sink.asend(frame)
+
+        storage = BaseStorage(io=io, path_provider=provider)
+        await storage.register(spec("cam"))
+        counter = storage.signal_for("cam")
+        sink = await storage("cam")
+
+        task = asyncio.create_task(send_frame_with_delay(sink, frame(1), delay=0.1))
+
+        await asyncio.sleep(
+            0
+        )  # yield control to the event loop to ensure the task starts
+        assert await counter.get_value() == 0  # Counter should not advance yet
+        assert not task.done()
+
+        io.set_gate()  # Allow the write to proceed
+        await asyncio.wait_for(task, timeout=0.5)
+        assert (
+            await counter.get_value() == 1
+        )  # Counter should advance after write completes
+
+
+class TestConcurrentSeal: ...
