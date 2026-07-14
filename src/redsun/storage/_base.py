@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
     from ophyd_async.core import PathInfo, PathProvider, SignalR, StreamResourceInfo
 
-    FrameGenerator: TypeAlias = AsyncGenerator[None, npt.NDArray[Any]]
+    FrameSender: TypeAlias = AsyncGenerator[None, npt.NDArray[Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,7 +101,7 @@ class SinkFactory(Protocol):
     async def register(self, spec: StreamSpec) -> None:
         """Register a new stream with the backend."""
 
-    async def __call__(self, data_key: str) -> FrameGenerator:
+    async def __call__(self, data_key: str) -> FrameSender:
         """Return an async generator that pushes frames to the backend for the given `data_key`."""
 
     def uri_for(self, data_key: str) -> str:
@@ -142,7 +142,7 @@ class BaseStorage(SinkFactory):
         self._router = FrameRouter()
         self._fsm = StorageStateMachine()
         self._path: PathInfo | None = None
-        self._sinks: dict[str, FrameGenerator] = {}
+        self._sinks: dict[str, FrameSender] = {}
 
     async def register(self, spec: StreamSpec) -> None:
         """Register a new stream with the backend."""
@@ -153,7 +153,7 @@ class BaseStorage(SinkFactory):
             self._path = self._path_provider()
         self._router.add(spec)
 
-    async def __call__(self, data_key: str) -> FrameGenerator:
+    async def __call__(self, data_key: str) -> FrameSender:
         """Create the frame sink for the given data key.
 
         Only one live sink per key can exist at a time; the returned
@@ -190,7 +190,7 @@ class BaseStorage(SinkFactory):
         for key in list(self._router.spec.keys()):
             await self._release(key)
 
-    async def _pusher(self, data_key: str, capacity: int | None) -> FrameGenerator:
+    async def _pusher(self, data_key: str, capacity: int | None) -> FrameSender:
         """Async generator that pushes frames to the backend for the given `data_key`."""
         try:
             frame = yield
