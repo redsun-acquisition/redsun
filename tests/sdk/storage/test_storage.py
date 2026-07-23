@@ -180,7 +180,7 @@ class TestMultiKey:
         await median.aclose()
         assert ("release", "median") in io.stores[0].calls
         assert io.stores[0].calls[-1] == ("close", "")
-        assert storage._fsm.state is StorageState.UNSEALED
+        assert storage._fsm.state is StorageState.UNSEALED  # type: ignore
 
 
 class TestCounterOrder:
