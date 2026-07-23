@@ -25,20 +25,21 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "platformdirs>=4.3.8",
+    "platformdirs>=4.11.0",
     "pyyaml>=6.0.3",
-    "bluesky>=1.15.0",
+    "bluesky>=1.15.1",
     "psygnal>=0.15.1",
-    "typing-extensions>=4.15.0",
-    "dependency-injector>=4.49.0",
-    "ophyd-async>=0.19.2",
+    "typing-extensions>=4.16.0",
+    "dependency-injector>=4.49.1",
+    "ophyd-async>=0.20.1",
 ]
 requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
-    "redsun[pyqt,zarr]",
-    "mypy>=1.20.0",
+    { include-group = "pyqt" },
+    { include-group = "zarr" },
+    "mypy>=2.3.0",
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -55,19 +56,40 @@ docs = [
     "zensical>=0.0.24",
 ]
 
+qt-common = [
+    "magicgui>=0.10.2",
+    "qtpy>=2.4.3",
+]
+
+pyqt = [
+    {include-group = "qt-common"},
+    "pyqt6>=6.11.0",
+]
+
+pyside = [
+    {include-group = "qt-common"},
+    "pyside6>=6.11.0",
+]
+
+zarr = [
+    "acquire-zarr>=0.8.1",
+]
+
 [project.optional-dependencies]
 zarr = [
-    "acquire-zarr>=0.7.0",
+    "acquire-zarr>=0.8.1",
+]
+qt-common = [
+    "magicgui>=0.10.2",
+    "qtpy>=2.4.3",
 ]
 pyqt = [
-    "magicgui>=0.10.1",
-    "pyqt6>=6.10.2",
-    "qtpy>=2.4.3",
+    "redsun[qt-common]",
+    "pyqt6>=6.11.0",
 ]
 pyside = [
-    "magicgui>=0.10.1",
-    "pyside6>=6.9.1",
-    "qtpy>=2.4.3",
+    "redsun[qt-common]",
+    "pyside6>=6.11.0",
 ]
 
 [project.urls]
