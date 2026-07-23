@@ -91,7 +91,9 @@ class StorageStateMachine:
         Raises
         ------
         InvalidStoreState
-            If the store is in CLOSING state.
+            If the store is in CLOSING state. No sink can exist during
+            CLOSING, so a send in this state is a bookkeeping bug
+            upstream and must be loud.
         """
         if self._state is StorageState.UNSEALED:
             self._state = StorageState.SEALING
@@ -114,6 +116,13 @@ class StorageStateMachine:
         if self._state is not StorageState.SEALING:
             raise InvalidStoreState(self._state, "confirm open")
         self._state = StorageState.OPEN
+        # Maintains the invariant "OPEN implies _closed is clear". Has no
+        # observable effect today: the only waiter on _closed is in
+        # ensure_registrable(), which is reachable only from CLOSING, and
+        # begin_close() clears the event before any waiter can read it.
+        # Kept so a future waiter reachable from OPEN cannot observe a
+        # stale set() left over from the previous burst. Do not remove
+        # without adding a test that pins the intended behaviour.
         self._closed.clear()
         self._opened.set()
 

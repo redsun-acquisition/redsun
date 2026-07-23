@@ -216,6 +216,12 @@ class BaseStorage(SinkFactory):
 
     async def _open_and_write(self, data_key: str, frame: npt.NDArray[Any]) -> None:
         """Seal/open handshake plus the burst's first write for this key."""
+        # try_seal() may raise InvalidStoreState (CLOSING) — deliberately
+        # outside the try below, which exists only to convert a *store open*
+        # failure into open_failed(). A CLOSING seal opened nothing and
+        # parked nobody, so there is no state to roll back; routing it
+        # through open_failed() would raise a second InvalidStoreState and
+        # mask the real bug.
         if self._fsm.try_seal():
             # a sink implies a registration, so
             # this assert is only for type-narrowing
