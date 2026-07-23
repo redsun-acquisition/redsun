@@ -228,4 +228,133 @@ class TestCounterOrder:
         )  # Counter should advance after write completes
 
 
-class TestConcurrentSeal: ...
+class TestConcurrentSeal:
+    async def test_single_store_opened_under_concurrent_first_frames(
+        self, provider: SessionPathProvider
+    ) -> None:
+        """Two keys sealing concurrently must open exactly one shared store."""
+        io = GatedIO()
+        storage = BaseStorage(io=io, path_provider=provider)
+        await storage.register(spec("cam"))
+        await storage.register(spec("median"))
+
+        cam = await storage("cam")
+        median = await storage("median")
+
+        cam_task = asyncio.create_task(cam.asend(frame(1)))
+        median_task = asyncio.create_task(median.asend(frame(2)))
+        await asyncio.sleep(0)
+
+        assert not cam_task.done()
+        assert not median_task.done()
+
+        io.set_gate()
+        await asyncio.wait_for(asyncio.gather(cam_task, median_task), timeout=1.0)
+
+        assert len(io.stores) == 1
+        assert len(io.stores[0].arrays["cam"]) == 1
+        assert len(io.stores[0].arrays["median"]) == 1
+        assert set(io.stores[0].specs) == {"cam", "median"}
+        assert storage._fsm.state is StorageState.OPEN
+
+    async def test_loser_waits_for_winner_open(
+        self, provider: SessionPathProvider
+    ) -> None:
+        io = GatedIO()
+        storage = BaseStorage(io=io, path_provider=provider)
+        await storage.register(spec("cam"))
+        await storage.register(spec("median"))
+
+        cam = await storage("cam")
+        median = await storage("median")
+
+        cam_task = asyncio.create_task(cam.asend(frame(1)))
+        await asyncio.sleep(0)
+        median_task = asyncio.create_task(median.asend(frame(2)))
+        await asyncio.sleep(0)
+
+        assert storage._fsm.state is StorageState.OPEN
+        assert not median_task.done()
+
+        io.set_gate()
+        await asyncio.wait_for(asyncio.gather(cam_task, median_task), timeout=1.0)
+
+        assert len(io.stores) == 1
+        assert storage._fsm.state is StorageState.OPEN
+
+
+class TestReset:
+    async def test_reset_closes_open_burst(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.register(spec("cam"))
+        await storage.register(spec("median"))
+
+        cam = await storage("cam")
+        median = await storage("median")
+        await cam.asend(frame())
+        await median.asend(frame())
+
+        await storage.reset()
+
+        assert io.stores[0].calls[-1] == ("close", "")
+        assert ("release", "cam") in io.stores[0].calls
+        assert ("release", "median") in io.stores[0].calls
+        assert storage._fsm.state is StorageState.UNSEALED
+
+    async def test_reset_before_any_frame_opens_no_store(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.register(spec("cam"))
+        await storage("cam")
+
+        await storage.reset()
+
+        assert io.stores == []
+        assert storage._fsm.state is StorageState.UNSEALED
+
+    async def test_reset_without_registration_is_noop(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.reset()
+
+        assert io.stores == []
+        assert storage._fsm.state is StorageState.UNSEALED
+
+    async def test_reset_is_idempotent(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.register(spec("cam"))
+        sink = await storage("cam")
+        await sink.asend(frame())
+
+        await storage.reset()
+        await storage.reset()
+
+        assert io.stores[0].calls.count(("close", "")) == 1
+        assert storage._fsm.state is StorageState.UNSEALED
+
+    async def test_register_after_reset_starts_new_burst(
+        self, storage: BaseStorage, io: MemoryIO
+    ) -> None:
+        await storage.register(spec("cam"))
+        sink = await storage("cam")
+        await sink.asend(frame())
+        await storage.reset()
+
+        await storage.register(spec("median"))
+        new_sink = await storage("median")
+        await new_sink.asend(frame())
+
+        assert len(io.stores) == 2
+        assert set(io.stores[1].specs) == {"median"}
+
+    async def test_send_after_reset_raises(self, storage: BaseStorage) -> None:
+        await storage.register(spec("cam"))
+        sink = await storage("cam")
+        await sink.asend(frame())
+
+        await storage.reset()
+
+        with pytest.raises(StopAsyncIteration):
+            await sink.asend(frame())
