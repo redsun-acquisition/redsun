@@ -112,9 +112,9 @@ class TestResourceInfo:
         """The document must describe the true on-disk layout."""
         target = spec("cam", shape=(64, 32))
         info = io.resource_info(target)
-        _, y, x = io._array_settings(target).dimensions
+        chunk_y, chunk_x = io._spatial_chunks(target)
 
-        assert info.chunk_shape == (1, y.chunk_size_px, x.chunk_size_px)
+        assert info.chunk_shape == (io._chunk_t, chunk_y, chunk_x)
 
     def test_chunk_t_is_reflected(self) -> None:
         io = AcquireZarrIO(chunk_t=7)
