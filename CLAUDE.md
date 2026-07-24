@@ -2,6 +2,10 @@
 
 Single source of conventions for agents (Claude, Copilot) and contributors — cross-link, don't duplicate.
 
+> `sunflare` no longer exists. The SDK was merged into this repository; the
+> archived `redsun-acquisition/sunflare` repo is historical only. There is one
+> package: `src/redsun`. Never import or reference `sunflare`.
+
 ## Repository layout
 
 ```
@@ -34,6 +38,10 @@ uv run mypy src/redsun --ignore-missing-imports $(uv run qtpy mypy-args)
 uv run zensical build                   # docs
 ```
 
+- **Windows:** `$(...)` command substitution does not exist in `cmd.exe`. Use
+  PowerShell with `@(uv run qtpy mypy-args)`, or just run `/check`, which
+  sequences the whole validation suite. Prefer PowerShell over `cmd.exe` for
+  Claude Code sessions on this repo.
 - **Use the qtpy shim form of mypy** — `$(uv run qtpy mypy-args)` pins the Qt
   binding mypy resolves against. This is exactly what CI runs, so it's the only
   invocation whose result is authoritative. A bare `mypy src/redsun` may agree
