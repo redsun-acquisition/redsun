@@ -117,6 +117,5 @@ test_configs/*
 site/
 
 # claude
-.claude/settings.local.json
-.claude/plans/
+.claude
 CLAUDE.local.md
