@@ -2,10 +2,6 @@
 
 Single source of conventions for agents (Claude, Copilot) and contributors — cross-link, don't duplicate.
 
-> `sunflare` no longer exists. The SDK was merged into this repository; the
-> archived `redsun-acquisition/sunflare` repo is historical only. There is one
-> package: `src/redsun`. Never import or reference `sunflare`.
-
 ## Repository layout
 
 ```
