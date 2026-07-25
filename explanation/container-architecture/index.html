@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.43">
+      <meta name="generator" content="zensical-0.0.51">
     
     
       
@@ -36,7 +36,7 @@
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.fba56155.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.62c9b9cc.min.css">
       
         
           
@@ -249,6 +249,8 @@
       
         
       
+        
+      
     
     
     
@@ -341,6 +343,8 @@
       
         
           
+        
+      
         
       
     
@@ -443,6 +447,8 @@
       
         
           
+        
+      
         
       
         
@@ -1008,6 +1014,185 @@
     
   
   Virtual container
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Decisions
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Decisions
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0001-record-architecture-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  1. Record architecture decisions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  2. Storage dual-context redesign
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  4. Owner-scoped signal lookup
 
     
   </span>
@@ -1631,6 +1816,8 @@
           
         
       
+        
+      
     
     
     
@@ -1664,6 +1851,11 @@
 
             </a>
             
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
           </div>
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
@@ -1676,6 +1868,33 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/custom-storage-backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing a custom storage backend
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
           </ul>
@@ -1966,9 +2185,9 @@
 <h2 id="the-dvp-pattern">The DVP pattern<a class="headerlink" href="#the-dvp-pattern" title="Permanent link">&para;</a></h2>
 <p><code>redsun</code> builds three types of components:</p>
 <ul>
-<li><strong>Devices</strong>: objects interfacing with real hardware components that subclass [<code>Device</code>][redsun.device.Device] (or one of the higher-level ophyd-async base classes such as [<code>StandardReadable</code>][redsun.device.StandardReadable] or [<code>StandardDetector</code>][redsun.device.StandardDetector]).</li>
-<li><strong>View</strong>: UI components that implement <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> to display data and capture user interactions.</li>
-<li><strong>Presenter</strong>: business logic components that implement <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a>, sitting between models and views, coordinating device operations and updating the UI through <a href="https://psygnal.readthedocs.io/en/latest/"><code>psygnal</code></a>.</li>
+<li><strong>Devices</strong>: objects interfacing with real hardware components that subclass <code>ophyd_async.core.Device</code> (or one of the higher-level ophyd-async base classes such as <code>StandardReadable</code> or <code>StandardDetector</code>).</li>
+<li><strong>View</strong>: UI components satisfying the <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a> protocol to display data and capture user interactions.</li>
+<li><strong>Presenter</strong>: business logic components satisfying the <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> protocol, sitting between devices and views, coordinating device operations and updating the UI through <a href="https://psygnal.readthedocs.io/en/latest/"><code>psygnal</code></a>.</li>
 </ul>
 <p>This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.</p>
 <h2 id="declarative-containers">Declarative containers<a class="headerlink" href="#declarative-containers" title="Permanent link">&para;</a></h2>
@@ -2012,8 +2231,8 @@ Each accepts the component class as its first positional argument, followed by o
 </ol>
 <p>Examples in the declarative flow:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">)</span>                       <span class="c1"># name → &quot;motor&quot;</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">cam</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;detector&quot;</span><span class="p">)</span>      <span class="c1"># name → &quot;detector&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">)</span>  <span class="c1"># name → &quot;motor&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">cam</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;detector&quot;</span><span class="p">)</span>  <span class="c1"># name → &quot;detector&quot;</span>
 </span></code></pre></div>
 <p>In the dynamic flow:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">devices</span><span class="p">:</span>
@@ -2051,6 +2270,14 @@ Each accepts the component class as its first positional argument, followed by o
 <li><strong>Presenters</strong> — each receives its resolved name and the full device dictionary.</li>
 <li><strong>Views</strong> — each receives its resolved name.</li>
 </ol>
+<p>Presenter and view constructors are signature-checked when their
+components are declared or discovered (leading positionals must be
+<code>(name, devices)</code> / <code>(name,)</code>), and every built instance is validated
+against its layer contract (<code>ophyd_async.core.Device</code>,
+<a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a>,
+<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a>). Failures follow the layer asymmetry: a
+failing device is logged and skipped, while a failing presenter or view
+re-raises and aborts the build.</p>
 <p><strong>Phase 2 — provider registration</strong>:</p>
 <p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> calls <code>register_providers()</code> on the <code>VirtualContainer</code>. This is safe to run across both layers simultaneously because no injection occurs here.</p>
 <p><strong>Phase 3 — dependency injection</strong>:</p>
@@ -2087,7 +2314,8 @@ Each accepts the component class as its first positional argument, followed by o
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyPresenter</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ctrl&quot;</span><span class="p">)</span>
 </span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">ui</span> <span class="o">=</span> <span class="n">declare_view</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ui&quot;</span><span class="p">)</span>
 </span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="dynamic-flow-configuration-driven">Dynamic flow (configuration-driven)<a class="headerlink" href="#dynamic-flow-configuration-driven" title="Permanent link">&para;</a></h3>
 <p>The dynamic flow is for end users who point Redsun at a YAML configuration file. Plugins are discovered via entry points and the frontend is resolved from the <code>frontend:</code> key in the file — no Python code needs to be written:</p>
@@ -2257,10 +2485,10 @@ Each accepts the component class as its first positional argument, followed by o
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.6e5f0216.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7f30b55.min.js"></script>
       
     
   </body>

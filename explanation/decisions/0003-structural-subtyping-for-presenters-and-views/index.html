@@ -12,13 +12,13 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/reference/api/log/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0003-structural-subtyping-for-presenters-and-views/">
       
       
-        <link rel="prev" href="../engine/">
+        <link rel="prev" href="../0002-storage-dual-context-redesign/">
       
       
-        <link rel="next" href="../presenter/">
+        <link rel="next" href="../0004-owner-scoped-signal-lookup/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Logging - Redsun</title>
+        <title>3. Structural subtyping for presenters and views - Redsun</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#logging" class="md-skip">
+        <a href="#3-structural-subtyping-for-presenters-and-views" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Logging
+              3. Structural subtyping for presenters and views
             
           </span>
         </div>
@@ -229,6 +229,8 @@
   
   
   
+    
+  
   
     
       
@@ -253,8 +255,8 @@
     
     
     
-      <li class="md-tabs__item">
-        <a href="../../../explanation/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
           
   
   Explanation
@@ -303,8 +305,6 @@
   
   
   
-    
-  
   
     
       
@@ -321,8 +321,8 @@
     
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -438,6 +438,8 @@
       
   
   
+    
+  
   
   
     
@@ -463,20 +465,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../explanation/" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -493,13 +498,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -518,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/component-system/" class="md-nav__link">
+      <a href="../../component-system/" class="md-nav__link">
         
   
   
@@ -545,7 +550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/container-architecture/" class="md-nav__link">
+      <a href="../../container-architecture/" class="md-nav__link">
         
   
   
@@ -572,7 +577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/statement/" class="md-nav__link">
+      <a href="../../statement/" class="md-nav__link">
         
   
   
@@ -599,7 +604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/storage/" class="md-nav__link">
+      <a href="../../storage/" class="md-nav__link">
         
   
   
@@ -644,17 +649,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
             
   
   
@@ -688,7 +696,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/architecture/devices/" class="md-nav__link">
+      <a href="../../architecture/devices/" class="md-nav__link">
         
   
   
@@ -715,7 +723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/architecture/plans/" class="md-nav__link">
+      <a href="../../architecture/plans/" class="md-nav__link">
         
   
   
@@ -742,7 +750,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/architecture/presenters/" class="md-nav__link">
+      <a href="../../architecture/presenters/" class="md-nav__link">
         
   
   
@@ -769,7 +777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/architecture/qt-widgets/" class="md-nav__link">
+      <a href="../../architecture/qt-widgets/" class="md-nav__link">
         
   
   
@@ -796,7 +804,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/architecture/virtual/" class="md-nav__link">
+      <a href="../../architecture/virtual/" class="md-nav__link">
         
   
   
@@ -828,8 +836,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -846,18 +856,21 @@
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -874,7 +887,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -891,7 +904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -918,7 +931,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -942,10 +955,36 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -960,6 +999,71 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Context
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -972,7 +1076,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -1170,8 +1274,6 @@
       
   
   
-    
-  
   
   
     
@@ -1189,23 +1291,20 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../../../reference/" class="md-nav__link ">
               
   
   
@@ -1222,13 +1321,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1247,7 +1346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../changelog/" class="md-nav__link">
+      <a href="../../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1271,10 +1370,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1301,21 +1398,18 @@
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
             
   
   
@@ -1332,7 +1426,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1349,7 +1443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../container/" class="md-nav__link">
+      <a href="../../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1376,7 +1470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../device/" class="md-nav__link">
+      <a href="../../../reference/api/device/" class="md-nav__link">
         
   
   
@@ -1403,7 +1497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../engine/" class="md-nav__link">
+      <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1427,36 +1521,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Logging
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1471,66 +1539,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#redsun.log" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;log
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#redsun.log.Loggable" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Loggable
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Loggable">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#redsun.log.Loggable.logger" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;logger
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1543,7 +1551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../presenter/" class="md-nav__link">
+      <a href="../../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1570,7 +1578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../storage/" class="md-nav__link">
+      <a href="../../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -1597,7 +1605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../utils/" class="md-nav__link">
+      <a href="../../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -1624,7 +1632,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../view/" class="md-nav__link">
+      <a href="../../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -1651,7 +1659,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../virtual/" class="md-nav__link">
+      <a href="../../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -1828,10 +1836,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#redsun.log" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;log
+        Status
       </span>
     </span>
   </a>
@@ -1839,30 +1847,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#redsun.log.Loggable" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Loggable
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Loggable">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#redsun.log.Loggable.logger" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;logger
+        Context
       </span>
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
+      </span>
+    </span>
+  </a>
   
 </li>
       
@@ -1884,131 +1897,101 @@
   
 
 
-<h1 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h1>
-
-
-<div class="doc doc-object doc-module">
-
-
-
-<a id="redsun.log"></a>
-    <div class="doc doc-contents first">
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="redsun.log.Loggable" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">Loggable</span>
-
-
-<a href="#redsun.log.Loggable" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Mixin class that adds a logger to a class instance with extra contextual information.</p>
-
-
-
-
-
-
-
-
-              <details class="mkdocstrings-source">
-                <summary>Source code in <code>src/redsun/log.py</code></summary>
-                <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-131">131</a></span>
-<span class="normal"><a href="#__codelineno-0-132">132</a></span>
-<span class="normal"><a href="#__codelineno-0-133">133</a></span>
-<span class="normal"><a href="#__codelineno-0-134">134</a></span>
-<span class="normal"><a href="#__codelineno-0-135">135</a></span>
-<span class="normal"><a href="#__codelineno-0-136">136</a></span>
-<span class="normal"><a href="#__codelineno-0-137">137</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131"></a><span class="k">class</span><span class="w"> </span><span class="nc">Loggable</span><span class="p">:</span>
-</span><span id="__span-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class that adds a logger to a class instance with extra contextual information.&quot;&quot;&quot;</span>
-</span><span id="__span-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133"></a>
-</span><span id="__span-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134"></a>    <span class="nd">@cached_property</span>
-</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">logger</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_LoggerAdapter</span><span class="p">:</span>
-</span><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Logger instance with contextual information.&quot;&quot;&quot;</span>
-</span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a>        <span class="k">return</span> <span class="n">ContextualAdapter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;redsun&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
-</span></code></pre></div></td></tr></table></div>
-              </details>
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="redsun.log.Loggable.logger" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">logger</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-cached"><code>cached</code></small>
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#redsun.log.Loggable.logger" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span><span class="p">:</span> <span class="n">_LoggerAdapter</span>
-</span></code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Logger instance with contextual information.</p>
-
-    </div>
-
-</div>
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
+<h1 id="3-structural-subtyping-for-presenters-and-views">3. Structural subtyping for presenters and views<a class="headerlink" href="#3-structural-subtyping-for-presenters-and-views" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-07-24</p>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Redsun's wiring is protocol-based: components are recognized by what they
+expose, not by what they inherit. Two defects undermined that promise for
+the presenter and view layers.</p>
+<p><strong>Static structural subtyping was broken by read-write protocol members.</strong>
+<code>PPresenter</code> declared <code>name: str</code> and <code>devices: Mapping[str, Device]</code> as
+plain attributes; <code>PView</code> declared <code>name: str</code>. A plain protocol attribute
+demands a <em>settable, invariantly typed</em> member from implementers, so (as
+verified with mypy):</p>
+<ul>
+<li>a class exposing <code>name</code> as a read-only property failed the protocol
+  ("expected settable variable, got read-only attribute") — even though
+  ophyd-async's own <code>Device.name</code> is a read-only property;</li>
+<li>a class annotating <code>self.devices: dict[str, Device]</code> failed too, because
+  read-write members are invariant and <code>dict</code> is not <code>Mapping</code>.</li>
+</ul>
+<p>Every plausible duck-typed implementer therefore failed static checks;
+nobody noticed because everything inherited the nominal ABCs.</p>
+<p><strong>Runtime validation checked classes, where the information does not
+exist.</strong> <code>issubclass</code> is a <code>TypeError</code> for data-member protocols, so the
+container hand-rolled <code>hasattr(cls, ...)</code> checks — on the <em>class</em>. Instance
+attributes assigned in <code>__init__</code> (the normal style) are invisible there,
+so structurally compliant non-ABC components were rejected at plugin
+discovery. The check then papered over the container's nominal typing with
+<code>ABC.register(cls)</code>.</p>
+<p>A third wrinkle surfaced during the fix: a protocol's property members are
+real descriptors, so a class inheriting the protocol <em>and</em> assigning
+<code>self.name = ...</code> raises <code>AttributeError</code> at runtime (setter-less property).
+The ABCs must therefore not inherit the protocols they satisfy.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Protocol data members are read-only properties.</strong> <code>PPresenter.name</code>,
+   <code>PPresenter.devices</code>, and <code>PView.name</code> are declared as <code>@property</code> in the
+   protocols. The framework only ever reads them, so read-only is the true
+   contract. Implementers may use plain instance attributes, class
+   attributes, or properties, and covariant types (<code>dict</code> for <code>Mapping</code>)
+   are accepted.</li>
+<li><strong>The ABCs do not inherit the protocols.</strong> <code>Presenter(ABC)</code> and
+   <code>View(ABC)</code> satisfy <code>PPresenter</code>/<code>PView</code> structurally, exactly like any
+   other implementer — inheritance would shadow instance attributes with
+   the protocols' property descriptors.</li>
+<li>
+<p><strong>Validation is a dual gate.</strong> The parts of the contract are checked
+   where they are actually knowable:</p>
+</li>
+<li>
+<p><em>Class level — constructor signature.</em> The container instantiates
+     components as <code>cls(*positionals, **config_kwargs)</code>, so the knowable
+     class-level contract is purely positional. <code>expects_positionals</code>
+     (<code>inspect</code>-based) verifies the leading positional parameters are
+     exactly <code>("name", "devices")</code> for presenters and <code>("name",)</code> for
+     views, that any further positional-or-keyword parameters carry
+     defaults, that <code>*args</code> is absent, and that the container's positional
+     call binds. Keyword arguments are deliberately unvalidated — the
+     container has no control over them. This gate runs at component
+     wrapper creation (declarative path, at class definition time) and at
+     plugin discovery (config path, log-and-skip).</p>
+</li>
+<li><em>Instance level — protocol compliance.</em> <code>_PresenterComponent.build</code> /
+     <code>_ViewComponent.build</code> run <code>isinstance(instance, PPresenter/PView)</code>
+     after construction and raise <code>TypeError</code> on failure — instance
+     attributes assigned in <code>__init__</code> are only visible here. This sits on
+     the correct side of the "presenter/view build failures re-raise"
+     invariant.</li>
+</ol>
+<p>The old class-level hasattr screen and the <code>ABC.register</code> hack are gone.
+4. <strong>The container is typed against the protocols.</strong> Components hold
+   constructors as <code>Callable[..., PPresenter]</code> / <code>Callable[..., PView]</code>
+   (<code>type[Protocol]</code> is not callable for type checkers), and
+   <code>AppContainer.presenters</code> / <code>.views</code> return <code>dict[str, PPresenter]</code> /
+   <code>dict[str, PView]</code>. Devices remain nominal (<code>ophyd_async.core.Device</code>).</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Structural implementers — property-based, attribute-based, or Qt widgets
+  like <code>QtView</code> — now pass both static and runtime checks; the
+  <code>type: ignore</code> previously needed for <code>_ViewComponent(QtView-subclass)</code>
+  is deleted.</li>
+<li>Components with a wrong constructor shape fail <strong>at declaration or
+  discovery time</strong>; components whose instances miss protocol members fail
+  <strong>at build time</strong> — both with a loud <code>TypeError</code> naming the problem,
+  instead of being silently skipped or slipping through the old
+  class-level attribute screen.</li>
+<li>Breaking: <code>AppContainer.presenters</code>/<code>views</code> are typed against the
+  protocols; code annotated against the ABCs keeps working at runtime but
+  should re-annotate. Classes that explicitly inherited <code>PPresenter</code>/<code>PView</code>
+  while assigning instance attributes must drop the inheritance (it was
+  latently broken at runtime already).</li>
+<li>Regression tests pin: property-based and dict-based implementers
+  (static + runtime), ABC structural compliance, duck components building
+  without the ABC, and non-compliant components raising at build.</li>
+</ul>
 
 
 
@@ -2048,7 +2031,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../engine/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Engine">
+          <a href="../0002-storage-dual-context-redesign/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 2. Storage dual-context redesign">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2058,20 +2041,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Engine
+                2. Storage dual-context redesign
               </div>
             </div>
           </a>
         
         
           
-          <a href="../presenter/" class="md-footer__link md-footer__link--next" aria-label="Next: Presenter">
+          <a href="../0004-owner-scoped-signal-lookup/" class="md-footer__link md-footer__link--next" aria-label="Next: 4. Owner-scoped signal lookup">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Presenter
+                4. Owner-scoped signal lookup
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -34,6 +34,18 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/virtual/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0001-record-architecture-decisions/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0002-storage-dual-context-redesign/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0003-structural-subtyping-for-presenters-and-views/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0004-owner-scoped-signal-lookup/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
@@ -80,5 +92,8 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/custom-storage-backend/</loc>
       </url>
 </urlset>

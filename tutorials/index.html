@@ -18,12 +18,14 @@
         <link rel="prev" href="../reference/api/virtual/">
       
       
+        <link rel="next" href="./custom-storage-backend/">
+      
       
         
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.43">
+      <meta name="generator" content="zensical-0.0.51">
     
     
       
@@ -34,7 +36,7 @@
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.fba56155.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.62c9b9cc.min.css">
       
         
           
@@ -245,6 +247,8 @@
       
         
       
+        
+      
     
     
     
@@ -339,6 +343,8 @@
       
         
           
+        
+      
         
       
     
@@ -439,6 +445,8 @@
       
         
           
+        
+      
         
       
         
@@ -796,6 +804,182 @@
     
   
   Virtual container
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Decisions
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Decisions
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  1. Record architecture decisions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  2. Storage dual-context redesign
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  4. Owner-scoped signal lookup
 
     
   </span>
@@ -1421,6 +1605,8 @@
           
         
       
+        
+      
     
     
     
@@ -1457,6 +1643,11 @@
 
             </a>
             
+              
+              <label class="md-nav__link md-nav__link--active" for="__nav_5" id="__nav_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
           </div>
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
@@ -1469,6 +1660,33 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./custom-storage-backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writing a custom storage backend
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
           </ul>
@@ -1524,9 +1742,16 @@
 
 
 <h1 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h1>
+<p>Learning-oriented, step-by-step lessons. Each tutorial builds something
+small but complete that you can run yourself.</p>
+<ul>
+<li><a href="custom-storage-backend/">Writing a custom storage backend</a> —
+  implement <code>StorageIO</code>/<code>OpenStore</code> for your own file format and drive
+  it through <code>BaseStorage</code>.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Tutorials are a work in progress. Please be patient!</p>
+<p>More tutorials are on the way. Please be patient!</p>
 </div>
 
 
@@ -1583,6 +1808,22 @@
           </a>
         
         
+          
+          <a href="./custom-storage-backend/" class="md-footer__link md-footer__link--next" aria-label="Next: Writing a custom storage backend">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Writing a custom storage backend
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
       </nav>
     
   
@@ -1638,10 +1879,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.6e5f0216.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7f30b55.min.js"></script>
       
     
   </body>
