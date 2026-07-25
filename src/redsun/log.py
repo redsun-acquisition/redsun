@@ -9,7 +9,8 @@ __all__ = ["Loggable"]
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, MutableMapping
+    from collections.abc import MutableMapping
+    from typing import Any
 
     _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
 else:

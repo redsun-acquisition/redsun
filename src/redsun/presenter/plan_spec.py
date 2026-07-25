@@ -21,12 +21,11 @@ from enum import IntEnum
 from inspect import Parameter, _empty, signature
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Any,
     Literal,
-    Mapping,
     NamedTuple,
-    Sequence,
     get_args,
     get_origin,
     get_type_hints,
@@ -41,6 +40,9 @@ from redsun.presenter.utils import (
     isdevicesequence,
     isdeviceset,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -297,7 +299,7 @@ def _try_dispatch_entry(
         if predicate(ann, kind):
             return handler(ann, devices)
         return None
-    except Exception:
+    except Exception:  # noqa: BLE001 — a failing predicate means "no match", never a crash
         return None
 
 

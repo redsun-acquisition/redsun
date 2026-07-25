@@ -74,15 +74,13 @@ class MyComponent:
 Through the `VirtualContainer`, objects provided by other components may be retrieved by implementing the [`IsInjectable`][redsun.virtual.IsInjectable] protocol.
 
 ```python
-
 from redsun.virtual import VirtualContainer
 from dependency_injector import providers
 from event_model.documents import Document
 
-class MyOtherComponent:
 
-    def my_slot(self) -> None:
-        ...
+class MyOtherComponent:
+    def my_slot(self) -> None: ...
 
     def inject_dependencies(self, container: VirtualContainer) -> None:
         # get the currently cached signals so you can connect them

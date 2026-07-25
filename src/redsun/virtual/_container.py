@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
-    Iterable,
     TypeAlias,
     TypeVar,
 )
@@ -131,17 +130,17 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
 
         if only is None:
             only = [
-                name
-                for name in dir(owner_class)
-                if isinstance(getattr(owner_class, name, None), Signal)
+                attr
+                for attr in dir(owner_class)
+                if isinstance(getattr(owner_class, attr, None), Signal)
             ]
 
         batch: dict[str, SignalInstance] = {}
-        for name in only:
-            signal_descriptor = getattr(owner_class, name, None)
+        for signal_name in only:
+            signal_descriptor = getattr(owner_class, signal_name, None)
             if isinstance(signal_descriptor, Signal):
-                signal_instance = getattr(owner, name)
-                batch[name] = signal_instance
+                signal_instance = getattr(owner, signal_name)
+                batch[signal_name] = signal_instance
         if batch:
             self._signals.add_kwargs(**{cache_entry: batch})
 

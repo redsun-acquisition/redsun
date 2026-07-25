@@ -156,16 +156,16 @@ class BaseStorage(SinkFactory):
     """
 
     __slots__ = (
+        "_closing",
+        "_drains",
         "_io",
-        "_path_provider",
         "_maxsize",
+        "_open_lock",
+        "_path",
+        "_path_provider",
+        "_queues",
         "_router",
         "_store",
-        "_path",
-        "_open_lock",
-        "_queues",
-        "_drains",
-        "_closing",
     )
 
     def __init__(
@@ -307,7 +307,7 @@ class BaseStorage(SinkFactory):
                                 await store.close()
                             except asyncio.CancelledError:
                                 raise
-                            except BaseException as exc:
+                            except BaseException as exc:  # noqa: BLE001 — held back so drain errors surface first
                                 sweep_exc = exc
             finally:
                 # by this point self._store is always None: either no store

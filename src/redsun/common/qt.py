@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from qtpy import QtWidgets
 
 
@@ -14,7 +12,7 @@ def ask_file_path(
     *,
     folder: str,
     saving: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Ask the user for a file path.
 
     Parameters

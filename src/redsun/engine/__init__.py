@@ -10,9 +10,9 @@ from ._wrapper import (
 )
 
 __all__ = [
-    "Status",
     "RunEngine",
     "RunEngineResult",
+    "Status",
     "get_shared_loop",
     "register_bound_command",
 ]

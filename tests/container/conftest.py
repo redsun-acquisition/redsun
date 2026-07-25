@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from collections.abc import Generator
 from importlib.metadata import EntryPoint
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest import mock
 
 import pytest

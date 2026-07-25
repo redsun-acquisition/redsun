@@ -51,7 +51,7 @@ spec = StreamSpec(
     data_key="det1",
     shape=(2048, 2048),
     dtype="uint16",
-    capacity=100,   # None means unbounded
+    capacity=100,  # None means unbounded
 )
 ```
 
@@ -63,9 +63,9 @@ Register the spec (sync), then obtain a sink for the channel:
 ```python
 storage.register(spec)
 sink = storage.sink(spec.data_key)
-await sink.put(frame)       # async producer: device logic
-sink.put_nowait(frame)      # sync producer: document callback
-sink.close()                # end the stream; queued frames still flush
+await sink.put(frame)  # async producer: device logic
+sink.put_nowait(frame)  # sync producer: document callback
+sink.close()  # end the stream; queued frames still flush
 ```
 
 ## Frame sinks and capacity

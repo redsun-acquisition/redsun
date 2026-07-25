@@ -48,7 +48,7 @@ class PlanFilenameProvider(FilenameProvider):
         Defaults to 5 (e.g. `00001`).
     """
 
-    __slots__ = ("_plan", "_max_digits", "_counters")
+    __slots__ = ("_counters", "_max_digits", "_plan")
 
     @property
     def plan(self) -> str:
@@ -126,13 +126,13 @@ class SessionPathProvider(PathProvider):
     """
 
     __slots__ = (
-        "_session",
         "_base_dir",
         "_filenames",
         "_now",
         "_pattern",
-        "_signals",
+        "_session",
         "_setters",
+        "_signals",
     )
 
     @property

@@ -16,8 +16,8 @@ except PackageNotFoundError:
 __all__ = [
     "AppContainer",
     "Frontend",
-    "declare_view",
-    "declare_presenter",
-    "declare_device",
     "__version__",
+    "declare_device",
+    "declare_presenter",
+    "declare_view",
 ]

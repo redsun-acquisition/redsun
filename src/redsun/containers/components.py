@@ -66,7 +66,7 @@ def expects_positionals(cls: Callable[..., Any], expected: tuple[str, ...]) -> b
 class _DeviceField:
     """Sentinel returned by [`declare_device`][redsun.containers.declare_device]. Resolved by the metaclass into a ``_DeviceComponent``."""
 
-    __slots__ = ("cls", "alias", "from_config", "kwargs")
+    __slots__ = ("alias", "cls", "from_config", "kwargs")
 
     def __init__(
         self,
@@ -84,7 +84,7 @@ class _DeviceField:
 class _PresenterField:
     """Sentinel returned by [`declare_presenter`][redsun.containers.declare_presenter]. Resolved by the metaclass into a ``_PresenterComponent``."""
 
-    __slots__ = ("cls", "alias", "from_config", "kwargs")
+    __slots__ = ("alias", "cls", "from_config", "kwargs")
 
     def __init__(
         self,
@@ -102,7 +102,7 @@ class _PresenterField:
 class _ViewField:
     """Sentinel returned by [`declare_view`][redsun.containers.declare_view]. Resolved by the metaclass into a ``_ViewComponent``."""
 
-    __slots__ = ("cls", "alias", "from_config", "kwargs")
+    __slots__ = ("alias", "cls", "from_config", "kwargs")
 
     def __init__(
         self,
@@ -214,7 +214,7 @@ class _ComponentBase(Generic[T]):
     for ``from_config()``-built containers it is the YAML key.
     """
 
-    __slots__ = ("cls", "name", "kwargs", "_instance")
+    __slots__ = ("_instance", "cls", "kwargs", "name")
 
     def __init__(self, cls: Callable[..., T], name: str, /, **kwargs: Any) -> None:
         self.cls = cls

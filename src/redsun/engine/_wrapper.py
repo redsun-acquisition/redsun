@@ -13,8 +13,8 @@ from bluesky.run_engine import RunEngineResult
 from redsun.aio import get_shared_loop
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Mapping
-    from typing import Iterable, Literal, TypeAlias
+    from collections.abc import Awaitable, Callable, Iterable, Mapping
+    from typing import Literal, TypeAlias
 
     from bluesky.utils import Msg, Subscribers
 
@@ -180,7 +180,7 @@ class RunEngine(BlueskyRunEngine):
         self,
         md: dict[str, Any] | None = None,
         *,
-        loop: asyncio.AbstractEventLoop = get_shared_loop(),
+        loop: asyncio.AbstractEventLoop = get_shared_loop(),  # noqa: B008 — returns the import-time singleton loop
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,

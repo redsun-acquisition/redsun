@@ -152,11 +152,17 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
     # ignore missing docstrings in tests
-    "D101", 
-    "D102", 
+    "D101",
+    "D102",
     "D103",
     # ignore type check imports in tests
-    "TC"
+    "TC",
+    # defaults in plan signatures (incl. mutable/call defaults) are exactly
+    # what plan-spec introspection exercises
+    "B006",
+    "B008",
+    # naive datetimes mirror SessionPathProvider's local-time directory layout
+    "DTZ",
 ]
 
 [tool.ruff.lint.pydocstyle]

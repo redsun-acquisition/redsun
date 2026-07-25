@@ -21,6 +21,7 @@ Mark a plan as continuous with the `@continous` decorator:
 from redsun.engine.actions import continous, Action
 from bluesky.utils import MsgGenerator
 
+
 @continous(togglable=True, pausable=True)
 def live_scan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]:
     while True:
@@ -40,6 +41,7 @@ from redsun.engine.actions import Action
 
 snap_action = Action(name="snap", description="Capture a single frame")
 
+
 @continous
 def live_view(
     camera: CameraProtocol,
@@ -56,7 +58,12 @@ The view renders `snap` as a button. When clicked, the `SRLatch` inside
 Togglable actions (represented as toggle buttons) use `togglable=True`:
 
 ```python
-Action(name="led", description="Toggle illumination", togglable=True, toggle_states=("On", "Off"))
+Action(
+    name="led",
+    description="Toggle illumination",
+    togglable=True,
+    toggle_states=("On", "Off"),
+)
 ```
 
 ### SRLatch
@@ -68,7 +75,7 @@ Action(name="led", description="Toggle illumination", togglable=True, toggle_sta
 latch = SRLatch()
 
 # in a coroutine:
-await latch.wait_for_set()    # blocks until set()
+await latch.wait_for_set()  # blocks until set()
 await latch.wait_for_reset()  # blocks until reset()
 ```
 

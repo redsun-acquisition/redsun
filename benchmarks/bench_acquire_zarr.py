@@ -126,7 +126,7 @@ class BenchAcquireLogic(DetectorAcquireLogic):
 
     async def ensure_ready(self) -> None:
         """No hardware to reset."""
-        return None
+        return
 
     async def start_acquiring(self) -> None:
         """Kickoff: start the frame loop."""
@@ -283,14 +283,18 @@ class BenchResult:
         lines = [
             "",
             "=" * 68,
-            f"acquire-zarr benchmark — {total_frames} frames total, "
-            f"{self.shape[0]}x{self.shape[1]} {self.dtype} "
-            f"({frame_bytes / 1e6:.2f} MB/frame)",
+            (
+                f"acquire-zarr benchmark — {total_frames} frames total, "
+                f"{self.shape[0]}x{self.shape[1]} {self.dtype} "
+                f"({frame_bytes / 1e6:.2f} MB/frame)"
+            ),
             "=" * 68,
             f"plan wall time            : {self.plan_time:8.3f} s",
             f"final flush (close)       : {self.flush_time:8.3f} s",
-            f"effective throughput      : {total_frames / total:8.1f} frames/s "
-            f"({written_mb / total:.1f} MB/s)",
+            (
+                f"effective throughput      : {total_frames / total:8.1f} frames/s "
+                f"({written_mb / total:.1f} MB/s)"
+            ),
             f"bytes on disk             : {self.disk_bytes / 1e6:8.1f} MB",
             "-" * 68,
         ]
@@ -299,16 +303,22 @@ class BenchResult:
             per_frame_put = stats.put_time / max(stats.frames, 1) * 1e3
             lines += [
                 f"[{name}] frames produced    : {stats.frames}",
-                f"[{name}] live emission      : {stats.buffer_time:8.3f} s total "
-                f"({per_frame_buf:.3f} ms/frame, max {stats.buffer_max * 1e3:.3f} ms)",
-                f"[{name}] sink.put wait      : {stats.put_time:8.3f} s total "
-                f"({per_frame_put:.3f} ms/frame, max {stats.put_max * 1e3:.3f} ms)",
+                (
+                    f"[{name}] live emission      : {stats.buffer_time:8.3f} s total "
+                    f"({per_frame_buf:.3f} ms/frame, max {stats.buffer_max * 1e3:.3f} ms)"
+                ),
+                (
+                    f"[{name}] sink.put wait      : {stats.put_time:8.3f} s total "
+                    f"({per_frame_put:.3f} ms/frame, max {stats.put_max * 1e3:.3f} ms)"
+                ),
             ]
         lines += [
             "-" * 68,
             f"callback events processed : {self.callback_events}",
-            f"callback processing time  : {self.callback_time:8.3f} s "
-            f"({self.callback_time / max(self.callback_events, 1) * 1e3:.3f} ms/event)",
+            (
+                f"callback processing time  : {self.callback_time:8.3f} s "
+                f"({self.callback_time / max(self.callback_events, 1) * 1e3:.3f} ms/event)"
+            ),
             "=" * 68,
         ]
         return "\n".join(lines)

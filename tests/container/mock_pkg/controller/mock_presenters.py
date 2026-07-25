@@ -1,4 +1,4 @@
-from typing import Mapping
+from collections.abc import Mapping
 
 from ophyd_async.core import Device
 
@@ -34,4 +34,4 @@ class BrokenController(Presenter):
         floating: float = 0.0,
         boolean: bool = False,
     ) -> None:
-        raise Exception("Broken controller")
+        raise RuntimeError("Broken controller")

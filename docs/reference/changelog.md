@@ -16,11 +16,6 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `AppContainer.connect_devices(mock=False)` — connects all registered ophyd-async devices
   via their async connect lifecycle. Call after `build()`. Pass `mock=True` to skip hardware
   communication in tests.
-- `DescriptorTreeView` grouped constructor form — accepts a `groups` argument of type
-  `list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]` built by the presenter
-  layer. When provided, the tree groups rows by device name (one header per device, leaf
-  labels strip the device-name prefix) instead of the `source` field prefix used by the flat
-  `(descriptors, readings)` form.
 - `FrameSink`, `StoreStateError`, and the process-wide storage registry
   (`register_storage`, `get_storage`, `reset_group`, `clear_registry`).
 - culsans (>=0.11.0) as a runtime dependency.

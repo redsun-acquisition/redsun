@@ -47,6 +47,7 @@ programmatic setter:
 ```python
 from ophyd_async.core import StandardReadable, soft_signal_rw
 
+
 class MyStage(StandardReadable):
     def __init__(self, name: str) -> None:
         self.position = soft_signal_rw(float, initial_value=0.0, units="mm")
@@ -67,7 +68,7 @@ import bluesky.plans as bp
 
 stage = MyStage("stage")
 RE(bp.count([stage.position]))  # read only the position signal
-RE(bp.count([stage]))           # read all signals registered by StandardReadable
+RE(bp.count([stage]))  # read all signals registered by StandardReadable
 ```
 
 ## Detectors
@@ -118,7 +119,7 @@ after calling [`build()`][redsun.containers.container.AppContainer.build]:
 ```python
 app = MyApp()
 app.build()
-app.connect_devices()     # connects all registered devices
+app.connect_devices()  # connects all registered devices
 app.run()
 ```
 

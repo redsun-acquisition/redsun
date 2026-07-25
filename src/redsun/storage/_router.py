@@ -38,7 +38,7 @@ class FrameRouter:
 
     def add(self, spec: StreamSpec) -> None:
         """Add a new spec and initialize its frame counter."""
-        if spec.data_key in self._specs.keys():
+        if spec.data_key in self._specs:
             raise KeyError(f"Key '{spec.data_key!r}' is already routed.")
         signal, setter = soft_signal_r_and_setter(int, initial_value=0)
         self._specs[spec.data_key] = spec
@@ -48,7 +48,7 @@ class FrameRouter:
 
     def delete(self, data_key: str) -> None:
         """Remove a spec and its associated frame counter."""
-        if data_key not in self._specs.keys():
+        if data_key not in self._specs:
             # nothing to do if the key is not present
             return
         del self._specs[data_key]

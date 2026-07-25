@@ -60,7 +60,7 @@ def storage(io: AcquireZarrIO, provider: SessionPathProvider) -> BaseStorage:
 class TestArraySettings:
     def test_spatial_chunks_divide_shape(self, io: AcquireZarrIO) -> None:
         settings = io._array_settings(spec("cam", shape=(64, 32)))
-        t, y, x = settings.dimensions
+        _t, y, x = settings.dimensions
 
         assert (y.array_size_px, x.array_size_px) == (64, 32)
         assert (y.chunk_size_px, x.chunk_size_px) == (16, 8)

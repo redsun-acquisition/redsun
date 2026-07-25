@@ -54,7 +54,9 @@ if TYPE_CHECKING:
 class RawStore(OpenStore):
     """One open burst: a flat binary file per stream plus a JSON sidecar."""
 
-    def __init__(self, directory: Path, filename: str, specs: Mapping[str, StreamSpec]) -> None:
+    def __init__(
+        self, directory: Path, filename: str, specs: Mapping[str, StreamSpec]
+    ) -> None:
         self._files: dict[str, BinaryIO] = {}
         self._counts: dict[str, int] = {}
         self._sidecar = directory / f"{filename}.json"

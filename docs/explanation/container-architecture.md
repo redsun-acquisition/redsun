@@ -131,8 +131,8 @@ Examples in the declarative flow:
 
 ```python
 class MyApp(QtAppContainer):
-    motor = declare_device(MyMotor)                       # name → "motor"
-    cam = declare_device(MyCamera, alias="detector")      # name → "detector"
+    motor = declare_device(MyMotor)  # name → "motor"
+    cam = declare_device(MyCamera, alias="detector")  # name → "detector"
 ```
 
 In the dynamic flow:
@@ -231,6 +231,7 @@ class MyApp(QtAppContainer, config="config.yaml"):
     motor = declare_device(MyMotor, from_config="motor")
     ctrl = declare_presenter(MyPresenter, from_config="ctrl")
     ui = declare_view(MyView, from_config="ui")
+
 
 MyApp().run()
 ```

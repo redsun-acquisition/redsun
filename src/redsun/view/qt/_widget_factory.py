@@ -175,7 +175,7 @@ def _try_factory_entry(
     """
     try:
         matched = predicate(param)
-    except Exception:
+    except Exception:  # noqa: BLE001 — a failing predicate means "no match", never a crash
         return None
     if matched:
         return factory(param)

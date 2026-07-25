@@ -71,12 +71,12 @@ class MemoryStore(OpenStore):
         The complete spec map the store was opened with.
     """
 
-    __slots__ = ("path", "specs", "arrays", "calls")
+    __slots__ = ("arrays", "calls", "path", "specs")
 
     def __init__(self, path: PathInfo, specs: Mapping[str, StreamSpec]) -> None:
         self.path = path
         self.specs = dict(specs)
-        self.arrays: dict[str, list[np.ndarray]] = {key: [] for key in specs.keys()}
+        self.arrays: dict[str, list[np.ndarray]] = {key: [] for key in specs}
         self.calls: list[tuple[str, str]] = []
 
     async def write(self, data_key: str, frame: npt.NDArray[Any]) -> None:

@@ -21,7 +21,6 @@ from typing import (
     TypedDict,
     TypeGuard,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -49,12 +48,12 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, Self
+    from typing import Never, Self
 
     from redsun.virtual import RedSunConfig
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
-PluginType = Union[type[Device], type[PPresenter], type[PView]]
+PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
 _AnyField = _DeviceField | _PresenterField | _ViewField
@@ -182,11 +181,11 @@ class AppContainer:
     """Application container for MVP architecture."""
 
     __slots__ = (
-        "_config",
-        "_virtual_container",
-        "_is_built",
         "_built_devices",
+        "_config",
         "_devices_connected",
+        "_is_built",
+        "_virtual_container",
     )
 
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
@@ -322,7 +321,7 @@ class AppContainer:
         if config_path is not None:
             try:
                 yaml_data = _load_yaml(config_path)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — unreadable config falls back to defaults
                 logger.warning(f"Could not read config file {config_path}: {e}")
                 yaml_data = {}
             _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
@@ -406,7 +405,7 @@ class AppContainer:
             try:
                 built_devices[name] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
 
         # build presenters
@@ -486,7 +485,7 @@ class AppContainer:
             if isinstance(comp.instance, HasShutdown):
                 try:
                     comp.instance.shutdown()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
 
         self._is_built = False
