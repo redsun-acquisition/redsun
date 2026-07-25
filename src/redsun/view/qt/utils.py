@@ -32,10 +32,10 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ActionButton",
-    "PlanWidget",
     "PlanInfoDialog",
-    "create_plan_widget",
+    "PlanWidget",
     "create_param_widget",
+    "create_plan_widget",
 ]
 
 
@@ -143,7 +143,7 @@ class PlanWidget:
             self.pause_button.setText("Resume" if status else "Pause")
             self.run_button.setEnabled(not status)
 
-    def setEnabled(self, enabled: bool) -> None:  # noqa: N802
+    def setEnabled(self, enabled: bool) -> None:
         """Enable or disable the entire plan widget.
 
         Parameters

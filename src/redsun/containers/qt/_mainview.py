@@ -12,6 +12,8 @@ from redsun.log import Loggable
 from redsun.view import ViewPosition
 
 if TYPE_CHECKING:
+    from typing import Final
+
     from redsun.view.qt import QtView
     from redsun.virtual import VirtualContainer
 
@@ -31,7 +33,7 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
         Dictionary of view name to pre-built view instance.
     """
 
-    _DOCK_MAP = {
+    _DOCK_MAP: Final[dict[ViewPosition, Qt.DockWidgetArea]] = {
         ViewPosition.LEFT: Qt.DockWidgetArea.LeftDockWidgetArea,
         ViewPosition.RIGHT: Qt.DockWidgetArea.RightDockWidgetArea,
         ViewPosition.TOP: Qt.DockWidgetArea.TopDockWidgetArea,

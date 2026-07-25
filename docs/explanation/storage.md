@@ -3,230 +3,158 @@
 !!! warning
     Storage support is under active development. Expect breaking changes.
 
-`redsun` provides a session-scoped storage layer that lets devices write acquired
-frames to disk without managing their own file handles or knowing where data
-lands.
+`redsun` provides a session-scoped storage layer that lets devices write
+acquired frames without managing file handles or knowing where data lands.
 
 ## Overview
 
-Writers are **injected into devices at construction time** via dependency
-injection.  Multiple devices that should write into the same store receive the
-same writer instance — the writer tracks each device as a named *source* and
-fans their frames into a single backend.
+Storage is split across two axes: **what a backend does** (`StorageIO` /
+`OpenStore`) and **how frames reach it** (`SinkFactory` / `BaseStorage`).
+A single `BaseStorage` instance fans frames from many named channels
+(`data_key`s) into one backend store.
 
 ```mermaid
 graph TD
-    DI[Application / DI container] -->|"ZarrWriter('default')"| W[ZarrWriter]
-    W --> |writer_logic| DA[Device A]
-    W --> |writer_logic| DB[Device B]
-    DC[Device C\nno storage] -. unaffected .-> W
-    SP[Presenter] -->|set_uri + clear_sources| W
+    P[PathProvider] --> BS[BaseStorage]
+    IO[StorageIO backend] --> BS
+    BS -->|"sink(data_key)"| S1[FrameSink + drain: det1]
+    BS -->|"sink(data_key)"| S2[FrameSink + drain: det2]
+    S1 --> ST[OpenStore]
+    S2 --> ST
+    FR[FrameRouter] -.tracks specs + counters.-> BS
 ```
 
-Storage is **opt-in per device** — devices that do not receive a writer are
-unaffected.  The writer instance itself is stateless between acquisitions: it
-is opened, written to, and closed on each plan, then reused for the next.
-
----
-
-## Protocol hierarchy
-
-Two protocols govern writer objects:
+## Protocols
 
 | Protocol | Purpose |
 |---|---|
-| [`DataWriter`][redsun.device.DataWriter] | Single-device persistence: open, write, collect documents, close |
-| [`ControllableDataWriter`][redsun.device.ControllableDataWriter] | Extends `DataWriter` with source registration, frame pushing, and URI configuration; satisfied by shared backends like `ZarrWriter` |
+| `StorageIO` | Backend *mechanics*: `open(path, specs) -> OpenStore`, `uri()`, `resource_info()` |
+| `OpenStore` | Lifecycle-bound *handle*: `write()`, `release()`, `close()` |
+| `SinkFactory` | Frame-facing surface: `register()`, `sink(data_key)`, `open()`, `close()`, `uri_for()`, `signal_for()` |
 
-A device that holds a writer exposes it through the
-[`HasWriterLogic`][redsun.storage.HasWriterLogic] protocol (a `writer_logic`
-property typed as `DataWriter`).  Helper functions and callbacks use this
-protocol to discover writers without depending on any concrete class.
+`BaseStorage` implements `SinkFactory` on top of a `StorageIO` and a
+`PathProvider`. Backends live in `redsun.storage.backends` (`_memory`,
+`_acquire_zarr`).
 
----
+The `StorageIO`/`OpenStore` split is deliberate: a backend describes *how* to
+open and address data, while the returned handle owns the *open lifetime*.
+Don't push lifecycle methods onto `StorageIO`.
 
-## Device side
+## Declaring a stream
 
-An imaging device receives a writer at `__init__` time and uses it in
-`prepare` and `kickoff`:
-
-```python
-from __future__ import annotations
-
-import numpy as np
-from bluesky.protocols import Status
-
-from redsun.device import Device, ControllableDataWriter, PrepareInfo
-
-
-class MyCamera(Device):
-    def __init__(
-        self,
-        name: str,
-        /,
-        writer: ControllableDataWriter,
-    ) -> None:
-        super().__init__(name)
-        self._writer = writer
-
-    @property
-    def writer_logic(self) -> ControllableDataWriter:
-        """Expose the writer so presenters and callbacks can discover it."""
-        return self._writer
-
-    def prepare(self, value: PrepareInfo) -> Status:
-        s = Status()
-        try:
-            capacity = 0 if value.write_forever else value.capacity
-            self._writer.register(
-                name=self.name,
-                dtype=np.dtype("uint16"),
-                shape=(2048, 2048),
-                capacity=capacity,
-            )
-        except Exception as e:
-            s.set_exception(e)
-        else:
-            s.set_finished()
-        return s
-
-    def kickoff(self) -> Status:
-        s = Status()
-        try:
-            self._writer.open(self.name)
-            # arm hardware, start acquisition loop …
-        except Exception as e:
-            s.set_exception(e)
-        else:
-            s.set_finished()
-        return s
-```
-
-The `writer_logic` property makes the device satisfy
-[`HasWriterLogic`][redsun.storage.HasWriterLogic] structurally, enabling
-automatic discovery by the presenter and metadata callbacks without any
-explicit registration.
-
----
-
-## Metadata
-
-There are two ways to attach metadata to a store.
-
-### Direct — in `prepare()`
-
-Call [`update_metadata(metadata)`][redsun.storage.Writer.update_metadata] on the
-writer directly.  This is the simplest option when the device owns the writer:
+Each channel is described by a frozen `StreamSpec`:
 
 ```python
-def prepare(self, value: PrepareInfo) -> Status:
-    self._writer.update_metadata({
-        self.name: {
-            "exposure_time": self._exposure_s,
-            "roi": list(self._roi),
-        }
-    })
-    self._writer.register(self.name, ...)
-    ...
+from redsun.storage import StreamSpec
+
+spec = StreamSpec(
+    data_key="det1",
+    shape=(2048, 2048),
+    dtype="uint16",
+    capacity=100,  # None means unbounded
+)
 ```
 
-Metadata accumulates on the writer between `prepare()` calls and is passed
-into the backend when the store is first opened.  It is cleared automatically
-by [`close()`][redsun.storage.Writer.close] (or explicitly via
-[`clear_metadata()`][redsun.storage.Writer.clear_metadata]) so each new run
-starts clean.
+`capacity` must be `None` or `>= 1`; anything else raises at construction.
+`spec.is_unbounded` is the canonical check for a never-ending stream.
 
-### Via a bluesky descriptor callback
-
-For devices that are not imaging devices (motors, lights, etc.) a bluesky
-callback can forward the configuration section of each
-[`EventDescriptor`](https://blueskyproject.io/event-model/main/explanations/event-descriptors.html)
-document into the associated writer using
-[`handle_descriptor_metadata`][redsun.storage.handle_descriptor_metadata]:
+Register the spec (sync), then obtain a sink for the channel:
 
 ```python
-from redsun.storage import handle_descriptor_metadata
-
-
-class MyCallback:
-    def __init__(self, devices: dict) -> None:
-        self._devices = devices
-
-    def descriptor(self, doc) -> None:
-        handle_descriptor_metadata(doc, self._devices)
-        # … rest of callback logic
+storage.register(spec)
+sink = storage.sink(spec.data_key)
+await sink.put(frame)  # async producer: device logic
+sink.put_nowait(frame)  # sync producer: document callback
+sink.close()  # end the stream; queued frames still flush
 ```
 
-The function iterates the descriptor's `configuration` section, looks up each
-device name in `devices`, checks whether it satisfies `HasWriterLogic` and
-whether its writer satisfies [`HasMetadata`][redsun.storage.HasMetadata]
-(i.e. implements `update_metadata`), and forwards the configuration snapshot.
+## Frame sinks and capacity
 
-Bluesky emits one descriptor per stream name per run, so this function fires
-once per run for a given stream.
+`sink(data_key)` returns a `FrameSink` — a thin producer-only handle over a
+bounded `culsans.Queue`. Async device logics `await put`; sync document
+callbacks (running inside `emit_sync` on the loop thread, which can never
+await) use `put_nowait`. `sink.close()` is sync and idempotent.
 
----
+Calling `sink()` also spawns a **drain task**, one per key, owned by
+`BaseStorage`. The drain is the only consumer of the queue — producers cannot
+read frames back. **Capacity is enforced by the drain, not by exceptions**: it
+counts writes and, at `spec.capacity`, calls `queue.shutdown()` and exits;
+unbounded specs (`capacity=None`) drain until close. An overrunning producer's
+next `put`/`put_nowait` observes this as `culsans.QueueShutDown` — the
+queue-era analogue of the old generator returning. Nothing raises
+`StopAsyncIteration` by hand. Shutdown on overrun is best-effort, not a hard
+guarantee: a fast async producer can enqueue a few frames past capacity
+before the drain's `queue.shutdown()` call takes effect, and those overshoot
+frames are simply discarded at teardown rather than written.
 
-## Presenter side
+All per-key teardown happens in the drain's exit path, whichever way it was
+triggered (capacity, `sink.close()`, or `storage.close()`); the last drain out
+closes the backend.
 
-Before each plan the presenter must set the write location on every active
-writer.  [`get_available_writers`][redsun.storage.presenter.get_available_writers]
-discovers unique writers from the device registry via `HasWriterLogic`:
+## Lifecycle: open, drain, close
 
-```python
-from pathlib import Path
+```mermaid
+sequenceDiagram
+    participant P as Producer
+    participant BS as BaseStorage
+    participant D as Drain(key)
+    participant IO as StorageIO
 
-from redsun.storage import SessionPathProvider
-from redsun.storage.presenter import get_available_writers
-
-# devices is your application device registry (Mapping[str, Any])
-writers = get_available_writers(devices)
-# {"application/x-zarr": {"default": <ZarrWriter>}}
-
-provider = SessionPathProvider(base_dir=Path("/data"), session="exp1")
-
-for mimetype, groups in writers.items():
-    for group_name, writer in groups.items():
-        path_info = provider(plan_name, group=group_name)
-        writer.clear_sources()
-        writer.set_uri(path_info.store_uri)
+    P->>BS: register(spec)
+    P->>BS: sink(data_key)
+    BS->>D: spawn drain task
+    BS-->>P: FrameSink
+    P->>BS: await sink.put(frame)
+    Note over D: queue non-empty
+    D->>BS: await open() [lazy, idempotent]
+    BS->>IO: open(path, specs)
+    IO-->>BS: OpenStore
+    D->>BS: store.write(data_key, frame)
+    BS-->>D: router.mark_written(data_key)
+    Note over D: written == capacity
+    D->>D: queue.shutdown()
+    P--xBS: further put() raises QueueShutDown
+    D->>BS: last drain out closes store
 ```
 
-`SessionPathProvider` produces auto-incrementing URIs of the form:
+`open()` is idempotent and lock-guarded, with two entry points: **eager**,
+called from a device's write-intent `prepare` when writing is imminent, and
+**lazy**, called by a drain before its first write — the store materialises
+on the first frame actually written, never earlier. Concurrent openers await
+the same in-flight open on the lock rather than racing the backend.
 
-```
-file:///data/exp1/2026_02_25/live_stream_00000
-file:///data/exp1/2026_02_25/live_stream_00001
-```
+`register()` is sync and only legal before open — it raises `StoreStateError`
+while the store is open, opening, or closing.
 
-The counter increments independently per plan name, so different plans never
-collide.  Counters for existing directories are picked up automatically on
-construction, preventing overwrites across application restarts.
+`close(flush=True)` (default) shuts every queue down cleanly: drains finish
+writing what's already queued, then exit. `close(flush=False)` (used by
+`reset_group` for abort) shuts queues down immediately, dropping queued
+frames for a fast teardown. Either way, the last drain to exit closes the
+backend under the open lock — no separate release API.
 
----
+Drain write failures don't raise at the producer — `gather` collects them
+with `return_exceptions=True` — so `close()` is the error observation point:
+awaiting it re-raises whatever a drain failed on.
 
-## Backend dependencies
+!!! note
+    A bluesky plan that collects a `StandardDetector` must pre-declare the
+    stream (`bps.declare_stream(det, name=..., collect=True)`) — otherwise
+    `collect` has no stream to attach documents to.
 
-The Zarr backend requires the optional `acquire-zarr` package:
+Design rationale, including the concurrent-first-write and abort-vs-flush
+tradeoffs, lives in ADR
+[0002](decisions/0002-storage-dual-context-redesign.md).
 
-=== "uv (recommended)"
+## Paths
 
-    ```bash
-    uv pip install redsun[zarr]
-    ```
+`SessionPathProvider` resolves where a burst lands, combining a session base
+directory with a `PlanFilenameProvider` that tracks a per-plan counter and
+zero-pads it. It exposes `PathSignals` so the current directory, plan, and
+counter are observable from the UI, and `_scan_existing()` resumes numbering
+from files already on disk rather than overwriting them.
 
-=== "pip"
+## Counters
 
-    ```bash
-    pip install redsun[zarr]
-    ```
-
-The import is deferred — sessions without imaging devices have no dependency
-on `acquire-zarr`.
-
----
-
-## See also
-
-- [`redsun.storage` API reference](../reference/api/storage.md)
-- [`redsun.device` API reference](../reference/api/device.md)
+`FrameRouter` owns the per-`data_key` `StreamSpec` and a `SignalR[int]` frame
+counter. `mark_written()` is the single place counts advance — subscribe to
+`signal_for(data_key)` to follow progress rather than polling the backend.

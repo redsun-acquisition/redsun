@@ -11,7 +11,6 @@ from bluesky.run_engine import RunEngine
 from bluesky.utils import MsgGenerator
 from ophyd_async.core import Device, SignalRW, StandardReadable, soft_signal_rw
 
-from redsun.presenter import PPresenter
 from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
 
 
@@ -78,7 +77,7 @@ class MockDeviceWithChild(StandardReadable):
     correctly inside the container and plan-spec machinery.
     """
 
-    stage: MockMotor
+    motor: MockMotor
     enabled: SignalRW[bool]
 
     def __init__(
@@ -87,17 +86,22 @@ class MockDeviceWithChild(StandardReadable):
         *,
         units: str = "μm",
     ) -> None:
-        self.stage = MockMotor(name, units=units)
+        self.motor = MockMotor(name, units=units)
         with self.add_children_as_readables():
             self.enabled = soft_signal_rw(bool, initial_value=True)
         super().__init__(name=name)
 
 
-class MockController(PPresenter, IsProvider, IsInjectable):
-    """Mock controller/presenter that optionally provides dependencies."""
+class MockController(IsProvider, IsInjectable):
+    """Mock controller/presenter that optionally provides dependencies.
 
-    sigBar = Signal()
-    sigNewPlan = Signal(object)
+    Satisfies ``PPresenter`` structurally — deliberately not by inheritance,
+    since the protocol's read-only property descriptors would shadow the
+    instance attributes assigned in ``__init__``.
+    """
+
+    sig_bar = Signal()
+    sig_new_plan = Signal(object)
 
     def __init__(
         self,

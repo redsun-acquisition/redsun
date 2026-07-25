@@ -79,9 +79,9 @@ graph LR
 
 `redsun` builds three types of components:
 
-- **Devices**: objects interfacing with real hardware components that subclass [`Device`][redsun.device.Device] (or one of the higher-level ophyd-async base classes such as [`StandardReadable`][redsun.device.StandardReadable] or [`StandardDetector`][redsun.device.StandardDetector]).
-- **View**: UI components that implement [`View`][redsun.view.View] to display data and capture user interactions.
-- **Presenter**: business logic components that implement [`Presenter`][redsun.presenter.Presenter], sitting between models and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
+- **Devices**: objects interfacing with real hardware components that subclass `ophyd_async.core.Device` (or one of the higher-level ophyd-async base classes such as `StandardReadable` or `StandardDetector`).
+- **View**: UI components satisfying the [`PView`][redsun.view.PView] protocol to display data and capture user interactions.
+- **Presenter**: business logic components satisfying the [`PPresenter`][redsun.presenter.PPresenter] protocol, sitting between devices and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
 This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
 
@@ -131,8 +131,8 @@ Examples in the declarative flow:
 
 ```python
 class MyApp(QtAppContainer):
-    motor = declare_device(MyMotor)                       # name → "motor"
-    cam = declare_device(MyCamera, alias="detector")      # name → "detector"
+    motor = declare_device(MyMotor)  # name → "motor"
+    cam = declare_device(MyCamera, alias="detector")  # name → "detector"
 ```
 
 In the dynamic flow:
@@ -181,6 +181,15 @@ When [`build()`][redsun.containers.container.AppContainer.build] is called, the 
 3. **Presenters** — each receives its resolved name and the full device dictionary.
 4. **Views** — each receives its resolved name.
 
+Presenter and view constructors are signature-checked when their
+components are declared or discovered (leading positionals must be
+`(name, devices)` / `(name,)`), and every built instance is validated
+against its layer contract (`ophyd_async.core.Device`,
+[`PPresenter`][redsun.presenter.PPresenter],
+[`PView`][redsun.view.PView]). Failures follow the layer asymmetry: a
+failing device is logged and skipped, while a failing presenter or view
+re-raises and aborts the build.
+
 **Phase 2 — provider registration**:
 
 Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
@@ -222,6 +231,7 @@ class MyApp(QtAppContainer, config="config.yaml"):
     motor = declare_device(MyMotor, from_config="motor")
     ctrl = declare_presenter(MyPresenter, from_config="ctrl")
     ui = declare_view(MyView, from_config="ui")
+
 
 MyApp().run()
 ```

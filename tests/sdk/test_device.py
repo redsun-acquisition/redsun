@@ -62,11 +62,6 @@ async def test_device_read_write_round_trip() -> None:
     assert reading["stage-x"]["value"] == pytest.approx(42.0)
 
 
-# ---------------------------------------------------------------------------
-# soft_signal_r_and_setter
-# ---------------------------------------------------------------------------
-
-
 async def test_soft_signal_r_and_setter_basic() -> None:
     sig, setter = soft_signal_r_and_setter(int, initial_value=0, name="counter")
     await sig.connect(mock=False)
@@ -84,11 +79,6 @@ async def test_soft_signal_r_and_setter_multiple_updates() -> None:
     setter(1.0)
     setter(2.0)
     assert await sig.get_value() == pytest.approx(2.0)
-
-
-# ---------------------------------------------------------------------------
-# Child device hierarchy — name scoping
-# ---------------------------------------------------------------------------
 
 
 class _Axis(Device):

@@ -25,7 +25,10 @@ from redsun.containers.components import (
     _PresenterComponent,
     _ViewComponent,
 )
+from redsun.presenter import PPresenter
+from redsun.presenter.builtins import StoragePresenter
 from redsun.qt import QtAppContainer
+from redsun.view import PView, ViewPosition
 from redsun.virtual import RedSunConfig
 
 
@@ -92,9 +95,8 @@ class TestComponentWrappers:
         assert "built" in repr(comp)
 
     @pytest.mark.qt
-    def test_view_component_build(self) -> None:
+    def test_view_component_build(self, qapp: QApplication) -> None:
 
-        _ = QApplication.instance() or QApplication([])
         comp = _ViewComponent(MockQtView, "v")
         view = comp.build()
         assert view is comp.instance
@@ -183,7 +185,7 @@ class TestAppContainerBuild:
         app = TestApp()
         assert not app.is_built
 
-        app.build()
+        app = app.build()
         assert app.is_built
         assert "motor" in app.devices
         assert "ctrl" in app.presenters
@@ -326,9 +328,7 @@ class TestComponentFieldSyntax:
         assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
 
     @pytest.mark.qt
-    def test_component_field_collects_view(self) -> None:
-
-        _ = QApplication.instance() or QApplication([])
+    def test_component_field_collects_view(self, qapp: QApplication) -> None:
 
         class TestApp(AppContainer):
             v = declare_view(MockQtView)
@@ -359,7 +359,7 @@ class TestComponentFieldSyntax:
         app = TestApp()
         assert not app.is_built
 
-        app.build()
+        app = app.build()
         assert app.is_built
         assert "motor" in app.devices
         assert app.devices["motor"].name == "motor"
@@ -559,13 +559,13 @@ class TestQtAppContainer:
         app = _TestQtApp()
         assert app._qt_app is None
 
-        app.build()
+        built = app.build()
 
-        assert app._qt_app is not None
-        assert QApplication.instance() is app._qt_app
-        assert app.is_built
-        assert "motor" in app.devices
-        assert "v" in app.views
+        assert built._qt_app is not None
+        assert QApplication.instance() is built._qt_app
+        assert built.is_built
+        assert "motor" in built.devices
+        assert "v" in built.views
 
     def test_run_reuses_qapplication_created_by_build(self) -> None:
 
@@ -714,6 +714,7 @@ class TestChildDevices:
         app.build()
         app.connect_devices(mock=True)
         parent = app.devices["stage"]
+        assert isinstance(parent, MotorWithChild)
         # parent step_size descriptor includes units from egu
         parent_desc = await parent.step_size.describe()
         assert "stage-step_size" in parent_desc
@@ -827,7 +828,7 @@ class TestConnectDevices:
 
         connected_before_frontend: list[bool] = []
 
-        def patched_run(self: AppContainer) -> None:  # type: ignore[override]
+        def patched_run(self: AppContainer) -> None:
             # call the real run up to (but not past) frontend startup
             if not self._is_built:
                 self.build()
@@ -850,7 +851,7 @@ class TestConnectDevices:
         class TrackingApp(AppContainer):
             motor = declare_device(MockOAMotor, units="mm")
 
-            def connect_devices(self, mock: bool = False) -> None:  # type: ignore[override]
+            def connect_devices(self, mock: bool = False) -> None:
                 connect_calls.append("called")
                 super().connect_devices(mock=mock)
 
@@ -864,3 +865,162 @@ class TestConnectDevices:
             app.connect_devices(mock=True)
 
         assert connect_calls == ["called"]  # still only one call
+
+
+class TestBuiltinPlugins:
+    """Builtin components resolve through the real ``redsun.plugins`` entry point.
+
+    No ``mock_entry_points`` fixture here: the point is that the installed
+    redsun distribution itself advertises ``plugins.yaml``, so a user config
+    can reference ``plugin_name: redsun`` with zero extra setup.
+    """
+
+    def test_from_config_builtin_storage_presenter(self, tmp_path: Path) -> None:
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "session": "builtin-session",
+            "presenters": {
+                "storage": {
+                    "plugin_name": "redsun",
+                    "plugin_id": "storage",
+                    "base_dir": str(tmp_path),
+                }
+            },
+        }
+        cfg_file = tmp_path / "builtin.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        container = AppContainer.from_config(str(cfg_file))
+        container.build()
+
+        assert "storage" in container.presenters
+        presenter = container.presenters["storage"]
+        assert isinstance(presenter, StoragePresenter)
+        # the provider is session-scoped from the config and DI-exposed
+        provider = container.virtual_container.path_provider()
+        assert provider is presenter.path_provider
+        assert "builtin-session" in provider().directory_path.parts
+
+
+class TestProtocolValidationAtBuild:
+    """Protocol compliance is validated on built instances, not classes.
+
+    Class-level checks cannot see attributes assigned in ``__init__`` —
+    the old hasattr-on-class screen rejected exactly these implementers.
+    """
+
+    def test_structural_presenter_without_abc_builds(self) -> None:
+        class DuckPresenter:
+            def __init__(self, name: str, devices: dict[str, Device], /) -> None:
+                self.name = name
+                self.devices = devices
+
+        comp = _PresenterComponent(DuckPresenter, "duck")
+        instance = comp.build({})
+        assert instance is comp.instance
+        assert isinstance(instance, PPresenter)
+
+    def test_non_compliant_presenter_raises_at_build(self) -> None:
+        class NotAPresenter:
+            def __init__(self, name: str, devices: dict[str, Device], /) -> None:
+                pass  # stores neither name nor devices
+
+        # the arg-type ignore is the point: mypy already rejects this class,
+        # the runtime check protects callers without static typing
+        comp = _PresenterComponent(NotAPresenter, "bad")  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="PPresenter"):
+            comp.build({})
+
+    def test_structural_view_without_qt_builds(self) -> None:
+        class HeadlessView:
+            def __init__(self, name: str, /) -> None:
+                self.name = name
+                self.view_position = ViewPosition.CENTER
+
+        comp = _ViewComponent(HeadlessView, "headless")
+        assert isinstance(comp.build(), PView)
+
+    def test_non_compliant_view_raises_at_build(self) -> None:
+        class NotAView:
+            def __init__(self, name: str, /) -> None:
+                self.name = name  # missing view_position
+
+        # the arg-type ignore is the point: mypy already rejects this class,
+        # the runtime check protects callers without static typing
+        comp = _ViewComponent(NotAView, "bad")  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="PView"):
+            comp.build()
+
+
+class TestConstructorSignatureGate:
+    """Class-level gate: constructor positional shape checked via inspect.
+
+    The classes below all satisfy the protocols at instance level, so these
+    tests isolate the signature gate from the build-time protocol gate.
+    """
+
+    def test_presenter_wrong_positional_names_rejected(self) -> None:
+        class WrongNames:
+            def __init__(self, identifier: str, devices: dict[str, Device], /) -> None:
+                self.name = identifier
+                self.devices = devices
+
+        with pytest.raises(TypeError, match="leading positional"):
+            _PresenterComponent(WrongNames, "bad")
+
+    def test_presenter_extra_required_positional_rejected(self) -> None:
+        class ExtraPositional:
+            def __init__(
+                self, name: str, devices: dict[str, Device], extra: int, /
+            ) -> None:
+                self.name = name
+                self.devices = devices
+
+        with pytest.raises(TypeError, match="leading positional"):
+            _PresenterComponent(ExtraPositional, "bad")
+
+    def test_presenter_var_positional_rejected(self) -> None:
+        class VarArgs:
+            def __init__(self, *args: Any) -> None:
+                self.name = "x"
+                self.devices: dict[str, Device] = {}
+
+        with pytest.raises(TypeError, match="leading positional"):
+            _PresenterComponent(VarArgs, "bad")
+
+    def test_presenter_optional_trailing_params_accepted(self) -> None:
+        """StoragePresenter-shaped signatures pass: defaults after the slash."""
+
+        class Configurable:
+            def __init__(
+                self,
+                name: str,
+                devices: dict[str, Device],
+                /,
+                base_dir: str | None = None,
+                **kwargs: Any,
+            ) -> None:
+                self.name = name
+                self.devices = devices
+
+        comp = _PresenterComponent(Configurable, "ok", base_dir="/tmp")
+        assert isinstance(comp.build({}), PPresenter)
+
+    def test_view_extra_positional_rejected(self) -> None:
+        class TwoPositionals:
+            def __init__(self, name: str, devices: dict[str, Device], /) -> None:
+                self.name = name
+                self.view_position = ViewPosition.CENTER
+
+        with pytest.raises(TypeError, match="leading positional"):
+            _ViewComponent(TwoPositionals, "bad")
+
+    def test_view_name_only_accepted(self) -> None:
+        class Minimal:
+            def __init__(self, name: str, /) -> None:
+                self.name = name
+                self.view_position = ViewPosition.CENTER
+
+        comp = _ViewComponent(Minimal, "ok")
+        assert isinstance(comp.build(), PView)

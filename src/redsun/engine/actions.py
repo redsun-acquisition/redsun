@@ -161,8 +161,9 @@ def continous(
     """
 
     def decorator(func: Callable[P, R_co]) -> ContinousPlan[P, R_co]:
-        setattr(func, "__togglable__", togglable)
-        setattr(func, "__pausable__", pausable)
+        # setattr keeps mypy happy: Callable has no such attributes to assign
+        setattr(func, "__togglable__", togglable)  # noqa: B010
+        setattr(func, "__pausable__", pausable)  # noqa: B010
         return cast("ContinousPlan[P, R_co]", func)
 
     if func is None:

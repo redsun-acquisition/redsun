@@ -41,7 +41,7 @@ def test_engine_wrapper_run_with_result(RE: RunEngine) -> None:
 
 
 def test_engine_with_callback(RE: RunEngine) -> None:
-    def callback(future: Future) -> None:
+    def callback(future: Future[Any]) -> None:
         assert len(future.result()) == 1
 
     fut = RE(count([det1], num=5))
@@ -98,7 +98,7 @@ def test_engine_callbacks(RE: RunEngine) -> None:
 def test_pausable_engine(RE: RunEngine) -> None:
     future_set = set()
 
-    def pausable_plan():
+    def pausable_plan() -> Any:
         yield from bps.checkpoint()
 
         yield from count([det1], num=None)

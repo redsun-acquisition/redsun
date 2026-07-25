@@ -116,5 +116,7 @@ test_configs/*
 # MkDocs build output
 site/
 
-# model agent files
-.claude/
+# claude
+.claude/settings.local.json
+.claude/plans
+CLAUDE.local.md

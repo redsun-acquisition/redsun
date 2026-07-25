@@ -11,15 +11,19 @@ Make sure you have [installed `redsun` with development dependencies](installati
 Run the tests from the project root:
 
 ```bash
-pytest
+uv run pytest
 ```
+
+Qt-dependent tests are marked with `@pytest.mark.qt` and are skipped
+automatically when no display environment is available.
 
 ## Generate coverage report
 
-Obtain a test coverage report:
+Coverage sources are configured in `pyproject.toml`, so no extra flags are
+needed:
 
 ```bash
-pytest --cov=redsun --cov-report=html
+uv run pytest --cov --cov-report=html
 ```
 
 This generates an `htmlcov/` directory. Open `htmlcov/index.html` in your browser to view it.
@@ -28,14 +32,23 @@ This generates an `htmlcov/` directory. Open `htmlcov/index.html` in your browse
 
 ```bash
 # Run SDK tests only
-pytest tests/sdk/
+uv run pytest tests/sdk/
 
 # Run container tests only
-pytest tests/container/
+uv run pytest tests/container/
 
 # Run a specific test function
-pytest tests/container/test_container.py::test_function_name
+uv run pytest tests/container/test_container.py::test_function_name
 
 # Run tests matching a pattern
-pytest -k "test_storage"
+uv run pytest -k "test_storage"
+```
+
+## Type-check the test suite
+
+Tests are covered by mypy strict mode alongside the sources. Run the
+configuration-driven form (the Qt binding shim pins what CI checks):
+
+```bash
+uv run mypy --ignore-missing-imports $(uv run qtpy mypy-args)
 ```

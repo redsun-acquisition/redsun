@@ -36,3 +36,7 @@
         - isdevice
         - isdevicesequence
         - issequence
+
+## Built-ins
+
+::: redsun.presenter.builtins.StoragePresenter

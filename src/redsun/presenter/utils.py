@@ -16,8 +16,8 @@ from ophyd_async.core import Device as OADevice
 __all__ = [
     "get_choice_list",
     "isdevice",
-    "isdeviceset",
     "isdevicesequence",
+    "isdeviceset",
     "issequence",
 ]
 

@@ -18,9 +18,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/ruff-action@v3
         with:
-          version: 0.15.10
+          version: 0.16.0
           args: "check --fix"
-          src: "src/redsun"
+          src: "."
 
   mypy-pyqt:
     strategy:
@@ -28,9 +28,18 @@ jobs:
             python-version: ["3.14"]
             frontend: ["pyside", "pyqt"]
             os: [ubuntu-latest]
+            include:
+                - frontend: pyside
+                  qt-api: pyside6
+                - frontend: pyqt
+                  qt-api: pyqt6
 
     name: mypy with Qt
     runs-on: ${{ matrix.os }}
+    env:
+        # dev pulls pyqt6 unconditionally; pin the binding qtpy resolves
+        # against so the pyside leg actually checks pyside6
+        QT_API: ${{ matrix.qt-api }}
     steps:
       - uses: actions/checkout@v6
 
@@ -45,7 +54,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --extra ${{ matrix.frontend }}
+          uv sync --group dev --group ${{ matrix.frontend }}
 
+      # config-driven invocation (no path argument) so tests and
+      # benchmarks stay in scope — see CLAUDE.md
       - name: Run mypy
-        run: uv run mypy src/redsun --ignore-missing-imports $(uv run qtpy mypy-args)
+        run: uv run mypy --ignore-missing-imports $(uv run qtpy mypy-args)

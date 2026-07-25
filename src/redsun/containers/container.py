@@ -21,7 +21,6 @@ from typing import (
     TypedDict,
     TypeGuard,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -37,9 +36,10 @@ from redsun.containers.components import (
     _PresenterField,
     _ViewComponent,
     _ViewField,
+    expects_positionals,
 )
-from redsun.presenter import Presenter
-from redsun.view import View
+from redsun.presenter import PPresenter
+from redsun.view import PView
 from redsun.virtual import (
     HasShutdown,
     IsInjectable,
@@ -48,12 +48,12 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, Self
+    from typing import Never, Self
 
     from redsun.virtual import RedSunConfig
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
-PluginType = Union[type[Device], type[Presenter], type[View]]
+PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
 _AnyField = _DeviceField | _PresenterField | _ViewField
@@ -71,8 +71,8 @@ class _PluginTypeDict(TypedDict):
     """Typed dictionary for discovered plugin classes, organized by group."""
 
     devices: dict[str, type[Device]]
-    presenters: dict[str, type[Presenter]]
-    views: dict[str, type[View]]
+    presenters: dict[str, type[PPresenter]]
+    views: dict[str, type[PView]]
 
 
 def _assert_never(arg: Never) -> Never:
@@ -87,34 +87,27 @@ def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
         return False
 
 
-def _check_presenter_protocol(cls: type) -> TypeGuard[type[Presenter]]:
-    """Check if a class implements the presenter protocol."""
-    if Presenter in cls.mro():
-        return True
+def _check_presenter_protocol(cls: type) -> TypeGuard[type[PPresenter]]:
+    """Class-level gate of the dual presenter validation.
 
-    # TODO: this check is fragile because it might
-    # happen that a class does not store at initialization
-    # the devices and so such attribute does not exists at the
-    # moment of the check; the best solution is to impose
-    # a stricter __instancecheck__ hook at protocol level
-    required_attributes = ["devices", "name"]
-    is_compliant = all(hasattr(cls, attr) for attr in required_attributes)
-    if is_compliant:
-        Presenter.register(cls)
-    return is_compliant
+    The constructor must accept exactly ``(name, devices)`` as its leading
+    positional parameters — the only part of the contract knowable before
+    instantiation (keyword arguments are uncontrolled; instance attributes
+    are invisible). PPresenter compliance is then validated on the built
+    instance by ``_PresenterComponent.build``.
+    """
+    return isinstance(cls, type) and expects_positionals(cls, ("name", "devices"))
 
 
-def _check_view_protocol(cls: type) -> TypeGuard[type[View]]:
-    """Check if a class implements the view protocol."""
-    if issubclass(cls, View):
-        return True
+def _check_view_protocol(cls: type) -> TypeGuard[type[PView]]:
+    """Class-level gate of the dual view validation.
 
-    required_attributes = ["name", "view_position"]
-    is_compliant = all([hasattr(cls, attr) for attr in required_attributes])
-
-    if is_compliant:
-        View.register(cls)
-    return is_compliant
+    The constructor must accept exactly ``(name,)`` as its leading
+    positional parameter — the only part of the contract knowable before
+    instantiation. PView compliance is then validated on the built
+    instance by ``_ViewComponent.build``.
+    """
+    return isinstance(cls, type) and expects_positionals(cls, ("name",))
 
 
 @overload
@@ -124,11 +117,11 @@ def _check_plugin_protocol(
 @overload
 def _check_plugin_protocol(
     imported_class: type, group: Literal["presenters"]
-) -> TypeGuard[type[Presenter]]: ...
+) -> TypeGuard[type[PPresenter]]: ...
 @overload
 def _check_plugin_protocol(
     imported_class: type, group: Literal["views"]
-) -> TypeGuard[type[View]]: ...
+) -> TypeGuard[type[PView]]: ...
 def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
     match group:
         case "devices":
@@ -188,11 +181,11 @@ class AppContainer:
     """Application container for MVP architecture."""
 
     __slots__ = (
-        "_config",
-        "_virtual_container",
-        "_is_built",
         "_built_devices",
+        "_config",
         "_devices_connected",
+        "_is_built",
+        "_virtual_container",
     )
 
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
@@ -328,7 +321,7 @@ class AppContainer:
         if config_path is not None:
             try:
                 yaml_data = _load_yaml(config_path)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — unreadable config falls back to defaults
                 logger.warning(f"Could not read config file {config_path}: {e}")
                 yaml_data = {}
             _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
@@ -349,7 +342,7 @@ class AppContainer:
         return {name: comp.instance for name, comp in self._device_components.items()}
 
     @property
-    def presenters(self) -> dict[str, Presenter]:
+    def presenters(self) -> dict[str, PPresenter]:
         """Return built presenter instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
@@ -358,7 +351,7 @@ class AppContainer:
         }
 
     @property
-    def views(self) -> dict[str, View]:
+    def views(self) -> dict[str, PView]:
         """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
@@ -412,7 +405,7 @@ class AppContainer:
             try:
                 built_devices[name] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
 
         # build presenters
@@ -492,7 +485,7 @@ class AppContainer:
             if isinstance(comp.instance, HasShutdown):
                 try:
                     comp.instance.shutdown()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
 
         self._is_built = False

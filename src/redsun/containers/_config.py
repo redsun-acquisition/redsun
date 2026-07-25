@@ -1,6 +1,4 @@
-from typing import Any
-
-from typing_extensions import NotRequired
+from typing import Any, NotRequired
 
 from redsun.virtual import RedSunConfig
 

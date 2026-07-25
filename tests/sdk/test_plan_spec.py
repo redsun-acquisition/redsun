@@ -7,7 +7,7 @@ from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, FrozenSet, Literal, Protocol, Set, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 import pytest
@@ -68,8 +68,8 @@ class _MockAxis(Device):
 class _MockDetector(StandardReadable):
     """Mock detector satisfying [`_DetectorProtocol`][tests.sdk.test_plan_spec._DetectorProtocol]."""
 
-    roi: SignalRW[tuple[int, int, int, int]]
-    sensor_shape: SignalR[tuple[int, int]]
+    roi: SignalRW[np.ndarray]
+    sensor_shape: SignalR[np.ndarray]
 
     def __init__(self, name: str) -> None:
         with self.add_children_as_readables():
@@ -140,14 +140,14 @@ class TestTypePredicates:
         assert not isdevicesequence(_DetectorProtocol)
 
     def test_isdeviceset_true(self) -> None:
-        assert isdeviceset(Set[_DetectorProtocol])
-        assert isdeviceset(Set[_MotorProtocol])
+        assert isdeviceset(set[_DetectorProtocol])
+        assert isdeviceset(set[_MotorProtocol])
         assert isdeviceset(AbstractSet[_DetectorProtocol])
-        assert isdeviceset(FrozenSet[_DetectorProtocol])
+        assert isdeviceset(frozenset[_DetectorProtocol])
 
     def test_isdeviceset_false_for_primitive_set(self) -> None:
-        assert not isdeviceset(Set[int])
-        assert not isdeviceset(FrozenSet[str])
+        assert not isdeviceset(set[int])
+        assert not isdeviceset(frozenset[str])
 
     def test_isdeviceset_false_for_bare_type(self) -> None:
         assert not isdeviceset(_DetectorProtocol)
@@ -171,7 +171,7 @@ class TestCreatePlanSpec:
 
     def test_int_param(self) -> None:
         def plan(x: int) -> MsgGenerator[None]:
-            yield
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         p = spec.parameters[0]
@@ -182,7 +182,7 @@ class TestCreatePlanSpec:
 
     def test_float_param_with_default(self) -> None:
         def plan(step: float = 1.0) -> MsgGenerator[None]:
-            yield
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         p = spec.parameters[0]
@@ -191,7 +191,7 @@ class TestCreatePlanSpec:
 
     def test_literal_produces_string_choices(self) -> None:
         def plan(egu: Literal["um", "mm", "nm"] = "um") -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         p = spec.parameters[0]
@@ -201,7 +201,7 @@ class TestCreatePlanSpec:
 
     def test_literal_with_int_values_stringified(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         assert spec.parameters[0].choices == ["1", "2", "3"]
@@ -210,7 +210,7 @@ class TestCreatePlanSpec:
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
         def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
-            yield
+            yield from ()
 
         spec = create_plan_spec(plan, one_motor)
         p = spec.parameters[0]
@@ -227,7 +227,7 @@ class TestCreatePlanSpec:
         """
 
         def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         with pytest.raises(UnresolvableAnnotationError) as exc_info:
             create_plan_spec(plan, {})
@@ -237,7 +237,7 @@ class TestCreatePlanSpec:
         """A PDevice param with a default is fine even with an empty registry."""
 
         def plan(motor: _MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         assert spec.parameters[0].choices is None  # no match, but has default
@@ -248,7 +248,7 @@ class TestCreatePlanSpec:
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
         def plan(dets: Sequence[_DetectorProtocol]) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
@@ -259,8 +259,8 @@ class TestCreatePlanSpec:
     def test_set_device_param_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
-        def plan(dets: Set[_DetectorProtocol]) -> MsgGenerator[None]:
-            yield  # type: ignore
+        def plan(dets: set[_DetectorProtocol]) -> MsgGenerator[None]:
+            yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
@@ -274,7 +274,7 @@ class TestCreatePlanSpec:
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
         def plan(*dets: _DetectorProtocol) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, one_detector)
         p = spec.parameters[0]
@@ -290,7 +290,7 @@ class TestCreatePlanSpec:
             name: str = "snap"
 
         def plan(frames: int = 1, /, snap: Action = Snap()) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         action_p = next(p for p in spec.parameters if p.name == "snap")
@@ -312,7 +312,7 @@ class TestCreatePlanSpec:
             /,
             actions: Action = [A(), B()],  # type: ignore[assignment]
         ) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         p = next(q for q in spec.parameters if q.name == "actions")
@@ -324,7 +324,7 @@ class TestCreatePlanSpec:
     def test_togglable_flag(self) -> None:
         @continous(togglable=True, pausable=True)
         def plan() -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         assert spec.togglable is True
@@ -332,7 +332,7 @@ class TestCreatePlanSpec:
 
     def test_non_togglable_plan(self) -> None:
         def plan(x: int) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(plan, {})
         assert spec.togglable is False
@@ -343,7 +343,7 @@ class TestCreatePlanSpec:
     def test_self_is_stripped_from_method_signature(self) -> None:
         class Presenter:
             def plan(self, x: int) -> MsgGenerator[None]:
-                yield  # type: ignore
+                yield from ()
 
         spec = create_plan_spec(Presenter.plan, {})
         assert all(p.name != "self" for p in spec.parameters)
@@ -360,7 +360,7 @@ class TestCreatePlanSpec:
 
     def test_missing_return_annotation_raises(self) -> None:
         def plan(x: int):  # type: ignore[no-untyped-def]
-            yield
+            yield from ()
 
         with pytest.raises(TypeError, match="return type annotation"):
             create_plan_spec(plan, {})
@@ -386,7 +386,7 @@ class TestUnresolvableAnnotation:
 
     def test_required_exotic_param_raises(self) -> None:
         def bad_plan(thing: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         with pytest.raises(UnresolvableAnnotationError) as exc_info:
             create_plan_spec(bad_plan, {})
@@ -403,7 +403,7 @@ class TestUnresolvableAnnotation:
         def ok_plan(
             thing: TestUnresolvableAnnotation._Exotic = default_val,
         ) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(ok_plan, {})
         assert spec.parameters[0].name == "thing"
@@ -412,14 +412,14 @@ class TestUnresolvableAnnotation:
         """**kwargs are never turned into widgets; no probe needed."""
 
         def ok_plan(**kw: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         spec = create_plan_spec(ok_plan, {})
         assert spec.parameters[0].kind is ParamKind.VAR_KEYWORD
 
     def test_error_message_contains_plan_and_param_name(self) -> None:
         def broken(widget: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
-            yield  # type: ignore
+            yield from ()
 
         with pytest.raises(UnresolvableAnnotationError, match="broken") as exc_info:
             create_plan_spec(broken, {})
@@ -457,7 +457,7 @@ class TestDispatchAnnotation:
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
         fields = _dispatch_annotation(
-            Set[_DetectorProtocol],
+            set[_DetectorProtocol],
             ParamKind.POSITIONAL_OR_KEYWORD,
             one_detector,
         )
@@ -539,17 +539,17 @@ class TestCollectArguments:
 
     def test_var_positional_sequence_expanded(self) -> None:
         spec = self._make_spec(self._param("vals", ParamKind.VAR_POSITIONAL))
-        args, kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
+        args, _kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
         assert args == (1, 2, 3)
 
     def test_var_positional_single_value_wrapped(self) -> None:
         spec = self._make_spec(self._param("vals", ParamKind.VAR_POSITIONAL))
-        args, kwargs = collect_arguments(spec, {"vals": 99})
+        args, _kwargs = collect_arguments(spec, {"vals": 99})
         assert args == (99,)
 
     def test_var_keyword_mapping_merged(self) -> None:
         spec = self._make_spec(self._param("kw", ParamKind.VAR_KEYWORD))
-        args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
+        _args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
         assert kwargs == {"a": 1, "b": 2}
 
     def test_var_keyword_non_mapping_raises(self) -> None:
@@ -562,7 +562,7 @@ class TestCollectArguments:
             self._param("x", ParamKind.POSITIONAL_OR_KEYWORD),
             self._param("y", ParamKind.POSITIONAL_OR_KEYWORD),
         )
-        args, kwargs = collect_arguments(spec, {"x": 1})
+        args, _kwargs = collect_arguments(spec, {"x": 1})
         assert args == (1,)
 
     def test_ordering_preserved(self) -> None:
@@ -675,7 +675,7 @@ class TestResolveArguments:
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
-                annotation=Set[_DetectorProtocol],
+                annotation=set[_DetectorProtocol],
                 default=Parameter.empty,
                 choices=["cam"],
                 multiselect=True,

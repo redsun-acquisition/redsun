@@ -35,7 +35,7 @@ class QtAppContainer(AppContainer):
         Configuration options passed to :meth:`AppContainer.__init__`.
     """
 
-    __slots__ = ("_qt_app", "_main_view")
+    __slots__ = ("_main_view", "_qt_app")
 
     def __init__(self, **config: Any) -> None:
         super().__init__(**config)

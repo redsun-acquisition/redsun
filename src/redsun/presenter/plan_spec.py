@@ -21,12 +21,11 @@ from enum import IntEnum
 from inspect import Parameter, _empty, signature
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Any,
     Literal,
-    Mapping,
     NamedTuple,
-    Sequence,
     get_args,
     get_origin,
     get_type_hints,
@@ -41,6 +40,9 @@ from redsun.presenter.utils import (
     isdevicesequence,
     isdeviceset,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -121,8 +123,8 @@ class ParamDescription:
     actions: Sequence[Action] | Action | None = None
     """Action metadata extracted from the parameter's default value, if any."""
 
-    device_proto: type[OADevice] | None = None
-    """The `OADevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
+    device_proto: type[Any] | None = None
+    """The device class or runtime-checkable protocol for model-backed parameters, if any; used for device look-up during argument resolution."""
 
     @property
     def has_default(self) -> bool:
@@ -159,7 +161,7 @@ class _FieldsFromAnnotation(NamedTuple):
 
     choices: list[str] | None = None
     multiselect: bool = False
-    device_proto: type[OADevice] | None = None
+    device_proto: type[Any] | None = None
 
 
 def _handle_literal(
@@ -297,7 +299,7 @@ def _try_dispatch_entry(
         if predicate(ann, kind):
             return handler(ann, devices)
         return None
-    except Exception:
+    except Exception:  # noqa: BLE001 — a failing predicate means "no match", never a crash
         return None
 
 

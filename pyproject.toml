@@ -25,26 +25,28 @@ classifiers = [
 ]
 license = { text = "Apache-2.0" }
 dependencies = [
-    "platformdirs>=4.3.8",
-    "pyyaml>=6.0.3",
-    "bluesky>=1.15.0",
+    "bluesky>=1.15.1",
+    "culsans>=0.11.0",
+    "dependency-injector>=4.49.1",
+    "ophyd-async>=0.20.1",
+    "platformdirs>=4.11.0",
     "psygnal>=0.15.1",
-    "typing-extensions>=4.15.0",
-    "dependency-injector>=4.49.0",
-    "ophyd-async>=0.17a5",
+    "pyyaml>=6.0.3",
+    "typing-extensions>=4.16.0",
 ]
 requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
-    "redsun[pyqt,zarr]",
-    "mypy>=1.20.0",
+    { include-group = "pyqt" },
+    { include-group = "zarr" },
+    "mypy>=2.3.0",
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-env>=1.1.5",
     "types-pyyaml>=6.0.12.20250915",
-    "ruff>=0.14.14",
+    "ruff>=0.15.22",
     "ophyd>=1.11.0",
     "griffe-fieldz>=0.4.0",
     "pytest-asyncio>=1.3.0",
@@ -55,20 +57,44 @@ docs = [
     "zensical>=0.0.24",
 ]
 
+qt-common = [
+    "magicgui>=0.10.2",
+    "qtpy>=2.4.3",
+]
+
+pyqt = [
+    {include-group = "qt-common"},
+    "pyqt6>=6.11.0",
+]
+
+pyside = [
+    {include-group = "qt-common"},
+    "pyside6>=6.11.0",
+]
+
+zarr = [
+    "acquire-zarr>=0.8.1",
+]
+
 [project.optional-dependencies]
 zarr = [
-    "acquire-zarr>=0.7.0",
+    "acquire-zarr>=0.8.1",
+]
+qt-common = [
+    "magicgui>=0.10.2",
+    "qtpy>=2.4.3",
 ]
 pyqt = [
-    "magicgui>=0.10.1",
-    "pyqt6>=6.10.2",
-    "qtpy>=2.4.3",
+    "redsun[qt-common]",
+    "pyqt6>=6.11.0",
 ]
 pyside = [
-    "magicgui>=0.10.1",
-    "pyside6>=6.9.1",
-    "qtpy>=2.4.3",
+    "redsun[qt-common]",
+    "pyside6>=6.11.0",
 ]
+
+[project.entry-points."redsun.plugins"]
+redsun = "plugins.yaml"
 
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
@@ -84,11 +110,14 @@ packages = ["src/redsun"]
 [tool.hatch.build.targets.sdist]
 include = [
   "src/redsun/**",
+  "benchmarks/**",
 ]
 
 [tool.mypy]
 files = "."
-exclude = ["docs", "tests"]
+exclude = ["docs"]
+mypy_path = ["src", "tests/container"]
+explicit_package_bases = true
 disable_error_code = [
     "import-untyped",
     "no-untyped-call"
@@ -123,11 +152,17 @@ ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
     # ignore missing docstrings in tests
-    "D101", 
-    "D102", 
+    "D101",
+    "D102",
     "D103",
     # ignore type check imports in tests
-    "TC"
+    "TC",
+    # defaults in plan signatures (incl. mutable/call defaults) are exactly
+    # what plan-spec introspection exercises
+    "B006",
+    "B008",
+    # naive datetimes mirror SessionPathProvider's local-time directory layout
+    "DTZ",
 ]
 
 [tool.ruff.lint.pydocstyle]

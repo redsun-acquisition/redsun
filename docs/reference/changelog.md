@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [Unreleased]
+## [0.10.0]
 
 ### Added
 
@@ -16,11 +16,52 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `AppContainer.connect_devices(mock=False)` — connects all registered ophyd-async devices
   via their async connect lifecycle. Call after `build()`. Pass `mock=True` to skip hardware
   communication in tests.
-- `DescriptorTreeView` grouped constructor form — accepts a `groups` argument of type
-  `list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]` built by the presenter
-  layer. When provided, the tree groups rows by device name (one header per device, leaf
-  labels strip the device-name prefix) instead of the `source` field prefix used by the flat
-  `(descriptors, readings)` form.
+- `FrameSink`, `StoreStateError`, and the process-wide storage registry
+  (`register_storage`, `get_storage`, `reset_group`, `clear_registry`).
+- culsans (>=0.11.0) as a runtime dependency.
+- `redsun.presenter.builtins` — built-in, reusable presenter components.
+  First entry: `StoragePresenter` (ported from redsun-mimir's
+  `FileStoragePresenter`), which owns the `SessionPathProvider`, exposes it
+  on the virtual container as the `path_provider` DI provider, and wires
+  plan names from `sig_pre_launch_notify`/`sig_plan_done`.
+- `redsun.plugins` entry point: redsun ships its own plugin manifest
+  (`plugins.yaml`), so built-in components resolve from configuration files
+  through the same discovery path as external plugins
+  (`plugin_name: redsun`, `plugin_id: storage`).
+- `BaseStorage.path_provider` read-only property.
+- `find_signals` accepts an optional `owner` keyword to scope the lookup to
+  one component's signal cache (ADR 0004).
+- `SinkFactory`, `StorageIO`, `OpenStore`, and `PathSignals` are exported from
+  `redsun.storage` — the backend protocols are part of the public contract.
+- `benchmarks/` — acquire-zarr dual-load benchmark (live view via
+  `bps.monitor` + disk storage, two detectors, inline processing callback).
+  Shipped in the sdist only, never in wheels, not collected by pytest.
+- Tutorial: [writing a custom storage backend](../tutorials/custom-storage-backend.md)
+  (`StorageIO`/`OpenStore` implementation driven through `BaseStorage`).
+
+### Changed (breaking)
+
+- `redsun.storage` rewritten per ADR 0002: `BaseStorage.sink()` returns a
+  `FrameSink` (culsans-backed) usable from async device logics and sync
+  document callbacks; `open()`/`close()` are explicit and idempotent.
+- Removed `StorageStateMachine`, `StorageState`, `InvalidStoreState`, and the
+  `FrameSender` async-generator API. `StoreStateError` replaces
+  `InvalidStoreState`.
+- Removed `redsun.device.DeviceMap` — ophyd-async now ships `DeviceMap` as a
+  built-in; import it from `ophyd_async.core` instead (downstream consumers
+  such as redsun-mimir should migrate on their next refactor).
+- Signal naming convention: `sig_snake_case` replaces `sigCamelCase`
+  (ADR 0004). `StoragePresenter` wires `sig_pre_launch_notify` /
+  `sig_plan_done`; `DescriptorTreeView.sig_property_changed` renamed.
+- Presenter/view protocols reworked for sound structural subtyping (ADR
+  0003): `PPresenter.name`/`devices` and `PView.name` are read-only property
+  members; the `Presenter`/`View` ABCs no longer inherit the protocols;
+  validation is a dual gate — constructor positional shape
+  (`(name, devices)` / `(name,)`) checked via `inspect` at
+  declaration/discovery, protocol compliance validated on built instances
+  (raising `TypeError`) — replacing the class-level attribute screen;
+  `AppContainer.presenters` and `.views` are typed `dict[str, PPresenter]`
+  / `dict[str, PView]`.
 
 ### Changed
 
@@ -34,15 +75,22 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `device()`, `presenter()`, `view()` field specifiers renamed to `declare_device()`,
   `declare_presenter()`, `declare_view()` for clarity. Update all container subclasses and
   imports accordingly.
-- Storage API temporarily reworked to make it compatible with `ophyd-async<0.17`; further
-  changes planned to support multi-source data writers via `DetectorDataLogic`.
 - `AppContainerMeta` metaclass replaced with `__init_subclass__` for container subclass
   registration.
 - Dropped `beartype` as a runtime dependency.
 - Updated CI tag pattern to support release candidates (e.g. `v0.10.0rc0`).
+- Re-enabled CI after the test-suite rewrite: the cross-platform test matrix
+  and Codecov upload run again, and docs deployment / package build depend on
+  green tests once more. CI mypy now uses the config-driven invocation (tests
+  and benchmarks in scope) with `QT_API` pinning the Qt binding per matrix
+  leg, and ruff checks the whole repository instead of `src/redsun` only.
 
 ### Removed
 - Removed `attrs` from dev dependencies — drop support for it in favor of `ophyd-async`.
+- Removed unused utilities: `redsun.utils.resolve_sync_or_async` and
+  `redsun.utils.descriptors.make_key` / `make_descriptor` / `make_reading` —
+  descriptors and readings come from ophyd-async signal backends; the
+  `parse_key` / `parse_map_key` helpers remain.
 
 ## [0.9.1] - 06-03-2026
 
@@ -259,6 +307,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.10.0]: https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/redsun-acquisition/redsun/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/redsun-acquisition/redsun/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/redsun-acquisition/redsun/compare/v0.8.0...v0.8.2

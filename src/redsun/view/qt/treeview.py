@@ -217,27 +217,29 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 class DescriptorTreeView(QtWidgets.QTreeWidget):
     """Two-column property tree for browsing and editing device settings.
 
+    Rows are grouped by the ``source`` field of each descriptor (one
+    header per device, leaf labels strip the device-name prefix).
+
     Parameters
     ----------
-    descriptors_or_groups : dict[str, Descriptor] or list[tuple[str, dict[str, Descriptor], dict[str, Reading[Any]]]]
-        Either a flat descriptor dict (first form) or a list of
-        ``(device_name, descriptors, readings)`` tuples (second form).
-    readings_or_parent : dict[str, Reading[Any]] or QtWidgets.QWidget or None
-        Flat reading dict when using the first form; optional parent
-        widget when using the second form.
+    descriptors : dict[str, Descriptor]
+        Mapping of canonical ``name-property`` keys to descriptors.
+    readings : dict[str, Reading[Any]]
+        Initial readings for the same keys; only ``reading["value"]``
+        is used.
     parent : QtWidgets.QWidget, optional
-        Optional parent widget (first form only).
+        Optional parent widget.
 
     Signals
     -------
-    sigPropertyChanged : Signal[str, str, Any]
+    sig_property_changed : Signal[str, str, Any]
         Emitted when the user commits an edit to a setting.
         - str: object name
         - str: property name
         - Any: new value
     """
 
-    sigPropertyChanged: Signal = Signal(str, str, object)
+    sig_property_changed: Signal = Signal(str, str, object)
 
     def __init__(
         self,
@@ -246,8 +248,6 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         parent: QtWidgets.QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-
-        self._groups = None
 
         self._descriptors = descriptors
         self._readings = {k: v["value"] for k, v in readings.items()}
@@ -323,7 +323,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
         owner, property = key.split("-", 1)
-        self.sigPropertyChanged.emit(owner, property, value)
+        self.sig_property_changed.emit(owner, property, value)
 
     def _add_leaf(
         self,

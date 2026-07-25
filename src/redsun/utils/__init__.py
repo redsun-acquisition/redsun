@@ -2,20 +2,14 @@
 
 Exposes:
 - `find_signals` — locate named signals in a `VirtualContainer`.
-- `resolve_sync_or_async` — resolve a ``SyncOrAsync[T]`` value to ``T``.
 """
 
 from __future__ import annotations
 
-import asyncio
-import inspect
-from typing import TYPE_CHECKING, Any, TypeVar, overload
-
-from redsun.engine import get_shared_loop
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Iterable
-    from concurrent.futures import Future
+    from collections.abc import Iterable
 
     from psygnal import SignalInstance
 
@@ -23,40 +17,47 @@ if TYPE_CHECKING:
 
 __all__ = [
     "find_signals",
-    "resolve_sync_or_async",
 ]
 
 
-T = TypeVar("T")
-
-
 def find_signals(
-    container: VirtualContainer, signal_names: Iterable[str]
+    container: VirtualContainer,
+    signal_names: Iterable[str],
+    owner: str | None = None,
 ) -> dict[str, SignalInstance]:
-    """Find signals in a `VirtualContainer` by name, regardless of owner.
+    """Find signals in a `VirtualContainer` by name, optionally scoped to an owner.
 
-    Searches all registered signal caches for each name in *signal_names*
-    and returns the first match found.  Names not present in any cache are
-    omitted from the result.
+    The signal registry is keyed by owner first (mirroring
+    ``container.signals[owner][signal]``): different components may expose
+    signals with the same name, and the owner name is what discerns them.
+    Pass *owner* to restrict the lookup to a single component's cache.
 
-    This helper avoids coupling callers to the owner's instance name, which
-    is assigned at runtime by the application container.
+    When *owner* is omitted, all registered caches are searched and the
+    first match per name wins — convenient when a signal name is known to
+    be unique, but ambiguous otherwise. Names (or owners) not present in
+    the registry are omitted from the result rather than raising.
 
     Parameters
     ----------
     container : VirtualContainer
         The virtual container holding registered signals.
     signal_names : Iterable[str]
-        Signal names to look up (e.g. ``["sigMotorMove", "sigConfigChanged"]``).
+        Signal names to look up (e.g. ``["sig_motor_move", "sig_config_changed"]``).
+    owner : str | None
+        Registry key of the owning component (its ``name``, or the alias
+        used at registration). If ``None``, every cache is searched.
 
     Returns
     -------
     dict[str, SignalInstance]
         Mapping of signal name to signal instance for each name found.
-        Names that are not found in any cache are omitted.
+        Names that are not found are omitted.
     """
     result: dict[str, SignalInstance] = {}
     remaining = set(signal_names)
+    if owner is not None:
+        cache = container.signals.get(owner, {})
+        return {name: cache[name] for name in remaining & cache.keys()}
     for cache in container.signals.values():
         for name in remaining & cache.keys():
             result[name] = cache[name]
@@ -64,31 +65,3 @@ def find_signals(
         if not remaining:
             break
     return result
-
-
-@overload
-def resolve_sync_or_async(value: Awaitable[T]) -> T: ...
-@overload
-def resolve_sync_or_async(value: T) -> T: ...
-def resolve_sync_or_async(value: Any) -> Any:
-    """Resolve a ``SyncOrAsync[T]`` value to its concrete ``T``.
-
-    If *value* is not a coroutine it is returned directly. If it is,
-    it will be submitted to the global shared event loop running
-    in a background thread.
-
-    Parameters
-    ----------
-    value :
-        Either a plain value ``T`` or a ``Coroutine[Any, Any, T]``.
-
-    Returns
-    -------
-    T
-        The resolved value.
-    """
-    if inspect.iscoroutine(value):
-        loop = get_shared_loop()
-        future: Future[Any] = asyncio.run_coroutine_threadsafe(value, loop)
-        return future.result()
-    return value
