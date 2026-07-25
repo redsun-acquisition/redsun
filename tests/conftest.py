@@ -30,8 +30,9 @@ def _has_display() -> bool:
     # X11 / Wayland display on Linux
     if sys.platform == "linux":
         return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
-    # macOS and Windows always have a display in normal environments
-    return True
+    else:
+        # macOS and Windows always have a display in normal environments
+        return True
 
 
 _SKIP_QT = pytest.mark.skip(
