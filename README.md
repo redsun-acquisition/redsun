@@ -15,4 +15,4 @@ A component-based, customizable application builder for scientific hardware orch
 See the [documentation] for more informations.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
-[documentation]: https://redsun-acquisition.github.io/redsun/main/
+[documentation]: https://redsun-acquisition.github.io/redsun/
