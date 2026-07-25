@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import pytest
 from event_model import DocumentRouter
 
 from redsun.virtual import IsInjectable, IsProvider, Signal, VirtualContainer
+
+if TYPE_CHECKING:
+    from typing import Any
 
 logger = logging.getLogger("redsun")
 logger.setLevel(logging.DEBUG)
@@ -17,16 +23,16 @@ class MockRouter(DocumentRouter):
     def __init__(self) -> None:
         super().__init__()
 
-    def event(self, doc: dict) -> None:  # type: ignore[override]
+    def event(self, doc: dict[str, Any]) -> None:  # type: ignore[override]
         logger.debug("MockRouter received event document")
 
-    def start(self, doc: dict) -> None:  # type: ignore[override]
+    def start(self, doc: dict[str, Any]) -> None:  # type: ignore[override]
         logger.debug("MockRouter received start document")
 
-    def stop(self, doc: dict) -> None:  # type: ignore[override]
+    def stop(self, doc: dict[str, Any]) -> None:  # type: ignore[override]
         logger.debug("MockRouter received stop document")
 
-    def descriptor(self, doc: dict) -> None:  # type: ignore[override]
+    def descriptor(self, doc: dict[str, Any]) -> None:  # type: ignore[override]
         logger.debug("MockRouter received descriptor document")
 
 
@@ -35,7 +41,7 @@ class MockCallable:
 
     name = "mock_callable"
 
-    def __call__(self, name: str, doc: dict) -> None:
+    def __call__(self, name: str, doc: dict[str, Any]) -> None:
         logger.debug(f"MockCallable received {name} document")
 
 
@@ -64,7 +70,7 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
     """Tests signal registration and cross-component connection via VirtualContainer."""
 
     class FirstMockOwner(IsProvider):
-        sigFirstSignal = Signal(int)
+        sig_first_signal = Signal(int)
 
         def __init__(self, container: VirtualContainer) -> None:
             self.container = container
@@ -77,7 +83,7 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
             assert x == 5
 
     class SecondMockOwner(IsInjectable):
-        sigSecondSignal = Signal(int)
+        sig_second_signal = Signal(int)
 
         def __init__(self, container: VirtualContainer) -> None:
             self.container = container
@@ -85,7 +91,7 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
 
         def inject_dependencies(self, container: VirtualContainer) -> None:
             container.register_signals(self)
-            container.signals["FirstMockOwner"]["sigFirstSignal"].connect(
+            container.signals["FirstMockOwner"]["sig_first_signal"].connect(
                 self.first_to_second
             )
 
@@ -101,15 +107,15 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
     second_owner.inject_dependencies(bus)
 
     # first owner can now connect to second owner's signal
-    bus.signals["SecondMockOwner"]["sigSecondSignal"].connect(
+    bus.signals["SecondMockOwner"]["sig_second_signal"].connect(
         first_owner.second_to_first
     )
 
     assert "FirstMockOwner" in bus.signals
     assert "SecondMockOwner" in bus.signals
 
-    first_owner.sigFirstSignal.emit(5)
-    second_owner.sigSecondSignal.emit(5)
+    first_owner.sig_first_signal.emit(5)
+    second_owner.sig_second_signal.emit(5)
 
 
 def test_virtual_container_psygnal_connection_only(bus: VirtualContainer) -> None:
@@ -119,8 +125,8 @@ def test_virtual_container_psygnal_connection_only(bus: VirtualContainer) -> Non
         assert x == 5
 
     class MockOwner:
-        sigSignalOne = Signal(int)
-        sigSignalTwo = Signal(int)
+        sig_signal_one = Signal(int)
+        sig_signal_two = Signal(int)
 
         @property
         def name(self) -> str:
@@ -128,15 +134,15 @@ def test_virtual_container_psygnal_connection_only(bus: VirtualContainer) -> Non
 
     owner = MockOwner()
 
-    bus.register_signals(owner, only=["sigSignalOne"])
+    bus.register_signals(owner, only=["sig_signal_one"])
 
     assert "MockOwner" in bus.signals
     assert len(bus.signals["MockOwner"]) == 1
-    assert "sigSignalOne" in bus.signals["MockOwner"]
-    assert "sigSignalTwo" not in bus.signals["MockOwner"]
+    assert "sig_signal_one" in bus.signals["MockOwner"]
+    assert "sig_signal_two" not in bus.signals["MockOwner"]
 
-    bus.signals["MockOwner"]["sigSignalOne"].connect(callback)
-    owner.sigSignalOne.emit(5)
+    bus.signals["MockOwner"]["sig_signal_one"].connect(callback)
+    owner.sig_signal_one.emit(5)
 
 
 def test_register_callbacks_document_router(bus: VirtualContainer) -> None:
@@ -180,10 +186,8 @@ def test_register_callbacks_callback_map(bus: VirtualContainer) -> None:
     router = MockRouter()
     cb = MockCallable()
 
-    bus.register_callbacks(
-        router,
-        callback_map={"router_key": router, "callable_key": cb},
-    )
+    callback_map: dict[str, Any] = {"router_key": router, "callable_key": cb}
+    bus.register_callbacks(router, callback_map=callback_map)
 
     assert "router_key" in bus.callbacks
     assert "callable_key" in bus.callbacks
@@ -194,11 +198,9 @@ def test_register_callbacks_callback_map(bus: VirtualContainer) -> None:
 def test_register_callbacks_callback_map_rejects_invalid(bus: VirtualContainer) -> None:
     """callback_map validates each entry and raises TypeError on bad values."""
     router = MockRouter()
+    callback_map: dict[str, Any] = {"good": router, "bad": MockBadCallable()}
     with pytest.raises(TypeError):
-        bus.register_callbacks(
-            router,
-            callback_map={"good": router, "bad": MockBadCallable()},
-        )
+        bus.register_callbacks(router, callback_map=callback_map)
 
 
 def test_is_provider_protocol(bus: VirtualContainer) -> None:
@@ -234,9 +236,9 @@ def test_register_signals_all_signals_survive(bus: VirtualContainer) -> None:
     """
 
     class MultiSignalOwner:
-        sigFirst = Signal(int)
-        sigSecond = Signal(str)
-        sigThird = Signal()
+        sig_first = Signal(int)
+        sig_second = Signal(str)
+        sig_third = Signal()
 
         @property
         def name(self) -> str:
@@ -247,9 +249,9 @@ def test_register_signals_all_signals_survive(bus: VirtualContainer) -> None:
 
     assert "MultiSignalOwner" in bus.signals
     registered = bus.signals["MultiSignalOwner"]
-    assert "sigFirst" in registered
-    assert "sigSecond" in registered
-    assert "sigThird" in registered
+    assert "sig_first" in registered
+    assert "sig_second" in registered
+    assert "sig_third" in registered
     assert len(registered) == 3
 
 
@@ -279,3 +281,38 @@ def test_virtual_container_configuration(bus: VirtualContainer) -> None:
     assert bus.session == "test-session"
     assert bus.frontend == "pyqt"
     assert bus.metadata == {"key": "value"}
+
+
+def test_containers_do_not_share_state() -> None:
+    """Two containers in one process must not leak config, signals, or callbacks.
+
+    Regression test: the config/signal/callback providers were class-level,
+    so the first container's cached config masked every later container's
+    configuration, and registrations accumulated process-wide.
+    """
+
+    class _Owner:
+        sig_ping = Signal()
+
+        def __init__(self) -> None:
+            self.name = "owner"
+
+    container_a = VirtualContainer()
+    container_b = VirtualContainer()
+
+    container_a._set_configuration(
+        {"schema_version": 1.0, "frontend": "pyqt", "session": "session-a"}
+    )
+    container_b._set_configuration(
+        {"schema_version": 1.0, "frontend": "pyqt", "session": "session-b"}
+    )
+    assert container_a.session == "session-a"
+    assert container_b.session == "session-b"
+
+    container_a.register_signals(_Owner())
+    assert "owner" in container_a.signals
+    assert "owner" not in container_b.signals
+
+    container_a.register_callbacks(MockRouter())
+    assert "mock_router" in container_a.callbacks
+    assert "mock_router" not in container_b.callbacks

@@ -121,8 +121,8 @@ class ParamDescription:
     actions: Sequence[Action] | Action | None = None
     """Action metadata extracted from the parameter's default value, if any."""
 
-    device_proto: type[OADevice] | None = None
-    """The `OADevice` protocol/class for model-backed parameters, if any; used for device look-up during argument resolution."""
+    device_proto: type[Any] | None = None
+    """The device class or runtime-checkable protocol for model-backed parameters, if any; used for device look-up during argument resolution."""
 
     @property
     def has_default(self) -> bool:
@@ -159,7 +159,7 @@ class _FieldsFromAnnotation(NamedTuple):
 
     choices: list[str] | None = None
     multiselect: bool = False
-    device_proto: type[OADevice] | None = None
+    device_proto: type[Any] | None = None
 
 
 def _handle_literal(

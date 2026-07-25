@@ -23,7 +23,7 @@ is called with a configuration file, Redsun:
 1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
 2. **Queries entry points** - looks up installed packages registered under the `redsun.plugins` entry point group.
 3. **Loads manifests** - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.
-4. **Validates protocols** - each loaded class is checked against the expected protocol ([`Device`][redsun.device.Device], [`Presenter`][redsun.presenter.Presenter], or [`View`][redsun.view.View]).
+4. **Validates components** - devices are checked at discovery (must subclass `ophyd_async.core.Device`); presenter and view instances are validated against [`PPresenter`][redsun.presenter.PPresenter] / [`PView`][redsun.view.PView] when the container builds (see [Protocol validation](#protocol-validation)).
 5. **Creates the container** - a dynamic container class is assembled with the discovered components.
 
 ## Component manifest
@@ -101,21 +101,56 @@ The `plugin_name` and `plugin_id` keys are used for plugin resolution and are no
 
 ## Protocol validation
 
-Before a plugin class is used, `redsun` verifies it implements the expected protocol:
+Validation happens at two different moments, matching where the required
+information actually exists:
 
-- **Devices** must be subclasses of [`Device`][redsun.device.Device] or structurally implement the [`PDevice`][redsun.device.PDevice] protocol.
-- **Presenters** must be subclasses of [`Presenter`][redsun.presenter.Presenter] or structurally implement the [`PPresenter`][redsun.presenter.PPresenter] protocol.
-- **Views** must be subclasses of [`View`][redsun.view.View] or structurally implement the [`PView`][redsun.view.PView] protocol.
+- **Devices** are checked at discovery time: the loaded class must subclass
+  `ophyd_async.core.Device`. This is a sound class-level check because the
+  device layer is nominal.
+- **Presenters and views** pass a **dual gate**, each part checked where
+  the information exists:
+    1. *Constructor signature (class level, at discovery)* — the leading
+       positional parameters must be exactly `(name, devices)` for
+       presenters and `(name,)` for views; further parameters must be
+       keyword-assignable (the container calls
+       `cls(*positionals, **config_kwargs)` and has no control over the
+       keywords). Plugins failing this gate are rejected before
+       instantiation.
+    2. *Protocol compliance (instance level, at build)* — the constructed
+       instance must satisfy [`PPresenter`][redsun.presenter.PPresenter]
+       (exposing `name` and `devices`) or [`PView`][redsun.view.PView]
+       (exposing `name` and `view_position`) structurally. Attributes
+       assigned in `__init__` are only visible here; a non-compliant
+       instance raises a `TypeError` naming the missing members.
 
-Classes that satisfy the protocol structurally (without inheriting from the base class) are registered as virtual subclasses via [`ABCMeta.register()`][abc.ABCMeta.register].
+Inheriting the [`Presenter`][redsun.presenter.Presenter] /
+[`View`][redsun.view.View] ABCs is optional — compliance is purely
+structural (see
+[ADR 0003](decisions/0003-structural-subtyping-for-presenters-and-views.md)).
+
+## Built-in components
+
+redsun itself ships a plugin manifest under the `redsun` entry point, so
+built-in components resolve through the same discovery path as external
+plugins — no special-casing in configuration files:
+
+```yaml
+presenters:
+  storage:
+    plugin_name: redsun
+    plugin_id: storage
+```
+
+The available built-ins are documented in
+[Presenters](architecture/presenters.md#built-in-presenters).
 
 ## Inline vs. config-based registration
 
 The plugin system is used when building from configuration files via
 [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config].
 When using the declarative class-based approach (defining a container subclass with
-[`device()`][redsun.containers.components.device], [`presenter()`][redsun.containers.components.presenter] or [`view()`][redsun.containers.components.view] field functions), component classes are
-passed directly as the first argument to the respective function and do not go through plugin discovery.
+[`declare_device()`][redsun.containers.components.declare_device], [`declare_presenter()`][redsun.containers.components.declare_presenter] or [`declare_view()`][redsun.containers.components.declare_view] field functions), component classes are
+passed directly as the first argument to the respective function and do not go through plugin discovery. Build-time protocol validation applies identically to both paths.
 
 Both approaches produce the same result: an
 [`AppContainer`][redsun.containers.container.AppContainer] with registered device,

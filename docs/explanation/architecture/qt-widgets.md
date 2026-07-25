@@ -100,7 +100,7 @@ tree = DescriptorTreeView(
     device.read_configuration(),
     parent=self,
 )
-tree.sigPropertyChanged.connect(on_property_changed)
+tree.sig_property_changed.connect(on_property_changed)
 ```
 
 The view groups properties by their `source` field. Properties whose source

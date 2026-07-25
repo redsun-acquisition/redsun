@@ -20,8 +20,8 @@ from event_model.documents import Document
 
 class MyComponent:
 
-    mySignal: Signal()
-    myOtherSignal: Signal(int)
+    my_signal: Signal()
+    my_other_signal: Signal(int)
 
     my_provider: dict[str, Any] = {}
 
@@ -33,7 +33,7 @@ class MyComponent:
 
     def register_providers(self, container: VirtualContainer) -> None:
         # register a signal via "register signals", which can be accessed via
-        # container.signals["MyComponent"]["mySignal"]
+        # container.signals["MyComponent"]["my_signal"]
         container.register_signals(self)
 
         # you can also provide an alias for the component to be cached
@@ -42,7 +42,7 @@ class MyComponent:
         # you can selectively specify which signal to expose via the "only" keyword
         # and provide an iterable object containing names matching the signal attributes
         # you wish to register, hiding the others
-        container.register_signals(self, only=["mySignal"])
+        container.register_signals(self, only=["my_signal"])
 
         # you can register your callbacks; by default the owner's name attribute
         # is used as the registry key; if your component subclasses DocumentRouter
@@ -89,7 +89,7 @@ class MyOtherComponent:
         # to your own slots, to provide event-based communication
         # between components; be sure to handle the case
         # where the component might not be existent
-        container.signals["MyComponent"]["MySignal"].connect(self.my_slot)
+        container.signals["MyComponent"]["my_signal"].connect(self.my_slot)
 
         # get the currently available callbacks so you can consume RunEngine documents;
         # this is useful when your component contains a RunEngine itself and you wish

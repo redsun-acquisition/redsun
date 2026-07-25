@@ -230,14 +230,14 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
     Signals
     -------
-    sigPropertyChanged : Signal[str, str, Any]
+    sig_property_changed : Signal[str, str, Any]
         Emitted when the user commits an edit to a setting.
         - str: object name
         - str: property name
         - Any: new value
     """
 
-    sigPropertyChanged: Signal = Signal(str, str, object)
+    sig_property_changed: Signal = Signal(str, str, object)
 
     def __init__(
         self,
@@ -323,7 +323,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
         owner, property = key.split("-", 1)
-        self.sigPropertyChanged.emit(owner, property, value)
+        self.sig_property_changed.emit(owner, property, value)
 
     def _add_leaf(
         self,

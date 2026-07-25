@@ -1,3 +1,1 @@
-from ._vector import DeviceMap
-
-__all__ = ["DeviceMap"]
+__all__: list[str] = []

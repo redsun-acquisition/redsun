@@ -32,7 +32,7 @@ def test_base_view(bus: VirtualContainer) -> None:
 
 
 @pytest.mark.qt
-def test_presenter_is_provider(bus: VirtualContainer) -> None:
+def test_presenter_is_provider() -> None:
     """Test that a presenter can optionally implement IsProvider."""
 
     class ProviderView(QtView):
@@ -42,8 +42,12 @@ def test_presenter_is_provider(bus: VirtualContainer) -> None:
         ) -> None:
             super().__init__(name)
 
-        def register_providers(self, container: VirtualContainer) -> None:
+        def register_providers(self, _: VirtualContainer) -> None:
             pass  # would register DI providers here
+
+        @property
+        def view_position(self) -> ViewPosition:
+            return ViewPosition.CENTER
 
     app = QtW.QApplication.instance() or QtW.QApplication([])
     assert app is not None
@@ -53,7 +57,7 @@ def test_presenter_is_provider(bus: VirtualContainer) -> None:
     assert issubclass(ProviderView, IsProvider)
 
 
-def test_view_is_injectable(bus: VirtualContainer) -> None:
+def test_view_is_injectable() -> None:
     """Test that a view can optionally implement IsInjectable."""
 
     class InjectableView(View, IsInjectable):
@@ -64,7 +68,7 @@ def test_view_is_injectable(bus: VirtualContainer) -> None:
         def view_position(self) -> ViewPosition:
             return ViewPosition.LEFT
 
-        def inject_dependencies(self, container: VirtualContainer) -> None:
+        def inject_dependencies(self, _: VirtualContainer) -> None:
             pass  # would pull providers from container here
 
     view = InjectableView("injectable_view")
@@ -73,7 +77,7 @@ def test_view_is_injectable(bus: VirtualContainer) -> None:
 
 
 @pytest.mark.qt
-def test_base_qt_view(bus: VirtualContainer) -> None:
+def test_base_qt_view() -> None:
     """Test basic QtView functionality."""
 
     class TestQtView(QtView):
@@ -93,3 +97,34 @@ def test_base_qt_view(bus: VirtualContainer) -> None:
     assert isinstance(view, PView)
     assert view.name == "qt_view"
     assert view.view_position == ViewPosition.CENTER
+
+
+def test_property_based_view_satisfies_protocol() -> None:
+    """Read-only protocol members accept property-based, non-Qt implementers."""
+
+    class _HeadlessView:
+        def __init__(self, name: str, /) -> None:
+            self._name = name
+
+        @property
+        def name(self) -> str:
+            return self._name
+
+        @property
+        def view_position(self) -> ViewPosition:
+            return ViewPosition.CENTER
+
+    view: PView = _HeadlessView("h")  # static check
+    assert isinstance(view, PView)  # runtime check
+
+
+def test_attribute_based_view_satisfies_protocol() -> None:
+    """Plain instance attributes satisfy the read-only protocol members."""
+
+    class _AttrView:
+        def __init__(self, name: str, /) -> None:
+            self.name = name
+            self.view_position = ViewPosition.LEFT
+
+    view: PView = _AttrView("a")  # static check
+    assert isinstance(view, PView)

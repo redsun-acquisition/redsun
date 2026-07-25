@@ -1,14 +1,15 @@
 # Devices
 
-A `Device` class represents an interface with a hardware device.
+A device represents an interface with a hardware component.
 
-`redsun` delegates the device layer entirely to [ophyd-async](https://bluesky.github.io/ophyd-async/).
-The `redsun.device` module is a re-export namespace — all device primitives are imported from
-`ophyd_async.core` and re-exported so that application code never needs to import from
-`ophyd_async` directly.
+`redsun` delegates the device layer entirely to
+[ophyd-async](https://bluesky.github.io/ophyd-async/): device primitives are
+imported directly from `ophyd_async.core`. The `redsun.device` module only
+hosts redsun-specific device protocols (currently
+[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown]).
 
 ```python
-from redsun.device import Device, StandardReadable, SignalRW, soft_signal_rw
+from ophyd_async.core import Device, StandardReadable, SignalRW, soft_signal_rw
 ```
 
 ## Choosing a base class
@@ -17,12 +18,13 @@ ophyd-async provides several base classes depending on the complexity of your de
 
 | Base class | Use when |
 |------------|----------|
-| [`Device`][redsun.device.Device] | bare async device with no built-in read/describe logic |
-| [`StandardReadable`][redsun.device.StandardReadable] | readable device that composes signals into `read()` / `describe()` automatically |
-| [`StandardDetector`][redsun.device.StandardDetector] | detector with a controller/writer split and a built-in trigger/acquire/collect lifecycle |
-| [`StandardFlyer`][redsun.device.StandardFlyer] | flyer device that runs asynchronously and emits data at completion |
+| `Device` | bare async device with no built-in read/describe logic |
+| `StandardReadable` | readable device that composes signals into `read()` / `describe()` automatically |
+| `StandardDetector` | detector composed from trigger/acquire/data logic, with a built-in prepare/kickoff/complete/collect lifecycle |
+| `StandardFlyer` | flyer device that runs asynchronously and emits data at completion |
+| `DeviceMap` | a `Device` holding string-keyed child devices (e.g. motor axes) |
 
-For most simple devices, [`StandardReadable`][redsun.device.StandardReadable] is the right starting point.
+For most simple devices, `StandardReadable` is the right starting point.
 
 ## Signals
 
@@ -30,20 +32,20 @@ Signals are the typed, named attributes of a device. ophyd-async provides four s
 
 | Signal type | bluesky protocols | Description |
 |-------------|-------------------|-------------|
-| [`SignalR[T]`][redsun.device.SignalR] | `Readable[T]`, `Subscribable[T]` | read-only |
-| [`SignalW[T]`][redsun.device.SignalW] | `HasName`, `Movable[T]` | write-only |
-| [`SignalRW[T]`][redsun.device.SignalRW] | `Readable[T]`, `Subscribable[T]`, `Movable[T]` | read-write |
-| [`SignalX`][redsun.device.SignalX] | `HasName`, `Triggerable` | trigger / execute |
+| `SignalR[T]` | `Readable[T]`, `Subscribable[T]` | read-only |
+| `SignalW[T]` | `HasName`, `Movable[T]` | write-only |
+| `SignalRW[T]` | `Readable[T]`, `Subscribable[T]`, `Movable[T]` | read-write |
+| `SignalX` | `HasName`, `Triggerable` | trigger / execute |
 
 ### Soft signals
 
 For simulation and testing, soft signals hold their value in memory.
-Use [`soft_signal_rw`][redsun.device.soft_signal_rw] to create a read-write soft signal and
-[`soft_signal_r_and_setter`][redsun.device.soft_signal_r_and_setter] to create a read-only signal
-paired with a programmatic setter:
+Use `soft_signal_rw` to create a read-write soft signal and
+`soft_signal_r_and_setter` to create a read-only signal paired with a
+programmatic setter:
 
 ```python
-from redsun.device import StandardReadable, soft_signal_rw
+from ophyd_async.core import StandardReadable, soft_signal_rw
 
 class MyStage(StandardReadable):
     def __init__(self, name: str) -> None:
@@ -70,36 +72,41 @@ RE(bp.count([stage]))           # read all signals registered by StandardReadabl
 
 ## Detectors
 
-[`StandardDetector`][redsun.device.StandardDetector] separates hardware control from data writing
-through the [`DetectorController`][redsun.device.DetectorController] and
-[`DetectorWriter`][redsun.device.DetectorWriter] protocols:
+`StandardDetector` is assembled by **composition** from three logic classes,
+each owning one concern:
+
+| Logic class | Concern |
+|---|---|
+| `DetectorTriggerLogic` | trigger configuration: `prepare_internal` / `prepare_edge` / `prepare_level`, deadtime |
+| `DetectorAcquireLogic` | acquisition lifecycle: `ensure_ready` (stage), `start_acquiring` (kickoff/trigger), `wait_for_idle`, `ensure_stopped` (unstage) |
+| `DetectorDataLogic` | data handling: `prepare_unbounded` / `prepare_single` return the data providers `complete()` and `collect()` operate on |
 
 ```python
-from redsun.device import (
-    StandardDetector,
-    DetectorController,
-    DetectorWriter,
-    TriggerInfo,
-    DetectorTrigger,
-)
+from ophyd_async.core import StandardDetector
 
-class MyController(DetectorController):
-    async def prepare(self, trigger_info: TriggerInfo) -> None: ...
-    async def arm(self) -> None: ...
-    async def disarm(self) -> None: ...
-    async def wait_for_idle(self) -> None: ...
-
-    @property
-    def trigger_types(self) -> tuple[DetectorTrigger, ...]: ...
-
-class MyDetector(StandardDetector):
-    def __init__(self, name: str) -> None:
-        super().__init__(
-            controller=MyController(),
-            writer=MyWriter(),
-            name=name,
-        )
+det = StandardDetector.__new__(StandardDetector)
+det.add_detector_logics(trigger_logic, acquire_logic, data_logic)
+StandardDetector.__init__(det, name="det")
 ```
+
+### Writing acquired data
+
+Detector data logics meet redsun's storage layer through
+[`BaseStorage`][redsun.storage.BaseStorage]: the trigger logic registers a
+[`StreamSpec`][redsun.storage.StreamSpec] at prepare time, the data logic
+obtains a [`FrameSink`][redsun.storage.FrameSink] and builds its
+`StreamResourceDataProvider` from `uri_for` / `resource_info_for` /
+`signal_for`, and the acquire logic pushes frames with `await sink.put(...)`
+from kickoff onwards. Devices never see the path provider — only the
+storage instance, resolved through the
+[storage registry][redsun.storage.get_storage].
+
+The full contract — including when to open eagerly versus lazily, and how a
+live view streams frames without creating a store — is documented in
+[Session storage](../storage.md) and
+[ADR 0002](../decisions/0002-storage-dual-context-redesign.md). The
+reference implementation of both patterns lives in
+`tests/sdk/storage/test_integration_plans.py`.
 
 ## Connecting devices
 
@@ -124,5 +131,5 @@ app.connect_devices(mock=True)
 ## redsun-specific protocols
 
 The only redsun-specific protocol in the device layer is
-[`HasCache`][redsun.device.HasCache], which expresses that a device can cache its most
-recent reading for use in the presenter layer.
+[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown], which marks a
+device as supporting an asynchronous shutdown at application teardown.

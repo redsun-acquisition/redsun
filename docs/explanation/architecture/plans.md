@@ -94,8 +94,8 @@ Each parameter becomes a `ParamDescription` with:
 |-------|---------|
 | `annotation` | stripped type (no `Annotated` wrapper) |
 | `choices` | string labels for `Literal` or device params |
-| `multiselect` | True for `Sequence[PDevice]` / `*args: PDevice` |
-| `device_proto` | the `PDevice` protocol/class for device params |
+| `multiselect` | True for `Sequence[...]` / `*args` device parameters |
+| `device_proto` | the device class or runtime-checkable protocol for device params |
 | `actions` | `Action` metadata if the default is an `Action` |
 
 ### Annotation dispatch
@@ -136,35 +136,23 @@ engine(my_plan(*args, **kwargs))
 
 `redsun.engine.plan_stubs` provides stubs that compose inside larger plans.
 
-### Cache stubs
-
-`HasCache` devices accumulate readings during a plan. The stubs emit custom
-`Msg` objects handled by the `RunEngine`:
-
-```python
-from redsun.engine.plan_stubs import read_and_stash, clear_cache
-
-# trigger, read, and stash in one shot
-readings = yield from read_and_stash([camera], [camera], stream="primary")
-
-# clear between acquisitions
-yield from clear_cache(camera, wait=True)
-```
-
-The `RunEngine` dispatches `"stash"` and `"clear_cache"` messages to
-`_stash` and `_clear_cache` handlers, which call `obj.stash()` and
-`obj.clear()` and track their statuses via the group mechanism.
-
 ### Action flow-control stubs
 
 ```python
-from redsun.engine.plan_stubs import wait_for_actions, read_while_waiting
+import redsun.engine.plan_stubs as rps
 
-# block until any latch in the map changes state (with timeout)
-result = yield from wait_for_actions(action.event_map, timeout=0.016)
+# block until any latch in the map changes state, polling at `timeout`
+name, latch = yield from rps.wait_for_actions(action.event_map, timeout=0.016)
+```
 
-# read at 60 Hz until an action fires
-event = yield from read_while_waiting([camera], action.event_map)
+### Descriptor stubs
+
+```python
+import redsun.engine.plan_stubs as rps
+
+# gather descriptors from Readable / Collectable devices inside a plan
+descriptor = yield from rps.describe(readable)
+descriptors = yield from rps.describe_collect(collectable)
 ```
 
 ---

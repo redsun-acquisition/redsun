@@ -23,7 +23,7 @@ def _simple_spec() -> PlanSpec:
     """Build a minimal plan spec with one int parameter."""
 
     def plan(frames: int = 1) -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 
@@ -32,7 +32,7 @@ def _literal_spec() -> PlanSpec:
     """Build a plan spec with a Literal parameter."""
 
     def plan(egu: Literal["um", "mm"] = "um") -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 
@@ -42,7 +42,7 @@ def _togglable_spec() -> PlanSpec:
 
     @continous(togglable=True, pausable=False)
     def plan() -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 
@@ -52,7 +52,7 @@ def _pausable_spec() -> PlanSpec:
 
     @continous(togglable=True, pausable=True)
     def plan() -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 
@@ -65,7 +65,7 @@ def _action_spec() -> PlanSpec:
         name: str = "snap"
 
     def plan(frames: int = 1, /, snap: Action = Snap()) -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 
@@ -80,7 +80,7 @@ def _togglable_action_spec() -> PlanSpec:
         toggle_states: tuple[str, str] = ("Start", "Stop")
 
     def plan(frames: int = 1, /, stream: Action = Stream()) -> MsgGenerator[None]:
-        yield
+        yield from ()
 
     return create_plan_spec(plan, {})
 

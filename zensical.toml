@@ -52,6 +52,7 @@ nav = [
     { "Home" = "index.md" },
     { "Tutorials" = [
         "tutorials/index.md",
+        { "Writing a custom storage backend" = "tutorials/custom-storage-backend.md" },
     ]},
     { "How-to guides" = [
         "how-to/index.md",
@@ -86,6 +87,12 @@ nav = [
             { "Plans" = "explanation/architecture/plans.md" },
             { "Qt widgets" = "explanation/architecture/qt-widgets.md" },
             { "Virtual container" = "explanation/architecture/virtual.md" },
+        ]},
+        { "Decisions" = [
+            { "1. Record architecture decisions" = "explanation/decisions/0001-record-architecture-decisions.md" },
+            { "2. Storage dual-context redesign" = "explanation/decisions/0002-storage-dual-context-redesign.md" },
+            { "3. Structural subtyping for presenters and views" = "explanation/decisions/0003-structural-subtyping-for-presenters-and-views.md" },
+            { "4. Owner-scoped signal lookup" = "explanation/decisions/0004-owner-scoped-signal-lookup.md" },
         ]},
     ]},
 ]

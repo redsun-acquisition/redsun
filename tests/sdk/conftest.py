@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -18,7 +17,6 @@ def RE() -> RunEngine:
 
 
 @pytest.fixture(scope="function")
-def bus() -> Generator[VirtualContainer, None, None]:
-    container = VirtualContainer()
-    yield container
-    container._config.reset()
+def bus() -> VirtualContainer:
+    # containers are fully instance-scoped; no shared state to reset
+    return VirtualContainer()

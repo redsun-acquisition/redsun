@@ -52,9 +52,14 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     that also acts as a runtime signal bus and data sharing layer for an application.
     """
 
-    _signals = dip.Factory(dict[str, SignalCache])
-    _callbacks = dip.Factory(dict[str, CallbackType])
-    _config = dip.Singleton(_FrozenConfig)
+    def __init__(self) -> None:
+        super().__init__()
+        # instance-scoped providers: class-level providers would be shared
+        # across every container in the process, leaking config, signal,
+        # and callback registrations between containers
+        self._signals = dip.Factory(dict[str, SignalCache])
+        self._callbacks = dip.Factory(dict[str, CallbackType])
+        self._config = dip.Singleton(_FrozenConfig)
 
     @property
     def schema_version(self) -> float:
