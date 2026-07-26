@@ -278,8 +278,11 @@ def test_queue_shutdown_is_not_an_error(
 ) -> None:
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         backend.close()
-        assert wait_until(lambda: "queue shut down" in caplog.text)
+        # the drain logs its exit reason before clearing `running`, so waiting
+        # on the flag orders the assertions instead of racing the log
+        assert wait_until(lambda: not backend.running.is_set())
 
+    assert "queue shut down" in caplog.text
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
@@ -288,8 +291,9 @@ def test_drain_cancellation_is_not_an_error(
 ) -> None:
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         assert backend._run_task.cancel()
-        assert wait_until(lambda: "Dispatch cancelled" in caplog.text)
+        assert wait_until(lambda: not backend.running.is_set())
 
+    assert "Dispatch cancelled" in caplog.text
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
@@ -310,11 +314,11 @@ def test_unexpected_drain_failure_is_logged(
 
     with caplog.at_level(logging.ERROR, logger="redsun"):
         failing = set_async_backend()
-        assert wait_until(lambda: "Dispatch stopped: loop gone" in caplog.text)
+        assert wait_until(lambda: not failing.running.is_set())
 
+    assert "Dispatch stopped: loop gone" in caplog.text
     record = next(r for r in caplog.records if "Dispatch stopped" in r.message)
     assert record.exc_info is not None
-    assert not failing.running.is_set()
 
 
 def test_dead_weak_callback_is_skipped(backend: CulsansAsyncioBackend) -> None:
