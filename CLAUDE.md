@@ -2,27 +2,14 @@
 
 Single source of conventions for agents (Claude, Copilot) and contributors — cross-link, don't duplicate.
 
-## Repository layout
+Things the tree does not show:
 
-```
-src/redsun/
-  virtual/       # VirtualContainer: DI + psygnal signal bus + document callbacks
-  containers/    # AppContainer, build phases, YAML config, plugin discovery
-                 #   qt/ — Qt-specific container + main view
-  device/        # device protocols (HasAsyncShutdown); DeviceMap comes from ophyd-async
-  engine/        # RunEngine wrapper, actions, plan stubs, exceptions
-  presenter/     # Presenter ABC, plan_spec, utils; builtins (StoragePresenter)
-  view/          # View base; qt/ — widget factory, treeview, sequence edit
-  storage/       # BaseStorage/SinkFactory, FrameSink, registry, path provider, FrameRouter
-                 #   backends/ — _memory, _acquire_zarr
-  common/ utils/ aio.py log.py
-docs/            # zensical + mkdocstrings, Diataxis (see below)
-benchmarks/      # storage performance benchmarks — not tests, sdist-only
-                 #   run: uv run python benchmarks/bench_acquire_zarr.py
-tests/sdk/       # per-subsystem unit tests
-tests/container/ # container build/plugin-discovery tests + mock_pkg fixtures
-pyproject.toml   # all tool config: pytest, ruff, mypy, coverage
-```
+- `src/redsun/device/` holds device protocols only — `DeviceMap` comes from
+  ophyd-async, not from this package.
+- `benchmarks/` are not tests and are never collected by pytest; they ship in
+  the sdist only. Run one with
+  `uv run python benchmarks/bench_acquire_zarr.py`.
+- `pyproject.toml` carries all tool config: pytest, ruff, mypy, coverage.
 
 ## Build & validate
 
@@ -145,20 +132,8 @@ uv run zensical build                   # docs
 
 ## Docs conventions
 
-- Diataxis under `docs/`: `tutorials/` (learning), `how-to/` (task),
-  `explanation/` (rationale), `reference/api/` (mkdocstrings-generated facts).
-- One authoritative source per fact; cross-link instead of restating.
-- Material-style admonitions (`!!! warning`), mermaid fences for diagrams.
-- Reference pages are generated from docstrings — fix the docstring, not the
-  `.md`, when reference content is wrong.
-- Architectural decisions are recorded as ADRs under
-  `docs/explanation/decisions/` (numbered, `COPYME` template — same
-  convention as ophyd-async). Architecture changes get a new ADR; superseded
-  ADRs are marked, not edited. Wire new ADRs into the `zensical.toml` nav and
-  `docs/explanation/index.md`.
-- **A green `zensical build` does not mean the docs are correct.** Broken
-  mkdocstrings xrefs do not fail the build. When changing public API, grep
-  `docs/` for the old symbol name and fix references by hand.
+See the `docs-conventions` skill — Diataxis layout, ADR recording, and the
+mkdocstrings pitfalls that a green `zensical build` will not catch.
 
 ## Response style (agents)
 
