@@ -93,7 +93,6 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
                     "Ensure the view has a 'view_position' attribute set to a valid ViewPosition value."
                 )
         if len(centers) == 0:
-            # no center widgets, do nothing
             pass
         elif len(centers) > 1:
             center_tab = QtWidgets.QTabWidget()
@@ -101,7 +100,6 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
                 center_tab.addTab(widget, widget.objectName())
             self.setCentralWidget(center_tab)
         else:
-            # only one center widget, add it directly
             self.setCentralWidget(centers.pop())
 
         # TODO: this should be customizable by the user

@@ -390,10 +390,9 @@ def create_plan_widget(
     page_layout.setContentsMargins(4, 4, 4, 4)
     page_layout.setSpacing(4)
 
-    # Build device + parameter widgets and assemble the two group boxes
     device_widgets, param_widgets = _build_param_widgets(spec)
 
-    # Combine into one flat list for the container (preserves .parameters access)
+    # a flat list is what keeps `Container.parameters` reachable
     all_widgets = device_widgets + param_widgets
     container = mgw.Container(widgets=all_widgets)
 

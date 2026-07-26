@@ -99,10 +99,8 @@ class QtAppContainer(AppContainer):
             views=cast("dict[str, QtView]", self.views),
         )
 
-        # 4. Wire shutdown and start psygnal bridge
         self._qt_app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
 
-        # 6. Show and exec
         self._main_view.show()
         sys.exit(self._qt_app.exec())
