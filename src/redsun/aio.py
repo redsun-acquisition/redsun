@@ -119,12 +119,19 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
         super().__init__("culsans")
         self._queue: Queue[QueueItem] = Queue()
         self._running = AwaitableEvent()
+        self._draining = False
         self._tasks: set[asyncio.Task[None]] = set()
+
+        # the queue holds callbacks from here on, so work queued before the
+        # loop thread picks the drain up is still delivered; marking the
+        # backend running only once the drain executes would expose a window
+        # in which callers see it as inert when it is not
+        self._running.set()
         self._run_task = asyncio.run_coroutine_threadsafe(self.run(), get_shared_loop())
 
     @property
     def running(self) -> AwaitableEvent:
-        """Return the event indicating if the backend is running."""
+        """Return the event indicating whether the backend accepts callbacks."""
         return self._running
 
     def put(self, item: QueueItem) -> None:
@@ -137,9 +144,9 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
 
     async def run(self) -> None:
         """Drain the queue until it is shut down or the drain is cancelled."""
-        if self._running.is_set():
+        if self._draining:
             return
-        self._running.set()
+        self._draining = True
         try:
             loop = get_shared_loop()
             while True:
@@ -155,6 +162,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
         except Exception as e:
             self.logger.error(f"Dispatch stopped: {e}", exc_info=e)
         finally:
+            self._draining = False
             self._running.clear()
             for task in self._tasks:
                 task.cancel()

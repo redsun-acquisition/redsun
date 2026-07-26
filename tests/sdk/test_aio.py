@@ -78,9 +78,7 @@ def clean_backend() -> Iterator[None]:
 
 @pytest.fixture
 def backend() -> CulsansAsyncioBackend:
-    installed = set_async_backend()
-    assert wait_until(installed.running.is_set)
-    return installed
+    return set_async_backend()
 
 
 def test_set_async_backend_installs_into_psygnal(
@@ -89,7 +87,14 @@ def test_set_async_backend_installs_into_psygnal(
     assert get_async_backend() is backend
     assert backend._backend == "culsans"
     assert backend.name == "psygnal-culsans"
-    assert backend.running.is_set()
+
+
+def test_set_async_backend_returns_a_running_backend() -> None:
+    """The drain starts on another thread, so this must not be observably async."""
+    for _ in range(50):
+        installed = set_async_backend()
+        assert installed.running.is_set()
+        clear_async_backend()
 
 
 def test_set_async_backend_is_idempotent(backend: CulsansAsyncioBackend) -> None:
@@ -358,6 +363,12 @@ async def test_delivery_survives_per_test_event_loops(
     assert asyncio.get_running_loop() is not get_shared_loop()
 
 
+def test_run_does_not_start_a_second_drain(backend: CulsansAsyncioBackend) -> None:
+    """A second ``run()`` must return, not park on the queue alongside the first."""
+    run_coro(asyncio.wait_for(backend.run(), TIMEOUT))
+    assert backend.running.is_set()
+
+
 def test_close_stops_the_drain(backend: CulsansAsyncioBackend) -> None:
     backend.close()
 
@@ -380,9 +391,7 @@ def test_backend_buffers_items_put_before_the_drain_runs() -> None:
 
     set_async_backend()
     emitter = Emitter()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        emitter.sig_motor_move.connect(on_move)
+    emitter.sig_motor_move.connect(on_move)
 
     # no wait on `running` — the queue must hold the item until the drain
     # is scheduled on the shared loop
