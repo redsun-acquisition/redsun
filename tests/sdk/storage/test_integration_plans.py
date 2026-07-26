@@ -1,9 +1,9 @@
 """RunEngine integration: async device writer + sync callback writer.
 
-Pins the dual-producer flow of ADR 0002: a StandardDetector built on the
-ophyd-async logic decomposition streams frames to a BaseStorage sink,
-while a DocumentRouter callback consumes Event documents from the same
-run and writes a derived (median) key through the sync API.
+A StandardDetector built on the ophyd-async logic decomposition streams
+frames to a BaseStorage sink, while a DocumentRouter callback consumes
+Event documents from the same run and writes a derived (median) key
+through the sync API.
 """
 
 from __future__ import annotations
@@ -145,9 +145,9 @@ def make_detector(
 class LiveAcquireLogic(DetectorAcquireLogic):
     """Live-view acquire logic: streams to a buffer signal from stage time.
 
-    Mirrors the mimir live-view pattern per ADR 0002 D10: the acquisition
-    loop always updates the buffer signal for viewers and pushes into a
-    `FrameSink` only while a write window is active (a sink exists). The
+    The acquisition loop always updates the buffer signal for viewers and
+    pushes into a `FrameSink` only while a write window is active (a sink
+    exists). The
     write window ends when capacity shuts the queue down — the producer
     observes `QueueShutDown` and drops its sink, no `write_sig` involved.
     """
@@ -183,7 +183,7 @@ class LiveAcquireLogic(DetectorAcquireLogic):
 
     async def start_acquiring(self) -> None:
         # kickoff: the write window becomes active — frames start flowing
-        # into the sink obtained at prepare (ADR 0002 D12)
+        # into the sink obtained at prepare
         if self.pending_sink is not None:
             self.sink, self.pending_sink = self.pending_sink, None
 
@@ -398,8 +398,8 @@ def test_two_devices_share_one_storage(storage: BaseStorage, io: MemoryIO) -> No
 def test_live_view_writes_only_during_write_window(tmp_path: Path) -> None:
     """Live view streams to the buffer signal; storage sees only the window.
 
-    Pins the mimir live-view target per ADR 0002 D10/D12: frames flow to
-    viewers from stage time with no store; a write-intent prepare opens the
+    Frames flow to viewers from stage time with no store; a write-intent
+    prepare opens the
     write window (sink lifecycle, no ``write_sig``); capacity ends it via
     ``QueueShutDown``; live streaming continues after; exactly one store
     exists at the end holding exactly ``capacity`` frames.

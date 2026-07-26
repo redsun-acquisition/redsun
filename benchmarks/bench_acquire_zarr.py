@@ -4,7 +4,7 @@ Scenario
 --------
 Two ``StandardDetector``s share one ``BaseStorage`` backed by
 ``AcquireZarrIO`` (real disk I/O). Each detector's acquire loop does, per
-frame, exactly what the mimir live-view pattern prescribes:
+frame:
 
 1. update its buffer signal (live view) — the plan ``bps.monitor``s the
    signal, so every update synchronously emits an Event document through

@@ -362,7 +362,7 @@ class TestCreatePlanSpec:
 
 
 class TestUnresolvableAnnotation:
-    """Tests for the Option-B unresolvable-annotation guard."""
+    """Tests for the unresolvable-annotation guard."""
 
     class _Exotic:
         """A type magicgui has no idea how to handle."""

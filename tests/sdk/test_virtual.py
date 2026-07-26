@@ -230,9 +230,9 @@ def test_is_injectable_protocol(bus: VirtualContainer) -> None:
 def test_register_signals_all_signals_survive(bus: VirtualContainer) -> None:
     """All signals on a class are registered when register_signals is called.
 
-    Regression test: previously register_signals called add_kwargs inside a
-    per-signal loop, causing each call to overwrite the previous entry for the
-    same owner key in the Factory kwargs store.  Only the last signal survived.
+    Registering per signal rather than in one batch would overwrite the
+    previous entry for the same owner key in the Factory kwargs store,
+    leaving only the last signal.
     """
 
     class MultiSignalOwner:
