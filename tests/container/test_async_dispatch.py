@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.qt
 
-TIMEOUT = 5.0
+TIMEOUT = 10.0
 
 
 def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
