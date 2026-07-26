@@ -46,6 +46,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0004-owner-scoped-signal-lookup/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0005-culsans-psygnal-async-backend/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
@@ -62,6 +65,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/changelog/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/aio/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/container/</loc>

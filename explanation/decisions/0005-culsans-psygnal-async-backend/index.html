@@ -12,13 +12,13 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0003-structural-subtyping-for-presenters-and-views/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0005-culsans-psygnal-async-backend/">
       
       
-        <link rel="prev" href="../0002-storage-dual-context-redesign/">
+        <link rel="prev" href="../0004-owner-scoped-signal-lookup/">
       
       
-        <link rel="next" href="../0004-owner-scoped-signal-lookup/">
+        <link rel="next" href="../../../how-to/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>3. Structural subtyping for presenters and views - Redsun</title>
+        <title>5. Culsans-backed psygnal async backend - Redsun</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#3-structural-subtyping-for-presenters-and-views" class="md-skip">
+        <a href="#5-culsans-backed-psygnal-async-backend" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              3. Structural subtyping for presenters and views
+              5. Culsans-backed psygnal async backend
             
           </span>
         </div>
@@ -957,6 +957,60 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  4. Owner-scoped signal lookup
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -976,7 +1030,7 @@
   <span class="md-ellipsis">
     
   
-  3. Structural subtyping for presenters and views
+  5. Culsans-backed psygnal async backend
 
     
   </span>
@@ -993,7 +1047,7 @@
   <span class="md-ellipsis">
     
   
-  3. Structural subtyping for presenters and views
+  5. Culsans-backed psygnal async backend
 
     
   </span>
@@ -1066,60 +1120,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  4. Owner-scoped signal lookup
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  5. Culsans-backed psygnal async backend
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1955,100 +1955,79 @@
   
 
 
-<h1 id="3-structural-subtyping-for-presenters-and-views">3. Structural subtyping for presenters and views<a class="headerlink" href="#3-structural-subtyping-for-presenters-and-views" title="Permanent link">&para;</a></h1>
-<p>Date: 2026-07-24</p>
+<h1 id="5-culsans-backed-psygnal-async-backend">5. Culsans-backed psygnal async backend<a class="headerlink" href="#5-culsans-backed-psygnal-async-backend" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-07-26</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p>Accepted</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Redsun's wiring is protocol-based: components are recognized by what they
-expose, not by what they inherit. Two defects undermined that promise for
-the presenter and view layers.</p>
-<p><strong>Static structural subtyping was broken by read-write protocol members.</strong>
-<code>PPresenter</code> declared <code>name: str</code> and <code>devices: Mapping[str, Device]</code> as
-plain attributes; <code>PView</code> declared <code>name: str</code>. A plain protocol attribute
-demands a <em>settable, invariantly typed</em> member from implementers, so (as
-verified with mypy):</p>
+<p>Redsun's UI runs on the Qt main thread while device logic runs on a single
+background <code>asyncio</code> loop. A view emits a signal; a presenter reacts to it by
+awaiting hardware. psygnal already supports this shape directly — connecting a
+coroutine function to a signal builds a coroutine callback that hands the call
+to whatever async backend is installed — so no bridging code of our own is
+needed at the call sites.</p>
+<p>The stock backends could not carry that traffic:</p>
 <ul>
-<li>a class exposing <code>name</code> as a read-only property failed the protocol
-  ("expected settable variable, got read-only attribute") — even though
-  ophyd-async's own <code>Device.name</code> is a read-only property;</li>
-<li>a class annotating <code>self.devices: dict[str, Device]</code> failed too, because
-  read-write members are invariant and <code>dict</code> is not <code>Mapping</code>.</li>
+<li><code>AsyncioBackend.put</code> is <code>asyncio.Queue.put_nowait</code>, which is not thread-safe.
+  Called from the Qt thread while the background loop sits idle, the queue's
+  internal <code>call_soon</code> never wakes the parked loop: a signal emitted from the
+  GUI was measured as undelivered after five seconds. A thread-safe hand-off
+  delivers the same emission in well under a millisecond.</li>
+<li><code>asyncio.Queue</code> binds to the loop that first awaits it while empty. The
+  backend outlives any single loop — it is created once and lives for the
+  process — so a queue bound to one loop raises once another is running, which
+  is exactly what pytest's per-test event loops produce.</li>
 </ul>
-<p>Every plausible duck-typed implementer therefore failed static checks;
-nobody noticed because everything inherited the nominal ABCs.</p>
-<p><strong>Runtime validation checked classes, where the information does not
-exist.</strong> <code>issubclass</code> is a <code>TypeError</code> for data-member protocols, so the
-container hand-rolled <code>hasattr(cls, ...)</code> checks — on the <em>class</em>. Instance
-attributes assigned in <code>__init__</code> (the normal style) are invisible there,
-so structurally compliant non-ABC components were rejected at plugin
-discovery. The check then papered over the container's nominal typing with
-<code>ABC.register(cls)</code>.</p>
-<p>A third wrinkle surfaced during the fix: a protocol's property members are
-real descriptors, so a class inheriting the protocol <em>and</em> assigning
-<code>self.name = ...</code> raises <code>AttributeError</code> at runtime (setter-less property).
-The ABCs must therefore not inherit the protocols they satisfy.</p>
+<p>psygnal's <code>set_async_backend()</code> accepts only the three literal names
+<code>"asyncio"</code>, <code>"anyio"</code>, and <code>"trio"</code>, so there is no public API for selecting a
+backend of our own. Its teardown helper, <code>clear_async_backend()</code>, dispatches on
+<code>isinstance</code> against the three concrete backend classes to decide whether to
+close the queue.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Protocol data members are read-only properties.</strong> <code>PPresenter.name</code>,
-   <code>PPresenter.devices</code>, and <code>PView.name</code> are declared as <code>@property</code> in the
-   protocols. The framework only ever reads them, so read-only is the true
-   contract. Implementers may use plain instance attributes, class
-   attributes, or properties, and covariant types (<code>dict</code> for <code>Mapping</code>)
-   are accepted.</li>
-<li><strong>The ABCs do not inherit the protocols.</strong> <code>Presenter(ABC)</code> and
-   <code>View(ABC)</code> satisfy <code>PPresenter</code>/<code>PView</code> structurally, exactly like any
-   other implementer — inheritance would shadow instance attributes with
-   the protocols' property descriptors.</li>
-<li>
-<p><strong>Validation is a dual gate.</strong> The parts of the contract are checked
-   where they are actually knowable:</p>
-</li>
-<li>
-<p><em>Class level — constructor signature.</em> The container instantiates
-     components as <code>cls(*positionals, **config_kwargs)</code>, so the knowable
-     class-level contract is purely positional. <code>expects_positionals</code>
-     (<code>inspect</code>-based) verifies the leading positional parameters are
-     exactly <code>("name", "devices")</code> for presenters and <code>("name",)</code> for
-     views, that any further positional-or-keyword parameters carry
-     defaults, that <code>*args</code> is absent, and that the container's positional
-     call binds. Keyword arguments are deliberately unvalidated — the
-     container has no control over them. This gate runs at component
-     wrapper creation (declarative path, at class definition time) and at
-     plugin discovery (config path, log-and-skip).</p>
-</li>
-<li><em>Instance level — protocol compliance.</em> <code>_PresenterComponent.build</code> /
-     <code>_ViewComponent.build</code> run <code>isinstance(instance, PPresenter/PView)</code>
-     after construction and raise <code>TypeError</code> on failure — instance
-     attributes assigned in <code>__init__</code> are only visible here. This sits on
-     the correct side of the "presenter/view build failures re-raise"
-     invariant.</li>
-</ol>
-<p>The old class-level hasattr screen and the <code>ABC.register</code> hack are gone.
-4. <strong>The container is typed against the protocols.</strong> Components hold
-   constructors as <code>Callable[..., PPresenter]</code> / <code>Callable[..., PView]</code>
-   (<code>type[Protocol]</code> is not callable for type checkers), and
-   <code>AppContainer.presenters</code> / <code>.views</code> return <code>dict[str, PPresenter]</code> /
-   <code>dict[str, PView]</code>. Devices remain nominal (<code>ophyd_async.core.Device</code>).</p>
+<p><code>redsun.aio.CulsansAsyncioBackend</code> implements psygnal's backend contract on a
+<a href="https://pypi.org/project/culsans/">culsans</a> queue, which is thread-safe on the
+producing side by construction and is not bound to any one event loop. A drain
+coroutine runs on the shared loop and dispatches each queued callback as its
+own task, so a slow slot does not serialize the ones behind it.</p>
+<p>The class is wired into psygnal at two levels, and both are load-bearing:</p>
+<ul>
+<li>It <strong>inherits</strong> <code>psygnal._async._AsyncBackend</code>, which supplies the abstract
+  contract and makes the instance assignable where psygnal expects a backend.
+  Virtual registration alone is invisible to a type checker.</li>
+<li>It is <strong>registered as a virtual subclass</strong> of <code>AsyncioBackend</code>, because that
+  <code>isinstance</code> check is what makes <code>clear_async_backend()</code> call <code>close()</code>.
+  Without it the backend is dropped with its queue and drain task still live.</li>
+</ul>
+<p>Installation goes through <code>redsun.aio.set_async_backend()</code>, which assigns
+psygnal's module global directly — the only way to install a backend that
+<code>set_async_backend()</code> cannot name. It is idempotent and refuses to displace a
+backend it did not install. The backend reports its name as <code>"culsans"</code>, so
+psygnal's own setter raises rather than silently replacing it.</p>
+<p><code>QtAppContainer</code> owns the lifecycle: <code>build()</code> installs the backend before the
+dependency-injection phase, since coroutine slots resolve a backend at connect
+time, and <code>shutdown()</code> hands teardown back to psygnal's <code>clear_async_backend()</code>.</p>
+<p>Exceptions raised inside a dispatched slot are logged on the <code>redsun</code> logger
+through a task done-callback. Nothing awaits these tasks, so an unhandled
+exception would otherwise surface only as asyncio's "task exception was never
+retrieved" at garbage-collection time, or not at all.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Structural implementers — property-based, attribute-based, or Qt widgets
-  like <code>QtView</code> — now pass both static and runtime checks; the
-  <code>type: ignore</code> previously needed for <code>_ViewComponent(QtView-subclass)</code>
-  is deleted.</li>
-<li>Components with a wrong constructor shape fail <strong>at declaration or
-  discovery time</strong>; components whose instances miss protocol members fail
-  <strong>at build time</strong> — both with a loud <code>TypeError</code> naming the problem,
-  instead of being silently skipped or slipping through the old
-  class-level attribute screen.</li>
-<li>Breaking: <code>AppContainer.presenters</code>/<code>views</code> are typed against the
-  protocols; code annotated against the ABCs keeps working at runtime but
-  should re-annotate. Classes that explicitly inherited <code>PPresenter</code>/<code>PView</code>
-  while assigning instance attributes must drop the inheritance (it was
-  latently broken at runtime already).</li>
-<li>Regression tests pin: property-based and dict-based implementers
-  (static + runtime), ABC structural compliance, duck components building
-  without the ABC, and non-compliant components raising at build.</li>
+<li>Redsun depends on two private psygnal symbols: <code>_AsyncBackend</code> as a base
+  class and <code>_ASYNC_BACKEND</code> as the assignment target, plus
+  <code>WeakCallback.dereference()</code> reached through the inherited <code>call_back</code>. A
+  psygnal release that renames any of them breaks dispatch. The test suite
+  pins the observable behaviour — installation, teardown, and delivery — so
+  the break surfaces as a test failure rather than as silently dropped
+  signals.</li>
+<li>culsans and aiologic become runtime dependencies. Both are pre-1.0.</li>
+<li>Only <code>QtAppContainer</code> installs a backend. Under a bare <code>AppContainer</code>,
+  connecting a coroutine to a signal raises <code>RuntimeError</code> from psygnal.</li>
+<li>A failing slot no longer propagates anywhere a caller can see: emitters
+  never learn that a slot raised, and the log is the only record.</li>
+<li><code>close()</code> is synchronous and returns before in-flight callbacks finish. It
+  shuts the queue down and lets the drain's exit path cancel outstanding
+  tasks; awaiting their completion would require an async teardown entry
+  point, which no caller has asked for yet.</li>
 </ul>
 
 
@@ -2089,7 +2068,7 @@ The ABCs must therefore not inherit the protocols they satisfy.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0002-storage-dual-context-redesign/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 2. Storage dual-context redesign">
+          <a href="../0004-owner-scoped-signal-lookup/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 4. Owner-scoped signal lookup">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2099,20 +2078,20 @@ The ABCs must therefore not inherit the protocols they satisfy.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                2. Storage dual-context redesign
+                4. Owner-scoped signal lookup
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0004-owner-scoped-signal-lookup/" class="md-footer__link md-footer__link--next" aria-label="Next: 4. Owner-scoped signal lookup">
+          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                4. Owner-scoped signal lookup
+                How-to guides
               </div>
             </div>
             <div class="md-footer__button md-icon">
