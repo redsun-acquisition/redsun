@@ -115,6 +115,20 @@ uv run zensical build                   # docs
 - asyncio only — no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change ⇒ docstring + `CHANGELOG.md` entry.
 
+### Docstrings and comments
+
+- Docstrings are concise and minimal: only the behaviour of the thing being
+  defined, scoped to that definition. Write for a reader who has nothing but
+  the docstring in front of them — no ADR numbers, no references to design
+  documents, no history of previous designs. Rationale belongs in `docs/`,
+  which is where a reader can follow it; ADRs are cross-linked from this file
+  and from the docs, never from a docstring.
+- Don't restate the signature in prose, and don't document parameters whose
+  meaning the name and type already carry.
+- No section-divider or banner comments, and no comment blocks describing the
+  code that follows. A comment earns its place only by explaining why a
+  specific statement is the way it is.
+
 ## Testing conventions
 
 - Mirror the source layout under `tests/sdk/`. Container/plugin-discovery tests

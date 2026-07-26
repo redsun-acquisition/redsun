@@ -230,51 +230,33 @@ def _handle_var_positional_device(
     )
 
 
-# ---------------------------------------------------------------------------
-# Dispatch table
-# ---------------------------------------------------------------------------
-# Each entry is (predicate, handler).
-# Predicates: (annotation, ParamKind) -> bool
-# Handlers:   (annotation, devices)    -> _FieldsFromAnnotation
-#
-# Entries are checked in order; the first matching handler is called.
-# To support a new annotation shape: insert a (predicate, handler) pair
-# at the appropriate priority. Nothing else needs to change.
-# ---------------------------------------------------------------------------
-
 _AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, OADevice]], _FieldsFromAnnotation]
 _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 
+#: ``(predicate, handler)`` pairs, tried in order; the first match wins and the
+#: last entry always matches.
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
-    # 1. Literal[...] → fixed string choices (no model look-up)
     (
-        # get_origin returns Literal at runtime;
-        # mypy cannot prove the identity holds statically;
-        # we simply keep mypy silent
+        # get_origin returns Literal at runtime, which mypy cannot prove
         lambda ann, _: get_origin(ann) is Literal,  # type: ignore[comparison-overlap]
         _handle_literal,
     ),
-    # 2. Set[OADevice] / AbstractSet[OADevice] / FrozenSet[OADevice] → multi-select (set semantics)
     (
         lambda ann, _: isdeviceset(ann),
         _handle_device_set,
     ),
-    # 3. Sequence[OADevice] → multi-select device widget
     (
         lambda ann, _: isdevicesequence(ann),
         _handle_device_sequence,
     ),
-    # 4. *args: OADevice  (VAR_POSITIONAL + bare device type) → multi-select
     (
         lambda ann, kind: kind is ParamKind.VAR_POSITIONAL and isdevice(ann),
         _handle_var_positional_device,
     ),
-    # 5. Bare OADevice type → single-select device widget
     (
         lambda ann, _: isdevice(ann),
         _handle_device,
     ),
-    # 6. Catch-all fallback → no choices, no model
     (
         lambda ann, kind: True,
         lambda ann, devices: _FieldsFromAnnotation(),
@@ -289,12 +271,7 @@ def _try_dispatch_entry(
     kind: ParamKind,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation | None:
-    """Attempt one ``(predicate, handler)`` entry; return ``None`` on any exception.
-
-    Isolating the try/except here keeps it out of the ``for`` loop body in
-    ``_dispatch_annotation``, satisfying ruff's PERF203 rule without
-    suppressing it via ``noqa``.
-    """
+    """Attempt one ``(predicate, handler)`` entry; return ``None`` on any exception."""
     try:
         if predicate(ann, kind):
             return handler(ann, devices)
@@ -310,8 +287,7 @@ def _dispatch_annotation(
 ) -> _FieldsFromAnnotation:
     """Walk ``_ANN_HANDLER_MAP`` and call the first matching handler.
 
-    If a predicate or handler raises (e.g. beartype cannot handle an exotic
-    annotation), that entry is skipped and the next one is tried.
+    An entry whose predicate or handler raises is skipped.
     """
     for predicate, handler in _ANN_HANDLER_MAP:
         result = _try_dispatch_entry(predicate, handler, ann, kind, devices)
@@ -505,7 +481,6 @@ def create_plan_spec(
     params: list[ParamDescription] = []
 
     for name, param in _iterate_signature(sig):
-        # Resolve the raw annotation, stripping Annotated[T, ...] → T
         raw_ann: Any = type_hints.get(name, param.annotation)
         if raw_ann is _empty:
             raw_ann = Any
@@ -516,35 +491,20 @@ def create_plan_spec(
         else:
             ann = raw_ann
 
-        # Extract Action metadata (validated against the annotation)
         actions_meta = _extract_action_meta(param, ann)
 
-        # Map inspect kind -> our ParamKind
         pkind = _PARAM_KIND_MAP.get(param.kind)
         if pkind is None:
             raise RuntimeError(f"Unexpected parameter kind: {param.kind!r}")
 
-        # Dispatch annotation -> choices / device_proto / multiselect
-        # (skip for Action parameters — they get no normal widget)
+        # Action parameters never get a widget, so they skip dispatch
         if actions_meta is not None:
             fields = _FieldsFromAnnotation()
         else:
             fields = _dispatch_annotation(ann, pkind, devices)
 
-        # Reject unresolvable required parameters
-        # If dispatch produced no choices and no device_proto, the param
-        # will fall through to the magicgui generic path at widget-creation
-        # time. Probe that path now so we can fail fast here with a clear
-        # error, rather than silently producing a broken LineEdit widget or
-        # crashing later during plan execution.
-        #
-        # Parameters that are exempt from this check:
-        # - Action params: never get a widget
-        # - VAR_KEYWORD (**kwargs): no generic widget is ever built
-        # - Params with a dispatch hit (choices set): already handled
-        # - Params with a default: the default will be used if the widget
-        #   can't be built, so the plan can still run
-        # -----------------------------------------------------------------
+        # probe the magicgui path now: failing here is clearer than a broken
+        # widget or a crash once the plan runs
         is_required = param.default is _empty
         needs_widget_probe = (
             actions_meta is None

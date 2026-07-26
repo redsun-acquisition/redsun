@@ -29,11 +29,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-# ---------------------------------------------------------------------------
-# Qt backend — implements ValueWidgetProtocol around _CheckboxListWidget
-# ---------------------------------------------------------------------------
-
-
 class _QCheckboxBackend(protocols.ValueWidgetProtocol):
     """Qt backend for ``DeviceSequenceEdit``.
 
@@ -51,10 +46,6 @@ class _QCheckboxBackend(protocols.ValueWidgetProtocol):
         self._change_callback: Callable[[Any], Any] | None = None
         self._qwidget.selection_changed.connect(self._on_change)
 
-    # ------------------------------------------------------------------
-    # ValueWidgetProtocol
-    # ------------------------------------------------------------------
-
     def _mgui_get_value(self) -> list[str]:
         return self._qwidget.get_value()
 
@@ -70,10 +61,6 @@ class _QCheckboxBackend(protocols.ValueWidgetProtocol):
     def _on_change(self, value: list[str]) -> None:
         if self._change_callback is not None:
             self._change_callback(value)
-
-    # ------------------------------------------------------------------
-    # WidgetProtocol
-    # ------------------------------------------------------------------
 
     def _mgui_close_widget(self) -> None:
         self._qwidget.close()
@@ -152,11 +139,6 @@ class _QCheckboxBackend(protocols.ValueWidgetProtocol):
         raise NotImplementedError
 
 
-# ---------------------------------------------------------------------------
-# Public magicgui widget
-# ---------------------------------------------------------------------------
-
-
 class DeviceSequenceEdit(ValueWidget[list[str]]):
     """Checkbox-list ``ValueWidget`` for ``Sequence[PDevice]`` / ``Set[PDevice]``.
 
@@ -198,11 +180,6 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
     def set_value(self, value: list[str]) -> None:
         """Set checked devices from a list (or set/frozenset) of names."""
         self._widget._mgui_set_value(value)
-
-
-# ---------------------------------------------------------------------------
-# Pure-Qt implementation
-# ---------------------------------------------------------------------------
 
 
 class _CheckboxListWidget(QtW.QWidget):

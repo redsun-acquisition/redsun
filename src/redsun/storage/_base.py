@@ -143,7 +143,7 @@ class BaseStorage(SinkFactory):
     Async device logics use ``await sink(key).put(frame)``; sync document
     callbacks use ``sink(key).put_nowait(frame)``. One drain task per key
     (spawned by `sink`) writes frames to the backend; the last drain out
-    closes the store. See ADR 0002 for the full design.
+    closes the store.
 
     Parameters
     ----------
