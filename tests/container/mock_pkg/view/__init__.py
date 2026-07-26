@@ -1,3 +1,3 @@
-from .mock_views import MockQtView
+from .mock_views import MockMotorView, MockQtView
 
-__all__ = ["MockQtView"]
+__all__ = ["MockMotorView", "MockQtView"]

@@ -1,0 +1,17 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-async-session
+devices:
+  my_motor:
+    plugin_name: mock-pkg
+    plugin_id: my_motor
+    egu: mm
+presenters:
+  motor_controller:
+    plugin_name: mock-pkg
+    plugin_id: async_motor_controller
+views:
+  motor_view:
+    plugin_name: mock-pkg
+    plugin_id: motor_view
+    motor: my_motor
