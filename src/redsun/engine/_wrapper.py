@@ -33,7 +33,7 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
     return scan_id + 1
 
 
-__all__ = ["RunEngine", "RunEngineResult", "get_shared_loop", "register_bound_command"]
+__all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 REResultType = RunEngineResult | tuple[str, ...]
 

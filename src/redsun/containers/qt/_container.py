@@ -6,9 +6,12 @@ import logging
 import sys
 from typing import TYPE_CHECKING, NoReturn, cast
 
+# psygnal re-exports get/set_async_backend at the top level but not this one
+from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
+from redsun.aio import set_async_backend
 from redsun.containers.container import AppContainer
 from redsun.containers.qt._mainview import QtMainView
 
@@ -56,7 +59,7 @@ class QtAppContainer(AppContainer):
         return self._main_view
 
     def build(self) -> QtAppContainer:
-        """Ensure a ``QApplication`` exists, then build all components.
+        """Ensure a ``QApplication`` and an async backend exist, then build.
 
         If a ``QApplication`` is not yet running (e.g. when ``build()`` is
         called explicitly before ``run()``), one is created here so that
@@ -67,8 +70,16 @@ class QtAppContainer(AppContainer):
             self._qt_app = cast(
                 "QApplication", QApplication.instance() or QApplication(sys.argv)
             )
+        # coroutine slots resolve a backend when they are connected, which
+        # happens during the dependency injection phase of super().build()
+        set_async_backend()
         super().build()
         return self
+
+    def shutdown(self) -> None:
+        """Shut components down, then tear the async backend down."""
+        super().shutdown()
+        clear_async_backend()
 
     def run(self) -> NoReturn:
         """Build and launch the Qt application."""

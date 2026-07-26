@@ -25,3 +25,4 @@ as [ophyd-async](https://blueskyproject.io/ophyd-async/main/explanations/decisio
 - **[2. Storage dual-context redesign](decisions/0002-storage-dual-context-redesign.md)**
 - **[3. Structural subtyping for presenters and views](decisions/0003-structural-subtyping-for-presenters-and-views.md)**
 - **[4. Owner-scoped signal lookup](decisions/0004-owner-scoped-signal-lookup.md)**
+- **[5. Culsans-backed psygnal async backend](decisions/0005-culsans-psygnal-async-backend.md)**

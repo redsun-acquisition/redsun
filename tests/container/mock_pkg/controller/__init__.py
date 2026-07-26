@@ -1,3 +1,3 @@
-from .mock_presenters import BrokenController, MockController
+from .mock_presenters import AsyncMotorController, BrokenController, MockController
 
-__all__ = ["BrokenController", "MockController"]
+__all__ = ["AsyncMotorController", "BrokenController", "MockController"]
