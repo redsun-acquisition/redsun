@@ -242,8 +242,6 @@ class TestCreatePlanSpec:
         spec = create_plan_spec(plan, {})
         assert spec.parameters[0].choices is None  # no match, but has default
 
-    # ---- Sequence[PDevice] ------------------------------------------------
-
     def test_sequence_device_param_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
@@ -268,8 +266,6 @@ class TestCreatePlanSpec:
         assert p.multiselect
         assert p.device_proto is _DetectorProtocol
 
-    # ---- VAR_POSITIONAL device (*args) ------------------------------------
-
     def test_var_positional_device_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
@@ -281,8 +277,6 @@ class TestCreatePlanSpec:
         assert p.kind is ParamKind.VAR_POSITIONAL
         assert p.choices == ["cam"]
         assert p.multiselect
-
-    # ---- Action parameters ------------------------------------------------
 
     def test_action_param_has_no_choices_and_stores_meta(self) -> None:
         @dataclass
@@ -319,8 +313,6 @@ class TestCreatePlanSpec:
         assert isinstance(p.actions, list)
         assert len(p.actions) == 2
 
-    # ---- toggleable / pausable flags --------------------------------------
-
     def test_togglable_flag(self) -> None:
         @continous(togglable=True, pausable=True)
         def plan() -> MsgGenerator[None]:
@@ -338,8 +330,6 @@ class TestCreatePlanSpec:
         assert spec.togglable is False
         assert spec.pausable is False
 
-    # ---- self/cls stripping -----------------------------------------------
-
     def test_self_is_stripped_from_method_signature(self) -> None:
         class Presenter:
             def plan(self, x: int) -> MsgGenerator[None]:
@@ -348,8 +338,6 @@ class TestCreatePlanSpec:
         spec = create_plan_spec(Presenter.plan, {})
         assert all(p.name != "self" for p in spec.parameters)
         assert spec.parameters[0].name == "x"
-
-    # ---- error cases -------------------------------------------------------
 
     def test_non_generator_raises_type_error(self) -> None:
         def not_a_plan(x: int) -> int:
@@ -373,13 +361,8 @@ class TestCreatePlanSpec:
             create_plan_spec(plan, {})  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# UnresolvableAnnotationError
-# ---------------------------------------------------------------------------
-
-
 class TestUnresolvableAnnotation:
-    """Tests for the Option-B unresolvable-annotation guard."""
+    """Tests for the unresolvable-annotation guard."""
 
     class _Exotic:
         """A type magicgui has no idea how to handle."""
@@ -426,11 +409,6 @@ class TestUnresolvableAnnotation:
 
         assert "widget" in str(exc_info.value)
         assert "broken" in str(exc_info.value)
-
-
-# ---------------------------------------------------------------------------
-# _dispatch_annotation: table entry selection
-# ---------------------------------------------------------------------------
 
 
 class TestDispatchAnnotation:
@@ -492,11 +470,6 @@ class TestDispatchAnnotation:
             _MotorProtocol, ParamKind.POSITIONAL_OR_KEYWORD, {}
         )
         assert fields.choices is None
-
-
-# ---------------------------------------------------------------------------
-# collect_arguments
-# ---------------------------------------------------------------------------
 
 
 class TestCollectArguments:
@@ -573,11 +546,6 @@ class TestCollectArguments:
         )
         args, _ = collect_arguments(spec, {"a": 1, "b": 2, "c": 3})
         assert args == (1, 2, 3)
-
-
-# ---------------------------------------------------------------------------
-# resolve_arguments
-# ---------------------------------------------------------------------------
 
 
 class TestResolveArguments:
@@ -700,11 +668,6 @@ class TestResolveArguments:
         )
         resolved = resolve_arguments(spec, {"motor": "nonexistent"}, one_motor)
         assert resolved["motor"] is None
-
-
-# ---------------------------------------------------------------------------
-# create_param_widget: factory registry
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.skipif(

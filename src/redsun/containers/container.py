@@ -399,7 +399,6 @@ class AppContainer:
         self._virtual_container._set_configuration(base_cfg)
         logger.debug("VirtualContainer created")
 
-        # build devices
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
@@ -408,7 +407,6 @@ class AppContainer:
             except Exception as e:  # noqa: BLE001 — a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
 
-        # build presenters
         for comp_name, presenter_component in self._presenter_components.items():
             try:
                 presenter_component.build(built_devices)
@@ -416,7 +414,6 @@ class AppContainer:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
 
-        # build views
         for comp_name, view_component in self._view_components.items():
             try:
                 view_component.build()
@@ -424,7 +421,6 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
 
-        # register providers from presenters and views
         all_components: dict[str, _PresenterComponent | _ViewComponent] = {
             **self._presenter_components,
             **self._view_components,
@@ -433,7 +429,6 @@ class AppContainer:
             if isinstance(component.instance, IsProvider):
                 component.instance.register_providers(self._virtual_container)
 
-        # inject dependencies into presenters and views
         for comp_name, component in all_components.items():
             if isinstance(component.instance, IsInjectable):
                 component.instance.inject_dependencies(self._virtual_container)

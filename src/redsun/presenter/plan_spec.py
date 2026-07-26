@@ -627,7 +627,7 @@ def resolve_arguments(
     """
     values: dict[str, Any] = dict(param_values)
 
-    # Inject Action metadata for parameters that have no UI widget
+    # action parameters have no widget, so their values never come from the UI
     for p in spec.parameters:
         if p.actions is not None and p.name not in values:
             values[p.name] = p.actions
@@ -640,7 +640,6 @@ def resolve_arguments(
         val = values[p.name]
 
         if p.choices is not None and p.device_proto is not None:
-            # Coerce widget value (string, sequence, or set of strings) → list of labels
             if isinstance(val, str):
                 labels = [val]
             elif isinstance(val, (cabc.Sequence, cabc.Set)) and not isinstance(

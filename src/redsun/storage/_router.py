@@ -49,7 +49,6 @@ class FrameRouter:
     def delete(self, data_key: str) -> None:
         """Remove a spec and its associated frame counter."""
         if data_key not in self._specs:
-            # nothing to do if the key is not present
             return
         del self._specs[data_key]
         del self._indices[data_key]

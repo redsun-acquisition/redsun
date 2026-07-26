@@ -140,19 +140,9 @@ class TestActionButton:
         assert "Start" in btn.text()
 
 
-# ---------------------------------------------------------------------------
-# PlanWidget helpers — build a minimal PlanWidget without Qt machinery
-# ---------------------------------------------------------------------------
-
-
 def _make_minimal_plan_widget(spec: PlanSpec) -> PlanWidget:
     """Create a PlanWidget via create_plan_widget with no callbacks."""
     return create_plan_widget(spec)
-
-
-# ---------------------------------------------------------------------------
-# create_plan_widget: structure
-# ---------------------------------------------------------------------------
 
 
 class TestCreatePlanWidget:
@@ -252,11 +242,6 @@ class TestCreatePlanWidget:
     def test_get_action_button_returns_none_for_unknown(self) -> None:
         pw = _make_minimal_plan_widget(_action_spec())
         assert pw.get_action_button("nonexistent") is None
-
-
-# ---------------------------------------------------------------------------
-# PlanWidget: runtime control API
-# ---------------------------------------------------------------------------
 
 
 class TestPlanWidgetControlAPI:

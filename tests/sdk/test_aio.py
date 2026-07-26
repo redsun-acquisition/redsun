@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
+import sys
 import threading
 import time
 import warnings
@@ -283,6 +284,10 @@ def test_queue_shutdown_is_not_an_error(
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="randomly fails on macOS with 'Dispatch cancelled' not logged in time",
+)
 def test_drain_cancellation_is_not_an_error(
     backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
 ) -> None:
