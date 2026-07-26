@@ -5,7 +5,6 @@ from bluesky.protocols import Status
 from ._wrapper import (
     RunEngine,
     RunEngineResult,
-    get_shared_loop,
     register_bound_command,
 )
 
@@ -13,6 +12,5 @@ __all__ = [
     "RunEngine",
     "RunEngineResult",
     "Status",
-    "get_shared_loop",
     "register_bound_command",
 ]
