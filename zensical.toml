@@ -63,6 +63,7 @@ nav = [
     { "Reference" = [
         "reference/index.md",
         { "API" = [
+            { "Async runtime" = "reference/api/aio.md" },
             { "Container" = "reference/api/container.md" },
             { "Device" = "reference/api/device.md" },
             { "Engine" = "reference/api/engine.md" },
@@ -93,6 +94,7 @@ nav = [
             { "2. Storage dual-context redesign" = "explanation/decisions/0002-storage-dual-context-redesign.md" },
             { "3. Structural subtyping for presenters and views" = "explanation/decisions/0003-structural-subtyping-for-presenters-and-views.md" },
             { "4. Owner-scoped signal lookup" = "explanation/decisions/0004-owner-scoped-signal-lookup.md" },
+            { "5. Culsans-backed psygnal async backend" = "explanation/decisions/0005-culsans-psygnal-async-backend.md" },
         ]},
     ]},
 ]

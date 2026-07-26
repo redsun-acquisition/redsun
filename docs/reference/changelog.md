@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [0.10.0]
+## [Unreleased]
+
+### Added
+
+- `redsun.aio.set_async_backend()` — installs `CulsansAsyncioBackend` as psygnal's
+  active async backend, so coroutines connected to a signal are dispatched onto the
+  shared event loop from any thread. Idempotent; raises if a different backend is
+  already active. Tear it down with psygnal's `clear_async_backend()`.
+  `QtAppContainer` calls it in `build()` and clears it in `shutdown()` (ADR 0005).
+- `CulsansAsyncioBackend` and `AwaitableEvent` (`redsun.aio`) — the backend itself and
+  the resettable, awaitable event it reports `running` through. Exceptions raised by a
+  dispatched slot are logged on the `redsun` logger instead of being discarded.
+
+### Changed (breaking)
+
+- `get_shared_loop()` is no longer re-exported from `redsun.engine`; import it from
+  `redsun.aio`, where it is defined. It is the only piece of the async runtime
+  intended for use outside the application container, alongside `run_coro()`.
+
+## [0.10.0] 25-07-2026
 
 ### Added
 
