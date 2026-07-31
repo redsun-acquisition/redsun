@@ -38,11 +38,15 @@ if TYPE_CHECKING:
 
 K = TypeVar("K")
 V = TypeVar("V")
+T = TypeVar("T")
+
+ProviderKey: TypeAlias = dip.Dependency[T]
+"""A typed key identifying an object shared through the container."""
 
 CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
 """Type alias for document callback functions."""
 
-__all__ = ["Connection", "Signal", "VirtualContainer"]
+__all__ = ["Connection", "ProviderKey", "Signal", "VirtualContainer"]
 
 SignalCache: TypeAlias = dict[str, SignalInstance]
 """Cache type for storing signal instances registered from component classes."""
@@ -89,6 +93,9 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._names: dict[int, str] = {}
         self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
         self._connections: list[Connection] = []
+        # bindings are held here rather than through Dependency.override, which
+        # mutates the key itself and would leak between containers in one process
+        self._provided: dict[dip.Dependency[Any], Any] = {}
 
     @property
     def schema_version(self) -> float:
@@ -126,6 +133,73 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
             session=config.get("session", "redsun"),
             metadata=config.get("metadata", {}),
         )
+
+    def provide(self, key: ProviderKey[T], value: T) -> None:
+        """Bind *value* to *key* for this container.
+
+        Parameters
+        ----------
+        key : ProviderKey[T]
+            The key consumers resolve.
+        value : T
+            The object to share. Rebinding an already bound key replaces it.
+
+        Raises
+        ------
+        TypeError
+            If *value* is not an instance of the key's ``instance_of``.
+        """
+        if not isinstance(value, key.instance_of):
+            raise TypeError(
+                f"{value!r} is not an instance of "
+                f"{key.instance_of.__name__}, required by {key!r}"
+            )
+        self._provided[key] = value
+
+    def require(self, key: ProviderKey[T]) -> T:
+        """Resolve *key*, which must be bound.
+
+        Parameters
+        ----------
+        key : ProviderKey[T]
+            The key to resolve.
+
+        Returns
+        -------
+        T
+            The bound value.
+
+        Raises
+        ------
+        KeyError
+            If nothing bound *key*. Providers are bound during
+            ``register_providers``, so a key read before that phase is unbound
+            even when the owning component is present.
+        """
+        try:
+            return cast("T", self._provided[key])
+        except KeyError:
+            raise KeyError(
+                f"nothing provided {key!r}; the component that owns it is "
+                "either absent from this application or has not run "
+                "'register_providers' yet"
+            ) from None
+
+    def try_require(self, key: ProviderKey[T]) -> T | None:
+        """Resolve *key*, or return ``None`` if nothing bound it.
+
+        Parameters
+        ----------
+        key : ProviderKey[T]
+            The key to resolve.
+
+        Returns
+        -------
+        T | None
+            The bound value, or ``None`` for an optional collaborator that this
+            application does not include.
+        """
+        return cast("T | None", self._provided.get(key))
 
     def register_signals(
         self, owner: HasName, name: str | None = None, only: Iterable[str] | None = None

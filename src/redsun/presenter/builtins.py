@@ -10,11 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from dependency_injector import providers
-
 from redsun.log import Loggable
 from redsun.presenter import Presenter
-from redsun.storage import SessionPathProvider
+from redsun.storage import PATH_PROVIDER, SessionPathProvider
 from redsun.utils import find_signals
 
 if TYPE_CHECKING:
@@ -33,9 +31,9 @@ class StoragePresenter(Presenter, Loggable):
     """Application-level control point for the session path provider.
 
     Owns the [`SessionPathProvider`][redsun.storage.SessionPathProvider] and
-    exposes it on the virtual container as the ``path_provider`` provider, so
-    every view and presenter resolves the same instance. Storage instances get
-    it at construction; devices only ever see
+    binds it to `PATH_PROVIDER` on the virtual container, so every view and
+    presenter resolves the same instance. Storage instances get it at
+    construction; devices only ever see
     [`BaseStorage`][redsun.storage.BaseStorage].
 
     Wiring:
@@ -91,7 +89,7 @@ class StoragePresenter(Presenter, Loggable):
             session=container.session,
             max_digits=self._max_digits,
         )
-        container.path_provider = providers.Object(self._provider)
+        container.provide(PATH_PROVIDER, self._provider)
 
     def inject_dependencies(self, container: VirtualContainer) -> None:
         """Connect plan lifecycle signals to the provider, if present."""

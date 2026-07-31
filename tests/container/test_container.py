@@ -32,6 +32,7 @@ from redsun.containers.components import (
 from redsun.presenter import PPresenter
 from redsun.presenter.builtins import StoragePresenter
 from redsun.qt import QtAppContainer
+from redsun.storage import PATH_PROVIDER
 from redsun.view import PView, ViewPosition
 from redsun.virtual import RedSunConfig, WiringError, ports
 
@@ -902,7 +903,7 @@ class TestBuiltinPlugins:
         presenter = container.presenters["storage"]
         assert isinstance(presenter, StoragePresenter)
         # the provider is session-scoped from the config and DI-exposed
-        provider = container.virtual_container.path_provider()
+        provider = container.virtual_container.require(PATH_PROVIDER)
         assert provider is presenter.path_provider
         assert "builtin-session" in provider().directory_path.parts
 

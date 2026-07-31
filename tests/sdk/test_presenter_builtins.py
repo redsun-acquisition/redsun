@@ -19,6 +19,7 @@ from psygnal import Signal
 
 from redsun.presenter.builtins import StoragePresenter
 from redsun.storage import (
+    PATH_PROVIDER,
     BaseStorage,
     SessionPathProvider,
     StreamSpec,
@@ -72,7 +73,7 @@ def test_register_providers_creates_session_scoped_provider(
     presenter = StoragePresenter("storage", {}, base_dir=str(tmp_path))
     presenter.register_providers(configured_bus)
 
-    provider = configured_bus.path_provider()
+    provider = configured_bus.require(PATH_PROVIDER)
     assert provider is presenter.path_provider
     info = provider()
     date = datetime.now().strftime("%Y-%m-%d")
@@ -114,7 +115,7 @@ async def test_approach_di_container_wires_storage_bursts(
     configured_bus.register_signals(acquisition)
     presenter.inject_dependencies(configured_bus)
 
-    provider = configured_bus.path_provider()
+    provider = configured_bus.require(PATH_PROVIDER)
     io = MemoryIO()
     storage = BaseStorage(io=io, path_provider=provider)
 
