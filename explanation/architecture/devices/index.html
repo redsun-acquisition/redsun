@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -1000,6 +1002,8 @@
       
         
       
+        
+      
     
     
     
@@ -1181,6 +1185,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1207,6 +1238,8 @@
       
         
           
+        
+      
         
       
         
@@ -1336,6 +1369,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2205,17 +2265,17 @@ each owning one concern:</p>
 obtains a <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.FrameSink"><code>FrameSink</code></a> and builds its
 <code>StreamResourceDataProvider</code> from <code>uri_for</code> / <code>resource_info_for</code> /
 <code>signal_for</code>, and the acquire logic pushes frames with <code>await sink.put(...)</code>
-from kickoff onwards. Devices never see the path provider — only the
+from kickoff onwards. Devices never see the path provider - only the
 storage instance, resolved through the
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;get_storage&lt;/span&gt;" href="../../../reference/api/storage/#redsun.storage.get_storage">storage registry</a>.</p>
-<p>The full contract — including when to open eagerly versus lazily, and how a
-live view streams frames without creating a store — is documented in
+<p>The full contract - including when to open eagerly versus lazily, and how a
+live view streams frames without creating a store - is documented in
 <a href="../../storage/">Session storage</a> and
 <a href="../../decisions/0002-storage-dual-context-redesign/">ADR 0002</a>. The
 reference implementation of both patterns lives in
 <code>tests/sdk/storage/test_integration_plans.py</code>.</p>
 <h2 id="connecting-devices">Connecting devices<a class="headerlink" href="#connecting-devices" title="Permanent link">&para;</a></h2>
-<p>ophyd-async devices must be connected before use — this initialises their signal backends
+<p>ophyd-async devices must be connected before use - this initialises their signal backends
 and verifies hardware communication. Use
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>AppContainer.connect_devices()</code></a>
 after calling <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a>:</p>

@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -853,6 +855,8 @@
       
         
       
+        
+      
     
     
     
@@ -1125,6 +1129,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1151,6 +1182,8 @@
       
         
           
+        
+      
         
       
         
@@ -1280,6 +1313,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1970,7 +2030,7 @@ demands a <em>settable, invariantly typed</em> member from implementers, so (as
 verified with mypy):</p>
 <ul>
 <li>a class exposing <code>name</code> as a read-only property failed the protocol
-  ("expected settable variable, got read-only attribute") — even though
+  ("expected settable variable, got read-only attribute") - even though
   ophyd-async's own <code>Device.name</code> is a read-only property;</li>
 <li>a class annotating <code>self.devices: dict[str, Device]</code> failed too, because
   read-write members are invariant and <code>dict</code> is not <code>Mapping</code>.</li>
@@ -1979,7 +2039,7 @@ verified with mypy):</p>
 nobody noticed because everything inherited the nominal ABCs.</p>
 <p><strong>Runtime validation checked classes, where the information does not
 exist.</strong> <code>issubclass</code> is a <code>TypeError</code> for data-member protocols, so the
-container hand-rolled <code>hasattr(cls, ...)</code> checks — on the <em>class</em>. Instance
+container hand-rolled <code>hasattr(cls, ...)</code> checks - on the <em>class</em>. Instance
 attributes assigned in <code>__init__</code> (the normal style) are invisible there,
 so structurally compliant non-ABC components were rejected at plugin
 discovery. The check then papered over the container's nominal typing with
@@ -1998,28 +2058,28 @@ The ABCs must therefore not inherit the protocols they satisfy.</p>
    are accepted.</li>
 <li><strong>The ABCs do not inherit the protocols.</strong> <code>Presenter(ABC)</code> and
    <code>View(ABC)</code> satisfy <code>PPresenter</code>/<code>PView</code> structurally, exactly like any
-   other implementer — inheritance would shadow instance attributes with
+   other implementer - inheritance would shadow instance attributes with
    the protocols' property descriptors.</li>
 <li>
 <p><strong>Validation is a dual gate.</strong> The parts of the contract are checked
    where they are actually knowable:</p>
 </li>
 <li>
-<p><em>Class level — constructor signature.</em> The container instantiates
+<p><em>Class level - constructor signature.</em> The container instantiates
      components as <code>cls(*positionals, **config_kwargs)</code>, so the knowable
      class-level contract is purely positional. <code>expects_positionals</code>
      (<code>inspect</code>-based) verifies the leading positional parameters are
      exactly <code>("name", "devices")</code> for presenters and <code>("name",)</code> for
      views, that any further positional-or-keyword parameters carry
      defaults, that <code>*args</code> is absent, and that the container's positional
-     call binds. Keyword arguments are deliberately unvalidated — the
+     call binds. Keyword arguments are deliberately unvalidated - the
      container has no control over them. This gate runs at component
      wrapper creation (declarative path, at class definition time) and at
      plugin discovery (config path, log-and-skip).</p>
 </li>
-<li><em>Instance level — protocol compliance.</em> <code>_PresenterComponent.build</code> /
+<li><em>Instance level - protocol compliance.</em> <code>_PresenterComponent.build</code> /
      <code>_ViewComponent.build</code> run <code>isinstance(instance, PPresenter/PView)</code>
-     after construction and raise <code>TypeError</code> on failure — instance
+     after construction and raise <code>TypeError</code> on failure - instance
      attributes assigned in <code>__init__</code> are only visible here. This sits on
      the correct side of the "presenter/view build failures re-raise"
      invariant.</li>
@@ -2032,13 +2092,13 @@ The ABCs must therefore not inherit the protocols they satisfy.</p>
    <code>dict[str, PView]</code>. Devices remain nominal (<code>ophyd_async.core.Device</code>).</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Structural implementers — property-based, attribute-based, or Qt widgets
-  like <code>QtView</code> — now pass both static and runtime checks; the
+<li>Structural implementers - property-based, attribute-based, or Qt widgets
+  like <code>QtView</code> - now pass both static and runtime checks; the
   <code>type: ignore</code> previously needed for <code>_ViewComponent(QtView-subclass)</code>
   is deleted.</li>
 <li>Components with a wrong constructor shape fail <strong>at declaration or
   discovery time</strong>; components whose instances miss protocol members fail
-  <strong>at build time</strong> — both with a loud <code>TypeError</code> naming the problem,
+  <strong>at build time</strong> - both with a loud <code>TypeError</code> naming the problem,
   instead of being silently skipped or slipping through the old
   class-level attribute screen.</li>
 <li>Breaking: <code>AppContainer.presenters</code>/<code>views</code> are typed against the

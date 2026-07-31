@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -694,34 +696,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Two usage flows">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#explicit-flow-developer-written-containers" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Explicit flow (developer-written containers)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dynamic-flow-configuration-driven" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dynamic flow (configuration-driven)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1053,6 +1027,8 @@
       
         
       
+        
+      
     
     
     
@@ -1234,6 +1210,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1260,6 +1263,8 @@
       
         
           
+        
+      
         
       
         
@@ -1389,6 +1394,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2088,34 +2120,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Two usage flows">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#explicit-flow-developer-written-containers" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Explicit flow (developer-written containers)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dynamic-flow-configuration-driven" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dynamic flow (configuration-driven)
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -2212,7 +2216,7 @@
 </ul>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>At the core of Redsun is the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a>, which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.</p>
-<p><strong>Build order</strong> — components are constructed in strict dependency sequence:</p>
+<p><strong>Build order</strong> - components are constructed in strict dependency sequence:</p>
 <pre class="mermaid"><code>graph LR
     VC[VirtualContainer]
     Devices
@@ -2222,7 +2226,7 @@
     VC --&gt; Devices
     Devices --&gt; Presenters
     Presenters --&gt; Views</code></pre>
-<p><strong>Provider registration and dependency injection</strong> — once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:</p>
+<p><strong>Provider registration and dependency injection</strong> - once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:</p>
 <pre class="mermaid"><code>graph LR
     VC[VirtualContainer]
 
@@ -2255,7 +2259,7 @@
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_presenter&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_presenter"><code>declare_presenter()</code></a>, and
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_view&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_view"><code>declare_view()</code></a>.
 Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.</p>
-<p>When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base <code>AppContainer</code> — for Qt applications that is <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtAppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a>:</p>
+<p>When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base <code>AppContainer</code> - for Qt applications that is <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtAppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">declare_device</span><span class="p">,</span> <span class="n">declare_presenter</span><span class="p">,</span> <span class="n">declare_view</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
@@ -2278,9 +2282,9 @@ Each accepts the component class as its first positional argument, followed by o
 <h2 id="component-naming">Component naming<a class="headerlink" href="#component-naming" title="Permanent link">&para;</a></h2>
 <p>Every component receives a <code>name</code> that is used as its key in the container's <code>devices</code>, <code>presenters</code>, or <code>views</code> dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:</p>
 <ol>
-<li><code>alias</code> — if an explicit <code>alias</code> is passed to <code>declare_device()</code>, <code>declare_presenter()</code>, or <code>declare_view()</code>, that value is used regardless of everything else.</li>
-<li>attribute name — in the declarative flow, the Python attribute name becomes the component name when no <code>alias</code> is provided.</li>
-<li>YAML key — in the dynamic flow (<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
+<li><code>alias</code> - if an explicit <code>alias</code> is passed to <code>declare_device()</code>, <code>declare_presenter()</code>, or <code>declare_view()</code>, that value is used regardless of everything else.</li>
+<li>attribute name - in the declarative flow, the Python attribute name becomes the component name when no <code>alias</code> is provided.</li>
+<li>YAML key - in the dynamic flow (<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
@@ -2320,13 +2324,13 @@ Each accepts the component class as its first positional argument, followed by o
 </span></code></pre></div>
 <p>The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container proceeds in three phases. After build completes, call <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>connect_devices()</code></a> to run the ophyd-async async connect lifecycle on all registered devices:</p>
-<p><strong>Phase 1 — construction</strong>:</p>
+<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container proceeds in four phases. After build completes, call <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>connect_devices()</code></a> to run the ophyd-async async connect lifecycle on all registered devices:</p>
+<p><strong>Phase 1 - construction</strong>:</p>
 <ol>
-<li><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a> — created and seeded with the application configuration.</li>
-<li><strong>Devices</strong> — each receives its resolved name and keyword arguments.</li>
-<li><strong>Presenters</strong> — each receives its resolved name and the full device dictionary.</li>
-<li><strong>Views</strong> — each receives its resolved name.</li>
+<li><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a> - created and seeded with the application configuration.</li>
+<li><strong>Devices</strong> - each receives its resolved name and keyword arguments.</li>
+<li><strong>Presenters</strong> - each receives its resolved name and the full device dictionary.</li>
+<li><strong>Views</strong> - each receives its resolved name.</li>
 </ol>
 <p>Presenter and view constructors are signature-checked when their
 components are declared or discovered (leading positionals must be
@@ -2336,26 +2340,30 @@ against its layer contract (<code>ophyd_async.core.Device</code>,
 <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a>). Failures follow the layer asymmetry: a
 failing device is logged and skipped, while a failing presenter or view
 re-raises and aborts the build.</p>
-<p><strong>Phase 2 — provider registration</strong>:</p>
+<p><strong>Phase 2 - provider registration</strong>:</p>
 <p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> calls <code>register_providers()</code> on the <code>VirtualContainer</code>. This is safe to run across both layers simultaneously because no injection occurs here.</p>
-<p><strong>Phase 3 — dependency injection</strong>:</p>
+<p><strong>Phase 3 - wiring</strong>:</p>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;wire&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.wire"><code>wire()</code></a> runs, followed by the <code>wiring</code> section of the configuration file. Every component is built by now, so a connection can name both of its ends. See <a href="../../how-to/wire-components/">wire components together</a>.</p>
+<p><strong>Phase 4 - dependency injection</strong>:</p>
 <p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> calls <code>inject_dependencies()</code> on the <code>VirtualContainer</code>, consuming providers registered in phase 2.</p>
 <h2 id="communication">Communication<a class="headerlink" href="#communication" title="Permanent link">&para;</a></h2>
 <p>Components communicate through the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>, which serves as the single shared data exchange layer for the application. It combines two roles:</p>
 <ul>
-<li><strong>Signal registry</strong>: components can register their <a href="https://psygnal.readthedocs.io/"><code>psygnal</code></a> signals into the container via <code>register_signals()</code>, making them discoverable by other components without direct references to each other. Registered signals are accessible through the <code>signals</code> property.</li>
+<li><strong>Signal bus</strong>: a component declares <a href="https://psygnal.readthedocs.io/"><code>psygnal</code></a> signals and marks the methods it accepts connections on with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;slot&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.slot"><code>slot</code></a>; the application connects the two during phase 3, and the container records every link. The older <code>register_signals()</code> registry, discovered by name through <code>find_signals()</code>, still works and is kept as an escape hatch for dynamic lookup.</li>
 <li><strong>Dependency injection</strong>: built on top of <a href="https://python-dependency-injector.readthedocs.io/"><code>dependency_injector</code></a>'s <code>DynamicContainer</code>, it allows any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> to register typed providers, and any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> to consume them. This enables components across both layers to share information without direct coupling.</li>
 </ul>
-<p>The <code>VirtualContainer</code> is created during [<code>build()</code>][redsun.AppContainer.build] and is accessible via the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;virtual_container&lt;/span&gt;
+<p>The <code>VirtualContainer</code> is created during <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> and is accessible via the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;virtual_container&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-property&quot;&gt;&lt;code&gt;property&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.virtual_container"><code>virtual_container</code></a> property after the container is built.</p>
 <h2 id="two-usage-flows">Two usage flows<a class="headerlink" href="#two-usage-flows" title="Permanent link">&para;</a></h2>
-<p><code>redsun</code> supports two distinct approaches for assembling an application, both producing the same result at runtime.</p>
-<h3 id="explicit-flow-developer-written-containers">Explicit flow (developer-written containers)<a class="headerlink" href="#explicit-flow-developer-written-containers" title="Permanent link">&para;</a></h3>
-<p>The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:</p>
+<p><code>redsun</code> supports two distinct approaches for assembling an application, both producing the same result at runtime. Picking a tab below switches every other tab in this documentation to the same form.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Container class</label><label for="__tabbed_2_2">Configuration file</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>For plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">declare_device</span><span class="p">,</span> <span class="n">declare_presenter</span><span class="p">,</span> <span class="n">declare_view</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
@@ -2372,11 +2380,16 @@ re-raises and aborts the build.</p>
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyPresenter</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ctrl&quot;</span><span class="p">)</span>
 </span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">ui</span> <span class="o">=</span> <span class="n">declare_view</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">&quot;ui&quot;</span><span class="p">)</span>
 </span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">sig_new_position</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">update_setpoint</span><span class="p">)</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
-<h3 id="dynamic-flow-configuration-driven">Dynamic flow (configuration-driven)<a class="headerlink" href="#dynamic-flow-configuration-driven" title="Permanent link">&para;</a></h3>
-<p>The dynamic flow is for end users who point Redsun at a YAML configuration file. Plugins are discovered via entry points and the frontend is resolved from the <code>frontend:</code> key in the file — no Python code needs to be written:</p>
+<p>Keyword arguments still come from <code>config.yaml</code>; what is fixed in Python is the set of components, the frontend, and the connections.</p>
+</div>
+<div class="tabbed-block">
+<p>For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the <code>frontend:</code> key - no Python code needs to be written:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">&quot;path/to/config.yaml&quot;</span><span class="p">)</span>
@@ -2393,12 +2406,23 @@ re-raises and aborts the build.</p>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">...</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">ctrl</span><span class="p">:</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_presenter</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="nt">views</span><span class="p">:</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span><span class="nt">ui</span><span class="p">:</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_view</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ctrl.sig_new_position</span>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ui.update_setpoint</span>
 </span></code></pre></div>
-<p>See the <a href="../component-system/">component system</a> documentation for a full description of the dynamic flow.</p>
+<p>See the <a href="../component-system/">component system</a> documentation for a full description of this flow.</p>
+</div>
+</div>
+</div>
 <h2 id="frontend-support">Frontend support<a class="headerlink" href="#frontend-support" title="Permanent link">&para;</a></h2>
 <p>Frontend is intended as the toolkit that deploys the functionalities to implement the Graphical User Interface (GUI).</p>
 <h3 id="qt">Qt<a class="headerlink" href="#qt" title="Permanent link">&para;</a></h3>

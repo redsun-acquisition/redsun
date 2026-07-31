@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -950,6 +952,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1135,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1157,6 +1188,8 @@
       
         
           
+        
+      
         
       
         
@@ -1286,6 +1319,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1984,14 +2044,14 @@
 <em>instances</em> expose a <code>name</code> (<code>str</code>) and a <code>devices</code>
 (<code>Mapping[str, Device]</code>) satisfies it. The protocol declares both members
 as <strong>read-only properties</strong>, so implementers are free to use plain instance
-attributes, class attributes, or properties — and <code>devices</code> may be any
+attributes, class attributes, or properties - and <code>devices</code> may be any
 <code>Mapping</code> subtype, such as a plain <code>dict</code>.</p>
 <p>Compliance is a <strong>dual gate</strong>. At class level, the constructor's
 positional shape is verified: its leading positional parameters must be
-exactly <code>(name, devices)</code> — the container instantiates presenters as
+exactly <code>(name, devices)</code> - the container instantiates presenters as
 <code>cls(name, devices, **config_kwargs)</code> and has no control over the keyword
 arguments. At build time, the constructed instance is checked against the
-protocol, raising a <code>TypeError</code> naming the missing members — attributes
+protocol, raising a <code>TypeError</code> naming the missing members - attributes
 assigned in <code>__init__</code> are invisible before instantiation
 (see <a href="../../decisions/0003-structural-subtyping-for-presenters-and-views/">ADR 0003</a>).</p>
 <p>The <a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> ABC is an optional
@@ -2001,7 +2061,7 @@ convenience base providing the conventional constructor shape:</p>
 <li>a <code>Mapping[str, Device]</code> of the allocated devices in the session;</li>
 <li>additional keyword arguments, parsed from the session configuration file.</li>
 </ul>
-<p>The ABC deliberately does <em>not</em> inherit the protocol — it satisfies it
+<p>The ABC deliberately does <em>not</em> inherit the protocol - it satisfies it
 structurally, like every other implementer.</p>
 <p>Access to the virtual container is opt-in via the
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> and
@@ -2011,7 +2071,7 @@ teardown via <a class="autorefs autorefs-internal" title="&lt;code class=&quot;d
 <p>Presenters that process acquisition data subscribe to the <code>RunEngine</code>'s
 document stream (directly, or through the callback registry on the
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>). Document callbacks
-run <em>synchronously</em> on the engine's event loop thread — they can never
+run <em>synchronously</em> on the engine's event loop thread - they can never
 await. To persist derived results (e.g. a median image computed from Event
 documents), a callback uses the storage layer's synchronous face:
 <code>register</code> a <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.StreamSpec"><code>StreamSpec</code></a> derived from the

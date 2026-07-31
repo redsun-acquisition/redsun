@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -853,6 +855,8 @@
       
         
       
+        
+      
     
     
     
@@ -1263,6 +1267,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1289,6 +1320,8 @@
       
         
           
+        
+      
         
       
         
@@ -1418,6 +1451,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2244,7 +2304,7 @@ layer. Two producer contexts need the same store:</p>
   decomposition (<code>TriggerLogic</code> / <code>AcquireLogic</code> / <code>DataLogic</code>) pushing
   frames during the prepare → kickoff → complete → collect cycle.</li>
 <li><strong>Callback layer (sync):</strong> <code>DocumentRouter</code> presenters running inside the
-  RunEngine's <code>emit_sync</code> on the loop thread — they can never await.</li>
+  RunEngine's <code>emit_sync</code> on the loop thread - they can never await.</li>
 </ul>
 <p>The async-only sink API forces callback-side work to be modelled as a fake
 device: <code>MedianDevice</code> in redsun-mimir is a <code>StandardDetector</code> whose polling
@@ -2252,11 +2312,11 @@ device: <code>MedianDevice</code> in redsun-mimir is a <code>StandardDetector</c
 patches the gap between "kickoff = start live view" and "now also write".</p>
 <p>The <code>StorageStateMachine</code> (UNSEALED → SEALING → OPEN → CLOSING, <code>try_seal</code>
 first-writer race, <code>await_open</code> parking) exists solely because store-open is
-inferred from the first arriving frame — nothing tells the storage a write
+inferred from the first arriving frame - nothing tells the storage a write
 window started. The <code>StandardDetector</code> cycle provides explicit lifecycle
 moments the current design ignores.</p>
 <p>A redsun-specific constraint shapes everything: <strong>live view without
-storage</strong> — a staged, kicked-off detector streams frames to viewers
+storage</strong> - a staged, kicked-off detector streams frames to viewers
 indefinitely, and today's live plans (<code>live_stream</code>, <code>live_median_scan</code>)
 re-run stage/prepare/kickoff every loop iteration while writing only happens
 if a stream action fires. Any design that opens a store eagerly at prepare
@@ -2280,10 +2340,10 @@ so it is safe inside <code>emit_sync</code> on the loop thread.</p>
 <h3 id="framesink-producer-face-only-handle"><code>FrameSink</code>: producer-face-only handle<a class="headerlink" href="#framesink-producer-face-only-handle" title="Permanent link">&para;</a></h3>
 <p><code>BaseStorage.sink(data_key)</code> returns a thin wrapper exposing only:</p>
 <ul>
-<li><code>await sink.put(frame)</code> — device layer; parks on a full queue.</li>
-<li><code>sink.put_nowait(frame)</code> — callback layer; raises <code>QueueFull</code> /
+<li><code>await sink.put(frame)</code> - device layer; parks on a full queue.</li>
+<li><code>sink.put_nowait(frame)</code> - callback layer; raises <code>QueueFull</code> /
   <code>QueueShutDown</code> loudly.</li>
-<li><code>sink.close()</code> — sync, idempotent; shuts the queue down cleanly (queued
+<li><code>sink.close()</code> - sync, idempotent; shuts the queue down cleanly (queued
   frames still written). Devices call it from <code>DataLogic.stop</code>/unstage,
   presenters on the stop document. No-op if capacity already shut the queue.</li>
 </ul>
@@ -2291,7 +2351,7 @@ so it is safe inside <code>emit_sync</code> on the loop thread.</p>
 the drain. Producers cannot consume frames. Frames may be enqueued before the
 store opens; they wait in the queue.</p>
 <h3 id="drain-one-basestorage-owned-task-per-key-spawned-by-sink">Drain: one <code>BaseStorage</code>-owned task per key, spawned by <code>sink()</code><a class="headerlink" href="#drain-one-basestorage-owned-task-per-key-spawned-by-sink" title="Permanent link">&para;</a></h3>
-<p><code>sink(data_key)</code> creates the queue and spawns the drain task — legal from
+<p><code>sink(data_key)</code> creates the queue and spawns the drain task - legal from
 sync code because every caller (async device prepare, <code>emit_sync</code> callback)
 runs on the loop thread. The drain loop is the old <code>_pusher</code> inverted:
 <code>await queue.async_get()</code> → ensure open → <code>await store.write(key, frame)</code> →
@@ -2307,11 +2367,11 @@ open lock. No separate release API, no double-release ambiguity.</p>
 backend; concurrent and later callers await/return on the same open. Entry
 points:</p>
 <ul>
-<li><strong>Eager (optional):</strong> <code>DataLogic.prepare</code> calls it — stock ophyd-async
+<li><strong>Eager (optional):</strong> <code>DataLogic.prepare</code> calls it - stock ophyd-async
   writer behaviour ("prepare means writing is imminent"). Snap-style
   acquisition detectors opt in.</li>
 <li><strong>Lazy (always on):</strong> the drain calls it before its first write. Live-view
-  devices and callback-only bursts rely on this — the store materialises on
+  devices and callback-only bursts rely on this - the store materialises on
   the first frame actually written, never earlier.</li>
 </ul>
 <p>Path allocation stays at first <code>register</code> (cheap, no backend I/O), so
@@ -2327,10 +2387,10 @@ points:</p>
 <p>A burst where no frame ever flowed (live iteration whose action never fired)
 is trivial cleanup: the drain exits without ever having opened, clearing its
 router entry and the path. Symmetric register/teardown per plan-loop
-iteration — no leaked router entries.</p>
+iteration - no leaked router entries.</p>
 <h3 id="capacity-enforced-by-the-drain-signalled-by-the-queue">Capacity: enforced by the drain, signalled by the queue<a class="headerlink" href="#capacity-enforced-by-the-drain-signalled-by-the-queue" title="Permanent link">&para;</a></h3>
 <p>The drain counts writes; at <code>spec.capacity</code> it calls <code>queue.shutdown()</code> and
-exits. An overrunning producer's next <code>put</code> raises <code>QueueShutDown</code> — the
+exits. An overrunning producer's next <code>put</code> raises <code>QueueShutDown</code> - the
 queue-era analogue of the generator returning. Unbounded specs drain until
 close. Capacity remains control flow; nothing raises <code>StopAsyncIteration</code> by
 hand.</p>
@@ -2404,15 +2464,15 @@ opens and writes → stop doc → <code>sink.close()</code> → drain flushes an
   put → open → capacity → close asserting backend contents via <code>MemoryIO</code>,
   plus focused unhappy paths (register-while-open, put-after-capacity,
   abort-drop vs clean-flush, burst-died-without-frames) and a concurrency
-  test (several keys putting concurrently — single backend open, all frames
+  test (several keys putting concurrently - single backend open, all frames
   written). In addition, <strong>integration tests execute real plans through the
   <code>RunEngine</code></strong> combining a disk-writing device (mock detector built on the
   ophyd-async logic decomposition, backed by <code>MemoryIO</code>) with a
   <code>DocumentRouter</code> callback that consumes the emitted documents and writes a
-  derived key through the sync API — pinning the dual-producer behaviour
+  derived key through the sync API - pinning the dual-producer behaviour
   <code>live_median_scan</code> will rely on after the mimir rework.</li>
 <li><strong>redsun-mimir (staged separately, enabled by this ADR):</strong> <code>MedianDevice</code>
-  and its logics/signals are deleted — median computation moves to
+  and its logics/signals are deleted - median computation moves to
   <code>MedianPresenter</code> consuming Event documents. After the plan rework makes
   the sink lifecycle the write window (prepare → kickoff → capacity →
   complete as a plain bounded fly segment), <code>write_sig</code> is deleted too. Until

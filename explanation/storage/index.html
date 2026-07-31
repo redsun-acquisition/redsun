@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -975,6 +977,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,6 +1160,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1182,6 +1213,8 @@
       
         
           
+        
+      
         
       
         
@@ -1311,6 +1344,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2089,16 +2149,16 @@ Don't push lifecycle methods onto <code>StorageIO</code>.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">sink</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># end the stream; queued frames still flush</span>
 </span></code></pre></div>
 <h2 id="frame-sinks-and-capacity">Frame sinks and capacity<a class="headerlink" href="#frame-sinks-and-capacity" title="Permanent link">&para;</a></h2>
-<p><code>sink(data_key)</code> returns a <code>FrameSink</code> — a thin producer-only handle over a
+<p><code>sink(data_key)</code> returns a <code>FrameSink</code> - a thin producer-only handle over a
 bounded <code>culsans.Queue</code>. Async device logics <code>await put</code>; sync document
 callbacks (running inside <code>emit_sync</code> on the loop thread, which can never
 await) use <code>put_nowait</code>. <code>sink.close()</code> is sync and idempotent.</p>
 <p>Calling <code>sink()</code> also spawns a <strong>drain task</strong>, one per key, owned by
-<code>BaseStorage</code>. The drain is the only consumer of the queue — producers cannot
+<code>BaseStorage</code>. The drain is the only consumer of the queue - producers cannot
 read frames back. <strong>Capacity is enforced by the drain, not by exceptions</strong>: it
 counts writes and, at <code>spec.capacity</code>, calls <code>queue.shutdown()</code> and exits;
 unbounded specs (<code>capacity=None</code>) drain until close. An overrunning producer's
-next <code>put</code>/<code>put_nowait</code> observes this as <code>culsans.QueueShutDown</code> — the
+next <code>put</code>/<code>put_nowait</code> observes this as <code>culsans.QueueShutDown</code> - the
 queue-era analogue of the old generator returning. Nothing raises
 <code>StopAsyncIteration</code> by hand. Shutdown on overrun is best-effort, not a hard
 guarantee: a fast async producer can enqueue a few frames past capacity
@@ -2131,23 +2191,23 @@ closes the backend.</p>
     D-&gt;&gt;BS: last drain out closes store</code></pre>
 <p><code>open()</code> is idempotent and lock-guarded, with two entry points: <strong>eager</strong>,
 called from a device's write-intent <code>prepare</code> when writing is imminent, and
-<strong>lazy</strong>, called by a drain before its first write — the store materialises
+<strong>lazy</strong>, called by a drain before its first write - the store materialises
 on the first frame actually written, never earlier. Concurrent openers await
 the same in-flight open on the lock rather than racing the backend.</p>
-<p><code>register()</code> is sync and only legal before open — it raises <code>StoreStateError</code>
+<p><code>register()</code> is sync and only legal before open - it raises <code>StoreStateError</code>
 while the store is open, opening, or closing.</p>
 <p><code>close(flush=True)</code> (default) shuts every queue down cleanly: drains finish
 writing what's already queued, then exit. <code>close(flush=False)</code> (used by
 <code>reset_group</code> for abort) shuts queues down immediately, dropping queued
 frames for a fast teardown. Either way, the last drain to exit closes the
-backend under the open lock — no separate release API.</p>
-<p>Drain write failures don't raise at the producer — <code>gather</code> collects them
-with <code>return_exceptions=True</code> — so <code>close()</code> is the error observation point:
+backend under the open lock - no separate release API.</p>
+<p>Drain write failures don't raise at the producer - <code>gather</code> collects them
+with <code>return_exceptions=True</code> - so <code>close()</code> is the error observation point:
 awaiting it re-raises whatever a drain failed on.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>A bluesky plan that collects a <code>StandardDetector</code> must pre-declare the
-stream (<code>bps.declare_stream(det, name=..., collect=True)</code>) — otherwise
+stream (<code>bps.declare_stream(det, name=..., collect=True)</code>) - otherwise
 <code>collect</code> has no stream to attach documents to.</p>
 </div>
 <p>Design rationale, including the concurrent-first-write and abort-vs-flush
@@ -2161,7 +2221,7 @@ counter are observable from the UI, and <code>_scan_existing()</code> resumes nu
 from files already on disk rather than overwriting them.</p>
 <h2 id="counters">Counters<a class="headerlink" href="#counters" title="Permanent link">&para;</a></h2>
 <p><code>FrameRouter</code> owns the per-<code>data_key</code> <code>StreamSpec</code> and a <code>SignalR[int]</code> frame
-counter. <code>mark_written()</code> is the single place counts advance — subscribe to
+counter. <code>mark_written()</code> is the single place counts advance - subscribe to
 <code>signal_for(data_key)</code> to follow progress rather than polling the backend.</p>
 
 

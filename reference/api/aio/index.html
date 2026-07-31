@@ -283,6 +283,8 @@
       
         
       
+        
+      
     
     
     
@@ -843,6 +845,8 @@
       
         
       
+        
+      
     
     
     
@@ -1021,6 +1025,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1047,6 +1078,8 @@
       
         
           
+        
+      
         
       
         
@@ -1176,6 +1209,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2255,8 +2315,8 @@
 <p>Redsun runs one background <code>asyncio</code> event loop for the whole process. Device
 I/O and any coroutine connected to a psygnal signal execute there, off the GUI
 thread that emits.</p>
-<p>Only <code>run_coro</code> is meant for general use: it is how synchronous code — a
-presenter method, a Qt slot — runs a coroutine on that loop and gets its
+<p>Only <code>run_coro</code> is meant for general use: it is how synchronous code - a
+presenter method, a Qt slot - runs a coroutine on that loop and gets its
 result. Everything else in this module is application plumbing, set up by the
 application container during startup and torn down on shutdown. Components
 should not build a loop or install a backend of their own.</p>

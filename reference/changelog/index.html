@@ -283,6 +283,8 @@
       
         
       
+        
+      
     
     
     
@@ -843,6 +845,8 @@
       
         
       
+        
+      
     
     
     
@@ -1021,6 +1025,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1047,6 +1078,8 @@
       
         
           
+        
+      
         
       
         
@@ -1176,6 +1209,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -3108,15 +3168,42 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>redsun.aio.set_async_backend()</code> — installs <code>CulsansAsyncioBackend</code> as psygnal's
+<li><code>slot</code> (<code>redsun.virtual</code>) - marks a method as connectable, making its name and
+  signature part of a component's public surface. Only a marked method can be
+  connected to a signal. <code>@slot(name=...)</code> sets the port name used in
+  configuration; <code>@slot(thread=...)</code> overrides the thread affinity declared by
+  the class.</li>
+<li><code>AppContainer.wire()</code> - override to declare the connections of an
+  application. It runs after <code>register_providers</code> and before
+  <code>inject_dependencies</code>; component attributes resolve to their built instances
+  while it runs, so a connection reads as
+  <code>self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)</code>.</li>
+<li><code>AppContainer.connect()</code> and <code>VirtualContainer.connect()</code> - connect a signal to
+  a slot, applying the thread affinity of the slot or its class and recording the
+  link. A slot that is not marked, or whose signature psygnal rejects, raises
+  <code>WiringError</code> naming both ports.</li>
+<li><code>VirtualContainer.connections</code> and <code>VirtualContainer.disconnect_all()</code> - the
+  recorded wiring graph and its teardown. <code>AppContainer.shutdown()</code> now
+  disconnects everything it connected.</li>
+<li><code>ports()</code> and <code>Ports</code> (<code>redsun.virtual</code>) - the signals and slots a component
+  exposes, by port name. <code>SignalGroup</code> members appear under the member name.</li>
+<li>A <code>wiring</code> section in the configuration file, listing <code>from</code> / <code>to</code> port
+  paths (<code>component.port</code>) for a session that has no container class to
+  override. Applied after <code>wire()</code>, through the same <code>connect</code>.</li>
+<li><code>VirtualContainer.connect_paths()</code> - the string form of <code>connect</code>, used by
+  that section. A malformed path, an unbuilt component, or an unknown port
+  raises <code>WiringError</code> listing what does exist.</li>
+<li><code>Connection</code> and <code>WiringError</code> (<code>redsun.virtual</code>).</li>
+</ul>
+<p><code>find_signals</code> and hand-written <code>inject_dependencies</code> are unaffected.
+- <code>redsun.aio.set_async_backend()</code> - installs <code>CulsansAsyncioBackend</code> as psygnal's
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is
   already active. Tear it down with psygnal's <code>clear_async_backend()</code>.
-  <code>QtAppContainer</code> calls it in <code>build()</code> and clears it in <code>shutdown()</code> (ADR 0005).</li>
-<li><code>CulsansAsyncioBackend</code> and <code>AwaitableEvent</code> (<code>redsun.aio</code>) — the backend itself and
+  <code>QtAppContainer</code> calls it in <code>build()</code> and clears it in <code>shutdown()</code> (ADR 0005).
+- <code>CulsansAsyncioBackend</code> and <code>AwaitableEvent</code> (<code>redsun.aio</code>) - the backend itself and
   the resettable, awaitable event it reports <code>running</code> through. Exceptions raised by a
-  dispatched slot are logged on the <code>redsun</code> logger instead of being discarded.</li>
-</ul>
+  dispatched slot are logged on the <code>redsun</code> logger instead of being discarded.</p>
 <h3 id="changed-breaking">Changed (breaking)<a class="headerlink" href="#changed-breaking" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>get_shared_loop()</code> is no longer re-exported from <code>redsun.engine</code>; import it from
@@ -3126,15 +3213,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="0100-25-07-2026"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0">0.10.0</a> 25-07-2026<a class="headerlink" href="#0100-25-07-2026" title="Permanent link">&para;</a></h2>
 <h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>get_shared_loop()</code> (<code>redsun.engine</code>) — returns the single <code>asyncio</code> event loop created
+<li><code>get_shared_loop()</code> (<code>redsun.engine</code>) - returns the single <code>asyncio</code> event loop created
   at module import time.</li>
-<li><code>AppContainer.connect_devices(mock=False)</code> — connects all registered ophyd-async devices
+<li><code>AppContainer.connect_devices(mock=False)</code> - connects all registered ophyd-async devices
   via their async connect lifecycle. Call after <code>build()</code>. Pass <code>mock=True</code> to skip hardware
   communication in tests.</li>
 <li><code>FrameSink</code>, <code>StoreStateError</code>, and the process-wide storage registry
   (<code>register_storage</code>, <code>get_storage</code>, <code>reset_group</code>, <code>clear_registry</code>).</li>
 <li>culsans (&gt;=0.11.0) as a runtime dependency.</li>
-<li><code>redsun.presenter.builtins</code> — built-in, reusable presenter components.
+<li><code>redsun.presenter.builtins</code> - built-in, reusable presenter components.
   First entry: <code>StoragePresenter</code> (ported from redsun-mimir's
   <code>FileStoragePresenter</code>), which owns the <code>SessionPathProvider</code>, exposes it
   on the virtual container as the <code>path_provider</code> DI provider, and wires
@@ -3147,8 +3234,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><code>find_signals</code> accepts an optional <code>owner</code> keyword to scope the lookup to
   one component's signal cache (ADR 0004).</li>
 <li><code>SinkFactory</code>, <code>StorageIO</code>, <code>OpenStore</code>, and <code>PathSignals</code> are exported from
-  <code>redsun.storage</code> — the backend protocols are part of the public contract.</li>
-<li><code>benchmarks/</code> — acquire-zarr dual-load benchmark (live view via
+  <code>redsun.storage</code> - the backend protocols are part of the public contract.</li>
+<li><code>benchmarks/</code> - acquire-zarr dual-load benchmark (live view via
   <code>bps.monitor</code> + disk storage, two detectors, inline processing callback).
   Shipped in the sdist only, never in wheels, not collected by pytest.</li>
 <li>Tutorial: <a href="../../tutorials/custom-storage-backend/">writing a custom storage backend</a>
@@ -3162,7 +3249,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>Removed <code>StorageStateMachine</code>, <code>StorageState</code>, <code>InvalidStoreState</code>, and the
   <code>FrameSender</code> async-generator API. <code>StoreStateError</code> replaces
   <code>InvalidStoreState</code>.</li>
-<li>Removed <code>redsun.device.DeviceMap</code> — ophyd-async now ships <code>DeviceMap</code> as a
+<li>Removed <code>redsun.device.DeviceMap</code> - ophyd-async now ships <code>DeviceMap</code> as a
   built-in; import it from <code>ophyd_async.core</code> instead (downstream consumers
   such as redsun-mimir should migrate on their next refactor).</li>
 <li>Signal naming convention: <code>sig_snake_case</code> replaces <code>sigCamelCase</code>
@@ -3171,10 +3258,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>Presenter/view protocols reworked for sound structural subtyping (ADR
   0003): <code>PPresenter.name</code>/<code>devices</code> and <code>PView.name</code> are read-only property
   members; the <code>Presenter</code>/<code>View</code> ABCs no longer inherit the protocols;
-  validation is a dual gate — constructor positional shape
+  validation is a dual gate - constructor positional shape
   (<code>(name, devices)</code> / <code>(name,)</code>) checked via <code>inspect</code> at
   declaration/discovery, protocol compliance validated on built instances
-  (raising <code>TypeError</code>) — replacing the class-level attribute screen;
+  (raising <code>TypeError</code>) - replacing the class-level attribute screen;
   <code>AppContainer.presenters</code> and <code>.views</code> are typed <code>dict[str, PPresenter]</code>
   / <code>dict[str, PView]</code>.</li>
 </ul>
@@ -3202,10 +3289,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Removed <code>attrs</code> from dev dependencies — drop support for it in favor of <code>ophyd-async</code>.</li>
+<li>Removed <code>attrs</code> from dev dependencies - drop support for it in favor of <code>ophyd-async</code>.</li>
 <li>Removed unused utilities: <code>redsun.utils.resolve_sync_or_async</code> and
-  <code>redsun.utils.descriptors.make_key</code> / <code>make_descriptor</code> / <code>make_reading</code> —
-  descriptors and readings come from ophyd-async signal backends; the
+  <code>redsun.utils.descriptors.make_key</code> / <code>make_descriptor</code> / <code>make_reading</code> - descriptors and readings come from ophyd-async signal backends; the
   <code>parse_key</code> / <code>parse_map_key</code> helpers remain.</li>
 </ul>
 <h2 id="091-06-03-2026"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.9.0...v0.9.1">0.9.1</a> - 06-03-2026<a class="headerlink" href="#091-06-03-2026" title="Permanent link">&para;</a></h2>

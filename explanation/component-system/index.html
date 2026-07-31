@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -975,6 +977,8 @@
       
         
       
+        
+      
     
     
     
@@ -1156,6 +1160,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1182,6 +1213,8 @@
       
         
           
+        
+      
         
       
         
@@ -1311,6 +1344,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -2112,14 +2172,14 @@ information actually exists:</p>
   device layer is nominal.</li>
 <li><strong>Presenters and views</strong> pass a <strong>dual gate</strong>, each part checked where
   the information exists:<ol>
-<li><em>Constructor signature (class level, at discovery)</em> — the leading
+<li><em>Constructor signature (class level, at discovery)</em> - the leading
    positional parameters must be exactly <code>(name, devices)</code> for
    presenters and <code>(name,)</code> for views; further parameters must be
    keyword-assignable (the container calls
    <code>cls(*positionals, **config_kwargs)</code> and has no control over the
    keywords). Plugins failing this gate are rejected before
    instantiation.</li>
-<li><em>Protocol compliance (instance level, at build)</em> — the constructed
+<li><em>Protocol compliance (instance level, at build)</em> - the constructed
    instance must satisfy <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a>
    (exposing <code>name</code> and <code>devices</code>) or <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a>
    (exposing <code>name</code> and <code>view_position</code>) structurally. Attributes
@@ -2129,13 +2189,13 @@ information actually exists:</p>
 </li>
 </ul>
 <p>Inheriting the <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> /
-<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> ABCs is optional — compliance is purely
+<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> ABCs is optional - compliance is purely
 structural (see
 <a href="../decisions/0003-structural-subtyping-for-presenters-and-views/">ADR 0003</a>).</p>
 <h2 id="built-in-components">Built-in components<a class="headerlink" href="#built-in-components" title="Permanent link">&para;</a></h2>
 <p>redsun itself ships a plugin manifest under the <code>redsun</code> entry point, so
 built-in components resolve through the same discovery path as external
-plugins — no special-casing in configuration files:</p>
+plugins - no special-casing in configuration files:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">presenters</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">storage</span><span class="p">:</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>

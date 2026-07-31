@@ -18,7 +18,7 @@
         <link rel="prev" href="../0004-owner-scoped-signal-lookup/">
       
       
-        <link rel="next" href="../../../how-to/">
+        <link rel="next" href="../0006-application-declared-wiring/">
       
       
         
@@ -277,6 +277,8 @@
       
         
           
+        
+      
         
       
         
@@ -853,6 +855,8 @@
       
         
       
+        
+      
     
     
     
@@ -1125,6 +1129,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1151,6 +1182,8 @@
       
         
           
+        
+      
         
       
         
@@ -1280,6 +1313,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1962,9 +2022,9 @@
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>Redsun's UI runs on the Qt main thread while device logic runs on a single
 background <code>asyncio</code> loop. A view emits a signal; a presenter reacts to it by
-awaiting hardware. psygnal already supports this shape directly — connecting a
+awaiting hardware. psygnal already supports this shape directly - connecting a
 coroutine function to a signal builds a coroutine callback that hands the call
-to whatever async backend is installed — so no bridging code of our own is
+to whatever async backend is installed - so no bridging code of our own is
 needed at the call sites.</p>
 <p>The stock backends could not carry that traffic:</p>
 <ul>
@@ -1974,8 +2034,8 @@ needed at the call sites.</p>
   GUI was measured as undelivered after five seconds. A thread-safe hand-off
   delivers the same emission in well under a millisecond.</li>
 <li><code>asyncio.Queue</code> binds to the loop that first awaits it while empty. The
-  backend outlives any single loop — it is created once and lives for the
-  process — so a queue bound to one loop raises once another is running, which
+  backend outlives any single loop - it is created once and lives for the
+  process - so a queue bound to one loop raises once another is running, which
   is exactly what pytest's per-test event loops produce.</li>
 </ul>
 <p>psygnal's <code>set_async_backend()</code> accepts only the three literal names
@@ -1999,7 +2059,7 @@ own task, so a slow slot does not serialize the ones behind it.</p>
   Without it the backend is dropped with its queue and drain task still live.</li>
 </ul>
 <p>Installation goes through <code>redsun.aio.set_async_backend()</code>, which assigns
-psygnal's module global directly — the only way to install a backend that
+psygnal's module global directly - the only way to install a backend that
 <code>set_async_backend()</code> cannot name. It is idempotent and refuses to displace a
 backend it did not install. The backend reports its name as <code>"culsans"</code>, so
 psygnal's own setter raises rather than silently replacing it.</p>
@@ -2016,7 +2076,7 @@ retrieved" at garbage-collection time, or not at all.</p>
   class and <code>_ASYNC_BACKEND</code> as the assignment target, plus
   <code>WeakCallback.dereference()</code> reached through the inherited <code>call_back</code>. A
   psygnal release that renames any of them breaks dispatch. The test suite
-  pins the observable behaviour — installation, teardown, and delivery — so
+  pins the observable behaviour - installation, teardown, and delivery - so
   the break surfaces as a test failure rather than as silently dropped
   signals.</li>
 <li>culsans and aiologic become runtime dependencies. Both are pre-1.0.</li>
@@ -2085,13 +2145,13 @@ retrieved" at garbage-collection time, or not at all.</p>
         
         
           
-          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
+          <a href="../0006-application-declared-wiring/" class="md-footer__link md-footer__link--next" aria-label="Next: 6. Application-declared wiring">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How-to guides
+                6. Application-declared wiring
               </div>
             </div>
             <div class="md-footer__button md-icon">

@@ -281,6 +281,8 @@
       
         
       
+        
+      
     
     
     
@@ -841,6 +843,8 @@
       
         
       
+        
+      
     
     
     
@@ -1019,6 +1023,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1045,6 +1076,8 @@
       
         
           
+        
+      
         
       
         
@@ -1174,6 +1207,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1971,8 +2031,7 @@
 <p>Redsun ships with an in-memory backend (for tests) and an
 <a href="https://github.com/acquire-project/acquire-zarr">acquire-zarr</a> backend.
 If your lab uses another format, you can plug it in by implementing two
-small classes. In this tutorial you will build a naive raw-binary backend
-— each stream lands in a flat <code>.bin</code> file next to a JSON sidecar — and
+small classes. In this tutorial you will build a naive raw-binary backend - each stream lands in a flat <code>.bin</code> file next to a JSON sidecar - and
 drive it end to end through <a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.BaseStorage"><code>BaseStorage</code></a>.</p>
 <p>The format itself is deliberately simple; the point is the contract.</p>
 <h2 id="the-contract">The contract<a class="headerlink" href="#the-contract" title="Permanent link">&para;</a></h2>
@@ -1980,16 +2039,16 @@ drive it end to end through <a class="autorefs autorefs-internal" href="../../re
 <a href="../../explanation/decisions/0002-storage-dual-context-redesign/">storage redesign decision</a>
 for why):</p>
 <ul>
-<li><a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.StorageIO"><code>StorageIO</code></a> — the <em>unopened</em> factory. It
+<li><a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.StorageIO"><code>StorageIO</code></a> - the <em>unopened</em> factory. It
   knows the format's identity (<code>mimetype</code>, <code>extension</code>), how to <code>open</code> a
   store at a path, and how to describe streams to bluesky
   (<code>uri</code>, <code>resource_info</code>).</li>
-<li><a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.OpenStore"><code>OpenStore</code></a> — the <em>hot</em> write path returned
+<li><a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.OpenStore"><code>OpenStore</code></a> - the <em>hot</em> write path returned
   by <code>open</code>. It only writes (<code>write</code>), releases finished streams
   (<code>release</code>), and closes (<code>close</code>).</li>
 </ul>
 <p>You never call <code>OpenStore</code> yourself: <code>BaseStorage</code> owns the lifecycle.
-Producers — async device logics and sync document callbacks — only ever
+Producers - async device logics and sync document callbacks - only ever
 see a <a class="autorefs autorefs-internal" href="../../reference/api/storage/#redsun.storage.FrameSink"><code>FrameSink</code></a>.</p>
 <h2 id="step-1-the-open-store">Step 1: the open store<a class="headerlink" href="#step-1-the-open-store" title="Permanent link">&para;</a></h2>
 <p>Create a file <code>raw_backend.py</code> and start with the write path:</p>
@@ -2052,11 +2111,11 @@ see a <a class="autorefs autorefs-internal" href="../../reference/api/storage/#r
 </span></code></pre></div>
 <p>Three things to notice:</p>
 <ul>
-<li><code>write</code> receives the <code>data_key</code> on every call — one store serves all
+<li><code>write</code> receives the <code>data_key</code> on every call - one store serves all
   registered streams of the burst.</li>
 <li><code>release</code> is called once per stream when its drain retires (capacity
   reached, or teardown). <code>close</code> is called exactly once, by whichever
-  drain retires last — any stream still open at that point is cleaned up
+  drain retires last - any stream still open at that point is cleaned up
   there.</li>
 <li>The methods are <code>async</code> but this implementation blocks the event loop
   on file I/O. That is fine for a tutorial and for fast local disks;
@@ -2092,7 +2151,7 @@ see a <a class="autorefs autorefs-internal" href="../../reference/api/storage/#r
 </span></code></pre></div>
 <ul>
 <li><code>mimetype</code> is the backend's identity in the
-  <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;register_storage&lt;/span&gt;" href="../../reference/api/storage/#redsun.storage.register_storage">storage registry</a> — pick something
+  <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;register_storage&lt;/span&gt;" href="../../reference/api/storage/#redsun.storage.register_storage">storage registry</a> - pick something
   unique and stable.</li>
 <li><code>uri</code> and <code>resource_info</code> exist so that device data logics can emit
   <code>StreamResource</code> documents pointing at your files; consumers (e.g. a
@@ -2111,13 +2170,13 @@ teardown ordering. Append a small demo:</p>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="c1"># paths must be absolute — PathInfo rejects relative directories</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="c1"># paths must be absolute - PathInfo rejects relative directories</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">provider</span> <span class="o">=</span> <span class="n">SessionPathProvider</span><span class="p">(</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">base_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;raw-demo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span> <span class="n">session</span><span class="o">=</span><span class="s2">&quot;tutorial&quot;</span>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="p">)</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">storage</span> <span class="o">=</span> <span class="n">BaseStorage</span><span class="p">(</span><span class="n">RawIO</span><span class="p">(),</span> <span class="n">provider</span><span class="p">)</span>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="c1"># declare the burst&#39;s streams — only legal while the store is closed</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="c1"># declare the burst&#39;s streams - only legal while the store is closed</span>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">storage</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">StreamSpec</span><span class="p">(</span><span class="s2">&quot;camera&quot;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;uint16&quot;</span><span class="p">,</span> <span class="n">capacity</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="n">storage</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">StreamSpec</span><span class="p">(</span><span class="s2">&quot;stats&quot;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float64&quot;</span><span class="p">,</span> <span class="n">capacity</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
@@ -2139,8 +2198,7 @@ teardown ordering. Append a small demo:</p>
 <p>Run it:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>raw_backend.py
 </span></code></pre></div>
-<p>You get the canonical session layout —
-<code>raw-demo/tutorial/&lt;YYYY-MM-DD&gt;/unknown_00000-{camera,stats}.bin</code> plus
+<p>You get the canonical session layout - <code>raw-demo/tutorial/&lt;YYYY-MM-DD&gt;/unknown_00000-{camera,stats}.bin</code> plus
 the <code>unknown_00000.json</code> sidecar (the plan name defaults to <code>unknown</code>
 until a presenter sets it). Reading a stream back is one line:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span>
@@ -2153,16 +2211,16 @@ drain opened the store lazily, capacity (or <code>close</code>) shut the sinks
 down, and the last drain out closed <code>RawStore</code>.</p>
 <h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Share it across the app</strong> — put the instance in the process-wide
+<li><strong>Share it across the app</strong> - put the instance in the process-wide
   registry with
   <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;register_storage&lt;/span&gt;" href="../../reference/api/storage/#redsun.storage.register_storage"><code>register_storage("group", storage)</code></a>
   so device data logics and document callbacks retrieve the same
   instance via <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;get_storage&lt;/span&gt;" href="../../reference/api/storage/#redsun.storage.get_storage"><code>get_storage</code></a>.</li>
-<li><strong>Feed it from devices and callbacks</strong> — the
+<li><strong>Feed it from devices and callbacks</strong> - the
   <a href="../../explanation/storage/">session storage explanation</a> covers how
   <code>StandardDetector</code> data logics and document callbacks share one store,
   and the write-window rules that come with it.</li>
-<li><strong>Understand the invariants</strong> — the
+<li><strong>Understand the invariants</strong> - the
   <a href="../../explanation/decisions/0002-storage-dual-context-redesign/">dual-context redesign ADR</a>
   documents the lifecycle your backend can rely on: <code>open</code> is called
   once per burst, <code>write</code>/<code>release</code> only between <code>open</code> and <code>close</code>,

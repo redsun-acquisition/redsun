@@ -285,6 +285,8 @@
       
         
       
+        
+      
     
     
     
@@ -853,6 +855,8 @@
       
         
       
+        
+      
     
     
     
@@ -1125,6 +1129,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1151,6 +1182,8 @@
       
         
           
+        
+      
         
       
         
@@ -1280,6 +1313,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1960,8 +2020,8 @@
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p>Accepted</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>The <code>VirtualContainer</code> signal registry is two-level — keyed by owner name
-first, then by signal name (<code>container.signals[owner][signal]</code>) — precisely
+<p>The <code>VirtualContainer</code> signal registry is two-level - keyed by owner name
+first, then by signal name (<code>container.signals[owner][signal]</code>) - precisely
 because different components may expose signals with the same name and the
 owner name is what discerns them. <code>find_signals</code>, however, only searched by
 signal name across every cache and silently returned the first match, so
@@ -1974,7 +2034,7 @@ aligned with it.</p>
 restricted to that component's cache (its <code>name</code>, or the alias used at
 registration); an unknown owner yields an empty result, consistent with the
 existing omit-missing semantics. When omitted, the legacy first-match scan
-across all caches is preserved — convenient when a signal name is known to
+across all caches is preserved - convenient when a signal name is known to
 be unique, ambiguous otherwise.</p>
 <p>As a companion convention, signal attributes follow standard Python naming:
 <code>sig_snake_case</code> (the <code>sig_</code> prefix is a readability aid and may be dropped
@@ -1985,7 +2045,7 @@ by component authors), replacing the previous <code>sigCamelCase</code> style.
 <ul>
 <li>Consumers that must disambiguate same-named signals pass the owner name;
   redsun-mimir's presenters and views should adopt the owner-scoped form in
-  their refactor and rename their signals to <code>sig_snake_case</code> — until then,
+  their refactor and rename their signals to <code>sig_snake_case</code> - until then,
   mimir's <code>sigCamelCase</code> emitters will not match redsun's renamed
   <code>StoragePresenter</code> wiring.</li>
 <li>The rename is breaking for any consumer that looked up the old

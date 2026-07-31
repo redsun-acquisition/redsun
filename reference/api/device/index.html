@@ -283,6 +283,8 @@
       
         
       
+        
+      
     
     
     
@@ -843,6 +845,8 @@
       
         
       
+        
+      
     
     
     
@@ -1021,6 +1025,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1047,6 +1078,8 @@
       
         
           
+        
+      
         
       
         
@@ -1176,6 +1209,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -1909,12 +1969,11 @@
 
 
 <h1 id="device">Device<a class="headerlink" href="#device" title="Permanent link">&para;</a></h1>
-<p>The device layer is delegated to
-<a href="https://bluesky.github.io/ophyd-async/">ophyd-async</a>: import device
-primitives (<code>Device</code>, <code>StandardReadable</code>, <code>StandardDetector</code>, signals,
-<code>DeviceMap</code>, ...) directly from <code>ophyd_async.core</code>. See
-<a href="../../../explanation/architecture/devices/">Devices</a> for guidance.</p>
-<p><code>redsun.device</code> hosts only redsun-specific device protocols.</p>
+<p>Devices are <a href="https://bluesky.github.io/ophyd-async/">ophyd-async</a> devices.
+Import <code>Device</code>, <code>StandardReadable</code>, <code>StandardDetector</code>, the signal types and
+<code>DeviceMap</code> from <code>ophyd_async.core</code>; see
+<a href="../../../explanation/architecture/devices/">Devices</a>.</p>
+<p><code>redsun.device</code> adds one protocol on top of that.</p>
 
 
 <div class="doc doc-object doc-class">

@@ -283,6 +283,8 @@
       
         
       
+        
+      
     
     
     
@@ -843,6 +845,8 @@
       
         
       
+        
+      
     
     
     
@@ -1021,6 +1025,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1047,6 +1078,8 @@
       
         
           
+        
+      
         
       
         
@@ -1176,6 +1209,33 @@
     
   
   Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Wire components together
 
     
   </span>
@@ -3192,7 +3252,7 @@ can be modified based on needs.</p>
 </span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a>        <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a>        <span class="n">md</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a>        <span class="o">*</span><span class="p">,</span>
-</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a>        <span class="n">loop</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">AbstractEventLoop</span> <span class="o">=</span> <span class="n">get_shared_loop</span><span class="p">(),</span>  <span class="c1"># noqa: B008 — returns the import-time singleton loop</span>
+</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a>        <span class="n">loop</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">AbstractEventLoop</span> <span class="o">=</span> <span class="n">get_shared_loop</span><span class="p">(),</span>  <span class="c1"># noqa: B008 - returns the import-time singleton loop</span>
 </span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a>        <span class="n">preprocessors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Preprocessor</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>        <span class="n">md_validator</span><span class="p">:</span> <span class="n">MDValidator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a>        <span class="n">md_normalizer</span><span class="p">:</span> <span class="n">MDNormalizer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3465,13 +3525,13 @@ and may support pause/resume and in-flight actions (user-triggered side effects
 while the plan is running).</p>
 <p>This module provides:</p>
 <ul>
-<li><code>SRLatch</code> — an asyncio set-reset latch used to synchronise plan execution with
+<li><code>SRLatch</code> - an asyncio set-reset latch used to synchronise plan execution with
   external signals.</li>
-<li><code>continous</code> — a decorator that marks a plan function as continuous and records
+<li><code>continous</code> - a decorator that marks a plan function as continuous and records
   its <code>togglable</code> and <code>pausable</code> capabilities.</li>
-<li><code>Action</code> — a dataclass carrying metadata (name, description, toggle state) for
+<li><code>Action</code> - a dataclass carrying metadata (name, description, toggle state) for
   a single in-flight action.</li>
-<li><code>ContinousPlan</code> — a <code>typing.Protocol</code> used for static typing and runtime
+<li><code>ContinousPlan</code> - a <code>typing.Protocol</code> used for static typing and runtime
   <code>isinstance</code> checks on decorated plans.</li>
 </ul>
 

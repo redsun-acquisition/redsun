@@ -49,6 +49,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0005-culsans-psygnal-async-backend/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0006-application-declared-wiring/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
@@ -59,6 +62,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/wire-components/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
