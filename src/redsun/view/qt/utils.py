@@ -2,14 +2,14 @@
 
 This module provides the building blocks for a plan parameter form:
 
-- `ActionButton` — a `QPushButton` that carries `Action` metadata and
+- `ActionButton` - a `QPushButton` that carries `Action` metadata and
   auto-updates its label when toggled.
-- `PlanWidget` — a frozen dataclass owning all Qt widgets for a single
+- `PlanWidget` - a frozen dataclass owning all Qt widgets for a single
   plan (parameter form, run/pause buttons, action buttons).
-- `create_plan_widget` — factory that builds a complete `PlanWidget` from
+- `create_plan_widget` - factory that builds a complete `PlanWidget` from
   a `PlanSpec` and wires up the caller-supplied callbacks.
-- `PlanInfoDialog` — a simple Markdown-rendering dialog for displaying the plan docstring (if available).
-- `create_param_widget` — re-exported from `_widget_factory` for convenience.
+- `PlanInfoDialog` - a simple Markdown-rendering dialog for displaying the plan docstring (if available).
+- `create_param_widget` - re-exported from `_widget_factory` for convenience.
 """
 
 from __future__ import annotations
@@ -199,7 +199,7 @@ def _build_param_widgets(
     """Arrange *spec* parameters into device widgets and plain parameter widgets.
 
     Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``, ``*args: PDevice``
-    and bare ``PDevice`` parameters.  Everything else (scalars, Literals, …) goes
+    and bare ``PDevice`` parameters.  Everything else (scalars, Literals, ...) goes
     into the plain parameters list.
 
     Returns
@@ -263,7 +263,7 @@ def _build_params_group(
 ) -> QtW.QGroupBox | None:
     """Build the *Parameters* group box using a ``QFormLayout``.
 
-    Each plain parameter (scalar, Literal, …) is added as a labelled
+    Each plain parameter (scalar, Literal, ...) is added as a labelled
     form row.  Returns ``None`` when there are no plain parameters.
     """
     if not param_widgets:

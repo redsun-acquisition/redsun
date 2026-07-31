@@ -14,7 +14,7 @@ under `.claude/agents/`, and code comments. Contributors and agents need a
 public, durable record of *why* the architecture is shaped the way it is,
 especially across breaking rewrites.
 
-ophyd-async — whose device model redsun builds on — keeps Architecture
+ophyd-async - whose device model redsun builds on - keeps Architecture
 Decision Records under `docs/explanations/decisions/`, following the format
 described in [Michael Nygard's blog](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions).
 

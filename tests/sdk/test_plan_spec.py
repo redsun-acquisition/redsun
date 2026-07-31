@@ -380,7 +380,7 @@ class TestUnresolvableAnnotation:
         assert err.annotation is TestUnresolvableAnnotation._Exotic
 
     def test_optional_exotic_param_does_not_raise(self) -> None:
-        """A param with a default value is never required — plan should succeed."""
+        """A param with a default value is never required - plan should succeed."""
         default_val = TestUnresolvableAnnotation._Exotic()
 
         def ok_plan(
@@ -675,7 +675,7 @@ class TestResolveArguments:
     reason="requires a display (Qt) on Linux",
 )
 class TestCreateParamWidget:
-    """Tests for ``create_param_widget`` — requires a Qt platform."""
+    """Tests for ``create_param_widget`` - requires a Qt platform."""
 
     def _param(
         self,

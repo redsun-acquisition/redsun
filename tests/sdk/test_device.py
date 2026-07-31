@@ -116,7 +116,7 @@ async def test_child_device_sibling_independence() -> None:
 
 
 def test_oa_device_has_no_egu_attribute() -> None:
-    """Units must come from descriptors only — no top-level egu attribute."""
+    """Units must come from descriptors only - no top-level egu attribute."""
 
     class OADetector(StandardReadable):
         def __init__(self, name: str, /, *, exposure_units: str = "ms") -> None:

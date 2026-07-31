@@ -13,7 +13,7 @@ graph TD
 
 ## The role of each part
 
-- **Redsun** provides both the application container and the SDK — shared base classes and communication patterns (devices, presenters, views, a shared container for inter-component communication and data exchange) — ensuring a consistent programming model across the entire ecosystem.
+- **Redsun** provides both the application container and the SDK - shared base classes and communication patterns (devices, presenters, views, a shared container for inter-component communication and data exchange) - ensuring a consistent programming model across the entire ecosystem.
 - **Components** are user-developed packages that implement the actual hardware drivers, business logic, and UI components using the redsun SDK.
 - **redsun** is the application shell that discovers plugins, wires them together through its container architecture, and launches the final application.
 

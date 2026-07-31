@@ -70,17 +70,17 @@ sink.close()  # end the stream; queued frames still flush
 
 ## Frame sinks and capacity
 
-`sink(data_key)` returns a `FrameSink` — a thin producer-only handle over a
+`sink(data_key)` returns a `FrameSink` - a thin producer-only handle over a
 bounded `culsans.Queue`. Async device logics `await put`; sync document
 callbacks (running inside `emit_sync` on the loop thread, which can never
 await) use `put_nowait`. `sink.close()` is sync and idempotent.
 
 Calling `sink()` also spawns a **drain task**, one per key, owned by
-`BaseStorage`. The drain is the only consumer of the queue — producers cannot
+`BaseStorage`. The drain is the only consumer of the queue - producers cannot
 read frames back. **Capacity is enforced by the drain, not by exceptions**: it
 counts writes and, at `spec.capacity`, calls `queue.shutdown()` and exits;
 unbounded specs (`capacity=None`) drain until close. An overrunning producer's
-next `put`/`put_nowait` observes this as `culsans.QueueShutDown` — the
+next `put`/`put_nowait` observes this as `culsans.QueueShutDown` - the
 queue-era analogue of the old generator returning. Nothing raises
 `StopAsyncIteration` by hand. Shutdown on overrun is best-effort, not a hard
 guarantee: a fast async producer can enqueue a few frames past capacity
@@ -119,26 +119,26 @@ sequenceDiagram
 
 `open()` is idempotent and lock-guarded, with two entry points: **eager**,
 called from a device's write-intent `prepare` when writing is imminent, and
-**lazy**, called by a drain before its first write — the store materialises
+**lazy**, called by a drain before its first write - the store materialises
 on the first frame actually written, never earlier. Concurrent openers await
 the same in-flight open on the lock rather than racing the backend.
 
-`register()` is sync and only legal before open — it raises `StoreStateError`
+`register()` is sync and only legal before open - it raises `StoreStateError`
 while the store is open, opening, or closing.
 
 `close(flush=True)` (default) shuts every queue down cleanly: drains finish
 writing what's already queued, then exit. `close(flush=False)` (used by
 `reset_group` for abort) shuts queues down immediately, dropping queued
 frames for a fast teardown. Either way, the last drain to exit closes the
-backend under the open lock — no separate release API.
+backend under the open lock - no separate release API.
 
-Drain write failures don't raise at the producer — `gather` collects them
-with `return_exceptions=True` — so `close()` is the error observation point:
+Drain write failures don't raise at the producer - `gather` collects them
+with `return_exceptions=True` - so `close()` is the error observation point:
 awaiting it re-raises whatever a drain failed on.
 
 !!! note
     A bluesky plan that collects a `StandardDetector` must pre-declare the
-    stream (`bps.declare_stream(det, name=..., collect=True)`) — otherwise
+    stream (`bps.declare_stream(det, name=..., collect=True)`) - otherwise
     `collect` has no stream to attach documents to.
 
 Design rationale, including the concurrent-first-write and abort-vs-flush
@@ -156,5 +156,5 @@ from files already on disk rather than overwriting them.
 ## Counters
 
 `FrameRouter` owns the per-`data_key` `StreamSpec` and a `SignalR[int]` frame
-counter. `mark_written()` is the single place counts advance — subscribe to
+counter. `mark_written()` is the single place counts advance - subscribe to
 `signal_for(data_key)` to follow progress rather than polling the backend.

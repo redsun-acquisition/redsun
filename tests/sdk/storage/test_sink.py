@@ -42,7 +42,7 @@ async def test_close_is_idempotent_and_shuts_producers_out() -> None:
     sink = FrameSink(queue)
     await sink.put(frame(7))
     sink.close()
-    sink.close()  # idempotent — no raise
+    sink.close()  # idempotent - no raise
     with pytest.raises(culsans.QueueShutDown):
         sink.put_nowait(frame())
     with pytest.raises(culsans.QueueShutDown):

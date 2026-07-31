@@ -180,7 +180,7 @@ def test_emit_from_foreign_thread_reaches_an_idle_loop(
     emitter = Emitter()
     emitter.sig_motor_move.connect(on_move)
 
-    # the loop has nothing else to do — this is the case a non-threadsafe
+    # the loop has nothing else to do - this is the case a non-threadsafe
     # ``put_nowait`` never wakes up
     emitter.sig_motor_move.emit("stage", "x", 10.0)
 
@@ -398,7 +398,7 @@ def test_backend_buffers_items_put_before_the_drain_runs() -> None:
     emitter = Emitter()
     emitter.sig_motor_move.connect(on_move)
 
-    # no wait on `running` — the queue must hold the item until the drain
+    # no wait on `running` - the queue must hold the item until the drain
     # is scheduled on the shared loop
     emitter.sig_motor_move.emit("stage", "x", 1.0)
     assert delivered.wait(TIMEOUT)

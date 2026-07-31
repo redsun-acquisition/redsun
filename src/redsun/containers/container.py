@@ -97,7 +97,7 @@ def _check_presenter_protocol(cls: type) -> TypeGuard[type[PPresenter]]:
     """Class-level gate of the dual presenter validation.
 
     The constructor must accept exactly ``(name, devices)`` as its leading
-    positional parameters — the only part of the contract knowable before
+    positional parameters - the only part of the contract knowable before
     instantiation (keyword arguments are uncontrolled; instance attributes
     are invisible). PPresenter compliance is then validated on the built
     instance by ``_PresenterComponent.build``.
@@ -109,7 +109,7 @@ def _check_view_protocol(cls: type) -> TypeGuard[type[PView]]:
     """Class-level gate of the dual view validation.
 
     The constructor must accept exactly ``(name,)`` as its leading
-    positional parameter — the only part of the contract knowable before
+    positional parameter - the only part of the contract knowable before
     instantiation. PView compliance is then validated on the built
     instance by ``_ViewComponent.build``.
     """
@@ -327,7 +327,7 @@ class AppContainer:
         if config_path is not None:
             try:
                 yaml_data = _load_yaml(config_path)
-            except Exception as e:  # noqa: BLE001 — unreadable config falls back to defaults
+            except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
                 logger.warning(f"Could not read config file {config_path}: {e}")
                 yaml_data = {}
             _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
@@ -454,7 +454,7 @@ class AppContainer:
             try:
                 built_devices[name] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
-            except Exception as e:  # noqa: BLE001 — a missing device must not abort the app
+            except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
 
         for comp_name, presenter_component in self._presenter_components.items():
@@ -539,7 +539,7 @@ class AppContainer:
             if isinstance(comp.instance, HasShutdown):
                 try:
                     comp.instance.shutdown()
-                except Exception as e:  # noqa: BLE001 — one failed shutdown must not block the rest
+                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
 
         self._is_built = False

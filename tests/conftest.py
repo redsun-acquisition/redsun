@@ -24,7 +24,7 @@ def qapp() -> QApplication:
 
 def _has_display() -> bool:
     """Return True if a Qt display environment is available."""
-    # offscreen platform works everywhere — check first
+    # offscreen platform works everywhere - check first
     if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
         return True
     # X11 / Wayland display on Linux

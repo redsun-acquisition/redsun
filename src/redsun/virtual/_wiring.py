@@ -56,18 +56,17 @@ def slot(
 ) -> F | Callable[[F], F]:
     """Mark a method as connectable to a signal.
 
-    A marked method is part of the component's public surface: it can be named
-    from a wiring declaration and its name and signature are what other
-    components are connected against. Undecorated methods cannot be connected.
+    A marked method is public API: its name and signature are what other
+    components are connected against, and an unmarked method cannot be
+    connected at all. `async def` methods may be marked too.
 
     Parameters
     ----------
     name : str | None
-        Port name the method is addressed by. Defaults to the method name
-        without leading underscores.
+        Port name a configuration file addresses the method by. Defaults to
+        the method name without leading underscores.
     thread : SlotThread
-        Thread the method is delivered on, overriding the affinity its class
-        declares.
+        Delivery thread, overriding the affinity the class declares.
     """
 
     def deco(target: F) -> F:
@@ -96,16 +95,25 @@ class Ports:
 def ports(component: object) -> Ports:
     """Return the signals and slots *component* exposes, by port name.
 
-    A signal is a public `psygnal.Signal` attribute, or a member of a
-    `psygnal.SignalGroup` held by the component, in which case the member name
-    is the port name. A slot is a method marked with
-    [`slot`][redsun.virtual.slot].
+    A signal is a public [`Signal`][psygnal.Signal] attribute, or a member of a
+    [`SignalGroup`][psygnal.SignalGroup] the component holds, in which case the
+    member name is the port name. A slot is a method marked with `slot`.
+
+    Parameters
+    ----------
+    component : object
+        The built component to inspect.
+
+    Returns
+    -------
+    Ports
+        Its signals and slots, keyed by port name.
 
     Raises
     ------
     WiringError
-        If two signals claim the same port name, which makes the component
-        unaddressable from a wiring declaration.
+        If two signals claim the same port name, which would leave the
+        component unaddressable.
     """
     cls = type(component)
     signals: dict[str, SignalInstance] = {}

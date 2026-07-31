@@ -1,7 +1,7 @@
 """General-purpose utilities for redsun.
 
 Exposes:
-- `find_signals` — locate named signals in a `VirtualContainer`.
+- `find_signals` - locate named signals in a `VirtualContainer`.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def find_signals(
     Pass *owner* to restrict the lookup to a single component's cache.
 
     When *owner* is omitted, all registered caches are searched and the
-    first match per name wins — convenient when a signal name is known to
+    first match per name wins - convenient when a signal name is known to
     be unique, but ambiguous otherwise. Names (or owners) not present in
     the registry are omitted from the result rather than raising.
 

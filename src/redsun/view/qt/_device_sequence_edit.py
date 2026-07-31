@@ -3,7 +3,7 @@
 ``DeviceSequenceEdit`` is a proper ``magicgui.widgets.bases.ValueWidget`` subclass,
 backed by a Qt ``_CheckboxListWidget``.  The backend class (``_QCheckboxBackend``)
 implements ``ValueWidgetProtocol`` so that the widget passes through the magicgui
-container machinery unchanged — no ``_explicitly_hidden`` or ``_LabeledWidget``
+container machinery unchanged - no ``_explicitly_hidden`` or ``_LabeledWidget``
 errors.
 
 The full device pool is always visible as a vertical list of ``QCheckBox`` widgets.

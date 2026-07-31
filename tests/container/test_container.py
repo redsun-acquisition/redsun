@@ -516,7 +516,7 @@ class TestAppConfig:
             "frontend": "pyqt",
         }
         assert cfg["schema_version"] == 1.0
-        # AppConfig extends RedSunConfig — verify required keys are inherited
+        # AppConfig extends RedSunConfig - verify required keys are inherited
         assert "schema_version" in AppConfig.__required_keys__
         assert "frontend" in AppConfig.__required_keys__
         # session is NotRequired since 0.10.0
@@ -864,7 +864,7 @@ class TestConnectDevices:
         app.connect_devices(mock=True)
         assert connect_calls == ["called"]
 
-        # Simulate run() when already connected — connect_devices must not fire again.
+        # Simulate run() when already connected - connect_devices must not fire again.
         if not app._devices_connected:
             app.connect_devices(mock=True)
 
@@ -910,8 +910,7 @@ class TestBuiltinPlugins:
 class TestProtocolValidationAtBuild:
     """Protocol compliance is validated on built instances, not classes.
 
-    Class-level checks cannot see attributes assigned in ``__init__`` —
-    the old hasattr-on-class screen rejected exactly these implementers.
+    Class-level checks cannot see attributes assigned in ``__init__`` - the old hasattr-on-class screen rejected exactly these implementers.
     """
 
     def test_structural_presenter_without_abc_builds(self) -> None:

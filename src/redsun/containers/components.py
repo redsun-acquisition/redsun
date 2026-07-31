@@ -24,8 +24,7 @@ def expects_positionals(cls: Callable[..., Any], expected: tuple[str, ...]) -> b
     contract is purely positional: the constructor's leading positional
     parameters must be exactly *expected* (checked by name and by binding),
     any further positional-or-keyword parameters must carry defaults, and
-    ``*args`` is rejected. Keyword arguments are deliberately not validated —
-    the container has no control over them.
+    ``*args`` is rejected. Keyword arguments are deliberately not validated - the container has no control over them.
 
     Parameters
     ----------
@@ -133,19 +132,17 @@ def declare_device(
         motor = declare_device(MyMotor, axis=["X"])
     ```
 
-    The container will create an instance of `MyMotor` with the specified kwargs when the
-    container is built. The attribute name ``motor`` will be used as the device ``name`` argument.
-
     Parameters
     ----------
     cls : type
         The component class to instantiate.
     alias : str | None
-        Override the component name. Takes priority over the attribute name.
+        Component name, overriding the attribute name.
     from_config : str | None
-        Key to look up in the configuration file's ``devices`` section.
+        Key to read further keyword arguments from, in the configuration
+        file's ``devices`` section.
     **kwargs : Any
-        Additional keyword arguments forwarded to the component constructor.
+        Keyword arguments forwarded to the component constructor.
     """
     return _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
@@ -169,11 +166,12 @@ def declare_view(
     cls : type
         The component class to instantiate.
     alias : str | None
-        Override the component name. Takes priority over the attribute name.
+        Component name, overriding the attribute name.
     from_config : str | None
-        Key to look up in the configuration file's ``views`` section.
+        Key to read further keyword arguments from, in the configuration
+        file's ``views`` section.
     **kwargs : Any
-        Additional keyword arguments forwarded to the component constructor.
+        Keyword arguments forwarded to the component constructor.
     """
     return _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
@@ -197,11 +195,12 @@ def declare_presenter(
     cls : type
         The component class to instantiate.
     alias : str | None
-        Override the component name. Takes priority over the attribute name.
+        Component name, overriding the attribute name.
     from_config : str | None
-        Key to look up in the configuration file's ``presenters`` section.
+        Key to read further keyword arguments from, in the configuration
+        file's ``presenters`` section.
     **kwargs : Any
-        Additional keyword arguments forwarded to the component constructor.
+        Keyword arguments forwarded to the component constructor.
     """
     return _PresenterField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
 
@@ -267,7 +266,7 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
     Validation is a dual gate: the constructor's positional shape
     (``name``, ``devices``) is checked at wrapper creation via
     ``inspect``; PPresenter compliance is validated on the built
-    instance — class-level checks cannot see attributes assigned in
+    instance - class-level checks cannot see attributes assigned in
     ``__init__``.
     """
 
@@ -300,7 +299,7 @@ class _ViewComponent(_ComponentBase[PView]):
 
     Validation is a dual gate: the constructor's positional shape
     (``name``) is checked at wrapper creation via ``inspect``; PView
-    compliance is validated on the built instance — class-level checks
+    compliance is validated on the built instance - class-level checks
     cannot see attributes assigned in ``__init__``.
     """
 

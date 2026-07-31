@@ -6,13 +6,13 @@ while the plan is running).
 
 This module provides:
 
-- `SRLatch` — an asyncio set-reset latch used to synchronise plan execution with
+- `SRLatch` - an asyncio set-reset latch used to synchronise plan execution with
   external signals.
-- `continous` — a decorator that marks a plan function as continuous and records
+- `continous` - a decorator that marks a plan function as continuous and records
   its ``togglable`` and ``pausable`` capabilities.
-- `Action` — a dataclass carrying metadata (name, description, toggle state) for
+- `Action` - a dataclass carrying metadata (name, description, toggle state) for
   a single in-flight action.
-- `ContinousPlan` — a `typing.Protocol` used for static typing and runtime
+- `ContinousPlan` - a `typing.Protocol` used for static typing and runtime
   ``isinstance`` checks on decorated plans.
 """
 

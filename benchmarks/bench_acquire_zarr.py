@@ -6,10 +6,10 @@ Two ``StandardDetector``s share one ``BaseStorage`` backed by
 ``AcquireZarrIO`` (real disk I/O). Each detector's acquire loop does, per
 frame:
 
-1. update its buffer signal (live view) — the plan ``bps.monitor``s the
+1. update its buffer signal (live view) - the plan ``bps.monitor``s the
    signal, so every update synchronously emits an Event document through
    the RunEngine, where a processing callback consumes it inline;
-2. ``await sink.put(frame)`` (disk path) — frames flow through the bounded
+2. ``await sink.put(frame)`` (disk path) - frames flow through the bounded
    culsans queue into the per-key drain, which writes to the zarr store.
 
 Both paths run on the engine's event loop, so the benchmark surfaces their
@@ -201,7 +201,7 @@ class BenchDataLogic(DetectorDataLogic):
 class ProcessingCallback(DocumentRouter):
     """Consumes monitor events inline and does configurable processing.
 
-    Runs synchronously inside ``emit_sync`` on the engine loop — its
+    Runs synchronously inside ``emit_sync`` on the engine loop - its
     cumulative time is stolen directly from producers and drains.
     """
 
@@ -225,7 +225,7 @@ class ProcessingCallback(DocumentRouter):
                 float(corrected.mean())
                 float(corrected.std())
             elif self.mode == "heavy":
-                # 2D FFT magnitude — deliberately expensive
+                # 2D FFT magnitude - deliberately expensive
                 np.abs(np.fft.rfft2(frame.astype(np.float32)))
         self.events += 1
         self.processing_time += time.perf_counter() - start
@@ -284,7 +284,7 @@ class BenchResult:
             "",
             "=" * 68,
             (
-                f"acquire-zarr benchmark — {total_frames} frames total, "
+                f"acquire-zarr benchmark - {total_frames} frames total, "
                 f"{self.shape[0]}x{self.shape[1]} {self.dtype} "
                 f"({frame_bytes / 1e6:.2f} MB/frame)"
             ),

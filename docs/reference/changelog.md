@@ -39,12 +39,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `Connection` and `WiringError` (`redsun.virtual`).
 
   `find_signals` and hand-written `inject_dependencies` are unaffected.
-- `redsun.aio.set_async_backend()` — installs `CulsansAsyncioBackend` as psygnal's
+- `redsun.aio.set_async_backend()` - installs `CulsansAsyncioBackend` as psygnal's
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is
   already active. Tear it down with psygnal's `clear_async_backend()`.
   `QtAppContainer` calls it in `build()` and clears it in `shutdown()` (ADR 0005).
-- `CulsansAsyncioBackend` and `AwaitableEvent` (`redsun.aio`) — the backend itself and
+- `CulsansAsyncioBackend` and `AwaitableEvent` (`redsun.aio`) - the backend itself and
   the resettable, awaitable event it reports `running` through. Exceptions raised by a
   dispatched slot are logged on the `redsun` logger instead of being discarded.
 
@@ -58,15 +58,15 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- `get_shared_loop()` (`redsun.engine`) — returns the single `asyncio` event loop created
+- `get_shared_loop()` (`redsun.engine`) - returns the single `asyncio` event loop created
   at module import time.
-- `AppContainer.connect_devices(mock=False)` — connects all registered ophyd-async devices
+- `AppContainer.connect_devices(mock=False)` - connects all registered ophyd-async devices
   via their async connect lifecycle. Call after `build()`. Pass `mock=True` to skip hardware
   communication in tests.
 - `FrameSink`, `StoreStateError`, and the process-wide storage registry
   (`register_storage`, `get_storage`, `reset_group`, `clear_registry`).
 - culsans (>=0.11.0) as a runtime dependency.
-- `redsun.presenter.builtins` — built-in, reusable presenter components.
+- `redsun.presenter.builtins` - built-in, reusable presenter components.
   First entry: `StoragePresenter` (ported from redsun-mimir's
   `FileStoragePresenter`), which owns the `SessionPathProvider`, exposes it
   on the virtual container as the `path_provider` DI provider, and wires
@@ -79,8 +79,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `find_signals` accepts an optional `owner` keyword to scope the lookup to
   one component's signal cache (ADR 0004).
 - `SinkFactory`, `StorageIO`, `OpenStore`, and `PathSignals` are exported from
-  `redsun.storage` — the backend protocols are part of the public contract.
-- `benchmarks/` — acquire-zarr dual-load benchmark (live view via
+  `redsun.storage` - the backend protocols are part of the public contract.
+- `benchmarks/` - acquire-zarr dual-load benchmark (live view via
   `bps.monitor` + disk storage, two detectors, inline processing callback).
   Shipped in the sdist only, never in wheels, not collected by pytest.
 - Tutorial: [writing a custom storage backend](../tutorials/custom-storage-backend.md)
@@ -94,7 +94,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - Removed `StorageStateMachine`, `StorageState`, `InvalidStoreState`, and the
   `FrameSender` async-generator API. `StoreStateError` replaces
   `InvalidStoreState`.
-- Removed `redsun.device.DeviceMap` — ophyd-async now ships `DeviceMap` as a
+- Removed `redsun.device.DeviceMap` - ophyd-async now ships `DeviceMap` as a
   built-in; import it from `ophyd_async.core` instead (downstream consumers
   such as redsun-mimir should migrate on their next refactor).
 - Signal naming convention: `sig_snake_case` replaces `sigCamelCase`
@@ -103,10 +103,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 - Presenter/view protocols reworked for sound structural subtyping (ADR
   0003): `PPresenter.name`/`devices` and `PView.name` are read-only property
   members; the `Presenter`/`View` ABCs no longer inherit the protocols;
-  validation is a dual gate — constructor positional shape
+  validation is a dual gate - constructor positional shape
   (`(name, devices)` / `(name,)`) checked via `inspect` at
   declaration/discovery, protocol compliance validated on built instances
-  (raising `TypeError`) — replacing the class-level attribute screen;
+  (raising `TypeError`) - replacing the class-level attribute screen;
   `AppContainer.presenters` and `.views` are typed `dict[str, PPresenter]`
   / `dict[str, PView]`.
 
@@ -133,10 +133,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   leg, and ruff checks the whole repository instead of `src/redsun` only.
 
 ### Removed
-- Removed `attrs` from dev dependencies — drop support for it in favor of `ophyd-async`.
+- Removed `attrs` from dev dependencies - drop support for it in favor of `ophyd-async`.
 - Removed unused utilities: `redsun.utils.resolve_sync_or_async` and
-  `redsun.utils.descriptors.make_key` / `make_descriptor` / `make_reading` —
-  descriptors and readings come from ophyd-async signal backends; the
+  `redsun.utils.descriptors.make_key` / `make_descriptor` / `make_reading` - descriptors and readings come from ophyd-async signal backends; the
   `parse_key` / `parse_map_key` helpers remain.
 
 ## [0.9.1] - 06-03-2026

@@ -39,7 +39,7 @@ The key differences in respect to the `MVP` architecture are the following:
 
 At the core of Redsun is the [`AppContainer`][redsun.AppContainer], which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.
 
-**Build order** — components are constructed in strict dependency sequence:
+**Build order** - components are constructed in strict dependency sequence:
 
 ```mermaid
 graph LR
@@ -53,7 +53,7 @@ graph LR
     Presenters --> Views
 ```
 
-**Provider registration and dependency injection** — once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:
+**Provider registration and dependency injection** - once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:
 
 ```mermaid
 graph LR
@@ -95,7 +95,7 @@ Components are declared as class attributes using the layer-specific field speci
 [`declare_view()`][redsun.containers.components.declare_view].
 Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
 
-When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` — for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
+When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` - for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
 from redsun.containers import declare_device, declare_presenter, declare_view
@@ -123,9 +123,9 @@ The class is defined inside a function so that the Qt imports and any heavy devi
 
 Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
 
-1. `alias` — if an explicit `alias` is passed to `declare_device()`, `declare_presenter()`, or `declare_view()`, that value is used regardless of everything else.
-2. attribute name — in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
-3. YAML key — in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
+1. `alias` - if an explicit `alias` is passed to `declare_device()`, `declare_presenter()`, or `declare_view()`, that value is used regardless of everything else.
+2. attribute name - in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
+3. YAML key - in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
 
 Examples in the declarative flow:
 
@@ -174,12 +174,12 @@ The configuration file provides base keyword arguments for each component. These
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in four phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:
 
-**Phase 1 — construction**:
+**Phase 1 - construction**:
 
-1. [`VirtualContainer`][redsun.virtual.VirtualContainer] — created and seeded with the application configuration.
-2. **Devices** — each receives its resolved name and keyword arguments.
-3. **Presenters** — each receives its resolved name and the full device dictionary.
-4. **Views** — each receives its resolved name.
+1. [`VirtualContainer`][redsun.virtual.VirtualContainer] - created and seeded with the application configuration.
+2. **Devices** - each receives its resolved name and keyword arguments.
+3. **Presenters** - each receives its resolved name and the full device dictionary.
+4. **Views** - each receives its resolved name.
 
 Presenter and view constructors are signature-checked when their
 components are declared or discovered (leading positionals must be
@@ -190,15 +190,15 @@ against its layer contract (`ophyd_async.core.Device`,
 failing device is logged and skipped, while a failing presenter or view
 re-raises and aborts the build.
 
-**Phase 2 — provider registration**:
+**Phase 2 - provider registration**:
 
 Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
 
-**Phase 3 — wiring**:
+**Phase 3 - wiring**:
 
 [`wire()`][redsun.containers.container.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
 
-**Phase 4 — dependency injection**:
+**Phase 4 - dependency injection**:
 
 Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
 
@@ -247,7 +247,7 @@ The `VirtualContainer` is created during [`build()`][redsun.containers.container
 
 === "Configuration file"
 
-    For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the `frontend:` key — no Python code needs to be written:
+    For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the `frontend:` key - no Python code needs to be written:
 
     ```python
     from redsun import AppContainer

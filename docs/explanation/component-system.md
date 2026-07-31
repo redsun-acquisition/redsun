@@ -109,14 +109,14 @@ information actually exists:
   device layer is nominal.
 - **Presenters and views** pass a **dual gate**, each part checked where
   the information exists:
-    1. *Constructor signature (class level, at discovery)* — the leading
+    1. *Constructor signature (class level, at discovery)* - the leading
        positional parameters must be exactly `(name, devices)` for
        presenters and `(name,)` for views; further parameters must be
        keyword-assignable (the container calls
        `cls(*positionals, **config_kwargs)` and has no control over the
        keywords). Plugins failing this gate are rejected before
        instantiation.
-    2. *Protocol compliance (instance level, at build)* — the constructed
+    2. *Protocol compliance (instance level, at build)* - the constructed
        instance must satisfy [`PPresenter`][redsun.presenter.PPresenter]
        (exposing `name` and `devices`) or [`PView`][redsun.view.PView]
        (exposing `name` and `view_position`) structurally. Attributes
@@ -124,7 +124,7 @@ information actually exists:
        instance raises a `TypeError` naming the missing members.
 
 Inheriting the [`Presenter`][redsun.presenter.Presenter] /
-[`View`][redsun.view.View] ABCs is optional — compliance is purely
+[`View`][redsun.view.View] ABCs is optional - compliance is purely
 structural (see
 [ADR 0003](decisions/0003-structural-subtyping-for-presenters-and-views.md)).
 
@@ -132,7 +132,7 @@ structural (see
 
 redsun itself ships a plugin manifest under the `redsun` entry point, so
 built-in components resolve through the same discovery path as external
-plugins — no special-casing in configuration files:
+plugins - no special-casing in configuration files:
 
 ```yaml
 presenters:

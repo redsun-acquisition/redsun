@@ -1,7 +1,7 @@
 """Plan specification: inspect a plan's signature into a structured `PlanSpec`.
 
 This module provides `create_plan_spec`, which inspects a Bluesky
-``MsgGenerator`` function and returns a `PlanSpec` — a structured
+``MsgGenerator`` function and returns a `PlanSpec` - a structured
 description of the plan's parameters that the view layer can use to
 automatically generate a parameter form.
 
@@ -66,7 +66,7 @@ class UnresolvableAnnotationError(TypeError):
             f"Plan {plan_name!r}: cannot resolve annotation for parameter "
             f"{param_name!r} ({annotation!r}). "
             f"Supported types are: Literal, OADevice subtype, Sequence[OADevice], "
-            f"Path, and magicgui-supported primitives (int, float, str, bool, …). "
+            f"Path, and magicgui-supported primitives (int, float, str, bool, ...). "
             f"The plan will be skipped."
         )
 
@@ -276,7 +276,7 @@ def _try_dispatch_entry(
         if predicate(ann, kind):
             return handler(ann, devices)
         return None
-    except Exception:  # noqa: BLE001 — a failing predicate means "no match", never a crash
+    except Exception:  # noqa: BLE001 - a failing predicate means "no match", never a crash
         return None
 
 
@@ -410,7 +410,7 @@ def _is_magicgui_resolvable(ann: Any) -> bool:
     construction time before a ``QApplication`` exists.
 
     We do **not** include `Any` in the resolvable set, because magicgui
-    silently produces a ``LineEdit`` for it — the same opaque behaviour we
+    silently produces a ``LineEdit`` for it - the same opaque behaviour we
     are trying to eliminate.
     """
     if ann is Any:
@@ -606,10 +606,10 @@ def resolve_arguments(
     """Resolve raw UI parameter values into plan-callable values.
 
     Handles:
-    * **Action parameters** — injected from metadata when absent from the UI.
-    * **Model-backed parameters** — string labels are resolved to live
+    * **Action parameters** - injected from metadata when absent from the UI.
+    * **Model-backed parameters** - string labels are resolved to live
       ``OADevice`` instances via the ``devices`` registry.
-    * **Everything else** — passed through unchanged.
+    * **Everything else** - passed through unchanged.
 
     Parameters
     ----------

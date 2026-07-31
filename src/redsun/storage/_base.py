@@ -206,8 +206,8 @@ class BaseStorage(SinkFactory):
             hold `_open_lock` across their critical window, so checking
             the lock alongside `_store` closes the register-during-open
             race window. `close()` additionally sets `_closing` for its
-            entire body — including while it is suspended in the drain
-            `gather`, when neither `_store` nor the lock is held — to
+            entire body - including while it is suspended in the drain
+            `gather`, when neither `_store` nor the lock is held - to
             close the register-during-close race window too.
         KeyError
             If `spec.data_key` is already registered.
@@ -231,7 +231,7 @@ class BaseStorage(SinkFactory):
             If `data_key` is not registered.
         StoreStateError
             If a live sink already exists for `data_key`, or the storage
-            is currently closing — a sink spawned mid-close would create
+            is currently closing - a sink spawned mid-close would create
             a drain that `close()`'s `gather` never awaits.
         """
         if self._closing:
@@ -281,7 +281,7 @@ class BaseStorage(SinkFactory):
         -----
         Drain write failures don't raise at the producer: `gather` is
         called with ``return_exceptions=True``, so a drain that dies mid-burst
-        surfaces nowhere until its exception is collected here — `close()`
+        surfaces nowhere until its exception is collected here - `close()`
         is the error observation point for the whole burst.
         """
         self._closing = True
@@ -295,7 +295,7 @@ class BaseStorage(SinkFactory):
             for key in list(self._router.spec.keys()):
                 self._router.delete(key)
             # a store opened via open() with no live drains has nobody to close
-            # it — every drain retired without ever seeing this store
+            # it - every drain retired without ever seeing this store
             sweep_exc: BaseException | None = None
             try:
                 if self._store is not None:
@@ -307,7 +307,7 @@ class BaseStorage(SinkFactory):
                                 await store.close()
                             except asyncio.CancelledError:
                                 raise
-                            except BaseException as exc:  # noqa: BLE001 — held back so drain errors surface first
+                            except BaseException as exc:  # noqa: BLE001 - held back so drain errors surface first
                                 sweep_exc = exc
             finally:
                 # by this point self._store is always None: either no store
@@ -378,8 +378,8 @@ class BaseStorage(SinkFactory):
         """Retire one stream; the last drain out closes the store.
 
         `self._drains.pop` happens last, in the outer `finally`, not first.
-        While this coroutine is still running — in particular while
-        `store.release()` is in flight — the key must stay visible in
+        While this coroutine is still running - in particular while
+        `store.release()` is in flight - the key must stay visible in
         `self._drains`, so a concurrent `close()`'s `list(self._drains.values())`
         snapshot still captures this drain and awaits it through `gather`
         instead of racing ahead to close the backend underneath the
@@ -396,7 +396,7 @@ class BaseStorage(SinkFactory):
                     if not self._router.spec:
                         async with self._open_lock:
                             # a concurrently retiring drain may have closed
-                            # already — only the drain that still sees the
+                            # already - only the drain that still sees the
                             # store closes it
                             if self._store is not None:
                                 self._store = None

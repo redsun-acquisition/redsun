@@ -19,7 +19,7 @@ demands a *settable, invariantly typed* member from implementers, so (as
 verified with mypy):
 
 - a class exposing `name` as a read-only property failed the protocol
-  ("expected settable variable, got read-only attribute") — even though
+  ("expected settable variable, got read-only attribute") - even though
   ophyd-async's own `Device.name` is a read-only property;
 - a class annotating `self.devices: dict[str, Device]` failed too, because
   read-write members are invariant and `dict` is not `Mapping`.
@@ -29,7 +29,7 @@ nobody noticed because everything inherited the nominal ABCs.
 
 **Runtime validation checked classes, where the information does not
 exist.** `issubclass` is a `TypeError` for data-member protocols, so the
-container hand-rolled `hasattr(cls, ...)` checks — on the *class*. Instance
+container hand-rolled `hasattr(cls, ...)` checks - on the *class*. Instance
 attributes assigned in `__init__` (the normal style) are invisible there,
 so structurally compliant non-ABC components were rejected at plugin
 discovery. The check then papered over the container's nominal typing with
@@ -50,25 +50,25 @@ The ABCs must therefore not inherit the protocols they satisfy.
    are accepted.
 2. **The ABCs do not inherit the protocols.** `Presenter(ABC)` and
    `View(ABC)` satisfy `PPresenter`/`PView` structurally, exactly like any
-   other implementer — inheritance would shadow instance attributes with
+   other implementer - inheritance would shadow instance attributes with
    the protocols' property descriptors.
 3. **Validation is a dual gate.** The parts of the contract are checked
    where they are actually knowable:
 
-   - *Class level — constructor signature.* The container instantiates
+   - *Class level - constructor signature.* The container instantiates
      components as `cls(*positionals, **config_kwargs)`, so the knowable
      class-level contract is purely positional. `expects_positionals`
      (`inspect`-based) verifies the leading positional parameters are
      exactly `("name", "devices")` for presenters and `("name",)` for
      views, that any further positional-or-keyword parameters carry
      defaults, that `*args` is absent, and that the container's positional
-     call binds. Keyword arguments are deliberately unvalidated — the
+     call binds. Keyword arguments are deliberately unvalidated - the
      container has no control over them. This gate runs at component
      wrapper creation (declarative path, at class definition time) and at
      plugin discovery (config path, log-and-skip).
-   - *Instance level — protocol compliance.* `_PresenterComponent.build` /
+   - *Instance level - protocol compliance.* `_PresenterComponent.build` /
      `_ViewComponent.build` run `isinstance(instance, PPresenter/PView)`
-     after construction and raise `TypeError` on failure — instance
+     after construction and raise `TypeError` on failure - instance
      attributes assigned in `__init__` are only visible here. This sits on
      the correct side of the "presenter/view build failures re-raise"
      invariant.
@@ -82,13 +82,13 @@ The ABCs must therefore not inherit the protocols they satisfy.
 
 ## Consequences
 
-- Structural implementers — property-based, attribute-based, or Qt widgets
-  like `QtView` — now pass both static and runtime checks; the
+- Structural implementers - property-based, attribute-based, or Qt widgets
+  like `QtView` - now pass both static and runtime checks; the
   `type: ignore` previously needed for `_ViewComponent(QtView-subclass)`
   is deleted.
 - Components with a wrong constructor shape fail **at declaration or
   discovery time**; components whose instances miss protocol members fail
-  **at build time** — both with a loud `TypeError` naming the problem,
+  **at build time** - both with a loud `TypeError` naming the problem,
   instead of being silently skipped or slipping through the old
   class-level attribute screen.
 - Breaking: `AppContainer.presenters`/`views` are typed against the

@@ -20,15 +20,15 @@ A presenter is recognized **structurally** through the
 *instances* expose a `name` (`str`) and a `devices`
 (`Mapping[str, Device]`) satisfies it. The protocol declares both members
 as **read-only properties**, so implementers are free to use plain instance
-attributes, class attributes, or properties — and `devices` may be any
+attributes, class attributes, or properties - and `devices` may be any
 `Mapping` subtype, such as a plain `dict`.
 
 Compliance is a **dual gate**. At class level, the constructor's
 positional shape is verified: its leading positional parameters must be
-exactly `(name, devices)` — the container instantiates presenters as
+exactly `(name, devices)` - the container instantiates presenters as
 `cls(name, devices, **config_kwargs)` and has no control over the keyword
 arguments. At build time, the constructed instance is checked against the
-protocol, raising a `TypeError` naming the missing members — attributes
+protocol, raising a `TypeError` naming the missing members - attributes
 assigned in `__init__` are invisible before instantiation
 (see [ADR 0003](../decisions/0003-structural-subtyping-for-presenters-and-views.md)).
 
@@ -39,7 +39,7 @@ convenience base providing the conventional constructor shape:
 - a `Mapping[str, Device]` of the allocated devices in the session;
 - additional keyword arguments, parsed from the session configuration file.
 
-The ABC deliberately does *not* inherit the protocol — it satisfies it
+The ABC deliberately does *not* inherit the protocol - it satisfies it
 structurally, like every other implementer.
 
 Access to the virtual container is opt-in via the
@@ -52,7 +52,7 @@ teardown via [`HasShutdown`][redsun.virtual.HasShutdown].
 Presenters that process acquisition data subscribe to the `RunEngine`'s
 document stream (directly, or through the callback registry on the
 [`VirtualContainer`][redsun.virtual.VirtualContainer]). Document callbacks
-run *synchronously* on the engine's event loop thread — they can never
+run *synchronously* on the engine's event loop thread - they can never
 await. To persist derived results (e.g. a median image computed from Event
 documents), a callback uses the storage layer's synchronous face:
 `register` a [`StreamSpec`][redsun.storage.StreamSpec] derived from the

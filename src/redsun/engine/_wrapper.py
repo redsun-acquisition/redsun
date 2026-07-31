@@ -180,7 +180,7 @@ class RunEngine(BlueskyRunEngine):
         self,
         md: dict[str, Any] | None = None,
         *,
-        loop: asyncio.AbstractEventLoop = get_shared_loop(),  # noqa: B008 — returns the import-time singleton loop
+        loop: asyncio.AbstractEventLoop = get_shared_loop(),  # noqa: B008 - returns the import-time singleton loop
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,

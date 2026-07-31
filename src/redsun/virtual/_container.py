@@ -130,27 +130,17 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     def register_signals(
         self, owner: HasName, name: str | None = None, only: Iterable[str] | None = None
     ) -> None:
-        """Register the signals of an object in the virtual container.
+        """Cache the signals *owner* declares.
 
         Parameters
         ----------
         owner : HasName
-            The instance whose class's signals are to be cached.
-            Must provide a `name` attribute.
+            The component whose class signals are cached.
         name : str | None
-            An optional name to use as the key for caching the signals.
-            If not provided, the `name` of `owner` will be used.
-        only : Iterable[str], optional
-            A list of signal names to cache. If not provided, all
-            signals in the class will be cached automatically by inspecting
-            the class attributes.
-
-        Notes
-        -----
-        This method inspects the attributes of the owner's class to find
-        [`psygnal.Signal`][psygnal.Signal] descriptors. For each such descriptor, it
-        retrieves the [`psygnal.SignalInstance`][psygnal.SignalInstance] from the owner using
-        the descriptor protocol and stores it in the registry.
+            Registry key. Defaults to ``owner.name``.
+        only : Iterable[str] | None
+            Signal names to cache. Defaults to every
+            [`Signal`][psygnal.Signal] declared on the class.
         """
         owner_class = type(owner)
         if name is not None:
@@ -176,23 +166,23 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
 
     @staticmethod
     def _validate_callback(callback: object) -> CallbackType:
-        """Validate that *callback* is an acceptable ``CallbackType``.
+        """Return *callback* unchanged if it can be called as ``(name, doc)``.
 
         Parameters
         ----------
-        callback :
+        callback : object
             The object to validate.
 
         Returns
         -------
         CallbackType
-            The validated callback, unchanged.
+            The validated callback.
 
         Raises
         ------
         TypeError
-            If *callback* is not callable, or if it is a callable but
-            its call signature is not compatible with ``(str, Document)``.
+            If *callback* is not callable, or its signature is incompatible
+            with ``(str, Document)``.
         """
         if isinstance(callback, DocumentRouter):
             return callback
@@ -220,34 +210,22 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         name: str | None = None,
         callback_map: dict[str, CallbackType] | None = None,
     ) -> None:
-        """Register one or more document callbacks in the virtual container.
+        """Register one or more document callbacks.
 
-        Accepts any object that is a valid ``CallbackType`` and exposes a
-        ``name`` attribute used as the registry key.  Two forms are supported:
-
-        * A [DocumentRouter][event_model.DocumentRouter] subclass instance;
-        * Any other object that implements ``__call__(self, name, doc)`` with
-          the correct two-parameter signature.
-
-        When *callback_map* is provided the owner itself is not registered;
-        instead each entry in the mapping is validated and registered
-        independently under its own key, allowing a single owner to expose
-        multiple callbacks.
+        A callback is a [`DocumentRouter`][event_model.DocumentRouter] or any
+        object callable as ``(name, doc)``.
 
         Parameters
         ----------
         owner : HasName
-            The component registering callbacks.  Must expose a ``name``
-            attribute.  When *callback_map* is ``None``, *owner* itself is
-            registered as the callback.
+            The component registering callbacks, and the callback itself when
+            *callback_map* is ``None``.
         name : str | None
-            Override for the registry key used when registering *owner*
-            directly.  Ignored when *callback_map* is provided.
-            Defaults to ``owner.name``.
+            Registry key for *owner*. Defaults to ``owner.name``; ignored when
+            *callback_map* is given.
         callback_map : dict[str, CallbackType] | None
-            Optional mapping of registry key to callback object.  When
-            supplied, each value is validated and registered under its
-            corresponding key; *name* is ignored.
+            Several callbacks from one owner, each registered under its own
+            key. *owner* is then not registered itself.
 
         Raises
         ------
@@ -292,18 +270,16 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     ) -> Connection:
         """Connect a signal to a slot and record the link.
 
-        The thread the slot is delivered on comes from its own declaration,
-        falling back to the affinity declared by its class; *thread* overrides
-        both.
-
         Parameters
         ----------
         signal : SignalInstance
             The emitting signal.
         slot : Callable[..., Any]
-            A bound method marked as connectable.
+            A bound method marked with [`slot`][redsun.virtual.slot]. May be a
+            coroutine function.
         thread : SlotThread
-            Overrides the thread affinity of the slot and of its class.
+            Delivery thread. Defaults to the affinity the slot declares, then
+            to the one its class declares.
 
         Returns
         -------
@@ -313,8 +289,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         WiringError
-            If *slot* is not marked as connectable, or if the signal and the
-            slot have incompatible signatures.
+            If *slot* is not marked as connectable, or if psygnal rejects the
+            two signatures.
         """
         declaration = getattr(slot, SLOT_ATTR, None)
         if not isinstance(declaration, Slot):
@@ -351,10 +327,10 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     ) -> Connection:
         """Connect two ports addressed as ``component.port``.
 
-        The string form of [`connect`][redsun.virtual.VirtualContainer.connect],
-        used by the ``wiring`` section of a configuration file. A signal port is
-        the signal's attribute name, or the member name when it belongs to a
-        signal group; a slot port is the name the slot declares.
+        The string form of `connect`, used by the ``wiring`` section of a
+        configuration file. A signal port is the signal's attribute name, or the
+        member name when it belongs to a signal group; a slot port is the name
+        the slot declares.
 
         Parameters
         ----------
@@ -363,7 +339,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         target : str
             Path of the consuming slot.
         thread : SlotThread
-            Overrides the thread affinity of the slot and of its class.
+            Delivery thread, overriding the slot and its class.
 
         Returns
         -------
@@ -374,7 +350,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         ------
         WiringError
             If either path is malformed, names a component that was not built,
-            or names a port that component does not expose.
+            or names a port that component does not expose. The message lists
+            what does exist.
         """
         signal = self._resolve_port(source, "signal")
         slot = self._resolve_port(target, "slot")

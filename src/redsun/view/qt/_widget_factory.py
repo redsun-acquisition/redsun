@@ -4,8 +4,8 @@ Maps a `ParamDescription` to an appropriate magicgui widget via a
 table-driven factory registry (`_WIDGET_FACTORY_MAP`).
 
 `create_param_widget` is the public entry point.  It walks
-`_WIDGET_FACTORY_MAP` — an ordered list of ``(predicate, factory)``
-pairs — and calls the first factory whose predicate matches the given
+`_WIDGET_FACTORY_MAP` - an ordered list of ``(predicate, factory)``
+pairs - and calls the first factory whose predicate matches the given
 `ParamDescription`.
 
 Extending the system
@@ -75,7 +75,7 @@ def _is_non_device_sequence(p: ParamDescription) -> bool:
 
 
 def _always(p: ParamDescription) -> bool:
-    """Catch-all predicate — always matches."""
+    """Catch-all predicate - always matches."""
     return True
 
 
@@ -170,12 +170,12 @@ def _try_factory_entry(
 ) -> mgw.Widget | None:
     """Evaluate predicate; if it matches, call factory (errors propagate).
 
-    Only predicate evaluation is guarded — a factory crash is a real bug
+    Only predicate evaluation is guarded - a factory crash is a real bug
     and must not be silently swallowed.
     """
     try:
         matched = predicate(param)
-    except Exception:  # noqa: BLE001 — a failing predicate means "no match", never a crash
+    except Exception:  # noqa: BLE001 - a failing predicate means "no match", never a crash
         return None
     if matched:
         return factory(param)
@@ -207,5 +207,5 @@ def create_param_widget(param: ParamDescription) -> mgw.Widget:
     raise RuntimeError(
         f"No widget factory matched parameter {param.name!r} "
         f"(annotation: {param.annotation!r}). "
-        f"This is a bug — create_plan_spec should have caught this."
+        f"This is a bug - create_plan_spec should have caught this."
     )
