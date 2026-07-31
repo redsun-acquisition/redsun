@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import yaml
-from mock_pkg.controller import MockController
+from mock_pkg.controller import AsyncMotorController, MockController
 from mock_pkg.device import MockOAMotor, MyMotor
 from mock_pkg.view import MockQtView
 from ophyd_async.core import Device
@@ -29,7 +29,7 @@ from redsun.presenter import PPresenter
 from redsun.presenter.builtins import StoragePresenter
 from redsun.qt import QtAppContainer
 from redsun.view import PView, ViewPosition
-from redsun.virtual import RedSunConfig
+from redsun.virtual import RedSunConfig, WiringError
 
 
 class TestComponentWrappers:
@@ -1024,3 +1024,77 @@ class TestConstructorSignatureGate:
 
         comp = _ViewComponent(Minimal, "ok")
         assert isinstance(comp.build(), PView)
+
+
+class TestWiring:
+    """Tests for the ``wire`` hook and the connections it records."""
+
+    def _app(self) -> type[AppContainer]:
+        class TestApp(AppContainer):
+            motor = declare_device(MyMotor, egu="mm", string="s")
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.on_motor_moved)
+
+        return TestApp
+
+    def test_declared_connection_is_live_after_build(self) -> None:
+        """A component attribute resolves to its built instance during wiring."""
+        app = self._app()().build()
+
+        mover = cast("AsyncMotorController", app.presenters["mover"])
+        ctrl = cast("MockController", app.presenters["ctrl"])
+
+        mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert ctrl.moved == [("motor", 1.0)]
+
+    def test_connection_is_recorded_with_both_port_paths(self) -> None:
+        """The link names the components by the keys the container knows."""
+        app = self._app()().build()
+
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ctrl.on_motor_moved"
+        ]
+
+    def test_shutdown_disconnects(self) -> None:
+        """Teardown drops the links the container made."""
+        app = self._app()().build()
+        mover = cast("AsyncMotorController", app.presenters["mover"])
+        ctrl = cast("MockController", app.presenters["ctrl"])
+        app.shutdown()
+
+        mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert ctrl.moved == []
+        assert app.virtual_container.connections == []
+
+    def test_connecting_an_unmarked_method_fails_the_build(self) -> None:
+        """Only a marked method is connectable, so a typo cannot pass silently."""
+
+        class TestApp(AppContainer):
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.not_connectable)
+
+        with pytest.raises(WiringError, match="not connectable"):
+            TestApp().build()
+
+    def test_incompatible_slot_names_both_ends(self) -> None:
+        """A signature mismatch is a build error naming the two ports."""
+
+        class TestApp(AppContainer):
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.on_too_many)
+
+        with pytest.raises(
+            WiringError, match="mover.sig_motor_moved -> ctrl.on_too_many"
+        ):
+            TestApp().build()

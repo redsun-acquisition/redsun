@@ -9,7 +9,7 @@ from psygnal import Signal
 
 from redsun.presenter import Presenter
 from redsun.utils import find_signals
-from redsun.virtual import VirtualContainer
+from redsun.virtual import VirtualContainer, slot
 
 from ..device import MyMotor
 
@@ -30,6 +30,16 @@ class MockController(Presenter):
         self.integer = integer
         self.floating = floating
         self.boolean = boolean
+        self.moved: list[tuple[str, float]] = []
+
+    @slot
+    def on_motor_moved(self, motor: str, position: float) -> None:
+        self.moved.append((motor, position))
+
+    @slot
+    def on_too_many(self, motor: str, position: float, extra: int) -> None: ...
+
+    def not_connectable(self, motor: str, position: float) -> None: ...
 
 
 class BrokenController(Presenter):

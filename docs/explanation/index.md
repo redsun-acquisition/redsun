@@ -18,8 +18,9 @@
 
 ## Decisions
 
-Architectural decisions are recorded as ADRs, following the same convention
-as [ophyd-async](https://blueskyproject.io/ophyd-async/main/explanations/decisions.html).
+Architectural decisions are recorded as ADRs, following the lightweight format
+described in [Michael Nygard's blog](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions):
+Status, Context, Decision, Consequences.
 
 - **[1. Record architecture decisions](decisions/0001-record-architecture-decisions.md)**
 - **[2. Storage dual-context redesign](decisions/0002-storage-dual-context-redesign.md)**
