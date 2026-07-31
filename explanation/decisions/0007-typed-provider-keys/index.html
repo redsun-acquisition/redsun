@@ -12,13 +12,13 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0006-application-declared-wiring/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0007-typed-provider-keys/">
       
       
-        <link rel="prev" href="../0005-culsans-psygnal-async-backend/">
+        <link rel="prev" href="../0006-application-declared-wiring/">
       
       
-        <link rel="next" href="../0007-typed-provider-keys/">
+        <link rel="next" href="../../../how-to/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>6. Application-declared wiring - Redsun</title>
+        <title>7. Typed provider keys - Redsun</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#6-application-declared-wiring" class="md-skip">
+        <a href="#7-typed-provider-keys" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              6. Application-declared wiring
+              7. Typed provider keys
             
           </span>
         </div>
@@ -1044,6 +1044,33 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1063,7 +1090,7 @@
   <span class="md-ellipsis">
     
   
-  6. Application-declared wiring
+  7. Typed provider keys
 
     
   </span>
@@ -1080,7 +1107,7 @@
   <span class="md-ellipsis">
     
   
-  6. Application-declared wiring
+  7. Typed provider keys
 
     
   </span>
@@ -1153,33 +1180,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0007-typed-provider-keys/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  7. Typed provider keys
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2044,89 +2044,75 @@
   
 
 
-<h1 id="6-application-declared-wiring">6. Application-declared wiring<a class="headerlink" href="#6-application-declared-wiring" title="Permanent link">&para;</a></h1>
+<h1 id="7-typed-provider-keys">7. Typed provider keys<a class="headerlink" href="#7-typed-provider-keys" title="Permanent link">&para;</a></h1>
 <p>Date: 2026-07-31</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p>Accepted</p>
-<p>Extends <a href="../0004-owner-scoped-signal-lookup/">4. Owner-scoped signal lookup</a>.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Signal connections were made by consumers, which reached into the container's
-signal registry for names they hoped existed:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sigs</span> <span class="o">=</span> <span class="n">find_signals</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;sig_pre_launch_notify&quot;</span><span class="p">,</span> <span class="s2">&quot;sig_plan_done&quot;</span><span class="p">])</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">if</span> <span class="s2">&quot;sig_pre_launch_notify&quot;</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">sigs</span><span class="p">[</span><span class="s2">&quot;sig_pre_launch_notify&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_pre_launch</span><span class="p">)</span>
+<p>Objects shared between components go through the virtual container. Until now
+the sharing surface was the container's dynamic attributes:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">container</span><span class="o">.</span><span class="n">path_provider</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Object</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_provider</span><span class="p">)</span>  <span class="c1"># producer</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">path_provider</span><span class="p">()</span>  <span class="c1"># consumer</span>
 </span></code></pre></div>
-<p>Four problems follow from that shape, and ADR 0004's owner scoping addressed
-only the first.</p>
-<p><strong>A rename breaks the connection silently.</strong> The emitter and the consumer agree
-on a string, checked by nobody. ADR 0004 records this happening across the
-redsun and redsun-mimir boundary during the <code>sigCamelCase</code> rename.</p>
-<p><strong>Optionality is expressed by silence.</strong> The <code>if name in sigs</code> guard makes a
-typo, a rename, an uninstalled plugin, and a deliberately absent optional
-collaborator indistinguishable at runtime.</p>
-<p><strong>No one owns the graph.</strong> Each component decides for itself what it listens to,
-so no single place says how an application is wired. The answer is distributed
-across every <code>inject_dependencies</code> in every installed plugin.</p>
-<p><strong>Nothing is recorded.</strong> A pull-based connection leaves no trace, so the graph
-cannot be reported, and <code>shutdown</code> cannot release what was connected.</p>
-<p>psygnal supplies the machinery underneath (class-scoped declaration, signature
-validation at connect, grouping, cross-thread delivery) but has no cross-object
-concept: nothing in it says which component's signal reaches which component's
-method. That is the gap.</p>
-<p>An earlier design filled it with nominal <em>contracts</em>: a component published a
-signal under a name and consumed one with a decorator, and the container matched
-the two. It was implemented and dropped. It kept the knowledge of the graph
-inside the components, needed a process-global registry with qualified names,
-short names and per-session bindings to keep two packages from colliding, and
-left the graph emergent, so a report was necessary rather than useful.</p>
+<p><code>VirtualContainer</code> subclasses <code>DynamicContainer</code>, so attribute access on it
+returns <code>Any</code>. Both halves of that exchange are unchecked. The consumer's
+annotation is a promise, not a check; the attribute name is a string agreed by
+convention; and a consumer whose producer is absent gets <code>AttributeError</code>,
+which is indistinguishable from a typo.</p>
+<p><code>dependency-injector</code> is properly generic. <code>providers.Object[T]</code>,
+<code>providers.Factory[T]</code> and <code>providers.Dependency[T]</code> all carry their type
+through to the call, so the type information is available and <code>DynamicContainer</code>
+is what discards it. The fix is to use the library as intended rather than to
+add an abstraction: a hand-rolled typed key would be <code>providers.Dependency</code>
+with a worse name.</p>
+<p>Two mechanical facts shaped the result.</p>
+<p><code>Dependency(instance_of=...)</code> gives a runtime <code>isinstance</code> check alongside the
+static parameter, which is what makes the key self-describing.</p>
+<p><code>Dependency.override()</code> mutates the key object itself, and a key is a
+module-level constant, so a binding made through it is process-global. Two
+containers in one process would clobber each other's bindings, which is the
+defect <code>VirtualContainer.__init__</code> already avoids by scoping its signal and
+callback registries per instance. Bindings therefore cannot live on the key.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>A component states what it offers; the application states what is connected.</p>
-<p><strong>A method opts in.</strong> <code>slot</code> marks a method as connectable, which makes its name
-and signature part of the component's public surface. An unmarked method cannot
-be connected. Signals need no marker: a public <code>Signal</code> attribute, or a member
-of a <code>SignalGroup</code>, is already a port, addressed by the member name in the group
-case.</p>
-<p><strong>The application connects.</strong> <code>AppContainer.wire</code> is a hook that runs after
-every component is built and before dependency injection. Inside it, a
-component attribute resolves to its built instance, so a connection reads as
-<code>self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)</code>. A
-session built from a configuration file uses the <code>wiring</code> section, addressing
-each end as <code>component.port</code>. Both forms end in the same
-<code>VirtualContainer.connect</code>.</p>
-<p><strong>Validation is psygnal's, at connection time.</strong> The argument count is always
-checked; argument types are checked as well when the signal names them. redsun
-adds only the port names to the failure, so the error identifies both ends.</p>
-<p><strong>Thread affinity belongs to the component</strong>, declared once on the class
-(<code>__redsun_slot_thread__</code>), overridable per slot and per connection. <code>QtView</code>
-declares <code>"main"</code>, which removes by construction the class of defect where one
-Qt slot is connected without marshalling and its neighbour is not.</p>
-<p><strong>Every link is recorded.</strong> <code>VirtualContainer.connections</code> is the graph, and
-<code>disconnect_all</code> releases it during <code>shutdown</code>.</p>
-<p><code>find_signals</code> and <code>register_signals</code> are unchanged and still work. They are
-demoted to an escape hatch for dynamic lookup, not the way components are wired.</p>
+<p>A shared object is identified by a <strong>typed key</strong>, a <code>providers.Dependency[T]</code>
+exported as <code>ProviderKey[T]</code>, and bound per container:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">PATH_PROVIDER</span> <span class="o">=</span> <span class="n">dip</span><span class="o">.</span><span class="n">Dependency</span><span class="p">(</span><span class="n">instance_of</span><span class="o">=</span><span class="n">SessionPathProvider</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">container</span><span class="o">.</span><span class="n">provide</span><span class="p">(</span><span class="n">PATH_PROVIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_provider</span><span class="p">)</span>  <span class="c1"># producer</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">require</span><span class="p">(</span><span class="n">PATH_PROVIDER</span><span class="p">)</span>  <span class="c1"># consumer</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">maybe</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">try_require</span><span class="p">(</span><span class="n">PATH_PROVIDER</span><span class="p">)</span>  <span class="c1"># optional collaborator</span>
+</span></code></pre></div>
+<p>The key is a name, not storage. <code>VirtualContainer</code> holds the bindings in its
+own mapping and never calls <code>Dependency.override</code>.</p>
+<p><code>provide</code> enforces <code>instance_of</code> where the value is bound, so a wrong value is
+blamed on the component that supplied it. <code>require</code> raises <code>KeyError</code> naming the
+key; <code>try_require</code> returns <code>None</code>, which is how an application states that a
+collaborator is optional rather than expressing it as silence.</p>
+<p>A key lives beside the type it identifies, in the package that owns that type,
+and is exported from it. There is no central key module: a plugin defines its
+own keys in its own package, and no plugin has to be listed anywhere for its
+keys to work.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<ul>
-<li>The wiring of an application is readable in one place, in the container class
-  or in its configuration file. Adding a producer to an existing consumer is one
-  line there, and it is the same line whether the producer ships with redsun or
-  with a third-party plugin.</li>
-<li>A connection that cannot be made fails the build with both port paths in the
-  message, rather than not happening.</li>
-<li>A component gains no knowledge of the application it is in. A viewer that
-  accepts frames names no producer, and a plugin author cannot express a
-  connection to a component they do not ship. That is deliberate: the
-  composition root is where that knowledge belongs.</li>
-<li>The cost is that a plugin no longer arrives pre-wired. A deployment that
-  installs a new frame producer must add a line for it. This is the trade
-  against the contract design, which auto-connected at the price of a global
-  name registry and an emergent graph.</li>
-<li>Marking a method makes it API. Components migrating from <code>inject_dependencies</code>
-  will find their slots are private methods and should rename them, since a
-  wiring declaration naming <code>_update_layers</code> is a contradiction.</li>
-<li>Payload types become worth declaring. <code>Signal(object)</code> passes any slot;
-  <code>Signal(FrameBatch)</code> makes the connection a real type check at build. Existing
-  signals are unaffected, but a new signal should name its payload.</li>
-</ul>
+<p>Provider exchange becomes statically checked. <code>container.require(PATH_PROVIDER)</code>
+is a <code>SessionPathProvider</code> to a type checker, and passing the wrong value to
+<code>provide</code> is a type error before it is a runtime one.</p>
+<p>Absence becomes expressible. <code>try_require</code> returning <code>None</code> distinguishes an
+optional collaborator from a typo, where the dynamic attribute made both an
+<code>AttributeError</code>.</p>
+<p><code>container.path_provider</code> is gone. Any component reading it must move to
+<code>container.require(PATH_PROVIDER)</code>, which is a breaking change for out-of-tree
+consumers.</p>
+<p>The dynamic-attribute mechanism still exists on <code>DynamicContainer</code> and is not
+removed. Nothing forces an existing provider onto keys, but new providers should
+use them, and untyped attribute registration should not be added.</p>
+<p>dishka was considered as an alternative and rejected. It resolves dependencies
+by type at a composition root, which inverts this build model: redsun constructs
+plugin instances discovered from configuration at runtime and lets them register
+what they own. Type keys also collide with the plugin model, where two cameras
+or two presenters of one class are normal and the configuration key is the
+identity. The migration would break <code>register_providers</code> and
+<code>inject_dependencies</code>, which are the public plugin API, in exchange for
+generics that <code>dependency-injector</code> already provides.</p>
 
 
 
@@ -2166,7 +2152,7 @@ demoted to an escape hatch for dynamic lookup, not the way components are wired.
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0005-culsans-psygnal-async-backend/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 5. Culsans-backed psygnal async backend">
+          <a href="../0006-application-declared-wiring/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 6. Application-declared wiring">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2176,20 +2162,20 @@ demoted to an escape hatch for dynamic lookup, not the way components are wired.
                 Previous
               </span>
               <div class="md-ellipsis">
-                5. Culsans-backed psygnal async backend
+                6. Application-declared wiring
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0007-typed-provider-keys/" class="md-footer__link md-footer__link--next" aria-label="Next: 7. Typed provider keys">
+          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                7. Typed provider keys
+                How-to guides
               </div>
             </div>
             <div class="md-footer__button md-icon">
