@@ -1,11 +1,10 @@
 # Device
 
-The device layer is delegated to
-[ophyd-async](https://bluesky.github.io/ophyd-async/): import device
-primitives (`Device`, `StandardReadable`, `StandardDetector`, signals,
-`DeviceMap`, ...) directly from `ophyd_async.core`. See
-[Devices](../../explanation/architecture/devices.md) for guidance.
+Devices are [ophyd-async](https://bluesky.github.io/ophyd-async/) devices.
+Import `Device`, `StandardReadable`, `StandardDetector`, the signal types and
+`DeviceMap` from `ophyd_async.core`; see
+[Devices](../../explanation/architecture/devices.md).
 
-`redsun.device` hosts only redsun-specific device protocols.
+`redsun.device` adds one protocol on top of that.
 
 ::: redsun.device.protocols.HasAsyncShutdown

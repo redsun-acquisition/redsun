@@ -16,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class MockRouter(DocumentRouter):
-    """DocumentRouter subclass — the primary callback form."""
+    """DocumentRouter subclass - the primary callback form."""
 
     name = "mock_router"
 

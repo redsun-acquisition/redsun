@@ -47,7 +47,7 @@ class FrameSink:
         Raises
         ------
         culsans.QueueFull
-            If the queue is full — a callback bug or a stalled backend.
+            If the queue is full - a callback bug or a stalled backend.
         culsans.QueueShutDown
             If the stream has reached capacity or was closed.
         """

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 import yaml
-from mock_pkg.controller import MockController
+from mock_pkg.controller import (
+    AsyncMotorController,
+    GroupedController,
+    MockController,
+)
 from mock_pkg.device import MockOAMotor, MyMotor
 from mock_pkg.view import MockQtView
 from ophyd_async.core import Device
@@ -29,7 +33,7 @@ from redsun.presenter import PPresenter
 from redsun.presenter.builtins import StoragePresenter
 from redsun.qt import QtAppContainer
 from redsun.view import PView, ViewPosition
-from redsun.virtual import RedSunConfig
+from redsun.virtual import RedSunConfig, WiringError, ports
 
 
 class TestComponentWrappers:
@@ -512,7 +516,7 @@ class TestAppConfig:
             "frontend": "pyqt",
         }
         assert cfg["schema_version"] == 1.0
-        # AppConfig extends RedSunConfig — verify required keys are inherited
+        # AppConfig extends RedSunConfig - verify required keys are inherited
         assert "schema_version" in AppConfig.__required_keys__
         assert "frontend" in AppConfig.__required_keys__
         # session is NotRequired since 0.10.0
@@ -860,7 +864,7 @@ class TestConnectDevices:
         app.connect_devices(mock=True)
         assert connect_calls == ["called"]
 
-        # Simulate run() when already connected — connect_devices must not fire again.
+        # Simulate run() when already connected - connect_devices must not fire again.
         if not app._devices_connected:
             app.connect_devices(mock=True)
 
@@ -906,8 +910,7 @@ class TestBuiltinPlugins:
 class TestProtocolValidationAtBuild:
     """Protocol compliance is validated on built instances, not classes.
 
-    Class-level checks cannot see attributes assigned in ``__init__`` —
-    the old hasattr-on-class screen rejected exactly these implementers.
+    Class-level checks cannot see attributes assigned in ``__init__`` - the old hasattr-on-class screen rejected exactly these implementers.
     """
 
     def test_structural_presenter_without_abc_builds(self) -> None:
@@ -1024,3 +1027,185 @@ class TestConstructorSignatureGate:
 
         comp = _ViewComponent(Minimal, "ok")
         assert isinstance(comp.build(), PView)
+
+
+class TestWiring:
+    """Tests for the ``wire`` hook and the connections it records."""
+
+    def _app(self) -> type[AppContainer]:
+        class TestApp(AppContainer):
+            motor = declare_device(MyMotor, egu="mm", string="s")
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.on_motor_moved)
+
+        return TestApp
+
+    def test_declared_connection_is_live_after_build(self) -> None:
+        """A component attribute resolves to its built instance during wiring."""
+        app = self._app()().build()
+
+        mover = cast("AsyncMotorController", app.presenters["mover"])
+        ctrl = cast("MockController", app.presenters["ctrl"])
+
+        mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert ctrl.moved == [("motor", 1.0)]
+
+    def test_connection_is_recorded_with_both_port_paths(self) -> None:
+        """The link names the components by the keys the container knows."""
+        app = self._app()().build()
+
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ctrl.on_motor_moved"
+        ]
+
+    def test_shutdown_disconnects(self) -> None:
+        """Teardown drops the links the container made."""
+        app = self._app()().build()
+        mover = cast("AsyncMotorController", app.presenters["mover"])
+        ctrl = cast("MockController", app.presenters["ctrl"])
+        app.shutdown()
+
+        mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert ctrl.moved == []
+        assert app.virtual_container.connections == []
+
+    def test_connecting_an_unmarked_method_fails_the_build(self) -> None:
+        """Only a marked method is connectable, so a typo cannot pass silently."""
+
+        class TestApp(AppContainer):
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.not_connectable)
+
+        with pytest.raises(WiringError, match="not connectable"):
+            TestApp().build()
+
+    def test_incompatible_slot_names_both_ends(self) -> None:
+        """A signature mismatch is a build error naming the two ports."""
+
+        class TestApp(AppContainer):
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.on_too_many)
+
+        with pytest.raises(
+            WiringError, match="mover.sig_motor_moved -> ctrl.on_too_many"
+        ):
+            TestApp().build()
+
+
+class TestYamlWiring:
+    """Tests for the ``wiring`` section of a configuration file."""
+
+    def _build(self, config_path: Path, mock_entry_points: Any) -> AppContainer:
+        return AppContainer.from_config(
+            str(config_path / "mock_wiring_config.yaml")
+        ).build()
+
+    def test_declared_links_are_live(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """A rule in the file connects the same ports the Python form would."""
+        app = self._build(config_path, mock_entry_points)
+        mover = cast("AsyncMotorController", app.presenters["mover"])
+        ctrl = cast("MockController", app.presenters["ctrl"])
+
+        mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert ctrl.moved == [("motor", 1.0)]
+
+    def test_signal_group_members_are_addressed_by_member_name(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """``component.member`` reaches a signal declared inside a group."""
+        app = self._build(config_path, mock_entry_points)
+        grouped = cast("GroupedController", app.presenters["grouped"])
+
+        grouped.frames.median.emit("a")
+        grouped.frames.filtered.emit("b")
+
+        assert grouped.seen == ["a", "b"]
+
+    def test_the_whole_graph_is_recorded(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """Every rule appears in the report, named by its port path."""
+        app = self._build(config_path, mock_entry_points)
+
+        assert sorted(str(link) for link in app.virtual_container.connections) == [
+            "grouped.filtered -> grouped.absorb",
+            "grouped.median -> grouped.absorb",
+            "mover.sig_motor_moved -> ctrl.on_motor_moved",
+        ]
+
+    def test_wire_runs_before_the_configuration_section(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """A container may declare connections in code and in the file."""
+        app = AppContainer.from_config(str(config_path / "mock_wiring_config.yaml"))
+        grouped_link: list[str] = []
+
+        def wire(self: AppContainer) -> None:
+            grouped_link.append("wire")
+
+        type(app).wire = wire  # type: ignore[method-assign]
+        app.build()
+
+        assert grouped_link == ["wire"]
+        assert len(app.virtual_container.connections) == 3
+
+    @pytest.mark.parametrize(
+        ("rule", "expected"),
+        [
+            (
+                {"from": "nope.sig_motor_moved", "to": "ctrl.on_motor_moved"},
+                "was not built",
+            ),
+            (
+                {"from": "mover.sig_typo", "to": "ctrl.on_motor_moved"},
+                "exposes no signal",
+            ),
+            ({"from": "mover.sig_motor_moved", "to": "ctrl.typo"}, "exposes no slot"),
+            (
+                {"from": "mover.sig_motor_moved", "to": "ctrl.not_connectable"},
+                "exposes no slot",
+            ),
+            ({"from": "mover", "to": "ctrl.on_motor_moved"}, "is not a port path"),
+            ({"from": "mover.sig_motor_moved"}, "keys 'from' and 'to'"),
+        ],
+    )
+    def test_a_bad_rule_fails_the_build(
+        self,
+        rule: dict[str, str],
+        expected: str,
+        mock_entry_points: Any,
+        config_path: Path,
+        tmp_path: Path,
+    ) -> None:
+        """Every way of getting a rule wrong names the offending path."""
+        source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
+        source["wiring"] = [rule]
+        broken = tmp_path / "broken_wiring.yaml"
+        broken.write_text(yaml.safe_dump(source))
+
+        with pytest.raises(WiringError, match=expected):
+            AppContainer.from_config(str(broken)).build()
+
+    def test_an_unmarked_method_is_not_a_slot_port(
+        self, mock_entry_points: Any, config_path: Path
+    ) -> None:
+        """A method exists but is not addressable until it is marked."""
+        app = self._build(config_path, mock_entry_points)
+        surface = ports(app.presenters["ctrl"])
+
+        assert "on_motor_moved" in surface.slots
+        assert "not_connectable" not in surface.slots

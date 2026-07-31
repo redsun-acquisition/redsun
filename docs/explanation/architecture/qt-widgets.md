@@ -67,7 +67,7 @@ args, kwargs = collect_arguments(spec, widget.parameters)
 | `Sequence[MyDevice]` | `Select` (multi-select) |
 | `Sequence[T]` (non-device) | `ListEdit` |
 | `Path` | `FileEdit` |
-| `int`, `float`, `str`, … | `create_widget` (magicgui default) |
+| `int`, `float`, `str`, ... | `create_widget` (magicgui default) |
 
 ---
 

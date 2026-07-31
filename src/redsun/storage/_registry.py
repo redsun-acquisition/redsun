@@ -48,7 +48,7 @@ def get_storage(group: str, mimetype: str) -> BaseStorage:
 async def reset_group(group: str) -> None:
     """Abort every storage in `group`: close with drop semantics.
 
-    Instances stay registered — a session-scoped storage survives the
+    Instances stay registered - a session-scoped storage survives the
     teardown of one burst.
     """
     for (candidate, _), storage in list(_REGISTRY.items()):
@@ -59,7 +59,7 @@ async def reset_group(group: str) -> None:
 def clear_registry() -> None:
     """Remove every registered storage. For session teardown and tests.
 
-    This does not close the dropped storages — any that are still open
+    This does not close the dropped storages - any that are still open
     leak their open store. Callers must `reset_group` (or `close` each
     storage directly) first if a storage might still be open.
     """

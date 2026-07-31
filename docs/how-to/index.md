@@ -4,3 +4,6 @@
 - **[Installation](installation.md)**
 - **[Build documentation](build-docs.md)**
 - **[Run tests](run-tests.md)**
+
+## Building an application
+- **[Wire components together](wire-components.md)**

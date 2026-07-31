@@ -15,3 +15,6 @@ views:
     plugin_name: mock-pkg
     plugin_id: motor_view
     motor: my_motor
+wiring:
+  - from: motor_view.sig_motor_move
+    to: motor_controller.move

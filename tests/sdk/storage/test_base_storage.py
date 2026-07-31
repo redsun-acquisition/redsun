@@ -89,7 +89,7 @@ async def test_happy_path_register_sink_write_to_capacity(
     for i in range(3):
         await sink.put(frame(i))
     # deterministic wait: the drain shuts the queue down synchronously right
-    # after marking the 3rd write, before its next suspension point — no
+    # after marking the 3rd write, before its next suspension point - no
     # scheduling assumption needed once the counter confirms the write
     while await signal.get_value() < 3:
         await asyncio.sleep(0)
@@ -123,7 +123,7 @@ async def test_register_while_open_raises(storage: BaseStorage, io: MemoryIO) ->
     with pytest.raises(StoreStateError):
         storage.register(spec("late", capacity=1))
     await storage.close()
-    # the store opened but never got a sink/drain — close() must still
+    # the store opened but never got a sink/drain - close() must still
     # close it, not leak it open forever
     assert io.stores[0].calls[-1] == ("close", "")
 
@@ -174,7 +174,7 @@ async def test_open_failure_propagates_and_is_retryable(
     with pytest.raises(OSError, match="disk on fire"):
         await storage.open()
     failing_io.fail = False
-    await storage.open()  # lock released — retry succeeds
+    await storage.open()  # lock released - retry succeeds
     assert len(failing_io.stores) == 1
     await storage.close()
 
@@ -321,7 +321,7 @@ async def test_register_during_close_gather_window_raises(
     the backend *before* `close()` resumes from `await asyncio.gather(...)`.
     In that window `register()`'s old guard (`_store is None` and the lock
     free) passed, so a concurrently scheduled `register()` (e.g. a device
-    `prepare` for the next burst) would succeed — only for `close()`'s
+    `prepare` for the next burst) would succeed - only for `close()`'s
     router sweep and `finally: self._path = None` to silently destroy it
     once it resumed. The `_closing` flag, set for the whole body of
     `close()`, closes that window.

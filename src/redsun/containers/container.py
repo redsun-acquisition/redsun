@@ -41,16 +41,22 @@ from redsun.containers.components import (
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
+    Connection,
     HasShutdown,
     IsInjectable,
     IsProvider,
     VirtualContainer,
+    WiringError,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Never, Self
 
+    from psygnal import SignalInstance
+
     from redsun.virtual import RedSunConfig
+    from redsun.virtual._wiring import SlotThread
 
 ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
 PluginType = type[Device] | type[PPresenter] | type[PView]
@@ -91,7 +97,7 @@ def _check_presenter_protocol(cls: type) -> TypeGuard[type[PPresenter]]:
     """Class-level gate of the dual presenter validation.
 
     The constructor must accept exactly ``(name, devices)`` as its leading
-    positional parameters — the only part of the contract knowable before
+    positional parameters - the only part of the contract knowable before
     instantiation (keyword arguments are uncontrolled; instance attributes
     are invisible). PPresenter compliance is then validated on the built
     instance by ``_PresenterComponent.build``.
@@ -103,7 +109,7 @@ def _check_view_protocol(cls: type) -> TypeGuard[type[PView]]:
     """Class-level gate of the dual view validation.
 
     The constructor must accept exactly ``(name,)`` as its leading
-    positional parameter — the only part of the contract knowable before
+    positional parameter - the only part of the contract knowable before
     instantiation. PView compliance is then validated on the built
     instance by ``_ViewComponent.build``.
     """
@@ -321,7 +327,7 @@ class AppContainer:
         if config_path is not None:
             try:
                 yaml_data = _load_yaml(config_path)
-            except Exception as e:  # noqa: BLE001 — unreadable config falls back to defaults
+            except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
                 logger.warning(f"Could not read config file {config_path}: {e}")
                 yaml_data = {}
             _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
@@ -369,6 +375,48 @@ class AppContainer:
         """Return whether the container has been built."""
         return self._is_built
 
+    def wire(self) -> None:
+        """Connect the signals and slots of built components.
+
+        Override in a container subclass to declare the connections of an
+        application. Every component is built by the time this runs and is
+        reachable as the attribute it was declared under:
+
+        ```python
+        class MyApp(AppContainer):
+            det_ctrl = declare_presenter(DetectorPresenter)
+            img_widget = declare_view(ImageView)
+
+            def wire(self) -> None:
+                self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)
+        ```
+
+        The default implementation connects nothing.
+        """
+
+    def connect(
+        self,
+        signal: SignalInstance,
+        slot: Callable[..., Any],
+        *,
+        thread: SlotThread = None,
+    ) -> Connection:
+        """Connect a signal to a slot, recording the link for teardown.
+
+        See [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect].
+        """
+        return self.virtual_container.connect(signal, slot, thread=thread)
+
+    def _apply_wiring_config(self) -> None:
+        """Connect the port pairs listed in the ``wiring`` configuration section."""
+        for index, rule in enumerate(self._config.get("wiring", [])):
+            if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
+                raise WiringError(
+                    f"wiring entry {index} must be a mapping with exactly the "
+                    f"keys 'from' and 'to', got {rule!r}"
+                )
+            self.virtual_container.connect_paths(rule["from"], rule["to"])
+
     def build(self) -> Self:
         """Instantiate all components in dependency order.
 
@@ -378,6 +426,8 @@ class AppContainer:
         2. Devices
         3. Presenters (register their providers in the VirtualContainer)
         4. Views (inject dependencies from the VirtualContainer)
+        5. Wiring, connecting the signals and slots of built components
+        6. Remaining dependency injection
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -404,7 +454,7 @@ class AppContainer:
             try:
                 built_devices[name] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
-            except Exception as e:  # noqa: BLE001 — a missing device must not abort the app
+            except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
 
         for comp_name, presenter_component in self._presenter_components.items():
@@ -428,6 +478,12 @@ class AppContainer:
         for comp_name, component in all_components.items():
             if isinstance(component.instance, IsProvider):
                 component.instance.register_providers(self._virtual_container)
+
+        self._virtual_container._set_components(
+            {name: comp.instance for name, comp in all_components.items()}
+        )
+        self.wire()
+        self._apply_wiring_config()
 
         for comp_name, component in all_components.items():
             if isinstance(component.instance, IsInjectable):
@@ -476,11 +532,14 @@ class AppContainer:
         if not self._is_built:
             return
 
+        if self._virtual_container is not None:
+            self._virtual_container.disconnect_all()
+
         for name, comp in self._presenter_components.items():
             if isinstance(comp.instance, HasShutdown):
                 try:
                     comp.instance.shutdown()
-                except Exception as e:  # noqa: BLE001 — one failed shutdown must not block the rest
+                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
 
         self._is_built = False
@@ -536,6 +595,8 @@ class AppContainer:
             session=config.get("session", "Redsun"),
             frontend=frontend,
         )
+        if "wiring" in config:
+            instance._config["wiring"] = config["wiring"]
 
         return instance
 

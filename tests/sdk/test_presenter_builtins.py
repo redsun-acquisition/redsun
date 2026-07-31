@@ -133,7 +133,7 @@ def test_approach_storage_property_via_registry(tmp_path: Path) -> None:
     """Approach (a): the provider is reached through the storage instance.
 
     ``get_storage(group, mimetype).path_provider`` works, but the consumer
-    must know a (group, mimetype) pair — storage-layer coordinates — to
+    must know a (group, mimetype) pair - storage-layer coordinates - to
     reach an application-scoped object. Kept for evaluation against the
     DI approach above.
     """

@@ -36,12 +36,12 @@ class StoragePresenter(Presenter, Loggable):
     exposes it on the virtual container as the ``path_provider`` DI provider,
     so views and sibling presenters resolve the same instance without
     constructor threading. Storage instances receive the provider when they
-    are constructed; devices never see it — they only interact with
+    are constructed; devices never see it - they only interact with
     [`BaseStorage`][redsun.storage.BaseStorage].
 
     Wiring:
 
-    - ``sig_pre_launch_notify`` (str) → ``set_plan`` — filenames adopt the plan
+    - ``sig_pre_launch_notify`` (str) → ``set_plan`` - filenames adopt the plan
       name of the upcoming run.
     - ``sig_plan_done`` → plan resets to ``"unknown"`` so stray bursts are not
       attributed to a finished plan.

@@ -98,12 +98,12 @@ Detector data logics meet redsun's storage layer through
 obtains a [`FrameSink`][redsun.storage.FrameSink] and builds its
 `StreamResourceDataProvider` from `uri_for` / `resource_info_for` /
 `signal_for`, and the acquire logic pushes frames with `await sink.put(...)`
-from kickoff onwards. Devices never see the path provider — only the
+from kickoff onwards. Devices never see the path provider - only the
 storage instance, resolved through the
 [storage registry][redsun.storage.get_storage].
 
-The full contract — including when to open eagerly versus lazily, and how a
-live view streams frames without creating a store — is documented in
+The full contract - including when to open eagerly versus lazily, and how a
+live view streams frames without creating a store - is documented in
 [Session storage](../storage.md) and
 [ADR 0002](../decisions/0002-storage-dual-context-redesign.md). The
 reference implementation of both patterns lives in
@@ -111,7 +111,7 @@ reference implementation of both patterns lives in
 
 ## Connecting devices
 
-ophyd-async devices must be connected before use — this initialises their signal backends
+ophyd-async devices must be connected before use - this initialises their signal backends
 and verifies hardware communication. Use
 [`AppContainer.connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
 after calling [`build()`][redsun.containers.container.AppContainer.build]:

@@ -56,7 +56,7 @@ def _is_device_annotation(ann: Any) -> bool:
     Python 3.11 forbids Protocols from inheriting non-Protocol concrete classes,
     so device-protocol annotations (e.g. ``_MotorProtocol``) cannot inherit from
     ``Device`` directly.  As a pragmatic extension, any ``@runtime_checkable``
-    Protocol is accepted here — the actual per-device structural check is
+    Protocol is accepted here - the actual per-device structural check is
     performed later via ``isinstance(device, proto)``.
     """
     try:

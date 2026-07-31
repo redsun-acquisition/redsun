@@ -4,8 +4,8 @@ Redsun runs one background `asyncio` event loop for the whole process. Device
 I/O and any coroutine connected to a psygnal signal execute there, off the GUI
 thread that emits.
 
-Only `run_coro` is meant for general use: it is how synchronous code — a
-presenter method, a Qt slot — runs a coroutine on that loop and gets its
+Only `run_coro` is meant for general use: it is how synchronous code - a
+presenter method, a Qt slot - runs a coroutine on that loop and gets its
 result. Everything else in this module is application plumbing, set up by the
 application container during startup and torn down on shutdown. Components
 should not build a loop or install a backend of their own.

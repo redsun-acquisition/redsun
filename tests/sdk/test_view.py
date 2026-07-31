@@ -12,7 +12,7 @@ def test_qtview_subclassing() -> None:
 
 
 def test_base_view(bus: VirtualContainer) -> None:
-    """Test basic View functionality — no virtual_container required."""
+    """Test basic View functionality - no virtual_container required."""
 
     class TestView(View):
         def __init__(self, name: str) -> None:

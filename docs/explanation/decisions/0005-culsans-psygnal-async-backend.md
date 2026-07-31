@@ -10,9 +10,9 @@ Accepted
 
 Redsun's UI runs on the Qt main thread while device logic runs on a single
 background `asyncio` loop. A view emits a signal; a presenter reacts to it by
-awaiting hardware. psygnal already supports this shape directly — connecting a
+awaiting hardware. psygnal already supports this shape directly - connecting a
 coroutine function to a signal builds a coroutine callback that hands the call
-to whatever async backend is installed — so no bridging code of our own is
+to whatever async backend is installed - so no bridging code of our own is
 needed at the call sites.
 
 The stock backends could not carry that traffic:
@@ -23,8 +23,8 @@ The stock backends could not carry that traffic:
   GUI was measured as undelivered after five seconds. A thread-safe hand-off
   delivers the same emission in well under a millisecond.
 - `asyncio.Queue` binds to the loop that first awaits it while empty. The
-  backend outlives any single loop — it is created once and lives for the
-  process — so a queue bound to one loop raises once another is running, which
+  backend outlives any single loop - it is created once and lives for the
+  process - so a queue bound to one loop raises once another is running, which
   is exactly what pytest's per-test event loops produce.
 
 psygnal's `set_async_backend()` accepts only the three literal names
@@ -51,7 +51,7 @@ The class is wired into psygnal at two levels, and both are load-bearing:
   Without it the backend is dropped with its queue and drain task still live.
 
 Installation goes through `redsun.aio.set_async_backend()`, which assigns
-psygnal's module global directly — the only way to install a backend that
+psygnal's module global directly - the only way to install a backend that
 `set_async_backend()` cannot name. It is idempotent and refuses to displace a
 backend it did not install. The backend reports its name as `"culsans"`, so
 psygnal's own setter raises rather than silently replacing it.
@@ -71,7 +71,7 @@ retrieved" at garbage-collection time, or not at all.
   class and `_ASYNC_BACKEND` as the assignment target, plus
   `WeakCallback.dereference()` reached through the inherited `call_back`. A
   psygnal release that renames any of them breaks dispatch. The test suite
-  pins the observable behaviour — installation, teardown, and delivery — so
+  pins the observable behaviour - installation, teardown, and delivery - so
   the break surfaces as a test failure rather than as silently dropped
   signals.
 - culsans and aiologic become runtime dependencies. Both are pre-1.0.

@@ -29,7 +29,7 @@ class PPresenter(Protocol):  # pragma: no cover
     by implementing [`IsProvider`][redsun.virtual.IsProvider] or
     [`IsInjectable`][redsun.virtual.IsInjectable].
 
-    Compliance is enforced at build time via ``isinstance`` — class-level
+    Compliance is enforced at build time via ``isinstance`` - class-level
     checks cannot see attributes assigned in ``__init__``.
     """
 
@@ -49,8 +49,7 @@ class Presenter(ABC):
 
     Deliberately does **not** inherit [`PPresenter`][redsun.presenter.PPresenter]:
     the protocol's read-only property descriptors would shadow the instance
-    attributes assigned here. Instances satisfy the protocol structurally —
-    which is also how any non-ABC presenter is expected to comply.
+    attributes assigned here. Instances satisfy the protocol structurally - which is also how any non-ABC presenter is expected to comply.
 
     Parameters
     ----------

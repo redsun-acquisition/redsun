@@ -20,7 +20,7 @@ class PView(Protocol):
     Access to the virtual container is optional and should be acquired
     by implementing :class:`~redsun.virtual.IsInjectable`.
 
-    Compliance is enforced at build time via ``isinstance`` — class-level
+    Compliance is enforced at build time via ``isinstance`` - class-level
     checks cannot see attributes assigned in ``__init__``.
     """
 
@@ -41,7 +41,7 @@ class View(ABC):
     Deliberately does **not** inherit [`PView`][redsun.view.PView]: the
     protocol's read-only ``name`` property descriptor would shadow the
     instance attribute assigned here. Instances satisfy the protocol
-    structurally — which is also how any non-ABC view is expected to comply.
+    structurally - which is also how any non-ABC view is expected to comply.
 
     Parameters
     ----------

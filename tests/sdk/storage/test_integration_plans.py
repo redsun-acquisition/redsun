@@ -112,9 +112,8 @@ class DemoDataLogic(DetectorDataLogic):
         self.acquire.sink = self.storage.sink(datakey_name)
         if self.eager_open:
             # eager open: this detector owns its storage exclusively.
-            # Shared-storage detectors must NOT open here — a sibling's
-            # register would race the open and raise StoreStateError —
-            # they rely on the drain's lazy open instead.
+            # Shared-storage detectors must NOT open here - a sibling's
+            # register would race the open and raise StoreStateError - # they rely on the drain's lazy open instead.
             await self.storage.open()
         self.spec = StreamSpec(
             data_key=datakey_name,
@@ -148,7 +147,7 @@ class LiveAcquireLogic(DetectorAcquireLogic):
     The acquisition loop always updates the buffer signal for viewers and
     pushes into a `FrameSink` only while a write window is active (a sink
     exists). The
-    write window ends when capacity shuts the queue down — the producer
+    write window ends when capacity shuts the queue down - the producer
     observes `QueueShutDown` and drops its sink, no `write_sig` involved.
     """
 
@@ -182,7 +181,7 @@ class LiveAcquireLogic(DetectorAcquireLogic):
             await asyncio.sleep(0)
 
     async def start_acquiring(self) -> None:
-        # kickoff: the write window becomes active — frames start flowing
+        # kickoff: the write window becomes active - frames start flowing
         # into the sink obtained at prepare
         if self.pending_sink is not None:
             self.sink, self.pending_sink = self.pending_sink, None
@@ -225,7 +224,7 @@ class LiveDataLogic(DetectorDataLogic):
     acquire: LiveAcquireLogic
 
     async def prepare_unbounded(self, datakey_name: str) -> StreamableDataProvider:
-        # live-view device: NO eager open — the store must materialise only
+        # live-view device: NO eager open - the store must materialise only
         # when the first frame is actually written (lazy open in the drain).
         # The sink is handed over here but only activated at kickoff.
         self.acquire.pending_sink = self.storage.sink(datakey_name)
@@ -445,7 +444,7 @@ def test_live_view_writes_only_during_write_window(tmp_path: Path) -> None:
     engine(plan()).result(timeout=30)
     run_coro(live_storage.close())
 
-    # exactly one store, created lazily by the first written frame — after
+    # exactly one store, created lazily by the first written frame - after
     # live streaming had already produced frames without any storage
     assert len(io.stores) == 1
     assert io.live_frames_at_open is not None

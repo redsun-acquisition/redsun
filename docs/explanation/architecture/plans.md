@@ -6,9 +6,9 @@ consumes them and drives hardware.
 
 Redsun adds two layers on top:
 
-- **`continous` plans** — plans that run in a loop, with optional pause/resume
+- **`continous` plans** - plans that run in a loop, with optional pause/resume
   and in-flight user actions.
-- **`PlanSpec`** — a structured description of a plan's signature, used by the
+- **`PlanSpec`** - a structured description of a plan's signature, used by the
   view layer to build a parameter form automatically.
 
 ---
@@ -169,4 +169,4 @@ descriptors = yield from rps.describe_collect(collectable)
 - [`engine/actions` API](../../reference/api/engine.md#actions)
 - [`engine/plan_stubs` API](../../reference/api/engine.md#plan-stubs)
 - [`presenter/plan_spec` API](../../reference/api/presenter.md#plan-specification)
-- [Qt widgets — plans](qt-widgets.md)
+- [Qt widgets - plans](qt-widgets.md)

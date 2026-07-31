@@ -16,7 +16,7 @@ layer. Two producer contexts need the same store:
   decomposition (`TriggerLogic` / `AcquireLogic` / `DataLogic`) pushing
   frames during the prepare → kickoff → complete → collect cycle.
 - **Callback layer (sync):** `DocumentRouter` presenters running inside the
-  RunEngine's `emit_sync` on the loop thread — they can never await.
+  RunEngine's `emit_sync` on the loop thread - they can never await.
 
 The async-only sink API forces callback-side work to be modelled as a fake
 device: `MedianDevice` in redsun-mimir is a `StandardDetector` whose polling
@@ -25,12 +25,12 @@ patches the gap between "kickoff = start live view" and "now also write".
 
 The `StorageStateMachine` (UNSEALED → SEALING → OPEN → CLOSING, `try_seal`
 first-writer race, `await_open` parking) exists solely because store-open is
-inferred from the first arriving frame — nothing tells the storage a write
+inferred from the first arriving frame - nothing tells the storage a write
 window started. The `StandardDetector` cycle provides explicit lifecycle
 moments the current design ignores.
 
 A redsun-specific constraint shapes everything: **live view without
-storage** — a staged, kicked-off detector streams frames to viewers
+storage** - a staged, kicked-off detector streams frames to viewers
 indefinitely, and today's live plans (`live_stream`, `live_median_scan`)
 re-run stage/prepare/kickoff every loop iteration while writing only happens
 if a stream action fires. Any design that opens a store eagerly at prepare
@@ -59,10 +59,10 @@ so it is safe inside `emit_sync` on the loop thread.
 
 `BaseStorage.sink(data_key)` returns a thin wrapper exposing only:
 
-- `await sink.put(frame)` — device layer; parks on a full queue.
-- `sink.put_nowait(frame)` — callback layer; raises `QueueFull` /
+- `await sink.put(frame)` - device layer; parks on a full queue.
+- `sink.put_nowait(frame)` - callback layer; raises `QueueFull` /
   `QueueShutDown` loudly.
-- `sink.close()` — sync, idempotent; shuts the queue down cleanly (queued
+- `sink.close()` - sync, idempotent; shuts the queue down cleanly (queued
   frames still written). Devices call it from `DataLogic.stop`/unstage,
   presenters on the stop document. No-op if capacity already shut the queue.
 
@@ -72,7 +72,7 @@ store opens; they wait in the queue.
 
 ### Drain: one `BaseStorage`-owned task per key, spawned by `sink()`
 
-`sink(data_key)` creates the queue and spawns the drain task — legal from
+`sink(data_key)` creates the queue and spawns the drain task - legal from
 sync code because every caller (async device prepare, `emit_sync` callback)
 runs on the loop thread. The drain loop is the old `_pusher` inverted:
 `await queue.async_get()` → ensure open → `await store.write(key, frame)` →
@@ -91,11 +91,11 @@ open lock. No separate release API, no double-release ambiguity.
 backend; concurrent and later callers await/return on the same open. Entry
 points:
 
-- **Eager (optional):** `DataLogic.prepare` calls it — stock ophyd-async
+- **Eager (optional):** `DataLogic.prepare` calls it - stock ophyd-async
   writer behaviour ("prepare means writing is imminent"). Snap-style
   acquisition detectors opt in.
 - **Lazy (always on):** the drain calls it before its first write. Live-view
-  devices and callback-only bursts rely on this — the store materialises on
+  devices and callback-only bursts rely on this - the store materialises on
   the first frame actually written, never earlier.
 
 Path allocation stays at first `register` (cheap, no backend I/O), so
@@ -112,12 +112,12 @@ Path allocation stays at first `register` (cheap, no backend I/O), so
 A burst where no frame ever flowed (live iteration whose action never fired)
 is trivial cleanup: the drain exits without ever having opened, clearing its
 router entry and the path. Symmetric register/teardown per plan-loop
-iteration — no leaked router entries.
+iteration - no leaked router entries.
 
 ### Capacity: enforced by the drain, signalled by the queue
 
 The drain counts writes; at `spec.capacity` it calls `queue.shutdown()` and
-exits. An overrunning producer's next `put` raises `QueueShutDown` — the
+exits. An overrunning producer's next `put` raises `QueueShutDown` - the
 queue-era analogue of the generator returning. Unbounded specs drain until
 close. Capacity remains control flow; nothing raises `StopAsyncIteration` by
 hand.
@@ -207,15 +207,15 @@ opens and writes → stop doc → `sink.close()` → drain flushes and exits.
   put → open → capacity → close asserting backend contents via `MemoryIO`,
   plus focused unhappy paths (register-while-open, put-after-capacity,
   abort-drop vs clean-flush, burst-died-without-frames) and a concurrency
-  test (several keys putting concurrently — single backend open, all frames
+  test (several keys putting concurrently - single backend open, all frames
   written). In addition, **integration tests execute real plans through the
   `RunEngine`** combining a disk-writing device (mock detector built on the
   ophyd-async logic decomposition, backed by `MemoryIO`) with a
   `DocumentRouter` callback that consumes the emitted documents and writes a
-  derived key through the sync API — pinning the dual-producer behaviour
+  derived key through the sync API - pinning the dual-producer behaviour
   `live_median_scan` will rely on after the mimir rework.
 - **redsun-mimir (staged separately, enabled by this ADR):** `MedianDevice`
-  and its logics/signals are deleted — median computation moves to
+  and its logics/signals are deleted - median computation moves to
   `MedianPresenter` consuming Event documents. After the plan rework makes
   the sink lifecycle the write window (prepare → kickoff → capacity →
   complete as a plain bounded fly segment), `write_sig` is deleted too. Until

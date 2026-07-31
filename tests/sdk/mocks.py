@@ -95,7 +95,7 @@ class MockDeviceWithChild(StandardReadable):
 class MockController(IsProvider, IsInjectable):
     """Mock controller/presenter that optionally provides dependencies.
 
-    Satisfies ``PPresenter`` structurally — deliberately not by inheritance,
+    Satisfies ``PPresenter`` structurally - deliberately not by inheritance,
     since the protocol's read-only property descriptors would shadow the
     instance attributes assigned in ``__init__``.
     """

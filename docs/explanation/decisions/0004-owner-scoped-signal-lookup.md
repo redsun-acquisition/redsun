@@ -8,8 +8,8 @@ Accepted
 
 ## Context
 
-The `VirtualContainer` signal registry is two-level — keyed by owner name
-first, then by signal name (`container.signals[owner][signal]`) — precisely
+The `VirtualContainer` signal registry is two-level - keyed by owner name
+first, then by signal name (`container.signals[owner][signal]`) - precisely
 because different components may expose signals with the same name and the
 owner name is what discerns them. `find_signals`, however, only searched by
 signal name across every cache and silently returned the first match, so
@@ -24,7 +24,7 @@ aligned with it.
 restricted to that component's cache (its `name`, or the alias used at
 registration); an unknown owner yields an empty result, consistent with the
 existing omit-missing semantics. When omitted, the legacy first-match scan
-across all caches is preserved — convenient when a signal name is known to
+across all caches is preserved - convenient when a signal name is known to
 be unique, ambiguous otherwise.
 
 As a companion convention, signal attributes follow standard Python naming:
@@ -37,7 +37,7 @@ by component authors), replacing the previous `sigCamelCase` style.
 
 - Consumers that must disambiguate same-named signals pass the owner name;
   redsun-mimir's presenters and views should adopt the owner-scoped form in
-  their refactor and rename their signals to `sig_snake_case` — until then,
+  their refactor and rename their signals to `sig_snake_case` - until then,
   mimir's `sigCamelCase` emitters will not match redsun's renamed
   `StoragePresenter` wiring.
 - The rename is breaking for any consumer that looked up the old

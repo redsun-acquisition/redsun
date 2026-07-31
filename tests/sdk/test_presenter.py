@@ -74,7 +74,7 @@ def test_presenter_is_injectable(
 
 
 class _PropertyPresenter:
-    """Structural presenter using read-only properties — no ABC involved."""
+    """Structural presenter using read-only properties - no ABC involved."""
 
     def __init__(self, name: str, devices: Mapping[str, Device], /) -> None:
         self._name = name

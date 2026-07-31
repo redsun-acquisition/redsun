@@ -1,0 +1,20 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-wiring-session
+presenters:
+  mover:
+    plugin_name: mock-pkg
+    plugin_id: async_motor_controller
+  ctrl:
+    plugin_name: mock-pkg
+    plugin_id: my_controller
+  grouped:
+    plugin_name: mock-pkg
+    plugin_id: grouped_controller
+wiring:
+  - from: mover.sig_motor_moved
+    to: ctrl.on_motor_moved
+  - from: grouped.median
+    to: grouped.absorb
+  - from: grouped.filtered
+    to: grouped.absorb
