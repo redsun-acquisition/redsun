@@ -28,3 +28,4 @@ Status, Context, Decision, Consequences.
 - **[4. Owner-scoped signal lookup](decisions/0004-owner-scoped-signal-lookup.md)**
 - **[5. Culsans-backed psygnal async backend](decisions/0005-culsans-psygnal-async-backend.md)**
 - **[6. Application-declared wiring](decisions/0006-application-declared-wiring.md)**
+- **[7. Typed provider keys](decisions/0007-typed-provider-keys.md)**

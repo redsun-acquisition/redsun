@@ -1,6 +1,7 @@
 from ._config import RedSunConfig
 from ._container import (
     CallbackType,
+    ProviderKey,
     Signal,
     SignalCache,
     VirtualContainer,
@@ -15,6 +16,7 @@ __all__ = [
     "IsInjectable",
     "IsProvider",
     "Ports",
+    "ProviderKey",
     "RedSunConfig",
     "Signal",
     "SignalCache",

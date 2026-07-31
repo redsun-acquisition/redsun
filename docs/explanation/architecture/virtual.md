@@ -69,6 +69,48 @@ class MyComponent:
 
 [`python-dependency-injector`](https://python-dependency-injector.ets-labs.org/index.html) offers a great deal of options of what kind of resource to shared with other components. Refer to its documentation for more information.
 
+## Typed provider keys
+
+An object shared through the container should be identified by a key rather than
+by an attribute name. A key is a [`ProviderKey`][redsun.virtual.ProviderKey],
+declared in the package that owns the type it identifies:
+
+```python
+import dependency_injector.providers as dip
+
+PATH_PROVIDER = dip.Dependency(instance_of=SessionPathProvider)
+```
+
+The producer binds it, the consumer resolves it:
+
+```python
+class StoragePresenter:
+    def register_providers(self, container: VirtualContainer) -> None:
+        container.provide(PATH_PROVIDER, self._provider)
+
+
+class FileStorageView:
+    def inject_dependencies(self, container: VirtualContainer) -> None:
+        # required: raises KeyError if nothing provided it
+        provider = container.require(PATH_PROVIDER)
+
+        # optional: None when this application has no storage presenter
+        maybe = container.try_require(PATH_PROVIDER)
+```
+
+Both halves are typed: `require(PATH_PROVIDER)` is a `SessionPathProvider` to a
+type checker, and `provide` rejects a wrong value both statically and through
+the key's `instance_of`.
+
+A key names a binding; it does not hold one. Each container keeps its own, so
+two applications in one process never see each other's objects.
+
+!!! note
+
+    Prefer keys for anything new. The dynamic form below still works and is not
+    removed, but it is untyped in both directions and cannot express an optional
+    collaborator.
+
 ## Injected components
 
 Through the `VirtualContainer`, objects provided by other components may be retrieved by implementing the [`IsInjectable`][redsun.virtual.IsInjectable] protocol.

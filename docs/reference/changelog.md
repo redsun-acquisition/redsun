@@ -37,6 +37,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   that section. A malformed path, an unbuilt component, or an unknown port
   raises `WiringError` listing what does exist.
 - `Connection` and `WiringError` (`redsun.virtual`).
+- `VirtualContainer.provide()`, `require()` and `try_require()` - share an
+  object under a typed key instead of a dynamic attribute. `require` raises
+  `KeyError` when nothing bound the key; `try_require` returns `None`, which is
+  how an optional collaborator is expressed.
+- `ProviderKey` (`redsun.virtual`) - the type of such a key, a
+  `dependency_injector.providers.Dependency[T]`. `instance_of=` is enforced by
+  `provide`, so a wrong value is blamed where it is supplied.
+- `PATH_PROVIDER` (`redsun.storage`) - the key for the session path provider
+  owned by `StoragePresenter`.
+
+### Changed
+
+- `StoragePresenter` binds its provider with
+  `container.provide(PATH_PROVIDER, ...)`. **Breaking:** the dynamic attribute
+  it used to set is gone; read the provider with
+  `container.require(PATH_PROVIDER)` instead of `container.path_provider()`.
 
   `find_signals` and hand-written `inject_dependencies` are unaffected.
 - `redsun.aio.set_async_backend()` - installs `CulsansAsyncioBackend` as psygnal's
