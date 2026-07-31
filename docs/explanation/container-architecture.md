@@ -196,7 +196,7 @@ Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] cal
 
 **Phase 3 — wiring**:
 
-[`wire()`][redsun.containers.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
+[`wire()`][redsun.containers.container.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
 
 **Phase 4 — dependency injection**:
 
@@ -209,7 +209,7 @@ Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualCo
 - **Signal bus**: a component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods it accepts connections on with [`slot`][redsun.virtual.slot]; the application connects the two during phase 3, and the container records every link. The older `register_signals()` registry, discovered by name through `find_signals()`, still works and is kept as an escape hatch for dynamic lookup.
 - **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
 
-The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
+The `VirtualContainer` is created during [`build()`][redsun.containers.container.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
 ## Two usage flows
 

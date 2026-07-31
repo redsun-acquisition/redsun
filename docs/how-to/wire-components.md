@@ -11,7 +11,7 @@ other page of this documentation, to the same form.
 === "Container class"
 
     A container subclass declares its components as fields and its connections
-    by overriding [`wire`][redsun.containers.AppContainer.wire].
+    by overriding [`wire`][redsun.containers.container.AppContainer.wire].
 
 === "Configuration file"
 

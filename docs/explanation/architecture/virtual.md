@@ -110,7 +110,7 @@ offers, and the application states what is connected:
 - a method is offered by marking it with [`slot`][redsun.virtual.slot], which
   makes its name and signature part of the component's public surface;
 - the application connects them, in
-  [`AppContainer.wire`][redsun.containers.AppContainer.wire] or in the `wiring`
+  [`AppContainer.wire`][redsun.containers.container.AppContainer.wire] or in the `wiring`
   section of its configuration file. Both end in
   [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect], which
   records the link so the graph can be reported and released.
