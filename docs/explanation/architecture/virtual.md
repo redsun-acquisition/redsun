@@ -193,6 +193,13 @@ Signature validation happens at connection time and is psygnal's: the argument
 count is always checked, and the argument types are checked as well when the
 signal names them (`Signal(FrameBatch)` rather than `Signal(object)`).
 
+Device signals are the one channel that is not psygnal.
+[`subscribe`][redsun.virtual.VirtualContainer.subscribe] brings them under the
+same rules: a marked slot, an affinity from the component, and a record that
+`disconnect_all` releases. It marshals the reading through a psygnal signal,
+which is what gives an ophyd-async subscription a thread affinity at all, since
+ophyd-async calls its subscribers on whatever thread produced the reading.
+
 The signal registry above (`register_signals` / `find_signals`) predates this
 and still works, but it matches on names alone and leaves no record of what was
 connected. New components should not use it.

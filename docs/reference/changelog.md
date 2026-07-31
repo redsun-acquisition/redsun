@@ -46,8 +46,21 @@ Dates are specified in the format `DD-MM-YYYY`.
   `provide`, so a wrong value is blamed where it is supplied.
 - `PATH_PROVIDER` (`redsun.storage`) - the key for the session path provider
   owned by `StoragePresenter`.
+- `VirtualContainer.subscribe()` and `VirtualContainer.subscriptions` - observe
+  an ophyd-async device signal from a marked slot. The reading is marshalled
+  through psygnal, so `thread` behaves as it does for `connect`, and the
+  subscription is released by `disconnect_all()`. Previously a component had to
+  call `subscribe_reading` itself, from inside a coroutine, with no way to set a
+  thread affinity and nothing tracking the release.
+- `Subscription` (`redsun.virtual`) - the record of one, rendered as
+  `source ~> consumer.port`.
 
 ### Changed
+
+- `QtView` declares `__redsun_slot_thread__ = "main"`, so every slot on a Qt
+  view is delivered on the main thread unless the slot or the connection says
+  otherwise. Connections that passed `thread="main"` explicitly still work and
+  are now redundant.
 
 - `declare_device()`, `declare_presenter()` and `declare_view()` return the
   class they are given instead of `Any`, so a component attribute is typed as

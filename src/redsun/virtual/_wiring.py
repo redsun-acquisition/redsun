@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from psygnal import SignalInstance
 
-__all__ = ["Connection", "Ports", "WiringError", "ports", "slot"]
+__all__ = ["Connection", "Ports", "Subscription", "WiringError", "ports", "slot"]
 
 F = TypeVar("F", bound="Callable[..., Any]")
 
@@ -156,3 +156,17 @@ class Connection:
             f"{self.publisher}.{self.publisher_port} -> "
             f"{self.consumer}.{self.consumer_port}{thread}"
         )
+
+
+@dataclass(frozen=True, kw_only=True)
+class Subscription:
+    """A recorded subscription to a device signal."""
+
+    source: str
+    consumer: str
+    consumer_port: str
+    thread: SlotThread = None
+
+    def __str__(self) -> str:
+        thread = f"  [thread={self.thread}]" if self.thread else ""
+        return f"{self.source} ~> {self.consumer}.{self.consumer_port}{thread}"

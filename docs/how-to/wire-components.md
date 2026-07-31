@@ -230,17 +230,53 @@ overrides it for one method, and `connect(..., thread=...)` overrides both.
 
 `QtView` already declares `"main"`, so a Qt widget's slots need nothing.
 
+## Observe a device signal
+
+Device signals are ophyd-async, not psygnal, so `connect` does not take them.
+[`subscribe`][redsun.virtual.VirtualContainer.subscribe] does, and gives the
+same guarantees:
+
+```python
+class FileStorageView(QtView):
+    @slot
+    def update_base_dir(self, reading: dict[str, Reading[str]]) -> None:
+        self._edit.setText(next(iter(reading.values()))["value"])
+
+
+class MyApp(QtAppContainer):
+    def wire(self) -> None:
+        provider = self.virtual_container.require(PATH_PROVIDER)
+        self.virtual_container.subscribe(
+            provider.signals.base_dir, self.storage_widget.update_base_dir
+        )
+```
+
+The slot still has to be marked, the thread affinity still comes from the
+component, and the subscription is released at shutdown. That last one matters
+more here than for signals: ophyd-async releases a subscription by identity, so
+whoever subscribed has to keep the exact callback object to undo it.
+
+!!! note
+
+    ophyd-async needs a running event loop to subscribe, and `wire` runs on the
+    main thread. `subscribe` handles that for you.
+
 ## Inspect what is connected
 
 ```python
 for link in app.virtual_container.connections:
     print(link)
+for record in app.virtual_container.subscriptions:
+    print(record)
 ```
 
 ```
 det_ctrl.sig_new_data -> img_widget.update_layers  [thread=main]
 det_widget.sig_property_changed -> det_ctrl.configure
+base_dir ~> storage_widget.update_base_dir  [thread=main]
 ```
+
+`->` is a signal connection, `~>` a device subscription.
 
 [`ports`][redsun.virtual.ports] answers the other half, what a component
 offers:
@@ -250,7 +286,7 @@ offers:
 {'update_layers': <bound method ImageView.update_layers ...>}
 ```
 
-Connections are recorded, so `AppContainer.shutdown` releases them.
+Both are recorded, so `AppContainer.shutdown` releases them.
 
 ## Read a failure
 

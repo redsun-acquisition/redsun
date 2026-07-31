@@ -16,6 +16,10 @@ if TYPE_CHECKING:
 class QtView(QWidget):
     """Abstract base Qt widget implementing the View protocol.
 
+    Every slot on a Qt view is delivered on the main thread unless the slot or
+    the connection says otherwise, since touching a widget from any other
+    thread is undefined.
+
     Parameters
     ----------
     name : str
@@ -27,6 +31,8 @@ class QtView(QWidget):
         ``kwargs`` are kept for consistency but not forwarded to
         ``QWidget.__init__``.
     """
+
+    __redsun_slot_thread__ = "main"
 
     @abstractmethod
     def __init__(
