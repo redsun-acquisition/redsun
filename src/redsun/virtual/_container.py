@@ -212,8 +212,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     ) -> None:
         """Register one or more document callbacks.
 
-        A callback is a [`DocumentRouter`][event_model.DocumentRouter] or any
-        object callable as ``(name, doc)``.
+        A callback is an ``event_model.DocumentRouter`` or any object callable
+        as ``(name, doc)``.
 
         Parameters
         ----------

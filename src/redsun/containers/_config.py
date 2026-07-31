@@ -8,7 +8,7 @@ __all__ = ["AppConfig"]
 class AppConfig(RedSunConfig, total=False):
     """Extended configuration for Redsun application containers.
 
-    Extends [`RedSunConfig`][redsun.virtual.RedSunConfig`] with component sections
+    Extends [`RedSunConfig`][redsun.virtual.RedSunConfig] with component sections
     used by the application layer. These are **not** propagated to components.
     """
 

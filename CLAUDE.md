@@ -21,6 +21,7 @@ uv run pytest tests/sdk/storage/test_base_storage.py::test_name
 uv run ruff check --fix . && uv run ruff format .
 uv run mypy --ignore-missing-imports $(uv run qtpy mypy-args)
 uv run zensical build                   # docs
+uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 ```
 
 - **Windows:** `$(...)` command substitution does not exist in `cmd.exe`. Use

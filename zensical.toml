@@ -110,6 +110,8 @@ inventories = [
     "https://psygnal.readthedocs.io/en/latest/objects.inv",
     "https://docs.python.org/3/objects.inv",
     "https://blueskyproject.io/bluesky/main/objects.inv",
+    "https://blueskyproject.io/ophyd-async/main/objects.inv",
+    "https://python-dependency-injector.ets-labs.org/objects.inv",
 ]
 
 [project.plugins.mkdocstrings.handlers.python.options]
