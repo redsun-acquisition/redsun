@@ -110,11 +110,11 @@ Each parameter becomes a `ParamDescription` with:
 The dispatch is table-driven. Annotations are mapped to `ParamDescription`
 fields in this priority order:
 
-1. `Literal["a", "b"]` → `choices=["a", "b"]`
-2. `Sequence[MyDevice]` → multi-select, `choices=<matching device names>`
-3. `*args: MyDevice` (VAR_POSITIONAL) → multi-select
-4. `MyDevice` (bare protocol) → single-select
-5. Everything else → delegated to magicgui
+1. `Literal["a", "b"]` -> `choices=["a", "b"]`
+2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
+3. `*args: MyDevice` (VAR_POSITIONAL) -> multi-select
+4. `MyDevice` (bare protocol) -> single-select
+5. Everything else -> delegated to magicgui
 
 Plans with required parameters that fall through to step 5 and are not
 magicgui-resolvable raise `UnresolvableAnnotationError` and are skipped.
@@ -127,7 +127,7 @@ turn widget values into a plan call:
 ```python
 from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
 
-# 1. Resolve: string device names → live device instances
+# 1. Resolve: string device names -> live device instances
 resolved = resolve_arguments(spec, widget_values, devices)
 
 # 2. Collect: build (args, kwargs) matching the plan signature

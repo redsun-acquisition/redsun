@@ -94,35 +94,29 @@ class PlanFilenameProvider(FilenameProvider):
 class SessionPathProvider(PathProvider):
     """Session-scoped path provider.
 
-    Computes path in the canonical layout:
+    Computes paths in the layout:
 
     ```
     base_dir / session_name / YYYY-MM-DD/ <plan>_<counter>{.ext}
     ```
 
-    where the date is evaluated when a path is requested (not when
-    the provider is constructed) and the counter only ever increases,
-    per `(session, plan)`, *across* dates: the date
-    directory groups files, it does not scope the counter.
+    The date is evaluated per request, not at construction. The counter is
+    per `(session, plan)` and only ever increases: the date directory groups
+    files, it does not scope the counter.
 
     Parameters
     ----------
     base_dir : Path | None
-        Base directory for storage. Defaults to `~/redsun-storage`.
-
-        Note: `~` is expanded to the user's home directory.
+        Base directory for storage; `~` is expanded. Defaults to
+        `~/redsun-storage`.
     session : str
-        Session name. Fixed for the provider's lifetime.
-
-        Defaults to `"unknown-session"`.
+        Session name, fixed for the provider's lifetime. Defaults to
+        `"unknown-session"`.
     max_digits : int
-        Zero-padding with for auto-increment counter.
-
-        Defaults to 5 (e.g. `00001`).
+        Zero-padding width for the counter. Defaults to 5 (e.g. `00001`).
     now: Callable[[], datetime] | None
-        Clock used to compute the date directory. For testing.
-
-        Defaults to `datetime.now`.
+        Clock used to compute the date directory, for testing. Defaults to
+        `datetime.now`.
     """
 
     __slots__ = (

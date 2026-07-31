@@ -132,7 +132,7 @@ class TestActionButton:
             toggle_states: tuple[str, str] = ("Start", "Stop")
 
         btn = ActionButton(Stream())
-        # unchecked → first state label
+        # unchecked -> first state label
         assert "Start" in btn.text()
         btn.setChecked(True)
         assert "Stop" in btn.text()

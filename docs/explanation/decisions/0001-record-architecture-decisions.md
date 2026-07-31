@@ -31,4 +31,4 @@ superseded ADRs are marked as such rather than edited.
   implementation.
 - `.claude/agents/` memos and CLAUDE.md summarise and link to ADRs instead of
   being the primary record.
-- ADR pages are wired into the zensical nav under Explanation → Decisions.
+- ADR pages are wired into the zensical nav under Explanation -> Decisions.

@@ -11,9 +11,9 @@ Always run (POSIX shells):
 PowerShell (Windows):
 `uv run mypy src/redsun --ignore-missing-imports @(uv run qtpy mypy-args)`
 
-`cmd.exe` has no command substitution — use PowerShell there.
+`cmd.exe` has no command substitution - use PowerShell there.
 
-This pins the Qt binding and matches CI exactly — a bare `mypy src/redsun` can
+This pins the Qt binding and matches CI exactly - a bare `mypy src/redsun` can
 diverge when multiple Qt bindings are installed, so only the shimmed form is
 authoritative.
 

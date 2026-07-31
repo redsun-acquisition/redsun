@@ -22,19 +22,16 @@ def ask_file_path(
     title : str
         Dialog title.
     file_filter : str
-        File filter.
-    folder : str, optional
-        Folder to open the dialog in.
-        Default is None.
+        Qt file filter string.
+    folder : str
+        Folder the dialog opens in.
     saving : bool, optional
-        True if the dialog is for saving a file, False otherwise.
-        Default is True.
+        Save dialog if True, open dialog otherwise. Default is True.
 
     Returns
     -------
-    Optional[str]
-        Path to the selected file or None if the user cancels the dialog.
-
+    str | None
+        Selected path, or None if the user cancels the dialog.
     """
     if saving:
         dialog = QtWidgets.QFileDialog.getSaveFileName
