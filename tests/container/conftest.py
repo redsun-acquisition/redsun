@@ -34,7 +34,7 @@ def _make_mock_entry_point() -> mock.Mock:
 
 
 @pytest.fixture
-def mock_entry_points() -> Generator[Any, None, None]:
+def mock_entry_points() -> Generator[None, None, None]:
     """Patch entry_points and importlib.resources to use mock-pkg manifest.
 
     ``container.py`` resolves the manifest via::

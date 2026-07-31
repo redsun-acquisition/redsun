@@ -1,4 +1,3 @@
-# type: ignore
 from __future__ import annotations
 
 import sys
@@ -45,9 +44,10 @@ def test_loggable(caplog: LogCaptureFixture) -> None:
     assert "Test critical" in caplog.handler.records[4].msg
     assert "Test exception" in caplog.handler.records[5].msg
 
-    for _, record in enumerate(caplog.handler.records):
-        assert "MockLoggable" in record.clsname
-        assert "Test instance" in record.uid
+    for record in caplog.handler.records:
+        # injected through 'extra', so not attributes of LogRecord itself
+        assert "MockLoggable" in getattr(record, "clsname", "")
+        assert "Test instance" in getattr(record, "uid", "")
 
     assert caplog.handler.records[0].levelname == "INFO"
     assert caplog.handler.records[1].levelname == "DEBUG"
@@ -75,5 +75,5 @@ def test_loggable_no_name(caplog: LogCaptureFixture) -> None:
     assert "Test critical" in caplog.handler.records[4].msg
     assert "Test exception" in caplog.handler.records[5].msg
 
-    for _, record in enumerate(caplog.handler.records):
-        assert "LoggableNoName" in record.clsname
+    for record in caplog.handler.records:
+        assert "LoggableNoName" in getattr(record, "clsname", "")

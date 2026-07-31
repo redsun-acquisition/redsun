@@ -10,17 +10,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
-    from typing import Any
-
-    _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
-else:
-    _LoggerAdapter = logging.LoggerAdapter
+    from typing import Any, ClassVar
 
 
 class GlobalFormatter(logging.Formatter):
     """Custom formatter for log messages."""
 
-    _format = "[%(asctime)s][%(levelname)s]"
+    _format: ClassVar[str] = "[%(asctime)s][%(levelname)s]"
 
     def __init__(self, datefmt: str) -> None:
         super().__init__(datefmt=datefmt)
@@ -46,7 +42,7 @@ class GlobalFormatter(logging.Formatter):
         return formatted
 
 
-class ContextualAdapter(_LoggerAdapter):
+class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
     """Adapter that adds class and object context to log messages.
 
     It expands the ``kwargs`` to inject the object's class name and name into the log record.
@@ -132,6 +128,6 @@ class Loggable:
     """Mixin class that adds a logger to a class instance with extra contextual information."""
 
     @cached_property
-    def logger(self) -> _LoggerAdapter:
+    def logger(self) -> logging.LoggerAdapter[logging.Logger]:
         """Logger instance with contextual information."""
         return ContextualAdapter(logging.getLogger("redsun"), self)

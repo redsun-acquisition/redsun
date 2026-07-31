@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
+from helpers import component
 from mock_pkg.controller import AsyncMotorController
 from mock_pkg.device import MyMotor
 from mock_pkg.view import MockMotorView
@@ -40,14 +41,12 @@ def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
 @pytest.fixture
 def app(
     qapp: QApplication,
-    mock_entry_points: Any,
+    mock_entry_points: None,
     config_path: Path,
 ) -> Iterator[QtAppContainer]:
     """Boot a Qt container holding a view, a presenter and a mock motor."""
-    container = cast(
-        "QtAppContainer",
-        AppContainer.from_config(str(config_path / "mock_async_config.yaml")),
-    )
+    container = AppContainer.from_config(str(config_path / "mock_async_config.yaml"))
+    assert isinstance(container, QtAppContainer)
     container.build()
     container.connect_devices(mock=True)
     try:
@@ -58,11 +57,11 @@ def app(
 
 
 def _view(app: QtAppContainer) -> MockMotorView:
-    return cast("MockMotorView", app.views["motor_view"])
+    return component(app.views, "motor_view", MockMotorView)
 
 
 def _presenter(app: QtAppContainer) -> AsyncMotorController:
-    return cast("AsyncMotorController", app.presenters["motor_controller"])
+    return component(app.presenters, "motor_controller", AsyncMotorController)
 
 
 def test_container_boots_with_all_components(app: QtAppContainer) -> None:
@@ -91,7 +90,7 @@ def test_view_signal_reaches_the_presenter_coroutine(app: QtAppContainer) -> Non
 
 def test_coroutine_slot_drives_the_device(app: QtAppContainer) -> None:
     view, presenter = _view(app), _presenter(app)
-    motor = cast("MyMotor", app.devices["my_motor"])
+    motor = component(app.devices, "my_motor", MyMotor)
 
     view.position = 3.5
     view.move_button.click()
