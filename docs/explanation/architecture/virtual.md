@@ -128,14 +128,24 @@ class MyOtherComponent:
     def my_slot(self, value: int) -> None: ...
 ```
 
-```python
-class MyApp(AppContainer):
-    producer = declare_presenter(MyComponent)
-    consumer = declare_view(MyOtherComponent)
+=== "Container class"
 
-    def wire(self) -> None:
-        self.connect(self.producer.my_signal, self.consumer.my_slot)
-```
+    ```python
+    class MyApp(AppContainer):
+        producer = declare_presenter(MyComponent)
+        consumer = declare_view(MyOtherComponent)
+
+        def wire(self) -> None:
+            self.connect(self.producer.my_signal, self.consumer.my_slot)
+    ```
+
+=== "Configuration file"
+
+    ```yaml
+    wiring:
+      - from: producer.my_signal
+        to: consumer.my_slot
+    ```
 
 Signature validation happens at connection time and is psygnal's: the argument
 count is always checked, and the argument types are checked as well when the

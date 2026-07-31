@@ -172,7 +172,7 @@ The configuration file provides base keyword arguments for each component. These
 
 ## Build order
 
-When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in three phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:
+When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in four phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:
 
 **Phase 1 — construction**:
 
@@ -194,7 +194,11 @@ re-raises and aborts the build.
 
 Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
 
-**Phase 3 — dependency injection**:
+**Phase 3 — wiring**:
+
+[`wire()`][redsun.containers.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
+
+**Phase 4 — dependency injection**:
 
 Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
 
@@ -202,71 +206,84 @@ Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable]
 
 Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
 
-- **Signal registry**: components can register their [`psygnal`](https://psygnal.readthedocs.io/) signals into the container via `register_signals()`, making them discoverable by other components without direct references to each other. Registered signals are accessible through the `signals` property.
+- **Signal bus**: a component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods it accepts connections on with [`slot`][redsun.virtual.slot]; the application connects the two during phase 3, and the container records every link. The older `register_signals()` registry, discovered by name through `find_signals()`, still works and is kept as an escape hatch for dynamic lookup.
 - **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
 
 The `VirtualContainer` is created during [`build()`][redsun.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
 
 ## Two usage flows
 
-`redsun` supports two distinct approaches for assembling an application, both producing the same result at runtime.
+`redsun` supports two distinct approaches for assembling an application, both producing the same result at runtime. Picking a tab below switches every other tab in this documentation to the same form.
 
-### Explicit flow (developer-written containers)
+=== "Container class"
 
-The explicit flow is for plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
+    For plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
 
-```python
-from redsun.containers import declare_device, declare_presenter, declare_view
-from redsun.qt import QtAppContainer
+    ```python
+    from redsun.containers import declare_device, declare_presenter, declare_view
+    from redsun.qt import QtAppContainer
 
-# these are user-developed classes
-# that should reflect the structure
-# provided by redsun for each layer
-from my_package.device import MyMotor
-from my_package.presenter import MyPresenter
-from my_package.view import MyView
-
-
-class MyApp(QtAppContainer, config="config.yaml"):
-    motor = declare_device(MyMotor, from_config="motor")
-    ctrl = declare_presenter(MyPresenter, from_config="ctrl")
-    ui = declare_view(MyView, from_config="ui")
+    # these are user-developed classes
+    # that should reflect the structure
+    # provided by redsun for each layer
+    from my_package.device import MyMotor
+    from my_package.presenter import MyPresenter
+    from my_package.view import MyView
 
 
-MyApp().run()
-```
+    class MyApp(QtAppContainer, config="config.yaml"):
+        motor = declare_device(MyMotor, from_config="motor")
+        ctrl = declare_presenter(MyPresenter, from_config="ctrl")
+        ui = declare_view(MyView, from_config="ui")
 
-### Dynamic flow (configuration-driven)
+        def wire(self) -> None:
+            self.connect(self.ctrl.sig_new_position, self.ui.update_setpoint)
 
-The dynamic flow is for end users who point Redsun at a YAML configuration file. Plugins are discovered via entry points and the frontend is resolved from the `frontend:` key in the file — no Python code needs to be written:
 
-```python
-from redsun import AppContainer
+    MyApp().run()
+    ```
 
-app = AppContainer.from_config("path/to/config.yaml")
-app.run()
-```
+    Keyword arguments still come from `config.yaml`; what is fixed in Python is the set of components, the frontend, and the connections.
 
-The YAML file drives everything:
+=== "Configuration file"
 
-```yaml
-schema_version: 1.0
-session: "My Experiment"
-frontend: "pyqt"
+    For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the `frontend:` key — no Python code needs to be written:
 
-devices:
-  motor:
-    plugin_name: my-plugin
-    plugin_id: my_motor
+    ```python
+    from redsun import AppContainer
 
-presenters:
-  ...
+    app = AppContainer.from_config("path/to/config.yaml")
+    app.run()
+    ```
 
-views:
-  ...
-```
+    The YAML file drives everything:
 
-See the [component system](component-system.md) documentation for a full description of the dynamic flow.
+    ```yaml
+    schema_version: 1.0
+    session: "My Experiment"
+    frontend: "pyqt"
+
+    devices:
+      motor:
+        plugin_name: my-plugin
+        plugin_id: my_motor
+
+    presenters:
+      ctrl:
+        plugin_name: my-plugin
+        plugin_id: my_presenter
+
+    views:
+      ui:
+        plugin_name: my-plugin
+        plugin_id: my_view
+
+    wiring:
+      - from: ctrl.sig_new_position
+        to: ui.update_setpoint
+    ```
+
+    See the [component system](component-system.md) documentation for a full description of this flow.
 
 ## Frontend support
 
