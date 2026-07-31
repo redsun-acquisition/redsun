@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from ophyd_async.core import Device
 
@@ -117,12 +117,12 @@ class _ViewField:
 
 
 def declare_device(
-    cls: type,
+    cls: type[T],
     /,
     alias: str | None = None,
     from_config: str | None = None,
     **kwargs: Any,
-) -> Any:
+) -> T:
     """Declare a component as a device layer field.
 
     A device can be declared inside the body of an `AppContainer`:
@@ -132,9 +132,12 @@ def declare_device(
         motor = declare_device(MyMotor, axis=["X"])
     ```
 
+    The attribute is typed as *cls*, so reading it on a built container gives a
+    checked `MyMotor`.
+
     Parameters
     ----------
-    cls : type
+    cls : type[T]
         The component class to instantiate.
     alias : str | None
         Component name, overriding the attribute name.
@@ -144,16 +147,18 @@ def declare_device(
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """
-    return _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
+    return cast(
+        "T", _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
+    )
 
 
 def declare_view(
-    cls: type,
+    cls: type[T],
     /,
     alias: str | None = None,
     from_config: str | None = None,
     **kwargs: Any,
-) -> Any:
+) -> T:
     """Declare a component as a view layer field.
 
     ```python
@@ -161,9 +166,12 @@ def declare_view(
         ui = declare_view(MyView)
     ```
 
+    The attribute is typed as *cls*, so reading it on a built container gives a
+    checked `MyView`.
+
     Parameters
     ----------
-    cls : type
+    cls : type[T]
         The component class to instantiate.
     alias : str | None
         Component name, overriding the attribute name.
@@ -173,16 +181,18 @@ def declare_view(
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """
-    return _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
+    return cast(
+        "T", _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
+    )
 
 
 def declare_presenter(
-    cls: type,
+    cls: type[T],
     /,
     alias: str | None = None,
     from_config: str | None = None,
     **kwargs: Any,
-) -> Any:
+) -> T:
     """Declare a component as a presenter layer field.
 
     ```python
@@ -190,9 +200,13 @@ def declare_presenter(
         ctrl = declare_presenter(MyCtrl, gain=1.0)
     ```
 
+    The attribute is typed as *cls*, so a connection written in
+    [`wire`][redsun.containers.container.AppContainer.wire] is checked: naming a
+    signal or slot the class does not have is an error before the build runs.
+
     Parameters
     ----------
-    cls : type
+    cls : type[T]
         The component class to instantiate.
     alias : str | None
         Component name, overriding the attribute name.
@@ -202,7 +216,10 @@ def declare_presenter(
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """
-    return _PresenterField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
+    return cast(
+        "T",
+        _PresenterField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs),
+    )
 
 
 class _ComponentBase(Generic[T]):

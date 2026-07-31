@@ -49,6 +49,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- `declare_device()`, `declare_presenter()` and `declare_view()` return the
+  class they are given instead of `Any`, so a component attribute is typed as
+  its component. A connection in `wire()` that names a port the class does not
+  have is now a type error, where before it was only a build failure. No
+  container needs changing: existing declarations become checked as they are.
 - `StoragePresenter` binds its provider with
   `container.provide(PATH_PROVIDER, ...)`. **Breaking:** the dynamic attribute
   it used to set is gone; read the provider with

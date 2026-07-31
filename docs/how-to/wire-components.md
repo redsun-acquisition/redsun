@@ -69,7 +69,10 @@ already a port.
             self.connect(self.det_widget.sig_property_changed, self.det_ctrl.configure)
     ```
 
-    A renamed signal is an `AttributeError` at build, on the line that names it.
+    Each attribute is typed as the class it was declared with, so a type checker
+    reads `self.det_ctrl.sig_new_data` as the signal it is. A renamed or
+    misspelled port is an error before the application runs; if it reaches the
+    build anyway, it is an `AttributeError` on the line that names it.
 
 === "Configuration file"
 

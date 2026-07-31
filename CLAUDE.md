@@ -136,6 +136,12 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   function-level or method-level imports; runtime-unneeded imports go under
   the module's `if TYPE_CHECKING:` block like everywhere else.
 - `src/redsun/view/**` is omitted from coverage; don't chase coverage there.
+- **A property that only a type checker can observe is tested in
+  `tests/typing/`**, with `typing.assert_type`, not with runtime asserts. Those
+  modules are never imported or executed: pytest skips them (no `test_` prefix)
+  and mypy checks them via `files = "."`. `assert_type` demands an exact match,
+  so an attribute regressing to `Any` fails there while every runtime test still
+  passes. `tests/typing/component_attributes.py` pins the `declare_*` returns.
 
 ## Docs conventions
 
