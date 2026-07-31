@@ -14,7 +14,7 @@ layer. Two producer contexts need the same store:
 
 - **Device layer (async):** ophyd-async `StandardDetector` logic
   decomposition (`TriggerLogic` / `AcquireLogic` / `DataLogic`) pushing
-  frames during the prepare → kickoff → complete → collect cycle.
+  frames during the prepare -> kickoff -> complete -> collect cycle.
 - **Callback layer (sync):** `DocumentRouter` presenters running inside the
   RunEngine's `emit_sync` on the loop thread - they can never await.
 
@@ -23,7 +23,7 @@ device: `MedianDevice` in redsun-mimir is a `StandardDetector` whose polling
 `_pump` exists only to reuse the writer. A `write_sig` soft signal further
 patches the gap between "kickoff = start live view" and "now also write".
 
-The `StorageStateMachine` (UNSEALED → SEALING → OPEN → CLOSING, `try_seal`
+The `StorageStateMachine` (UNSEALED -> SEALING -> OPEN -> CLOSING, `try_seal`
 first-writer race, `await_open` parking) exists solely because store-open is
 inferred from the first arriving frame - nothing tells the storage a write
 window started. The `StandardDetector` cycle provides explicit lifecycle
@@ -75,8 +75,8 @@ store opens; they wait in the queue.
 `sink(data_key)` creates the queue and spawns the drain task - legal from
 sync code because every caller (async device prepare, `emit_sync` callback)
 runs on the loop thread. The drain loop is the old `_pusher` inverted:
-`await queue.async_get()` → ensure open → `await store.write(key, frame)` →
-`router.mark_written(key)` → count. `FrameRouter.mark_written` remains the
+`await queue.async_get()` -> ensure open -> `await store.write(key, frame)` ->
+`router.mark_written(key)` -> count. `FrameRouter.mark_written` remains the
 single counter-advance point; ophyd-async `complete()` machinery is untouched
 (it waits on `collections_written_signal` = `signal_for(key)`).
 
@@ -104,10 +104,10 @@ Path allocation stays at first `register` (cheap, no backend I/O), so
 
 ### Close: last drain out closes; flush on clean stop, drop on abort
 
-- Clean (`sink.close()` / `storage.close(flush=True)`): `queue.shutdown()` →
+- Clean (`sink.close()` / `storage.close(flush=True)`): `queue.shutdown()` ->
   drain finishes queued frames, then exits.
 - Abort (`reset_group` / `storage.close(flush=False)`):
-  `queue.shutdown(immediate=True)` → queued frames dropped, fast close.
+  `queue.shutdown(immediate=True)` -> queued frames dropped, fast close.
 
 A burst where no frame ever flowed (live iteration whose action never fired)
 is trivial cleanup: the drain exits without ever having opened, clearing its
@@ -172,24 +172,24 @@ class FrameSink:
 
 ### Lifecycle walkthroughs
 
-**Bounded acquisition (snap):** `TriggerLogic.prepare_internal` →
-`register(spec)`; `DataLogic.prepare_unbounded` → eager `await open()` +
-build provider; kickoff → producer `await put(frame)`; drain writes, counters
-advance; capacity → queue shutdown, drain exits; `complete` observes the
-counter; unstage → last drain out closes with flush.
+**Bounded acquisition (snap):** `TriggerLogic.prepare_internal` ->
+`register(spec)`; `DataLogic.prepare_unbounded` -> eager `await open()` +
+build provider; kickoff -> producer `await put(frame)`; drain writes, counters
+advance; capacity -> queue shutdown, drain exits; `complete` observes the
+counter; unstage -> last drain out closes with flush.
 
 **Live plan (today's shape, transitional):** stage/prepare/kickoff each
 iteration registers keys and allocates a path, opens nothing. Live frames go
-to the buffer signal only. Stream action flips `write_sig` → producer starts
-`put`ting → first written frame lazily opens the store → capacity →
-complete/collect/unstage → drains exit → close. Iterations without an
+to the buffer signal only. Stream action flips `write_sig` -> producer starts
+`put`ting -> first written frame lazily opens the store -> capacity ->
+complete/collect/unstage -> drains exit -> close. Iterations without an
 action create no store.
 
-**Median flow:** descriptor doc → presenter derives `StreamSpec`, registers,
+**Median flow:** descriptor doc -> presenter derives `StreamSpec`, registers,
 obtains its sink (drain parked on an empty queue); Event docs (from
 `trigger_and_read` / `create`+`save` in the scan) carry the frames; presenter
-accumulates per run-uid, computes the median → `put_nowait` → drain lazily
-opens and writes → stop doc → `sink.close()` → drain flushes and exits.
+accumulates per run-uid, computes the median -> `put_nowait` -> drain lazily
+opens and writes -> stop doc -> `sink.close()` -> drain flushes and exits.
 
 ## Consequences
 
@@ -203,8 +203,8 @@ opens and writes → stop doc → `sink.close()` → drain flushes and exits.
   and the lock releases (retryable); `QueueFull` on `put_nowait` is loud,
   never silently dropped.
 - **Testing:** `tests/sdk/storage/test_fsm.py` is replaced by lifecycle tests
-  against the public interface: one happy-path test driving register → sink →
-  put → open → capacity → close asserting backend contents via `MemoryIO`,
+  against the public interface: one happy-path test driving register -> sink ->
+  put -> open -> capacity -> close asserting backend contents via `MemoryIO`,
   plus focused unhappy paths (register-while-open, put-after-capacity,
   abort-drop vs clean-flush, burst-died-without-frames) and a concurrency
   test (several keys putting concurrently - single backend open, all frames
@@ -217,7 +217,7 @@ opens and writes → stop doc → `sink.close()` → drain flushes and exits.
 - **redsun-mimir (staged separately, enabled by this ADR):** `MedianDevice`
   and its logics/signals are deleted - median computation moves to
   `MedianPresenter` consuming Event documents. After the plan rework makes
-  the sink lifecycle the write window (prepare → kickoff → capacity →
+  the sink lifecycle the write window (prepare -> kickoff -> capacity ->
   complete as a plain bounded fly segment), `write_sig` is deleted too. Until
   then, today's plan shapes keep working unchanged against the new storage
   layer.

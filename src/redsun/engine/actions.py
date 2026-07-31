@@ -124,10 +124,8 @@ def continous(
 ) -> Callable[[Callable[P, R_co]], ContinousPlan[P, R_co]] | ContinousPlan[P, R_co]:
     """Mark a plan as continuous.
 
-    A *continuous* plan informs the view to provide UI controls that allow
-    the user to start, stop, pause, and resume plan execution.
-
-    Can be used with or without arguments:
+    A continuous plan gets UI controls to start, stop, pause and resume it.
+    Usable with or without arguments:
 
     ```python
     @continous
@@ -154,10 +152,8 @@ def continous(
 
     Notes
     -----
-    The decorator does not modify the function signature. It stores
-    ``togglable`` and ``pausable`` as attributes on the function object
-    (``__togglable__`` and ``__pausable__``), to be retrieved later by
-    `create_plan_spec`.
+    The signature is untouched; the flags are stored on the function as
+    ``__togglable__`` and ``__pausable__``.
     """
 
     def decorator(func: Callable[P, R_co]) -> ContinousPlan[P, R_co]:

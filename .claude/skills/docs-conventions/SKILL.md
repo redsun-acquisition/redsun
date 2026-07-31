@@ -12,7 +12,7 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
 - Reference pages are generated from docstrings: fix the docstring, not the
   `.md`, when reference content is wrong.
 - Architectural decisions are recorded as ADRs under
-  `docs/explanation/decisions/` (numbered, `COPYME` template — same
+  `docs/explanation/decisions/` (numbered, `COPYME` template - same
   convention as ophyd-async). Architecture changes get a new ADR; superseded
   ADRs are marked, not edited. Wire new ADRs into the `zensical.toml` nav and
   `docs/explanation/index.md`.

@@ -38,10 +38,10 @@ The returned `PlanWidget` is a frozen dataclass that owns the full widget tree:
 The presenter drives UI state through `PlanWidget`'s methods:
 
 ```python
-widget.toggle(True)  # plan started  → "Stop", enables actions
-widget.toggle(False)  # plan stopped  → "Run", disables actions
-widget.pause(True)  # paused        → "Resume", disables run button
-widget.pause(False)  # resumed       → "Pause", enables run button
+widget.toggle(True)  # plan started  -> "Stop", enables actions
+widget.toggle(False)  # plan stopped  -> "Run", disables actions
+widget.pause(True)  # paused        -> "Resume", disables run button
+widget.pause(False)  # resumed       -> "Pause", enables run button
 widget.setEnabled(False)  # disable whole widget during setup
 widget.enable_actions(True)  # enable action buttons independently
 ```

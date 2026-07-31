@@ -27,15 +27,10 @@ def find_signals(
 ) -> dict[str, SignalInstance]:
     """Find signals in a `VirtualContainer` by name, optionally scoped to an owner.
 
-    The signal registry is keyed by owner first (mirroring
-    ``container.signals[owner][signal]``): different components may expose
-    signals with the same name, and the owner name is what discerns them.
-    Pass *owner* to restrict the lookup to a single component's cache.
-
-    When *owner* is omitted, all registered caches are searched and the
-    first match per name wins - convenient when a signal name is known to
-    be unique, but ambiguous otherwise. Names (or owners) not present in
-    the registry are omitted from the result rather than raising.
+    The registry is keyed by owner first (``container.signals[owner][signal]``),
+    since components may expose signals of the same name. Pass *owner* to scope
+    the lookup to one component; omit it and every cache is searched, first
+    match per name winning. Names not found are omitted rather than raising.
 
     Parameters
     ----------

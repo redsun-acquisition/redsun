@@ -561,11 +561,11 @@ def collect_arguments(
 
     Notes
     -----
-    * ``POSITIONAL_ONLY`` and ``POSITIONAL_OR_KEYWORD`` → go into ``args`` in
+    * ``POSITIONAL_ONLY`` and ``POSITIONAL_OR_KEYWORD`` -> ``args``, in
       declaration order.
-    * ``KEYWORD_ONLY`` → go into ``kwargs``.
-    * ``VAR_POSITIONAL`` (``*args``) → sequence is expanded into ``args``.
-    * ``VAR_KEYWORD`` (``**kwargs``) → mapping is merged into ``kwargs``.
+    * ``KEYWORD_ONLY`` -> ``kwargs``.
+    * ``VAR_POSITIONAL`` (``*args``) -> sequence expanded into ``args``.
+    * ``VAR_KEYWORD`` (``**kwargs``) -> mapping merged into ``kwargs``.
     """
     args: list[Any] = []
     kwargs: dict[str, Any] = {}

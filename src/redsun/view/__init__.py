@@ -9,24 +9,11 @@ __all__ = ["PView", "View", "ViewPosition"]
 class ViewPosition(str, Enum):
     """Supported view positions.
 
-    Used to define the position of a view component in the main view of the UI.
+    Where a view component sits in the main window.
 
     !!! warning
         These values are based on how Qt manages dock widgets.
         They may change in the future.
-
-    Attributes
-    ----------
-    CENTER : str
-        Center view position.
-    LEFT : str
-        Left view position.
-    RIGHT : str
-        Right view position.
-    TOP : str
-        Top view position.
-    BOTTOM : str
-        Bottom view position.
     """
 
     CENTER = "center"

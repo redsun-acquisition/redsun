@@ -131,15 +131,15 @@ Examples in the declarative flow:
 
 ```python
 class MyApp(QtAppContainer):
-    motor = declare_device(MyMotor)  # name → "motor"
-    cam = declare_device(MyCamera, alias="detector")  # name → "detector"
+    motor = declare_device(MyMotor)  # name -> "motor"
+    cam = declare_device(MyCamera, alias="detector")  # name -> "detector"
 ```
 
 In the dynamic flow:
 
 ```yaml
 devices:
-  iSCAT channel:           # name → "iSCAT channel"
+  iSCAT channel:           # name -> "iSCAT channel"
     plugin_name: my-plugin
     plugin_id: my_detector
 ```

@@ -6,7 +6,7 @@ description: Run the full local validation suite
 Run in order, stopping at the first failure:
 
 1. `uv run ruff check --fix . && uv run ruff format .`
-2. mypy with the qtpy shim — pick the form matching the current shell:
+2. mypy with the qtpy shim - pick the form matching the current shell:
    - POSIX: `uv run mypy src/redsun --ignore-missing-imports $(uv run qtpy mypy-args)`
    - PowerShell: `uv run mypy src/redsun --ignore-missing-imports @(uv run qtpy mypy-args)`
    - `cmd.exe` has no command substitution. If that's the shell, run
