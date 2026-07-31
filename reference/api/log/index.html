@@ -2086,19 +2086,19 @@
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/redsun/log.py</code></summary>
-                <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-131">131</a></span>
+                <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-127">127</a></span>
+<span class="normal"><a href="#__codelineno-0-128">128</a></span>
+<span class="normal"><a href="#__codelineno-0-129">129</a></span>
+<span class="normal"><a href="#__codelineno-0-130">130</a></span>
+<span class="normal"><a href="#__codelineno-0-131">131</a></span>
 <span class="normal"><a href="#__codelineno-0-132">132</a></span>
-<span class="normal"><a href="#__codelineno-0-133">133</a></span>
-<span class="normal"><a href="#__codelineno-0-134">134</a></span>
-<span class="normal"><a href="#__codelineno-0-135">135</a></span>
-<span class="normal"><a href="#__codelineno-0-136">136</a></span>
-<span class="normal"><a href="#__codelineno-0-137">137</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131"></a><span class="k">class</span><span class="w"> </span><span class="nc">Loggable</span><span class="p">:</span>
-</span><span id="__span-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class that adds a logger to a class instance with extra contextual information.&quot;&quot;&quot;</span>
-</span><span id="__span-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133"></a>
-</span><span id="__span-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134"></a>    <span class="nd">@cached_property</span>
-</span><span id="__span-0-135"><a id="__codelineno-0-135" name="__codelineno-0-135"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">logger</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_LoggerAdapter</span><span class="p">:</span>
-</span><span id="__span-0-136"><a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Logger instance with contextual information.&quot;&quot;&quot;</span>
-</span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a>        <span class="k">return</span> <span class="n">ContextualAdapter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;redsun&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-133">133</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-127"><a id="__codelineno-0-127" name="__codelineno-0-127"></a><span class="k">class</span><span class="w"> </span><span class="nc">Loggable</span><span class="p">:</span>
+</span><span id="__span-0-128"><a id="__codelineno-0-128" name="__codelineno-0-128"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Mixin class that adds a logger to a class instance with extra contextual information.&quot;&quot;&quot;</span>
+</span><span id="__span-0-129"><a id="__codelineno-0-129" name="__codelineno-0-129"></a>
+</span><span id="__span-0-130"><a id="__codelineno-0-130" name="__codelineno-0-130"></a>    <span class="nd">@cached_property</span>
+</span><span id="__span-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">logger</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">LoggerAdapter</span><span class="p">[</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">]:</span>
+</span><span id="__span-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Logger instance with contextual information.&quot;&quot;&quot;</span>
+</span><span id="__span-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133"></a>        <span class="k">return</span> <span class="n">ContextualAdapter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;redsun&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 
@@ -2126,7 +2126,7 @@
   </span>
 
 <a href="#redsun.log.Loggable.logger" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span><span class="p">:</span> <span class="n">_LoggerAdapter</span>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">logger</span><span class="p">:</span> <span class="n">LoggerAdapter</span><span class="p">[</span><span class="n">Logger</span><span class="p">]</span>
 </span></code></pre></div>
 
     <div class="doc doc-contents ">
