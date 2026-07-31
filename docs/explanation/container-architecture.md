@@ -119,6 +119,11 @@ The class is defined inside a function so that the Qt imports and any heavy devi
 - inherit and override components from base classes;
 - merge configuration from YAML files with inline keyword arguments.
 
+Each specifier is typed as the class it is given, so `self.ctrl` is a
+`MyController` to a type checker while resolving to the built instance at
+runtime. That is what makes [`wire`][redsun.containers.container.AppContainer.wire]
+ordinary checked code rather than a script whose mistakes only surface at build.
+
 ## Component naming
 
 Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
