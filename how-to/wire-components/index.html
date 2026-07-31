@@ -2162,7 +2162,10 @@ attribute it was declared under:</p>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">det_ctrl</span><span class="o">.</span><span class="n">sig_new_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_widget</span><span class="o">.</span><span class="n">update_layers</span><span class="p">)</span>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">det_widget</span><span class="o">.</span><span class="n">sig_property_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">det_ctrl</span><span class="o">.</span><span class="n">configure</span><span class="p">)</span>
 </span></code></pre></div>
-<p>A renamed signal is an <code>AttributeError</code> at build, on the line that names it.</p>
+<p>Each attribute is typed as the class it was declared with, so a type checker
+reads <code>self.det_ctrl.sig_new_data</code> as the signal it is. A renamed or
+misspelled port is an error before the application runs; if it reaches the
+build anyway, it is an <code>AttributeError</code> on the line that names it.</p>
 </div>
 <div class="tabbed-block">
 <p>Each end is addressed as <code>component.port</code>:</p>

@@ -3257,6 +3257,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><code>declare_device()</code>, <code>declare_presenter()</code> and <code>declare_view()</code> return the
+  class they are given instead of <code>Any</code>, so a component attribute is typed as
+  its component. A connection in <code>wire()</code> that names a port the class does not
+  have is now a type error, where before it was only a build failure. No
+  container needs changing: existing declarations become checked as they are.</li>
 <li><code>StoragePresenter</code> binds its provider with
   <code>container.provide(PATH_PROVIDER, ...)</code>. <strong>Breaking:</strong> the dynamic attribute
   it used to set is gone; read the provider with

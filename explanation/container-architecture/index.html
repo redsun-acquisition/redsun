@@ -2308,6 +2308,10 @@ Each accepts the component class as its first positional argument, followed by o
 <li>inherit and override components from base classes;</li>
 <li>merge configuration from YAML files with inline keyword arguments.</li>
 </ul>
+<p>Each specifier is typed as the class it is given, so <code>self.ctrl</code> is a
+<code>MyController</code> to a type checker while resolving to the built instance at
+runtime. That is what makes <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;wire&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.wire"><code>wire</code></a>
+ordinary checked code rather than a script whose mistakes only surface at build.</p>
 <h2 id="component-naming">Component naming<a class="headerlink" href="#component-naming" title="Permanent link">&para;</a></h2>
 <p>Every component receives a <code>name</code> that is used as its key in the container's <code>devices</code>, <code>presenters</code>, or <code>views</code> dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:</p>
 <ol>
