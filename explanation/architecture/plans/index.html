@@ -2289,11 +2289,11 @@ that completes.</p>
 <p>The dispatch is table-driven. Annotations are mapped to <code>ParamDescription</code>
 fields in this priority order:</p>
 <ol>
-<li><code>Literal["a", "b"]</code> → <code>choices=["a", "b"]</code></li>
-<li><code>Sequence[MyDevice]</code> → multi-select, <code>choices=&lt;matching device names&gt;</code></li>
-<li><code>*args: MyDevice</code> (VAR_POSITIONAL) → multi-select</li>
-<li><code>MyDevice</code> (bare protocol) → single-select</li>
-<li>Everything else → delegated to magicgui</li>
+<li><code>Literal["a", "b"]</code> -&gt; <code>choices=["a", "b"]</code></li>
+<li><code>Sequence[MyDevice]</code> -&gt; multi-select, <code>choices=&lt;matching device names&gt;</code></li>
+<li><code>*args: MyDevice</code> (VAR_POSITIONAL) -&gt; multi-select</li>
+<li><code>MyDevice</code> (bare protocol) -&gt; single-select</li>
+<li>Everything else -&gt; delegated to magicgui</li>
 </ol>
 <p>Plans with required parameters that fall through to step 5 and are not
 magicgui-resolvable raise <code>UnresolvableAnnotationError</code> and are skipped.</p>
@@ -2302,7 +2302,7 @@ magicgui-resolvable raise <code>UnresolvableAnnotationError</code> and are skipp
 turn widget values into a plan call:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter.plan_spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">collect_arguments</span><span class="p">,</span> <span class="n">resolve_arguments</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># 1. Resolve: string device names → live device instances</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># 1. Resolve: string device names -&gt; live device instances</span>
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_arguments</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">widget_values</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
 </span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># 2. Collect: build (args, kwargs) matching the plan signature</span>

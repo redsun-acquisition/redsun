@@ -2302,7 +2302,7 @@ layer. Two producer contexts need the same store:</p>
 <ul>
 <li><strong>Device layer (async):</strong> ophyd-async <code>StandardDetector</code> logic
   decomposition (<code>TriggerLogic</code> / <code>AcquireLogic</code> / <code>DataLogic</code>) pushing
-  frames during the prepare → kickoff → complete → collect cycle.</li>
+  frames during the prepare -&gt; kickoff -&gt; complete -&gt; collect cycle.</li>
 <li><strong>Callback layer (sync):</strong> <code>DocumentRouter</code> presenters running inside the
   RunEngine's <code>emit_sync</code> on the loop thread - they can never await.</li>
 </ul>
@@ -2310,7 +2310,7 @@ layer. Two producer contexts need the same store:</p>
 device: <code>MedianDevice</code> in redsun-mimir is a <code>StandardDetector</code> whose polling
 <code>_pump</code> exists only to reuse the writer. A <code>write_sig</code> soft signal further
 patches the gap between "kickoff = start live view" and "now also write".</p>
-<p>The <code>StorageStateMachine</code> (UNSEALED → SEALING → OPEN → CLOSING, <code>try_seal</code>
+<p>The <code>StorageStateMachine</code> (UNSEALED -&gt; SEALING -&gt; OPEN -&gt; CLOSING, <code>try_seal</code>
 first-writer race, <code>await_open</code> parking) exists solely because store-open is
 inferred from the first arriving frame - nothing tells the storage a write
 window started. The <code>StandardDetector</code> cycle provides explicit lifecycle
@@ -2354,8 +2354,8 @@ store opens; they wait in the queue.</p>
 <p><code>sink(data_key)</code> creates the queue and spawns the drain task - legal from
 sync code because every caller (async device prepare, <code>emit_sync</code> callback)
 runs on the loop thread. The drain loop is the old <code>_pusher</code> inverted:
-<code>await queue.async_get()</code> → ensure open → <code>await store.write(key, frame)</code> →
-<code>router.mark_written(key)</code> → count. <code>FrameRouter.mark_written</code> remains the
+<code>await queue.async_get()</code> -&gt; ensure open -&gt; <code>await store.write(key, frame)</code> -&gt;
+<code>router.mark_written(key)</code> -&gt; count. <code>FrameRouter.mark_written</code> remains the
 single counter-advance point; ophyd-async <code>complete()</code> machinery is untouched
 (it waits on <code>collections_written_signal</code> = <code>signal_for(key)</code>).</p>
 <p>All per-key teardown flows through the drain's exit path: whether the queue
@@ -2379,10 +2379,10 @@ points:</p>
 (<code>uri_for</code> / <code>resource_info_for</code> / <code>signal_for</code>) before any store exists.</p>
 <h3 id="close-last-drain-out-closes-flush-on-clean-stop-drop-on-abort">Close: last drain out closes; flush on clean stop, drop on abort<a class="headerlink" href="#close-last-drain-out-closes-flush-on-clean-stop-drop-on-abort" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Clean (<code>sink.close()</code> / <code>storage.close(flush=True)</code>): <code>queue.shutdown()</code> →
+<li>Clean (<code>sink.close()</code> / <code>storage.close(flush=True)</code>): <code>queue.shutdown()</code> -&gt;
   drain finishes queued frames, then exits.</li>
 <li>Abort (<code>reset_group</code> / <code>storage.close(flush=False)</code>):
-  <code>queue.shutdown(immediate=True)</code> → queued frames dropped, fast close.</li>
+  <code>queue.shutdown(immediate=True)</code> -&gt; queued frames dropped, fast close.</li>
 </ul>
 <p>A burst where no frame ever flowed (live iteration whose action never fired)
 is trivial cleanup: the drain exits without ever having opened, clearing its
@@ -2432,22 +2432,22 @@ never sees a frame it will not write.</p>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>                        <span class="c1"># sync, idempotent, flush semantics</span>
 </span></code></pre></div>
 <h3 id="lifecycle-walkthroughs">Lifecycle walkthroughs<a class="headerlink" href="#lifecycle-walkthroughs" title="Permanent link">&para;</a></h3>
-<p><strong>Bounded acquisition (snap):</strong> <code>TriggerLogic.prepare_internal</code> →
-<code>register(spec)</code>; <code>DataLogic.prepare_unbounded</code> → eager <code>await open()</code> +
-build provider; kickoff → producer <code>await put(frame)</code>; drain writes, counters
-advance; capacity → queue shutdown, drain exits; <code>complete</code> observes the
-counter; unstage → last drain out closes with flush.</p>
+<p><strong>Bounded acquisition (snap):</strong> <code>TriggerLogic.prepare_internal</code> -&gt;
+<code>register(spec)</code>; <code>DataLogic.prepare_unbounded</code> -&gt; eager <code>await open()</code> +
+build provider; kickoff -&gt; producer <code>await put(frame)</code>; drain writes, counters
+advance; capacity -&gt; queue shutdown, drain exits; <code>complete</code> observes the
+counter; unstage -&gt; last drain out closes with flush.</p>
 <p><strong>Live plan (today's shape, transitional):</strong> stage/prepare/kickoff each
 iteration registers keys and allocates a path, opens nothing. Live frames go
-to the buffer signal only. Stream action flips <code>write_sig</code> → producer starts
-<code>put</code>ting → first written frame lazily opens the store → capacity →
-complete/collect/unstage → drains exit → close. Iterations without an
+to the buffer signal only. Stream action flips <code>write_sig</code> -&gt; producer starts
+<code>put</code>ting -&gt; first written frame lazily opens the store -&gt; capacity -&gt;
+complete/collect/unstage -&gt; drains exit -&gt; close. Iterations without an
 action create no store.</p>
-<p><strong>Median flow:</strong> descriptor doc → presenter derives <code>StreamSpec</code>, registers,
+<p><strong>Median flow:</strong> descriptor doc -&gt; presenter derives <code>StreamSpec</code>, registers,
 obtains its sink (drain parked on an empty queue); Event docs (from
 <code>trigger_and_read</code> / <code>create</code>+<code>save</code> in the scan) carry the frames; presenter
-accumulates per run-uid, computes the median → <code>put_nowait</code> → drain lazily
-opens and writes → stop doc → <code>sink.close()</code> → drain flushes and exits.</p>
+accumulates per run-uid, computes the median -&gt; <code>put_nowait</code> -&gt; drain lazily
+opens and writes -&gt; stop doc -&gt; <code>sink.close()</code> -&gt; drain flushes and exits.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Deleted:</strong> <code>FrameSender</code>, <code>BaseStorage._pusher</code>, generator priming and
@@ -2460,8 +2460,8 @@ opens and writes → stop doc → <code>sink.close()</code> → drain flushes an
   and the lock releases (retryable); <code>QueueFull</code> on <code>put_nowait</code> is loud,
   never silently dropped.</li>
 <li><strong>Testing:</strong> <code>tests/sdk/storage/test_fsm.py</code> is replaced by lifecycle tests
-  against the public interface: one happy-path test driving register → sink →
-  put → open → capacity → close asserting backend contents via <code>MemoryIO</code>,
+  against the public interface: one happy-path test driving register -&gt; sink -&gt;
+  put -&gt; open -&gt; capacity -&gt; close asserting backend contents via <code>MemoryIO</code>,
   plus focused unhappy paths (register-while-open, put-after-capacity,
   abort-drop vs clean-flush, burst-died-without-frames) and a concurrency
   test (several keys putting concurrently - single backend open, all frames
@@ -2474,7 +2474,7 @@ opens and writes → stop doc → <code>sink.close()</code> → drain flushes an
 <li><strong>redsun-mimir (staged separately, enabled by this ADR):</strong> <code>MedianDevice</code>
   and its logics/signals are deleted - median computation moves to
   <code>MedianPresenter</code> consuming Event documents. After the plan rework makes
-  the sink lifecycle the write window (prepare → kickoff → capacity →
+  the sink lifecycle the write window (prepare -&gt; kickoff -&gt; capacity -&gt;
   complete as a plain bounded fly segment), <code>write_sig</code> is deleted too. Until
   then, today's plan shapes keep working unchanged against the new storage
   layer.</li>
