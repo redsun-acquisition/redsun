@@ -10,6 +10,7 @@ presenters:
   my_controller: mock_pkg.controller:MockController
   broken_controller: mock_pkg.controller:BrokenController
   async_motor_controller: mock_pkg.controller:AsyncMotorController
+  grouped_controller: mock_pkg.controller:GroupedController
 views:
   mock_view: mock_pkg.view:MockQtView
   motor_view: mock_pkg.view:MockMotorView

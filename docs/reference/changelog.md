@@ -11,6 +11,34 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- `slot` (`redsun.virtual`) - marks a method as connectable, making its name and
+  signature part of a component's public surface. Only a marked method can be
+  connected to a signal. `@slot(name=...)` sets the port name used in
+  configuration; `@slot(thread=...)` overrides the thread affinity declared by
+  the class.
+- `AppContainer.wire()` - override to declare the connections of an
+  application. It runs after `register_providers` and before
+  `inject_dependencies`; component attributes resolve to their built instances
+  while it runs, so a connection reads as
+  `self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)`.
+- `AppContainer.connect()` and `VirtualContainer.connect()` - connect a signal to
+  a slot, applying the thread affinity of the slot or its class and recording the
+  link. A slot that is not marked, or whose signature psygnal rejects, raises
+  `WiringError` naming both ports.
+- `VirtualContainer.connections` and `VirtualContainer.disconnect_all()` - the
+  recorded wiring graph and its teardown. `AppContainer.shutdown()` now
+  disconnects everything it connected.
+- `ports()` and `Ports` (`redsun.virtual`) - the signals and slots a component
+  exposes, by port name. `SignalGroup` members appear under the member name.
+- A `wiring` section in the configuration file, listing `from` / `to` port
+  paths (`component.port`) for a session that has no container class to
+  override. Applied after `wire()`, through the same `connect`.
+- `VirtualContainer.connect_paths()` - the string form of `connect`, used by
+  that section. A malformed path, an unbuilt component, or an unknown port
+  raises `WiringError` listing what does exist.
+- `Connection` and `WiringError` (`redsun.virtual`).
+
+  `find_signals` and hand-written `inject_dependencies` are unaffected.
 - `redsun.aio.set_async_backend()` — installs `CulsansAsyncioBackend` as psygnal's
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is

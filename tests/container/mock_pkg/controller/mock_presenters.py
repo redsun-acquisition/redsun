@@ -5,11 +5,10 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from ophyd_async.core import Device
-from psygnal import Signal
+from psygnal import Signal, SignalGroup
 
 from redsun.presenter import Presenter
-from redsun.utils import find_signals
-from redsun.virtual import VirtualContainer
+from redsun.virtual import VirtualContainer, slot
 
 from ..device import MyMotor
 
@@ -30,6 +29,16 @@ class MockController(Presenter):
         self.integer = integer
         self.floating = floating
         self.boolean = boolean
+        self.moved: list[tuple[str, float]] = []
+
+    @slot
+    def on_motor_moved(self, motor: str, position: float) -> None:
+        self.moved.append((motor, position))
+
+    @slot
+    def on_too_many(self, motor: str, position: float, extra: int) -> None: ...
+
+    def not_connectable(self, motor: str, position: float) -> None: ...
 
 
 class BrokenController(Presenter):
@@ -70,11 +79,7 @@ class AsyncMotorController(Presenter):
     def register_providers(self, container: VirtualContainer) -> None:
         container.register_signals(self)
 
-    def inject_dependencies(self, container: VirtualContainer) -> None:
-        sigs = find_signals(container, ["sig_motor_move"])
-        if "sig_motor_move" in sigs:
-            sigs["sig_motor_move"].connect(self.move)
-
+    @slot
     async def move(self, motor: str, position: float) -> None:
         if position < 0:
             raise ValueError(f"{motor} position out of range: {position}")
@@ -85,3 +90,23 @@ class AsyncMotorController(Presenter):
 
     def shutdown(self) -> None:
         self.shutdown_calls += 1
+
+
+class FrameSignals(SignalGroup, strict=True):
+    """Two signals of one shape, addressed by their member names."""
+
+    median = Signal(object)
+    filtered = Signal(object)
+
+
+class GroupedController(Presenter):
+    """Presenter whose signals live in a group rather than on the class."""
+
+    def __init__(self, name: str, devices: Mapping[str, Device], /, **_: Any) -> None:
+        super().__init__(name, devices)
+        self.frames = FrameSignals(instance=self)
+        self.seen: list[Any] = []
+
+    @slot
+    def absorb(self, payload: Any) -> None:
+        self.seen.append(payload)

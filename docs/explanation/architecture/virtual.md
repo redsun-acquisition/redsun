@@ -83,12 +83,6 @@ class MyOtherComponent:
     def my_slot(self) -> None: ...
 
     def inject_dependencies(self, container: VirtualContainer) -> None:
-        # get the currently cached signals so you can connect them
-        # to your own slots, to provide event-based communication
-        # between components; be sure to handle the case
-        # where the component might not be existent
-        container.signals["MyComponent"]["my_signal"].connect(self.my_slot)
-
         # get the currently available callbacks so you can consume RunEngine documents;
         # this is useful when your component contains a RunEngine itself and you wish
         # to dispatch documents to other components
@@ -105,3 +99,52 @@ class MyOtherComponent:
     does not allow other components to be aware of the type hints associated with that injected object;
     it is the responsibility of component developers to document whatever object is stored in the virtual
     container and what type does it represent.
+
+## Wiring
+
+Signal connections are not made by the components. A component states what it
+offers, and the application states what is connected:
+
+- a signal is offered by declaring it, as a plain attribute or as a member of a
+  [`SignalGroup`][psygnal.SignalGroup];
+- a method is offered by marking it with [`slot`][redsun.virtual.slot], which
+  makes its name and signature part of the component's public surface;
+- the application connects them, in
+  [`AppContainer.wire`][redsun.containers.AppContainer.wire] or in the `wiring`
+  section of its configuration file. Both end in
+  [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect], which
+  records the link so the graph can be reported and released.
+
+```python
+from redsun.virtual import slot
+
+
+class MyComponent:
+    my_signal = Signal(int)
+
+
+class MyOtherComponent:
+    @slot
+    def my_slot(self, value: int) -> None: ...
+```
+
+```python
+class MyApp(AppContainer):
+    producer = declare_presenter(MyComponent)
+    consumer = declare_view(MyOtherComponent)
+
+    def wire(self) -> None:
+        self.connect(self.producer.my_signal, self.consumer.my_slot)
+```
+
+Signature validation happens at connection time and is psygnal's: the argument
+count is always checked, and the argument types are checked as well when the
+signal names them (`Signal(FrameBatch)` rather than `Signal(object)`).
+
+The signal registry above (`register_signals` / `find_signals`) predates this
+and still works, but it matches on names alone and leaves no record of what was
+connected. New components should not use it.
+
+See [wire components together](../../how-to/wire-components.md) for the full
+task, and [ADR 6](../decisions/0006-application-declared-wiring.md) for why the
+connection lives in the application.

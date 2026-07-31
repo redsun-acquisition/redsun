@@ -5,19 +5,33 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
+    Any,
     TypeAlias,
     TypeVar,
+    cast,
 )
 
 import dependency_injector.containers as dic
 import dependency_injector.providers as dip
 from event_model import DocumentRouter
 from event_model.documents import Document
-from psygnal import Signal, SignalInstance
+from psygnal import Signal, SignalGroup, SignalInstance
 
 from redsun.log import Loggable
+from redsun.virtual._wiring import (
+    SLOT_ATTR,
+    SLOT_THREAD_ATTR,
+    Connection,
+    Slot,
+    SlotThread,
+    WiringError,
+    port_name,
+    ports,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from bluesky.protocols import HasName
 
     from redsun.virtual._config import RedSunConfig
@@ -28,7 +42,7 @@ V = TypeVar("V")
 CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
 """Type alias for document callback functions."""
 
-__all__ = ["Signal", "VirtualContainer"]
+__all__ = ["Connection", "Signal", "VirtualContainer"]
 
 SignalCache: TypeAlias = dict[str, SignalInstance]
 """Cache type for storing signal instances registered from component classes."""
@@ -42,6 +56,18 @@ class _FrozenConfig:
     frontend: str
     session: str
     metadata: dict[str, object]
+
+
+def _owner_of(signal: SignalInstance) -> object | None:
+    """Return the component a signal belongs to.
+
+    A signal declared inside a `SignalGroup` reports the group as its
+    instance, so the owning component is one level further out.
+    """
+    instance: object | None = signal.instance
+    if isinstance(instance, SignalGroup):
+        return cast("object | None", instance.instance)
+    return instance
 
 
 class VirtualContainer(dic.DynamicContainer, Loggable):
@@ -59,6 +85,10 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._signals = dip.Factory(dict[str, SignalCache])
         self._callbacks = dip.Factory(dict[str, CallbackType])
         self._config = dip.Singleton(_FrozenConfig)
+        self._components: dict[str, object] = {}
+        self._names: dict[int, str] = {}
+        self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
+        self._connections: list[Connection] = []
 
     @property
     def schema_version(self) -> float:
@@ -242,3 +272,148 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     def signals(self) -> dict[str, SignalCache]:
         """The currently registered signals."""
         return self._signals()
+
+    def _set_components(self, components: Mapping[str, object]) -> None:
+        """Record the names built components are known by, for the wiring report."""
+        self._components = dict(components)
+        self._names = {id(component): name for name, component in components.items()}
+
+    def _label(self, component: object | None) -> str:
+        if component is None:
+            return "<unknown>"
+        return self._names.get(id(component), type(component).__name__)
+
+    def connect(
+        self,
+        signal: SignalInstance,
+        slot: Callable[..., Any],
+        *,
+        thread: SlotThread = None,
+    ) -> Connection:
+        """Connect a signal to a slot and record the link.
+
+        The thread the slot is delivered on comes from its own declaration,
+        falling back to the affinity declared by its class; *thread* overrides
+        both.
+
+        Parameters
+        ----------
+        signal : SignalInstance
+            The emitting signal.
+        slot : Callable[..., Any]
+            A bound method marked as connectable.
+        thread : SlotThread
+            Overrides the thread affinity of the slot and of its class.
+
+        Returns
+        -------
+        Connection
+            The recorded link.
+
+        Raises
+        ------
+        WiringError
+            If *slot* is not marked as connectable, or if the signal and the
+            slot have incompatible signatures.
+        """
+        declaration = getattr(slot, SLOT_ATTR, None)
+        if not isinstance(declaration, Slot):
+            name = getattr(slot, "__qualname__", repr(slot))
+            raise WiringError(
+                f"{name} is not connectable; mark it with the 'slot' decorator"
+            )
+
+        consumer = getattr(slot, "__self__", None)
+        if thread is None:
+            thread = declaration.thread or cast(
+                "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
+            )
+
+        link = Connection(
+            publisher=self._label(_owner_of(signal)),
+            publisher_port=signal.name or "<anonymous>",
+            consumer=self._label(consumer),
+            consumer_port=port_name(slot),
+            thread=thread,
+        )
+        try:
+            signal.connect(slot, thread=thread)
+        except (TypeError, ValueError) as e:
+            raise WiringError(f"cannot connect {link}: {e}") from e
+
+        self._links.append((signal, slot))
+        self._connections.append(link)
+        self.logger.debug(f"Connected {link}")
+        return link
+
+    def connect_paths(
+        self, source: str, target: str, *, thread: SlotThread = None
+    ) -> Connection:
+        """Connect two ports addressed as ``component.port``.
+
+        The string form of [`connect`][redsun.virtual.VirtualContainer.connect],
+        used by the ``wiring`` section of a configuration file. A signal port is
+        the signal's attribute name, or the member name when it belongs to a
+        signal group; a slot port is the name the slot declares.
+
+        Parameters
+        ----------
+        source : str
+            Path of the emitting signal.
+        target : str
+            Path of the consuming slot.
+        thread : SlotThread
+            Overrides the thread affinity of the slot and of its class.
+
+        Returns
+        -------
+        Connection
+            The recorded link.
+
+        Raises
+        ------
+        WiringError
+            If either path is malformed, names a component that was not built,
+            or names a port that component does not expose.
+        """
+        signal = self._resolve_port(source, "signal")
+        slot = self._resolve_port(target, "slot")
+        return self.connect(
+            cast("SignalInstance", signal),
+            cast("Callable[..., Any]", slot),
+            thread=thread,
+        )
+
+    def _resolve_port(self, path: str, kind: str) -> object:
+        """Look up the signal or slot a ``component.port`` path names."""
+        component_name, _, port = path.partition(".")
+        if not component_name or not port or "." in port:
+            raise WiringError(f"{path!r} is not a port path; expected 'component.port'")
+        component = self._components.get(component_name)
+        if component is None:
+            known = ", ".join(sorted(self._components)) or "none"
+            raise WiringError(
+                f"{path!r} names component {component_name!r}, which was not "
+                f"built. Built: {known}"
+            )
+        surface = ports(component)
+        available = surface.signals if kind == "signal" else surface.slots
+        if port not in available:
+            known = ", ".join(sorted(available)) or "none"
+            raise WiringError(
+                f"{component_name!r} exposes no {kind} named {port!r}. "
+                f"Its {kind} ports: {known}"
+            )
+        return available[port]
+
+    @property
+    def connections(self) -> list[Connection]:
+        """The links established so far."""
+        return list(self._connections)
+
+    def disconnect_all(self) -> None:
+        """Undo every connection made through this container."""
+        for signal, slot in self._links:
+            signal.disconnect(slot, missing_ok=True)
+        self._links.clear()
+        self._connections.clear()

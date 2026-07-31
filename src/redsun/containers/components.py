@@ -231,6 +231,16 @@ class _ComponentBase(Generic[T]):
             )
         return self._instance
 
+    def __get__(self, obj: object, objtype: type | None = None) -> Any:
+        """Resolve to the built instance when read from a container instance.
+
+        Reading the attribute on the class, or before the component is built,
+        gives the wrapper itself.
+        """
+        if obj is None or self._instance is None:
+            return self
+        return self._instance
+
     def __repr__(self) -> str:
         status = "built" if self._instance is not None else "pending"
         return f"{self.__class__.__name__}({self.name!r}, {status})"
