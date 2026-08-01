@@ -139,7 +139,15 @@ presenters:
   storage:
     plugin_name: redsun
     plugin_id: storage
+
+views:
+  storage:
+    plugin_name: redsun
+    plugin_id: storage
 ```
+
+A manifest entry is imported only when a configuration names it, so a headless
+installation never imports the Qt views.
 
 The available built-ins are documented in
 [Presenters](architecture/presenters.md#built-in-presenters).

@@ -56,6 +56,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   `source ~> consumer.port`.
 - `SlotThread` (`redsun.virtual`) - the type of a thread affinity, so a
   component can annotate its `__redsun_slot_thread__` declaration.
+- `StorageView` (`redsun.view.qt.builtins`) - a Qt widget showing and
+  editing the base directory of the provider bound to `PATH_PROVIDER`. Without
+  a `StoragePresenter` in the application it degrades to a read-only
+  placeholder. Available from a configuration file as `plugin_name: redsun`,
+  `plugin_id: storage` under `views`, which the shipped manifest now declares.
 
 ### Changed
 
@@ -73,8 +78,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   `container.provide(PATH_PROVIDER, ...)`. **Breaking:** the dynamic attribute
   it used to set is gone; read the provider with
   `container.require(PATH_PROVIDER)` instead of `container.path_provider()`.
+- `StoragePresenter` exposes `set_plan` and `reset_plan` as slots instead of
+  discovering `sig_pre_launch_notify` and `sig_plan_done` by name in
+  `inject_dependencies`. **Breaking:** an application that relied on that
+  discovery must now connect them, in `wire()` or in the `wiring:` section:
 
-  `find_signals` and hand-written `inject_dependencies` are unaffected.
+  ```python
+  self.connect(self.acquisition.sig_pre_launch_notify, self.storage.set_plan)
+  self.connect(self.acquisition.sig_plan_done, self.storage.reset_plan)
+  ```
+
+  Which signals announce a plan is the application's knowledge; the presenter
+  no longer guesses it from a name, and a misspelled one now fails instead of
+  silently connecting nothing.
+
+  `find_signals` and hand-written `inject_dependencies` are otherwise
+  unaffected.
 - `redsun.aio.set_async_backend()` - installs `CulsansAsyncioBackend` as psygnal's
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is

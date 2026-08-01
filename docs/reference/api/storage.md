@@ -27,6 +27,8 @@ Design rationale: [Session storage](../../explanation/storage.md) and
 
 ::: redsun.storage.PathSignals
 
+::: redsun.storage.PATH_PROVIDER
+
 ## Registry
 
 ::: redsun.storage

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from redsun.log import Loggable
 from redsun.presenter import Presenter
 from redsun.storage import PATH_PROVIDER, SessionPathProvider
-from redsun.utils import find_signals
+from redsun.virtual import slot
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -36,12 +36,12 @@ class StoragePresenter(Presenter, Loggable):
     construction; devices only ever see
     [`BaseStorage`][redsun.storage.BaseStorage].
 
-    Wiring:
+    Exposes two slots the application connects to whatever announces plan
+    lifecycle:
 
-    - ``sig_pre_launch_notify`` (str) -> ``set_plan``: filenames adopt the plan
-      name of the upcoming run.
-    - ``sig_plan_done`` -> plan resets to ``"unknown"``, so stray bursts are not
-      attributed to a finished plan.
+    - ``set_plan`` (str): filenames adopt the plan name of the upcoming run;
+    - ``reset_plan``: the plan returns to ``"unknown"``, so bursts arriving
+      after a run are not attributed to it.
 
     Parameters
     ----------
@@ -91,16 +91,12 @@ class StoragePresenter(Presenter, Loggable):
         )
         container.provide(PATH_PROVIDER, self._provider)
 
-    def inject_dependencies(self, container: VirtualContainer) -> None:
-        """Connect plan lifecycle signals to the provider, if present."""
-        sigs = find_signals(container, ["sig_pre_launch_notify", "sig_plan_done"])
-        if "sig_pre_launch_notify" in sigs:
-            sigs["sig_pre_launch_notify"].connect(self._on_pre_launch)
-        if "sig_plan_done" in sigs:
-            sigs["sig_plan_done"].connect(self._on_plan_done)
-
-    def _on_pre_launch(self, plan_name: str) -> None:
+    @slot
+    def set_plan(self, plan_name: str) -> None:
+        """Adopt *plan_name* for the paths generated from now on."""
         self.path_provider.set_plan(plan_name)
 
-    def _on_plan_done(self) -> None:
+    @slot
+    def reset_plan(self) -> None:
+        """Return the plan name to its placeholder."""
         self.path_provider.set_plan(_RESET_PLAN)
