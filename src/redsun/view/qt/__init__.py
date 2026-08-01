@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from qtpy.QtWidgets import QWidget
 
@@ -11,10 +11,15 @@ if TYPE_CHECKING:
     from typing import Any
 
     from redsun.view import ViewPosition
+    from redsun.virtual import SlotThread
 
 
 class QtView(QWidget):
     """Abstract base Qt widget implementing the View protocol.
+
+    Every slot on a Qt view is delivered on the main thread unless the slot or
+    the connection says otherwise, since touching a widget from any other
+    thread is undefined.
 
     Parameters
     ----------
@@ -27,6 +32,8 @@ class QtView(QWidget):
         ``kwargs`` are kept for consistency but not forwarded to
         ``QWidget.__init__``.
     """
+
+    __redsun_slot_thread__: ClassVar[SlotThread] = "main"
 
     @abstractmethod
     def __init__(

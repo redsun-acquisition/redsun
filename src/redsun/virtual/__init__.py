@@ -7,7 +7,15 @@ from ._container import (
     VirtualContainer,
 )
 from ._protocols import HasShutdown, IsInjectable, IsProvider
-from ._wiring import Connection, Ports, WiringError, ports, slot
+from ._wiring import (
+    Connection,
+    Ports,
+    SlotThread,
+    Subscription,
+    WiringError,
+    ports,
+    slot,
+)
 
 __all__ = [
     "CallbackType",
@@ -20,6 +28,8 @@ __all__ = [
     "RedSunConfig",
     "Signal",
     "SignalCache",
+    "SlotThread",
+    "Subscription",
     "VirtualContainer",
     "WiringError",
     "ports",

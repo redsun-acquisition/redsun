@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 from psygnal import Signal
@@ -7,7 +8,7 @@ from qtpy.QtWidgets import QPushButton
 
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
-from redsun.virtual import VirtualContainer
+from redsun.virtual import VirtualContainer, slot
 
 
 class MockQtView(QtView):
@@ -30,6 +31,8 @@ class MockMotorView(QtView):
         super().__init__(name, **kwargs)
         self.motor = motor
         self.position = 42.0
+        self.threads: list[int] = []
+        self.positions: list[tuple[str, float]] = []
         self.move_button = QPushButton("move", self)
         self.move_button.clicked.connect(self._on_move_clicked)
 
@@ -39,6 +42,12 @@ class MockMotorView(QtView):
 
     def register_providers(self, container: VirtualContainer) -> None:
         container.register_signals(self)
+
+    @slot
+    def note_position(self, motor: str, position: float) -> None:
+        """Record the thread it ran on, to prove where delivery happened."""
+        self.threads.append(threading.get_ident())
+        self.positions.append((motor, position))
 
     def _on_move_clicked(self) -> None:
         self.sig_motor_move.emit(self.motor, self.position)

@@ -17,6 +17,7 @@ from event_model import DocumentRouter
 from event_model.documents import Document
 from psygnal import Signal, SignalGroup, SignalInstance
 
+from redsun.aio import run_coro
 from redsun.log import Loggable
 from redsun.virtual._wiring import (
     SLOT_ATTR,
@@ -24,6 +25,7 @@ from redsun.virtual._wiring import (
     Connection,
     Slot,
     SlotThread,
+    Subscription,
     WiringError,
     port_name,
     ports,
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from bluesky.protocols import HasName
+    from ophyd_async.core import SignalR
 
     from redsun.virtual._config import RedSunConfig
 
@@ -93,6 +96,12 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._names: dict[int, str] = {}
         self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
         self._connections: list[Connection] = []
+        # the forwarding function is held because ophyd-async releases a
+        # subscription by identity: clear_sub needs the object back
+        self._subscriptions: list[
+            tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
+        ] = []
+        self._subscription_records: list[Subscription] = []
         # bindings are held here rather than through Dependency.override, which
         # mutates the key itself and would leak between containers in one process
         self._provided: dict[dip.Dependency[Any], Any] = {}
@@ -396,6 +405,83 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self.logger.debug(f"Connected {link}")
         return link
 
+    def subscribe(
+        self,
+        signal: SignalR[Any],
+        slot: Callable[..., Any],
+        *,
+        thread: SlotThread = None,
+    ) -> Subscription:
+        """Subscribe a slot to an ophyd-async device signal and record it.
+
+        Delivery is marshalled through a psygnal signal, so *thread* behaves as
+        it does for `connect`. This is the only way a device signal can reach a
+        slot with a thread affinity: ophyd-async calls its subscribers on
+        whatever thread produced the reading.
+
+        Parameters
+        ----------
+        signal : SignalR[Any]
+            The device signal to observe.
+        slot : Callable[..., Any]
+            A bound method marked with [`slot`][redsun.virtual.slot], called
+            with the reading dictionary.
+        thread : SlotThread
+            Delivery thread. Defaults to the affinity the slot declares, then
+            to the one its class declares.
+
+        Returns
+        -------
+        Subscription
+            The recorded subscription.
+
+        Raises
+        ------
+        WiringError
+            If *slot* is not marked as connectable.
+        """
+        declaration = getattr(slot, SLOT_ATTR, None)
+        if not isinstance(declaration, Slot):
+            name = getattr(slot, "__qualname__", repr(slot))
+            raise WiringError(
+                f"{name} is not connectable; mark it with the 'slot' decorator"
+            )
+
+        consumer = getattr(slot, "__self__", None)
+        if thread is None:
+            thread = declaration.thread or cast(
+                "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
+            )
+
+        relay = SignalInstance((object,), name=signal.name)
+        relay.connect(slot, thread=thread)
+
+        def forward(reading: Any) -> None:
+            relay.emit(reading)
+
+        record = Subscription(
+            source=signal.name,
+            consumer=self._label(consumer),
+            consumer_port=port_name(slot),
+            thread=thread,
+        )
+
+        async def attach() -> None:
+            signal.subscribe_reading(forward)
+
+        # ophyd-async requires a running loop to subscribe, and callers run on
+        # the main thread during the build
+        run_coro(attach())
+        self._subscriptions.append((signal, forward, relay))
+        self._subscription_records.append(record)
+        self.logger.debug(f"Subscribed {record}")
+        return record
+
+    @property
+    def subscriptions(self) -> list[Subscription]:
+        """The device-signal subscriptions made through this container."""
+        return list(self._subscription_records)
+
     def connect_paths(
         self, source: str, target: str, *, thread: SlotThread = None
     ) -> Connection:
@@ -463,8 +549,17 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         return list(self._connections)
 
     def disconnect_all(self) -> None:
-        """Undo every connection made through this container."""
+        """Undo every connection and subscription made through this container."""
         for signal, slot in self._links:
             signal.disconnect(slot, missing_ok=True)
         self._links.clear()
         self._connections.clear()
+
+        async def release(signal: SignalR[Any], forward: Callable[[Any], None]) -> None:
+            signal.clear_sub(forward)
+
+        for device_signal, forward, relay in self._subscriptions:
+            run_coro(release(device_signal, forward))
+            relay.disconnect()
+        self._subscriptions.clear()
+        self._subscription_records.clear()
