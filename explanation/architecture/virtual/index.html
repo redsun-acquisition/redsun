@@ -2218,6 +2218,12 @@ offers, and the application states what is connected:</p>
 <p>Signature validation happens at connection time and is psygnal's: the argument
 count is always checked, and the argument types are checked as well when the
 signal names them (<code>Signal(FrameBatch)</code> rather than <code>Signal(object)</code>).</p>
+<p>Device signals are the one channel that is not psygnal.
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;subscribe&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer.subscribe"><code>subscribe</code></a> brings them under the
+same rules: a marked slot, an affinity from the component, and a record that
+<code>disconnect_all</code> releases. It marshals the reading through a psygnal signal,
+which is what gives an ophyd-async subscription a thread affinity at all, since
+ophyd-async calls its subscribers on whatever thread produced the reading.</p>
 <p>The signal registry above (<code>register_signals</code> / <code>find_signals</code>) predates this
 and still works, but it matches on names alone and leaves no record of what was
 connected. New components should not use it.</p>
