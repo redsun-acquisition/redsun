@@ -18,7 +18,15 @@ if TYPE_CHECKING:
 
     from psygnal import SignalInstance
 
-__all__ = ["Connection", "Ports", "Subscription", "WiringError", "ports", "slot"]
+__all__ = [
+    "Connection",
+    "Ports",
+    "SlotThread",
+    "Subscription",
+    "WiringError",
+    "ports",
+    "slot",
+]
 
 F = TypeVar("F", bound="Callable[..., Any]")
 

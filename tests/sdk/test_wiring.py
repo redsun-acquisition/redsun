@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 from psygnal import SignalGroup
@@ -13,12 +13,12 @@ from psygnal._async import clear_async_backend
 from redsun.aio import set_async_backend
 from redsun.virtual import (
     Signal,
+    SlotThread,
     VirtualContainer,
     WiringError,
     ports,
     slot,
 )
-from redsun.virtual._wiring import SlotThread
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ class Grouped:
 
 
 class Consumer:
-    __redsun_slot_thread__ = "main"
+    __redsun_slot_thread__: ClassVar[SlotThread] = "main"
 
     def __init__(self) -> None:
         self.seen: list[FrameBatch] = []

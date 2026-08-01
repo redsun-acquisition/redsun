@@ -54,10 +54,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   thread affinity and nothing tracking the release.
 - `Subscription` (`redsun.virtual`) - the record of one, rendered as
   `source ~> consumer.port`.
+- `SlotThread` (`redsun.virtual`) - the type of a thread affinity, so a
+  component can annotate its `__redsun_slot_thread__` declaration.
 
 ### Changed
 
-- `QtView` declares `__redsun_slot_thread__ = "main"`, so every slot on a Qt
+- `QtView` declares `__redsun_slot_thread__: ClassVar[SlotThread] = "main"`, so every slot on a Qt
   view is delivered on the main thread unless the slot or the connection says
   otherwise. Connections that passed `thread="main"` explicitly still work and
   are now redundant.

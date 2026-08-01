@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from qtpy.QtWidgets import QWidget
 
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from redsun.view import ViewPosition
+    from redsun.virtual import SlotThread
 
 
 class QtView(QWidget):
@@ -32,7 +33,7 @@ class QtView(QWidget):
         ``QWidget.__init__``.
     """
 
-    __redsun_slot_thread__ = "main"
+    __redsun_slot_thread__: ClassVar[SlotThread] = "main"
 
     @abstractmethod
     def __init__(

@@ -221,8 +221,13 @@ Thread affinity belongs to the component, not to the connection. A class
 declares it once:
 
 ```python
+from typing import ClassVar
+
+from redsun.virtual import SlotThread
+
+
 class MyView(View):
-    __redsun_slot_thread__ = "main"
+    __redsun_slot_thread__: ClassVar[SlotThread] = "main"
 ```
 
 Every slot on that class is then delivered on the main thread. `@slot(thread=...)`
