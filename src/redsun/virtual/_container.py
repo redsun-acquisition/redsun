@@ -26,6 +26,7 @@ from redsun.virtual._wiring import (
     Slot,
     SlotThread,
     Subscription,
+    Unconnected,
     WiringError,
     port_name,
     ports,
@@ -547,6 +548,46 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     def connections(self) -> list[Connection]:
         """The links established so far."""
         return list(self._connections)
+
+    @property
+    def unconnected(self) -> Unconnected:
+        """Ports of the built components that no connection reaches.
+
+        The complement of `connections` and `subscriptions`: what a component
+        offers and nothing uses. A forgotten connection leaves no trace
+        anywhere else, since a port that is never named cannot fail.
+
+        Returns
+        -------
+        Unconnected
+            The unreached signal and slot paths, as ``component.port``.
+
+        Raises
+        ------
+        WiringError
+            If a component exposes two signals under one port name.
+        """
+        used_signals = {(c.publisher, c.publisher_port) for c in self._connections}
+        used_slots = {(c.consumer, c.consumer_port) for c in self._connections}
+        used_slots |= {
+            (s.consumer, s.consumer_port) for s in self._subscription_records
+        }
+
+        signals: list[str] = []
+        slots: list[str] = []
+        for name, component in self._components.items():
+            surface = ports(component)
+            signals += [
+                f"{name}.{port}"
+                for port in surface.signals
+                if (name, port) not in used_signals
+            ]
+            slots += [
+                f"{name}.{port}"
+                for port in surface.slots
+                if (name, port) not in used_slots
+            ]
+        return Unconnected(signals=signals, slots=slots)
 
     def disconnect_all(self) -> None:
         """Undo every connection and subscription made through this container."""
