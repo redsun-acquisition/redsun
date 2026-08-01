@@ -3264,6 +3264,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>source ~&gt; consumer.port</code>.</li>
 <li><code>SlotThread</code> (<code>redsun.virtual</code>) - the type of a thread affinity, so a
   component can annotate its <code>__redsun_slot_thread__</code> declaration.</li>
+<li><code>StorageView</code> (<code>redsun.view.qt.builtins</code>) - a Qt widget showing and
+  editing the base directory of the provider bound to <code>PATH_PROVIDER</code>. Without
+  a <code>StoragePresenter</code> in the application it degrades to a read-only
+  placeholder. Available from a configuration file as <code>plugin_name: redsun</code>,
+  <code>plugin_id: storage</code> under <code>views</code>, which the shipped manifest now declares.</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3284,8 +3289,19 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>container.provide(PATH_PROVIDER, ...)</code>. <strong>Breaking:</strong> the dynamic attribute
   it used to set is gone; read the provider with
   <code>container.require(PATH_PROVIDER)</code> instead of <code>container.path_provider()</code>.</li>
+<li><code>StoragePresenter</code> exposes <code>set_plan</code> and <code>reset_plan</code> as slots instead of
+  discovering <code>sig_pre_launch_notify</code> and <code>sig_plan_done</code> by name in
+  <code>inject_dependencies</code>. <strong>Breaking:</strong> an application that relied on that
+  discovery must now connect them, in <code>wire()</code> or in the <code>wiring:</code> section:</li>
 </ul>
-<p><code>find_signals</code> and hand-written <code>inject_dependencies</code> are unaffected.
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Which signals announce a plan is the application's knowledge; the presenter
+  no longer guesses it from a name, and a misspelled one now fails instead of
+  silently connecting nothing.</p>
+<p><code>find_signals</code> and hand-written <code>inject_dependencies</code> are otherwise
+  unaffected.
 - <code>redsun.aio.set_async_backend()</code> - installs <code>CulsansAsyncioBackend</code> as psygnal's
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is
@@ -3509,7 +3525,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>redsun.qt</code> public namespace exposing <code>QtAppContainer</code> for use in explicit,
   developer-written application configurations:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span></code></pre></div></li>
 <li>Clarified documentation</li>
 </ul>
@@ -3530,16 +3546,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>AppContainer</code> and <code>component</code> are now importable directly from the top-level
   <code>redsun</code> package:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
 </span></code></pre></div></li>
 </ul>
 <h3 id="changed_7">Changed<a class="headerlink" href="#changed_7" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>component()</code> now takes the component class as its first positional argument:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Before</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">])</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># After</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">])</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Before</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">])</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># After</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">&quot;device&quot;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;X&quot;</span><span class="p">])</span>
 </span></code></pre></div></li>
 <li><code>RedSunConfig</code> removed from the public API; it is an internal <code>TypedDict</code> used
   only for YAML configuration validation.</li>
