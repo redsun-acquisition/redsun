@@ -73,10 +73,21 @@ both for declarative containers and from configuration files via the
 application-level control point for storage paths. It owns the
 [`SessionPathProvider`][redsun.storage.SessionPathProvider] (created with
 the session name from the configuration), exposes it on the virtual
-container as the `path_provider` DI provider, and wires plan lifecycle
-signals: `sig_pre_launch_notify` sets the active plan name (so burst
-filenames adopt it) and `sig_plan_done` resets it. Views observe the
-provider through its `signals` (base directory and plan name).
+container under [`PATH_PROVIDER`][redsun.storage.PATH_PROVIDER]. Views observe
+the provider through its `signals` (base directory and plan name).
+
+Plan lifecycle reaches it through two slots the application connects:
+
+```python
+def wire(self) -> None:
+    self.connect(self.acquisition.sig_pre_launch_notify, self.storage.set_plan)
+    self.connect(self.acquisition.sig_plan_done, self.storage.reset_plan)
+```
+
+`set_plan` makes burst filenames adopt the name of the upcoming run;
+`reset_plan` returns it to `unknown`, so bursts arriving after a run are not
+attributed to it. Which signals mean "a plan started" is the application's
+knowledge, not the presenter's, so nothing is connected until it says so.
 
 ```yaml
 presenters:
@@ -84,6 +95,19 @@ presenters:
     plugin_name: redsun
     plugin_id: storage
     base_dir: "~/my-data"   # optional; defaults to ~/redsun-storage
+```
+
+Its Qt counterpart ships alongside it:
+[`StorageView`][redsun.view.qt.builtins.StorageView] shows the base
+directory and lets the user change it. It resolves the same key, so an
+application that declares the view without the presenter still builds, showing
+a read-only placeholder.
+
+```yaml
+views:
+  storage:
+    plugin_name: redsun
+    plugin_id: storage
 ```
 
 [plans]: https://blueskyproject.io/bluesky/main/plans.html

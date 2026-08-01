@@ -89,7 +89,7 @@ class StoragePresenter:
         container.provide(PATH_PROVIDER, self._provider)
 
 
-class FileStorageView:
+class StorageView:
     def inject_dependencies(self, container: VirtualContainer) -> None:
         # required: raises KeyError if nothing provided it
         provider = container.require(PATH_PROVIDER)

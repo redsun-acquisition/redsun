@@ -31,3 +31,7 @@
     options:
       members:
         - DescriptorTreeView
+
+## Built-ins
+
+::: redsun.view.qt.builtins.StorageView

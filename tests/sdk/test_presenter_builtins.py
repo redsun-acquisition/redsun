@@ -4,8 +4,8 @@ Also the evaluation ground for the two path-provider access approaches:
 
 - **(a) storage-attached:** ``BaseStorage.path_provider`` property, reached
   through the storage registry (``get_storage(group, mimetype).path_provider``).
-- **(b) DI-attached:** the provider registered on the `VirtualContainer` as
-  the ``path_provider`` DI provider by `StoragePresenter.register_providers`.
+- **(b) DI-attached:** the provider bound to ``PATH_PROVIDER`` on the
+  `VirtualContainer` by `StoragePresenter.register_providers`.
 """
 
 from __future__ import annotations
@@ -87,8 +87,8 @@ async def test_plan_signals_drive_filenames(
     presenter = StoragePresenter("storage", {}, base_dir=str(tmp_path))
     presenter.register_providers(configured_bus)
     acquisition = _AcquisitionSignals()
-    configured_bus.register_signals(acquisition)
-    presenter.inject_dependencies(configured_bus)
+    configured_bus.connect(acquisition.sig_pre_launch_notify, presenter.set_plan)
+    configured_bus.connect(acquisition.sig_plan_done, presenter.reset_plan)
 
     acquisition.sig_pre_launch_notify.emit("square_scan")
     assert await presenter.path_provider.signals.plan.get_value() == "square_scan"
@@ -104,16 +104,15 @@ async def test_approach_di_container_wires_storage_bursts(
     """Approach (b): consumers resolve the provider from the DI container.
 
     The presenter owns the provider; a downstream component (whatever builds
-    the application's `BaseStorage` instances) resolves ``path_provider``
+    the application's `BaseStorage` instances) resolves ``PATH_PROVIDER``
     from the container and hands it to the storage constructor. Plan-name
-    changes made through the presenter's signal wiring show up in the burst
-    paths without the storage ever knowing who controls them.
+    changes made through the presenter's slots show up in the burst paths
+    without the storage ever knowing who controls them.
     """
     presenter = StoragePresenter("storage", {}, base_dir=str(tmp_path))
     presenter.register_providers(configured_bus)
     acquisition = _AcquisitionSignals()
-    configured_bus.register_signals(acquisition)
-    presenter.inject_dependencies(configured_bus)
+    configured_bus.connect(acquisition.sig_pre_launch_notify, presenter.set_plan)
 
     provider = configured_bus.require(PATH_PROVIDER)
     io = MemoryIO()

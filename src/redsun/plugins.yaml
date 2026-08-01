@@ -1,2 +1,5 @@
 presenters:
   storage: "redsun.presenter.builtins:StoragePresenter"
+
+views:
+  storage: "redsun.view.qt.builtins:StorageView"

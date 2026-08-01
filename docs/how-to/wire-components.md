@@ -242,7 +242,7 @@ Device signals are ophyd-async, not psygnal, so `connect` does not take them.
 same guarantees:
 
 ```python
-class FileStorageView(QtView):
+class StorageView(QtView):
     @slot
     def update_base_dir(self, reading: dict[str, Reading[str]]) -> None:
         self._edit.setText(next(iter(reading.values()))["value"])
