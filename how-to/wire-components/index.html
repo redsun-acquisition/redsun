@@ -1398,6 +1398,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#find-what-is-not-connected" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Find what is <em>not</em> connected
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-failure" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2096,6 +2107,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#find-what-is-not-connected" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Find what is <em>not</em> connected
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#read-a-failure" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2369,6 +2391,28 @@ offers:</p>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="p">{</span><span class="s1">&#39;update_layers&#39;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">bound</span> <span class="n">method</span> <span class="n">ImageView</span><span class="o">.</span><span class="n">update_layers</span> <span class="o">...&gt;</span><span class="p">}</span>
 </span></code></pre></div>
 <p>Both are recorded, so <code>AppContainer.shutdown</code> releases them.</p>
+<h2 id="find-what-is-not-connected">Find what is <em>not</em> connected<a class="headerlink" href="#find-what-is-not-connected" title="Permanent link">&para;</a></h2>
+<p>A wrong port name fails at build. A connection you forgot to write fails
+nowhere: a signal simply emits into nothing. <code>unconnected</code> is what finds it,
+by subtracting the recorded links from what every built component offers.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">report</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">virtual_container</span><span class="o">.</span><span class="n">unconnected</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">if</span> <span class="n">report</span><span class="p">:</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>det_ctrl.sig_error -&gt; nothing
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>nothing -&gt; img_widget.clear
+</span></code></pre></div>
+<p>It is a plain <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Unconnected&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-dataclass&quot;&gt;&lt;code&gt;dataclass&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.Unconnected"><code>Unconnected</code></a> record, so a script
+can assert on it instead of reading it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">app</span><span class="o">.</span><span class="n">virtual_container</span><span class="o">.</span><span class="n">unconnected</span><span class="o">.</span><span class="n">slots</span>
+</span></code></pre></div>
+<p>Not every entry is a defect. A component may legitimately offer more than one
+application uses; the report says what is unused, not what is wrong.</p>
 <h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
 <p>Every way of getting a connection wrong fails at build, naming both ends.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Container class</label><label for="__tabbed_5_2">Configuration file</label></div>

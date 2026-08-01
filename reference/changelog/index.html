@@ -3264,6 +3264,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>source ~&gt; consumer.port</code>.</li>
 <li><code>SlotThread</code> (<code>redsun.virtual</code>) - the type of a thread affinity, so a
   component can annotate its <code>__redsun_slot_thread__</code> declaration.</li>
+<li><code>VirtualContainer.unconnected</code> and <code>Unconnected</code> (<code>redsun.virtual</code>) - the
+  ports of the built components that no connection or subscription reaches, as
+  <code>component.port</code> paths. A misspelled port fails at build; a connection that
+  was never written fails nowhere, and this is what finds it. Falsy when
+  everything is reached, so a script can assert on it.</li>
 <li><code>StorageView</code> (<code>redsun.view.qt.builtins</code>) - a Qt widget showing and
   editing the base directory of the provider bound to <code>PATH_PROVIDER</code>. Without
   a <code>StoragePresenter</code> in the application it degrades to a read-only
