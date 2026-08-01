@@ -293,6 +293,33 @@ offers:
 
 Both are recorded, so `AppContainer.shutdown` releases them.
 
+## Find what is *not* connected
+
+A wrong port name fails at build. A connection you forgot to write fails
+nowhere: a signal simply emits into nothing. `unconnected` is what finds it,
+by subtracting the recorded links from what every built component offers.
+
+```python
+report = app.virtual_container.unconnected
+if report:
+    print(report)
+```
+
+```
+det_ctrl.sig_error -> nothing
+nothing -> img_widget.clear
+```
+
+It is a plain [`Unconnected`][redsun.virtual.Unconnected] record, so a script
+can assert on it instead of reading it:
+
+```python
+assert not app.virtual_container.unconnected.slots
+```
+
+Not every entry is a defect. A component may legitimately offer more than one
+application uses; the report says what is unused, not what is wrong.
+
 ## Read a failure
 
 Every way of getting a connection wrong fails at build, naming both ends.

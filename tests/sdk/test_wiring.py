@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 import pytest
+from ophyd_async.core import soft_signal_rw
 from psygnal import SignalGroup
 
 # psygnal re-exports get/set_async_backend at the top level but not this one
@@ -153,6 +154,49 @@ def test_ports_lists_the_public_surface() -> None:
     assert surface.signals == {}
     assert sorted(producer_surface.signals) == ["sig_new_data", "sig_untyped"]
     assert producer_surface.slots == {}
+
+
+def test_unconnected_lists_what_nothing_reaches() -> None:
+    """The complement of the recorded links, as component.port paths."""
+    container = VirtualContainer()
+    producer, consumer = Producer(), Consumer()
+    container._set_components({"prod": producer, "cons": consumer})
+    container.connect(producer.sig_new_data, consumer._update_layers)
+
+    report = container.unconnected
+
+    assert report.signals == ["prod.sig_untyped"]
+    assert sorted(report.slots) == [
+        "cons.bare",
+        "cons.overrides_thread",
+        "cons.wrong_arity",
+        "cons.wrong_payload",
+    ]
+    assert report
+    assert "prod.sig_untyped -> nothing" in str(report)
+    assert "nothing -> cons.bare" in str(report)
+
+
+def test_a_subscribed_slot_counts_as_connected() -> None:
+    """A device subscription reaches a slot the same way a connection does."""
+    container = VirtualContainer()
+    consumer = Consumer()
+    container._set_components({"cons": consumer})
+    signal = soft_signal_rw(float, initial_value=0.0, name="base_dir")
+    container.subscribe(signal, consumer.bare)
+
+    assert "cons.bare" not in container.unconnected.slots
+
+
+def test_a_fully_wired_container_reports_nothing() -> None:
+    """The empty case is falsy and says so."""
+    container = VirtualContainer()
+    container._set_components({})
+
+    report = container.unconnected
+
+    assert not report
+    assert str(report) == "every port is connected"
 
 
 def test_grouped_signals_are_ports_under_their_member_name() -> None:

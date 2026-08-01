@@ -23,6 +23,7 @@ __all__ = [
     "Ports",
     "SlotThread",
     "Subscription",
+    "Unconnected",
     "WiringError",
     "ports",
     "slot",
@@ -148,7 +149,7 @@ def ports(component: object) -> Ports:
     return Ports(signals=signals, slots=slots)
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
 class Connection:
     """A recorded link between a signal and a slot."""
 
@@ -166,7 +167,29 @@ class Connection:
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, slots=True)
+class Unconnected:
+    """Ports of the built components that no connection reaches.
+
+    Each entry is a ``component.port`` path. A signal listed here emits into
+    nothing; a slot listed here is never called.
+    """
+
+    signals: list[str] = field(default_factory=list)
+    slots: list[str] = field(default_factory=list)
+
+    def __bool__(self) -> bool:
+        return bool(self.signals or self.slots)
+
+    def __str__(self) -> str:
+        if not self:
+            return "every port is connected"
+        lines = [f"{path} -> nothing" for path in self.signals]
+        lines += [f"nothing -> {path}" for path in self.slots]
+        return "\n".join(lines)
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
 class Subscription:
     """A recorded subscription to a device signal."""
 

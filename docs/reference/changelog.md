@@ -56,6 +56,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   `source ~> consumer.port`.
 - `SlotThread` (`redsun.virtual`) - the type of a thread affinity, so a
   component can annotate its `__redsun_slot_thread__` declaration.
+- `VirtualContainer.unconnected` and `Unconnected` (`redsun.virtual`) - the
+  ports of the built components that no connection or subscription reaches, as
+  `component.port` paths. A misspelled port fails at build; a connection that
+  was never written fails nowhere, and this is what finds it. Falsy when
+  everything is reached, so a script can assert on it.
 - `StorageView` (`redsun.view.qt.builtins`) - a Qt widget showing and
   editing the base directory of the provider bound to `PATH_PROVIDER`. Without
   a `StoragePresenter` in the application it degrades to a read-only
