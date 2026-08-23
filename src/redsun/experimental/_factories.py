@@ -1,0 +1,229 @@
+from __future__ import annotations
+
+import inspect
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
+
+from dishka import Has
+from typing_extensions import TypeForm
+
+from redsun.experimental._requires import key_for, question_of
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping
+
+    from dishka import Provider
+
+    from redsun.experimental._declarations import Declaration, Key
+    from redsun.experimental._requires import Question
+
+__all__ = [
+    "absent",
+    "defaulted",
+    "factory",
+    "injectable",
+    "optional_arg",
+    "register_optionals",
+    "requirements",
+    "synthesize",
+]
+
+
+def synthesize(
+    fn: Callable[..., Any],
+    params: Mapping[str, Key],
+    returns: Key,
+    name: str,
+) -> Callable[..., Any]:
+    """Give *fn* the public signature ``(**params) -> returns``.
+
+    Both ``__annotations__`` and ``__signature__`` are set: the graph reads the
+    signature to learn each parameter's kind and the annotations to learn its
+    type, so a closure taking ``**kwargs`` would otherwise present no
+    dependencies at all.
+
+    Every name appearing in *params* or *returns* must resolve at runtime; the
+    graph evaluates them, and an import made only for type checking fails there.
+    """
+    fn.__name__ = name
+    fn.__qualname__ = name
+    fn.__annotations__ = {**params, "return": returns}
+    fn.__signature__ = inspect.Signature(  # type: ignore[attr-defined]
+        parameters=[
+            inspect.Parameter(
+                pname, inspect.Parameter.KEYWORD_ONLY, annotation=annotation
+            )
+            for pname, annotation in params.items()
+        ],
+        return_annotation=returns,
+    )
+    return fn
+
+
+def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[Any]]:
+    """Return the constructor parameters the graph is responsible for.
+
+    Excludes ``name``, which the framework binds, anything the configuration
+    supplied, and variadics.
+
+    A parameter carrying a default is widened to ``X | None``, so the container
+    fills it when something provides ``X`` and leaves the default alone when
+    nothing does.
+
+    Raises
+    ------
+    TypeError
+        If a remaining parameter carries no annotation.
+    """
+    try:
+        hints = get_type_hints(cls.__init__, include_extras=True)  # type: ignore[misc]
+    except NameError as e:
+        raise TypeError(
+            f"cannot read the constructor of {cls.__qualname__}: {e.name!r} is "
+            "not available at runtime. A type a component is injected by must "
+            "be imported outside 'if TYPE_CHECKING', because the graph "
+            "evaluates the annotation."
+        ) from e
+    wanted: dict[str, TypeForm[Any]] = {}
+    for pname, param in inspect.signature(cls).parameters.items():
+        if pname in ("self", "name") or pname in cfg_kwargs:
+            continue
+        if param.kind in (param.VAR_KEYWORD, param.VAR_POSITIONAL):
+            continue
+        if pname not in hints:
+            raise TypeError(
+                f"{cls.__name__}.{pname} has no annotation; the container "
+                "cannot tell what to inject"
+            )
+        hint = hints[pname]
+        question = question_of(hint)
+        if question is not None:
+            wanted[pname] = key_for(question)
+            continue
+        if param.default is not param.empty and not _is_union(hint):
+            hint = hint | None
+        wanted[pname] = hint
+    return wanted
+
+
+def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:
+    """Return each question the declarations ask, and who asks it.
+
+    One entry per question, not per component: the answer is the same for every
+    component that asks, and the names are what an unanswerable question is
+    reported against.
+    """
+    found: dict[Question, list[str]] = {}
+    for declaration in declarations:
+        hints = get_type_hints(declaration.cls.__init__, include_extras=True)  # type: ignore[misc]
+        for pname, hint in hints.items():
+            if pname in declaration.cfg_kwargs:
+                continue
+            question = question_of(hint)
+            if question is None:
+                continue
+            askers = found.setdefault(question, [])
+            if declaration.name not in askers:
+                askers.append(declaration.name)
+    return found
+
+
+def defaulted(cls: type, names: Iterable[str]) -> set[str]:
+    """Return those of *names* the constructor of *cls* gives a default."""
+    params = inspect.signature(cls).parameters
+    return {
+        name
+        for name in names
+        if name in params and params[name].default is not inspect.Parameter.empty
+    }
+
+
+def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
+    """Return ``X`` for ``X | None``, or ``None`` for anything else."""
+    if not _is_union(hint):
+        return None
+    args = [arg for arg in get_args(hint) if arg is not type(None)]
+    return args[0] if len(args) == 1 else None
+
+
+def _is_union(hint: TypeForm[Any]) -> bool:
+    return get_origin(hint) in (Union, UnionType)
+
+
+def factory(
+    declaration: Declaration, on_built: Callable[[Declaration, Any], None]
+) -> Callable[..., Any]:
+    """Return the callable dishka inspects and calls for *declaration*.
+
+    *on_built* runs the moment the instance exists, which is what makes the
+    order components are created in observable: the graph, not the caller,
+    decides it.
+
+    Optional parameters stay in the signature; `register_optionals` makes
+    ``X | None`` resolvable whether or not anything provides ``X``. A parameter
+    nothing provides is left out of the call, so its own default applies.
+    """
+    params = injectable(declaration.cls, declaration.cfg_kwargs)
+    optional = defaulted(declaration.cls, params)
+
+    def build(**deps: Any) -> Any:
+        supplied = {
+            pname: value
+            for pname, value in deps.items()
+            if value is not None or pname not in optional
+        }
+        instance = declaration.cls(
+            declaration.name, **declaration.cfg_kwargs, **supplied
+        )
+        on_built(declaration, instance)
+        return instance
+
+    return synthesize(build, params, declaration.key, f"build_{declaration.name}")
+
+
+def register_optionals(provider: Provider, declarations: list[Declaration]) -> None:
+    """Make every ``X | None`` a component asks for resolvable.
+
+    One pair per optional type: an alias to ``X`` when the graph offers it,
+    and a factory yielding ``None`` when it does not. Registering variants of
+    the component instead would be exponential in its optional parameters.
+    """
+    seen: set[TypeForm[Any]] = set()
+    for declaration in declarations:
+        params = injectable(declaration.cls, declaration.cfg_kwargs)
+        for hint in params.values():
+            inner = optional_arg(hint)
+            if inner is None or inner in seen:
+                continue
+            seen.add(inner)
+            provider.alias(
+                source=cast("type", inner),
+                provides=inner | None,
+                when=Has(inner),
+            )
+            provider.provide(
+                absent(inner | None, _readable_name(inner)), when=~Has(inner)
+            )
+
+
+def absent(key: Key, label: str | None = None) -> Callable[..., Any]:
+    """Return a factory answering *key* with ``None``."""
+
+    # a fresh function per key: synthesize rewrites the object it is given,
+    # so a shared one would keep only the last set of annotations
+    def build(**_: Any) -> None:
+        return None
+
+    return synthesize(build, {}, key, f"absent_{label or _readable_name(key)}")
+
+
+def _readable_name(hint: Key) -> str:
+    return str(getattr(hint, "__name__", hint)).replace(".", "_")

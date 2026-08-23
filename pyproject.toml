@@ -50,6 +50,7 @@ dev = [
     "ophyd>=1.11.0",
     "griffe-fieldz>=0.4.0",
     "pytest-asyncio>=1.3.0",
+    { include-group = "experimental" },
 ]
 docs = [
     "mike>=2.1.3",
@@ -76,7 +77,14 @@ zarr = [
     "acquire-zarr>=0.8.1",
 ]
 
+experimental = [
+    "dishka>=1.7.0",
+]
+
 [project.optional-dependencies]
+experimental = [
+    "dishka>=1.7.0",
+]
 zarr = [
     "acquire-zarr>=0.8.1",
 ]
@@ -115,7 +123,8 @@ include = [
 
 [tool.mypy]
 files = "."
-exclude = ["docs"]
+# TEMPORARY: sketches/ is untracked design exploration, delete before merge
+exclude = ["docs", "^sketches/"]
 mypy_path = ["src", "tests/container"]
 explicit_package_bases = true
 disable_error_code = [
@@ -126,6 +135,13 @@ pretty = true
 strict = true
 warn_unreachable = true
 warn_no_return = true
+
+# mock_bundle is put on sys.path by tests/experimental/conftest.py, which mypy
+# does not run; the directory cannot join mypy_path because its conftest would
+# then collide with the one under tests/container
+[[tool.mypy.overrides]]
+module = ["mock_bundle.*"]
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["redsun"]

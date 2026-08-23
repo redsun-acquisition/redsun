@@ -83,6 +83,7 @@ nav = [
         { "Container architecture" = "explanation/container-architecture.md" },
         { "Component system" = "explanation/component-system.md" },
         { "Session storage" = "explanation/storage.md" },
+        { "The experimental container" = "explanation/experimental-container.md" },
         { "Architecture" = [
             { "Devices" = "explanation/architecture/devices.md" },
             { "Presenters" = "explanation/architecture/presenters.md" },

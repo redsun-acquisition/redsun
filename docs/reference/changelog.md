@@ -7,6 +7,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Added
+
+- `redsun.experimental` - a container layer built on
+  [dishka](https://dishka.readthedocs.io), behind the `experimental` extra.
+  **Not covered by any stability guarantee**: names and behaviour may change or
+  be withdrawn in any release. `redsun.containers` remains the supported layer.
+
+  Components are declared as annotations rather than `declare_*` calls, each
+  naming the layer it belongs to, and a component's collaborators are
+  constructor parameters resolved by type:
+
+  ```python
+  class MyApp(QtAppContainer):
+      config = "session.yaml"
+
+      stage: AsDevice[MyStage]
+      motor_ctrl: AsPresenter[MotorPresenter]
+      motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
+  ```
+
+  `AsDevice`, `AsPresenter` and `AsView` wrap the component's own type without
+  replacing it, so the attribute stays typed as what it holds. One of them is
+  required: it is what marks an annotation as a component, so a container class
+  may hold ordinary attributes beside its components, and the layer is stated
+  rather than inferred from the class. It is checked, so a device must subclass
+  `ophyd_async.core.Device` and a presenter or view must take `name` first;
+  declaring one in the wrong layer fails when the declarations are read. Devices
+  are therefore still built before the graph runs. A component appearing only in
+  the session file takes its layer from the section it sits under, and is
+  checked the same way. The three are also reachable as
+  `redsun.experimental.layer`.
+
+  The attribute name is both the component name and its configuration key;
+  `Alias` and `FromConfig` override each. `provides` marks a method whose
+  return value other components may ask for, replacing `register_providers`.
+  A parameter annotated `X | None` is `None` when nothing supplies `X`,
+  replacing `try_require`. A parameter carrying a default keeps it when the
+  session provides neither a value nor a configuration entry for it, so a
+  tunable does not have to be repeated in the configuration file to be
+  constructible. `IsProvider`, `IsInjectable`, `ProviderKey` and the
+  `provide`/`require` pair have no equivalent and are not needed.
+
+  Build order is derived from the dependency graph rather than fixed phases.
+  `DocumentCallbacks` is a live view of the callback registry rather than a
+  snapshot of it, so a component that consumes the registry carries no ordering
+  constraint: it holds the view and reads it once the application is built.
+  Reading it during construction raises `LookupError`, because the answer would
+  be incomplete.
+
+  `Requires[P]` asks the session which of its components satisfy a protocol,
+  instead of asking for one value. It is spelled
+  `Annotated[Mapping[str, P], Every()]`, so the parameter is an ordinary mapping
+  of names to components, and it is a live view for the same reason
+  `DocumentCallbacks` is. A component satisfying *P* appears in its own answer.
+
+  `RequiresOne[P]` and `RequiresMaybe[P]` ask the same question expecting a
+  single answer, and are ordinary dependencies rather than live views: the
+  component arrives built, and whatever answers is constructed first. Which
+  component answers is settled before anything is built, so a session holding
+  none (`RequiresOne`) or more than one fails to build, naming the components
+  that nearly matched and why. `RequiresMaybe` answers `None` for an empty
+  session. Both require *P* to declare at least one method, because a member
+  assigned in `__init__` cannot be seen that early; it is confirmed once the
+  instance exists.
+
+  `DevicesOf[P]` asks the same question of the devices, which `Requires[P]`
+  never answers over. It is spelled `Annotated[Mapping[str, P], Devices()]`, and
+  unlike the component census it is not a live view: devices exist before any
+  component is built, so the mapping arrives complete and may be read in
+  `__init__`. Ask for `DeviceMapping` to receive every device unfiltered.
+
+  Membership is decided structurally rather than with `isinstance`: an
+  implementation must accept every call the protocol permits, so a renamed
+  parameter or an extra required one is no longer a match, while an extra
+  defaulted parameter still is. Types are not compared, which a type checker
+  does at the call site. `satisfies` exposes the same check, and
+  `Satisfying.rejected` reports why each near miss was left out. *P* must still
+  be `runtime_checkable`, which is how a protocol declares it is meant to be
+  matched at runtime.
+
+  A container names its toolkit by subclassing, as `redsun.experimental.qt`'s
+  `QtAppContainer` does; `AppContainer.frontend` is a class attribute, and
+  `AppContainer` on its own names no toolkit and accepts any placement. The base
+  container builds the components and the toolkit one arranges them:
+  `QtAppContainer.__init__` puts a `QApplication`, the async backend and an empty
+  `QMainWindow` in place, since a widget cannot be built before any of them
+  exist; `build` builds and attaches the views to that window, exposed as
+  `main_window`; `run` shows it and hands over to the event loop. A component may
+  not be named after something the container already answers, such as `devices`
+  or `run`, since it could never be read back.
+
+  Layers are a build order, so a component may depend on its own layer or an
+  earlier one and never on a later one. Two views sharing a value is therefore
+  allowed and needs no publish-then-resolve pass: one shares it with `provides`,
+  the other asks for it in `__init__`, and the owner is built first because the
+  graph says so. A presenter naming a view, or a type only a view shares, is
+  refused before anything is constructed, naming both components and both
+  layers. `Requires[P]` is exempt: it is a live view of the session rather than
+  a dependency.
+
+  `AppContainer.from_config` returns a container for a session described by a
+  file or a mapping, for a session with no class of its own to declare anything.
+  The `frontend:` key picks the container to build on, so a session naming `pyqt`
+  comes up on `QtAppContainer` without importing it, and one naming a frontend
+  the class it was called on is not built against is refused rather than ignored.
+  Calling it on a class keeps that class's own declarations, its `wire` and its
+  toolkit, and what comes back is unbuilt, so whatever the file cannot say is
+  still said in Python before `build` runs. `AppContainer()` also takes the
+  session directly, overriding the `config` class attribute for that instance
+  alone.
+
+  A view declares the `Placement` it asks the frontend to attach it at, which is
+  what separates it from a presenter. The core defines `Placement` and no
+  concrete one: a dock, a menu bar and a toolbar are window concepts, so
+  `redsun.experimental.qt` owns `Dock`, `Central`, `MenuItem` and `ToolBarItem`
+  alongside the `Qt` frontend that lists them in `Frontend.placements` and the
+  `attach` that fills a `QMainWindow` from a container's `views`. Each is paired
+  there with the toolkit type it demands - a `QWidget` for a dock or the centre,
+  a `QAction` for a menu or toolbar entry - so no toolkit name reaches the core,
+  and a frontend for something other than a desktop window brings placements of
+  its own. Declaring the placement on the class lets a view be
+  refused before anything is built, both for asking a frontend to attach
+  something it does not, and for being declared in the wrong layer; a view
+  answering from a property is checked once it exists. `PView` and `PPresenter`
+  are the protocols the built components are held to, without a base class to
+  inherit: `PPresenter` is `name` alone, because devices are now an injected
+  dependency rather than part of a presenter's shape.
+
+  A plugin bundle may ship a dishka `Provider` of its own, declared at dishka's
+  `Scope.APP`; an application has one stage, so no narrower scope is entered and
+  a provider written for another dishka application drops in unchanged.
+
+  `VirtualContainer` owns the application's lifetime. `on_release` registers a
+  finalizer and `release` undoes everything in reverse: connections first, then
+  each component's `shutdown` in reverse construction order, then the dependency
+  graph, then devices. A component takes part by declaring `shutdown`, sync or
+  async, and nothing else.
+
+  See [The experimental container](../explanation/experimental-container.md) for
+  the architecture, what it lifts off component authors, and what it gives up.
+
 ## [0.11.0] 01-08-2026
 
 ### Added

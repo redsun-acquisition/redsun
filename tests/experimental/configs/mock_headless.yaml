@@ -1,0 +1,32 @@
+schema_version: 1.0
+session: mock-session
+
+providers:
+  services:
+    plugin_name: mock-bundle
+    plugin_id: mock-services
+
+devices:
+  stage:
+    plugin_name: mock-bundle
+    plugin_id: mock-stage
+    axis: Z
+
+presenters:
+  motor_ctrl:
+    plugin_name: mock-bundle
+    plugin_id: mock-motor
+    step: 4.0
+  late_ctrl:
+    plugin_name: mock-bundle
+    plugin_id: mock-late
+
+views:
+  motor_widget:
+    plugin_name: mock-bundle
+    plugin_id: mock-motor-view
+    title: from-config
+
+wiring:
+  - from: motor_ctrl.sig_moved
+    to: motor_widget.refresh
