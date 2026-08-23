@@ -120,6 +120,3 @@ site/
 .claude/settings.local.json
 .claude/plans
 CLAUDE.local.md
-
-# untracked design exploration
-sketches/

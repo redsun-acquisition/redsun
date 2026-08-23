@@ -152,6 +152,7 @@ omit = [
 
 [tool.ruff]
 fix = true
+exclude = ["sketches/"]
 
 [tool.ruff.format]
 docstring-code-format = true
