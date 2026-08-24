@@ -173,69 +173,47 @@ def _handle_literal(
     return _FieldsFromAnnotation(choices=choices)
 
 
-def _handle_device_sequence(
-    ann: Any,
+def _device_fields(
+    proto: Any,
     devices: cabc.Mapping[str, OADevice],
+    multiselect: bool,
 ) -> _FieldsFromAnnotation:
-    elem_ann: Any = get_args(ann)[0]
-    matching = [key for key, obj in devices.items() if isinstance(obj, elem_ann)]
+    """Offer the devices matching *proto* as choices, keyed by their name."""
+    matching = [key for key, obj in devices.items() if isinstance(obj, proto)]
     if not matching:
         return _FieldsFromAnnotation()
     return _FieldsFromAnnotation(
         choices=matching,
-        multiselect=True,
-        device_proto=elem_ann,
+        multiselect=multiselect,
+        device_proto=proto,
     )
 
 
-def _handle_device_set(
+def _handle_device_collection(
     ann: Any,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    elem_ann: Any = get_args(ann)[0]
-    matching = [key for key, obj in devices.items() if isinstance(obj, elem_ann)]
-    if not matching:
-        return _FieldsFromAnnotation()
-    return _FieldsFromAnnotation(
-        choices=matching,
-        multiselect=True,
-        device_proto=elem_ann,
-    )
+    return _device_fields(get_args(ann)[0], devices, multiselect=True)
 
 
 def _handle_device(
     ann: Any,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    matching = [key for key, obj in devices.items() if isinstance(obj, ann)]
-    if not matching:
-        return _FieldsFromAnnotation()
-    return _FieldsFromAnnotation(
-        choices=matching,
-        multiselect=False,
-        device_proto=ann,
-    )
+    return _device_fields(ann, devices, multiselect=False)
 
 
 def _handle_var_positional_device(
     ann: Any,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    matching = [key for key, obj in devices.items() if isinstance(obj, ann)]
-    if not matching:
-        return _FieldsFromAnnotation()
-    return _FieldsFromAnnotation(
-        choices=matching,
-        multiselect=True,
-        device_proto=ann,
-    )
+    return _device_fields(ann, devices, multiselect=True)
 
 
 _AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, OADevice]], _FieldsFromAnnotation]
 _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 
-#: ``(predicate, handler)`` pairs, tried in order; the first match wins and the
-#: last entry always matches.
+#: ``(predicate, handler)`` pairs, tried in order; the first match wins.
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     (
         # get_origin returns Literal at runtime, which mypy cannot prove
@@ -244,11 +222,11 @@ _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     ),
     (
         lambda ann, _: isdeviceset(ann),
-        _handle_device_set,
+        _handle_device_collection,
     ),
     (
         lambda ann, _: isdevicesequence(ann),
-        _handle_device_sequence,
+        _handle_device_collection,
     ),
     (
         lambda ann, kind: kind is ParamKind.VAR_POSITIONAL and isdevice(ann),
@@ -257,10 +235,6 @@ _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     (
         lambda ann, _: isdevice(ann),
         _handle_device,
-    ),
-    (
-        lambda ann, kind: True,
-        lambda ann, devices: _FieldsFromAnnotation(),
     ),
 ]
 
@@ -288,7 +262,8 @@ def _dispatch_annotation(
 ) -> _FieldsFromAnnotation:
     """Walk ``_ANN_HANDLER_MAP`` and call the first matching handler.
 
-    An entry whose predicate or handler raises is skipped.
+    An entry whose predicate or handler raises is skipped, and an annotation
+    no entry claims yields empty fields.
     """
     for predicate, handler in _ANN_HANDLER_MAP:
         result = _try_dispatch_entry(predicate, handler, ann, kind, devices)
@@ -325,30 +300,18 @@ def _extract_action_meta(
     else:
         return None
 
-    # Validate annotation compatibility
     origin = get_origin(ann)
-    is_action_type = ann is Action or (
-        isinstance(ann, type) and issubclass(ann, Action)
-    )
+    args = get_args(ann)
+    is_action_type = _is_action_type(ann)
     is_sequence_action = (
         origin is not None
-        and (
-            # try/except because issubclass on Protocols can raise
-            _safe_issubclass(origin, cabc.Sequence)
-        )
-        and bool(get_args(ann))
-        and (
-            get_args(ann)[0] is Action
-            or (
-                isinstance(get_args(ann)[0], type)
-                and issubclass(get_args(ann)[0], Action)
-            )
-        )
+        # try/except because issubclass on Protocols can raise
+        and _safe_issubclass(origin, cabc.Sequence)
+        and bool(args)
+        and _is_action_type(args[0])
     )
     is_union_containing_action = any(
-        arg is Action or (isinstance(arg, type) and issubclass(arg, Action))
-        for arg in get_args(ann)
-        if arg is not type(None)
+        _is_action_type(arg) for arg in args if arg is not type(None)
     )
 
     if not (is_action_type or is_sequence_action or is_union_containing_action):
@@ -358,6 +321,11 @@ def _extract_action_meta(
             f"containing Action; got {ann!r}"
         )
     return actions_meta
+
+
+def _is_action_type(ann: Any) -> bool:
+    """Whether *ann* is `Action` itself or a subclass of it."""
+    return isinstance(ann, type) and issubclass(ann, Action)
 
 
 def _safe_issubclass(cls: Any, parent: type) -> bool:
@@ -419,10 +387,7 @@ def _is_magicgui_resolvable(ann: Any) -> bool:
     if ann in _MAGICGUI_NATIVE_TYPES:
         return True
     # Enum subclasses produce a ComboBox in magicgui
-    try:
-        return isinstance(ann, type) and issubclass(ann, enum.Enum)
-    except TypeError:
-        return False
+    return _safe_issubclass(ann, enum.Enum)
 
 
 def _resolve_annotations(
@@ -562,7 +527,6 @@ def create_plan_spec(
                 multiselect=fields.multiselect,
                 actions=actions_meta,
                 device_proto=fields.device_proto,
-                hidden=False,
             )
         )
 
