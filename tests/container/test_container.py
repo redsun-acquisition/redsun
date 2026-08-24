@@ -304,6 +304,20 @@ class TestFromConfig:
         with pytest.raises(ValueError, match="Unknown frontend"):
             AppContainer.from_config(str(cfg_file))
 
+    def test_from_config_rejected_plugin_reports_group_expectation(
+        self,
+        mock_entry_points: None,
+        config_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        container = AppContainer.from_config(
+            str(config_path / "rejected_view_config.yaml")
+        )
+
+        assert "bad_view" not in container._view_components
+        assert "cannot be loaded as a plugin in group 'views'" in caplog.text
+        assert "must accept exactly ('name',)" in caplog.text
+
 
 class TestComponentFieldSyntax:
     """Tests for the ``component()`` field-specifier syntax."""
