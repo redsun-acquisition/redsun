@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Changed
+
+- A presenter or view that fails its protocol check at build time now reports
+  every member it is missing, instead of naming the members a correct component
+  would have. `TypeError` is still raised for exactly the same components.
+- A plugin that cannot be loaded into a manifest group now reports what that
+  group requires, instead of "does not implement any known protocol".
+
 ## [0.11.0] 01-08-2026
 
 ### Added

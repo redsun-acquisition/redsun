@@ -11,6 +11,14 @@ from redsun.view.qt import QtView
 from redsun.virtual import VirtualContainer, slot
 
 
+class NotAView:
+    """Listed under ``views`` in the manifest, but shaped like a presenter."""
+
+    def __init__(self, name: str, devices: dict[str, Any], /) -> None:
+        self.name = name
+        self.devices = devices
+
+
 class MockQtView(QtView):
     """Mock Qt view for testing."""
 

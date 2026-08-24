@@ -21,6 +21,7 @@ from typing import (
     TypedDict,
     TypeGuard,
     TypeVar,
+    assert_never,
     overload,
 )
 
@@ -51,14 +52,14 @@ from redsun.virtual import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Never, Self
+    from typing import Self
 
     from psygnal import SignalInstance
 
     from redsun.virtual import RedSunConfig
     from redsun.virtual._wiring import SlotThread
 
-ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
+ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
@@ -79,10 +80,6 @@ class _PluginTypeDict(TypedDict):
     devices: dict[str, type[Device]]
     presenters: dict[str, type[PPresenter]]
     views: dict[str, type[PView]]
-
-
-def _assert_never(arg: Never) -> Never:
-    raise AssertionError(f"Unhandled case: {arg!r}")
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
@@ -137,7 +134,7 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
         case "views":
             return _check_view_protocol(imported_class)
         case _:
-            _assert_never(group)
+            assert_never(group)
 
 
 T = TypeVar("T")
@@ -145,6 +142,14 @@ T = TypeVar("T")
 logger = logging.getLogger("redsun")
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
+
+_PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
+    "devices": "must subclass ophyd_async.core.Device",
+    "presenters": (
+        "must accept exactly ('name', 'devices') as its leading positional parameters"
+    ),
+    "views": "must accept exactly ('name',) as its leading positional parameter",
+}
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
@@ -694,8 +699,10 @@ class AppContainer:
 
                 if not _check_plugin_protocol(imported_class, group):
                     logger.error(
-                        "%s exists, but does not implement any known protocol.",
+                        "%s cannot be loaded as a plugin in group %r: it %s.",
                         imported_class,
+                        group,
+                        _PLUGIN_EXPECTATIONS[group],
                     )
                     continue
 
