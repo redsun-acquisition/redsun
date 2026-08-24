@@ -52,12 +52,15 @@ from redsun.virtual import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Self
+    from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
 
+    from redsun.containers.components import _ComponentBase
     from redsun.virtual import RedSunConfig
     from redsun.virtual._wiring import SlotThread
+
+    _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
 
 ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
@@ -567,29 +570,20 @@ class AppContainer:
 
         namespace: dict[str, Any] = {}
 
-        for name, device_class in plugin_types["devices"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("devices", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _DeviceComponent(device_class, name, **cfg_kwargs)
-
-        for name, presenter_class in plugin_types["presenters"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("presenters", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _PresenterComponent(presenter_class, name, **cfg_kwargs)
-
-        for name, view_class in plugin_types["views"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("views", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _ViewComponent(view_class, name, **cfg_kwargs)
+        declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
+            ("devices", _DeviceComponent),
+            ("presenters", _PresenterComponent),
+            ("views", _ViewComponent),
+        )
+        for group, component in declared:
+            section: dict[str, Any] = config.get(group, {})
+            for name, plugin_class in plugin_types[group].items():
+                cfg_kwargs = {
+                    k: v
+                    for k, v in section.get(name, {}).items()
+                    if k not in _PLUGIN_META_KEYS
+                }
+                namespace[name] = component(plugin_class, name, **cfg_kwargs)
 
         frontend = config.get("frontend", "pyqt")
         base_class = _resolve_frontend_container(frontend)
