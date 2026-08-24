@@ -31,6 +31,7 @@ from ophyd_async.core import Device
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers.components import (
+    _ComponentField,
     _DeviceComponent,
     _DeviceField,
     _PresenterComponent,
@@ -65,8 +66,6 @@ if TYPE_CHECKING:
 ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
-
-_AnyField = _DeviceField | _PresenterField | _ViewField
 
 
 @unique
@@ -250,7 +249,7 @@ class AppContainer:
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
-            if not attr_name.startswith("_") and isinstance(value, _AnyField)
+            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
         }
 
         if component_fields:
