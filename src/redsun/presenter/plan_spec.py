@@ -24,14 +24,15 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
+    ForwardRef,
     Literal,
     NamedTuple,
     get_args,
     get_origin,
-    get_type_hints,
 )
 
 from ophyd_async.core import Device as OADevice
+from typing_extensions import Format, evaluate_forward_ref, get_annotations
 
 from redsun.engine.actions import Action
 from redsun.presenter.utils import (
@@ -424,6 +425,30 @@ def _is_magicgui_resolvable(ann: Any) -> bool:
         return False
 
 
+def _resolve_annotations(
+    func_obj: cabc.Callable[..., Any],
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Resolve every annotation of *func_obj*, one at a time.
+
+    Returns the annotations that evaluate, and the source text of those naming
+    something unavailable at runtime. Resolving them separately keeps a single
+    unimportable name from hiding every other annotation.
+    """
+    namespace = getattr(func_obj, "__globals__", None)
+    resolved: dict[str, Any] = {}
+    unresolved: dict[str, str] = {}
+    for name, text in get_annotations(func_obj, format=Format.STRING).items():
+        try:
+            value = evaluate_forward_ref(ForwardRef(text), globals=namespace)
+        except NameError:
+            unresolved[name] = text
+        else:
+            # get_type_hints substitutes NoneType, which the return-type
+            # checks below rely on to tell "-> None" from "no annotation"
+            resolved[name] = type(None) if value is None else value
+    return resolved, unresolved
+
+
 def create_plan_spec(
     plan: cabc.Callable[..., cabc.Generator[Any, Any, Any]],
     devices: cabc.Mapping[str, OADevice],
@@ -449,6 +474,9 @@ def create_plan_spec(
     TypeError
         If *plan* is not a generator function or its return type is not a
         ``MsgGenerator`` (``Generator[Msg, Any, Any]``).
+    UnresolvableAnnotationError
+        If an annotation names something unavailable at runtime, or cannot be
+        mapped to a widget.
     RuntimeError
         If an unexpected ``inspect.Parameter.kind`` is encountered.
     """
@@ -460,7 +488,13 @@ def create_plan_spec(
         raise TypeError(f"Plan {func_obj.__name__!r} must be a generator function.")
 
     sig = signature(func_obj)
-    type_hints = get_type_hints(func_obj, include_extras=True)
+    type_hints, unresolved = _resolve_annotations(func_obj)
+
+    if "return" in unresolved:
+        raise UnresolvableAnnotationError(
+            func_obj.__name__, "return", unresolved["return"]
+        )
+
     return_type = type_hints.get("return", None)
 
     if return_type is None:
@@ -481,6 +515,9 @@ def create_plan_spec(
     params: list[ParamDescription] = []
 
     for name, param in _iterate_signature(sig):
+        if name in unresolved:
+            raise UnresolvableAnnotationError(func_obj.__name__, name, unresolved[name])
+
         raw_ann: Any = type_hints.get(name, param.annotation)
         if raw_ann is _empty:
             raw_ann = Any
