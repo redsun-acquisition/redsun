@@ -16,6 +16,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   would have. `TypeError` is still raised for exactly the same components.
 - A plugin that cannot be loaded into a manifest group now reports what that
   group requires, instead of "does not implement any known protocol".
+- `create_plan_spec` resolves each annotation on its own instead of resolving
+  the whole signature at once. An annotation naming something unavailable at
+  runtime, such as a type imported only under `TYPE_CHECKING`, now raises
+  `UnresolvableAnnotationError` naming the plan and the parameter, where it
+  previously raised `NameError` from `typing`. Such a plan is still rejected:
+  callers that already handle `UnresolvableAnnotationError` can skip it
+  instead of failing the surrounding build.
 
 ## [0.11.0] 01-08-2026
 
