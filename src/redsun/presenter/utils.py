@@ -67,6 +67,23 @@ def _is_device_annotation(ann: Any) -> bool:
     return isinstance(ann, type) and getattr(ann, "_is_runtime_protocol", False)
 
 
+def _origin_subclasses(ann: Any, base: type) -> bool:
+    """Return True if *ann* is a generic alias whose origin subclasses *base*."""
+    origin = get_origin(ann)
+    if origin is None:
+        return False
+    try:
+        return issubclass(origin, base)
+    except TypeError:
+        return False
+
+
+def _single_device_arg(ann: Any) -> bool:
+    """Return True if *ann* takes exactly one parameter and it is a device."""
+    args = get_args(ann)
+    return len(args) == 1 and _is_device_annotation(args[0])
+
+
 def issequence(ann: Any) -> bool:
     """Return True if *ann* is a ``Sequence[...]`` generic alias.
 
@@ -76,35 +93,17 @@ def issequence(ann: Any) -> bool:
     annotations are not generic aliases (``get_origin(str)`` is ``None``),
     so they are naturally excluded.
     """
-    origin = get_origin(ann)
-    if origin is None:
-        return False
-    try:
-        return issubclass(origin, Sequence)
-    except TypeError:
-        return False
+    return _origin_subclasses(ann, Sequence)
 
 
 def isdevicesequence(ann: Any) -> bool:
     """Return True if *ann* is ``Sequence[T]`` where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
-    if not issequence(ann):
-        return False
-    args = get_args(ann)
-    return len(args) == 1 and _is_device_annotation(args[0])
+    return issequence(ann) and _single_device_arg(ann)
 
 
 def isdeviceset(ann: Any) -> bool:
     """Return True if *ann* is ``Set[T]`` (or ``AbstractSet[T]``, ``FrozenSet[T]``) where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
-    origin = get_origin(ann)
-    if origin is None:
-        return False
-    try:
-        if not issubclass(origin, AbstractSet):
-            return False
-    except TypeError:
-        return False
-    args = get_args(ann)
-    return len(args) == 1 and _is_device_annotation(args[0])
+    return _origin_subclasses(ann, AbstractSet) and _single_device_arg(ann)
 
 
 def isdevice(ann: Any) -> bool:
