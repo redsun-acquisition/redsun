@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     from redsun.virtual import RedSunConfig
     from redsun.virtual._wiring import SlotThread
 
-ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
+ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
@@ -143,7 +143,7 @@ logger = logging.getLogger("redsun")
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
-_PLUGIN_EXPECTATIONS: dict[str, str] = {
+_PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
     "devices": "must subclass ophyd_async.core.Device",
     "presenters": (
         "must accept exactly ('name', 'devices') as its leading positional parameters"
