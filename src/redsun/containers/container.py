@@ -21,6 +21,7 @@ from typing import (
     TypedDict,
     TypeGuard,
     TypeVar,
+    assert_never,
     overload,
 )
 
@@ -51,7 +52,7 @@ from redsun.virtual import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Never, Self
+    from typing import Self
 
     from psygnal import SignalInstance
 
@@ -79,10 +80,6 @@ class _PluginTypeDict(TypedDict):
     devices: dict[str, type[Device]]
     presenters: dict[str, type[PPresenter]]
     views: dict[str, type[PView]]
-
-
-def _assert_never(arg: Never) -> Never:
-    raise AssertionError(f"Unhandled case: {arg!r}")
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
@@ -137,7 +134,7 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
         case "views":
             return _check_view_protocol(imported_class)
         case _:
-            _assert_never(group)
+            assert_never(group)
 
 
 T = TypeVar("T")
