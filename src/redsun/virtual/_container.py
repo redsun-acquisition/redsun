@@ -78,6 +78,33 @@ def _owner_of(signal: SignalInstance) -> object | None:
     return instance
 
 
+def _resolve_slot(
+    slot: Callable[..., Any], thread: SlotThread
+) -> tuple[object | None, SlotThread]:
+    """Return the object *slot* is bound to, and the thread it is delivered on.
+
+    An explicit *thread* wins; otherwise the affinity the slot declares, then
+    the one its class declares.
+
+    Raises
+    ------
+    WiringError
+        If *slot* is not marked with the ``slot`` decorator.
+    """
+    declaration = getattr(slot, SLOT_ATTR, None)
+    if not isinstance(declaration, Slot):
+        name = getattr(slot, "__qualname__", repr(slot))
+        raise WiringError(
+            f"{name} is not connectable; mark it with the 'slot' decorator"
+        )
+    consumer = getattr(slot, "__self__", None)
+    if thread is None:
+        thread = declaration.thread or cast(
+            "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
+        )
+    return consumer, thread
+
+
 class VirtualContainer(dic.DynamicContainer, Loggable):
     """Data exchange and dependency injection layer.
 
@@ -376,18 +403,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
             If *slot* is not marked as connectable, or if psygnal rejects the
             two signatures.
         """
-        declaration = getattr(slot, SLOT_ATTR, None)
-        if not isinstance(declaration, Slot):
-            name = getattr(slot, "__qualname__", repr(slot))
-            raise WiringError(
-                f"{name} is not connectable; mark it with the 'slot' decorator"
-            )
-
-        consumer = getattr(slot, "__self__", None)
-        if thread is None:
-            thread = declaration.thread or cast(
-                "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
-            )
+        consumer, thread = _resolve_slot(slot, thread)
 
         link = Connection(
             publisher=self._label(_owner_of(signal)),
@@ -441,18 +457,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         WiringError
             If *slot* is not marked as connectable.
         """
-        declaration = getattr(slot, SLOT_ATTR, None)
-        if not isinstance(declaration, Slot):
-            name = getattr(slot, "__qualname__", repr(slot))
-            raise WiringError(
-                f"{name} is not connectable; mark it with the 'slot' decorator"
-            )
-
-        consumer = getattr(slot, "__self__", None)
-        if thread is None:
-            thread = declaration.thread or cast(
-                "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
-            )
+        consumer, thread = _resolve_slot(slot, thread)
 
         relay = SignalInstance((object,), name=signal.name)
         relay.connect(slot, thread=thread)
