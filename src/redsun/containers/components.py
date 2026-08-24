@@ -10,6 +10,8 @@ from ophyd_async.core import Device
 from redsun.presenter import PPresenter
 from redsun.view import PView
 
+from ._structural import problems
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -304,8 +306,8 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
         if not isinstance(instance, PPresenter):
             raise TypeError(
                 f"{type(instance).__name__!r} (presenter {self.name!r}) does not "
-                "implement the PPresenter protocol: instances must expose "
-                "'name' and 'devices'."
+                "implement the PPresenter protocol: "
+                + "; ".join(problems(instance, PPresenter))
             )
         self._instance = instance
         return instance
@@ -335,8 +337,7 @@ class _ViewComponent(_ComponentBase[PView]):
         if not isinstance(instance, PView):
             raise TypeError(
                 f"{type(instance).__name__!r} (view {self.name!r}) does not "
-                "implement the PView protocol: instances must expose "
-                "'name' and 'view_position'."
+                "implement the PView protocol: " + "; ".join(problems(instance, PView))
             )
         self._instance = instance
         return instance

@@ -939,7 +939,7 @@ class TestProtocolValidationAtBuild:
         # the arg-type ignore is the point: mypy already rejects this class,
         # the runtime check protects callers without static typing
         comp = _PresenterComponent(NotAPresenter, "bad")  # type: ignore[arg-type]
-        with pytest.raises(TypeError, match="PPresenter"):
+        with pytest.raises(TypeError, match="'devices' is missing"):
             comp.build({})
 
     def test_structural_view_without_qt_builds(self) -> None:
@@ -959,7 +959,7 @@ class TestProtocolValidationAtBuild:
         # the arg-type ignore is the point: mypy already rejects this class,
         # the runtime check protects callers without static typing
         comp = _ViewComponent(NotAView, "bad")  # type: ignore[arg-type]
-        with pytest.raises(TypeError, match="PView"):
+        with pytest.raises(TypeError, match="'view_position' is missing"):
             comp.build()
 
 

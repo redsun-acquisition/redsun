@@ -146,6 +146,14 @@ logger = logging.getLogger("redsun")
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
+_PLUGIN_EXPECTATIONS: dict[str, str] = {
+    "devices": "must subclass ophyd_async.core.Device",
+    "presenters": (
+        "must accept exactly ('name', 'devices') as its leading positional parameters"
+    ),
+    "views": "must accept exactly ('name',) as its leading positional parameter",
+}
+
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
@@ -694,8 +702,10 @@ class AppContainer:
 
                 if not _check_plugin_protocol(imported_class, group):
                     logger.error(
-                        "%s exists, but does not implement any known protocol.",
+                        "%s cannot be loaded as a plugin in group %r: it %s.",
                         imported_class,
+                        group,
+                        _PLUGIN_EXPECTATIONS[group],
                     )
                     continue
 
