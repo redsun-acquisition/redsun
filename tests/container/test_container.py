@@ -304,6 +304,20 @@ class TestFromConfig:
         with pytest.raises(ValueError, match="Unknown frontend"):
             AppContainer.from_config(str(cfg_file))
 
+    def test_from_config_rejected_plugin_reports_group_expectation(
+        self,
+        mock_entry_points: None,
+        config_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        container = AppContainer.from_config(
+            str(config_path / "rejected_view_config.yaml")
+        )
+
+        assert "bad_view" not in container._view_components
+        assert "cannot be loaded as a plugin in group 'views'" in caplog.text
+        assert "must accept exactly ('name',)" in caplog.text
+
 
 class TestComponentFieldSyntax:
     """Tests for the ``component()`` field-specifier syntax."""
@@ -939,7 +953,7 @@ class TestProtocolValidationAtBuild:
         # the arg-type ignore is the point: mypy already rejects this class,
         # the runtime check protects callers without static typing
         comp = _PresenterComponent(NotAPresenter, "bad")  # type: ignore[arg-type]
-        with pytest.raises(TypeError, match="PPresenter"):
+        with pytest.raises(TypeError, match="'devices' is missing"):
             comp.build({})
 
     def test_structural_view_without_qt_builds(self) -> None:
@@ -959,7 +973,7 @@ class TestProtocolValidationAtBuild:
         # the arg-type ignore is the point: mypy already rejects this class,
         # the runtime check protects callers without static typing
         comp = _ViewComponent(NotAView, "bad")  # type: ignore[arg-type]
-        with pytest.raises(TypeError, match="PView"):
+        with pytest.raises(TypeError, match="'view_position' is missing"):
             comp.build()
 
 

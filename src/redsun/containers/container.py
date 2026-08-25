@@ -21,6 +21,7 @@ from typing import (
     TypedDict,
     TypeGuard,
     TypeVar,
+    assert_never,
     overload,
 )
 
@@ -30,6 +31,7 @@ from ophyd_async.core import Device
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers.components import (
+    _ComponentField,
     _DeviceComponent,
     _DeviceField,
     _PresenterComponent,
@@ -51,18 +53,19 @@ from redsun.virtual import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Never, Self
+    from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
 
+    from redsun.containers.components import _ComponentBase
     from redsun.virtual import RedSunConfig
     from redsun.virtual._wiring import SlotThread
 
-ManifestItems = dict[str, Any]  # maps plugin_id -> class path (str) or dict
+    _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
+
+ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
-
-_AnyField = _DeviceField | _PresenterField | _ViewField
 
 
 @unique
@@ -79,10 +82,6 @@ class _PluginTypeDict(TypedDict):
     devices: dict[str, type[Device]]
     presenters: dict[str, type[PPresenter]]
     views: dict[str, type[PView]]
-
-
-def _assert_never(arg: Never) -> Never:
-    raise AssertionError(f"Unhandled case: {arg!r}")
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
@@ -137,7 +136,7 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
         case "views":
             return _check_view_protocol(imported_class)
         case _:
-            _assert_never(group)
+            assert_never(group)
 
 
 T = TypeVar("T")
@@ -145,6 +144,14 @@ T = TypeVar("T")
 logger = logging.getLogger("redsun")
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
+
+_PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
+    "devices": "must subclass ophyd_async.core.Device",
+    "presenters": (
+        "must accept exactly ('name', 'devices') as its leading positional parameters"
+    ),
+    "views": "must accept exactly ('name',) as its leading positional parameter",
+}
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
@@ -242,7 +249,7 @@ class AppContainer:
         component_fields = {
             attr_name: value
             for attr_name, value in namespace.items()
-            if not attr_name.startswith("_") and isinstance(value, _AnyField)
+            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
         }
 
         if component_fields:
@@ -562,29 +569,20 @@ class AppContainer:
 
         namespace: dict[str, Any] = {}
 
-        for name, device_class in plugin_types["devices"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("devices", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _DeviceComponent(device_class, name, **cfg_kwargs)
-
-        for name, presenter_class in plugin_types["presenters"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("presenters", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _PresenterComponent(presenter_class, name, **cfg_kwargs)
-
-        for name, view_class in plugin_types["views"].items():
-            cfg_kwargs = {
-                k: v
-                for k, v in config.get("views", {}).get(name, {}).items()
-                if k not in _PLUGIN_META_KEYS
-            }
-            namespace[name] = _ViewComponent(view_class, name, **cfg_kwargs)
+        declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
+            ("devices", _DeviceComponent),
+            ("presenters", _PresenterComponent),
+            ("views", _ViewComponent),
+        )
+        for group, component in declared:
+            section: dict[str, Any] = config.get(group, {})
+            for name, plugin_class in plugin_types[group].items():
+                cfg_kwargs = {
+                    k: v
+                    for k, v in section.get(name, {}).items()
+                    if k not in _PLUGIN_META_KEYS
+                }
+                namespace[name] = component(plugin_class, name, **cfg_kwargs)
 
         frontend = config.get("frontend", "pyqt")
         base_class = _resolve_frontend_container(frontend)
@@ -694,8 +692,10 @@ class AppContainer:
 
                 if not _check_plugin_protocol(imported_class, group):
                     logger.error(
-                        "%s exists, but does not implement any known protocol.",
+                        "%s cannot be loaded as a plugin in group %r: it %s.",
                         imported_class,
+                        group,
+                        _PLUGIN_EXPECTATIONS[group],
                     )
                     continue
 

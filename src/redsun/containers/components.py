@@ -10,6 +10,8 @@ from ophyd_async.core import Device
 from redsun.presenter import PPresenter
 from redsun.view import PView
 
+from ._structural import problems
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -62,58 +64,40 @@ def expects_positionals(cls: Callable[..., Any], expected: tuple[str, ...]) -> b
     return True
 
 
-class _DeviceField:
+class _ComponentField:
+    """Base sentinel a ``declare_*`` call returns, resolved by the metaclass."""
+
+    __slots__ = ("alias", "cls", "from_config", "kwargs")
+
+    def __init__(
+        self,
+        cls: type,
+        alias: str | None,
+        from_config: str | None,
+        kwargs: dict[str, Any],
+    ) -> None:
+        self.cls = cls
+        self.alias = alias
+        self.from_config = from_config
+        self.kwargs = kwargs
+
+
+class _DeviceField(_ComponentField):
     """Sentinel returned by [`declare_device`][redsun.containers.declare_device]. Resolved by the metaclass into a ``_DeviceComponent``."""
 
-    __slots__ = ("alias", "cls", "from_config", "kwargs")
-
-    def __init__(
-        self,
-        cls: type,
-        alias: str | None,
-        from_config: str | None,
-        kwargs: dict[str, Any],
-    ) -> None:
-        self.cls = cls
-        self.alias = alias
-        self.from_config = from_config
-        self.kwargs = kwargs
+    __slots__ = ()
 
 
-class _PresenterField:
+class _PresenterField(_ComponentField):
     """Sentinel returned by [`declare_presenter`][redsun.containers.declare_presenter]. Resolved by the metaclass into a ``_PresenterComponent``."""
 
-    __slots__ = ("alias", "cls", "from_config", "kwargs")
-
-    def __init__(
-        self,
-        cls: type,
-        alias: str | None,
-        from_config: str | None,
-        kwargs: dict[str, Any],
-    ) -> None:
-        self.cls = cls
-        self.alias = alias
-        self.from_config = from_config
-        self.kwargs = kwargs
+    __slots__ = ()
 
 
-class _ViewField:
+class _ViewField(_ComponentField):
     """Sentinel returned by [`declare_view`][redsun.containers.declare_view]. Resolved by the metaclass into a ``_ViewComponent``."""
 
-    __slots__ = ("alias", "cls", "from_config", "kwargs")
-
-    def __init__(
-        self,
-        cls: type,
-        alias: str | None,
-        from_config: str | None,
-        kwargs: dict[str, Any],
-    ) -> None:
-        self.cls = cls
-        self.alias = alias
-        self.from_config = from_config
-        self.kwargs = kwargs
+    __slots__ = ()
 
 
 def declare_device(
@@ -304,8 +288,8 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
         if not isinstance(instance, PPresenter):
             raise TypeError(
                 f"{type(instance).__name__!r} (presenter {self.name!r}) does not "
-                "implement the PPresenter protocol: instances must expose "
-                "'name' and 'devices'."
+                "implement the PPresenter protocol: "
+                + "; ".join(problems(instance, PPresenter))
             )
         self._instance = instance
         return instance
@@ -335,8 +319,7 @@ class _ViewComponent(_ComponentBase[PView]):
         if not isinstance(instance, PView):
             raise TypeError(
                 f"{type(instance).__name__!r} (view {self.name!r}) does not "
-                "implement the PView protocol: instances must expose "
-                "'name' and 'view_position'."
+                "implement the PView protocol: " + "; ".join(problems(instance, PView))
             )
         self._instance = instance
         return instance

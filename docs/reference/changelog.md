@@ -150,6 +150,23 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [The experimental container](../explanation/experimental-container.md) for
   the architecture, what it lifts off component authors, and what it gives up.
 
+## [0.11.1]
+
+### Changed
+
+- A presenter or view that fails its protocol check at build time now reports
+  every member it is missing, instead of naming the members a correct component
+  would have. `TypeError` is still raised for exactly the same components.
+- A plugin that cannot be loaded into a manifest group now reports what that
+  group requires, instead of "does not implement any known protocol".
+- `create_plan_spec` resolves each annotation on its own instead of resolving
+  the whole signature at once. An annotation naming something unavailable at
+  runtime, such as a type imported only under `TYPE_CHECKING`, now raises
+  `UnresolvableAnnotationError` naming the plan and the parameter, where it
+  previously raised `NameError` from `typing`. Such a plan is still rejected:
+  callers that already handle `UnresolvableAnnotationError` can skip it
+  instead of failing the surrounding build.
+
 ## [0.11.0] 01-08-2026
 
 ### Added
@@ -556,6 +573,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/redsun-acquisition/redsun/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/redsun-acquisition/redsun/compare/v0.9.0...v0.9.1

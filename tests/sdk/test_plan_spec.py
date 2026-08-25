@@ -7,7 +7,7 @@ from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from inspect import Parameter
 from pathlib import Path
-from typing import Any, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 import pytest
@@ -37,6 +37,11 @@ from redsun.presenter.plan_spec import (
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
 from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
+
+if TYPE_CHECKING:
+    # deliberately never imported at runtime: a plan annotated with it
+    # reproduces a plugin author hiding an import behind TYPE_CHECKING
+    from decimal import Decimal
 
 
 @runtime_checkable
@@ -409,6 +414,51 @@ class TestUnresolvableAnnotation:
 
         assert "widget" in str(exc_info.value)
         assert "broken" in str(exc_info.value)
+
+
+class TestTypeCheckingOnlyAnnotation:
+    """A name available only to a type checker is reported, not raised as NameError."""
+
+    def test_required_param_raises_unresolvable(self) -> None:
+        def plan(amount: Decimal) -> MsgGenerator[None]:
+            yield from ()
+
+        with pytest.raises(UnresolvableAnnotationError) as exc_info:
+            create_plan_spec(plan, {})
+
+        err = exc_info.value
+        assert err.plan_name == "plan"
+        assert err.param_name == "amount"
+        assert err.annotation == "Decimal"
+
+    def test_unresolvable_return_raises_unresolvable(self) -> None:
+        def plan(count: int) -> Decimal:  # type: ignore[misc]
+            yield from ()
+
+        with pytest.raises(UnresolvableAnnotationError) as exc_info:
+            create_plan_spec(plan, {})  # type: ignore[arg-type]
+
+        assert exc_info.value.param_name == "return"
+
+    def test_resolvable_siblings_do_not_mask_the_bad_one(self) -> None:
+        """The failure names the offending parameter, not the first one."""
+
+        def plan(count: int, path: Path, amount: Decimal) -> MsgGenerator[None]:
+            yield from ()
+
+        with pytest.raises(UnresolvableAnnotationError) as exc_info:
+            create_plan_spec(plan, {})
+
+        assert exc_info.value.param_name == "amount"
+
+    def test_optional_unresolvable_param_still_raises(self) -> None:
+        """Strict by design: a default does not make an unreadable name acceptable."""
+
+        def plan(amount: Decimal | None = None) -> MsgGenerator[None]:
+            yield from ()
+
+        with pytest.raises(UnresolvableAnnotationError):
+            create_plan_spec(plan, {})
 
 
 class TestDispatchAnnotation:

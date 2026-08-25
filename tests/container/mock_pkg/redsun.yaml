@@ -14,3 +14,4 @@ presenters:
 views:
   mock_view: mock_pkg.view:MockQtView
   motor_view: mock_pkg.view:MockMotorView
+  bad_view: mock_pkg.view:NotAView
