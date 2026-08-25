@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import pytest
 from mock_pkg.controller import AsyncMotorController
 from mock_pkg.view import MockMotorView
-from psygnal.qt import start_emitting_from_queue
 
 from redsun.containers import AppContainer, declare_presenter, declare_view
 
@@ -51,7 +50,6 @@ def test_emission_from_a_worker_is_delivered_on_the_main_thread(
     app: _App, qapp: QApplication
 ) -> None:
     """The queued emission runs where Qt widgets can be touched."""
-    start_emitting_from_queue()
     main = threading.get_ident()
 
     worker = threading.Thread(

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import logging
 import logging.config
+from collections import deque
 from functools import cached_property
 
-__all__ = ["Loggable"]
+from psygnal import Signal
+
+__all__ = ["BufferHandler", "Loggable", "log_buffer"]
 
 from typing import TYPE_CHECKING
 
@@ -89,6 +92,40 @@ class DebugFilter(logging.Filter):
         return record.levelno < logging.INFO
 
 
+class BufferHandler(logging.Handler):
+    """Retain the most recent log records, and announce each one as it arrives.
+
+    The records outlive the moment they were emitted, so a consumer built later
+    in the session can still show what happened before it existed. The oldest
+    are dropped once *capacity* is reached.
+
+    Parameters
+    ----------
+    capacity : int
+        How many records to retain.
+    """
+
+    sig_record = Signal(logging.LogRecord)
+
+    def __init__(self, capacity: int = 10_000) -> None:
+        super().__init__()
+        self._records: deque[logging.LogRecord] = deque(maxlen=capacity)
+
+    @property
+    def records(self) -> tuple[logging.LogRecord, ...]:
+        """The retained records, oldest first."""
+        return tuple(self._records)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Retain *record* and announce it."""
+        self._records.append(record)
+        self.sig_record.emit(record)
+
+    def clear(self) -> None:
+        """Drop every retained record."""
+        self._records.clear()
+
+
 config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -100,6 +137,7 @@ config = {
         "debug_filter": {"()": DebugFilter},
     },
     "handlers": {
+        "buffer": {"()": BufferHandler, "level": "DEBUG"},
         "info": {
             "class": "logging.StreamHandler",
             "level": "INFO",
@@ -116,12 +154,30 @@ config = {
         },
     },
     "loggers": {
-        "redsun": {"level": "DEBUG", "propagate": True, "handlers": ["info", "debug"]}
+        "redsun": {
+            "level": "DEBUG",
+            "propagate": True,
+            "handlers": ["info", "debug", "buffer"],
+        }
     },
 }
 
 logging.config.dictConfig(config)
 logger = logging.getLogger("redsun")
+
+
+def log_buffer() -> BufferHandler:
+    """Return the buffer holding this session's log records.
+
+    Raises
+    ------
+    RuntimeError
+        If the logging configuration no longer carries a buffer.
+    """
+    for handler in logger.handlers:
+        if isinstance(handler, BufferHandler):
+            return handler
+    raise RuntimeError("no BufferHandler is installed on the 'redsun' logger")
 
 
 class Loggable:

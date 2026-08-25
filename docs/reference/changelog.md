@@ -24,6 +24,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   callers that already handle `UnresolvableAnnotationError` can skip it
   instead of failing the surrounding build.
 
+### Added
+
+- `BufferHandler` and `log_buffer()` (`redsun.log`) - the session's log records,
+  retained as they are emitted. The handler is installed on the `redsun` logger
+  alongside the stdout ones and keeps the most recent 10 000 records, so a
+  consumer built later in the session can still show what happened before it
+  existed.
+- `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
+  records, colour-coded by level. Buttons choose the lowest level displayed,
+  redrawing from the buffer so raising the threshold never discards anything,
+  and `Save logs...` writes every buffered record regardless of what is on
+  screen. Available from a configuration file as `plugin_name: redsun`,
+  `plugin_id: logs` under `views`.
+
 ## [0.11.0] 01-08-2026
 
 ### Added
