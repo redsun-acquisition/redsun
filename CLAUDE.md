@@ -125,6 +125,12 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 - psygnal signal attributes are `sig_snake_case` (the `sig_` prefix is
   optional), never `sigCamelCase`. Same-named signals across components are
   discerned by owner: `find_signals(container, names, owner=...)` (ADR 0004).
+- **A `__slots__` class that owns a psygnal `Signal` needs `__weakref__` among
+  its slots.** psygnal refers to a signal's owner weakly, and silently falls
+  back to a strong reference when it cannot; a slotted class cannot be referred
+  to weakly without that slot, and on the fallback the owner is never collected
+  - taking everything it holds with it. A class with a `__dict__` never reaches
+  that path, so this only bites where `__slots__` is declared.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring + `docs/reference/changelog.md` entry. The root
   `CHANGELOG.md` is only a redirect to it; never add entries there.

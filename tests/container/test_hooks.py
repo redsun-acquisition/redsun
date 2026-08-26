@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import gc
 import logging
+import weakref
 
 import pytest
 from mock_pkg import hooks as mock_hooks
+from mock_pkg.device import MyMotor
 
-from redsun.containers import AppContainer, HookError
+from redsun.containers import AppContainer, HookError, declare_device
 
 _PROVIDER = "mock_pkg.hooks:RecordingHook"
 
@@ -279,3 +282,73 @@ class TestHookTeardown:
         app.shutdown()
 
         assert app.phases == AppContainer().phases
+
+
+class TestSessionMoment:
+    """Tests for the after-the-session-is-built moment and its progress signal."""
+
+    def test_a_session_hook_sees_a_finished_container(self) -> None:
+        hook = mock_hooks.SessionHook()
+
+        class TestApp(AppContainer):
+            hooks = (hook,)
+
+            motor = declare_device(
+                MyMotor,
+                axis=["X"],
+                step_size={"X": 0.1},
+                egu="mm",
+                integer=1,
+                floating=1.0,
+                string="s",
+            )
+
+        TestApp().build()
+
+        assert hook.saw == {"devices": 1, "presenters": 0, "views": 0}
+
+    def test_the_phase_signal_reports_every_phase_in_order(self) -> None:
+        watcher = mock_hooks.PhaseWatcher()
+
+        class TestApp(AppContainer):
+            hooks = (watcher,)
+
+        app = TestApp().build()
+
+        assert watcher.seen == app.phases
+
+    def test_the_phase_signal_reports_a_registered_phase_too(self) -> None:
+        seen: list[str] = []
+        app = AppContainer()
+        app.sig_phase_complete.connect(seen.append)
+        app.register_phase("mine", lambda: None, after="devices")
+
+        app.build()
+
+        assert seen == app.phases
+        assert "mine" in seen
+
+    def test_the_signal_is_per_container(self) -> None:
+        first, second = AppContainer(), AppContainer()
+
+        assert first.sig_phase_complete is not second.sig_phase_complete
+
+    def test_a_container_is_collected_once_dropped(self) -> None:
+        # psygnal refers to a signal's owner weakly, and falls back to a strong
+        # reference when it cannot. A slotted class cannot be referred to
+        # weakly unless __weakref__ is one of its slots, and on that fallback
+        # no container is ever collected.
+        gc.collect()
+        cache = AppContainer.__dict__["sig_phase_complete"]._signal_instance_cache
+        before = len(cache)
+
+        app = AppContainer()
+        app.sig_phase_complete.connect(lambda _: None)
+        ref = weakref.ref(app)
+        assert len(cache) == before + 1
+
+        del app
+        gc.collect()
+
+        assert ref() is None
+        assert len(cache) == before

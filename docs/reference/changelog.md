@@ -24,6 +24,33 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.build()
   ```
 
+- `ConfiguresSession`, a hook point that runs once every component is built,
+  wired and injected. It is the closing half of the pair `ConfiguresBuild`
+  opens: previously the only way to reach that point was
+  `register_phase(..., after="injection")`, which names an implementation
+  detail to get somewhere the lifecycle already describes. It fires after
+  `is_built` is set, so a hook can read `devices`, `presenters` and `views`.
+
+- `AppContainer.sig_phase_complete`, emitted with the name of each build phase
+  as it finishes. For watching the build rather than taking part in it: a
+  splash screen naming the step in progress connects to this in
+  `configure_build`, where adding a phase per step would mean registering
+  seven phases to display seven labels.
+
+  ```python
+  class Splash:
+      def configure_build(self, container: AppContainer) -> None:
+          container.sig_phase_complete.connect(self._show)
+
+      def _show(self, phase: str) -> None: ...
+  ```
+
+  `AppContainer.__slots__` gains `__weakref__` to carry this signal. psygnal
+  refers to a signal's owner weakly and falls back to a strong reference when
+  it cannot; a class using `__slots__` cannot be referred to weakly unless
+  `__weakref__` is among its slots, and on that fallback no container is ever
+  collected. Any `__slots__` class owning a psygnal `Signal` needs the same.
+
 - **Container hooks** - an object a session installs on its application
   container to adjust the application as a whole, rather than any one
   component. A provider implements `ConfiguresBuild` to adjust the build
