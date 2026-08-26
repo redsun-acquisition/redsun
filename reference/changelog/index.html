@@ -3372,6 +3372,34 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
 </span></code></pre></div>
 <ul>
+<li>
+<p><code>ConfiguresSession</code>, a hook point that runs once every component is built,
+  wired and injected. It is the closing half of the pair <code>ConfiguresBuild</code>
+  opens: previously the only way to reach that point was
+  <code>register_phase(..., after="injection")</code>, which names an implementation
+  detail to get somewhere the lifecycle already describes. It fires after
+  <code>is_built</code> is set, so a hook can read <code>devices</code>, <code>presenters</code> and <code>views</code>.</p>
+</li>
+<li>
+<p><code>AppContainer.sig_phase_complete</code>, emitted with the name of each build phase
+  as it finishes. For watching the build rather than taking part in it: a
+  splash screen naming the step in progress connects to this in
+  <code>configure_build</code>, where adding a phase per step would mean registering
+  seven phases to display seven labels.</p>
+</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="n">container</span><span class="o">.</span><span class="n">sig_phase_complete</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p><code>AppContainer.__slots__</code> gains <code>__weakref__</code> to carry this signal. psygnal
+  refers to a signal's owner weakly and falls back to a strong reference when
+  it cannot; a class using <code>__slots__</code> cannot be referred to weakly unless
+  <code>__weakref__</code> is among its slots, and on that fallback no container is ever
+  collected. Any <code>__slots__</code> class owning a psygnal <code>Signal</code> needs the same.</p>
+<ul>
 <li><strong>Container hooks</strong> - an object a session installs on its application
   container to adjust the application as a whole, rather than any one
   component. A provider implements <code>ConfiguresBuild</code> to adjust the build
@@ -3380,14 +3408,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <p>Providers are named in a configuration file by dotted path, with the
   remaining keys forwarded to the constructor:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.hooks:Calibration"</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">passes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.hooks:Calibration"</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">passes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
 </span></code></pre></div>
 <p>or listed as instances on a container class, which is what an author writing
   Python already holds:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">hooks</span> <span class="o">=</span> <span class="p">(</span><span class="n">Calibration</span><span class="p">(</span><span class="n">passes</span><span class="o">=</span><span class="mi">3</span><span class="p">),)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">hooks</span> <span class="o">=</span> <span class="p">(</span><span class="n">Calibration</span><span class="p">(</span><span class="n">passes</span><span class="o">=</span><span class="mi">3</span><span class="p">),)</span>
 </span></code></pre></div>
 <p>The two sources concatenate, class-level first, and neither overrides the
   other. A subclass inherits what its bases declare. <code>HookError</code> is raised for
@@ -3498,8 +3526,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>inject_dependencies</code>. <strong>Breaking:</strong> an application that relied on that
   discovery must now connect them, in <code>wire()</code> or in the <code>wiring:</code> section:</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Which signals announce a plan is the application's knowledge; the presenter
   no longer guesses it from a name, and a misspelled one now fails instead of
@@ -3729,7 +3757,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>redsun.qt</code> public namespace exposing <code>QtAppContainer</code> for use in explicit,
   developer-written application configurations:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span></code></pre></div></li>
 <li>Clarified documentation</li>
 </ul>
@@ -3750,16 +3778,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>AppContainer</code> and <code>component</code> are now importable directly from the top-level
   <code>redsun</code> package:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
 </span></code></pre></div></li>
 </ul>
 <h3 id="changed_8">Changed<a class="headerlink" href="#changed_8" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>component()</code> now takes the component class as its first positional argument:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Before</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># After</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Before</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># After</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
 </span></code></pre></div></li>
 <li><code>RedSunConfig</code> removed from the public API; it is an internal <code>TypedDict</code> used
   only for YAML configuration validation.</li>
