@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from qtpy.QtWidgets import QApplication, QMainWindow
+
     from redsun.containers import AppContainer
 
 installed: list[str] = []
@@ -71,3 +73,30 @@ class PhaseWatcher:
 
     def configure_build(self, container: AppContainer) -> None:
         container.sig_phase_complete.connect(self.seen.append)
+
+
+class QtStyleHook:
+    """Styles the application, and records the window it is given."""
+
+    def __init__(self, stylesheet: str = "QWidget { color: red; }") -> None:
+        self.stylesheet = stylesheet
+        self.window: object | None = None
+        self._app: QApplication | None = None
+
+    def configure_application(self, app: QApplication) -> None:
+        self._app = app
+        app.setStyleSheet(self.stylesheet)
+
+    def configure_main_view(self, view: QMainWindow) -> None:
+        self.window = view
+
+    def shutdown(self) -> None:
+        if self._app is not None:
+            self._app.setStyleSheet("")
+
+
+class QtOnlyHook:
+    """Implements a Qt hook point and nothing a headless container calls."""
+
+    def configure_application(self, app: QApplication) -> None:
+        app.setStyleSheet("")

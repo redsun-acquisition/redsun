@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import threading
-from typing import Any
+from typing import Any, cast
 
 from psygnal import Signal
-from qtpy.QtWidgets import QPushButton
+from qtpy.QtWidgets import QApplication, QPushButton
 
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
@@ -59,3 +59,22 @@ class MockMotorView(QtView):
 
     def _on_move_clicked(self) -> None:
         self.sig_motor_move.emit(self.motor, self.position)
+
+
+class StyleRecordingView(QtView):
+    """Records the application stylesheet in force when it is constructed.
+
+    A hook that styles the application has to run before any view exists;
+    asserting on a call list alone cannot tell that apart from running after.
+    """
+
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        super().__init__(name, **kwargs)
+        app = QApplication.instance()
+        self.stylesheet_at_build = (
+            cast("QApplication", app).styleSheet() if app is not None else ""
+        )
+
+    @property
+    def view_position(self) -> ViewPosition:
+        return ViewPosition.CENTER

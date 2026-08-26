@@ -7,20 +7,61 @@ from abc import abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from redsun.containers.container import AppContainer
 
-__all__ = ["ConfiguresBuild", "ConfiguresSession", "HookError"]
+__all__ = [
+    "ConfiguresApplication",
+    "ConfiguresBuild",
+    "ConfiguresMainView",
+    "ConfiguresSession",
+    "CreatesApplication",
+    "HookError",
+]
+
+AppT_co = TypeVar("AppT_co", covariant=True)
+AppT_contra = TypeVar("AppT_contra", contravariant=True)
+ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
 
 logger = logging.getLogger("redsun")
 
 
 class HookError(RuntimeError):
     """A ``hooks`` configuration entry cannot be turned into a provider."""
+
+
+@runtime_checkable
+class CreatesApplication(Protocol[AppT_co]):
+    """Supplies the toolkit's application object instead of the container."""
+
+    @abstractmethod
+    def create_application(self, argv: list[str]) -> AppT_co:
+        """Return the application object the session runs on."""
+        ...
+
+
+@runtime_checkable
+class ConfiguresApplication(Protocol[AppT_contra]):
+    """Adjusts the application before any view is constructed."""
+
+    @abstractmethod
+    def configure_application(self, app: AppT_contra) -> None:
+        """Act on *app*, which every view is about to be built against."""
+        ...
+
+
+@runtime_checkable
+class ConfiguresMainView(Protocol[ViewT_contra]):
+    """Adjusts the main window after it is built and before it is shown."""
+
+    @abstractmethod
+    def configure_main_view(self, view: ViewT_contra) -> None:
+        """Act on *view*, the window the session is about to show."""
+        ...
 
 
 @runtime_checkable
@@ -41,6 +82,20 @@ class ConfiguresSession(Protocol):
     def configure_session(self, container: AppContainer) -> None:
         """Act on *container* now that the whole session exists."""
         ...
+
+
+HOOK_PROTOCOLS: tuple[type, ...] = (
+    CreatesApplication,
+    ConfiguresApplication,
+    ConfiguresMainView,
+    ConfiguresBuild,
+    ConfiguresSession,
+)
+"""Every hook protocol redsun defines, whichever container calls it.
+
+A container names the subset it calls in ``_hook_protocols``; the difference
+between the two is what a provider implements in vain.
+"""
 
 
 @dataclass(frozen=True, slots=True)

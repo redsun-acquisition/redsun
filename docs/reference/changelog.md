@@ -24,6 +24,44 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.build()
   ```
 
+- **Qt hook points.** `QtAppContainer` now runs
+  `redsun.qt.QtConfiguresApplication` providers against the `QApplication`
+  before the base build constructs any view, so a view is built against an
+  application already carrying its stylesheet, and
+  `redsun.qt.QtConfiguresMainView` providers against the main window as it is
+  created, before it is shown.
+
+  ```yaml
+  hooks:
+    - provider: "mypkg.theme:DarkTheme"
+  ```
+
+  ```python
+  class DarkTheme:
+      def configure_application(self, app: QApplication) -> None:
+          app.setStyleSheet(...)
+  ```
+
+  `QtConfiguresMainView` is bound to `QMainWindow`, not to the concrete window
+  class the container builds, so a hook is written against the toolkit and
+  imports nothing from redsun to annotate it. The window class stays an
+  implementation detail and stays free to change.
+
+  The three protocols are generic over the toolkit object
+  (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`), and
+  each toolkit supplies aliases rather than protocols of its own, so a plugin
+  author learns three names rather than three per toolkit. `create_application`
+  is declared but not yet called by any container.
+
+- A hook provider that implements a hook point its container never calls is
+  now logged as a warning naming the protocol. It still resolves, since a
+  provider may legitimately serve several toolkits, but silence is what a
+  typo'd method name looks like. A provider implementing nothing the container
+  calls still raises.
+
+- `QtAppContainer` gained `_ensure_main_view`, so the main window is built
+  and configured once, whether reached through `run` or directly.
+
 - `ConfiguresSession`, a hook point that runs once every component is built,
   wired and injected. It is the closing half of the pair `ConfiguresBuild`
   opens: previously the only way to reach that point was

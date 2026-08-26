@@ -54,6 +54,35 @@ the semantic content, so:
 - Registration is only legal before `build`, mirroring the storage layer's rule
   that `register` is legal only before `open`.
 
+**Toolkit hook points are one generic protocol each, aliased per toolkit.**
+What differs between toolkits is the objects, not the moments: Qt has a
+`QApplication` and a main window, wx has `wx.App` and `wx.Frame`, Tk merges
+both into one, a web frontend has no application object at all. So
+`CreatesApplication`, `ConfiguresApplication` and `ConfiguresMainView` are
+parameterised on the object and each toolkit supplies aliases, rather than
+protocols of its own. There are three protocol names in total, forever, and a
+plugin author learns three rather than three times the number of toolkits.
+
+The variance is forced, not stylistic: `create_application` returns the
+application so its variable is covariant, `configure_application` accepts one
+so its variable is contravariant, and a single shared variable does not
+compile. Contravariance also means a hook point is satisfied by a *wider*
+parameter - a `configure_main_view` taking `QWidget` legitimately satisfies one
+demanding a main window - which is correct and worth knowing when reading the
+type-level tests.
+
+Static checking is the whole point of the parameter, because runtime checking
+cannot reach it: `isinstance` refuses a parameterised protocol, so a container
+narrows to the bare form and a provider built for the wrong toolkit is only
+caught when called. `tests/typing/qt_hook_aliases.py` pins what mypy sees.
+
+**A provider implementing a hook point its container never calls is warned
+about, not refused.** A container names the subset of `HOOK_PROTOCOLS` it calls
+in `_hook_protocols`; the difference is what a provider implements in vain. A
+provider serving several toolkits is legitimate, so this is not an error - but
+it is inert, and silence is exactly what a typo'd method name looks like.
+Implementing *nothing* the container calls still raises.
+
 **Hook providers are plain objects, checked structurally.** A provider
 implements `ConfiguresBuild` to adjust the sequence, `HasShutdown` to undo what
 it did, or both; each is checked independently with `isinstance`, which is the

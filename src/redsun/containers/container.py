@@ -36,6 +36,7 @@ from psygnal import Signal
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers._hooks import (
+    HOOK_PROTOCOLS,
     ConfiguresBuild,
     ConfiguresSession,
     HookError,
@@ -390,7 +391,7 @@ class AppContainer:
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
-        self._hooks: tuple[object, ...] = ()
+        self._hooks: tuple[object, ...] | None = None
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
@@ -533,11 +534,11 @@ class AppContainer:
 
         logger.info("Building application container...")
 
-        self._hooks = self._resolve_hook_providers()
+        hooks = self._ensure_hooks()
         # what a hook adds to the sequence is undone when it is torn down, so
         # that a container built a second time does not accumulate phases
         self._phases_before_hooks = dict(self._phases)
-        for hook in self._hooks:
+        for hook in hooks:
             if isinstance(hook, ConfiguresBuild):
                 hook.configure_build(self)
 
@@ -549,7 +550,7 @@ class AppContainer:
         # before the session hooks, so that a hook reading `views`,
         # `presenters` or `devices` is not turned away by their build guard
         self._is_built = True
-        for hook in self._hooks:
+        for hook in hooks:
             if isinstance(hook, ConfiguresSession):
                 hook.configure_session(self)
 
@@ -620,6 +621,17 @@ class AppContainer:
         if self._is_built:
             raise RuntimeError(f"cannot {action} after the container is built")
 
+    def _ensure_hooks(self) -> tuple[object, ...]:
+        """Return the hook providers, resolving them once per build.
+
+        A subclass firing its own hook points calls this rather than resolving
+        again, so that every hook point of one build acts on one set of
+        providers.
+        """
+        if self._hooks is None:
+            self._hooks = self._resolve_hook_providers()
+        return self._hooks
+
     def _resolve_hook_providers(self) -> tuple[object, ...]:
         """Instantiate the class-level hook providers, then the configured ones.
 
@@ -641,11 +653,31 @@ class AppContainer:
                     f"the hook protocols {type(self).__name__} calls, so it "
                     f"would do nothing. It must implement one of: {known}."
                 )
+            self._warn_unused_hook_points(hook)
         return tuple(resolved)
+
+    def _warn_unused_hook_points(self, hook: object) -> None:
+        """Warn about protocols *hook* implements that this container never calls.
+
+        A provider written for another toolkit is not an error here, since it
+        may legitimately serve several; it is only inert, which is worth saying
+        out loud because silence is what a typo'd method name looks like.
+        """
+        unused = [
+            protocol.__name__
+            for protocol in HOOK_PROTOCOLS
+            if protocol not in self._hook_protocols and isinstance(hook, protocol)
+        ]
+        if unused:
+            logger.warning(
+                f"Hook provider '{type(hook).__name__}' implements "
+                f"{', '.join(sorted(unused))}, which {type(self).__name__} "
+                "never calls; those hook points will not run"
+            )
 
     def _shutdown_hooks(self) -> None:
         """Undo what the hook providers did, in reverse order of installation."""
-        for hook in reversed(self._hooks):
+        for hook in reversed(self._hooks or ()):
             if isinstance(hook, HasShutdown):
                 try:
                     hook.shutdown()
@@ -657,7 +689,7 @@ class AppContainer:
         # means `build` never took one and there is nothing to restore
         if self._phases_before_hooks:
             self._phases = self._phases_before_hooks
-        self._hooks = ()
+        self._hooks = None
 
     def _create_virtual_container(self) -> None:
         """Create the VirtualContainer and hand it the session configuration."""
