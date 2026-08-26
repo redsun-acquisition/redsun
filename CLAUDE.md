@@ -97,6 +97,20 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   symbols need docstrings; `D100`/`D104` are ignored.
 - Private modules are `_underscored`; the package `__init__.py` re-exports the
   public surface with explicit `__all__`. Add new public symbols to both.
+- **The underscore marks what `__all__` cannot.** A module named `_foo.py` is
+  private in its entirety, so its **module-level members carry no underscore** -
+  the module name already said it, and repeating it at every call site is noise.
+  What is public is what the package `__init__.py` lists in `__all__`.
+  **Class members always keep the underscore**, in a private module too:
+  `__all__` is module-scoped and can never say that a method is private, and the
+  docs filter (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's
+  autocomplete both key on the name. So `_hooks.py` holds `parse_hook_specs`,
+  but `AppContainer._build_devices` stays underscored.
+  Two consequences: ruff `D103` treats a non-underscore function as public, so
+  helpers in a private module need docstrings; and a reference page targeting a
+  *module* rather than an object needs an explicit `members:` list, because
+  mkdocstrings selects `__all__` **union** non-underscore members, never
+  `__all__` alone.
 - Public methods are named in the imperative: `wire`, `build`, `connect`,
   `release`, not `wiring`, `building` or `connection`. A method does something;
   the name says what it does, not what it is. Nouns are for the things a method

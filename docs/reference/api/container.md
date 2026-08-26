@@ -17,6 +17,14 @@
     options:
       show_root_heading: true
 
+::: redsun.containers.ConfiguresBuild
+    options:
+      show_root_heading: true
+
+::: redsun.containers.HookError
+    options:
+      show_root_heading: true
+
 ::: redsun.qt.QtAppContainer
     options:
       show_root_heading: true

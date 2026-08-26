@@ -15,7 +15,7 @@ class HasShutdown(Protocol):  # pragma: no cover
     def shutdown(self) -> None:
         """Shutdown an object. Perform cleanup operations.
 
-        For use in presenters.
+        For use in presenters and in container hooks.
         """
         ...
 

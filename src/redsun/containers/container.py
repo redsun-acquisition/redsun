@@ -8,6 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+# resolved at runtime: the ClassVar annotation below is evaluated by ruff's
+# runtime-evaluated rules and by anything calling get_type_hints on a subclass
+from collections.abc import Sequence  # noqa: TC003
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -30,6 +34,12 @@ from ophyd_async.core import Device
 
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
+from redsun.containers._hooks import (
+    ConfiguresBuild,
+    HookError,
+    parse_hook_specs,
+    resolve_hooks,
+)
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
@@ -154,6 +164,19 @@ _PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
     "views": "must accept exactly ('name',) as its leading positional parameter",
 }
 
+_BUILTIN_PHASES: frozenset[str] = frozenset(
+    {
+        "virtual_container",
+        "devices",
+        "presenters",
+        "views",
+        "providers",
+        "wiring",
+        "injection",
+    }
+)
+"""The phases every container runs, which no caller may remove or reorder."""
+
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
@@ -199,8 +222,10 @@ class AppContainer:
         "_components",
         "_config",
         "_devices_connected",
+        "_hooks",
         "_is_built",
         "_phases",
+        "_phases_before_hooks",
         "_virtual_container",
     )
 
@@ -208,6 +233,21 @@ class AppContainer:
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
     _config_path: ClassVar[Path | None] = None
+
+    hooks: ClassVar[Sequence[object]] = ()
+    """Hook providers this container installs, ahead of the configured ones.
+
+    Instances, not class paths: a container class is written in Python, where
+    the provider is already in hand. A subclass inherits what its bases
+    declare, ahead of its own.
+    """
+
+    _hook_protocols: ClassVar[tuple[type, ...]] = (ConfiguresBuild, HasShutdown)
+    """The hook protocols this container calls.
+
+    A provider satisfying none of them is refused, since it would silently do
+    nothing. A subclass adding hook points extends this.
+    """
 
     def __init_subclass__(
         cls,
@@ -309,6 +349,12 @@ class AppContainer:
         cls._presenter_components = presenters
         cls._view_components = views
 
+        inherited: list[object] = []
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                inherited.extend(base.hooks)
+        cls.hooks = (*inherited, *namespace.get("hooks", ()))
+
         if devices or presenters or views:
             logger.debug(
                 f"Collected from {cls.__name__}: "
@@ -324,6 +370,7 @@ class AppContainer:
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
+        self._hooks: tuple[object, ...] = ()
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
@@ -340,6 +387,7 @@ class AppContainer:
             "wiring": self._apply_wiring,
             "injection": self._inject_dependencies,
         }
+        self._phases_before_hooks: dict[str, BuildPhase] = {}
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -443,7 +491,9 @@ class AppContainer:
     def build(self) -> Self:
         """Instantiate all components in dependency order.
 
-        The registered phases run in order:
+        Hook providers are resolved first and given the chance to adjust the
+        sequence, which is why registering a phase is only legal until here.
+        The registered phases then run in order:
 
         1. VirtualContainer
         2. Devices
@@ -463,6 +513,14 @@ class AppContainer:
 
         logger.info("Building application container...")
 
+        self._hooks = self._resolve_hook_providers()
+        # what a hook adds to the sequence is undone when it is torn down, so
+        # that a container built a second time does not accumulate phases
+        self._phases_before_hooks = dict(self._phases)
+        for hook in self._hooks:
+            if isinstance(hook, ConfiguresBuild):
+                hook.configure_build(self)
+
         for name, phase in self._phases.items():
             phase()
             logger.debug(f"Build phase '{name}' complete")
@@ -476,6 +534,103 @@ class AppContainer:
         )
 
         return self
+
+    @property
+    def phases(self) -> list[str]:
+        """The build phases, in the order `build` runs them."""
+        return list(self._phases)
+
+    def register_phase(self, name: str, phase: BuildPhase, *, after: str) -> None:
+        """Add *phase* to the build sequence, directly after the phase *after*.
+
+        There is no default position: where a phase runs is what it means, so
+        *after* names an existing phase and is required.
+
+        Raises
+        ------
+        RuntimeError
+            If the container is already built.
+        ValueError
+            If *name* is already registered, or *after* is not a known phase.
+        """
+        self._refuse_after_build("register a phase")
+        if name in self._phases:
+            raise ValueError(f"build phase {name!r} is already registered")
+        if after not in self._phases:
+            raise ValueError(
+                f"cannot place phase {name!r} after unknown phase {after!r}. "
+                f"Known phases: {', '.join(self._phases)}"
+            )
+        rebuilt: dict[str, BuildPhase] = {}
+        for existing, existing_phase in self._phases.items():
+            rebuilt[existing] = existing_phase
+            if existing == after:
+                rebuilt[name] = phase
+        self._phases = rebuilt
+
+    def unregister_phase(self, name: str) -> None:
+        """Remove a previously registered phase.
+
+        Raises
+        ------
+        RuntimeError
+            If the container is already built.
+        ValueError
+            If *name* is not registered, or names one of the built-in phases:
+            the order they run in is what the container guarantees.
+        """
+        self._refuse_after_build("unregister a phase")
+        if name in _BUILTIN_PHASES:
+            raise ValueError(
+                f"build phase {name!r} is built in and cannot be removed. "
+                f"Built-in phases: {', '.join(_BUILTIN_PHASES)}"
+            )
+        if name not in self._phases:
+            raise ValueError(f"build phase {name!r} is not registered")
+        del self._phases[name]
+
+    def _refuse_after_build(self, action: str) -> None:
+        if self._is_built:
+            raise RuntimeError(f"cannot {action} after the container is built")
+
+    def _resolve_hook_providers(self) -> tuple[object, ...]:
+        """Instantiate the class-level hook providers, then the configured ones.
+
+        Raises
+        ------
+        HookError
+            If an entry does not resolve, or a provider satisfies none of the
+            hook protocols this container calls.
+        """
+        resolved: list[object] = [
+            *type(self).hooks,
+            *resolve_hooks(parse_hook_specs(self._config.get("hooks", []))),
+        ]
+        for hook in resolved:
+            if not isinstance(hook, self._hook_protocols):
+                known = ", ".join(p.__name__ for p in self._hook_protocols)
+                raise HookError(
+                    f"hook provider {type(hook).__name__!r} implements none of "
+                    f"the hook protocols {type(self).__name__} calls, so it "
+                    f"would do nothing. It must implement one of: {known}."
+                )
+        return tuple(resolved)
+
+    def _shutdown_hooks(self) -> None:
+        """Undo what the hook providers did, in reverse order of installation."""
+        for hook in reversed(self._hooks):
+            if isinstance(hook, HasShutdown):
+                try:
+                    hook.shutdown()
+                except Exception as e:  # noqa: BLE001 - one failure must not block the rest
+                    logger.error(
+                        f"Error shutting down hook '{type(hook).__name__}': {e}"
+                    )
+        # a container always holds the built-in phases, so an empty snapshot
+        # means `build` never took one and there is nothing to restore
+        if self._phases_before_hooks:
+            self._phases = self._phases_before_hooks
+        self._hooks = ()
 
     def _create_virtual_container(self) -> None:
         """Create the VirtualContainer and hand it the session configuration."""
@@ -570,7 +725,7 @@ class AppContainer:
         self._devices_connected = True
 
     def shutdown(self) -> None:
-        """Shutdown all presenters that implement ``HasShutdown``."""
+        """Shutdown all presenters and hooks that implement ``HasShutdown``."""
         if not self._is_built:
             return
 
@@ -583,6 +738,9 @@ class AppContainer:
                     comp.instance.shutdown()
                 except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
+
+        # after the components, which may still be using what a hook installed
+        self._shutdown_hooks()
 
         self._is_built = False
         logger.info("Container shutdown complete")
@@ -630,6 +788,8 @@ class AppContainer:
         )
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
+        if "hooks" in config:
+            instance._config["hooks"] = config["hooks"]
 
         return instance
 
