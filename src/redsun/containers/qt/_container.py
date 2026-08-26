@@ -58,6 +58,18 @@ class QtAppContainer(AppContainer):
             raise RuntimeError("Main view not built. Call run() first.")
         return self._main_view
 
+    def _ensure_application(self) -> QApplication:
+        """Return the ``QApplication``, creating one if none is running yet.
+
+        A widget cannot be constructed without one, so every entry point that
+        may reach a view goes through here first.
+        """
+        if self._qt_app is None:
+            self._qt_app = cast(
+                "QApplication", QApplication.instance() or QApplication(sys.argv)
+            )
+        return self._qt_app
+
     def build(self) -> QtAppContainer:
         """Ensure a ``QApplication`` and an async backend exist, then build.
 
@@ -66,10 +78,7 @@ class QtAppContainer(AppContainer):
         view components that instantiate ``QWidget`` subclasses have a valid
         application object available.
         """
-        if self._qt_app is None:
-            self._qt_app = cast(
-                "QApplication", QApplication.instance() or QApplication(sys.argv)
-            )
+        self._ensure_application()
         # coroutine slots resolve a backend when they are connected, which
         # happens during the dependency injection phase of super().build()
         set_async_backend()
@@ -83,15 +92,11 @@ class QtAppContainer(AppContainer):
 
     def run(self) -> NoReturn:
         """Build and launch the Qt application."""
-        if self._qt_app is None:
-            self._qt_app = cast(
-                "QApplication", QApplication.instance() or QApplication(sys.argv)
-            )
+        qt_app = self._ensure_application()
 
         if not self.is_built:
             self.build()
 
-        assert self._qt_app is not None  # guaranteed by build() above
         session_name = self._config.get("session", "Redsun")
         self._main_view = QtMainView(
             virtual_container=self.virtual_container,
@@ -99,8 +104,8 @@ class QtAppContainer(AppContainer):
             views=cast("dict[str, QtView]", self.views),
         )
 
-        self._qt_app.aboutToQuit.connect(self.shutdown)
+        qt_app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
 
         self._main_view.show()
-        sys.exit(self._qt_app.exec())
+        sys.exit(qt_app.exec())
