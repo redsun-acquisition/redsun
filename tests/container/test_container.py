@@ -38,7 +38,7 @@ from redsun.view import PView, ViewPosition
 from redsun.virtual import RedSunConfig, WiringError, ports
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 
 class TestComponentWrappers:
@@ -168,6 +168,52 @@ class TestComponentCollection:
 
 class TestAppContainerBuild:
     """Tests for the build lifecycle."""
+
+    def test_phases_are_registered_in_build_order(self) -> None:
+        assert list(AppContainer()._phases) == [
+            "virtual_container",
+            "devices",
+            "presenters",
+            "views",
+            "providers",
+            "wiring",
+            "injection",
+        ]
+
+    def test_build_runs_every_registered_phase_in_order(self) -> None:
+        calls: list[str] = []
+
+        def recorded(name: str, phase: Callable[[], None]) -> Callable[[], None]:
+            def run() -> None:
+                calls.append(name)
+                phase()
+
+            return run
+
+        app = AppContainer()
+        expected = list(app._phases)
+        for name, phase in list(app._phases.items()):
+            app._phases[name] = recorded(name, phase)
+
+        app.build()
+
+        assert calls == expected
+
+    def test_a_subclass_overriding_a_phase_is_the_one_that_runs(self) -> None:
+        calls: list[str] = []
+
+        class TestApp(AppContainer):
+            def _build_devices(self) -> None:
+                calls.append("devices")
+                super()._build_devices()
+
+            def _apply_wiring(self) -> None:
+                calls.append("wiring")
+                super()._apply_wiring()
+
+        TestApp().build()
+
+        assert calls == ["devices", "wiring"]
 
     def test_build_devices_and_presenters(self) -> None:
 
