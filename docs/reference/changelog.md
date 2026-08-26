@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Added
+
+- The build sequence is a registry a caller can add to.
+  `AppContainer.phases` reports the phases in the order `build` runs them, and
+  `register_phase(name, phase, after=...)` inserts a step after a named one.
+  `after` is required, since where a phase runs is what it means;
+  `unregister_phase` removes a registered phase but refuses the built-in ones,
+  whose order the container guarantees. Both are legal only before `build`.
+
+  ```python
+  app = MyApp()
+  app.register_phase("calibrate", calibrate, after="injection")
+  app.build()
+  ```
+
+- **Container hooks** - an object a session installs on its application
+  container to adjust the application as a whole, rather than any one
+  component. A provider implements `ConfiguresBuild` to adjust the build
+  sequence, `HasShutdown` to undo what it did, or both; each is checked on its
+  own, so a class defining one method is a complete provider.
+
+  Providers are named in a configuration file by dotted path, with the
+  remaining keys forwarded to the constructor:
+
+  ```yaml
+  hooks:
+    - provider: "mypkg.hooks:Calibration"
+      passes: 3
+  ```
+
+  or listed as instances on a container class, which is what an author writing
+  Python already holds:
+
+  ```python
+  class MyApp(QtAppContainer):
+      hooks = (Calibration(passes=3),)
+  ```
+
+  The two sources concatenate, class-level first, and neither overrides the
+  other. A subclass inherits what its bases declare. `HookError` is raised for
+  an entry that does not resolve, or a provider that satisfies none of the hook
+  protocols its container calls.
+
+  Hooks are torn down in reverse order with the container, after the
+  presenters; a failing teardown is logged and does not block the rest. The
+  container also restores the phase sequence it captured before the hooks ran,
+  so building a container twice does not accumulate phases.
+
+  See [Container hooks and the build phase
+  registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md).
+
 ## [0.11.1]
 
 ### Changed
