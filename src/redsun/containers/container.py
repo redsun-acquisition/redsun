@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from redsun.virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
+    BuildPhase: TypeAlias = Callable[[], None]
 
 ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
@@ -195,9 +196,11 @@ class AppContainer:
 
     __slots__ = (
         "_built_devices",
+        "_components",
         "_config",
         "_devices_connected",
         "_is_built",
+        "_phases",
         "_virtual_container",
     )
 
@@ -324,6 +327,19 @@ class AppContainer:
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
+        self._components: dict[str, _PresenterComponent | _ViewComponent] = {
+            **self._presenter_components,
+            **self._view_components,
+        }
+        self._phases: dict[str, BuildPhase] = {
+            "virtual_container": self._create_virtual_container,
+            "devices": self._build_devices,
+            "presenters": self._build_presenters,
+            "views": self._build_views,
+            "providers": self._register_providers,
+            "wiring": self._apply_wiring,
+            "injection": self._inject_dependencies,
+        }
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -427,14 +443,15 @@ class AppContainer:
     def build(self) -> Self:
         """Instantiate all components in dependency order.
 
-        Build order:
+        The registered phases run in order:
 
         1. VirtualContainer
         2. Devices
-        3. Presenters (register their providers in the VirtualContainer)
-        4. Views (inject dependencies from the VirtualContainer)
-        5. Wiring, connecting the signals and slots of built components
-        6. Remaining dependency injection
+        3. Presenters
+        4. Views
+        5. Providers, registered into the VirtualContainer
+        6. Wiring, connecting the signals and slots of built components
+        7. Remaining dependency injection
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -446,6 +463,22 @@ class AppContainer:
 
         logger.info("Building application container...")
 
+        for name, phase in self._phases.items():
+            phase()
+            logger.debug(f"Build phase '{name}' complete")
+
+        self._is_built = True
+        logger.info(
+            f"Container built: "
+            f"{len(self._device_components)} devices, "
+            f"{len(self._presenter_components)} presenters, "
+            f"{len(self._view_components)} views"
+        )
+
+        return self
+
+    def _create_virtual_container(self) -> None:
+        """Create the VirtualContainer and hand it the session configuration."""
         self._virtual_container = VirtualContainer()
 
         base_cfg: RedSunConfig = {
@@ -456,6 +489,8 @@ class AppContainer:
         self._virtual_container._set_configuration(base_cfg)
         logger.debug("VirtualContainer created")
 
+    def _build_devices(self) -> None:
+        """Build every declared device, skipping the ones that fail."""
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
@@ -463,14 +498,19 @@ class AppContainer:
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
+        self._built_devices = built_devices
 
+    def _build_presenters(self) -> None:
+        """Build every declared presenter against the built devices."""
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter_component.build(built_devices)
+                presenter_component.build(self._built_devices)
             except Exception as e:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
 
+    def _build_views(self) -> None:
+        """Build every declared view."""
         for comp_name, view_component in self._view_components.items():
             try:
                 view_component.build()
@@ -478,34 +518,29 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
 
-        all_components: dict[str, _PresenterComponent | _ViewComponent] = {
-            **self._presenter_components,
-            **self._view_components,
-        }
-        for comp_name, component in all_components.items():
+    def _register_providers(self) -> None:
+        """Let every component providing dependencies register them."""
+        for component in self._components.values():
             if isinstance(component.instance, IsProvider):
-                component.instance.register_providers(self._virtual_container)
+                component.instance.register_providers(self.virtual_container)
 
-        self._virtual_container._set_components(
-            {name: comp.instance for name, comp in all_components.items()}
+    def _apply_wiring(self) -> None:
+        """Publish the built components by name, then connect them.
+
+        The names reach the VirtualContainer first because both `wire` and the
+        ``wiring`` configuration section resolve components by name.
+        """
+        self.virtual_container._set_components(
+            {name: comp.instance for name, comp in self._components.items()}
         )
         self.wire()
         self._apply_wiring_config()
 
-        for comp_name, component in all_components.items():
+    def _inject_dependencies(self) -> None:
+        """Let every component taking dependencies receive them."""
+        for component in self._components.values():
             if isinstance(component.instance, IsInjectable):
-                component.instance.inject_dependencies(self._virtual_container)
-
-        self._built_devices = built_devices
-        self._is_built = True
-        logger.info(
-            f"Container built: "
-            f"{len(self._device_components)} devices, "
-            f"{len(self._presenter_components)} presenters, "
-            f"{len(self._view_components)} views"
-        )
-
-        return self
+                component.instance.inject_dependencies(self.virtual_container)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect all devices via ophyd-async's async connect lifecycle.

@@ -102,6 +102,12 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   the name says what it does, not what it is. Nouns are for the things a method
   returns or holds (`connections`, `ports`, `signals`), which are properties.
   Deviate only where an established external convention requires it.
+- **`@property` is for public API only.** It exists to give a class a read-only
+  attribute that callers can rely on; a leading underscore says there are no
+  such callers, so the two do not combine. Private state is a plain attribute,
+  computed once where it is first known - usually `__init__` - and added to
+  `__slots__`. Private *behaviour* is an ordinary underscored method. A private
+  property recomputes on every access with none of the guarantee it buys.
 - psygnal signal attributes are `sig_snake_case` (the `sig_` prefix is
   optional), never `sigCamelCase`. Same-named signals across components are
   discerned by owner: `find_signals(container, names, owner=...)` (ADR 0004).
