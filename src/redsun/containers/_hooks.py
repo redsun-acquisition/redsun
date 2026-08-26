@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from redsun.containers.container import AppContainer
 
-__all__ = ["ConfiguresBuild", "HookError"]
+__all__ = ["ConfiguresBuild", "ConfiguresSession", "HookError"]
 
 logger = logging.getLogger("redsun")
 
@@ -30,6 +30,16 @@ class ConfiguresBuild(Protocol):
     @abstractmethod
     def configure_build(self, container: AppContainer) -> None:
         """Register or remove build phases on *container*."""
+        ...
+
+
+@runtime_checkable
+class ConfiguresSession(Protocol):
+    """Runs once every component is built, wired and injected."""
+
+    @abstractmethod
+    def configure_session(self, container: AppContainer) -> None:
+        """Act on *container* now that the whole session exists."""
         ...
 
 

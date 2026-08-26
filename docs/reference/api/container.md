@@ -21,6 +21,10 @@
     options:
       show_root_heading: true
 
+::: redsun.containers.ConfiguresSession
+    options:
+      show_root_heading: true
+
 ::: redsun.containers.HookError
     options:
       show_root_heading: true

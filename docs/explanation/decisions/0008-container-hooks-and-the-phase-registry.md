@@ -68,6 +68,30 @@ the provider. The two concatenate, class-level first. Neither overrides the
 other: silent override would decide behaviour by which of two files the reader
 is not looking at.
 
+**A hook that only watches gets a signal, not a hook point.** A splash screen
+naming the step in progress does not want to add work at a moment; it wants to
+observe the sequence. Through the registry that is one registered phase per
+label, each doing nothing but emit a string. `sig_phase_complete` carries the
+name of each phase as it finishes, and a provider connects to it in
+`configure_build` - so the opt-in is still configuration, not code. It lives on
+`AppContainer` rather than on `VirtualContainer` because the bus is created
+*by* the first phase and so could not report that phase.
+
+This forces `__weakref__` into `AppContainer.__slots__`. psygnal keeps one
+`SignalInstance` per owner and refers to that owner weakly, both in the
+instance itself and in the `weakref.finalize` that drops its cache entry. Both
+fall back to a strong reference when the owner cannot be weakly referenced, and
+a class using `__slots__` cannot be unless `__weakref__` is among its slots.
+The fallback is deliberate on psygnal's part - it keeps signals working for
+owners that are neither hashable nor weak-referenceable - but its cost here is
+that no container is ever collected: not the container, nor its devices,
+presenters, views, bus or connections. An ordinary class never reaches this
+path, because psygnal stores the `SignalInstance` as a plain attribute when the
+owner has a `__dict__`; only a slotted owner does.
+
+The rule generalises past this signal: **a `__slots__` class that owns a
+psygnal `Signal` needs `__weakref__` in its slots.**
+
 **Teardown is symmetric and owned by the container.** `shutdown` walks the
 providers in reverse, after the presenters, logging failures rather than
 raising - the opposite of the setup rule, because a failing teardown happens

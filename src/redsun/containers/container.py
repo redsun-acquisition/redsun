@@ -31,11 +31,13 @@ from typing import (
 
 import yaml
 from ophyd_async.core import Device
+from psygnal import Signal
 
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers._hooks import (
     ConfiguresBuild,
+    ConfiguresSession,
     HookError,
     parse_hook_specs,
     resolve_hooks,
@@ -218,6 +220,12 @@ class AppContainer:
     """Application container for MVP architecture."""
 
     __slots__ = (
+        # psygnal holds a signal's owner weakly and drops its per-owner cache
+        # entry through weakref.finalize. Both fall back to a strong reference
+        # when the owner cannot be weakly referenced, which a slotted class
+        # cannot unless __weakref__ is one of its slots - and then no container
+        # is ever collected.
+        "__weakref__",
         "_built_devices",
         "_components",
         "_config",
@@ -234,6 +242,14 @@ class AppContainer:
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
     _config_path: ClassVar[Path | None] = None
 
+    sig_phase_complete = Signal(str)
+    """Emitted with the name of each build phase as it finishes.
+
+    For watching the build rather than taking part in it: a splash screen
+    naming the step in progress connects to this, where adding a phase per
+    step would register seven phases to display seven labels.
+    """
+
     hooks: ClassVar[Sequence[object]] = ()
     """Hook providers this container installs, ahead of the configured ones.
 
@@ -242,7 +258,11 @@ class AppContainer:
     declare, ahead of its own.
     """
 
-    _hook_protocols: ClassVar[tuple[type, ...]] = (ConfiguresBuild, HasShutdown)
+    _hook_protocols: ClassVar[tuple[type, ...]] = (
+        ConfiguresBuild,
+        ConfiguresSession,
+        HasShutdown,
+    )
     """The hook protocols this container calls.
 
     A provider satisfying none of them is refused, since it would silently do
@@ -524,8 +544,15 @@ class AppContainer:
         for name, phase in self._phases.items():
             phase()
             logger.debug(f"Build phase '{name}' complete")
+            self.sig_phase_complete.emit(name)
 
+        # before the session hooks, so that a hook reading `views`,
+        # `presenters` or `devices` is not turned away by their build guard
         self._is_built = True
+        for hook in self._hooks:
+            if isinstance(hook, ConfiguresSession):
+                hook.configure_session(self)
+
         logger.info(
             f"Container built: "
             f"{len(self._device_components)} devices, "

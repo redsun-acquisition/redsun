@@ -47,3 +47,27 @@ class FailingShutdownHook:
 
     def shutdown(self) -> None:
         raise RuntimeError("teardown blew up")
+
+
+class SessionHook:
+    """Records the components it can see once the session is built."""
+
+    def __init__(self) -> None:
+        self.saw: dict[str, int] | None = None
+
+    def configure_session(self, container: AppContainer) -> None:
+        self.saw = {
+            "devices": len(container.devices),
+            "presenters": len(container.presenters),
+            "views": len(container.views),
+        }
+
+
+class PhaseWatcher:
+    """Records every phase name the container reports finishing."""
+
+    def __init__(self) -> None:
+        self.seen: list[str] = []
+
+    def configure_build(self, container: AppContainer) -> None:
+        container.sig_phase_complete.connect(self.seen.append)
