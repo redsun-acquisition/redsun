@@ -2118,6 +2118,31 @@ the semantic content, so:</p>
 <li>Registration is only legal before <code>build</code>, mirroring the storage layer's rule
   that <code>register</code> is legal only before <code>open</code>.</li>
 </ul>
+<p><strong>Toolkit hook points are one generic protocol each, aliased per toolkit.</strong>
+What differs between toolkits is the objects, not the moments: Qt has a
+<code>QApplication</code> and a main window, wx has <code>wx.App</code> and <code>wx.Frame</code>, Tk merges
+both into one, a web frontend has no application object at all. So
+<code>CreatesApplication</code>, <code>ConfiguresApplication</code> and <code>ConfiguresMainView</code> are
+parameterised on the object and each toolkit supplies aliases, rather than
+protocols of its own. There are three protocol names in total, forever, and a
+plugin author learns three rather than three times the number of toolkits.</p>
+<p>The variance is forced, not stylistic: <code>create_application</code> returns the
+application so its variable is covariant, <code>configure_application</code> accepts one
+so its variable is contravariant, and a single shared variable does not
+compile. Contravariance also means a hook point is satisfied by a <em>wider</em>
+parameter - a <code>configure_main_view</code> taking <code>QWidget</code> legitimately satisfies one
+demanding a main window - which is correct and worth knowing when reading the
+type-level tests.</p>
+<p>Static checking is the whole point of the parameter, because runtime checking
+cannot reach it: <code>isinstance</code> refuses a parameterised protocol, so a container
+narrows to the bare form and a provider built for the wrong toolkit is only
+caught when called. <code>tests/typing/qt_hook_aliases.py</code> pins what mypy sees.</p>
+<p><strong>A provider implementing a hook point its container never calls is warned
+about, not refused.</strong> A container names the subset of <code>HOOK_PROTOCOLS</code> it calls
+in <code>_hook_protocols</code>; the difference is what a provider implements in vain. A
+provider serving several toolkits is legitimate, so this is not an error - but
+it is inert, and silence is exactly what a typo'd method name looks like.
+Implementing <em>nothing</em> the container calls still raises.</p>
 <p><strong>Hook providers are plain objects, checked structurally.</strong> A provider
 implements <code>ConfiguresBuild</code> to adjust the sequence, <code>HasShutdown</code> to undo what
 it did, or both; each is checked independently with <code>isinstance</code>, which is the
