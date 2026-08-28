@@ -16,6 +16,7 @@ from redsun.containers._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
+    HookError,
 )
 from redsun.containers.container import AppContainer
 from redsun.containers.qt._mainview import QtMainView
@@ -74,13 +75,48 @@ class QtAppContainer(AppContainer):
         """Return the ``QApplication``, creating one if none is running yet.
 
         A widget cannot be constructed without one, so every entry point that
-        may reach a view goes through here first.
+        may reach a view goes through here first. A running application is
+        adopted as it is; only a session that has none reaches a
+        `redsun.qt.QtCreatesApplication` hook.
         """
-        if self._qt_app is None:
-            self._qt_app = cast(
-                "QApplication", QApplication.instance() or QApplication(sys.argv)
+        if self._qt_app is not None:
+            return self._qt_app
+        # resolved even when an application is already running, so that a
+        # session naming two creators fails the same way under a test suite
+        # that owns one and a desktop launch that does not
+        creator = self._application_creator()
+        running = QApplication.instance()
+        if running is not None:
+            app = cast("QApplication", running)
+        elif creator is None:
+            app = QApplication(sys.argv)
+        else:
+            app = creator.create_application(sys.argv)
+        self._qt_app = app
+        return app
+
+    def _application_creator(self) -> CreatesApplication[QApplication] | None:
+        """Return the hook supplying the application, if any hook claims it.
+
+        Raises
+        ------
+        HookError
+            If more than one hook claims it, naming them: the application a
+            session runs on would otherwise be decided by the order of the
+            ``hooks`` section.
+        """
+        claimants: list[CreatesApplication[QApplication]] = [
+            hook
+            for hook in self._ensure_hooks()
+            if isinstance(hook, CreatesApplication)
+        ]
+        if len(claimants) > 1:
+            named = ", ".join(type(hook).__name__ for hook in claimants)
+            raise HookError(
+                f"create_application is claimed by {len(claimants)} hook providers "
+                f"({named}); exactly one may supply the application"
             )
-        return self._qt_app
+        return claimants[0] if claimants else None
 
     def _ensure_main_view(self) -> QtMainView:
         """Return the main window, building it from the built views if needed.

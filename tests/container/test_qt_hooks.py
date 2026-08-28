@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import cast
 
 import pytest
@@ -117,3 +118,48 @@ class TestQtMainViewHook:
         app = TestApp().build()
 
         assert app._ensure_main_view() is app._ensure_main_view()
+
+
+class TestQtApplicationFactory:
+    """Tests for the hook that supplies the QApplication itself."""
+
+    def test_a_claimant_supplies_the_application(
+        self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # a process holding a QApplication cannot build a second one, so the
+        # only way to reach the creation branch is to hide the one it has
+        hook = mock_hooks.QtApplicationFactory(qapp)
+        monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
+
+        class TestApp(QtAppContainer):
+            hooks = (hook,)
+
+        app = TestApp().build()
+
+        assert hook.calls == [sys.argv]
+        assert app._qt_app is qapp
+
+    def test_a_claimant_is_skipped_when_an_application_is_running(
+        self, qapp: QApplication
+    ) -> None:
+        hook = mock_hooks.QtApplicationFactory(qapp)
+
+        class TestApp(QtAppContainer):
+            hooks = (hook,)
+
+        app = TestApp().build()
+
+        assert hook.calls == []
+        assert app._qt_app is qapp
+
+    def test_two_claimants_are_refused_by_name(self, qapp: QApplication) -> None:
+        # refused although a running application means neither would be called:
+        # two creators is a configuration error whatever the process holds
+        class TestApp(QtAppContainer):
+            hooks = (
+                mock_hooks.QtApplicationFactory(qapp),
+                mock_hooks.QtApplicationFactory(qapp),
+            )
+
+        with pytest.raises(HookError, match="2 hook providers"):
+            TestApp().build()
