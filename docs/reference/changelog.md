@@ -11,154 +11,6 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- **Container hooks** - an object a session installs on its application
-  container to adjust the application as a whole. Each hook point is named by
-  the method it calls, and takes one provider.
-
-  Providers are named in a configuration file by dotted path, under the point
-  they serve, with their constructor arguments under `kwargs`:
-
-  ```yaml
-  hooks:
-    configure_build:
-      provider: "mypkg.hooks:Calibration"
-      kwargs:
-        passes: 3
-  ```
-
-  or declared on a container class with `declare_hook`:
-
-  ```python
-  class MyApp(QtAppContainer):
-      configure_build = declare_hook(Calibration, passes=3)
-  ```
-
-  A subclass inherits the points its bases declare. One provider serves several
-  points when it is the same object at each: the same instance in Python, a
-  YAML anchor and its alias in a file.
-
-  ```yaml
-  hooks:
-    configure_application: &theme
-      provider: "mypkg.hooks:DarkTheme"
-    configure_main_view: *theme
-  ```
-
-  `HookError` is raised for an entry that does not resolve, a key that is not a
-  hook point the container calls, a provider that does not implement the
-  protocol its point calls, a point named both on the container class and in
-  the configuration, and two separate entries naming one provider with the same
-  keys. The hook points below are listed in the order a session reaches them.
-
-  See [Container hooks and the build phase
-  registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md).
-
-- **`declare_hook`** (`redsun.containers`) - declares a hook provider on a
-  container class, at the point the attribute names. Takes a class with
-  keyword arguments, or a provider already built.
-
-  ```python
-  class MyApp(QtAppContainer):
-      configure_application = declare_hook(DarkTheme, palette="nord")
-  ```
-
-- **`QtCreatesApplication`** (`redsun.qt`) - supplies the `QApplication` the
-  session runs on. Called only when no `QApplication` is running yet.
-
-  ```python
-  class NapariApplication:
-      def create_application(self, argv: list[str]) -> QApplication:
-          return get_qapp(app_name=..., app_version=...)
-  ```
-
-- **`QtConfiguresApplication`** (`redsun.qt`) - adjusts the `QApplication`
-  before the build constructs any view.
-
-  ```python
-  class DarkTheme:
-      def configure_application(self, app: QApplication) -> None:
-          app.setStyleSheet(...)
-  ```
-
-- **`ConfiguresBuild`** (`redsun.containers`) - adjusts the build sequence
-  before any phase of it runs. The only point at which `register_phase` and
-  `unregister_phase` are legal.
-
-  ```python
-  class Calibration:
-      def configure_build(self, container: AppContainer) -> None:
-          container.register_phase("calibrate", self._run, after="injection")
-  ```
-
-- **`ConfiguresSession`** (`redsun.containers`) - runs after the last build
-  phase, with `is_built` already set, so `devices`, `presenters` and `views`
-  are readable.
-
-  ```python
-  class Autostart:
-      def configure_session(self, container: AppContainer) -> None:
-          self._log(container.devices, container.presenters, container.views)
-  ```
-
-- **`QtConfiguresMainView`** (`redsun.qt`) - adjusts the main window after it
-  is built and before it is shown. Bound to `QMainWindow`, not to the window
-  class the container builds.
-
-  ```python
-  class DarkTheme:
-      def configure_main_view(self, view: QMainWindow) -> None:
-          view.setWindowIcon(...)
-  ```
-
-- **`HasShutdown`** (`redsun.virtual`) - now called on hooks as well as
-  presenters. Hooks are torn down in reverse order, after the presenters, once
-  each however many points a provider serves; a failing teardown is logged and
-  does not block the rest. The container then restores the phase sequence it
-  captured before the hooks ran.
-
-  ```python
-  class DarkTheme:
-      def shutdown(self) -> None:
-          self._app.setStyleSheet(self._previous)
-  ```
-
-- The three toolkit hook points are one generic protocol each
-  (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`),
-  aliased per toolkit.
-
-- **`AppConfiguresBuild`** and **`AppConfiguresSession`** (`redsun.containers`)
-  - `ConfiguresBuild` and `ConfiguresSession` bound to `AppContainer`. Both
-  protocols are parameterised on the container they act against, so a container
-  implementation supplies its own aliases.
-
-- `AppContainer.phases`, `AppContainer.register_phase(name, phase, after=...)`
-  and `AppContainer.unregister_phase(name)` - the build sequence as a registry
-  a caller can add to. `after` is required; `unregister_phase` refuses the
-  built-in phases. Both are legal only before `build`.
-
-  ```python
-  app = MyApp()
-  app.register_phase("calibrate", calibrate, after="injection")
-  app.build()
-  ```
-
-- `AppContainer.sig_phase_complete`, emitted with the name of each build phase
-  as it finishes.
-
-  ```python
-  class Splash:
-      def configure_build(self, container: AppContainer) -> None:
-          container.sig_phase_complete.connect(self._show)
-
-      def _show(self, phase: str) -> None: ...
-  ```
-
-- `__weakref__` to `AppContainer.__slots__`, required by any `__slots__` class
-  owning a psygnal `Signal`.
-
-- `QtAppContainer._ensure_main_view`, so the main window is built and
-  configured once whether reached through `run` or directly.
-
 - `redsun.experimental` - a container layer built on
   [dishka](https://dishka.readthedocs.io), behind the `experimental` extra.
   **Not covered by any stability guarantee**: names and behaviour may change or
@@ -298,7 +150,216 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [The experimental container](../explanation/experimental-container.md) for
   the architecture, what it lifts off component authors, and what it gives up.
 
-## [0.11.1]
+- `config` accepts several YAML files, layered in the order given, and a
+  container class reads what its bases named before its own. A file common to
+  several sessions sits under the one particular to each.
+
+  ```python
+  class InstrumentApp(QtAppContainer, config="common.yaml"):
+      ui = declare_view(MyView, from_config="ui")
+
+
+  class Simulation(InstrumentApp, config="simulation.yaml"): ...
+
+
+  class Instrument(InstrumentApp, config="instrument.yaml"): ...
+  ```
+
+- `AppContainer._config_paths` reports those files in the order they layer, and
+  `AppContainer._component_fields` records the `declare_*` fields a container
+  and its bases declared.
+
+### Changed
+
+- A `declare_*` field with `from_config` is resolved against the configuration
+  of each container class that inherits it, rather than only the one that
+  declared it. A base class can therefore carry the declarations two sessions
+  share while each subclass reads its own files.
+- A subclass naming `config` adds to the files its bases named instead of
+  replacing them.
+- Configuration files merge as mappings, recursively: a key present in two
+  files is taken from the later one unless both values are mappings, which
+  merge in turn. Lists and scalars are replaced, not combined.
+- The `devices`, `presenters` and `views` sections merge by component name, but
+  a component named in a later file is taken from that file whole. A component
+  entry is a constructor's keyword arguments, so one file owns all of them.
+- The keys `AppConfig` requires are checked against the merged configuration
+  rather than against each file, so a file layered under another may carry a
+  fragment.
+- `schema_version` and `frontend` must agree across layered files. They name
+  what kind of session this is rather than what it contains, so a later file
+  giving a different value raises `ValueError` instead of overriding. Every
+  other key, `session` included, is taken from the later file.
+- A container reading more than one configuration file logs them at debug
+  level, in the order they layer, and logs each component an upper file takes
+  from a lower one.
+- A container inheriting from more than one base reads the files every base
+  named, rather than only those of the first in the method resolution order. A
+  file reached twice through the hierarchy is read once.
+- A configuration section written with nothing under it - `presenters:` and no
+  entries - is read as an empty section rather than raising `AttributeError`.
+- Declaring a `from_config` field on a container class with no `config` file no
+  longer raises at class creation; the `TypeError` is raised when such a
+  container is constructed, and names every field that asked for a section.
+  A base class exists to be subclassed, and the subclass is where `config` is
+  named.
+
+  See [Inherited and layered component
+  configuration](../explanation/decisions/0009-inherited-component-configuration.md).
+
+## [0.11.2] - 28-08-2026
+
+### Added
+
+- **Container hooks** - an object a session installs on its application
+  container to adjust the application as a whole. Each hook point is named by
+  the method it calls, and takes one provider.
+
+  Providers are named in a configuration file by dotted path, under the point
+  they serve, with their constructor arguments under `kwargs`:
+
+  ```yaml
+  hooks:
+    configure_build:
+      provider: "mypkg.hooks:Calibration"
+      kwargs:
+        passes: 3
+  ```
+
+  or declared on a container class with `declare_hook`:
+
+  ```python
+  class MyApp(QtAppContainer):
+      configure_build = declare_hook(Calibration, passes=3)
+  ```
+
+  A subclass inherits the points its bases declare. One provider serves several
+  points when it is the same object at each: the same instance in Python, a
+  YAML anchor and its alias in a file.
+
+  ```yaml
+  hooks:
+    configure_application: &theme
+      provider: "mypkg.hooks:DarkTheme"
+    configure_main_view: *theme
+  ```
+
+  `HookError` is raised for an entry that does not resolve, a key that is not a
+  hook point the container calls, a provider that does not implement the
+  protocol its point calls, a point named both on the container class and in
+  the configuration, and two separate entries naming one provider with the same
+  keys. The hook points below are listed in the order a session reaches them.
+
+  See [Container hooks and the build phase
+  registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md).
+
+- **`declare_hook`** (`redsun.containers`) - declares a hook provider on a
+  container class, at the point the attribute names. Takes a class with
+  keyword arguments, or a provider already built.
+
+  ```python
+  class MyApp(QtAppContainer):
+      configure_application = declare_hook(DarkTheme, palette="nord")
+  ```
+
+- **`QtCreatesApplication`** (`redsun.qt`) - supplies the `QApplication` the
+  session runs on. Called only when no `QApplication` is running yet.
+
+  ```python
+  class BrandedApplication:
+      def create_application(self, argv: list[str]) -> QApplication:
+          return QApplication(argv)
+  ```
+
+- **`QtConfiguresApplication`** (`redsun.qt`) - adjusts the `QApplication`
+  before the build constructs any view.
+
+  ```python
+  class DarkTheme:
+      def configure_application(self, app: QApplication) -> None:
+          app.setStyleSheet(...)
+  ```
+
+- **`ConfiguresBuild`** (`redsun.containers`) - adjusts the build sequence
+  before any phase of it runs. The only point at which `register_phase` and
+  `unregister_phase` are legal.
+
+  ```python
+  class Calibration:
+      def configure_build(self, container: AppContainer) -> None:
+          container.register_phase("calibrate", self._run, after="injection")
+  ```
+
+- **`ConfiguresSession`** (`redsun.containers`) - runs after the last build
+  phase, with `is_built` already set, so `devices`, `presenters` and `views`
+  are readable.
+
+  ```python
+  class Autostart:
+      def configure_session(self, container: AppContainer) -> None:
+          self._log(container.devices, container.presenters, container.views)
+  ```
+
+- **`QtConfiguresMainView`** (`redsun.qt`) - adjusts the main window after it
+  is built and before it is shown. Bound to `QMainWindow`, not to the window
+  class the container builds.
+
+  ```python
+  class DarkTheme:
+      def configure_main_view(self, view: QMainWindow) -> None:
+          view.setWindowIcon(...)
+  ```
+
+- **`HasShutdown`** (`redsun.virtual`) - now called on hooks as well as
+  presenters. Hooks are torn down in reverse order, after the presenters, once
+  each however many points a provider serves; a failing teardown is logged and
+  does not block the rest. The container then restores the phase sequence it
+  captured before the hooks ran.
+
+  ```python
+  class DarkTheme:
+      def shutdown(self) -> None:
+          self._app.setStyleSheet(self._previous)
+  ```
+
+- The three toolkit hook points are one generic protocol each
+  (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`),
+  aliased per toolkit.
+
+- **`AppConfiguresBuild`** and **`AppConfiguresSession`** (`redsun.containers`)
+  - `ConfiguresBuild` and `ConfiguresSession` bound to `AppContainer`. Both
+  protocols are parameterised on the container they act against, so a container
+  implementation supplies its own aliases.
+
+- `AppContainer.phases`, `AppContainer.register_phase(name, phase, after=...)`
+  and `AppContainer.unregister_phase(name)` - the build sequence as a registry
+  a caller can add to. `after` is required; `unregister_phase` refuses the
+  built-in phases. Both are legal only before `build`.
+
+  ```python
+  app = MyApp()
+  app.register_phase("calibrate", calibrate, after="injection")
+  app.build()
+  ```
+
+- `AppContainer.sig_phase_complete`, emitted with the name of each build phase
+  as it finishes.
+
+  ```python
+  class Splash:
+      def configure_build(self, container: AppContainer) -> None:
+          container.sig_phase_complete.connect(self._show)
+
+      def _show(self, phase: str) -> None: ...
+  ```
+
+- `__weakref__` to `AppContainer.__slots__`, required by any `__slots__` class
+  owning a psygnal `Signal`.
+
+- `QtAppContainer._ensure_main_view`, so the main window is built and
+  configured once whether reached through `run` or directly.
+
+## [0.11.1] - 25-08-2026
 
 ### Changed
 
@@ -721,6 +782,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/redsun-acquisition/redsun/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0

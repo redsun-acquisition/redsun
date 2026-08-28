@@ -30,3 +30,5 @@ Status, Context, Decision, Consequences.
 - **[5. Culsans-backed psygnal async backend](decisions/0005-culsans-psygnal-async-backend.md)**
 - **[6. Application-declared wiring](decisions/0006-application-declared-wiring.md)**
 - **[7. Typed provider keys](decisions/0007-typed-provider-keys.md)**
+- **[8. Container hooks and the build phase registry](decisions/0008-container-hooks-and-the-phase-registry.md)**
+- **[9. Inherited and layered component configuration](decisions/0009-inherited-component-configuration.md)**
