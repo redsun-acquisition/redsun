@@ -10,11 +10,14 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
+    from typing import TypeAlias
 
     from redsun.containers.container import AppContainer
 
 __all__ = [
+    "AppConfiguresBuild",
+    "AppConfiguresSession",
     "ConfiguresApplication",
     "ConfiguresBuild",
     "ConfiguresMainView",
@@ -26,6 +29,9 @@ __all__ = [
 AppT_co = TypeVar("AppT_co", covariant=True)
 AppT_contra = TypeVar("AppT_contra", contravariant=True)
 ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
+ContainerT_contra = TypeVar("ContainerT_contra", contravariant=True)
+
+ENTRY_KEYS = ("provider", "kwargs")
 
 logger = logging.getLogger("redsun")
 
@@ -65,78 +71,152 @@ class ConfiguresMainView(Protocol[ViewT_contra]):
 
 
 @runtime_checkable
-class ConfiguresBuild(Protocol):
+class ConfiguresBuild(Protocol[ContainerT_contra]):
     """Adjusts the build sequence before any phase of it runs."""
 
     @abstractmethod
-    def configure_build(self, container: AppContainer) -> None:
+    def configure_build(self, container: ContainerT_contra) -> None:
         """Register or remove build phases on *container*."""
         ...
 
 
 @runtime_checkable
-class ConfiguresSession(Protocol):
+class ConfiguresSession(Protocol[ContainerT_contra]):
     """Runs once every component is built, wired and injected."""
 
     @abstractmethod
-    def configure_session(self, container: AppContainer) -> None:
+    def configure_session(self, container: ContainerT_contra) -> None:
         """Act on *container* now that the whole session exists."""
         ...
 
 
-HOOK_PROTOCOLS: tuple[type, ...] = (
-    CreatesApplication,
-    ConfiguresApplication,
-    ConfiguresMainView,
-    ConfiguresBuild,
-    ConfiguresSession,
-)
-"""Every hook protocol redsun defines, whichever container calls it.
+AppConfiguresBuild: TypeAlias = ConfiguresBuild["AppContainer"]
+"""Adjusts the build sequence of an `redsun.containers.AppContainer`.
 
-A container names the subset it calls in ``_hook_protocols``; the difference
-between the two is what a provider implements in vain.
+Bound to the container whose phases a hook registers against, so that the
+protocol itself stays free of any one container implementation.
 """
+
+AppConfiguresSession: TypeAlias = ConfiguresSession["AppContainer"]
+"""Runs against an `redsun.containers.AppContainer` once its session exists."""
 
 
 @dataclass(frozen=True, slots=True)
 class HookSpec:
-    """One entry of the configuration ``hooks`` section."""
+    """One provider of the configuration ``hooks`` section, and what it serves.
 
+    *moments* holds every key the entry appeared under, so an anchor shared by
+    two keys gives one spec, and one provider instance.
+    """
+
+    moments: tuple[str, ...]
     provider: str
     kwargs: Mapping[str, Any]
 
 
-def parse_hook_specs(raw: Sequence[Mapping[str, Any]]) -> list[HookSpec]:
-    """Read the ``hooks`` section into one spec per entry.
+def parse_hook_specs(
+    raw: Mapping[str, Any], moments: Mapping[str, type], owner: str
+) -> list[HookSpec]:
+    """Read the ``hooks`` section into one spec per distinct entry.
+
+    Keys are the hook points *owner* calls; an entry appearing under several of
+    them through a YAML anchor is one spec serving them all.
 
     Raises
     ------
     HookError
-        If an entry is not a mapping, or carries no string ``provider`` key.
+        If a key is not a hook point *owner* calls, an entry is not a mapping,
+        carries a key other than ``provider`` and ``kwargs``, carries no string
+        ``provider``, carries a non-mapping ``kwargs``, or two separate entries
+        name the same provider with the same keys.
     """
-    specs: list[HookSpec] = []
-    for index, entry in enumerate(raw):
+    grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
+    for moment, entry in raw.items():
+        if moment not in moments:
+            known = ", ".join(moments)
+            raise HookError(
+                f"hooks key {moment!r} is not a hook point {owner} calls; "
+                f"expected one of: {known}"
+            )
         if not isinstance(entry, Mapping):
             raise HookError(
-                f"hooks entry {index} must be a mapping, got {type(entry).__name__}"
+                f"hooks entry {moment!r} must be a mapping, got {type(entry).__name__}"
             )
-        provider = entry.get("provider")
-        if not isinstance(provider, str):
-            raise HookError(
-                f"hooks entry {index} must carry a string 'provider' naming a "
-                f"class as 'module:ClassName', got {provider!r}"
-            )
-        specs.append(
-            HookSpec(
-                provider=provider,
-                kwargs={k: v for k, v in entry.items() if k != "provider"},
-            )
-        )
+        # a YAML anchor and its alias resolve to one object, which is how a
+        # session says that two hook points share a provider
+        served, _ = grouped.setdefault(id(entry), ([], entry))
+        served.append(moment)
+
+    specs = [
+        spec_from_entry(tuple(served), entry) for served, entry in grouped.values()
+    ]
+    refuse_ambiguous(specs)
     return specs
 
 
-def resolve_hooks(specs: Iterable[HookSpec]) -> list[object]:
-    """Instantiate the provider each spec names, passing its remaining keys.
+def spec_from_entry(moments: tuple[str, ...], entry: Mapping[str, Any]) -> HookSpec:
+    """Read one ``hooks`` entry, named by every hook point it appeared under.
+
+    Raises
+    ------
+    HookError
+        If the entry carries an unknown key, no string ``provider``, or a
+        ``kwargs`` that is not a mapping.
+    """
+    named = ", ".join(repr(moment) for moment in moments)
+    unknown = sorted(key for key in entry if key not in ENTRY_KEYS)
+    if unknown:
+        raise HookError(
+            f"hooks entry {named} carries unknown key(s) {', '.join(unknown)}; "
+            "an entry takes 'provider' and 'kwargs' only, and constructor "
+            "arguments go under 'kwargs'"
+        )
+    provider = entry.get("provider")
+    if not isinstance(provider, str):
+        raise HookError(
+            f"hooks entry {named} must carry a string 'provider' naming a "
+            f"class as 'module:ClassName', got {provider!r}"
+        )
+    kwargs = entry.get("kwargs", {})
+    if not isinstance(kwargs, Mapping):
+        raise HookError(
+            f"hooks entry {named} must carry a mapping 'kwargs', "
+            f"got {type(kwargs).__name__}"
+        )
+    return HookSpec(moments=moments, provider=provider, kwargs=kwargs)
+
+
+def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
+    """Refuse two separate entries naming one provider with the same keys.
+
+    Raises
+    ------
+    HookError
+        If two entries are indistinguishable, since whether they mean one
+        shared provider or two identical ones cannot be read off the file.
+    """
+    seen: list[HookSpec] = []
+    for spec in specs:
+        for other in seen:
+            if spec.provider == other.provider and dict(spec.kwargs) == dict(
+                other.kwargs
+            ):
+                first = ", ".join(repr(moment) for moment in other.moments)
+                second = ", ".join(repr(moment) for moment in spec.moments)
+                raise HookError(
+                    f"hook provider {spec.provider!r} is named twice, at "
+                    f"{first} and at {second}, with the same keys. Anchor the "
+                    "entry and alias it to share one provider, or give the two "
+                    "different keys to build two."
+                )
+        seen.append(spec)
+
+
+def resolve_hooks(specs: Iterable[HookSpec]) -> dict[str, object]:
+    """Instantiate the provider each spec names, once per spec.
+
+    Returns one entry per hook point, so a spec serving several points maps
+    them all to the same object.
 
     Raises
     ------
@@ -145,7 +225,12 @@ def resolve_hooks(specs: Iterable[HookSpec]) -> list[object]:
         not exist, or names something that cannot be instantiated with the
         keys given.
     """
-    return [instantiate(spec) for spec in specs]
+    resolved: dict[str, object] = {}
+    for spec in specs:
+        provider = instantiate(spec)
+        for moment in spec.moments:
+            resolved[moment] = provider
+    return resolved
 
 
 def instantiate(spec: HookSpec) -> object:
@@ -178,3 +263,11 @@ def instantiate(spec: HookSpec) -> object:
             f"cannot construct hook provider {spec.provider!r} with "
             f"{sorted(spec.kwargs)}: {e}"
         ) from e
+
+
+def distinct(objects: Iterable[object]) -> tuple[object, ...]:
+    """Return *objects* without repeats, by identity, in first-seen order."""
+    seen: dict[int, object] = {}
+    for obj in objects:
+        seen.setdefault(id(obj), obj)
+    return tuple(seen.values())

@@ -5,12 +5,22 @@ from __future__ import annotations
 import gc
 import logging
 import weakref
+from typing import TYPE_CHECKING
 
 import pytest
+import yaml
 from mock_pkg import hooks as mock_hooks
 from mock_pkg.device import MyMotor
 
-from redsun.containers import AppContainer, HookError, declare_device
+from redsun.containers import (
+    AppContainer,
+    HookError,
+    declare_device,
+    declare_hook,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _PROVIDER = "mock_pkg.hooks:RecordingHook"
 
@@ -90,29 +100,42 @@ class TestPhaseRegistry:
 class TestHookResolution:
     """Tests for turning the 'hooks' configuration section into providers."""
 
-    def test_a_class_level_hook_configures_the_build(self) -> None:
+    def test_a_declared_hook_configures_the_build(self) -> None:
         hook = mock_hooks.RecordingHook()
 
         class TestApp(AppContainer):
-            hooks = (hook,)
+            configure_build = declare_hook(hook)
 
         TestApp().build()
 
         assert hook.ran == ["recorded"]
 
+    def test_a_declared_class_is_constructed_with_its_keywords(self) -> None:
+        class TestApp(AppContainer):
+            configure_build = declare_hook(
+                mock_hooks.RecordingHook, name="custom", after="views"
+            )
+
+        app = TestApp().build()
+
+        assert app.phases.index("custom") == app.phases.index("views") + 1
+
     def test_a_configured_hook_configures_the_build(self) -> None:
         app = AppContainer()
-        app._config["hooks"] = [{"provider": _PROVIDER}]
+        app._config["hooks"] = {"configure_build": {"provider": _PROVIDER}}
 
         app.build()
 
         assert "recorded" in app.phases
 
-    def test_extra_keys_reach_the_provider_constructor(self) -> None:
+    def test_kwargs_reach_the_provider_constructor(self) -> None:
         app = AppContainer()
-        app._config["hooks"] = [
-            {"provider": _PROVIDER, "name": "custom", "after": "views"}
-        ]
+        app._config["hooks"] = {
+            "configure_build": {
+                "provider": _PROVIDER,
+                "kwargs": {"name": "custom", "after": "views"},
+            }
+        }
 
         app.build()
 
@@ -120,38 +143,86 @@ class TestHookResolution:
 
     def test_a_subclass_keeps_the_hooks_its_base_declares(self) -> None:
         base_hook = mock_hooks.RecordingHook(name="base")
+        own_hook = mock_hooks.SessionHook()
+
+        class Base(AppContainer):
+            configure_build = declare_hook(base_hook)
+
+        class Derived(Base):
+            configure_session = declare_hook(own_hook)
+
+        assert Derived._hook_providers == {
+            "configure_build": base_hook,
+            "configure_session": own_hook,
+        }
+
+    def test_a_subclass_replaces_a_point_its_base_declared(self) -> None:
         own_hook = mock_hooks.RecordingHook(name="own")
 
         class Base(AppContainer):
-            hooks = (base_hook,)
+            configure_build = declare_hook(mock_hooks.RecordingHook, name="base")
 
         class Derived(Base):
-            hooks = (own_hook,)
+            configure_build = declare_hook(own_hook)
 
-        # a list, because mypy reads the annotation off the class body and
-        # cannot see the tuple __init_subclass__ puts there instead
-        assert list(Derived.hooks) == [base_hook, own_hook]
+        Derived().build()
 
-    def test_class_level_hooks_run_before_configured_ones(self) -> None:
+        assert mock_hooks.installed == ["own"]
+
+    def test_a_declared_point_and_a_configured_one_run_together(self) -> None:
+        session_hook = mock_hooks.SessionHook()
+
         class TestApp(AppContainer):
-            hooks = (mock_hooks.RecordingHook(name="from_class"),)
+            configure_session = declare_hook(session_hook)
 
         app = TestApp()
-        app._config["hooks"] = [{"provider": _PROVIDER, "name": "from_config"}]
+        app._config["hooks"] = {"configure_build": {"provider": _PROVIDER}}
 
         app.build()
 
-        assert mock_hooks.installed == ["from_class", "from_config"]
+        assert mock_hooks.installed == ["recorded"]
+        assert session_hook.saw is not None
+
+    def test_a_point_named_twice_is_refused(self) -> None:
+        class TestApp(AppContainer):
+            configure_build = declare_hook(mock_hooks.RecordingHook)
+
+        app = TestApp()
+        app._config["hooks"] = {"configure_build": {"provider": _PROVIDER}}
+
+        with pytest.raises(HookError, match="named both on TestApp"):
+            app.build()
 
     def test_no_hooks_section_changes_nothing(self) -> None:
         assert AppContainer().build().phases == AppContainer().phases
 
-    def test_a_provider_implementing_no_hook_protocol_is_refused(self) -> None:
+    def test_a_provider_that_does_not_serve_its_point_is_refused(self) -> None:
         app = AppContainer()
-        app._config["hooks"] = [{"provider": "mock_pkg.hooks:NoopHook"}]
+        app._config["hooks"] = {
+            "configure_build": {"provider": "mock_pkg.hooks:NoopHook"}
+        }
 
-        with pytest.raises(HookError, match="implements none of the hook protocols"):
+        with pytest.raises(HookError, match="does not implement ConfiguresBuild"):
             app.build()
+
+    def test_a_declared_provider_that_does_not_serve_its_point_is_refused(self) -> None:
+        with pytest.raises(HookError, match="does not implement ConfiguresBuild"):
+
+            class TestApp(AppContainer):
+                configure_build = declare_hook(mock_hooks.NoopHook)
+
+    def test_a_point_the_container_never_calls_is_refused(self) -> None:
+        app = AppContainer()
+        app._config["hooks"] = {"configure_application": {"provider": _PROVIDER}}
+
+        with pytest.raises(HookError, match="is not a hook point AppContainer calls"):
+            app.build()
+
+    def test_a_declared_point_the_container_never_calls_is_refused(self) -> None:
+        with pytest.raises(HookError, match="is not a hook point it calls"):
+
+            class TestApp(AppContainer):
+                configure_application = declare_hook(mock_hooks.QtOnlyHook)
 
     @pytest.mark.parametrize(
         ("provider", "expected"),
@@ -166,25 +237,174 @@ class TestHookResolution:
         self, provider: str, expected: str
     ) -> None:
         app = AppContainer()
-        app._config["hooks"] = [{"provider": provider}]
+        app._config["hooks"] = {"configure_build": {"provider": provider}}
 
         with pytest.raises(HookError, match=expected):
             app.build()
 
-    def test_an_unexpected_key_names_the_provider(self) -> None:
+    def test_a_keyword_the_provider_rejects_names_the_provider(self) -> None:
         app = AppContainer()
-        app._config["hooks"] = [{"provider": _PROVIDER, "nope": 1}]
+        app._config["hooks"] = {
+            "configure_build": {"provider": _PROVIDER, "kwargs": {"nope": 1}}
+        }
 
         with pytest.raises(HookError, match="cannot construct hook provider"):
             app.build()
 
-    @pytest.mark.parametrize("entry", [{"name": "x"}, {"provider": 1}, "a string"])
-    def test_an_entry_without_a_provider_names_its_index(self, entry: object) -> None:
-        app = AppContainer()
-        app._config["hooks"] = [entry]  # type: ignore[list-item]
+    def test_a_declared_keyword_the_provider_rejects_names_the_point(self) -> None:
+        with pytest.raises(HookError, match="declared at 'configure_build'"):
 
-        with pytest.raises(HookError, match="hooks entry 0"):
+            class TestApp(AppContainer):
+                configure_build = declare_hook(mock_hooks.RecordingHook, nope=1)
+
+    def test_keywords_beside_the_provider_are_refused(self) -> None:
+        app = AppContainer()
+        app._config["hooks"] = {
+            "configure_build": {"provider": _PROVIDER, "name": "custom"}
+        }
+
+        with pytest.raises(HookError, match="unknown key"):
             app.build()
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            {"kwargs": {}},
+            {"provider": 1},
+            "a string",
+            {"provider": _PROVIDER, "kwargs": 1},
+        ],
+    )
+    def test_a_malformed_entry_names_its_hook_point(self, entry: object) -> None:
+        app = AppContainer()
+        app._config["hooks"] = {"configure_build": entry}  # type: ignore[dict-item]
+
+        with pytest.raises(HookError, match="'configure_build'"):
+            app.build()
+
+    def test_declaring_keywords_for_a_built_provider_is_refused(self) -> None:
+        with pytest.raises(TypeError, match="already constructed"):
+            declare_hook(mock_hooks.RecordingHook(), name="nope")  # type: ignore[call-overload]
+
+
+class TestSharedProviders:
+    """Tests for one provider serving more than one hook point."""
+
+    def test_an_anchored_entry_gives_one_provider_to_both_points(self) -> None:
+        app = AppContainer()
+        app._config["hooks"] = yaml.safe_load(
+            """
+            configure_build: &shared
+              provider: mock_pkg.hooks:BothPointsHook
+            configure_session: *shared
+            """
+        )
+
+        app.build()
+
+        hook = app._hook_by_moment["configure_build"]
+        assert hook is app._hook_by_moment["configure_session"]
+        assert isinstance(hook, mock_hooks.BothPointsHook)
+        assert hook.seen == ["build", "session"]
+
+    def test_a_declared_instance_serves_both_points(self) -> None:
+        hook = mock_hooks.BothPointsHook()
+
+        class TestApp(AppContainer):
+            configure_build = declare_hook(hook)
+            configure_session = declare_hook(hook)
+
+        TestApp().build()
+
+        assert hook.seen == ["build", "session"]
+
+    def test_two_indistinguishable_entries_are_refused(self) -> None:
+        app = AppContainer()
+        app._config["hooks"] = {
+            "configure_build": {"provider": "mock_pkg.hooks:BothPointsHook"},
+            "configure_session": {"provider": "mock_pkg.hooks:BothPointsHook"},
+        }
+
+        with pytest.raises(HookError, match="is named twice"):
+            app.build()
+
+    def test_two_entries_with_different_keywords_build_two_providers(self) -> None:
+        app = AppContainer()
+        app._config["hooks"] = {
+            "configure_build": {
+                "provider": "mock_pkg.hooks:BothPointsHook",
+                "kwargs": {"name": "first"},
+            },
+            "configure_session": {
+                "provider": "mock_pkg.hooks:BothPointsHook",
+                "kwargs": {"name": "second"},
+            },
+        }
+
+        app.build()
+
+        assert (
+            app._hook_by_moment["configure_build"]
+            is not app._hook_by_moment["configure_session"]
+        )
+
+    def test_a_shared_provider_is_torn_down_once(self) -> None:
+        hook = mock_hooks.BothPointsHook()
+
+        class TestApp(AppContainer):
+            configure_build = declare_hook(hook)
+            configure_session = declare_hook(hook)
+
+        TestApp().build().shutdown()
+
+        assert hook.teardowns == 1
+
+
+class TestHooksFromAFile:
+    """Tests for the 'hooks' section read from a configuration file on disk."""
+
+    def test_a_declarative_container_reads_the_hooks_section(
+        self, config_path: Path
+    ) -> None:
+        class TestApp(AppContainer, config=config_path / "mock_hooks_config.yaml"):
+            pass
+
+        app = TestApp().build()
+
+        assert app.phases.index("custom") == app.phases.index("views") + 1
+        assert mock_hooks.installed == ["custom"]
+
+    def test_an_anchored_entry_read_from_a_file_gives_one_provider(
+        self, config_path: Path
+    ) -> None:
+        class TestApp(
+            AppContainer, config=config_path / "mock_shared_hook_config.yaml"
+        ):
+            pass
+
+        app = TestApp().build()
+
+        hook = app._hook_by_moment["configure_build"]
+        assert hook is app._hook_by_moment["configure_session"]
+        assert isinstance(hook, mock_hooks.BothPointsHook)
+        assert hook.name == "shared"
+        assert hook.seen == ["build", "session"]
+
+    def test_a_shared_provider_read_from_a_file_is_torn_down_once(
+        self, config_path: Path
+    ) -> None:
+        class TestApp(
+            AppContainer, config=config_path / "mock_shared_hook_config.yaml"
+        ):
+            pass
+
+        app = TestApp().build()
+        hook = app._hook_by_moment["configure_build"]
+        assert isinstance(hook, mock_hooks.BothPointsHook)
+
+        app.shutdown()
+
+        assert hook.teardowns == 1
 
 
 class TestHookTeardown:
@@ -194,7 +414,7 @@ class TestHookTeardown:
         hook = mock_hooks.RecordingHook()
 
         class TestApp(AppContainer):
-            hooks = (hook,)
+            configure_build = declare_hook(hook)
 
         app = TestApp().build()
         assert mock_hooks.installed == ["recorded"]
@@ -205,7 +425,7 @@ class TestHookTeardown:
 
     def test_rebuilding_leaves_one_of_what_the_hook_installed(self) -> None:
         class TestApp(AppContainer):
-            hooks = (mock_hooks.RecordingHook(),)
+            configure_build = declare_hook(mock_hooks.RecordingHook)
 
         app = TestApp()
         app.build()
@@ -234,14 +454,15 @@ class TestHookTeardown:
             def configure_build(self, container: AppContainer) -> None:
                 pass
 
+            def configure_session(self, container: AppContainer) -> None:
+                pass
+
             def shutdown(self) -> None:
                 order.append(self.name)
 
         class TestApp(AppContainer):
-            hooks = (
-                Recorder("first"),
-                Recorder("second"),
-            )
+            configure_build = declare_hook(Recorder("first"))
+            configure_session = declare_hook(Recorder("second"))
 
         TestApp().build().shutdown()
 
@@ -253,10 +474,8 @@ class TestHookTeardown:
         hook = mock_hooks.RecordingHook()
 
         class TestApp(AppContainer):
-            hooks = (
-                hook,
-                mock_hooks.FailingShutdownHook(),
-            )
+            configure_build = declare_hook(hook)
+            configure_session = declare_hook(mock_hooks.FailingShutdownHook)
 
         app = TestApp().build()
         with caplog.at_level(logging.ERROR, logger="redsun"):
@@ -271,7 +490,7 @@ class TestHookTeardown:
                 pass
 
         class TestApp(AppContainer):
-            hooks = (NoTeardown(),)
+            configure_build = declare_hook(NoTeardown())
 
         TestApp().build().shutdown()
 
@@ -291,7 +510,7 @@ class TestSessionMoment:
         hook = mock_hooks.SessionHook()
 
         class TestApp(AppContainer):
-            hooks = (hook,)
+            configure_session = declare_hook(hook)
 
             motor = declare_device(
                 MyMotor,
@@ -311,7 +530,7 @@ class TestSessionMoment:
         watcher = mock_hooks.PhaseWatcher()
 
         class TestApp(AppContainer):
-            hooks = (watcher,)
+            configure_build = declare_hook(watcher)
 
         app = TestApp().build()
 

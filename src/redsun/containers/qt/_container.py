@@ -16,12 +16,12 @@ from redsun.containers._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
-    HookError,
 )
 from redsun.containers.container import AppContainer
 from redsun.containers.qt._mainview import QtMainView
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from typing import Any
 
     from redsun.view.qt import QtView
@@ -46,12 +46,12 @@ class QtAppContainer(AppContainer):
 
     __slots__ = ("_main_view", "_qt_app")
 
-    _hook_protocols: ClassVar[tuple[type, ...]] = (
-        *AppContainer._hook_protocols,
-        CreatesApplication,
-        ConfiguresApplication,
-        ConfiguresMainView,
-    )
+    _hook_keys: ClassVar[Mapping[str, type]] = {
+        "create_application": CreatesApplication,
+        "configure_application": ConfiguresApplication,
+        **AppContainer._hook_keys,
+        "configure_main_view": ConfiguresMainView,
+    }
 
     def __init__(self, **config: Any) -> None:
         super().__init__(**config)
@@ -82,41 +82,18 @@ class QtAppContainer(AppContainer):
         if self._qt_app is not None:
             return self._qt_app
         # resolved even when an application is already running, so that a
-        # session naming two creators fails the same way under a test suite
-        # that owns one and a desktop launch that does not
-        creator = self._application_creator()
+        # malformed hooks section fails the same way under a test suite that
+        # owns an application and a desktop launch that does not
+        creator = self._ensure_hooks().get("create_application")
         running = QApplication.instance()
         if running is not None:
             app = cast("QApplication", running)
-        elif creator is None:
-            app = QApplication(sys.argv)
+        elif isinstance(creator, CreatesApplication):
+            app = cast("QApplication", creator.create_application(sys.argv))
         else:
-            app = creator.create_application(sys.argv)
+            app = QApplication(sys.argv)
         self._qt_app = app
         return app
-
-    def _application_creator(self) -> CreatesApplication[QApplication] | None:
-        """Return the hook supplying the application, if any hook claims it.
-
-        Raises
-        ------
-        HookError
-            If more than one hook claims it, naming them: the application a
-            session runs on would otherwise be decided by the order of the
-            ``hooks`` section.
-        """
-        claimants: list[CreatesApplication[QApplication]] = [
-            hook
-            for hook in self._ensure_hooks()
-            if isinstance(hook, CreatesApplication)
-        ]
-        if len(claimants) > 1:
-            named = ", ".join(type(hook).__name__ for hook in claimants)
-            raise HookError(
-                f"create_application is claimed by {len(claimants)} hook providers "
-                f"({named}); exactly one may supply the application"
-            )
-        return claimants[0] if claimants else None
 
     def _ensure_main_view(self) -> QtMainView:
         """Return the main window, building it from the built views if needed.
@@ -130,9 +107,9 @@ class QtAppContainer(AppContainer):
                 session_name=self._config.get("session", "Redsun"),
                 views=cast("dict[str, QtView]", self.views),
             )
-            for hook in self._hooks or ():
-                if isinstance(hook, ConfiguresMainView):
-                    hook.configure_main_view(self._main_view)
+            hook = self._ensure_hooks().get("configure_main_view")
+            if isinstance(hook, ConfiguresMainView):
+                hook.configure_main_view(self._main_view)
         return self._main_view
 
     def build(self) -> QtAppContainer:
@@ -151,9 +128,9 @@ class QtAppContainer(AppContainer):
         # coroutine slots resolve a backend when they are connected, which
         # happens during the dependency injection phase of super().build()
         set_async_backend()
-        for hook in self._ensure_hooks():
-            if isinstance(hook, ConfiguresApplication):
-                hook.configure_application(app)
+        hook = self._ensure_hooks().get("configure_application")
+        if isinstance(hook, ConfiguresApplication):
+            hook.configure_application(app)
         super().build()
         return self
 

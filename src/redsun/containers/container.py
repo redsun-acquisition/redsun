@@ -11,7 +11,6 @@ import logging
 
 # resolved at runtime: the ClassVar annotation below is evaluated by ruff's
 # runtime-evaluated rules and by anything calling get_type_hints on a subclass
-from collections.abc import Sequence  # noqa: TC003
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -36,10 +35,10 @@ from psygnal import Signal
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers._hooks import (
-    HOOK_PROTOCOLS,
     ConfiguresBuild,
     ConfiguresSession,
     HookError,
+    distinct,
     parse_hook_specs,
     resolve_hooks,
 )
@@ -47,6 +46,7 @@ from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
     _DeviceField,
+    _HookField,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
@@ -65,7 +65,7 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
@@ -231,6 +231,7 @@ class AppContainer:
         "_components",
         "_config",
         "_devices_connected",
+        "_hook_by_moment",
         "_hooks",
         "_is_built",
         "_phases",
@@ -251,23 +252,22 @@ class AppContainer:
     step would register seven phases to display seven labels.
     """
 
-    hooks: ClassVar[Sequence[object]] = ()
-    """Hook providers this container installs, ahead of the configured ones.
+    _hook_keys: ClassVar[Mapping[str, type]] = {
+        "configure_build": ConfiguresBuild,
+        "configure_session": ConfiguresSession,
+    }
+    """The hook points this container calls, in the order it reaches them.
 
-    Instances, not class paths: a container class is written in Python, where
-    the provider is already in hand. A subclass inherits what its bases
-    declare, ahead of its own.
+    A key is the method the point calls, and is what names the point in a
+    container class body and in the ``hooks`` section. A subclass adding points
+    declares its own mapping.
     """
 
-    _hook_protocols: ClassVar[tuple[type, ...]] = (
-        ConfiguresBuild,
-        ConfiguresSession,
-        HasShutdown,
-    )
-    """The hook protocols this container calls.
+    _hook_providers: ClassVar[dict[str, object]] = {}
+    """The providers declared on this container class, by hook point.
 
-    A provider satisfying none of them is refused, since it would silently do
-    nothing. A subclass adding hook points extends this.
+    Built as the class is created, so that an instance declared at two points
+    is one provider serving both. A subclass inherits what its bases declare.
     """
 
     def __init_subclass__(
@@ -370,11 +370,21 @@ class AppContainer:
         cls._presenter_components = presenters
         cls._view_components = views
 
-        inherited: list[object] = []
+        hook_providers: dict[str, object] = {}
         for base in cls.__bases__:
             if issubclass(base, AppContainer):
-                inherited.extend(base.hooks)
-        cls.hooks = (*inherited, *namespace.get("hooks", ()))
+                hook_providers.update(base._hook_providers)
+
+        hook_fields = {
+            attr_name: value
+            for attr_name, value in namespace.items()
+            if isinstance(value, _HookField)
+        }
+        for attr_name, hook_field in hook_fields.items():
+            provider = cls._build_hook_provider(attr_name, hook_field)
+            hook_providers[attr_name] = provider
+            setattr(cls, attr_name, provider)
+        cls._hook_providers = hook_providers
 
         if devices or presenters or views:
             logger.debug(
@@ -392,6 +402,7 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._hooks: tuple[object, ...] | None = None
+        self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
@@ -538,9 +549,9 @@ class AppContainer:
         # what a hook adds to the sequence is undone when it is torn down, so
         # that a container built a second time does not accumulate phases
         self._phases_before_hooks = dict(self._phases)
-        for hook in hooks:
-            if isinstance(hook, ConfiguresBuild):
-                hook.configure_build(self)
+        configures_build = hooks.get("configure_build")
+        if isinstance(configures_build, ConfiguresBuild):
+            configures_build.configure_build(self)
 
         for name, phase in self._phases.items():
             phase()
@@ -550,9 +561,9 @@ class AppContainer:
         # before the session hooks, so that a hook reading `views`,
         # `presenters` or `devices` is not turned away by their build guard
         self._is_built = True
-        for hook in hooks:
-            if isinstance(hook, ConfiguresSession):
-                hook.configure_session(self)
+        configures_session = hooks.get("configure_session")
+        if isinstance(configures_session, ConfiguresSession):
+            configures_session.configure_session(self)
 
         logger.info(
             f"Container built: "
@@ -621,59 +632,90 @@ class AppContainer:
         if self._is_built:
             raise RuntimeError(f"cannot {action} after the container is built")
 
-    def _ensure_hooks(self) -> tuple[object, ...]:
-        """Return the hook providers, resolving them once per build.
+    @classmethod
+    def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
+        """Construct the provider this container class declares at *moment*.
+
+        Raises
+        ------
+        HookError
+            If *moment* is not a hook point this container calls, the provider
+            class rejects the keys given, or the provider does not implement
+            the protocol the point calls.
+        """
+        if moment not in cls._hook_keys:
+            known = ", ".join(cls._hook_keys)
+            raise HookError(
+                f"{cls.__name__} declares a hook at {moment!r}, which is not a "
+                f"hook point it calls; expected one of: {known}"
+            )
+        declared = field.provider
+        if isinstance(declared, type):
+            try:
+                provider: object = declared(**field.kwargs)
+            except TypeError as e:
+                raise HookError(
+                    f"cannot construct hook provider {declared.__name__!r} "
+                    f"declared at {moment!r} with {sorted(field.kwargs)}: {e}"
+                ) from e
+        else:
+            provider = declared
+        protocol = cls._hook_keys[moment]
+        if not isinstance(provider, protocol):
+            raise HookError(
+                f"hook provider {type(provider).__name__!r} declared at "
+                f"{moment!r} does not implement {protocol.__name__}"
+            )
+        return provider
+
+    def _ensure_hooks(self) -> dict[str, object]:
+        """Return the hook providers by hook point, resolving once per build.
 
         A subclass firing its own hook points calls this rather than resolving
         again, so that every hook point of one build acts on one set of
         providers.
         """
         if self._hooks is None:
-            self._hooks = self._resolve_hook_providers()
-        return self._hooks
+            self._hook_by_moment = self._resolve_hook_providers()
+            self._hooks = distinct(
+                self._hook_by_moment[moment]
+                for moment in self._hook_keys
+                if moment in self._hook_by_moment
+            )
+        return self._hook_by_moment
 
-    def _resolve_hook_providers(self) -> tuple[object, ...]:
-        """Instantiate the class-level hook providers, then the configured ones.
+    def _resolve_hook_providers(self) -> dict[str, object]:
+        """Merge the providers declared on the class with the configured ones.
 
         Raises
         ------
         HookError
-            If an entry does not resolve, or a provider satisfies none of the
-            hook protocols this container calls.
+            If an entry does not resolve, a hook point is named on the class
+            and in the configuration, or a configured provider does not
+            implement the protocol its hook point calls.
         """
-        resolved: list[object] = [
-            *type(self).hooks,
-            *resolve_hooks(parse_hook_specs(self._config.get("hooks", []))),
-        ]
-        for hook in resolved:
-            if not isinstance(hook, self._hook_protocols):
-                known = ", ".join(p.__name__ for p in self._hook_protocols)
-                raise HookError(
-                    f"hook provider {type(hook).__name__!r} implements none of "
-                    f"the hook protocols {type(self).__name__} calls, so it "
-                    f"would do nothing. It must implement one of: {known}."
-                )
-            self._warn_unused_hook_points(hook)
-        return tuple(resolved)
-
-    def _warn_unused_hook_points(self, hook: object) -> None:
-        """Warn about protocols *hook* implements that this container never calls.
-
-        A provider written for another toolkit is not an error here, since it
-        may legitimately serve several; it is only inert, which is worth saying
-        out loud because silence is what a typo'd method name looks like.
-        """
-        unused = [
-            protocol.__name__
-            for protocol in HOOK_PROTOCOLS
-            if protocol not in self._hook_protocols and isinstance(hook, protocol)
-        ]
-        if unused:
-            logger.warning(
-                f"Hook provider '{type(hook).__name__}' implements "
-                f"{', '.join(sorted(unused))}, which {type(self).__name__} "
-                "never calls; those hook points will not run"
+        declared = dict(type(self)._hook_providers)
+        configured = resolve_hooks(
+            parse_hook_specs(
+                self._config.get("hooks", {}), self._hook_keys, type(self).__name__
             )
+        )
+        both = sorted(declared.keys() & configured.keys())
+        if both:
+            named = ", ".join(repr(moment) for moment in both)
+            raise HookError(
+                f"hook point(s) {named} are named both on {type(self).__name__} "
+                "and in the configuration; a hook point takes one provider, so "
+                "drop one of the two"
+            )
+        for moment, hook in configured.items():
+            protocol = self._hook_keys[moment]
+            if not isinstance(hook, protocol):
+                raise HookError(
+                    f"hook provider {type(hook).__name__!r} configured at "
+                    f"{moment!r} does not implement {protocol.__name__}"
+                )
+        return {**declared, **configured}
 
     def _shutdown_hooks(self) -> None:
         """Undo what the hook providers did, in reverse order of installation."""
@@ -690,6 +732,7 @@ class AppContainer:
         if self._phases_before_hooks:
             self._phases = self._phases_before_hooks
         self._hooks = None
+        self._hook_by_moment = {}
 
     def _create_virtual_container(self) -> None:
         """Create the VirtualContainer and hand it the session configuration."""
