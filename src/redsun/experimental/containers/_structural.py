@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import inspect
-import typing
 from functools import cache
 from typing import TYPE_CHECKING, Any
+
+from typing_extensions import get_protocol_members
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -16,11 +17,7 @@ _PROBE = object()
 @cache
 def members(protocol: type) -> frozenset[str]:
     """Return the member names *protocol* requires."""
-    attrs = getattr(protocol, "__protocol_attrs__", None)
-    if attrs is None:
-        # exposed as an attribute from 3.12; before that only computed here
-        attrs = typing._get_protocol_attrs(protocol)  # type: ignore[attr-defined]
-    return frozenset(attrs)
+    return frozenset(get_protocol_members(protocol))
 
 
 @cache
