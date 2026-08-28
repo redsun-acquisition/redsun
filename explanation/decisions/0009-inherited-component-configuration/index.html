@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/run-tests/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0009-inherited-component-configuration/">
       
       
-        <link rel="prev" href="../installation/">
+        <link rel="prev" href="../0008-container-hooks-and-the-phase-registry/">
       
       
-        <link rel="next" href="../wire-components/">
+        <link rel="next" href="../../../how-to/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.57">
     
     
       
-        <title>Run tests - Redsun</title>
+        <title>9. Inherited component configuration - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.5da3a30f.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.5da3a30f.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#run-tests" class="md-skip">
+        <a href="#9-inherited-component-configuration" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Run tests
+              9. Inherited component configuration
             
           </span>
         </div>
@@ -215,7 +215,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   Redsun
@@ -229,46 +229,6 @@
   
   
   
-  
-    
-      
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../explanation/" class="md-tabs__link">
-          
-  
-  Explanation
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
     
   
   
@@ -277,6 +237,8 @@
       
         
           
+        
+      
         
       
         
@@ -294,7 +256,45 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="../../" class="md-tabs__link">
+          
+  
+  Explanation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../how-to/" class="md-tabs__link">
           
   
   How to
@@ -326,7 +326,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -356,7 +356,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -389,7 +389,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -419,7 +419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -442,6 +442,8 @@
       
   
   
+    
+  
   
   
     
@@ -467,20 +469,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../explanation/" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -497,13 +502,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -522,7 +527,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/component-system/" class="md-nav__link">
+      <a href="../../component-system/" class="md-nav__link">
         
   
   
@@ -549,7 +554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/container-architecture/" class="md-nav__link">
+      <a href="../../container-architecture/" class="md-nav__link">
         
   
   
@@ -576,7 +581,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/statement/" class="md-nav__link">
+      <a href="../../statement/" class="md-nav__link">
         
   
   
@@ -603,7 +608,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/storage/" class="md-nav__link">
+      <a href="../../storage/" class="md-nav__link">
         
   
   
@@ -648,17 +653,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
             
   
   
@@ -692,7 +700,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/architecture/devices/" class="md-nav__link">
+      <a href="../../architecture/devices/" class="md-nav__link">
         
   
   
@@ -719,7 +727,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/architecture/plans/" class="md-nav__link">
+      <a href="../../architecture/plans/" class="md-nav__link">
         
   
   
@@ -746,7 +754,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/architecture/presenters/" class="md-nav__link">
+      <a href="../../architecture/presenters/" class="md-nav__link">
         
   
   
@@ -773,7 +781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/architecture/qt-widgets/" class="md-nav__link">
+      <a href="../../architecture/qt-widgets/" class="md-nav__link">
         
   
   
@@ -800,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/architecture/virtual/" class="md-nav__link">
+      <a href="../../architecture/virtual/" class="md-nav__link">
         
   
   
@@ -832,8 +840,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -860,18 +870,21 @@
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -888,7 +901,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -905,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -932,7 +945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -959,7 +972,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -986,7 +999,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -1013,7 +1026,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -1040,7 +1053,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -1067,7 +1080,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -1094,7 +1107,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -1102,209 +1115,6 @@
     
   
   8. Container hooks and the build phase registry
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../explanation/decisions/0009-inherited-component-configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited component configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  How to
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-  How to
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../build-docs/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Build documentation
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../install-hooks/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Install container hooks
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Installation
 
     
   </span>
@@ -1340,7 +1150,7 @@
   <span class="md-ellipsis">
     
   
-  Run tests
+  9. Inherited component configuration
 
     
   </span>
@@ -1357,7 +1167,7 @@
   <span class="md-ellipsis">
     
   
-  Run tests
+  9. Inherited component configuration
 
     
   </span>
@@ -1383,10 +1193,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Prerequisites
+        Status
       </span>
     </span>
   </a>
@@ -1394,10 +1204,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-all-tests" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run all tests
+        Context
       </span>
     </span>
   </a>
@@ -1405,10 +1215,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generate-coverage-report" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Generate coverage report
+        Decision
       </span>
     </span>
   </a>
@@ -1416,21 +1226,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-specific-tests" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run specific tests
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#type-check-the-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Type-check the test suite
+        Consequences
       </span>
     </span>
   </a>
@@ -1446,6 +1245,96 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../how-to/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  How to
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  How to
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
               
                 
   
@@ -1453,7 +1342,115 @@
   
   
     <li class="md-nav__item">
-      <a href="../wire-components/" class="md-nav__link">
+      <a href="../../../how-to/build-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Build documentation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/install-hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install container hooks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/run-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Run tests
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
         
   
   
@@ -1514,7 +1511,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../../../reference/" class="md-nav__link ">
               
   
   
@@ -1556,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/changelog/" class="md-nav__link">
+      <a href="../../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1655,7 +1652,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/aio/" class="md-nav__link">
+      <a href="../../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -1682,7 +1679,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/container/" class="md-nav__link">
+      <a href="../../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1709,7 +1706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/device/" class="md-nav__link">
+      <a href="../../../reference/api/device/" class="md-nav__link">
         
   
   
@@ -1736,7 +1733,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/engine/" class="md-nav__link">
+      <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1763,7 +1760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/log/" class="md-nav__link">
+      <a href="../../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1790,7 +1787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1817,7 +1814,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/storage/" class="md-nav__link">
+      <a href="../../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -1844,7 +1841,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/utils/" class="md-nav__link">
+      <a href="../../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -1871,7 +1868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/view/" class="md-nav__link">
+      <a href="../../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -1898,7 +1895,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -1965,7 +1962,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/" class="md-nav__link ">
+            <a href="../../../tutorials/" class="md-nav__link ">
               
   
   
@@ -2007,7 +2004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/custom-storage-backend/" class="md-nav__link">
+      <a href="../../../tutorials/custom-storage-backend/" class="md-nav__link">
         
   
   
@@ -2075,10 +2072,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Prerequisites
+        Status
       </span>
     </span>
   </a>
@@ -2086,10 +2083,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-all-tests" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run all tests
+        Context
       </span>
     </span>
   </a>
@@ -2097,10 +2094,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generate-coverage-report" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Generate coverage report
+        Decision
       </span>
     </span>
   </a>
@@ -2108,21 +2105,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-specific-tests" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run specific tests
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#type-check-the-test-suite" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Type-check the test suite
+        Consequences
       </span>
     </span>
   </a>
@@ -2147,40 +2133,68 @@
   
 
 
-<h1 id="run-tests">Run tests<a class="headerlink" href="#run-tests" title="Permanent link">&para;</a></h1>
-<p>This guide covers how to run the <code>redsun</code> test suite and generate coverage reports.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>Make sure you have <a href="../installation/#install-development-dependencies">installed <code>redsun</code> with development dependencies</a>.</p>
-<h2 id="run-all-tests">Run all tests<a class="headerlink" href="#run-all-tests" title="Permanent link">&para;</a></h2>
-<p>Run the tests from the project root:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest
-</span></code></pre></div>
-<p>Qt-dependent tests are marked with <code>@pytest.mark.qt</code> and are skipped
-automatically when no display environment is available.</p>
-<h2 id="generate-coverage-report">Generate coverage report<a class="headerlink" href="#generate-coverage-report" title="Permanent link">&para;</a></h2>
-<p>Coverage sources are configured in <code>pyproject.toml</code>, so no extra flags are
-needed:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="w"> </span>--cov-report<span class="o">=</span>html
-</span></code></pre></div>
-<p>This generates an <code>htmlcov/</code> directory. Open <code>htmlcov/index.html</code> in your browser to view it.</p>
-<h2 id="run-specific-tests">Run specific tests<a class="headerlink" href="#run-specific-tests" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Run SDK tests only</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/sdk/
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run container tests only</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/container/
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Run a specific test function</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/container/test_container.py::test_function_name
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Run tests matching a pattern</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-k<span class="w"> </span><span class="s2">"test_storage"</span>
-</span></code></pre></div>
-<h2 id="type-check-the-test-suite">Type-check the test suite<a class="headerlink" href="#type-check-the-test-suite" title="Permanent link">&para;</a></h2>
-<p>Tests are covered by mypy strict mode alongside the sources. Run the
-configuration-driven form (the Qt binding shim pins what CI checks):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>--ignore-missing-imports<span class="w"> </span><span class="k">$(</span>uv<span class="w"> </span>run<span class="w"> </span>qtpy<span class="w"> </span>mypy-args<span class="k">)</span>
-</span></code></pre></div>
+<h1 id="9-inherited-component-configuration">9. Inherited component configuration<a class="headerlink" href="#9-inherited-component-configuration" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-08-28</p>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>Two sessions of the same instrument differ in their hardware and in almost
+nothing else. A simulated microscope and the real one declare the same
+presenters, the same views and the same wiring; only the devices and the
+configuration file change. Written as two container classes, everything but the
+devices is duplicated, and the duplication is the part that carries the
+application's structure.</p>
+<p>Python already has the mechanism for that: a base class holding the shared
+declarations, subclassed once per session. It did not work here, for two
+reasons that both come from <code>from_config</code> being resolved as the class body is
+read.</p>
+<p>A base class has no configuration file of its own - the file is the thing that
+differs - so every <code>from_config</code> field in it raised at class creation:
+<code>Component field 'img_widget' in MimirBase has from_config set but no config
+path was provided</code>. Giving the base a file instead makes the resolution happen
+against that file, and <code>__init_subclass__</code> then copies the built wrappers into
+the subclass, so a subclass naming its own <code>config</code> inherits the base's
+keyword arguments and silently ignores its own file.</p>
+<p>Both are consequences of the same thing: the fields were consumed at class
+creation and not kept, so nothing was left for a subclass to re-resolve.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>The declared fields outlive class creation.</strong> <code>AppContainer._component_fields</code>
+records every <code>declare_*</code> field a container and its bases declared, keyed by
+attribute name. It is accumulated the way the component wrappers already are:
+bases first, then the class's own body.</p>
+<p><strong>Every class resolves the whole inherited set against its own file.</strong>
+<code>__init_subclass__</code> no longer resolves only the fields written in that body; it
+resolves everything in <code>_component_fields</code> against that class's <code>_config_path</code>.
+A subclass therefore rebuilds the wrappers it inherited, reading its own
+configuration, and two subclasses of one base read two different files.</p>
+<p><strong>A missing configuration file is refused at construction, not at class
+creation.</strong> A base class exists to be subclassed, and the subclass is where
+<code>config</code> is named, so a class body cannot know whether a file will arrive. The
+<code>TypeError</code> moves to <code>AppContainer.__init__</code>, and names every field that asked
+for a section rather than the first one reached.</p>
+<p>Resolution stays at class creation for a class that has a file. It is what lets
+a type checker read a component's type off the class body, and moving it to
+build time would buy nothing that the subclass rule does not already give.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A base class can carry the presenters, views, hooks and <code>wire</code> that two
+  sessions share, with each subclass supplying only its devices and its file.</li>
+<li>A class that today fails at import now fails when constructed. The message is
+  the same and names more; the timing is not.</li>
+<li><strong>The subclass's file must be complete.</strong> <code>config</code> names one path and a
+  subclass replaces rather than merges, so a file must carry a section for every
+  field its class inherits, and a base's file contributes nothing to a
+  subclass. Sharing the declarations does not share the configuration.</li>
+<li>Layering configuration files - a common one under a per-session one - would
+  close that gap and is deliberately not decided here: merging two files makes a
+  reader consult both to know one component's arguments, which is the objection
+  that made <a href="../0008-container-hooks-and-the-phase-registry/">container hooks</a>
+  refuse a silent override.</li>
+<li>An inherited field whose section is missing from the subclass's file falls
+  back to its inline keyword arguments with a warning, exactly as a directly
+  declared one does. Treating inheritance as a stronger statement of intent, and
+  raising instead, stays available as a later change.</li>
+</ul>
 
 
 
@@ -2220,7 +2234,7 @@ configuration-driven form (the Qt binding shim pins what CI checks):</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../installation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation">
+          <a href="../0008-container-hooks-and-the-phase-registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 8. Container hooks and the build phase registry">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2230,20 +2244,20 @@ configuration-driven form (the Qt binding shim pins what CI checks):</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Installation
+                8. Container hooks and the build phase registry
               </div>
             </div>
           </a>
         
         
           
-          <a href="../wire-components/" class="md-footer__link md-footer__link--next" aria-label="Next: Wire components together">
+          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Wire components together
+                How-to guides
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2307,10 +2321,10 @@ configuration-driven form (the Qt binding shim pins what CI checks):</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.49251538.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.49251538.min.js"></script>
       
     
   </body>
