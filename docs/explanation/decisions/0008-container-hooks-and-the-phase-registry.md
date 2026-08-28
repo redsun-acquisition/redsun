@@ -83,6 +83,17 @@ provider serving several toolkits is legitimate, so this is not an error - but
 it is inert, and silence is exactly what a typo'd method name looks like.
 Implementing *nothing* the container calls still raises.
 
+**The one hook point that returns a value takes exactly one claimant.** Every
+other point is void-returning, so every provider implementing it runs and the
+order is the order the session file lists. `create_application` returns the
+application the whole session is built against; running two of them is not
+possible and choosing the first would let list order decide which one a session
+gets, in a file whose author has no reason to think order matters there. Two
+claimants therefore raise, naming both. The count is checked whether or not the
+application is actually created, so the error does not depend on whether the
+process happens to hold a `QApplication` already - otherwise the one
+environment that never reports the mistake is the test suite.
+
 **Hook providers are plain objects, checked structurally.** A provider
 implements `ConfiguresBuild` to adjust the sequence, `HasShutdown` to undo what
 it did, or both; each is checked independently with `isinstance`, which is the

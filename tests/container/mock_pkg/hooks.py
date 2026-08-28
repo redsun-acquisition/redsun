@@ -100,3 +100,20 @@ class QtOnlyHook:
 
     def configure_application(self, app: QApplication) -> None:
         app.setStyleSheet("")
+
+
+class QtApplicationFactory:
+    """Supplies an application the test already owns, and records the call.
+
+    Returns an existing ``QApplication`` rather than building one: a second
+    real application cannot be constructed in a process that already has one,
+    which every Qt test session does.
+    """
+
+    def __init__(self, app: QApplication) -> None:
+        self.app = app
+        self.calls: list[list[str]] = []
+
+    def create_application(self, argv: list[str]) -> QApplication:
+        self.calls.append(argv)
+        return self.app

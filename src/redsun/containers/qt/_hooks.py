@@ -22,7 +22,14 @@ __all__ = [
 ]
 
 QtCreatesApplication: TypeAlias = CreatesApplication["QApplication"]
-"""Supplies the ``QApplication`` the session runs on."""
+"""Supplies the ``QApplication`` the session runs on.
+
+Consulted only when no ``QApplication`` is running yet, so it is the place for
+application identity - the class, ``argv``, the attributes that can only be set
+before construction - and never the place for a theme, which
+`QtConfiguresApplication` delivers whether or not the application was created
+here. At most one hook may claim it.
+"""
 
 QtConfiguresApplication: TypeAlias = ConfiguresApplication["QApplication"]
 """Adjusts the ``QApplication`` before any view is constructed.

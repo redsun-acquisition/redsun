@@ -11,89 +11,9 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- The build sequence is a registry a caller can add to.
-  `AppContainer.phases` reports the phases in the order `build` runs them, and
-  `register_phase(name, phase, after=...)` inserts a step after a named one.
-  `after` is required, since where a phase runs is what it means;
-  `unregister_phase` removes a registered phase but refuses the built-in ones,
-  whose order the container guarantees. Both are legal only before `build`.
-
-  ```python
-  app = MyApp()
-  app.register_phase("calibrate", calibrate, after="injection")
-  app.build()
-  ```
-
-- **Qt hook points.** `QtAppContainer` now runs
-  `redsun.qt.QtConfiguresApplication` providers against the `QApplication`
-  before the base build constructs any view, so a view is built against an
-  application already carrying its stylesheet, and
-  `redsun.qt.QtConfiguresMainView` providers against the main window as it is
-  created, before it is shown.
-
-  ```yaml
-  hooks:
-    - provider: "mypkg.theme:DarkTheme"
-  ```
-
-  ```python
-  class DarkTheme:
-      def configure_application(self, app: QApplication) -> None:
-          app.setStyleSheet(...)
-  ```
-
-  `QtConfiguresMainView` is bound to `QMainWindow`, not to the concrete window
-  class the container builds, so a hook is written against the toolkit and
-  imports nothing from redsun to annotate it. The window class stays an
-  implementation detail and stays free to change.
-
-  The three protocols are generic over the toolkit object
-  (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`), and
-  each toolkit supplies aliases rather than protocols of its own, so a plugin
-  author learns three names rather than three per toolkit. `create_application`
-  is declared but not yet called by any container.
-
-- A hook provider that implements a hook point its container never calls is
-  now logged as a warning naming the protocol. It still resolves, since a
-  provider may legitimately serve several toolkits, but silence is what a
-  typo'd method name looks like. A provider implementing nothing the container
-  calls still raises.
-
-- `QtAppContainer` gained `_ensure_main_view`, so the main window is built
-  and configured once, whether reached through `run` or directly.
-
-- `ConfiguresSession`, a hook point that runs once every component is built,
-  wired and injected. It is the closing half of the pair `ConfiguresBuild`
-  opens: previously the only way to reach that point was
-  `register_phase(..., after="injection")`, which names an implementation
-  detail to get somewhere the lifecycle already describes. It fires after
-  `is_built` is set, so a hook can read `devices`, `presenters` and `views`.
-
-- `AppContainer.sig_phase_complete`, emitted with the name of each build phase
-  as it finishes. For watching the build rather than taking part in it: a
-  splash screen naming the step in progress connects to this in
-  `configure_build`, where adding a phase per step would mean registering
-  seven phases to display seven labels.
-
-  ```python
-  class Splash:
-      def configure_build(self, container: AppContainer) -> None:
-          container.sig_phase_complete.connect(self._show)
-
-      def _show(self, phase: str) -> None: ...
-  ```
-
-  `AppContainer.__slots__` gains `__weakref__` to carry this signal. psygnal
-  refers to a signal's owner weakly and falls back to a strong reference when
-  it cannot; a class using `__slots__` cannot be referred to weakly unless
-  `__weakref__` is among its slots, and on that fallback no container is ever
-  collected. Any `__slots__` class owning a psygnal `Signal` needs the same.
-
 - **Container hooks** - an object a session installs on its application
-  container to adjust the application as a whole, rather than any one
-  component. A provider implements `ConfiguresBuild` to adjust the build
-  sequence, `HasShutdown` to undo what it did, or both; each is checked on its
-  own, so a class defining one method is a complete provider.
+  container to adjust the application as a whole. A provider implements one
+  hook point per moment it acts on; each is checked on its own.
 
   Providers are named in a configuration file by dotted path, with the
   remaining keys forwarded to the constructor:
@@ -104,26 +24,118 @@ Dates are specified in the format `DD-MM-YYYY`.
       passes: 3
   ```
 
-  or listed as instances on a container class, which is what an author writing
-  Python already holds:
+  or listed as instances on a container class:
 
   ```python
   class MyApp(QtAppContainer):
       hooks = (Calibration(passes=3),)
   ```
 
-  The two sources concatenate, class-level first, and neither overrides the
-  other. A subclass inherits what its bases declare. `HookError` is raised for
-  an entry that does not resolve, or a provider that satisfies none of the hook
-  protocols its container calls.
-
-  Hooks are torn down in reverse order with the container, after the
-  presenters; a failing teardown is logged and does not block the rest. The
-  container also restores the phase sequence it captured before the hooks ran,
-  so building a container twice does not accumulate phases.
+  The two sources concatenate, class-level first; neither overrides the other.
+  A subclass inherits what its bases declare. `HookError` is raised for an
+  entry that does not resolve, or for a provider that satisfies none of the
+  hook protocols its container calls. The hook points below are listed in the
+  order a session reaches them.
 
   See [Container hooks and the build phase
   registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md).
+
+- **`QtCreatesApplication`** (`redsun.qt`) - supplies the `QApplication` the
+  session runs on. Called only when no `QApplication` is running yet. At most
+  one provider may claim it; two raises `HookError` naming both, whether or not
+  the hook is reached.
+
+  ```python
+  class NapariApplication:
+      def create_application(self, argv: list[str]) -> QApplication:
+          return get_qapp(app_name=..., app_version=...)
+  ```
+
+- **`QtConfiguresApplication`** (`redsun.qt`) - adjusts the `QApplication`
+  before the build constructs any view.
+
+  ```python
+  class DarkTheme:
+      def configure_application(self, app: QApplication) -> None:
+          app.setStyleSheet(...)
+  ```
+
+- **`ConfiguresBuild`** (`redsun.containers`) - adjusts the build sequence
+  before any phase of it runs. The only point at which `register_phase` and
+  `unregister_phase` are legal.
+
+  ```python
+  class Calibration:
+      def configure_build(self, container: AppContainer) -> None:
+          container.register_phase("calibrate", self._run, after="injection")
+  ```
+
+- **`ConfiguresSession`** (`redsun.containers`) - runs after the last build
+  phase, with `is_built` already set, so `devices`, `presenters` and `views`
+  are readable.
+
+  ```python
+  class Autostart:
+      def configure_session(self, container: AppContainer) -> None:
+          self._log(container.devices, container.presenters, container.views)
+  ```
+
+- **`QtConfiguresMainView`** (`redsun.qt`) - adjusts the main window after it
+  is built and before it is shown. Bound to `QMainWindow`, not to the window
+  class the container builds.
+
+  ```python
+  class DarkTheme:
+      def configure_main_view(self, view: QMainWindow) -> None:
+          view.setWindowIcon(...)
+  ```
+
+- **`HasShutdown`** (`redsun.virtual`) - now called on hooks as well as
+  presenters. Hooks are torn down in reverse order, after the presenters; a
+  failing teardown is logged and does not block the rest. The container then
+  restores the phase sequence it captured before the hooks ran.
+
+  ```python
+  class DarkTheme:
+      def shutdown(self) -> None:
+          self._app.setStyleSheet(self._previous)
+  ```
+
+- The three toolkit hook points are one generic protocol each
+  (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`),
+  aliased per toolkit.
+
+- A hook provider that implements a hook point its container never calls is
+  logged as a warning naming the protocol. A provider implementing nothing the
+  container calls raises.
+
+- `AppContainer.phases`, `AppContainer.register_phase(name, phase, after=...)`
+  and `AppContainer.unregister_phase(name)` - the build sequence as a registry
+  a caller can add to. `after` is required; `unregister_phase` refuses the
+  built-in phases. Both are legal only before `build`.
+
+  ```python
+  app = MyApp()
+  app.register_phase("calibrate", calibrate, after="injection")
+  app.build()
+  ```
+
+- `AppContainer.sig_phase_complete`, emitted with the name of each build phase
+  as it finishes.
+
+  ```python
+  class Splash:
+      def configure_build(self, container: AppContainer) -> None:
+          container.sig_phase_complete.connect(self._show)
+
+      def _show(self, phase: str) -> None: ...
+  ```
+
+- `__weakref__` to `AppContainer.__slots__`, required by any `__slots__` class
+  owning a psygnal `Signal`.
+
+- `QtAppContainer._ensure_main_view`, so the main window is built and
+  configured once whether reached through `run` or directly.
 
 ## [0.11.1]
 
