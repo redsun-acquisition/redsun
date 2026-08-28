@@ -127,7 +127,9 @@ def declare_device(
         Component name, overriding the attribute name.
     from_config : str | None
         Key to read further keyword arguments from, in the configuration
-        file's ``devices`` section.
+        file's ``devices`` section. Read from the file the container class
+        naming the field declares, so a subclass with a ``config`` of its own
+        reads this field from that file.
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """
@@ -161,7 +163,9 @@ def declare_view(
         Component name, overriding the attribute name.
     from_config : str | None
         Key to read further keyword arguments from, in the configuration
-        file's ``views`` section.
+        file's ``views`` section. Read from the file the container class
+        naming the field declares, so a subclass with a ``config`` of its own
+        reads this field from that file.
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """
@@ -196,7 +200,9 @@ def declare_presenter(
         Component name, overriding the attribute name.
     from_config : str | None
         Key to read further keyword arguments from, in the configuration
-        file's ``presenters`` section.
+        file's ``presenters`` section. Read from the file the container class
+        naming the field declares, so a subclass with a ``config`` of its own
+        reads this field from that file.
     **kwargs : Any
         Keyword arguments forwarded to the component constructor.
     """

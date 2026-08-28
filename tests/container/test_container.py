@@ -542,12 +542,38 @@ class TestConfigField:
         assert app.devices["motor"].name == "motor"
         assert "ctrl" in app.presenters
 
-    def test_from_config_without_config_field_raises(self) -> None:
+    def test_from_config_without_config_field_raises_on_construction(self) -> None:
+        # declaring is legal: a base exists to be subclassed, and the subclass
+        # is where `config` is named
+        class TestApp(AppContainer):
+            motor = declare_device(MyMotor, from_config="motor")
 
         with pytest.raises(TypeError, match="no config path was provided"):
+            TestApp()
 
-            class TestApp(AppContainer):
-                motor = declare_device(MyMotor, from_config="motor")
+    def test_a_subclass_resolves_inherited_fields_against_its_own_config(
+        self, config_path: Path
+    ) -> None:
+        class Base(AppContainer):
+            motor = declare_device(MyMotor, from_config="motor")
+
+        class Derived(Base, config=config_path / "mock_component_config.yaml"):
+            pass
+
+        assert Derived._device_components["motor"].kwargs["string"] == "from config"
+
+    def test_two_subclasses_read_their_own_configs(self, config_path: Path) -> None:
+        class Base(AppContainer):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        class First(Base, config=config_path / "mock_component_config.yaml"):
+            pass
+
+        class Second(Base, config=config_path / "mock_component_alt_config.yaml"):
+            pass
+
+        assert First._presenter_components["ctrl"].kwargs["string"] == "config ctrl"
+        assert Second._presenter_components["ctrl"].kwargs["string"] == "alt ctrl"
 
     def test_from_config_missing_section_warns(
         self,

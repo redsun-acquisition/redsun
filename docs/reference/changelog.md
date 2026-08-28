@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Changed
+
+- A `declare_*` field with `from_config` is resolved against the configuration
+  file of each container class that inherits it, rather than only the one that
+  declared it. A base class can therefore carry the declarations two sessions
+  share while each subclass reads its own file.
+
+  ```python
+  class MimirBase(QtAppContainer):
+      img_widget = declare_view(ImageView, from_config="img_widget")
+
+
+  class Simulation(MimirBase, config="simulation.yaml"): ...
+
+
+  class Microscope(MimirBase, config="microscope.yaml"): ...
+  ```
+
+- Declaring a `from_config` field on a container class with no `config` file no
+  longer raises at class creation; the `TypeError` is raised when such a
+  container is constructed, and names every field that asked for a section.
+  A base class exists to be subclassed, and the subclass is where `config` is
+  named.
+
+- `AppContainer._component_fields` records the `declare_*` fields a container
+  and its bases declared, which is what makes the resolution above possible.
+
+  See [Inherited component
+  configuration](../explanation/decisions/0009-inherited-component-configuration.md).
+
 ## [0.11.2] - 28-08-2026
 
 ### Added

@@ -242,6 +242,14 @@ class AppContainer:
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
+    _component_fields: ClassVar[dict[str, _ComponentField]] = {}
+    """Every ``declare_*`` field this container and its bases declared.
+
+    Kept past class creation so that a subclass naming its own ``config`` file
+    resolves the fields it inherited against that file rather than the one its
+    base was written with.
+    """
+
     _config_path: ClassVar[Path | None] = None
 
     sig_phase_complete = Signal(str)
@@ -310,11 +318,18 @@ class AppContainer:
             elif isinstance(attr_value, _ViewComponent):
                 views[attr_value.name] = attr_value
 
-        component_fields = {
-            attr_name: value
-            for attr_name, value in namespace.items()
-            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
-        }
+        component_fields: dict[str, _ComponentField] = {}
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                component_fields.update(base._component_fields)
+        component_fields.update(
+            {
+                attr_name: value
+                for attr_name, value in namespace.items()
+                if not attr_name.startswith("_") and isinstance(value, _ComponentField)
+            }
+        )
+        cls._component_fields = component_fields
 
         if component_fields:
             config_data: dict[str, Any] = {}
@@ -329,14 +344,7 @@ class AppContainer:
 
             for attr_name, field in component_fields.items():
                 kw = field.kwargs
-                if field.from_config is not None:
-                    if not config_data:
-                        raise TypeError(
-                            f"Component field '{attr_name}' in {cls.__name__} has "
-                            f"from_config set but no config path was "
-                            f"provided to the container class"
-                        )
-
+                if field.from_config is not None and config_data:
                     section_key = _section_key[type(field)]
                     section_data: dict[str, Any] = config_data.get(section_key, {})
                     _sentinel = object()
@@ -395,6 +403,7 @@ class AppContainer:
             )
 
     def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
+        self._refuse_unresolved_fields()
         self._config: AppConfig = {
             "schema_version": 1.0,
             "session": session,
@@ -437,6 +446,32 @@ class AppContainer:
             for key, value in yaml_data.items():
                 if key not in _COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
+
+    @classmethod
+    def _refuse_unresolved_fields(cls) -> None:
+        """Refuse a container whose ``from_config`` fields have no file to read.
+
+        Deferred to construction rather than class creation: a base class exists
+        to be subclassed, and the subclass is where ``config`` is named.
+
+        Raises
+        ------
+        TypeError
+            Naming every field that asked for a configuration section.
+        """
+        if cls._config_path is not None:
+            return
+        unresolved = sorted(
+            attr_name
+            for attr_name, field in cls._component_fields.items()
+            if field.from_config is not None
+        )
+        if unresolved:
+            raise TypeError(
+                f"Component field(s) {', '.join(unresolved)} in {cls.__name__} have "
+                f"from_config set but no config path was provided to the container "
+                f"class"
+            )
 
     @property
     def config(self) -> AppConfig:
