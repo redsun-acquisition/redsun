@@ -39,7 +39,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   are therefore still built before the graph runs. A component appearing only in
   the session file takes its layer from the section it sits under, and is
   checked the same way. The three are also reachable as
-  `redsun.experimental.layer`.
+  `redsun.experimental.containers.components`.
 
   The attribute name is both the component name and its configuration key;
   `Alias` and `FromConfig` override each. `provides` marks a method whose
@@ -89,7 +89,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   be `runtime_checkable`, which is how a protocol declares it is meant to be
   matched at runtime.
 
-  A container names its toolkit by subclassing, as `redsun.experimental.qt`'s
+  A container names its toolkit by subclassing, as `redsun.experimental.containers.qt`'s
   `QtAppContainer` does; `AppContainer.frontend` is a class attribute, and
   `AppContainer` on its own names no toolkit and accepts any placement. The base
   container builds the components and the toolkit one arranges them:
@@ -123,7 +123,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   A view declares the `Placement` it asks the frontend to attach it at, which is
   what separates it from a presenter. The core defines `Placement` and no
   concrete one: a dock, a menu bar and a toolbar are window concepts, so
-  `redsun.experimental.qt` owns `Dock`, `Central`, `MenuItem` and `ToolBarItem`
+  `redsun.experimental.containers.qt` owns `Dock`, `Central`, `MenuItem` and `ToolBarItem`
   alongside the `Qt` frontend that lists them in `Frontend.placements` and the
   `attach` that fills a `QMainWindow` from a container's `views`. Each is paired
   there with the toolkit type it demands - a `QWidget` for a dock or the centre,

@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from typing import assert_type
 
 from redsun.experimental import AsPresenter, AsView, Placement, PPresenter, PView
-from redsun.experimental.qt import Central, Dock, QtAppContainer
+from redsun.experimental.containers.qt import Central, Dock, QtAppContainer
 
 
 class Ctrl:

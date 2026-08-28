@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
 )
 
 from redsun.experimental import AppContainer, AsView, Placement, PView
-from redsun.experimental.qt import (
+from redsun.experimental.containers.qt import (
     REQUIRES,
     Central,
     Dock,

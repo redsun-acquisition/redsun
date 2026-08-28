@@ -27,8 +27,12 @@ from redsun.experimental import (
     provides,
     slot,
 )
-from redsun.experimental._declarations import Layer, check
-from redsun.experimental._factories import injectable, optional_arg, synthesize
+from redsun.experimental.containers._declarations import Layer, check
+from redsun.experimental.containers._factories import (
+    injectable,
+    optional_arg,
+    synthesize,
+)
 
 Readings = NewType("Readings", "dict[str, float]")
 Descriptions = NewType("Descriptions", "dict[str, str]")

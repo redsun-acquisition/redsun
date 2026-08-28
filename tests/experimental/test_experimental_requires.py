@@ -21,8 +21,8 @@ from redsun.experimental import (
     RequiresMaybe,
     RequiresOne,
 )
-from redsun.experimental._factories import requirements
-from redsun.experimental._requires import (
+from redsun.experimental.containers._factories import requirements
+from redsun.experimental.virtual._requires import (
     Devices,
     Every,
     Maybe,
@@ -607,7 +607,7 @@ def test_one_key_per_question() -> None:
 
 
 def test_requirements_are_collected_once_per_question() -> None:
-    from redsun.experimental._declarations import Declaration, Layer
+    from redsun.experimental.containers._declarations import Declaration, Layer
 
     declarations = [
         Declaration(Session, "a", Layer.PRESENTER, {}),

@@ -33,7 +33,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `VirtualContainer`, `DeviceMapping`, `DocumentCallbacks`, `slot` |
 
-The Qt frontend is `redsun.experimental.qt`: `QtAppContainer` to subclass,
+The Qt frontend is `redsun.experimental.containers.qt`: `QtAppContainer` to subclass,
 `Qt` as the frontend itself, the placements it attaches (`Central`, `Dock`,
 `MenuItem`, `ToolBarItem`), and `attach` to fill a window. It lives apart from
 the rest so that nothing pulls in a toolkit unless it is used.
@@ -54,7 +54,7 @@ earlier:
 - The window `QtAppContainer` builds is a bare `QMainWindow`. Stable's
   `QtMainView` also carries a menu bar with "save configuration"; nothing here
   does.
-- `redsun.experimental._wiring` is a copy of `redsun.virtual._wiring`. The two
+- `redsun.experimental.virtual._wiring` is a copy of `redsun.virtual._wiring`. The two
   fold back together if this graduates.
 - No decision recorded. This page is the whole of the rationale; no ADR revisits
   [ADR 3](decisions/0003-structural-subtyping-for-presenters-and-views.md) or
@@ -206,7 +206,7 @@ A container says which toolkit it is built against by subclassing, the way
 `QtAppContainer` does today:
 
 ```python
-from redsun.experimental.qt import QtAppContainer
+from redsun.experimental.containers.qt import QtAppContainer
 
 
 class MyApp(QtAppContainer):
@@ -341,7 +341,7 @@ the main window, and it says where by declaring a placement:
 
 ```python
 from redsun.experimental import Placement
-from redsun.experimental.qt import Central, Dock, MenuItem
+from redsun.experimental.containers.qt import Central, Dock, MenuItem
 
 
 class MotorView(QWidget):
@@ -358,7 +358,7 @@ class SaveAction(QAction):
 
 The core defines `Placement` and nothing else. A dock, a menu bar and a toolbar
 are window concepts, so they belong to the frontend that has a window:
-`redsun.experimental.qt` defines them next to the code that attaches them, and
+`redsun.experimental.containers.qt` defines them next to the code that attaches them, and
 pairs each with the toolkit type it demands, a `QWidget` for a dock or the
 centre and a `QAction` for a menu or toolbar entry.
 
@@ -403,7 +403,7 @@ Attaching is a separate step, so a container never touches a window:
 
 ```python
 from qtpy.QtWidgets import QMainWindow
-from redsun.experimental.qt import attach
+from redsun.experimental.containers.qt import attach
 
 app = MyApp().build()
 window = QMainWindow()
@@ -921,7 +921,7 @@ was fixed by hand.
 
 ```text
 Cannot find factory for (Calibration, component=''). It is missing or has invalid scope.
-   ▼   redsun.experimental._declarations.motor_ctrl   build_motor_ctrl
+   ▼   redsun.experimental.containers._declarations.motor_ctrl   build_motor_ctrl
    ╰─> Calibration                                    ???
 ```
 
