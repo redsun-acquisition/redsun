@@ -65,7 +65,7 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
@@ -180,25 +180,112 @@ _BUILTIN_PHASES: frozenset[str] = frozenset(
 )
 """The phases every container runs, which no caller may remove or reorder."""
 
+_COMPONENT_SECTIONS: frozenset[str] = frozenset({"devices", "presenters", "views"})
+"""The configuration sections whose entries are a component's constructor call."""
+
+_IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
+"""Keys naming what kind of session this is, which every layered file must agree on.
+
+Everything else describes the session's content, where a later file legitimately
+overrides an earlier one.
+"""
+
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML file and validate required keys against AppConfig."""
+def _read_yaml(path: Path) -> dict[str, Any]:
+    """Read one YAML file into a mapping, without validating what it carries."""
     with open(path) as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         raise TypeError(
             f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
         )
-    required_keys = AppConfig.__required_keys__
-    missing = required_keys - data.keys()
+    return data
+
+
+def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Return *base* with *overlay* laid over it, merging nested mappings.
+
+    A key present in both is taken from *overlay* unless both values are
+    mappings, which merge in turn. Anything that is not a mapping - a list, a
+    scalar - is replaced rather than combined.
+
+    A component entry is the exception: under ``devices``, ``presenters`` and
+    ``views`` the section merges by component name, but a component *named* in
+    *overlay* is taken from it whole. Those entries are the keyword arguments
+    of a constructor call rather than a tree of settings, so one file owns one
+    component's arguments and a reader stops at the last file naming it.
+    """
+    merged = dict(base)
+    for key, value in overlay.items():
+        current = merged.get(key)
+        if not (isinstance(current, dict) and isinstance(value, dict)):
+            merged[key] = value
+        elif key in _COMPONENT_SECTIONS:
+            for shadowed in current.keys() & value.keys():
+                logger.debug(
+                    f"Component '{shadowed}' in '{key}' is taken from a later "
+                    f"configuration file, replacing the entry under it"
+                )
+            merged[key] = {**current, **value}
+        else:
+            merged[key] = merge_config(current, value)
+    return merged
+
+
+def _refuse_identity_conflict(
+    data: dict[str, Any], overlay: dict[str, Any], path: Path
+) -> None:
+    """Refuse a file that contradicts what an earlier one said the session is.
+
+    Raises
+    ------
+    ValueError
+        If *overlay* gives a different value for a key naming the session's
+        identity rather than its content.
+    """
+    for key in _IDENTITY_KEYS:
+        if key in data and key in overlay and data[key] != overlay[key]:
+            raise ValueError(
+                f"Configuration file {path} sets {key}={overlay[key]!r}, "
+                f"which contradicts {data[key]!r} from a file layered under it. "
+                f"{key} names what kind of session this is, so every file must "
+                f"agree on it."
+            )
+
+
+def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
+    """Read *paths* in order, lay each over the last, and validate the result.
+
+    Required keys are checked against the merged mapping rather than against
+    each file, so a file layered under another may carry a fragment.
+
+    Raises
+    ------
+    ValueError
+        If two files disagree about the session's schema version or frontend.
+    KeyError
+        If the merged mapping is missing a key `AppConfig` requires.
+    """
+    if len(paths) > 1:
+        logger.debug(
+            f"Reading configuration from {len(paths)} files, in order: "
+            f"{', '.join(str(path) for path in paths)}"
+        )
+    data: dict[str, Any] = {}
+    for path in paths:
+        overlay = _read_yaml(path)
+        _refuse_identity_conflict(data, overlay, path)
+        data = merge_config(data, overlay)
+    missing = AppConfig.__required_keys__ - data.keys()
     if missing:
+        named = ", ".join(str(path) for path in paths)
         raise KeyError(
-            f"Configuration file {path} is missing required keys: "
+            f"Configuration ({named}) is missing required keys: "
             f"{', '.join(sorted(missing))}"
         )
     return data
@@ -250,7 +337,13 @@ class AppContainer:
     base was written with.
     """
 
-    _config_path: ClassVar[Path | None] = None
+    _config_paths: ClassVar[tuple[Path, ...]] = ()
+    """The configuration files this container reads, in the order they layer.
+
+    A subclass naming its own ``config`` appends to what its bases named rather
+    than replacing it, so a file common to several sessions sits under the one
+    that is particular to each.
+    """
 
     sig_phase_complete = Signal(str)
     """Emitted with the name of each build phase as it finishes.
@@ -280,20 +373,37 @@ class AppContainer:
 
     def __init_subclass__(
         cls,
-        config: str | Path | None = None,
+        config: str | Path | Sequence[str | Path] | None = None,
         **kwargs: Any,
     ) -> None:
         """Collect component wrappers from class attributes.
 
         Parameters
         ----------
-        config : str | Path | None
-            Path to a YAML configuration file for component kwargs.
+        config : str | Path | Sequence[str | Path] | None
+            YAML configuration file for component kwargs, or several to layer
+            in order. They are read after the ones this container's bases name,
+            so a later file wins a key it shares with an earlier one.
         """
         super().__init_subclass__(**kwargs)
 
-        if config is not None:
-            cls._config_path = Path(config)
+        declared = (
+            []
+            if config is None
+            else [config]
+            if isinstance(config, (str, Path))
+            else list(config)
+        )
+        inherited: list[Path] = []
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                inherited.extend(base._config_paths)
+        # a base named twice through two paths of the hierarchy contributes its
+        # files once, in the order the first path reached them
+        seen: dict[Path, None] = {}
+        for path in (*inherited, *(Path(entry) for entry in declared)):
+            seen.setdefault(path, None)
+        cls._config_paths = tuple(seen)
 
         devices: dict[str, _DeviceComponent] = {}
         presenters: dict[str, _PresenterComponent] = {}
@@ -333,8 +443,8 @@ class AppContainer:
 
         if component_fields:
             config_data: dict[str, Any] = {}
-            if cls._config_path is not None:
-                config_data = _load_yaml(cls._config_path)
+            if cls._config_paths:
+                config_data = _load_yaml(cls._config_paths)
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -346,7 +456,8 @@ class AppContainer:
                 kw = field.kwargs
                 if field.from_config is not None and config_data:
                     section_key = _section_key[type(field)]
-                    section_data: dict[str, Any] = config_data.get(section_key, {})
+                    # a section written with nothing under it parses as None
+                    section_data: dict[str, Any] = config_data.get(section_key) or {}
                     _sentinel = object()
                     cfg_section = section_data.get(field.from_config, _sentinel)
 
@@ -435,14 +546,14 @@ class AppContainer:
         # populates _config with top-level sections such as 'storage', 'session',
         # or 'schema_version'.  We read those here so that build() sees the same
         # state as the from_config() path, which sets them explicitly.
-        config_path: Path | None = getattr(type(self), "_config_path", None)
-        if config_path is not None:
+        config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
+        if config_paths:
             try:
-                yaml_data = _load_yaml(config_path)
+                yaml_data = _load_yaml(config_paths)
             except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
-                logger.warning(f"Could not read config file {config_path}: {e}")
+                named = ", ".join(str(path) for path in config_paths)
+                logger.warning(f"Could not read config file(s) {named}: {e}")
                 yaml_data = {}
-            _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
             for key, value in yaml_data.items():
                 if key not in _COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
@@ -459,7 +570,7 @@ class AppContainer:
         TypeError
             Naming every field that asked for a configuration section.
         """
-        if cls._config_path is not None:
+        if cls._config_paths:
             return
         unresolved = sorted(
             attr_name

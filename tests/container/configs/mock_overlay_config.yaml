@@ -1,0 +1,17 @@
+session: mock-overlay-session
+devices:
+  motor:
+    egu: "um"
+  other_motor:
+    string: "overlay only"
+presenters:
+  other:
+    string: "overlay only"
+    integer: 7
+    floating: 7.0
+    boolean: false
+views:
+  widget:
+    label: "overlay widget"
+  other_widget:
+    label: "overlay only"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -574,6 +575,261 @@ class TestConfigField:
 
         assert First._presenter_components["ctrl"].kwargs["string"] == "config ctrl"
         assert Second._presenter_components["ctrl"].kwargs["string"] == "alt ctrl"
+
+    def test_config_files_layer_in_order(self, config_path: Path) -> None:
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_overlay_config.yaml",
+            ],
+        ):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        # the overlay adds a component and leaves the one it does not name
+        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert TestApp().config["session"] == "mock-overlay-session"
+
+    def test_a_subclass_layers_its_config_over_its_base(
+        self, config_path: Path
+    ) -> None:
+        class Base(AppContainer, config=config_path / "mock_common_config.yaml"):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        class Derived(Base, config=config_path / "mock_overlay_config.yaml"):
+            pass
+
+        assert Base._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert Derived._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert Derived().config["session"] == "mock-overlay-session"
+
+    def test_required_keys_are_checked_on_the_merged_configuration(
+        self, config_path: Path
+    ) -> None:
+        # the overlay alone carries neither schema_version nor frontend
+        with pytest.raises(KeyError, match="missing required keys"):
+
+            class Alone(AppContainer, config=config_path / "mock_overlay_config.yaml"):
+                ctrl = declare_presenter(MockController, from_config="ctrl")
+
+    def test_layered_files_must_agree_on_the_frontend(self, config_path: Path) -> None:
+        with pytest.raises(ValueError, match="contradicts"):
+
+            class TestApp(
+                AppContainer,
+                config=[
+                    config_path / "mock_common_config.yaml",
+                    config_path / "mock_conflicting_config.yaml",
+                ],
+            ):
+                ctrl = declare_presenter(MockController, from_config="ctrl")
+
+    def test_layered_files_may_restate_an_agreeing_identity_key(
+        self, config_path: Path
+    ) -> None:
+        # only a *different* value is refused; repeating one is legal
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_component_config.yaml",
+            ],
+        ):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        assert TestApp().config["frontend"] == "pyqt"
+
+    def test_a_component_named_in_both_files_is_taken_from_the_later_one(
+        self, config_path: Path
+    ) -> None:
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_component_config.yaml",
+            ],
+        ):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        # a component entry is a constructor call, so the later file owns it
+        # whole rather than contributing keys to it
+        assert TestApp._presenter_components["ctrl"].kwargs == {
+            "string": "config ctrl",
+            "integer": 10,
+            "floating": 2.0,
+            "boolean": True,
+        }
+
+    def test_a_component_only_one_file_names_survives(self, config_path: Path) -> None:
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_overlay_config.yaml",
+            ],
+        ):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+            other = declare_presenter(MockController, from_config="other")
+
+        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert TestApp._presenter_components["other"].kwargs["string"] == "overlay only"
+
+    def test_config_files_come_from_every_base(self, config_path: Path) -> None:
+        class First(AppContainer, config=config_path / "mock_common_config.yaml"):
+            pass
+
+        class Second(AppContainer, config=config_path / "mock_overlay_config.yaml"):
+            pass
+
+        class Both(First, Second):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+            other = declare_presenter(MockController, from_config="other")
+
+        assert len(Both._config_paths) == 2
+        assert Both._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert Both._presenter_components["other"].kwargs["string"] == "overlay only"
+
+    def test_a_file_reached_twice_is_read_once(self, config_path: Path) -> None:
+        class Base(AppContainer, config=config_path / "mock_common_config.yaml"):
+            pass
+
+        class Derived(Base, config=config_path / "mock_common_config.yaml"):
+            pass
+
+        assert Derived._config_paths == Base._config_paths
+
+    def test_a_section_written_empty_is_no_section(self, config_path: Path) -> None:
+        # `presenters:` with nothing under it parses as None, not as {}
+        class TestApp(
+            AppContainer, config=config_path / "mock_empty_section_config.yaml"
+        ):
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        assert TestApp._presenter_components["ctrl"].kwargs == {}
+
+    @pytest.mark.parametrize(
+        ("declare", "registry", "expected"),
+        [
+            (
+                lambda: declare_device(MyMotor, from_config="motor"),
+                "_device_components",
+                {"egu": "um"},
+            ),
+            (
+                lambda: declare_view(MockQtView, from_config="widget"),
+                "_view_components",
+                {"label": "overlay widget"},
+            ),
+        ],
+        ids=["device", "view"],
+    )
+    def test_every_layer_replaces_a_component_it_names(
+        self,
+        config_path: Path,
+        declare: Callable[[], Any],
+        registry: str,
+        expected: dict[str, Any],
+    ) -> None:
+        # the same rule the presenter case pins, for the other two layers: the
+        # later file owns the entry, so nothing from the file underneath leaks in
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_overlay_config.yaml",
+            ],
+        ):
+            component = declare()
+
+        assert getattr(TestApp, registry)["component"].kwargs == expected
+
+    @pytest.mark.parametrize(
+        ("declare", "registry", "name"),
+        [
+            (
+                lambda: declare_device(MyMotor, from_config="other_motor"),
+                "_device_components",
+                "other_motor",
+            ),
+            (
+                lambda: declare_view(MockQtView, from_config="other_widget"),
+                "_view_components",
+                "other_widget",
+            ),
+        ],
+        ids=["device", "view"],
+    )
+    def test_every_layer_adds_a_component_only_it_names(
+        self,
+        config_path: Path,
+        declare: Callable[[], Any],
+        registry: str,
+        name: str,
+    ) -> None:
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_overlay_config.yaml",
+            ],
+        ):
+            component = declare()
+
+        kwargs = getattr(TestApp, registry)["component"].kwargs
+        assert kwargs["string" if "motor" in name else "label"] == "overlay only"
+
+    def test_a_component_only_the_lower_file_names_survives_in_every_layer(
+        self, config_path: Path
+    ) -> None:
+        class TestApp(
+            AppContainer,
+            config=[
+                config_path / "mock_common_config.yaml",
+                config_path / "mock_overlay_config.yaml",
+            ],
+        ):
+            motor = declare_device(MyMotor, from_config="motor")
+            ctrl = declare_presenter(MockController, from_config="ctrl")
+
+        # the overlay names `motor` and not `ctrl`
+        assert TestApp._device_components["motor"].kwargs == {"egu": "um"}
+        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+
+    def test_the_layer_chain_is_logged(
+        self, config_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level(logging.DEBUG, logger="redsun"):
+
+            class TestApp(
+                AppContainer,
+                config=[
+                    config_path / "mock_common_config.yaml",
+                    config_path / "mock_overlay_config.yaml",
+                ],
+            ):
+                motor = declare_device(MyMotor, from_config="motor")
+
+        assert "Reading configuration from 2 files" in caplog.text
+        assert "mock_common_config.yaml" in caplog.text
+        assert "mock_overlay_config.yaml" in caplog.text
+
+    def test_a_shadowed_component_is_logged(
+        self, config_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level(logging.DEBUG, logger="redsun"):
+
+            class TestApp(
+                AppContainer,
+                config=[
+                    config_path / "mock_common_config.yaml",
+                    config_path / "mock_overlay_config.yaml",
+                ],
+            ):
+                motor = declare_device(MyMotor, from_config="motor")
+
+        # `motor` is named in both files, `ctrl` in only one
+        assert "Component 'motor' in 'devices'" in caplog.text
+        assert "Component 'ctrl'" not in caplog.text
 
     def test_from_config_missing_section_warns(
         self,
