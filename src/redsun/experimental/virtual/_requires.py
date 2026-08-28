@@ -13,14 +13,19 @@ from typing import (
     get_origin,
 )
 
-from redsun.experimental._structural import members, methods, problems, satisfies
+from redsun.experimental.containers._structural import (
+    members,
+    methods,
+    problems,
+    satisfies,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from typing_extensions import TypeForm
 
-    from redsun.experimental._declarations import Key
+    from redsun.experimental.containers._declarations import Key
 
 __all__ = [
     "Devices",

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Annotated, TypeAlias, TypeVar
 
-from redsun.experimental._declarations import Layer
+from redsun.experimental.containers._declarations import Layer
 
 __all__ = ["AsDevice", "AsPresenter", "AsView"]
 

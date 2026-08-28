@@ -8,7 +8,7 @@ no toolkit type appears in `redsun.experimental.Placement` or in a container.
 
 ```python
 from redsun.experimental import AsView
-from redsun.experimental.qt import Dock, QtAppContainer
+from redsun.experimental.containers.qt import Dock, QtAppContainer
 
 
 class ImageView(QWidget):
@@ -57,16 +57,16 @@ from qtpy.QtWidgets import (
 )
 
 from redsun.aio import set_async_backend
-from redsun.experimental._container import AppContainer
-from redsun.experimental._frontend import Frontend
-from redsun.experimental._placement import Placement
+from redsun.experimental.containers._frontend import Frontend
+from redsun.experimental.containers.container import AppContainer
+from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
     from typing import Any, TypeAlias
 
-    from redsun.experimental._protocols import PView
+    from redsun.experimental.virtual._protocols import PView
 
 __all__ = [
     "REQUIRES",
@@ -119,7 +119,7 @@ REQUIRES: Final[dict[type[Placement], type[QWidget | QAction]]] = {
 
 
 class Qt(Frontend):
-    """Qt frontend, attached by `redsun.experimental.qt.attach`."""
+    """Qt frontend, attached by `redsun.experimental.containers.qt.attach`."""
 
     placements: ClassVar[frozenset[type[Placement]]] = frozenset(REQUIRES)
 

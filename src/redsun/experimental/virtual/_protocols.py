@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from redsun.experimental._placement import Placement
+    from redsun.experimental.view._placement import Placement
 
 __all__ = ["PPresenter", "PView"]
 

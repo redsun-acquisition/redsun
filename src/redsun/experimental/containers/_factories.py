@@ -15,15 +15,15 @@ from typing import (
 from dishka import Has
 from typing_extensions import TypeForm
 
-from redsun.experimental._requires import key_for, question_of
+from redsun.experimental.virtual._requires import key_for, question_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
     from dishka import Provider
 
-    from redsun.experimental._declarations import Declaration, Key
-    from redsun.experimental._requires import Question
+    from redsun.experimental.containers._declarations import Declaration, Key
+    from redsun.experimental.virtual._requires import Question
 
 __all__ = [
     "absent",

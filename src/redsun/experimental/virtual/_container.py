@@ -12,8 +12,9 @@ from ophyd_async.core import Device
 from psygnal import Signal, SignalGroup, SignalInstance
 
 from redsun.aio import run_coro
-from redsun.experimental._requires import Satisfying
-from redsun.experimental._wiring import (
+from redsun.experimental.log import Loggable
+from redsun.experimental.virtual._requires import Satisfying
+from redsun.experimental.virtual._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
     Connection,
@@ -24,13 +25,12 @@ from redsun.experimental._wiring import (
     port_name,
     ports,
 )
-from redsun.log import Loggable
 
 if TYPE_CHECKING:
     from bluesky.protocols import HasName
     from ophyd_async.core import SignalR
 
-    from redsun.experimental._wiring import SlotThread
+    from redsun.experimental.virtual._wiring import SlotThread
 
 __all__ = [
     "CallbackType",

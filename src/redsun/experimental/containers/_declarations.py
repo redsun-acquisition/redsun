@@ -17,9 +17,9 @@ from typing import (
 
 from ophyd_async.core import Device
 
-from redsun.experimental._frontend import Frontend, check_placement
-from redsun.experimental._placement import Placement
-from redsun.experimental._plugins import META_KEYS, resolve
+from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.containers._plugins import META_KEYS, resolve
+from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -49,7 +49,7 @@ runtime, and no type checker can model one. Hints read from an annotation stay
 class Layer(StrEnum):
     """The layer a declared component belongs to.
 
-    Carried as the metadata of a declaration's annotation. `redsun.experimental.layer`
+    Carried as the metadata of a declaration's annotation. `redsun.experimental.containers.components`
     spells the three out. A member is its own name in a message, so it needs no
     ``.value``.
     """
@@ -196,7 +196,7 @@ def read(
     MRO, so inheritance needs no merge of its own.
 
     An annotation is a declaration only if it carries a layer, which is what
-    `redsun.experimental.layer` adds; anything else is an ordinary attribute.
+    `redsun.experimental.containers.components` adds; anything else is an ordinary attribute.
 
     A component named in *config* but never annotated is declared too, its
     layer coming from the section it appears under; an annotation only adds a

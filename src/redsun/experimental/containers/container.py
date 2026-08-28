@@ -18,18 +18,18 @@ from dishka import AnyOf, Provider, Scope, make_container
 from ophyd_async.core import Device  # noqa: TC002
 
 from redsun.aio import run_coro
-from redsun.experimental import (
+from redsun.experimental.containers import (
     _declarations,
     _factories,
     _plugins,
-    _provides,
     _structural,
 )
-from redsun.experimental._declarations import Layer
-from redsun.experimental._frontend import Frontend, check_placement
-from redsun.experimental._protocols import PPresenter, PView
-from redsun.experimental._requires import Devices, Maybe, One, key_for
-from redsun.experimental._virtual import VirtualContainer
+from redsun.experimental.containers._declarations import Layer
+from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.virtual import _provides
+from redsun.experimental.virtual._container import VirtualContainer
+from redsun.experimental.virtual._protocols import PPresenter, PView
+from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -37,9 +37,9 @@ if TYPE_CHECKING:
     from dishka import Container
     from psygnal import SignalInstance
 
-    from redsun.experimental._declarations import Key
-    from redsun.experimental._requires import Question
-    from redsun.experimental._wiring import Connection, SlotThread
+    from redsun.experimental.containers._declarations import Key
+    from redsun.experimental.virtual._requires import Question
+    from redsun.experimental.virtual._wiring import Connection, SlotThread
 
 __all__ = ["AppContainer"]
 
@@ -49,8 +49,8 @@ _ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VI
 """The order the layers are built in, which is the order they may depend in."""
 
 _FRONTENDS: Final[dict[str, str]] = {
-    "pyqt": "redsun.experimental.qt:QtAppContainer",
-    "pyside": "redsun.experimental.qt:QtAppContainer",
+    "pyqt": "redsun.experimental.containers.qt:QtAppContainer",
+    "pyside": "redsun.experimental.containers.qt:QtAppContainer",
 }
 """The container a session builds on, by the name its configuration gives."""
 
@@ -98,7 +98,7 @@ class AppContainer:
     frontend: ClassVar[type[Frontend]] = Frontend
     """The toolkit this container is built against.
 
-    Set by subclassing, as `redsun.experimental.qt.QtAppContainer` does. The
+    Set by subclassing, as `redsun.experimental.containers.qt.QtAppContainer` does. The
     default attaches nothing and constrains no view.
     """
 

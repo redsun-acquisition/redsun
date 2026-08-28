@@ -12,7 +12,7 @@ by type:
 from typing import Annotated
 
 from redsun.experimental import AsDevice, AsPresenter, AsView, Declare
-from redsun.experimental.qt import QtAppContainer
+from redsun.experimental.containers.qt import QtAppContainer
 
 
 class MyApp(QtAppContainer):
@@ -26,34 +26,34 @@ class MyApp(QtAppContainer):
 Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 """
 
-from redsun.experimental._container import AppContainer
-from redsun.experimental._declarations import (
+from redsun.experimental.containers._declarations import (
     Alias,
     Declare,
     FromConfig,
     Layer,
 )
-from redsun.experimental._frontend import Frontend, check_placement
-from redsun.experimental._placement import Placement
-from redsun.experimental._plugins import PluginError
-from redsun.experimental._protocols import PPresenter, PView
-from redsun.experimental._provides import provides
-from redsun.experimental._requires import (
+from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.containers._plugins import PluginError
+from redsun.experimental.containers._structural import satisfies
+from redsun.experimental.containers.components import AsDevice, AsPresenter, AsView
+from redsun.experimental.containers.container import AppContainer
+from redsun.experimental.view._placement import Placement
+from redsun.experimental.virtual._container import (
+    DeviceMapping,
+    DocumentCallbacks,
+    SessionConfig,
+    VirtualContainer,
+)
+from redsun.experimental.virtual._protocols import PPresenter, PView
+from redsun.experimental.virtual._provides import provides
+from redsun.experimental.virtual._requires import (
     DevicesOf,
     Requires,
     RequiresMaybe,
     RequiresOne,
     Satisfying,
 )
-from redsun.experimental._structural import satisfies
-from redsun.experimental._virtual import (
-    DeviceMapping,
-    DocumentCallbacks,
-    SessionConfig,
-    VirtualContainer,
-)
-from redsun.experimental._wiring import Connection, slot
-from redsun.experimental.layer import AsDevice, AsPresenter, AsView
+from redsun.experimental.virtual._wiring import Connection, slot
 
 __all__ = [
     "Alias",

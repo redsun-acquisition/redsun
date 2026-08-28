@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
-from redsun.experimental._factories import synthesize
+from redsun.experimental.containers._factories import synthesize
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from dishka import Provider
 
-    from redsun.experimental._declarations import Declaration, Key
+    from redsun.experimental.containers._declarations import Declaration, Key
 
 __all__ = ["provides", "register", "shared"]
 
