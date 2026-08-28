@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [Unreleased]
+## [0.11.2] - 28-08-2026
 
 ### Added
 
@@ -159,7 +159,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `QtAppContainer._ensure_main_view`, so the main window is built and
   configured once whether reached through `run` or directly.
 
-## [0.11.1]
+## [0.11.1] - 25-08-2026
 
 ### Changed
 
@@ -582,6 +582,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/redsun-acquisition/redsun/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0
