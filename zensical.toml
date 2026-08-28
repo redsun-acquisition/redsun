@@ -60,6 +60,7 @@ nav = [
         { "Build documentation" = "how-to/build-docs.md" },
         { "Run tests" = "how-to/run-tests.md" },
         { "Wire components together" = "how-to/wire-components.md" },
+        { "Install container hooks" = "how-to/install-hooks.md" },
     ]},
     { "Reference" = [
         "reference/index.md",
