@@ -44,11 +44,29 @@ class NoopHook:
 class FailingShutdownHook:
     """Tears down by raising."""
 
-    def configure_build(self, container: AppContainer) -> None:
+    def configure_session(self, container: AppContainer) -> None:
         pass
 
     def shutdown(self) -> None:
         raise RuntimeError("teardown blew up")
+
+
+class BothPointsHook:
+    """Serves the build and the session point, recording each and its teardown."""
+
+    def __init__(self, name: str = "both") -> None:
+        self.name = name
+        self.seen: list[str] = []
+        self.teardowns = 0
+
+    def configure_build(self, container: AppContainer) -> None:
+        self.seen.append("build")
+
+    def configure_session(self, container: AppContainer) -> None:
+        self.seen.append("session")
+
+    def shutdown(self) -> None:
+        self.teardowns += 1
 
 
 class SessionHook:

@@ -2,19 +2,26 @@
 
 from __future__ import annotations
 
-import logging
 import sys
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from mock_pkg import hooks as mock_hooks
 from mock_pkg.view import StyleRecordingView
 from qtpy.QtWidgets import QApplication
 
-from redsun.containers import AppContainer, HookError, declare_view
+from redsun.containers import AppContainer, HookError, declare_hook, declare_view
 from redsun.qt import QtAppContainer
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 pytestmark = pytest.mark.qt
+
+
+@pytest.fixture(autouse=True)
+def _clear_installed() -> None:
+    mock_hooks.installed.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +38,7 @@ class TestQtApplicationHook:
         hook = mock_hooks.QtStyleHook()
 
         class TestApp(QtAppContainer):
-            hooks = (hook,)
+            configure_application = declare_hook(hook)
 
             widget = declare_view(StyleRecordingView)
 
@@ -43,56 +50,48 @@ class TestQtApplicationHook:
         assert isinstance(view, StyleRecordingView)
         assert view.stylesheet_at_build == hook.stylesheet
 
-    def test_a_qt_only_hook_is_accepted_by_a_qt_container(self) -> None:
-        class TestApp(QtAppContainer):
-            hooks = (mock_hooks.QtStyleHook(),)
+    def test_a_qt_point_is_refused_by_a_headless_container(self) -> None:
+        with pytest.raises(HookError, match="is not a hook point it calls"):
 
-        assert TestApp().build().is_built
-
-    def test_a_hook_with_only_qt_points_is_refused_by_a_headless_container(
-        self,
-    ) -> None:
-        class TestApp(AppContainer):
-            hooks = (mock_hooks.QtOnlyHook(),)
-
-        with pytest.raises(HookError, match="implements none of the hook protocols"):
-            TestApp().build()
-
-    def test_a_hook_point_the_container_never_calls_is_warned_about(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        # QtStyleHook also implements shutdown, which a headless container does
-        # call, so it resolves - but its Qt points silently would not run
-        class TestApp(AppContainer):
-            hooks = (mock_hooks.QtStyleHook(),)
-
-        with caplog.at_level(logging.WARNING, logger="redsun"):
-            TestApp().build()
-
-        assert "ConfiguresApplication" in caplog.text
-        assert "never calls" in caplog.text
-
-    def test_a_qt_container_warns_about_nothing(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        class TestApp(QtAppContainer):
-            hooks = (mock_hooks.QtStyleHook(),)
-
-        with caplog.at_level(logging.WARNING, logger="redsun"):
-            TestApp().build()
-
-        assert "never calls" not in caplog.text
+            class TestApp(AppContainer):
+                configure_application = declare_hook(mock_hooks.QtOnlyHook)
 
     def test_the_hooks_are_resolved_once_for_the_whole_build(self) -> None:
         class TestApp(QtAppContainer):
             pass
 
         app = TestApp()
-        app._config["hooks"] = [{"provider": "mock_pkg.hooks:RecordingHook"}]
+        app._config["hooks"] = {
+            "configure_build": {"provider": "mock_pkg.hooks:RecordingHook"}
+        }
 
         app.build()
 
         assert mock_hooks.installed == ["recorded"]
+
+
+class TestQtHooksFromAFile:
+    """Tests for a session assembled from a configuration file on disk."""
+
+    def test_from_config_installs_the_hooks_section(self, config_path: Path) -> None:
+        app = AppContainer.from_config(str(config_path / "mock_hooks_config.yaml"))
+
+        assert isinstance(app, QtAppContainer)
+
+        app.build()
+
+        assert app.phases.index("custom") == app.phases.index("views") + 1
+        assert mock_hooks.installed == ["custom"]
+
+    def test_from_config_shares_an_anchored_provider(self, config_path: Path) -> None:
+        app = AppContainer.from_config(
+            str(config_path / "mock_shared_hook_config.yaml")
+        )
+
+        app.build()
+
+        hook = app._hook_by_moment["configure_build"]
+        assert hook is app._hook_by_moment["configure_session"]
 
 
 class TestQtMainViewHook:
@@ -102,7 +101,7 @@ class TestQtMainViewHook:
         hook = mock_hooks.QtStyleHook()
 
         class TestApp(QtAppContainer):
-            hooks = (hook,)
+            configure_main_view = declare_hook(hook)
 
         app = TestApp().build()
         assert hook.window is None
@@ -111,9 +110,22 @@ class TestQtMainViewHook:
 
         assert hook.window is main_view
 
+    def test_one_provider_serves_the_application_and_the_window(self) -> None:
+        hook = mock_hooks.QtStyleHook()
+
+        class TestApp(QtAppContainer):
+            configure_application = declare_hook(hook)
+            configure_main_view = declare_hook(hook)
+
+        app = TestApp().build()
+        main_view = app._ensure_main_view()
+
+        assert hook.window is main_view
+        assert hook._app is app._qt_app
+
     def test_the_window_is_built_once(self) -> None:
         class TestApp(QtAppContainer):
-            hooks = (mock_hooks.QtStyleHook(),)
+            configure_main_view = declare_hook(mock_hooks.QtStyleHook)
 
         app = TestApp().build()
 
@@ -132,7 +144,7 @@ class TestQtApplicationFactory:
         monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
 
         class TestApp(QtAppContainer):
-            hooks = (hook,)
+            create_application = declare_hook(hook)
 
         app = TestApp().build()
 
@@ -145,21 +157,26 @@ class TestQtApplicationFactory:
         hook = mock_hooks.QtApplicationFactory(qapp)
 
         class TestApp(QtAppContainer):
-            hooks = (hook,)
+            create_application = declare_hook(hook)
 
         app = TestApp().build()
 
         assert hook.calls == []
         assert app._qt_app is qapp
 
-    def test_two_claimants_are_refused_by_name(self, qapp: QApplication) -> None:
+    def test_the_point_named_on_the_class_and_in_the_config_is_refused(
+        self, qapp: QApplication
+    ) -> None:
         # refused although a running application means neither would be called:
-        # two creators is a configuration error whatever the process holds
+        # two providers for one point is a configuration error whatever the
+        # process holds
         class TestApp(QtAppContainer):
-            hooks = (
-                mock_hooks.QtApplicationFactory(qapp),
-                mock_hooks.QtApplicationFactory(qapp),
-            )
+            create_application = declare_hook(mock_hooks.QtApplicationFactory(qapp))
 
-        with pytest.raises(HookError, match="2 hook providers"):
-            TestApp().build()
+        app = TestApp()
+        app._config["hooks"] = {
+            "create_application": {"provider": "mock_pkg.hooks:QtStyleHook"}
+        }
+
+        with pytest.raises(HookError, match="named both on TestApp"):
+            app.build()

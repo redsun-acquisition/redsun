@@ -76,23 +76,27 @@ cannot reach it: `isinstance` refuses a parameterised protocol, so a container
 narrows to the bare form and a provider built for the wrong toolkit is only
 caught when called. `tests/typing/qt_hook_aliases.py` pins what mypy sees.
 
-**A provider implementing a hook point its container never calls is warned
-about, not refused.** A container names the subset of `HOOK_PROTOCOLS` it calls
-in `_hook_protocols`; the difference is what a provider implements in vain. A
-provider serving several toolkits is legitimate, so this is not an error - but
-it is inert, and silence is exactly what a typo'd method name looks like.
-Implementing *nothing* the container calls still raises.
+**A hook point is named by the method it calls, and takes one provider.** A
+container maps the points it calls to their protocols in `_hook_keys`, and that
+key is what names a point in a container class body and in the `hooks` section
+of a configuration file. Two consequences follow from the key being the unit.
 
-**The one hook point that returns a value takes exactly one claimant.** Every
-other point is void-returning, so every provider implementing it runs and the
-order is the order the session file lists. `create_application` returns the
-application the whole session is built against; running two of them is not
-possible and choosing the first would let list order decide which one a session
-gets, in a file whose author has no reason to think order matters there. Two
-claimants therefore raise, naming both. The count is checked whether or not the
-application is actually created, so the error does not depend on whether the
-process happens to hold a `QApplication` already - otherwise the one
-environment that never reports the mistake is the test suite.
+The first is that `create_application`, the one point that returns a value,
+cannot be claimed twice: it is one key. Running two application factories is
+not possible, and choosing between them by list position would let a file's
+order decide which application a session gets, in a file whose author has no
+reason to think order matters there. Naming a point on the container class
+*and* in the configuration raises, whether or not the point is ever reached, so
+the error does not depend on whether the process happens to hold a
+`QApplication` already - otherwise the one environment that never reports the
+mistake is the test suite.
+
+The second is that a provider is checked against the point it was named at,
+rather than against the set of everything the container might call. A provider
+named at a point it does not implement raises, and a point the container does
+not call is refused by name, listing the ones it does. Naming the point is the
+opt-in, so there is nothing left to warn about: a provider implementing a
+method nobody asked for is simply not installed.
 
 **Hook providers are plain objects, checked structurally.** A provider
 implements `ConfiguresBuild` to adjust the sequence, `HasShutdown` to undo what
@@ -101,12 +105,20 @@ idiom `build` already uses for `IsProvider` and `IsInjectable`. There is no base
 class to inherit and no protocol that demands methods a provider does not want,
 so a class defining one method is a complete provider.
 
-**A session names providers in either of two places, and both feed one list.** A
-configuration file names them by dotted path, since YAML cannot hold a class; a
-container class lists instances, since an author writing Python already holds
-the provider. The two concatenate, class-level first. Neither overrides the
-other: silent override would decide behaviour by which of two files the reader
-is not looking at.
+**A session names providers in either of two places, keyed the same way in
+both.** A configuration file names them by dotted path, since YAML cannot hold
+a class; a container class declares them with `declare_hook`, since an author
+writing Python already holds the provider. The two merge, and neither overrides
+the other: silent override would decide behaviour by which of two files the
+reader is not looking at, so a point named in both raises.
+
+**One provider serving several points is expressed by identity, never
+inferred.** A provider holding state between the points it serves is declared
+once and named at each of them - the same instance in Python, a YAML anchor and
+its alias in a file, which PyYAML resolves to one object. Two separate entries
+that name the same provider with the same keys are refused rather than guessed
+at: whether they mean one shared provider or two identical ones cannot be read
+off the file, and either reading silently changes what the session does.
 
 **A hook that only watches gets a signal, not a hook point.** A splash screen
 naming the step in progress does not want to add work at a moment; it wants to
@@ -156,11 +168,16 @@ same reason: it would silently do nothing.
   names appear in the debug log.
 - A phase registered by hand survives a rebuild; a phase registered by a hook
   does not. That asymmetry is deliberate - the container undoes what it caused.
-- `hooks` is declared as a `Sequence` and normalised to a tuple, so a class body
-  can use a tuple and avoid the mutable-class-attribute lint that a list form
-  would trip in every downstream package.
-- The protocols a container calls are a class attribute, so a container for
-  another toolkit extends the set rather than redefining the check.
+- A hook is declared like a component, with `declare_hook`, so a container class
+  body has one shape for everything a session installs.
+- The points a container calls are a class attribute, so a container for another
+  toolkit, or another container implementation entirely, declares its own set
+  rather than redefining the check. `ConfiguresBuild` and `ConfiguresSession`
+  are parameterised on the container for the same reason the toolkit points are
+  parameterised on the application object, and each container aliases them.
+- A configuration file addresses hooks the way it addresses everything else, by
+  name rather than by position, so an error names the point rather than an index
+  into a list.
 - Nothing is configurable that would break the four load-bearing orderings: the
   sequence is data so that hooks can address it, not so that a session file can
   rewrite it.

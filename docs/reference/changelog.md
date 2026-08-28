@@ -12,38 +12,58 @@ Dates are specified in the format `DD-MM-YYYY`.
 ### Added
 
 - **Container hooks** - an object a session installs on its application
-  container to adjust the application as a whole. A provider implements one
-  hook point per moment it acts on; each is checked on its own.
+  container to adjust the application as a whole. Each hook point is named by
+  the method it calls, and takes one provider.
 
-  Providers are named in a configuration file by dotted path, with the
-  remaining keys forwarded to the constructor:
+  Providers are named in a configuration file by dotted path, under the point
+  they serve, with their constructor arguments under `kwargs`:
 
   ```yaml
   hooks:
-    - provider: "mypkg.hooks:Calibration"
-      passes: 3
+    configure_build:
+      provider: "mypkg.hooks:Calibration"
+      kwargs:
+        passes: 3
   ```
 
-  or listed as instances on a container class:
+  or declared on a container class with `declare_hook`:
 
   ```python
   class MyApp(QtAppContainer):
-      hooks = (Calibration(passes=3),)
+      configure_build = declare_hook(Calibration, passes=3)
   ```
 
-  The two sources concatenate, class-level first; neither overrides the other.
-  A subclass inherits what its bases declare. `HookError` is raised for an
-  entry that does not resolve, or for a provider that satisfies none of the
-  hook protocols its container calls. The hook points below are listed in the
-  order a session reaches them.
+  A subclass inherits the points its bases declare. One provider serves several
+  points when it is the same object at each: the same instance in Python, a
+  YAML anchor and its alias in a file.
+
+  ```yaml
+  hooks:
+    configure_application: &theme
+      provider: "mypkg.hooks:DarkTheme"
+    configure_main_view: *theme
+  ```
+
+  `HookError` is raised for an entry that does not resolve, a key that is not a
+  hook point the container calls, a provider that does not implement the
+  protocol its point calls, a point named both on the container class and in
+  the configuration, and two separate entries naming one provider with the same
+  keys. The hook points below are listed in the order a session reaches them.
 
   See [Container hooks and the build phase
   registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md).
 
+- **`declare_hook`** (`redsun.containers`) - declares a hook provider on a
+  container class, at the point the attribute names. Takes a class with
+  keyword arguments, or a provider already built.
+
+  ```python
+  class MyApp(QtAppContainer):
+      configure_application = declare_hook(DarkTheme, palette="nord")
+  ```
+
 - **`QtCreatesApplication`** (`redsun.qt`) - supplies the `QApplication` the
-  session runs on. Called only when no `QApplication` is running yet. At most
-  one provider may claim it; two raises `HookError` naming both, whether or not
-  the hook is reached.
+  session runs on. Called only when no `QApplication` is running yet.
 
   ```python
   class NapariApplication:
@@ -91,9 +111,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 - **`HasShutdown`** (`redsun.virtual`) - now called on hooks as well as
-  presenters. Hooks are torn down in reverse order, after the presenters; a
-  failing teardown is logged and does not block the rest. The container then
-  restores the phase sequence it captured before the hooks ran.
+  presenters. Hooks are torn down in reverse order, after the presenters, once
+  each however many points a provider serves; a failing teardown is logged and
+  does not block the rest. The container then restores the phase sequence it
+  captured before the hooks ran.
 
   ```python
   class DarkTheme:
@@ -105,9 +126,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   (`CreatesApplication`, `ConfiguresApplication`, `ConfiguresMainView`),
   aliased per toolkit.
 
-- A hook provider that implements a hook point its container never calls is
-  logged as a warning naming the protocol. A provider implementing nothing the
-  container calls raises.
+- **`AppConfiguresBuild`** and **`AppConfiguresSession`** (`redsun.containers`)
+  - `ConfiguresBuild` and `ConfiguresSession` bound to `AppContainer`. Both
+  protocols are parameterised on the container they act against, so a container
+  implementation supplies its own aliases.
 
 - `AppContainer.phases`, `AppContainer.register_phase(name, phase, after=...)`
   and `AppContainer.unregister_phase(name)` - the build sequence as a registry

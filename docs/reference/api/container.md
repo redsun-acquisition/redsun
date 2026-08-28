@@ -5,6 +5,7 @@
     options:
       members:
         - declare_device
+        - declare_hook
         - declare_presenter
         - declare_view
 
@@ -24,6 +25,13 @@
 ::: redsun.containers.ConfiguresSession
     options:
       show_root_heading: true
+
+::: redsun.containers._hooks
+    options:
+      show_root_heading: true
+      members:
+        - AppConfiguresBuild
+        - AppConfiguresSession
 
 ::: redsun.containers.HookError
     options:
