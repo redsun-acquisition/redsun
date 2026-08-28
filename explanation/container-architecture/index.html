@@ -665,6 +665,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Configuration file support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sharing-declarations-between-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sharing declarations between sessions
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layering-configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Layering configuration files
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1313,7 +1341,7 @@
   <span class="md-ellipsis">
     
   
-  9. Inherited component configuration
+  9. Inherited and layered component configuration
 
     
   </span>
@@ -2205,6 +2233,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Configuration file support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sharing-declarations-between-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Sharing declarations between sessions
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#layering-configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Layering configuration files
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2445,6 +2501,53 @@ ordinary checked code rather than a script whose mistakes only surface at build.
 </span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.</p>
+<h3 id="sharing-declarations-between-sessions">Sharing declarations between sessions<a class="headerlink" href="#sharing-declarations-between-sessions" title="Permanent link">&para;</a></h3>
+<p>Two sessions of the same instrument usually differ in their devices and in
+little else. A base class carries what they share, and each subclass names the
+file it reads:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">InstrumentApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyController</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ctrl"</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">ui</span> <span class="o">=</span> <span class="n">declare_view</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ui"</span><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">(</span><span class="n">InstrumentApp</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"simulation.yaml"</span><span class="p">):</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MockMotor</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"motor"</span><span class="p">)</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">Instrument</span><span class="p">(</span><span class="n">InstrumentApp</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"instrument.yaml"</span><span class="p">):</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"motor"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>An inherited field is resolved against the file of the class that inherits it,
+so <code>Simulation</code> and <code>Instrument</code> read the same declarations from two different
+files. A base declaring <code>from_config</code> needs no file of its own; a container
+constructed without one raises <code>TypeError</code> naming the fields that wanted a
+section.</p>
+<h3 id="layering-configuration-files">Layering configuration files<a class="headerlink" href="#layering-configuration-files" title="Permanent link">&para;</a></h3>
+<p><code>config</code> also accepts several files, and a subclass adds to what its bases
+named rather than replacing it, so what two sessions share can be stated once:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">InstrumentApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"common.yaml"</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyController</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ctrl"</span><span class="p">)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Simulation</span><span class="p">(</span><span class="n">InstrumentApp</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"simulation.yaml"</span><span class="p">):</span>  <span class="c1"># common, then simulation</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p>Files are read in that order and merged as mappings: a later file wins a key it
+shares with an earlier one, and nested mappings merge in turn. Two rules qualify
+that:</p>
+<ul>
+<li><strong>A component entry is replaced whole.</strong> The <code>devices</code>, <code>presenters</code> and
+  <code>views</code> sections merge by component name, but a component a later file names
+  is taken from that file entirely. Those entries are the keyword arguments of a
+  constructor call, so one file owns all of a component's arguments.</li>
+<li><strong><code>schema_version</code> and <code>frontend</code> must agree.</strong> They name what kind of session
+  this is rather than what it contains, so a later file giving a different value
+  raises rather than overriding. <code>session</code> overrides normally.</li>
+</ul>
+<p>Only the merged result has to satisfy <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppConfig&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._config.AppConfig"><code>AppConfig</code></a>,
+so a file layered under another may carry a fragment - a <code>presenters</code> section
+and nothing else. The files a container read, and any component one file took
+from another, are logged at debug level.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
 <p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container proceeds in four phases. After build completes, call <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>connect_devices()</code></a> to run the ophyd-async async connect lifecycle on all registered devices:</p>
 <p><strong>Phase 1 - construction</strong>:</p>
@@ -2486,60 +2589,60 @@ re-raises and aborts the build.</p>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>For plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">declare_device</span><span class="p">,</span> <span class="n">declare_presenter</span><span class="p">,</span> <span class="n">declare_view</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># these are user-developed classes</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># that should reflect the structure</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># provided by redsun for each layer</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.device</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyMotor</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyPresenter</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.view</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyView</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"config.yaml"</span><span class="p">):</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"motor"</span><span class="p">)</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyPresenter</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ctrl"</span><span class="p">)</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">ui</span> <span class="o">=</span> <span class="n">declare_view</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ui"</span><span class="p">)</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">sig_new_position</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">update_setpoint</span><span class="p">)</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">declare_device</span><span class="p">,</span> <span class="n">declare_presenter</span><span class="p">,</span> <span class="n">declare_view</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># these are user-developed classes</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># that should reflect the structure</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># provided by redsun for each layer</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.device</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyMotor</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyPresenter</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">my_package.view</span><span class="w"> </span><span class="kn">import</span> <span class="n">MyView</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"config.yaml"</span><span class="p">):</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="n">motor</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"motor"</span><span class="p">)</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="n">ctrl</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">MyPresenter</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ctrl"</span><span class="p">)</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="n">ui</span> <span class="o">=</span> <span class="n">declare_view</span><span class="p">(</span><span class="n">MyView</span><span class="p">,</span> <span class="n">from_config</span><span class="o">=</span><span class="s2">"ui"</span><span class="p">)</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">sig_new_position</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="o">.</span><span class="n">update_setpoint</span><span class="p">)</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Keyword arguments still come from <code>config.yaml</code>; what is fixed in Python is the set of components, the frontend, and the connections.</p>
 </div>
 <div class="tabbed-block">
 <p>For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the <code>frontend:</code> key - no Python code needs to be written:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">"path/to/config.yaml"</span><span class="p">)</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">"path/to/config.yaml"</span><span class="p">)</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>The YAML file drives everything:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">Experiment"</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="s">"pyqt"</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">devices</span><span class="p">:</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">motor</span><span class="p">:</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">ctrl</span><span class="p">:</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_presenter</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span><span class="nt">ui</span><span class="p">:</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_view</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
-</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="nt">wiring</span><span class="p">:</span>
-</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ctrl.sig_new_position</span>
-</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ui.update_setpoint</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">Experiment"</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="s">"pyqt"</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nt">devices</span><span class="p">:</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">motor</span><span class="p">:</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_motor</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nt">presenters</span><span class="p">:</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span><span class="nt">ctrl</span><span class="p">:</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_presenter</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="nt">views</span><span class="p">:</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">  </span><span class="nt">ui</span><span class="p">:</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_view</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ctrl.sig_new_position</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ui.update_setpoint</span>
 </span></code></pre></div>
 <p>See the <a href="../component-system/">component system</a> documentation for a full description of this flow.</p>
 </div>
@@ -2557,7 +2660,7 @@ re-raises and aborts the build.</p>
 <li>Shows the main window and enters the Qt event loop.</li>
 </ol>
 <p>It is imported from the public <code>redsun.qt</code> namespace:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span></code></pre></div>
 <p>Both <a href="https://pypi.org/project/PyQt6/"><code>PyQt6</code></a> or <a href="https://pypi.org/project/PySide6/"><code>PySide6</code></a> wrapped via <a href="https://github.com/spyder-ide/qtpy"><code>qtpy</code></a> are supported.</p>
 <h3 id="other-frontends">Other frontends<a class="headerlink" href="#other-frontends" title="Permanent link">&para;</a></h3>
