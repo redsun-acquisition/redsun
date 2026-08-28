@@ -3360,108 +3360,124 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The build sequence is a registry a caller can add to.
-  <code>AppContainer.phases</code> reports the phases in the order <code>build</code> runs them, and
-  <code>register_phase(name, phase, after=...)</code> inserts a step after a named one.
-  <code>after</code> is required, since where a phase runs is what it means;
-  <code>unregister_phase</code> removes a registered phase but refuses the built-in ones,
-  whose order the container guarantees. Both are legal only before <code>build</code>.</li>
-</ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">app</span><span class="o">.</span><span class="n">register_phase</span><span class="p">(</span><span class="s2">"calibrate"</span><span class="p">,</span> <span class="n">calibrate</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-</span></code></pre></div>
-<ul>
-<li><strong>Qt hook points.</strong> <code>QtAppContainer</code> now runs
-  <code>redsun.qt.QtConfiguresApplication</code> providers against the <code>QApplication</code>
-  before the base build constructs any view, so a view is built against an
-  application already carrying its stylesheet, and
-  <code>redsun.qt.QtConfiguresMainView</code> providers against the main window as it is
-  created, before it is shown.</li>
-</ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.theme:DarkTheme"</span>
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-</span></code></pre></div>
-<p><code>QtConfiguresMainView</code> is bound to <code>QMainWindow</code>, not to the concrete window
-  class the container builds, so a hook is written against the toolkit and
-  imports nothing from redsun to annotate it. The window class stays an
-  implementation detail and stays free to change.</p>
-<p>The three protocols are generic over the toolkit object
-  (<code>CreatesApplication</code>, <code>ConfiguresApplication</code>, <code>ConfiguresMainView</code>), and
-  each toolkit supplies aliases rather than protocols of its own, so a plugin
-  author learns three names rather than three per toolkit. <code>create_application</code>
-  is declared but not yet called by any container.</p>
-<ul>
-<li>
-<p>A hook provider that implements a hook point its container never calls is
-  now logged as a warning naming the protocol. It still resolves, since a
-  provider may legitimately serve several toolkits, but silence is what a
-  typo'd method name looks like. A provider implementing nothing the container
-  calls still raises.</p>
-</li>
-<li>
-<p><code>QtAppContainer</code> gained <code>_ensure_main_view</code>, so the main window is built
-  and configured once, whether reached through <code>run</code> or directly.</p>
-</li>
-<li>
-<p><code>ConfiguresSession</code>, a hook point that runs once every component is built,
-  wired and injected. It is the closing half of the pair <code>ConfiguresBuild</code>
-  opens: previously the only way to reach that point was
-  <code>register_phase(..., after="injection")</code>, which names an implementation
-  detail to get somewhere the lifecycle already describes. It fires after
-  <code>is_built</code> is set, so a hook can read <code>devices</code>, <code>presenters</code> and <code>views</code>.</p>
-</li>
-<li>
-<p><code>AppContainer.sig_phase_complete</code>, emitted with the name of each build phase
-  as it finishes. For watching the build rather than taking part in it: a
-  splash screen naming the step in progress connects to this in
-  <code>configure_build</code>, where adding a phase per step would mean registering
-  seven phases to display seven labels.</p>
-</li>
-</ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="n">container</span><span class="o">.</span><span class="n">sig_phase_complete</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
-</span></code></pre></div>
-<p><code>AppContainer.__slots__</code> gains <code>__weakref__</code> to carry this signal. psygnal
-  refers to a signal's owner weakly and falls back to a strong reference when
-  it cannot; a class using <code>__slots__</code> cannot be referred to weakly unless
-  <code>__weakref__</code> is among its slots, and on that fallback no container is ever
-  collected. Any <code>__slots__</code> class owning a psygnal <code>Signal</code> needs the same.</p>
-<ul>
 <li><strong>Container hooks</strong> - an object a session installs on its application
-  container to adjust the application as a whole, rather than any one
-  component. A provider implements <code>ConfiguresBuild</code> to adjust the build
-  sequence, <code>HasShutdown</code> to undo what it did, or both; each is checked on its
-  own, so a class defining one method is a complete provider.</li>
+  container to adjust the application as a whole. A provider implements one
+  hook point per moment it acts on; each is checked on its own.</li>
 </ul>
 <p>Providers are named in a configuration file by dotted path, with the
   remaining keys forwarded to the constructor:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">hooks</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.hooks:Calibration"</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">passes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">hooks</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="s">"mypkg.hooks:Calibration"</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">passes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
 </span></code></pre></div>
-<p>or listed as instances on a container class, which is what an author writing
-  Python already holds:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">hooks</span> <span class="o">=</span> <span class="p">(</span><span class="n">Calibration</span><span class="p">(</span><span class="n">passes</span><span class="o">=</span><span class="mi">3</span><span class="p">),)</span>
+<p>or listed as instances on a container class:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">hooks</span> <span class="o">=</span> <span class="p">(</span><span class="n">Calibration</span><span class="p">(</span><span class="n">passes</span><span class="o">=</span><span class="mi">3</span><span class="p">),)</span>
 </span></code></pre></div>
-<p>The two sources concatenate, class-level first, and neither overrides the
-  other. A subclass inherits what its bases declare. <code>HookError</code> is raised for
-  an entry that does not resolve, or a provider that satisfies none of the hook
-  protocols its container calls.</p>
-<p>Hooks are torn down in reverse order with the container, after the
-  presenters; a failing teardown is logged and does not block the rest. The
-  container also restores the phase sequence it captured before the hooks ran,
-  so building a container twice does not accumulate phases.</p>
+<p>The two sources concatenate, class-level first; neither overrides the other.
+  A subclass inherits what its bases declare. <code>HookError</code> is raised for an
+  entry that does not resolve, or for a provider that satisfies none of the
+  hook protocols its container calls. The hook points below are listed in the
+  order a session reaches them.</p>
 <p>See <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/">Container hooks and the build phase
   registry</a>.</p>
+<ul>
+<li><strong><code>QtCreatesApplication</code></strong> (<code>redsun.qt</code>) - supplies the <code>QApplication</code> the
+  session runs on. Called only when no <code>QApplication</code> is running yet. At most
+  one provider may claim it; two raises <code>HookError</code> naming both, whether or not
+  the hook is reached.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">NapariApplication</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">create_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">QApplication</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="k">return</span> <span class="n">get_qapp</span><span class="p">(</span><span class="n">app_name</span><span class="o">=...</span><span class="p">,</span> <span class="n">app_version</span><span class="o">=...</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>QtConfiguresApplication</code></strong> (<code>redsun.qt</code>) - adjusts the <code>QApplication</code>
+  before the build constructs any view.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>ConfiguresBuild</code></strong> (<code>redsun.containers</code>) - adjusts the build sequence
+  before any phase of it runs. The only point at which <code>register_phase</code> and
+  <code>unregister_phase</code> are legal.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Calibration</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_phase</span><span class="p">(</span><span class="s2">"calibrate"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>ConfiguresSession</code></strong> (<code>redsun.containers</code>) - runs after the last build
+  phase, with <code>is_built</code> already set, so <code>devices</code>, <code>presenters</code> and <code>views</code>
+  are readable.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Autostart</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">container</span><span class="o">.</span><span class="n">devices</span><span class="p">,</span> <span class="n">container</span><span class="o">.</span><span class="n">presenters</span><span class="p">,</span> <span class="n">container</span><span class="o">.</span><span class="n">views</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>QtConfiguresMainView</code></strong> (<code>redsun.qt</code>) - adjusts the main window after it
+  is built and before it is shown. Bound to <code>QMainWindow</code>, not to the window
+  class the container builds.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_main_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view</span><span class="p">:</span> <span class="n">QMainWindow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="n">view</span><span class="o">.</span><span class="n">setWindowIcon</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>HasShutdown</code></strong> (<code>redsun.virtual</code>) - now called on hooks as well as
+  presenters. Hooks are torn down in reverse order, after the presenters; a
+  failing teardown is logged and does not block the rest. The container then
+  restores the phase sequence it captured before the hooks ran.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_previous</span><span class="p">)</span>
+</span></code></pre></div>
+<ul>
+<li>
+<p>The three toolkit hook points are one generic protocol each
+  (<code>CreatesApplication</code>, <code>ConfiguresApplication</code>, <code>ConfiguresMainView</code>),
+  aliased per toolkit.</p>
+</li>
+<li>
+<p>A hook provider that implements a hook point its container never calls is
+  logged as a warning naming the protocol. A provider implementing nothing the
+  container calls raises.</p>
+</li>
+<li>
+<p><code>AppContainer.phases</code>, <code>AppContainer.register_phase(name, phase, after=...)</code>
+  and <code>AppContainer.unregister_phase(name)</code> - the build sequence as a registry
+  a caller can add to. <code>after</code> is required; <code>unregister_phase</code> refuses the
+  built-in phases. Both are legal only before <code>build</code>.</p>
+</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">app</span><span class="o">.</span><span class="n">register_phase</span><span class="p">(</span><span class="s2">"calibrate"</span><span class="p">,</span> <span class="n">calibrate</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+</span></code></pre></div>
+<ul>
+<li><code>AppContainer.sig_phase_complete</code>, emitted with the name of each build phase
+  as it finishes.</li>
+</ul>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>        <span class="n">container</span><span class="o">.</span><span class="n">sig_phase_complete</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show</span><span class="p">)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<ul>
+<li>
+<p><code>__weakref__</code> to <code>AppContainer.__slots__</code>, required by any <code>__slots__</code> class
+  owning a psygnal <code>Signal</code>.</p>
+</li>
+<li>
+<p><code>QtAppContainer._ensure_main_view</code>, so the main window is built and
+  configured once whether reached through <code>run</code> or directly.</p>
+</li>
+</ul>
 <h2 id="0111"><a href="https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1">0.11.1</a><a class="headerlink" href="#0111" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3561,8 +3577,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>inject_dependencies</code>. <strong>Breaking:</strong> an application that relied on that
   discovery must now connect them, in <code>wire()</code> or in the <code>wiring:</code> section:</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Which signals announce a plan is the application's knowledge; the presenter
   no longer guesses it from a name, and a misspelled one now fails instead of
@@ -3792,7 +3808,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>redsun.qt</code> public namespace exposing <code>QtAppContainer</code> for use in explicit,
   developer-written application configurations:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
 </span></code></pre></div></li>
 <li>Clarified documentation</li>
 </ul>
@@ -3813,16 +3829,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <ul>
 <li><code>AppContainer</code> and <code>component</code> are now importable directly from the top-level
   <code>redsun</code> package:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">component</span>
 </span></code></pre></div></li>
 </ul>
 <h3 id="changed_8">Changed<a class="headerlink" href="#changed_8" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>component()</code> now takes the component class as its first positional argument:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Before</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># After</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Before</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">motor</span><span class="p">:</span> <span class="n">MyMotor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># After</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">motor</span> <span class="o">=</span> <span class="n">component</span><span class="p">(</span><span class="n">MyMotor</span><span class="p">,</span> <span class="n">layer</span><span class="o">=</span><span class="s2">"device"</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="s2">"X"</span><span class="p">])</span>
 </span></code></pre></div></li>
 <li><code>RedSunConfig</code> removed from the public API; it is an internal <code>TypedDict</code> used
   only for YAML configuration validation.</li>

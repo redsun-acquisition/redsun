@@ -2143,6 +2143,16 @@ in <code>_hook_protocols</code>; the difference is what a provider implements in
 provider serving several toolkits is legitimate, so this is not an error - but
 it is inert, and silence is exactly what a typo'd method name looks like.
 Implementing <em>nothing</em> the container calls still raises.</p>
+<p><strong>The one hook point that returns a value takes exactly one claimant.</strong> Every
+other point is void-returning, so every provider implementing it runs and the
+order is the order the session file lists. <code>create_application</code> returns the
+application the whole session is built against; running two of them is not
+possible and choosing the first would let list order decide which one a session
+gets, in a file whose author has no reason to think order matters there. Two
+claimants therefore raise, naming both. The count is checked whether or not the
+application is actually created, so the error does not depend on whether the
+process happens to hold a <code>QApplication</code> already - otherwise the one
+environment that never reports the mistake is the test suite.</p>
 <p><strong>Hook providers are plain objects, checked structurally.</strong> A provider
 implements <code>ConfiguresBuild</code> to adjust the sequence, <code>HasShutdown</code> to undo what
 it did, or both; each is checked independently with <code>isinstance</code>, which is the
