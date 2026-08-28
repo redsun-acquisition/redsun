@@ -97,14 +97,40 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   symbols need docstrings; `D100`/`D104` are ignored.
 - Private modules are `_underscored`; the package `__init__.py` re-exports the
   public surface with explicit `__all__`. Add new public symbols to both.
+- **The underscore marks what `__all__` cannot.** A module named `_foo.py` is
+  private in its entirety, so its **module-level members carry no underscore** -
+  the module name already said it, and repeating it at every call site is noise.
+  What is public is what the package `__init__.py` lists in `__all__`.
+  **Class members always keep the underscore**, in a private module too:
+  `__all__` is module-scoped and can never say that a method is private, and the
+  docs filter (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's
+  autocomplete both key on the name. So `_hooks.py` holds `parse_hook_specs`,
+  but `AppContainer._build_devices` stays underscored.
+  Two consequences: ruff `D103` treats a non-underscore function as public, so
+  helpers in a private module need docstrings; and a reference page targeting a
+  *module* rather than an object needs an explicit `members:` list, because
+  mkdocstrings selects `__all__` **union** non-underscore members, never
+  `__all__` alone.
 - Public methods are named in the imperative: `wire`, `build`, `connect`,
   `release`, not `wiring`, `building` or `connection`. A method does something;
   the name says what it does, not what it is. Nouns are for the things a method
   returns or holds (`connections`, `ports`, `signals`), which are properties.
   Deviate only where an established external convention requires it.
+- **`@property` is for public API only.** It exists to give a class a read-only
+  attribute that callers can rely on; a leading underscore says there are no
+  such callers, so the two do not combine. Private state is a plain attribute,
+  computed once where it is first known - usually `__init__` - and added to
+  `__slots__`. Private *behaviour* is an ordinary underscored method. A private
+  property recomputes on every access with none of the guarantee it buys.
 - psygnal signal attributes are `sig_snake_case` (the `sig_` prefix is
   optional), never `sigCamelCase`. Same-named signals across components are
   discerned by owner: `find_signals(container, names, owner=...)` (ADR 0004).
+- **A `__slots__` class that owns a psygnal `Signal` needs `__weakref__` among
+  its slots.** psygnal refers to a signal's owner weakly, and silently falls
+  back to a strong reference when it cannot; a slotted class cannot be referred
+  to weakly without that slot, and on the fallback the owner is never collected
+  - taking everything it holds with it. A class with a `__dict__` never reaches
+  that path, so this only bites where `__slots__` is declared.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring + `docs/reference/changelog.md` entry. The root
   `CHANGELOG.md` is only a redirect to it; never add entries there.

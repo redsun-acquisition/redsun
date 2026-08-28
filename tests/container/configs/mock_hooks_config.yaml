@@ -1,0 +1,9 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-hooks-session
+hooks:
+  configure_build:
+    provider: "mock_pkg.hooks:RecordingHook"
+    kwargs:
+      name: custom
+      after: views

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from ophyd_async.core import Device
 
@@ -326,3 +326,52 @@ class _ViewComponent(_ComponentBase[PView]):
 
 
 __all__ = ["declare_device", "declare_presenter", "declare_view"]
+
+
+class _HookField:
+    """Sentinel returned by [`declare_hook`][redsun.containers.declare_hook]. Resolved by the metaclass into a provider instance."""
+
+    __slots__ = ("kwargs", "provider")
+
+    def __init__(self, provider: Any, kwargs: dict[str, Any]) -> None:
+        self.provider = provider
+        self.kwargs = kwargs
+
+
+@overload
+def declare_hook(provider: type[T], /, **kwargs: Any) -> T: ...
+@overload
+def declare_hook(provider: T, /) -> T: ...
+def declare_hook(provider: Any, /, **kwargs: Any) -> Any:
+    """Declare a hook provider for the hook point the attribute names.
+
+    The attribute name is the method the hook point calls, so a container
+    installs at most one provider per point:
+
+    ```python
+    class MyApp(QtAppContainer):
+        configure_application = declare_hook(DarkTheme, theme="nord")
+    ```
+
+    A class is constructed with *kwargs* as the container class is created; an
+    already built instance is taken as it is, and the same instance declared at
+    two points is one provider serving both.
+
+    Parameters
+    ----------
+    provider : type[T] | T
+        The provider class to instantiate, or a provider already built.
+    **kwargs : Any
+        Keyword arguments forwarded to the provider constructor.
+
+    Raises
+    ------
+    TypeError
+        If keyword arguments are given for a provider that is already built.
+    """
+    if not isinstance(provider, type) and kwargs:
+        raise TypeError(
+            f"declare_hook takes keyword arguments only with a class; "
+            f"{type(provider).__name__} is already constructed"
+        )
+    return _HookField(provider=provider, kwargs=kwargs)
