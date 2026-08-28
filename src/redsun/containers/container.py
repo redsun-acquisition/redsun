@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+# resolved at runtime: the ClassVar annotation below is evaluated by ruff's
+# runtime-evaluated rules and by anything calling get_type_hints on a subclass
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -27,13 +30,23 @@ from typing import (
 
 import yaml
 from ophyd_async.core import Device
+from psygnal import Signal
 
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
+from redsun.containers._hooks import (
+    ConfiguresBuild,
+    ConfiguresSession,
+    HookError,
+    distinct,
+    parse_hook_specs,
+    resolve_hooks,
+)
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
     _DeviceField,
+    _HookField,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
@@ -52,7 +65,7 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
@@ -62,6 +75,7 @@ if TYPE_CHECKING:
     from redsun.virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
+    BuildPhase: TypeAlias = Callable[[], None]
 
 ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
@@ -153,6 +167,19 @@ _PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
     "views": "must accept exactly ('name',) as its leading positional parameter",
 }
 
+_BUILTIN_PHASES: frozenset[str] = frozenset(
+    {
+        "virtual_container",
+        "devices",
+        "presenters",
+        "views",
+        "providers",
+        "wiring",
+        "injection",
+    }
+)
+"""The phases every container runs, which no caller may remove or reorder."""
+
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
@@ -194,10 +221,21 @@ class AppContainer:
     """Application container for MVP architecture."""
 
     __slots__ = (
+        # psygnal holds a signal's owner weakly and drops its per-owner cache
+        # entry through weakref.finalize. Both fall back to a strong reference
+        # when the owner cannot be weakly referenced, which a slotted class
+        # cannot unless __weakref__ is one of its slots - and then no container
+        # is ever collected.
+        "__weakref__",
         "_built_devices",
+        "_components",
         "_config",
         "_devices_connected",
+        "_hook_by_moment",
+        "_hooks",
         "_is_built",
+        "_phases",
+        "_phases_before_hooks",
         "_virtual_container",
     )
 
@@ -205,6 +243,32 @@ class AppContainer:
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
     _config_path: ClassVar[Path | None] = None
+
+    sig_phase_complete = Signal(str)
+    """Emitted with the name of each build phase as it finishes.
+
+    For watching the build rather than taking part in it: a splash screen
+    naming the step in progress connects to this, where adding a phase per
+    step would register seven phases to display seven labels.
+    """
+
+    _hook_keys: ClassVar[Mapping[str, type]] = {
+        "configure_build": ConfiguresBuild,
+        "configure_session": ConfiguresSession,
+    }
+    """The hook points this container calls, in the order it reaches them.
+
+    A key is the method the point calls, and is what names the point in a
+    container class body and in the ``hooks`` section. A subclass adding points
+    declares its own mapping.
+    """
+
+    _hook_providers: ClassVar[dict[str, object]] = {}
+    """The providers declared on this container class, by hook point.
+
+    Built as the class is created, so that an instance declared at two points
+    is one provider serving both. A subclass inherits what its bases declare.
+    """
 
     def __init_subclass__(
         cls,
@@ -306,6 +370,22 @@ class AppContainer:
         cls._presenter_components = presenters
         cls._view_components = views
 
+        hook_providers: dict[str, object] = {}
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                hook_providers.update(base._hook_providers)
+
+        hook_fields = {
+            attr_name: value
+            for attr_name, value in namespace.items()
+            if isinstance(value, _HookField)
+        }
+        for attr_name, hook_field in hook_fields.items():
+            provider = cls._build_hook_provider(attr_name, hook_field)
+            hook_providers[attr_name] = provider
+            setattr(cls, attr_name, provider)
+        cls._hook_providers = hook_providers
+
         if devices or presenters or views:
             logger.debug(
                 f"Collected from {cls.__name__}: "
@@ -321,9 +401,25 @@ class AppContainer:
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
+        self._hooks: tuple[object, ...] | None = None
+        self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
+        self._components: dict[str, _PresenterComponent | _ViewComponent] = {
+            **self._presenter_components,
+            **self._view_components,
+        }
+        self._phases: dict[str, BuildPhase] = {
+            "virtual_container": self._create_virtual_container,
+            "devices": self._build_devices,
+            "presenters": self._build_presenters,
+            "views": self._build_views,
+            "providers": self._register_providers,
+            "wiring": self._apply_wiring,
+            "injection": self._inject_dependencies,
+        }
+        self._phases_before_hooks: dict[str, BuildPhase] = {}
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -427,14 +523,17 @@ class AppContainer:
     def build(self) -> Self:
         """Instantiate all components in dependency order.
 
-        Build order:
+        Hook providers are resolved first and given the chance to adjust the
+        sequence, which is why registering a phase is only legal until here.
+        The registered phases then run in order:
 
         1. VirtualContainer
         2. Devices
-        3. Presenters (register their providers in the VirtualContainer)
-        4. Views (inject dependencies from the VirtualContainer)
-        5. Wiring, connecting the signals and slots of built components
-        6. Remaining dependency injection
+        3. Presenters
+        4. Views
+        5. Providers, registered into the VirtualContainer
+        6. Wiring, connecting the signals and slots of built components
+        7. Remaining dependency injection
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -446,6 +545,197 @@ class AppContainer:
 
         logger.info("Building application container...")
 
+        hooks = self._ensure_hooks()
+        # what a hook adds to the sequence is undone when it is torn down, so
+        # that a container built a second time does not accumulate phases
+        self._phases_before_hooks = dict(self._phases)
+        configures_build = hooks.get("configure_build")
+        if isinstance(configures_build, ConfiguresBuild):
+            configures_build.configure_build(self)
+
+        for name, phase in self._phases.items():
+            phase()
+            logger.debug(f"Build phase '{name}' complete")
+            self.sig_phase_complete.emit(name)
+
+        # before the session hooks, so that a hook reading `views`,
+        # `presenters` or `devices` is not turned away by their build guard
+        self._is_built = True
+        configures_session = hooks.get("configure_session")
+        if isinstance(configures_session, ConfiguresSession):
+            configures_session.configure_session(self)
+
+        logger.info(
+            f"Container built: "
+            f"{len(self._device_components)} devices, "
+            f"{len(self._presenter_components)} presenters, "
+            f"{len(self._view_components)} views"
+        )
+
+        return self
+
+    @property
+    def phases(self) -> list[str]:
+        """The build phases, in the order `build` runs them."""
+        return list(self._phases)
+
+    def register_phase(self, name: str, phase: BuildPhase, *, after: str) -> None:
+        """Add *phase* to the build sequence, directly after the phase *after*.
+
+        There is no default position: where a phase runs is what it means, so
+        *after* names an existing phase and is required.
+
+        Raises
+        ------
+        RuntimeError
+            If the container is already built.
+        ValueError
+            If *name* is already registered, or *after* is not a known phase.
+        """
+        self._refuse_after_build("register a phase")
+        if name in self._phases:
+            raise ValueError(f"build phase {name!r} is already registered")
+        if after not in self._phases:
+            raise ValueError(
+                f"cannot place phase {name!r} after unknown phase {after!r}. "
+                f"Known phases: {', '.join(self._phases)}"
+            )
+        rebuilt: dict[str, BuildPhase] = {}
+        for existing, existing_phase in self._phases.items():
+            rebuilt[existing] = existing_phase
+            if existing == after:
+                rebuilt[name] = phase
+        self._phases = rebuilt
+
+    def unregister_phase(self, name: str) -> None:
+        """Remove a previously registered phase.
+
+        Raises
+        ------
+        RuntimeError
+            If the container is already built.
+        ValueError
+            If *name* is not registered, or names one of the built-in phases:
+            the order they run in is what the container guarantees.
+        """
+        self._refuse_after_build("unregister a phase")
+        if name in _BUILTIN_PHASES:
+            raise ValueError(
+                f"build phase {name!r} is built in and cannot be removed. "
+                f"Built-in phases: {', '.join(_BUILTIN_PHASES)}"
+            )
+        if name not in self._phases:
+            raise ValueError(f"build phase {name!r} is not registered")
+        del self._phases[name]
+
+    def _refuse_after_build(self, action: str) -> None:
+        if self._is_built:
+            raise RuntimeError(f"cannot {action} after the container is built")
+
+    @classmethod
+    def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
+        """Construct the provider this container class declares at *moment*.
+
+        Raises
+        ------
+        HookError
+            If *moment* is not a hook point this container calls, the provider
+            class rejects the keys given, or the provider does not implement
+            the protocol the point calls.
+        """
+        if moment not in cls._hook_keys:
+            known = ", ".join(cls._hook_keys)
+            raise HookError(
+                f"{cls.__name__} declares a hook at {moment!r}, which is not a "
+                f"hook point it calls; expected one of: {known}"
+            )
+        declared = field.provider
+        if isinstance(declared, type):
+            try:
+                provider: object = declared(**field.kwargs)
+            except TypeError as e:
+                raise HookError(
+                    f"cannot construct hook provider {declared.__name__!r} "
+                    f"declared at {moment!r} with {sorted(field.kwargs)}: {e}"
+                ) from e
+        else:
+            provider = declared
+        protocol = cls._hook_keys[moment]
+        if not isinstance(provider, protocol):
+            raise HookError(
+                f"hook provider {type(provider).__name__!r} declared at "
+                f"{moment!r} does not implement {protocol.__name__}"
+            )
+        return provider
+
+    def _ensure_hooks(self) -> dict[str, object]:
+        """Return the hook providers by hook point, resolving once per build.
+
+        A subclass firing its own hook points calls this rather than resolving
+        again, so that every hook point of one build acts on one set of
+        providers.
+        """
+        if self._hooks is None:
+            self._hook_by_moment = self._resolve_hook_providers()
+            self._hooks = distinct(
+                self._hook_by_moment[moment]
+                for moment in self._hook_keys
+                if moment in self._hook_by_moment
+            )
+        return self._hook_by_moment
+
+    def _resolve_hook_providers(self) -> dict[str, object]:
+        """Merge the providers declared on the class with the configured ones.
+
+        Raises
+        ------
+        HookError
+            If an entry does not resolve, a hook point is named on the class
+            and in the configuration, or a configured provider does not
+            implement the protocol its hook point calls.
+        """
+        declared = dict(type(self)._hook_providers)
+        configured = resolve_hooks(
+            parse_hook_specs(
+                self._config.get("hooks", {}), self._hook_keys, type(self).__name__
+            )
+        )
+        both = sorted(declared.keys() & configured.keys())
+        if both:
+            named = ", ".join(repr(moment) for moment in both)
+            raise HookError(
+                f"hook point(s) {named} are named both on {type(self).__name__} "
+                "and in the configuration; a hook point takes one provider, so "
+                "drop one of the two"
+            )
+        for moment, hook in configured.items():
+            protocol = self._hook_keys[moment]
+            if not isinstance(hook, protocol):
+                raise HookError(
+                    f"hook provider {type(hook).__name__!r} configured at "
+                    f"{moment!r} does not implement {protocol.__name__}"
+                )
+        return {**declared, **configured}
+
+    def _shutdown_hooks(self) -> None:
+        """Undo what the hook providers did, in reverse order of installation."""
+        for hook in reversed(self._hooks or ()):
+            if isinstance(hook, HasShutdown):
+                try:
+                    hook.shutdown()
+                except Exception as e:  # noqa: BLE001 - one failure must not block the rest
+                    logger.error(
+                        f"Error shutting down hook '{type(hook).__name__}': {e}"
+                    )
+        # a container always holds the built-in phases, so an empty snapshot
+        # means `build` never took one and there is nothing to restore
+        if self._phases_before_hooks:
+            self._phases = self._phases_before_hooks
+        self._hooks = None
+        self._hook_by_moment = {}
+
+    def _create_virtual_container(self) -> None:
+        """Create the VirtualContainer and hand it the session configuration."""
         self._virtual_container = VirtualContainer()
 
         base_cfg: RedSunConfig = {
@@ -456,6 +746,8 @@ class AppContainer:
         self._virtual_container._set_configuration(base_cfg)
         logger.debug("VirtualContainer created")
 
+    def _build_devices(self) -> None:
+        """Build every declared device, skipping the ones that fail."""
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
@@ -463,14 +755,19 @@ class AppContainer:
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
+        self._built_devices = built_devices
 
+    def _build_presenters(self) -> None:
+        """Build every declared presenter against the built devices."""
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter_component.build(built_devices)
+                presenter_component.build(self._built_devices)
             except Exception as e:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
 
+    def _build_views(self) -> None:
+        """Build every declared view."""
         for comp_name, view_component in self._view_components.items():
             try:
                 view_component.build()
@@ -478,34 +775,29 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
 
-        all_components: dict[str, _PresenterComponent | _ViewComponent] = {
-            **self._presenter_components,
-            **self._view_components,
-        }
-        for comp_name, component in all_components.items():
+    def _register_providers(self) -> None:
+        """Let every component providing dependencies register them."""
+        for component in self._components.values():
             if isinstance(component.instance, IsProvider):
-                component.instance.register_providers(self._virtual_container)
+                component.instance.register_providers(self.virtual_container)
 
-        self._virtual_container._set_components(
-            {name: comp.instance for name, comp in all_components.items()}
+    def _apply_wiring(self) -> None:
+        """Publish the built components by name, then connect them.
+
+        The names reach the VirtualContainer first because both `wire` and the
+        ``wiring`` configuration section resolve components by name.
+        """
+        self.virtual_container._set_components(
+            {name: comp.instance for name, comp in self._components.items()}
         )
         self.wire()
         self._apply_wiring_config()
 
-        for comp_name, component in all_components.items():
+    def _inject_dependencies(self) -> None:
+        """Let every component taking dependencies receive them."""
+        for component in self._components.values():
             if isinstance(component.instance, IsInjectable):
-                component.instance.inject_dependencies(self._virtual_container)
-
-        self._built_devices = built_devices
-        self._is_built = True
-        logger.info(
-            f"Container built: "
-            f"{len(self._device_components)} devices, "
-            f"{len(self._presenter_components)} presenters, "
-            f"{len(self._view_components)} views"
-        )
-
-        return self
+                component.instance.inject_dependencies(self.virtual_container)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect all devices via ophyd-async's async connect lifecycle.
@@ -535,7 +827,7 @@ class AppContainer:
         self._devices_connected = True
 
     def shutdown(self) -> None:
-        """Shutdown all presenters that implement ``HasShutdown``."""
+        """Shutdown all presenters and hooks that implement ``HasShutdown``."""
         if not self._is_built:
             return
 
@@ -548,6 +840,9 @@ class AppContainer:
                     comp.instance.shutdown()
                 except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
+
+        # after the components, which may still be using what a hook installed
+        self._shutdown_hooks()
 
         self._is_built = False
         logger.info("Container shutdown complete")
@@ -595,6 +890,8 @@ class AppContainer:
         )
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
+        if "hooks" in config:
+            instance._config["hooks"] = config["hooks"]
 
         return instance
 

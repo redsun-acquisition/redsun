@@ -98,6 +98,7 @@ nav = [
             { "5. Culsans-backed psygnal async backend" = "explanation/decisions/0005-culsans-psygnal-async-backend.md" },
             { "6. Application-declared wiring" = "explanation/decisions/0006-application-declared-wiring.md" },
             { "7. Typed provider keys" = "explanation/decisions/0007-typed-provider-keys.md" },
+            { "8. Container hooks and the build phase registry" = "explanation/decisions/0008-container-hooks-and-the-phase-registry.md" },
         ]},
     ]},
 ]

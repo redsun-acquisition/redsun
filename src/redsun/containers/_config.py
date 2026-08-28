@@ -16,3 +16,4 @@ class AppConfig(RedSunConfig, total=False):
     presenters: NotRequired[dict[str, Any]]
     views: NotRequired[dict[str, Any]]
     wiring: NotRequired[list[dict[str, str]]]
+    hooks: NotRequired[dict[str, dict[str, Any]]]
