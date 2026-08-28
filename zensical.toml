@@ -100,7 +100,7 @@ nav = [
             { "6. Application-declared wiring" = "explanation/decisions/0006-application-declared-wiring.md" },
             { "7. Typed provider keys" = "explanation/decisions/0007-typed-provider-keys.md" },
             { "8. Container hooks and the build phase registry" = "explanation/decisions/0008-container-hooks-and-the-phase-registry.md" },
-            { "9. Inherited component configuration" = "explanation/decisions/0009-inherited-component-configuration.md" },
+            { "9. Inherited and layered component configuration" = "explanation/decisions/0009-inherited-component-configuration.md" },
         ]},
     ]},
 ]

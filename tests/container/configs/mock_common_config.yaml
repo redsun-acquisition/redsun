@@ -1,0 +1,18 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-common-session
+devices:
+  motor:
+    egu: "mm"
+    integer: 1
+    floating: 1.0
+    string: "common motor"
+presenters:
+  ctrl:
+    string: "common ctrl"
+    integer: 1
+    floating: 1.0
+    boolean: true
+views:
+  widget:
+    label: "common widget"

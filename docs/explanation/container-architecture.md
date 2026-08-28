@@ -175,6 +175,63 @@ def my_app() -> None:
 
 The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
 
+### Sharing declarations between sessions
+
+Two sessions of the same instrument usually differ in their devices and in
+little else. A base class carries what they share, and each subclass names the
+file it reads:
+
+```python
+class InstrumentApp(QtAppContainer):
+    ctrl = declare_presenter(MyController, from_config="ctrl")
+    ui = declare_view(MyView, from_config="ui")
+
+
+class Simulation(InstrumentApp, config="simulation.yaml"):
+    motor = declare_device(MockMotor, from_config="motor")
+
+
+class Instrument(InstrumentApp, config="instrument.yaml"):
+    motor = declare_device(MyMotor, from_config="motor")
+```
+
+An inherited field is resolved against the file of the class that inherits it,
+so `Simulation` and `Instrument` read the same declarations from two different
+files. A base declaring `from_config` needs no file of its own; a container
+constructed without one raises `TypeError` naming the fields that wanted a
+section.
+
+### Layering configuration files
+
+`config` also accepts several files, and a subclass adds to what its bases
+named rather than replacing it, so what two sessions share can be stated once:
+
+```python
+class InstrumentApp(QtAppContainer, config="common.yaml"):
+    ctrl = declare_presenter(MyController, from_config="ctrl")
+
+
+class Simulation(InstrumentApp, config="simulation.yaml"):  # common, then simulation
+    ...
+```
+
+Files are read in that order and merged as mappings: a later file wins a key it
+shares with an earlier one, and nested mappings merge in turn. Two rules qualify
+that:
+
+- **A component entry is replaced whole.** The `devices`, `presenters` and
+  `views` sections merge by component name, but a component a later file names
+  is taken from that file entirely. Those entries are the keyword arguments of a
+  constructor call, so one file owns all of a component's arguments.
+- **`schema_version` and `frontend` must agree.** They name what kind of session
+  this is rather than what it contains, so a later file giving a different value
+  raises rather than overriding. `session` overrides normally.
+
+Only the merged result has to satisfy [`AppConfig`][redsun.containers.AppConfig],
+so a file layered under another may carry a fragment - a `presenters` section
+and nothing else. The files a container read, and any component one file took
+from another, are logged at debug level.
+
 ## Build order
 
 When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in four phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:

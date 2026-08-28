@@ -174,6 +174,19 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 See the `docs-conventions` skill: Diataxis layout, ADR recording, and the
 mkdocstrings pitfalls that a green `zensical build` will not catch.
 
+- **Examples are agnostic.** Every snippet, class name and configuration
+  fragment in the docs is written for a reader who has only this repository.
+  Name nothing from another project - not a downstream bundle, not a plugin,
+  not a class that lives outside `redsun` - unless the passage is explicitly
+  about that project. Reach for the placeholder names the surrounding page
+  already uses (`MyApp`, `MyMotor`, `MyController`, `MyView`, `mylab.thing:X`)
+  rather than inventing one from whatever motivated the change.
+- The motivating case is usually a real downstream session, and writing its
+  names into a snippet is the easiest mistake to make: it reads correctly to
+  whoever wrote it and names nothing the reader can look up. An ADR recording a
+  decision that genuinely spanned two repositories is the exception, and says
+  so.
+
 ## Response style (agents)
 
 - Terse. No preamble, no restatement of the request, no summary of what you

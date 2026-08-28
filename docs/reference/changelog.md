@@ -9,34 +9,63 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Added
+
+- `config` accepts several YAML files, layered in the order given, and a
+  container class reads what its bases named before its own. A file common to
+  several sessions sits under the one particular to each.
+
+  ```python
+  class InstrumentApp(QtAppContainer, config="common.yaml"):
+      ui = declare_view(MyView, from_config="ui")
+
+
+  class Simulation(InstrumentApp, config="simulation.yaml"): ...
+
+
+  class Instrument(InstrumentApp, config="instrument.yaml"): ...
+  ```
+
+- `AppContainer._config_paths` reports those files in the order they layer, and
+  `AppContainer._component_fields` records the `declare_*` fields a container
+  and its bases declared.
+
 ### Changed
 
 - A `declare_*` field with `from_config` is resolved against the configuration
-  file of each container class that inherits it, rather than only the one that
+  of each container class that inherits it, rather than only the one that
   declared it. A base class can therefore carry the declarations two sessions
-  share while each subclass reads its own file.
-
-  ```python
-  class MimirBase(QtAppContainer):
-      img_widget = declare_view(ImageView, from_config="img_widget")
-
-
-  class Simulation(MimirBase, config="simulation.yaml"): ...
-
-
-  class Microscope(MimirBase, config="microscope.yaml"): ...
-  ```
-
+  share while each subclass reads its own files.
+- A subclass naming `config` adds to the files its bases named instead of
+  replacing them.
+- Configuration files merge as mappings, recursively: a key present in two
+  files is taken from the later one unless both values are mappings, which
+  merge in turn. Lists and scalars are replaced, not combined.
+- The `devices`, `presenters` and `views` sections merge by component name, but
+  a component named in a later file is taken from that file whole. A component
+  entry is a constructor's keyword arguments, so one file owns all of them.
+- The keys `AppConfig` requires are checked against the merged configuration
+  rather than against each file, so a file layered under another may carry a
+  fragment.
+- `schema_version` and `frontend` must agree across layered files. They name
+  what kind of session this is rather than what it contains, so a later file
+  giving a different value raises `ValueError` instead of overriding. Every
+  other key, `session` included, is taken from the later file.
+- A container reading more than one configuration file logs them at debug
+  level, in the order they layer, and logs each component an upper file takes
+  from a lower one.
+- A container inheriting from more than one base reads the files every base
+  named, rather than only those of the first in the method resolution order. A
+  file reached twice through the hierarchy is read once.
+- A configuration section written with nothing under it - `presenters:` and no
+  entries - is read as an empty section rather than raising `AttributeError`.
 - Declaring a `from_config` field on a container class with no `config` file no
   longer raises at class creation; the `TypeError` is raised when such a
   container is constructed, and names every field that asked for a section.
   A base class exists to be subclassed, and the subclass is where `config` is
   named.
 
-- `AppContainer._component_fields` records the `declare_*` fields a container
-  and its bases declared, which is what makes the resolution above possible.
-
-  See [Inherited component
+  See [Inherited and layered component
   configuration](../explanation/decisions/0009-inherited-component-configuration.md).
 
 ## [0.11.2] - 28-08-2026
@@ -98,9 +127,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   session runs on. Called only when no `QApplication` is running yet.
 
   ```python
-  class NapariApplication:
+  class BrandedApplication:
       def create_application(self, argv: list[str]) -> QApplication:
-          return get_qapp(app_name=..., app_version=...)
+          return QApplication(argv)
   ```
 
 - **`QtConfiguresApplication`** (`redsun.qt`) - adjusts the `QApplication`
