@@ -105,6 +105,12 @@ AppContainer.from_config("session.yaml").run()
 > [!TIP]
 > When launching an app container from a configuration file, make sure that your involved component packages (i.e. `mylab` in this example) are installed in the same environment where your `AppContainer` is launched.
 
+## `AppContainer` architecture
+
+Each `redsun` container is structured as a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/container-architecture/) (DVP) application. This resembles the Model-View-Presenter (MVP) architecture, with the difference that at the lower level of the application sits the *Device layer*, leveraging [`ophyd-async`](https://github.com/bluesky/ophyd-async), to interact with hardware components.
+
+This is to make a clear separation statement: `redsun` is about primarely about device control, and tries to do it well.
+
 ## Documentation
 
 See the [documentation] for more informations.
