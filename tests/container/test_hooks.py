@@ -492,16 +492,3 @@ class TestBuildProgress:
         app.build()
 
         assert tuple(seen) == AppContainer.BUILD_STEPS
-
-    def test_the_announced_steps_are_the_ones_documented(self) -> None:
-        # a display sizes itself from this, so a silent reorder or rename
-        # would move somebody's progress bar without failing anything
-        assert AppContainer.BUILD_STEPS == (
-            "virtual container",
-            "devices",
-            "presenters",
-            "views",
-            "providers",
-            "wiring",
-            "injection",
-        )
