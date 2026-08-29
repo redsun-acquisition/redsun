@@ -51,7 +51,7 @@ Each component is declared once, with the arguments it needs. `wire` says which 
 
 `redsun` provides the common glue code that each component can use to ship entire applications or single, reusable components. Leveraging [Python entry points](https://packaging.python.org/en/latest/specifications/entry-points/), an application can also be shipped as a single YAML configuration file, provided that different contributing components expose a `redsun.yaml` manifest.
 
-The same application, with no Python at all:
+So the same application can be expressed as:
 
 ```yaml
 # session.yaml
