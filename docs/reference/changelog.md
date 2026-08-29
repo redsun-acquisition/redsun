@@ -41,6 +41,32 @@ Dates are specified in the format `DD-MM-YYYY`.
   provider serving `configure_main_view` as well holds the window and can hand
   over with `QSplashScreen.finish` instead of `close`.
 
+- **`set_level`** (`redsun.log`) - sets the level of the `redsun` logger. Takes
+  a `logging` constant or a level name, as `logging.Logger.setLevel` does; a
+  name is matched without regard to case.
+
+- **`add_handler`** and **`remove_handler`** (`redsun.log`) - install and
+  uninstall a destination for the `redsun` logger's records. A handler carrying
+  no formatter of its own is given the one every other destination writes
+  through.
+
+  ```python
+  from redsun.log import add_handler, remove_handler
+
+  handler = MyHandler()
+  add_handler(handler)
+  ...
+  remove_handler(handler)
+  ```
+
+- **`log_level`** - a keyword on `AppContainer.__init__` and on
+  `AppContainer.from_config`, giving the level the session runs its logger at.
+  The logger is left as it is when it is not given.
+
+  ```python
+  container = AppContainer.from_config("session.yaml", log_level=logging.DEBUG)
+  ```
+
 - `config` accepts several YAML files, layered in the order given, and a
   container class reads what its bases named before its own. A file common to
   several sessions sits under the one particular to each.
@@ -62,6 +88,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- The `redsun` logger starts at `INFO` rather than `DEBUG`, and is configured
+  with `logging` calls rather than a `dictConfig` mapping. `redsun.log.config`,
+  `redsun.log.InfoFilter` and `redsun.log.DebugFilter` are gone: the two stream
+  handlers they split records between wrote to one `sys.stdout` through one
+  formatter, which is now a single handler installed with `add_handler`.
 - `AppContainer` declares no hook points. Every point belongs to a toolkit, so
   `QtAppContainer` declares all four - `create_application`,
   `configure_application`, `during_build` and `configure_main_view` - and a

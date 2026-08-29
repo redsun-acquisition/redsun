@@ -878,6 +878,66 @@ class TestAppConfig:
         assert "views" not in RedSunConfig.__annotations__
 
 
+class TestLogLevel:
+    """Tests for the level the ``redsun`` logger runs at."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_level(self) -> Iterator[None]:
+        logger = logging.getLogger("redsun")
+        level = logger.level
+        yield
+        logger.setLevel(level)
+
+    def test_a_container_leaves_the_level_alone_by_default(self) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        AppContainer()
+
+        assert logging.getLogger("redsun").level == logging.WARNING
+
+    @pytest.mark.parametrize(
+        ("level", "expected"),
+        [
+            pytest.param(logging.DEBUG, logging.DEBUG, id="constant"),
+            pytest.param("DEBUG", logging.DEBUG, id="name"),
+            pytest.param("debug", logging.DEBUG, id="lowercase-name"),
+            pytest.param(logging.WARNING, logging.WARNING, id="another-constant"),
+        ],
+    )
+    def test_a_keyword_sets_the_level(self, level: int | str, expected: int) -> None:
+        AppContainer(log_level=level)
+
+        assert logging.getLogger("redsun").level == expected
+
+    @pytest.mark.parametrize(
+        ("level", "error"),
+        [
+            pytest.param("verbose", ValueError, id="not-a-level"),
+            pytest.param(3.5, TypeError, id="not-a-level-at-all"),
+        ],
+    )
+    def test_a_level_naming_nothing_is_refused(
+        self, level: Any, error: type[Exception]
+    ) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        with pytest.raises(error):
+            AppContainer(log_level=level)
+
+        assert logging.getLogger("redsun").level == logging.WARNING
+
+    def test_from_config_passes_the_level_on(
+        self, mock_entry_points: None, config_path: Path
+    ) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        AppContainer.from_config(
+            str(config_path / "mock_motor_config.yaml"), log_level=logging.DEBUG
+        )
+
+        assert logging.getLogger("redsun").level == logging.DEBUG
+
+
 @pytest.mark.qt
 class TestQtAppContainer:
     """Tests for QtAppContainer lifecycle correctness."""
