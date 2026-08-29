@@ -138,8 +138,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [Inherited and layered component
   configuration](../explanation/decisions/0009-inherited-component-configuration.md).
 
+- A required plan parameter annotated with a sequence of a non-device type -
+  `Sequence[int]`, `list[str]` - no longer raises `UnresolvableAnnotationError`.
+  The Qt view builds a list editor for it; the check that runs before the view
+  exists did not know that, and skipped the plan.
+
 - Bump `ophyd-async` to 0.21.2.
 - Bump `acquire-zarr` to 0.9.0.
+
+### Fixed
+
+- A plan with a required `bool` parameter no longer crashes the Qt parameter
+  form with `TypeError: setChecked(...) argument 1 has unexpected type
+  'NoneType'`. A parameter with no default is now given magicgui's `Undefined`
+  rather than `None`.
 
 ### Removed
 

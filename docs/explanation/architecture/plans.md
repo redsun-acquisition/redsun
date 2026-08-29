@@ -116,12 +116,18 @@ fields in this priority order:
 4. `MyDevice` (bare protocol) -> single-select
 5. Everything else -> a plain value, left to the view layer to render
 
-Step 5 accepts a fixed set of types: `int`, `float`, `str`, `bool`, `bytes`,
-`range`, `Path`, the `datetime` types, and any `Enum` subclass. A *required*
-parameter annotated with anything else raises `UnresolvableAnnotationError`,
-and the plan is skipped rather than shown with a control nobody can fill in
-correctly. `Any` is excluded deliberately: it would accept everything and
-render as a bare text field.
+Step 5 accepts:
+
+- `int`, `float`, `str`, `bool`, `bytes` and `range`
+- `Path`
+- `datetime`, `date`, `time` and `timedelta`
+- any `Enum` subclass
+- a sequence of anything that is not a device
+
+A *required* parameter annotated with anything else raises
+`UnresolvableAnnotationError`, and the plan is skipped rather than shown with a
+control nobody can fill in correctly. `Any` is excluded deliberately: it would
+accept everything and render as a bare text field.
 
 The check is pure Python and imports no toolkit, so a plan can be inspected
 before any application object exists. Turning these descriptions into actual

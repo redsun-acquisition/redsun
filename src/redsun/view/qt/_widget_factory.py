@@ -30,6 +30,7 @@ from collections.abc import Callable
 from typing import Any, TypeAlias, get_args
 
 from magicgui import widgets as mgw
+from magicgui.types import Undefined
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
@@ -141,11 +142,14 @@ def _make_generic(p: ParamDescription) -> mgw.Widget:
     Raises TypeError or ValueError if magicgui does not support the annotation.
     """
     options: dict[str, Any] = {}
+    # a parameter with no default gets magicgui's sentinel rather than None:
+    # a widget that cannot hold None, such as the CheckBox built for a bool,
+    # raises on being handed one
     return mgw.create_widget(
         annotation=p.annotation,
         name=p.name,
         param_kind=p.kind.name,
-        value=p.default if p.has_default else None,
+        value=p.default if p.has_default else Undefined,
         options=options,
     )
 

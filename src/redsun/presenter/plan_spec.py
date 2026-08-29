@@ -40,6 +40,7 @@ from redsun.presenter.utils import (
     isdevice,
     isdevicesequence,
     isdeviceset,
+    issequence,
 )
 
 if TYPE_CHECKING:
@@ -66,9 +67,10 @@ class UnresolvableAnnotationError(TypeError):
         super().__init__(
             f"Plan {plan_name!r}: cannot resolve annotation for parameter "
             f"{param_name!r} ({annotation!r}). "
-            f"Supported types are: Literal, OADevice subtype, Sequence[OADevice], "
-            f"Path, and magicgui-supported primitives (int, float, str, bool, ...). "
-            f"The plan will be skipped."
+            f"A required parameter must be a Literal, a device protocol, a "
+            f"sequence of them, a sequence of any other renderable type, or one "
+            f"of int, float, str, bool, bytes, range, Path, an Enum or a "
+            f"datetime type. The plan will be skipped."
         )
 
 
@@ -355,7 +357,7 @@ def _iterate_signature(sig: inspect.Signature) -> cabc.Iterator[tuple[str, Param
     yield from items
 
 
-_MAGICGUI_NATIVE_TYPES: frozenset[type] = frozenset(
+_PRIMITIVE_TYPES: frozenset[type] = frozenset(
     {
         int,
         float,
@@ -372,22 +374,26 @@ _MAGICGUI_NATIVE_TYPES: frozenset[type] = frozenset(
 )
 
 
-def _is_magicgui_resolvable(ann: Any) -> bool:
-    """Return ``True`` if *ann* is known to produce a real widget via magicgui.
+def _is_renderable(ann: Any) -> bool:
+    """Return ``True`` if a view layer can be expected to build a control for *ann*.
 
-    This is a pure-Python check with no Qt dependency, safe to call at plan
-    construction time before a ``QApplication`` exists.
+    A pure-Python check that imports no toolkit, so it is safe to call at plan
+    construction time, before any application object exists.
 
-    We do **not** include `Any` in the resolvable set, because magicgui
-    silently produces a ``LineEdit`` for it - the same opaque behaviour we
-    are trying to eliminate.
+    `Any` is excluded: it says nothing about the value, so no view can choose a
+    control for it. Refusing here names the plan and the parameter, which a
+    failure raised while the form is being built does not.
     """
     if ann is Any:
         return False
-    if ann in _MAGICGUI_NATIVE_TYPES:
+    if ann in _PRIMITIVE_TYPES:
         return True
-    # Enum subclasses produce a ComboBox in magicgui
-    return _safe_issubclass(ann, enum.Enum)
+    if _safe_issubclass(ann, enum.Enum):
+        return True
+    # a sequence of anything but devices is an editable list of its element
+    # type; a device sequence is handled by the dispatch table, which offers
+    # the matching device names as choices instead
+    return issequence(ann) and not isdevicesequence(ann) and not isdeviceset(ann)
 
 
 def _resolve_annotations(
@@ -440,8 +446,8 @@ def create_plan_spec(
         If *plan* is not a generator function or its return type is not a
         ``MsgGenerator`` (``Generator[Msg, Any, Any]``).
     UnresolvableAnnotationError
-        If an annotation names something unavailable at runtime, or cannot be
-        mapped to a widget.
+        If an annotation names something unavailable at runtime, or is one no
+        view layer can build a control for.
     RuntimeError
         If an unexpected ``inspect.Parameter.kind`` is encountered.
     """
@@ -505,16 +511,16 @@ def create_plan_spec(
         else:
             fields = _dispatch_annotation(ann, pkind, devices)
 
-        # probe the magicgui path now: failing here is clearer than a broken
-        # widget or a crash once the plan runs
+        # refuse now: failing here is clearer than a broken control or a
+        # crash once the plan runs
         is_required = param.default is _empty
-        needs_widget_probe = (
+        needs_control = (
             actions_meta is None
             and is_required
             and pkind is not ParamKind.VAR_KEYWORD
             and fields.choices is None
         )
-        if needs_widget_probe and not _is_magicgui_resolvable(ann):
+        if needs_control and not _is_renderable(ann):
             raise UnresolvableAnnotationError(func_obj.__name__, name, ann)
 
         params.append(
