@@ -16,10 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      # no --fix: ruff exits 0 once it has fixed everything, so a fixable
+      # violation would pass here and reach the branch unnoticed
       - uses: astral-sh/ruff-action@v3
         with:
-          version: 0.16.0
-          args: "check --fix"
+          version: 0.16.5
+          args: "check"
+          src: "."
+      - uses: astral-sh/ruff-action@v3
+        with:
+          version: 0.16.5
+          args: "format --check"
           src: "."
 
   mypy-pyqt:
