@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1554,6 +1556,8 @@
       
         
       
+        
+      
     
     
     
@@ -1639,6 +1643,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1675,10 +1706,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1695,8 +1726,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2205,10 +2236,10 @@ signal registry for names they hoped existed:</p>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">if</span> <span class="s2">"sig_pre_launch_notify"</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">:</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">sigs</span><span class="p">[</span><span class="s2">"sig_pre_launch_notify"</span><span class="p">]</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_pre_launch</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Four problems follow from that shape, and ADR 0004's owner scoping addressed
+<p>Four problems follow from that shape, and <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0004's owner scoping addressed
 only the first.</p>
 <p><strong>A rename breaks the connection silently.</strong> The emitter and the consumer agree
-on a string, checked by nobody. ADR 0004 records this happening across the
+on a string, checked by nobody. <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0004 records this happening across the
 redsun and redsun-mimir boundary during the <code>sigCamelCase</code> rename.</p>
 <p><strong>Optionality is expressed by silence.</strong> The <code>if name in sigs</code> guard makes a
 typo, a rename, an uninstalled plugin, and a deliberately absent optional

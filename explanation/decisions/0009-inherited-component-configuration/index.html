@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1554,6 +1556,8 @@
       
         
       
+        
+      
     
     
     
@@ -1639,6 +1643,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1675,10 +1706,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1695,8 +1726,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2225,7 +2256,7 @@ the Python to the YAML rather than going away.</p>
 them to know one component's arguments. That objection is real, and it is the
 same one that made <a href="../0008-container-hooks-and-the-phase-registry/">container hooks</a>
 refuse a silent override between two sources. It is not the same situation. A
-hook override is invisible: two files name the same hook point and nothing in
+hook override is invisible: two files name the same <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> and nothing in
 either says which wins. A layered configuration is declared at the class that
 does the layering - <code>class Simulation(InstrumentApp, config="simulation.yaml")</code>
 reads as "this session, on top of what InstrumentApp set up" - and the order is the

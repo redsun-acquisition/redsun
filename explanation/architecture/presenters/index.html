@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1560,6 +1562,8 @@
       
         
       
+        
+      
     
     
     
@@ -1645,6 +1649,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1681,10 +1712,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1701,8 +1732,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2231,7 +2262,7 @@ exactly <code>(name, devices)</code> - the container instantiates presenters as
 arguments. At build time, the constructed instance is checked against the
 protocol, raising a <code>TypeError</code> naming the missing members - attributes
 assigned in <code>__init__</code> are invisible before instantiation
-(see <a href="../../decisions/0003-structural-subtyping-for-presenters-and-views/">ADR 0003</a>).</p>
+(see <a href="../../decisions/0003-structural-subtyping-for-presenters-and-views/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0003</a>).</p>
 <p>The <a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> ABC is an optional
 convenience base providing the conventional constructor shape:</p>
 <ul>
@@ -2241,7 +2272,7 @@ convenience base providing the conventional constructor shape:</p>
 </ul>
 <p>The ABC deliberately does <em>not</em> inherit the protocol - it satisfies it
 structurally, like every other implementer.</p>
-<p>Access to the virtual container is opt-in via the
+<p>Access to the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr> is opt-in via the
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> and
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> protocols; synchronous
 teardown via <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>.</p>
@@ -2256,7 +2287,7 @@ documents), a callback uses the storage layer's synchronous face:
 descriptor document, then <code>put_nowait</code> on a
 <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.FrameSink"><code>FrameSink</code></a>. The dual-context design is
 documented in <a href="../../storage/">Session storage</a> and
-<a href="../../decisions/0002-storage-dual-context-redesign/">ADR 0002</a>.</p>
+<a href="../../decisions/0002-storage-dual-context-redesign/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0002</a>.</p>
 <h2 id="built-in-presenters">Built-in presenters<a class="headerlink" href="#built-in-presenters" title="Permanent link">&para;</a></h2>
 <p>Reusable presenters ship in <code>redsun.presenter.builtins</code> and are available
 both for declarative containers and from configuration files via the

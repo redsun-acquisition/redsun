@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1638,6 +1640,8 @@
       
         
       
+        
+      
     
     
     
@@ -1723,6 +1727,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1759,10 +1790,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1779,8 +1810,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2471,10 +2502,18 @@ fields in this priority order:</p>
 <li><code>Sequence[MyDevice]</code> -&gt; multi-select, <code>choices=&lt;matching device names&gt;</code></li>
 <li><code>*args: MyDevice</code> (VAR_POSITIONAL) -&gt; multi-select</li>
 <li><code>MyDevice</code> (bare protocol) -&gt; single-select</li>
-<li>Everything else -&gt; delegated to magicgui</li>
+<li>Everything else -&gt; a plain value, left to the view layer to render</li>
 </ol>
-<p>Plans with required parameters that fall through to step 5 and are not
-magicgui-resolvable raise <code>UnresolvableAnnotationError</code> and are skipped.</p>
+<p>Step 5 accepts a fixed set of types: <code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>bytes</code>,
+<code>range</code>, <code>Path</code>, the <code>datetime</code> types, and any <code>Enum</code> subclass. A <em>required</em>
+parameter annotated with anything else raises <code>UnresolvableAnnotationError</code>,
+and the plan is skipped rather than shown with a control nobody can fill in
+correctly. <code>Any</code> is excluded deliberately: it would accept everything and
+render as a bare text field.</p>
+<p>The check is pure Python and imports no toolkit, so a plan can be inspected
+before any application object exists. Turning these descriptions into actual
+widgets belongs to the view layer; for the Qt one, see
+<a href="../qt-widgets/">Qt widgets - plans</a>.</p>
 <h3 id="collecting-and-resolving-arguments">Collecting and resolving arguments<a class="headerlink" href="#collecting-and-resolving-arguments" title="Permanent link">&para;</a></h3>
 <p>Once the user fills in the form, the presenter calls two functions to
 turn widget values into a plan call:</p>

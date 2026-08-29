@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1554,6 +1556,8 @@
       
         
       
+        
+      
     
     
     
@@ -1639,6 +1643,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1675,10 +1706,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1695,8 +1726,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2199,7 +2230,7 @@
 <p>Accepted, superseded in part by
 <a href="../0010-toolkit-hook-points/">10. Toolkit hook points</a>.</p>
 <p>The build phase registry, <code>configure_build</code> and <code>configure_session</code> are removed
-there. What remains in force is that a hook point is named by the method it
+there. What remains in force is that a <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> is named by the method it
 calls, takes one provider, and is a generic protocol with a per-toolkit alias.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>A session may need to adjust the application container itself, rather than any
@@ -2253,7 +2284,7 @@ plugin author learns three rather than three times the number of toolkits.</p>
 <p>The variance is forced, not stylistic: <code>create_application</code> returns the
 application so its variable is covariant, <code>configure_application</code> accepts one
 so its variable is contravariant, and a single shared variable does not
-compile. Contravariance also means a hook point is satisfied by a <em>wider</em>
+compile. Contravariance also means a <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> is satisfied by a <em>wider</em>
 parameter - a <code>configure_main_view</code> taking <code>QWidget</code> legitimately satisfies one
 demanding a main window - which is correct and worth knowing when reading the
 type-level tests.</p>
@@ -2261,7 +2292,7 @@ type-level tests.</p>
 cannot reach it: <code>isinstance</code> refuses a parameterised protocol, so a container
 narrows to the bare form and a provider built for the wrong toolkit is only
 caught when called. <code>tests/typing/qt_hook_aliases.py</code> pins what mypy sees.</p>
-<p><strong>A hook point is named by the method it calls, and takes one provider.</strong> A
+<p><strong>A <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> is named by the method it calls, and takes one provider.</strong> A
 container maps the points it calls to their protocols in <code>_hook_keys</code>, and that
 key is what names a point in a container class body and in the <code>hooks</code> section
 of a configuration file. Two consequences follow from the key being the unit.</p>
@@ -2299,7 +2330,7 @@ its alias in a file, which PyYAML resolves to one object. Two separate entries
 that name the same provider with the same keys are refused rather than guessed
 at: whether they mean one shared provider or two identical ones cannot be read
 off the file, and either reading silently changes what the session does.</p>
-<p><strong>A hook that only watches gets a signal, not a hook point.</strong> A splash screen
+<p><strong>A hook that only watches gets a signal, not a <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr>.</strong> A splash screen
 naming the step in progress does not want to add work at a moment; it wants to
 observe the sequence. Through the registry that is one registered phase per
 label, each doing nothing but emit a string. <code>sig_phase_complete</code> carries the

@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1452,6 +1454,8 @@
       
         
       
+        
+      
     
     
     
@@ -1538,6 +1542,33 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1581,10 +1612,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
             
   
   
@@ -1601,8 +1632,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2907,7 +2938,7 @@ typed attributes, ruling out property-based classes.</p>
 
 <details class="note" open>
   <summary>Notes</summary>
-  <p>Access to the virtual container is optional and should be acquired
+  <p>Access to the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr> is optional and should be acquired
 by implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> or
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a>.</p>
 <p>Compliance is enforced at build time via <code>isinstance</code> - class-level
@@ -4971,7 +5002,7 @@ so they are naturally excluded.</p>
 
         <p>Application-level control point for the session path provider.</p>
 <p>Owns the <a class="autorefs autorefs-internal" href="../storage/#redsun.storage.SessionPathProvider"><code>SessionPathProvider</code></a> and
-binds it to <code>PATH_PROVIDER</code> on the virtual container, so every view and
+binds it to <code>PATH_PROVIDER</code> on the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr>, so every view and
 presenter resolves the same instance. Storage instances get it at
 construction; devices only ever see
 <a class="autorefs autorefs-internal" href="../storage/#redsun.storage.BaseStorage"><code>BaseStorage</code></a>.</p>
@@ -5271,7 +5302,7 @@ expanded. Defaults to the provider's own default
 
     <div class="doc doc-contents ">
 
-        <p>Create the provider (session-scoped) and register it for DI.</p>
+        <p>Create the provider (session-scoped) and register it for <abbr title="Dependency injection. A container supplies a component with what it needs, rather than the component constructing it.">DI</abbr>.</p>
 
 
             <details class="mkdocstrings-source">

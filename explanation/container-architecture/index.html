@@ -323,6 +323,8 @@
       
         
       
+        
+      
     
     
     
@@ -1663,6 +1665,8 @@
       
         
       
+        
+      
     
     
     
@@ -1748,6 +1752,33 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Glossary
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1784,10 +1815,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -1804,8 +1835,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2414,7 +2445,7 @@
 
 
 <h1 id="container-architecture">Container architecture<a class="headerlink" href="#container-architecture" title="Permanent link">&para;</a></h1>
-<p><code>redsun</code> leverages an architectural denominated to the <strong>Device-View-Presenter</strong> (<code>DVP</code>). This is semantically close to the definition of the <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter">Model-View-Presenter</a> (<code>MVP</code>) architecture.</p>
+<p><code>redsun</code> is built on the <strong>Device-View-Presenter</strong> (<abbr title="Device-View-Presenter. The architecture a redsun session is built on.">DVP</abbr>) architecture, a variation of <a href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter">Model-View-Presenter</a> (<abbr title="Model-View-Presenter. The architecture DVP is a variation of, whose Model layer DVP replaces with a Device layer.">MVP</abbr>).</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:1"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Architecture block diagram</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block"></div>
@@ -2442,11 +2473,10 @@
   style D1 fill:#2196f3,color:#fff,stroke:#1565c0
   style D2 fill:#2196f3,color:#fff,stroke:#1565c0
   style D3 fill:#2196f3,color:#fff,stroke:#1565c0</code></pre>
-<p>The key differences in respect to the <code>MVP</code> architecture are the following:</p>
+<p>It differs from <abbr title="Model-View-Presenter. The architecture DVP is a variation of, whose Model layer DVP replaces with a Device layer.">MVP</abbr> in two ways:</p>
 <ul>
-<li>In <code>MVP</code>, the <strong>Model</strong> layer represents the <strong>data</strong> the application holds; think for example of a text editor: the content of the text is stored in this layer.</li>
-<li>In contrast, the <strong>Device</strong> layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.</li>
-<li>Additionally, in the <code>MVP</code> pattern, <strong>Presenters</strong> and <strong>Views</strong> are tightly coupled between each other, making it difficult to have one without the other. In <code>DVP</code>, both layers are decoupled via a <strong>virtual container</strong> to follow an approach of <a href="https://en.wikipedia.org/wiki/Dependency_injection"><strong>dependency injection</strong></a> in order to maintain all the components separated, allowing to bring only the pieces you need to create an application fully compliant with your specifications.</li>
+<li><strong>The Model layer becomes a Device layer.</strong> In <abbr title="Model-View-Presenter. The architecture DVP is a variation of, whose Model layer DVP replaces with a Device layer.">MVP</abbr> the Model holds the data the application works on, the way a text editor's model holds its text. Here the layer holds the objects that talk to hardware instead. The rename makes that difference explicit rather than leaving it to be inferred.</li>
+<li><strong>Presenters and views are decoupled.</strong> In <abbr title="Model-View-Presenter. The architecture DVP is a variation of, whose Model layer DVP replaces with a Device layer.">MVP</abbr> the two are tightly bound, and one is hard to have without the other. In <abbr title="Device-View-Presenter. The architecture a redsun session is built on.">DVP</abbr> they reach each other through a <strong><abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr></strong>, using <a href="https://en.wikipedia.org/wiki/Dependency_injection">dependency injection</a>, so a session takes only the components it needs.</li>
 </ul>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>At the core of Redsun is the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a>, which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.</p>
@@ -2478,7 +2508,7 @@
     V1 -.-&gt;|IsProvider: register_providers| VC
     VC -.-&gt;|IsInjectable: inject_dependencies| P2
     VC -.-&gt;|IsInjectable: inject_dependencies| V2</code></pre>
-<h2 id="the-dvp-pattern">The DVP pattern<a class="headerlink" href="#the-dvp-pattern" title="Permanent link">&para;</a></h2>
+<h2 id="the-dvp-pattern">The <abbr title="Device-View-Presenter. The architecture a redsun session is built on.">DVP</abbr> pattern<a class="headerlink" href="#the-dvp-pattern" title="Permanent link">&para;</a></h2>
 <p><code>redsun</code> builds three types of components:</p>
 <ul>
 <li><strong>Devices</strong>: objects interfacing with real hardware components that subclass <code>ophyd_async.core.Device</code> (or one of the higher-level ophyd-async base classes such as <code>StandardReadable</code> or <code>StandardDetector</code>).</li>
@@ -2609,8 +2639,12 @@ so a file layered under another may carry a fragment - a <code>presenters</code>
 and nothing else. The files a container read, and any component one file took
 from another, are logged at debug level.</p>
 <h2 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h2>
-<p>When <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> is called, the container proceeds in four phases. After build completes, call <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>connect_devices()</code></a> to run the ophyd-async async connect lifecycle on all registered devices:</p>
-<p><strong>Phase 1 - construction</strong>:</p>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> walks the steps named
+by <code>AppContainer.BUILD_STEPS</code>, announcing each one as it starts. They group into
+four stages. Once the build is done, call
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>connect_devices()</code></a>
+to run ophyd-async's connect lifecycle on every registered device.</p>
+<p><strong>Construction</strong> - the steps <code>virtual container</code>, <code>devices</code>, <code>presenters</code> and <code>views</code>:</p>
 <ol>
 <li><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a> - created and seeded with the application configuration.</li>
 <li><strong>Devices</strong> - each receives its resolved name and keyword arguments.</li>
@@ -2625,16 +2659,16 @@ against its layer contract (<code>ophyd_async.core.Device</code>,
 <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a>). Failures follow the layer asymmetry: a
 failing device is logged and skipped, while a failing presenter or view
 re-raises and aborts the build.</p>
-<p><strong>Phase 2 - provider registration</strong>:</p>
+<p><strong>Provider registration</strong> - the step <code>providers</code>:</p>
 <p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> calls <code>register_providers()</code> on the <code>VirtualContainer</code>. This is safe to run across both layers simultaneously because no injection occurs here.</p>
-<p><strong>Phase 3 - wiring</strong>:</p>
+<p><strong>Wiring</strong> - the step <code>wiring</code>:</p>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;wire&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.wire"><code>wire()</code></a> runs, followed by the <code>wiring</code> section of the configuration file. Every component is built by now, so a connection can name both of its ends. See <a href="../../how-to/wire-components/">wire components together</a>.</p>
-<p><strong>Phase 4 - dependency injection</strong>:</p>
-<p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> calls <code>inject_dependencies()</code> on the <code>VirtualContainer</code>, consuming providers registered in phase 2.</p>
+<p><strong>Dependency injection</strong> - the step <code>injection</code>:</p>
+<p>Any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> calls <code>inject_dependencies()</code> on the <code>VirtualContainer</code>, consuming the providers registered earlier.</p>
 <h2 id="communication">Communication<a class="headerlink" href="#communication" title="Permanent link">&para;</a></h2>
 <p>Components communicate through the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>, which serves as the single shared data exchange layer for the application. It combines two roles:</p>
 <ul>
-<li><strong>Signal bus</strong>: a component declares <a href="https://psygnal.readthedocs.io/"><code>psygnal</code></a> signals and marks the methods it accepts connections on with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;slot&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.slot"><code>slot</code></a>; the application connects the two during phase 3, and the container records every link. The older <code>register_signals()</code> registry, discovered by name through <code>find_signals()</code>, still works and is kept as an escape hatch for dynamic lookup.</li>
+<li><strong>Signal bus</strong>: a component declares <a href="https://psygnal.readthedocs.io/"><code>psygnal</code></a> signals and marks the methods it accepts connections on with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;slot&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.slot"><code>slot</code></a>; the application connects the two during the wiring step, and the container records every link. The older <code>register_signals()</code> registry, discovered by name through <code>find_signals()</code>, still works and is kept as an escape hatch for dynamic lookup.</li>
 <li><strong>Dependency injection</strong>: built on top of <a href="https://python-dependency-injector.readthedocs.io/"><code>dependency_injector</code></a>'s <code>DynamicContainer</code>, it allows any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> to register typed providers, and any presenter or view implementing <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> to consume them. This enables components across both layers to share information without direct coupling.</li>
 </ul>
 <p>The <code>VirtualContainer</code> is created during <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a> and is accessible via the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;virtual_container&lt;/span&gt;
