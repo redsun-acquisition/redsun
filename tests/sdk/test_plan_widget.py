@@ -2,15 +2,26 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from decimal import Decimal
+from inspect import Parameter
+from pathlib import Path
+from typing import Any, Literal
 
 import pytest
 from bluesky.utils import MsgGenerator
 from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action, continous
-from redsun.presenter.plan_spec import PlanSpec, create_plan_spec
+from redsun.presenter.plan_spec import (
+    ParamDescription,
+    ParamKind,
+    PlanSpec,
+    _is_renderable,
+    create_plan_spec,
+)
+from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 
 pytestmark = pytest.mark.skipif(
@@ -338,3 +349,45 @@ class TestPlanWidgetControlAPI:
         pw = _make_minimal_plan_widget(_simple_spec())
         pw.enable_actions(True)  # must not raise
         pw.enable_actions(False)
+
+
+#: Annotations a required plan parameter might carry, spanning both sides of
+#: the gate. Each is checked twice: whether `create_plan_spec` accepts it, and
+#: whether the Qt view can build a control for it.
+_ANNOTATIONS = [
+    pytest.param(int, id="int"),
+    pytest.param(float, id="float"),
+    pytest.param(str, id="str"),
+    pytest.param(bool, id="bool"),
+    pytest.param(Path, id="path"),
+    pytest.param(Sequence[int], id="sequence-int"),
+    pytest.param(list[str], id="list-str"),
+    pytest.param(Decimal, id="decimal"),
+    pytest.param(Any, id="any"),
+]
+
+
+@pytest.mark.parametrize("annotation", _ANNOTATIONS)
+def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
+    """What the presenter admits is what the Qt view can render, and vice versa.
+
+    The two live in different layers and neither imports the other, so a type
+    added to one and not the other goes unnoticed: a plan is either skipped
+    though it was renderable, or admitted and then crashes the form.
+    """
+    # required, as the gate only refuses a parameter with no default
+    param = ParamDescription(
+        name="x",
+        kind=ParamKind.POSITIONAL_OR_KEYWORD,
+        annotation=annotation,
+        default=Parameter.empty,
+    )
+    try:
+        create_param_widget(param)
+    except (RuntimeError, TypeError, ValueError):
+        # what magicgui and the factory raise for an annotation neither can map
+        renderable = False
+    else:
+        renderable = True
+
+    assert _is_renderable(annotation) is renderable
