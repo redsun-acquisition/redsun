@@ -855,6 +855,8 @@
       
         
       
+        
+      
     
     
     
@@ -1141,6 +1143,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0010-toolkit-hook-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  10. Toolkit hook points
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1384,24 +1413,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-a-step-to-the-build" class="md-nav__link">
+  <a href="#cover-the-build-with-a-splash-screen" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Add a step to the build
+        Cover the build with a splash screen
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cover the build with a splash screen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#show-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Show progress
       </span>
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#read-the-finished-session" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#hand-over-to-the-window-rather-than-closing" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Read the finished session
+        Hand over to the window rather than closing
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2185,24 +2231,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#add-a-step-to-the-build" class="md-nav__link">
+  <a href="#cover-the-build-with-a-splash-screen" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Add a step to the build
+        Cover the build with a splash screen
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cover the build with a splash screen">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#show-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Show progress
       </span>
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#read-the-finished-session" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#hand-over-to-the-window-rather-than-closing" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Read the finished session
+        Hand over to the window rather than closing
       </span>
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2258,9 +2321,11 @@
 
 
 <h1 id="install-container-hooks">Install container hooks<a class="headerlink" href="#install-container-hooks" title="Permanent link">&para;</a></h1>
-<p>A component acts on its own behalf. A <strong>hook</strong> acts on the application as a
-whole: it themes every window, adds a step to the build, or reads the finished
-session. It is an ordinary object, with no base class to inherit.</p>
+<p>A component acts on its own behalf. A <strong>hook</strong> acts on the toolkit the session
+runs on: it supplies the application object, themes every window, or covers the
+build with a splash screen. It is an ordinary object, with no base class to
+inherit, and it never changes what the container builds or the order it builds
+it in.</p>
 <p>Each hook point is named by the method it calls, and a container installs one
 provider per point. A provider is named in one of two places, and every example
 below is shown in both. Picking a tab switches every other tab on this page, and
@@ -2299,14 +2364,9 @@ name, with the provider's import path.</p>
 <td>before the build constructs any view</td>
 </tr>
 <tr>
-<td><code>configure_build</code></td>
-<td>the container</td>
-<td>before the first build phase</td>
-</tr>
-<tr>
-<td><code>configure_session</code></td>
-<td>the container</td>
-<td>after the last build phase, with <code>is_built</code> set</td>
+<td><code>during_build</code></td>
+<td>the application</td>
+<td>around the whole build, closing once the window is shown</td>
 </tr>
 <tr>
 <td><code>configure_main_view</code></td>
@@ -2315,15 +2375,15 @@ name, with the provider's import path.</p>
 </tr>
 </tbody>
 </table>
-<p><code>configure_build</code> and <code>configure_session</code> are toolkit-neutral and live on every
-container. The other three are Qt points and exist only on
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtAppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a>; naming one on a plain
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> is refused.</p>
+<p>Every point belongs to a toolkit, so all four live on
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtAppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a>. A plain
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> calls none, and
+naming one on it is refused; a container for another toolkit declares the
+moments that toolkit actually has.</p>
 <p>Each point has a protocol carrying its one method:
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;CreatesApplication&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.CreatesApplication"><code>CreatesApplication</code></a>,
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresApplication&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.ConfiguresApplication"><code>ConfiguresApplication</code></a>,
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresBuild&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.ConfiguresBuild"><code>ConfiguresBuild</code></a>,
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresSession&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.ConfiguresSession"><code>ConfiguresSession</code></a> and
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;WrapsBuild&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.WrapsBuild"><code>WrapsBuild</code></a> and
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresMainView&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.ConfiguresMainView"><code>ConfiguresMainView</code></a>. Implement
 the method and the provider satisfies the protocol; there is nothing to
 subclass and nothing to register.</p>
@@ -2358,26 +2418,20 @@ runtime:</p>
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.qt._hooks.QtConfiguresApplication"><code>QtConfiguresApplication</code></a>
-and <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;QtConfiguresMainView&lt;/span&gt;
+  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.qt._hooks.QtConfiguresApplication"><code>QtConfiguresApplication</code></a>,
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;QtWrapsBuild&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.qt._hooks.QtConfiguresMainView"><code>QtConfiguresMainView</code></a>,
-all exported from <code>redsun.qt</code>. The container points are
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;AppConfiguresBuild&lt;/span&gt;
+  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.qt._hooks.QtWrapsBuild"><code>QtWrapsBuild</code></a> and
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;QtConfiguresMainView&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.AppConfiguresBuild"><code>AppConfiguresBuild</code></a> and
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;AppConfiguresSession&lt;/span&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.AppConfiguresSession"><code>AppConfiguresSession</code></a>.</p>
+  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.qt._hooks.QtConfiguresMainView"><code>QtConfiguresMainView</code></a>, all
+exported from <code>redsun.qt</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><code>isinstance</code> cannot be given a parameterised protocol, so the container
@@ -2475,53 +2529,174 @@ anchored node, so both keys hold one provider.</p>
 <p>Two separate entries naming the same provider with the same arguments are
 refused, because whether they mean one shared object or two identical ones
 cannot be read off the file. Give them different arguments to build two.</p>
-<h2 id="add-a-step-to-the-build">Add a step to the build<a class="headerlink" href="#add-a-step-to-the-build" title="Permanent link">&para;</a></h2>
-<p><code>configure_build</code> is the only point at which
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;register_phase&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.register_phase"><code>register_phase</code></a> and
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;unregister_phase&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.unregister_phase"><code>unregister_phase</code></a>
-are legal. <code>after</code> is required, and names an existing phase:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+<h2 id="cover-the-build-with-a-splash-screen">Cover the build with a splash screen<a class="headerlink" href="#cover-the-build-with-a-splash-screen" title="Permanent link">&para;</a></h2>
+<p><code>during_build</code> is a span rather than a moment: it returns a context manager
+entered before the first component is built and left once the window is on
+screen. What the context manager yields is called with the name of each step as
+it starts.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">Calibration</span><span class="p">:</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">passes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">passes</span> <span class="o">=</span> <span class="n">passes</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtGui</span><span class="w"> </span><span class="kn">import</span> <span class="n">QPixmap</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">QSplashScreen</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>        <span class="n">container</span><span class="o">.</span><span class="n">register_phase</span><span class="p">(</span><span class="s2">"calibrate"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="s2">"injection"</span><span class="p">)</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>
+</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>            <span class="k">yield</span> <span class="n">report</span>
+</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
-<p>Read the sequence a container will run with
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;phases&lt;/span&gt;
-
-
-  &lt;span class=&quot;doc doc-labels&quot;&gt;
-      &lt;small class=&quot;doc doc-label doc-label-property&quot;&gt;&lt;code&gt;property&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.phases"><code>phases</code></a>. The built-in phases
-cannot be removed or reordered.</p>
-<p>To watch the build rather than take part in it, connect to
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;sig_phase_complete&lt;/span&gt;
+<p>Build the <code>QPixmap</code> in the constructor and check it. <code>QPixmap</code> reports a
+missing file by being null rather than by raising, and <code>QSplashScreen</code> given a
+null pixmap is a window of size 0x0 - so a mistyped path produces a splash that
+silently shows nothing.</p>
+<p>The steps reported are
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;BUILD_STEPS&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-class-attribute&quot;&gt;&lt;code&gt;class-attribute&lt;/code&gt;&lt;/small&gt;
-      &lt;small class=&quot;doc doc-label doc-label-instance-attribute&quot;&gt;&lt;code&gt;instance-attribute&lt;/code&gt;&lt;/small&gt;
-  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.sig_phase_complete"><code>sig_phase_complete</code></a>,
-which carries the name of each phase as it finishes:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>        <span class="n">container</span><span class="o">.</span><span class="n">sig_phase_complete</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_show</span><span class="p">)</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phase</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+  &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.BUILD_STEPS"><code>AppContainer.BUILD_STEPS</code></a>:
+<code>virtual container</code>, <code>devices</code>, <code>presenters</code>, <code>views</code>, <code>providers</code>, <code>wiring</code>
+and <code>injection</code>, in that order. Size a display from that tuple rather than from
+a count of your own, which would drift the day the sequence changes.</p>
+<p>The span is left through the context manager, so a build that raises closes the
+splash on the way out rather than leaving it over an application that never got
+a window. Anything else wanting to surround the build belongs here too: a busy
+cursor, a profiler, a logging context.</p>
+<p>The span opens only on <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;run&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer.run"><code>run</code></a>. Calling <code>build</code> on
+its own reports nothing, which is what a test driving the container directly
+wants.</p>
+<h3 id="show-progress">Show progress<a class="headerlink" href="#show-progress" title="Permanent link">&para;</a></h3>
+<p>Each step is reported as it <em>starts</em>, so a bar showing how many are finished
+sets the value before advancing its own count, and fills to the total after the
+<code>yield</code> returns. Map the step names to whatever wording you want:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qt</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QProgressBar</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">LABELS</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="s2">"virtual container"</span><span class="p">:</span> <span class="s2">"Building virtual layer..."</span><span class="p">,</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="s2">"devices"</span><span class="p">:</span> <span class="s2">"Connecting devices..."</span><span class="p">,</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="s2">"presenters"</span><span class="p">:</span> <span class="s2">"Starting presenters..."</span><span class="p">,</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="s2">"views"</span><span class="p">:</span> <span class="s2">"Laying out views..."</span><span class="p">,</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="s2">"providers"</span><span class="p">:</span> <span class="s2">"Registering providers..."</span><span class="p">,</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="s2">"wiring"</span><span class="p">:</span> <span class="s2">"Wiring signals..."</span><span class="p">,</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="s2">"injection"</span><span class="p">:</span> <span class="s2">"Injecting dependencies..."</span><span class="p">,</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="p">}</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProgressSplash</span><span class="p">:</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">screen</span><span class="p">:</span> <span class="n">QSplashScreen</span><span class="p">,</span> <span class="n">bar</span><span class="p">:</span> <span class="n">QProgressBar</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">)</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">..."</span><span class="p">),</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>        <span class="p">)</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">AppContainer</span><span class="o">.</span><span class="n">BUILD_STEPS</span><span class="p">)</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>        <span class="n">bar</span> <span class="o">=</span> <span class="n">QProgressBar</span><span class="p">(</span><span class="n">screen</span><span class="p">)</span>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setGeometry</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">height</span><span class="p">()</span> <span class="o">-</span> <span class="mi">18</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="mi">18</span><span class="p">)</span>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-48"><a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a>
+</span><span id="__span-10-49"><a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-10-50"><a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a>            <span class="k">yield</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report</span><span class="p">,</span> <span class="n">screen</span><span class="p">,</span> <span class="n">bar</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+</span><span id="__span-10-51"><a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>            <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+</span><span id="__span-10-52"><a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s2">"Ready"</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span><span class="p">)</span>
+</span><span id="__span-10-53"><a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-54"><a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-10-55"><a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
-<h2 id="read-the-finished-session">Read the finished session<a class="headerlink" href="#read-the-finished-session" title="Permanent link">&para;</a></h2>
-<p><code>configure_session</code> runs after the last phase with <code>is_built</code> already set, so
-<code>devices</code>, <code>presenters</code> and <code>views</code> are readable:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Inventory</span><span class="p">:</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">container</span><span class="p">:</span> <span class="n">AppContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">built</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">container</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span> <span class="o">+</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">container</span><span class="o">.</span><span class="n">presenters</span><span class="p">)</span>
+<p><code>report</code> is an ordinary method taking the widgets it draws on, and
+<code>functools.partial</code> binds them to give the container the <code>Callable[[str], None]</code>
+it expects. Only the count is instance state, because only the count has to
+survive from one call to the next; the widgets belong to one span and stay
+local to it. Resetting <code>_done</code> when the span opens rather than only in
+<code>__init__</code> is what lets one provider serve a container that is built twice.</p>
+<p>Filling the bar after the <code>yield</code> rather than inside <code>report</code> is what makes it
+reach the total: the last step is announced when it begins, and nothing is
+reported once it finishes. Statements after the <code>yield</code> run only on a build
+that succeeded, so a failed build leaves the bar where it stopped and the
+<code>finally</code> still closes the splash.</p>
+<h3 id="hand-over-to-the-window-rather-than-closing">Hand over to the window rather than closing<a class="headerlink" href="#hand-over-to-the-window-rather-than-closing" title="Permanent link">&para;</a></h3>
+<p><code>close</code> dismisses the splash at once. Qt's own handoff is
+<a href="https://doc.qt.io/qt-6/qsplashscreen.html#finish"><code>finish</code></a>, which keeps the
+splash up until the widget passed to it is displayed. A provider reaches the
+window by serving <code>configure_main_view</code> as well, and is installed at both
+points as one object:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QMainWindow</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">Splash</span><span class="p">:</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">:</span> <span class="n">QMainWindow</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_main_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view</span><span class="p">:</span> <span class="n">QMainWindow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">view</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>
+</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>            <span class="k">yield</span> <span class="n">report</span>
+</span><span id="__span-11-26"><a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-11-27"><a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-28"><a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>                <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>            <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-11-30"><a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>                <span class="n">screen</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">)</span>
 </span></code></pre></div>
+<p><code>configure_main_view</code> runs inside the span, before it is left, so the window is
+there by the time the splash is dismissed. It stays <code>None</code> when the build
+raises before the window exists, which is why the fallback is kept.</p>
+<p><code>run</code> processes events once after showing the window and before leaving the
+span, so the window has painted either way; <code>finish</code> additionally waits for it
+to be shown on platforms where that takes longer than one pass.</p>
 <h2 id="undo-what-a-hook-did">Undo what a hook did<a class="headerlink" href="#undo-what-a-hook-did" title="Permanent link">&para;</a></h2>
 <p>Add <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>'s <code>shutdown</code>. Hooks are torn
 down after the presenters, in reverse order, and a provider serving several
@@ -2535,9 +2710,9 @@ points is torn down once:</p>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_previous</span><span class="p">)</span>
 </span></code></pre></div>
-<p>A phase a hook registered is removed by the container itself, so a hook that
-only calls <code>register_phase</code> needs no <code>shutdown</code>. A failing <code>shutdown</code> is logged
-and does not stop the rest.</p>
+<p>A <code>during_build</code> provider needs no <code>shutdown</code>: its context manager already
+closes what it opened. A failing <code>shutdown</code> is logged and does not stop the
+rest.</p>
 <h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
 <p>Every way of getting a hook wrong raises
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HookError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.HookError"><code>HookError</code></a>, naming the point.</p>
@@ -2628,8 +2803,7 @@ rather than at build.</p>
 source wins: drop one.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/">Container hooks and the build phase
-  registry</a>
+<li><a href="../../explanation/decisions/0010-toolkit-hook-points/">Toolkit hook points</a>
   for why the points are what they are.</li>
 <li><a href="../wire-components/">Wire components together</a> for connecting components,
   which hooks do not do.</li>

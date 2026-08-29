@@ -865,6 +865,8 @@
       
         
       
+        
+      
     
     
     
@@ -1233,6 +1235,33 @@
     
   
   9. Inherited and layered component configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  10. Toolkit hook points
 
     
   </span>
@@ -2136,7 +2165,11 @@
 <h1 id="8-container-hooks-and-the-build-phase-registry">8. Container hooks and the build phase registry<a class="headerlink" href="#8-container-hooks-and-the-build-phase-registry" title="Permanent link">&para;</a></h1>
 <p>Date: 2026-08-26</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
+<p>Accepted, superseded in part by
+<a href="../0010-toolkit-hook-points/">10. Toolkit hook points</a>.</p>
+<p>The build phase registry, <code>configure_build</code> and <code>configure_session</code> are removed
+there. What remains in force is that a hook point is named by the method it
+calls, takes one provider, and is a generic protocol with a per-toolkit alias.</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>A session may need to adjust the application container itself, rather than any
 one component. The case that forced the question is theming: a bundle that
