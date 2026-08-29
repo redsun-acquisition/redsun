@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, ClassVar, NoReturn, cast
 
 # psygnal re-exports get/set_async_backend at the top level but not this one
@@ -16,12 +17,14 @@ from redsun.containers._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
+    WrapsBuild,
 )
-from redsun.containers.container import AppContainer
+from redsun.containers.container import AppContainer, _silent
 from redsun.containers.qt._mainview import QtMainView
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
+    from contextlib import AbstractContextManager
     from typing import Any
 
     from redsun.view.qt import QtView
@@ -49,7 +52,7 @@ class QtAppContainer(AppContainer):
     _hook_keys: ClassVar[Mapping[str, type]] = {
         "create_application": CreatesApplication,
         "configure_application": ConfiguresApplication,
-        **AppContainer._hook_keys,
+        "during_build": WrapsBuild,
         "configure_main_view": ConfiguresMainView,
     }
 
@@ -139,17 +142,47 @@ class QtAppContainer(AppContainer):
         super().shutdown()
         clear_async_backend()
 
+    def _during_build(
+        self, app: QApplication
+    ) -> AbstractContextManager[Callable[[str], None]]:
+        """Return the span a `redsun.qt.QtWrapsBuild` hook wraps the build in.
+
+        With no hook declared this is a context manager over a reporter that
+        does nothing, so `run` has one path either way.
+        """
+        hook = self._ensure_hooks().get("during_build")
+        if isinstance(hook, WrapsBuild):
+            return hook.during_build(app)
+        return nullcontext(_silent)
+
     def run(self) -> NoReturn:
-        """Build and launch the Qt application."""
+        """Build and launch the Qt application.
+
+        The build, the window and its first paint happen inside the span a
+        `redsun.qt.QtWrapsBuild` hook opens, so a splash screen covers all
+        three and closes with the window already up. It closes on a failed
+        build too, rather than being left over an application that has no
+        window.
+        """
         qt_app = self._ensure_application()
 
-        if not self.is_built:
-            self.build()
+        with self._during_build(qt_app) as report:
+            self._report = report
+            try:
+                if not self.is_built:
+                    self.build()
 
-        main_view = self._ensure_main_view()
+                main_view = self._ensure_main_view()
 
-        qt_app.aboutToQuit.connect(self.shutdown)
-        start_emitting_from_queue()
+                qt_app.aboutToQuit.connect(self.shutdown)
+                start_emitting_from_queue()
 
-        main_view.show()
+                main_view.show()
+                # `show` only schedules the first paint, so without this the
+                # span would close over a window that has not drawn yet and a
+                # splash screen would uncover an empty desktop
+                qt_app.processEvents()
+            finally:
+                self._report = _silent
+
         sys.exit(qt_app.exec())

@@ -170,9 +170,15 @@ class TestComponentCollection:
 class TestAppContainerBuild:
     """Tests for the build lifecycle."""
 
-    def test_phases_are_registered_in_build_order(self) -> None:
-        assert list(AppContainer()._phases) == [
-            "virtual_container",
+    def test_build_reports_every_step_in_order(self) -> None:
+        app = AppContainer()
+        seen: list[str] = []
+        app._report = seen.append
+
+        app.build()
+
+        assert seen == [
+            "virtual container",
             "devices",
             "presenters",
             "views",
@@ -180,25 +186,6 @@ class TestAppContainerBuild:
             "wiring",
             "injection",
         ]
-
-    def test_build_runs_every_registered_phase_in_order(self) -> None:
-        calls: list[str] = []
-
-        def recorded(name: str, phase: Callable[[], None]) -> Callable[[], None]:
-            def run() -> None:
-                calls.append(name)
-                phase()
-
-            return run
-
-        app = AppContainer()
-        expected = list(app._phases)
-        for name, phase in list(app._phases.items()):
-            app._phases[name] = recorded(name, phase)
-
-        app.build()
-
-        assert calls == expected
 
     def test_a_subclass_overriding_a_phase_is_the_one_that_runs(self) -> None:
         calls: list[str] = []

@@ -20,8 +20,8 @@ pytestmark = pytest.mark.qt
 
 
 @pytest.fixture(autouse=True)
-def _clear_installed() -> None:
-    mock_hooks.installed.clear()
+def _clear_open_spans() -> None:
+    mock_hooks.open_spans.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -57,41 +57,106 @@ class TestQtApplicationHook:
                 configure_application = declare_hook(mock_hooks.QtOnlyHook)
 
     def test_the_hooks_are_resolved_once_for_the_whole_build(self) -> None:
+        hook = mock_hooks.QtStyleHook()
+
         class TestApp(QtAppContainer):
-            pass
+            configure_application = declare_hook(hook)
+            configure_main_view = declare_hook(hook)
 
-        app = TestApp()
-        app._config["hooks"] = {
-            "configure_build": {"provider": "mock_pkg.hooks:RecordingHook"}
-        }
+        app = TestApp().build()
+        resolved = app._ensure_hooks()
 
-        app.build()
-
-        assert mock_hooks.installed == ["recorded"]
+        assert resolved["configure_application"] is resolved["configure_main_view"]
+        assert app._ensure_hooks() is resolved
 
 
 class TestQtHooksFromAFile:
     """Tests for a session assembled from a configuration file on disk."""
 
     def test_from_config_installs_the_hooks_section(self, config_path: Path) -> None:
-        app = AppContainer.from_config(str(config_path / "mock_hooks_config.yaml"))
+        app = AppContainer.from_config(str(config_path / "mock_qt_hooks_config.yaml"))
 
         assert isinstance(app, QtAppContainer)
 
         app.build()
 
-        assert app.phases.index("custom") == app.phases.index("views") + 1
-        assert mock_hooks.installed == ["custom"]
+        hook = app._hook_by_moment["configure_application"]
+        assert isinstance(hook, mock_hooks.QtStyleHook)
+        assert hook.stylesheet == "QWidget { color: blue; }"
+        assert cast("QApplication", QApplication.instance()).styleSheet() == (
+            hook.stylesheet
+        )
 
     def test_from_config_shares_an_anchored_provider(self, config_path: Path) -> None:
         app = AppContainer.from_config(
-            str(config_path / "mock_shared_hook_config.yaml")
+            str(config_path / "mock_qt_shared_hook_config.yaml")
         )
 
         app.build()
 
-        hook = app._hook_by_moment["configure_build"]
-        assert hook is app._hook_by_moment["configure_session"]
+        hook = app._hook_by_moment["configure_application"]
+        assert hook is app._hook_by_moment["configure_main_view"]
+
+
+class TestQtBuildSpan:
+    """Tests for the hook that wraps the whole build."""
+
+    def test_no_hook_gives_a_span_over_a_silent_reporter(
+        self, qapp: QApplication
+    ) -> None:
+        app = QtAppContainer()
+
+        with app._during_build(qapp) as report:
+            report("devices")
+
+        assert mock_hooks.open_spans == []
+
+    def test_a_declared_span_wraps_the_build_and_closes(
+        self, qapp: QApplication
+    ) -> None:
+        span = mock_hooks.RecordingSpan()
+
+        class TestApp(QtAppContainer):
+            during_build = declare_hook(span)
+
+        app = TestApp()
+
+        with app._during_build(qapp) as report:
+            assert mock_hooks.open_spans == ["recorded"]
+            app._report = report
+            app.build()
+
+        assert span.entries == 1
+        assert mock_hooks.open_spans == []
+        assert span.steps == [
+            "virtual container",
+            "devices",
+            "presenters",
+            "views",
+            "providers",
+            "wiring",
+            "injection",
+        ]
+
+    def test_a_span_closes_when_the_build_raises(self, qapp: QApplication) -> None:
+        span = mock_hooks.RecordingSpan()
+
+        class TestApp(QtAppContainer):
+            during_build = declare_hook(span)
+
+        with (
+            pytest.raises(RuntimeError, match="build blew up"),
+            TestApp()._during_build(qapp),
+        ):
+            raise RuntimeError("build blew up")
+
+        assert mock_hooks.open_spans == []
+
+    def test_a_provider_that_does_not_wrap_the_build_is_refused(self) -> None:
+        with pytest.raises(HookError, match="does not implement WrapsBuild"):
+
+            class TestApp(QtAppContainer):
+                during_build = declare_hook(mock_hooks.QtStyleHook)
 
 
 class TestQtMainViewHook:

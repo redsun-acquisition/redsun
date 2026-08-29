@@ -11,6 +11,36 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`WrapsBuild`** (`redsun.containers._hooks`) and **`QtWrapsBuild`**
+  (`redsun.qt`) - the `during_build` hook point, which surrounds the whole
+  build. `during_build` returns a context manager entered before the first
+  component is built and left once the window is shown; what it yields is
+  called with the name of each build step as it starts.
+
+  ```python
+  class Splash:
+      @contextmanager
+      def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+          screen = QSplashScreen(QPixmap("logo.png"))
+          screen.show()
+          try:
+              yield screen.showMessage
+          finally:
+              screen.close()
+  ```
+
+- **`AppContainer.BUILD_STEPS`** - the step names `build` announces, in order,
+  so a progress display sizes itself from the framework rather than from a
+  count of its own.
+
+  The steps reported are `virtual container`, `devices`, `presenters`, `views`,
+  `providers`, `wiring` and `injection`. The span opens on
+  `QtAppContainer.run`, not on `build`, and closes when the build raises.
+  `run` processes events once after showing the main window and before leaving
+  the span, so the window has painted by the time a splash is dismissed. A
+  provider serving `configure_main_view` as well holds the window and can hand
+  over with `QSplashScreen.finish` instead of `close`.
+
 - `config` accepts several YAML files, layered in the order given, and a
   container class reads what its bases named before its own. A file common to
   several sessions sits under the one particular to each.
@@ -31,6 +61,15 @@ Dates are specified in the format `DD-MM-YYYY`.
   and its bases declared.
 
 ### Changed
+
+- `AppContainer` declares no hook points. Every point belongs to a toolkit, so
+  `QtAppContainer` declares all four - `create_application`,
+  `configure_application`, `during_build` and `configure_main_view` - and a
+  `hooks` section naming a point on a plain `AppContainer` is refused.
+- A hook never changes what the container builds or the order it builds it in.
+
+  See [Toolkit hook
+  points](../explanation/decisions/0010-toolkit-hook-points.md).
 
 - A `declare_*` field with `from_config` is resolved against the configuration
   of each container class that inherits it, rather than only the one that
@@ -67,6 +106,19 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   See [Inherited and layered component
   configuration](../explanation/decisions/0009-inherited-component-configuration.md).
+
+### Removed
+
+- **`AppContainer.phases`**, **`AppContainer.register_phase`** and
+  **`AppContainer.unregister_phase`** - the build sequence is a straight-line
+  body again and cannot be added to.
+- **`AppContainer.sig_phase_complete`** - a `during_build` provider is given a
+  reporter instead. It was the only psygnal `Signal` on `AppContainer`, so
+  `__weakref__` leaves its `__slots__`.
+- **`ConfiguresBuild`**, **`ConfiguresSession`**, **`AppConfiguresBuild`** and
+  **`AppConfiguresSession`** (`redsun.containers`) - the `configure_build` and
+  `configure_session` hook points are gone with the registry and the
+  after-the-build moment.
 
 ## [0.11.2] - 28-08-2026
 
