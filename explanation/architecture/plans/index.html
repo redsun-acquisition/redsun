@@ -2504,12 +2504,18 @@ fields in this priority order:</p>
 <li><code>MyDevice</code> (bare protocol) -&gt; single-select</li>
 <li>Everything else -&gt; a plain value, left to the view layer to render</li>
 </ol>
-<p>Step 5 accepts a fixed set of types: <code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>bytes</code>,
-<code>range</code>, <code>Path</code>, the <code>datetime</code> types, and any <code>Enum</code> subclass. A <em>required</em>
-parameter annotated with anything else raises <code>UnresolvableAnnotationError</code>,
-and the plan is skipped rather than shown with a control nobody can fill in
-correctly. <code>Any</code> is excluded deliberately: it would accept everything and
-render as a bare text field.</p>
+<p>Step 5 accepts:</p>
+<ul>
+<li><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>bytes</code> and <code>range</code></li>
+<li><code>Path</code></li>
+<li><code>datetime</code>, <code>date</code>, <code>time</code> and <code>timedelta</code></li>
+<li>any <code>Enum</code> subclass</li>
+<li>a sequence of anything that is not a device</li>
+</ul>
+<p>A <em>required</em> parameter annotated with anything else raises
+<code>UnresolvableAnnotationError</code>, and the plan is skipped rather than shown with a
+control nobody can fill in correctly. <code>Any</code> is excluded deliberately: it would
+accept everything and render as a bare text field.</p>
 <p>The check is pure Python and imports no toolkit, so a plan can be inspected
 before any application object exists. Turning these descriptions into actual
 widgets belongs to the view layer; for the Qt one, see
