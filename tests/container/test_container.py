@@ -20,7 +20,6 @@ from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
-    AppConfig,
     AppContainer,
     declare_device,
     declare_presenter,
@@ -842,34 +841,7 @@ class TestConfigField:
 
 
 class TestAppConfig:
-    """Tests for AppConfig TypedDict and RedSunConfig inheritance."""
-
-    def test_app_config_has_schema_version(self) -> None:
-
-        cfg: AppConfig = {
-            "schema_version": 1.0,
-            "session": "s",
-            "frontend": "pyqt",
-        }
-        assert cfg["schema_version"] == 1.0
-        # AppConfig extends RedSunConfig - verify required keys are inherited
-        assert "schema_version" in AppConfig.__required_keys__
-        assert "frontend" in AppConfig.__required_keys__
-        # session is NotRequired since 0.10.0
-        assert "session" in AppConfig.__optional_keys__
-
-    def test_app_config_has_component_fields(self) -> None:
-
-        cfg: AppConfig = {
-            "schema_version": 1.0,
-            "session": "s",
-            "frontend": "pyqt",
-            "devices": {"cam": {}},
-            "presenters": {},
-            "views": {},
-        }
-        assert "devices" in cfg
-        assert "cam" in cfg["devices"]
+    """Tests for the boundary between the two configuration schemas."""
 
     def test_redsun_config_no_component_fields(self) -> None:
         """RedSunConfig must not expose devices/presenters/views."""

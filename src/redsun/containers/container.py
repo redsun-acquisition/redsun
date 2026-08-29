@@ -1,4 +1,4 @@
-"""Application container for MVP architecture.
+"""Application container for DVP architecture.
 
 Provides `AppContainer` for declarative component registration
 and dependency-ordered instantiation.
@@ -299,7 +299,7 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
 
 
 class AppContainer:
-    """Application container for MVP architecture.
+    """Application container for DVP architecture.
 
     Parameters
     ----------

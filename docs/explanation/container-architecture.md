@@ -1,6 +1,6 @@
 # Container architecture
 
-`redsun` leverages an architectural denominated to the **Device-View-Presenter** (`DVP`). This is semantically close to the definition of the [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (`MVP`) architecture.
+`redsun` is built on the **Device-View-Presenter** (DVP) architecture, a variation of [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (MVP).
 
 === "Architecture block diagram"
 
@@ -29,11 +29,10 @@ block-beta
   style D3 fill:#2196f3,color:#fff,stroke:#1565c0
 ```
 
-The key differences in respect to the `MVP` architecture are the following:
+It differs from MVP in two ways:
 
-- In `MVP`, the **Model** layer represents the **data** the application holds; think for example of a text editor: the content of the text is stored in this layer.
-- In contrast, the **Device** layer assumes the role of containing all objects interfacing with real hardware; it is both a semantic and pragmatic difference which, to avoid confusion, has been applied in the renaming of the architecture to make the distinction explicit.
-- Additionally, in the `MVP` pattern, **Presenters** and **Views** are tightly coupled between each other, making it difficult to have one without the other. In `DVP`, both layers are decoupled via a **virtual container** to follow an approach of [**dependency injection**](https://en.wikipedia.org/wiki/Dependency_injection) in order to maintain all the components separated, allowing to bring only the pieces you need to create an application fully compliant with your specifications.
+- **The Model layer becomes a Device layer.** In MVP the Model holds the data the application works on, the way a text editor's model holds its text. Here the layer holds the objects that talk to hardware instead. The rename makes that difference explicit rather than leaving it to be inferred.
+- **Presenters and views are decoupled.** In MVP the two are tightly bound, and one is hard to have without the other. In DVP they reach each other through a **virtual container**, using [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection), so a session takes only the components it needs.
 
 ## Overview
 
@@ -234,9 +233,13 @@ from another, are logged at debug level.
 
 ## Build order
 
-When [`build()`][redsun.containers.container.AppContainer.build] is called, the container proceeds in four phases. After build completes, call [`connect_devices()`][redsun.containers.container.AppContainer.connect_devices] to run the ophyd-async async connect lifecycle on all registered devices:
+[`build()`][redsun.containers.container.AppContainer.build] walks the steps named
+by `AppContainer.BUILD_STEPS`, announcing each one as it starts. They group into
+four stages. Once the build is done, call
+[`connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
+to run ophyd-async's connect lifecycle on every registered device.
 
-**Phase 1 - construction**:
+**Construction** - the steps `virtual container`, `devices`, `presenters` and `views`:
 
 1. [`VirtualContainer`][redsun.virtual.VirtualContainer] - created and seeded with the application configuration.
 2. **Devices** - each receives its resolved name and keyword arguments.
@@ -252,23 +255,23 @@ against its layer contract (`ophyd_async.core.Device`,
 failing device is logged and skipped, while a failing presenter or view
 re-raises and aborts the build.
 
-**Phase 2 - provider registration**:
+**Provider registration** - the step `providers`:
 
 Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
 
-**Phase 3 - wiring**:
+**Wiring** - the step `wiring`:
 
 [`wire()`][redsun.containers.container.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
 
-**Phase 4 - dependency injection**:
+**Dependency injection** - the step `injection`:
 
-Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming providers registered in phase 2.
+Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming the providers registered earlier.
 
 ## Communication
 
 Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
 
-- **Signal bus**: a component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods it accepts connections on with [`slot`][redsun.virtual.slot]; the application connects the two during phase 3, and the container records every link. The older `register_signals()` registry, discovered by name through `find_signals()`, still works and is kept as an escape hatch for dynamic lookup.
+- **Signal bus**: a component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods it accepts connections on with [`slot`][redsun.virtual.slot]; the application connects the two during the wiring step, and the container records every link. The older `register_signals()` registry, discovered by name through `find_signals()`, still works and is kept as an escape hatch for dynamic lookup.
 - **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
 
 The `VirtualContainer` is created during [`build()`][redsun.containers.container.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.

@@ -77,6 +77,7 @@ nav = [
             { "Utilities" = "reference/api/utils.md" },
             { "Logging" = "reference/api/log.md" },
         ]},
+        { "Glossary" = "reference/glossary.md" },
         { "Changelog" = "reference/changelog.md" },
     ]},
     { "Explanation" = [
@@ -102,6 +103,7 @@ nav = [
             { "7. Typed provider keys" = "explanation/decisions/0007-typed-provider-keys.md" },
             { "8. Container hooks and the build phase registry" = "explanation/decisions/0008-container-hooks-and-the-phase-registry.md" },
             { "9. Inherited and layered component configuration" = "explanation/decisions/0009-inherited-component-configuration.md" },
+            { "10. Toolkit hook points" = "explanation/decisions/0010-toolkit-hook-points.md" },
         ]},
     ]},
 ]
@@ -170,6 +172,13 @@ pygments_lang_class = true
 [project.markdown_extensions.pymdownx.keys]
 [project.markdown_extensions.pymdownx.mark]
 [project.markdown_extensions.pymdownx.smartsymbols]
+
+# includes/abbreviations.md is appended to every page, so each entry underlines
+# every occurrence of its term site-wide. Keep it to acronyms and terms that are
+# rare in prose; a common word such as "presenter" or "slot" belongs in
+# docs/reference/glossary.md alone.
+[project.markdown_extensions.pymdownx.snippets]
+auto_append = ["includes/abbreviations.md"]
 
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
