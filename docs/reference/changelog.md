@@ -138,6 +138,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [Inherited and layered component
   configuration](../explanation/decisions/0009-inherited-component-configuration.md).
 
+- Bump `ophyd-async` to 0.21.2.
+- Bump `acquire-zarr` to 0.9.0.
+
 ### Removed
 
 - **`AppContainer.phases`**, **`AppContainer.register_phase`** and
