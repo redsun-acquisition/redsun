@@ -4,7 +4,12 @@ Date: 2026-08-26
 
 ## Status
 
-Accepted
+Accepted, superseded in part by
+[10. Toolkit hook points](0010-toolkit-hook-points.md).
+
+The build phase registry, `configure_build` and `configure_session` are removed
+there. What remains in force is that a hook point is named by the method it
+calls, takes one provider, and is a generic protocol with a per-toolkit alias.
 
 ## Context
 

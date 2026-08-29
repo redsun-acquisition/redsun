@@ -19,6 +19,7 @@ from redsun.containers.qt import (
     QtConfiguresApplication,
     QtConfiguresMainView,
     QtCreatesApplication,
+    QtWrapsBuild,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "QtConfiguresApplication",
     "QtConfiguresMainView",
     "QtCreatesApplication",
+    "QtWrapsBuild",
 ]

@@ -18,21 +18,6 @@
     options:
       show_root_heading: true
 
-::: redsun.containers.ConfiguresBuild
-    options:
-      show_root_heading: true
-
-::: redsun.containers.ConfiguresSession
-    options:
-      show_root_heading: true
-
-::: redsun.containers._hooks
-    options:
-      show_root_heading: true
-      members:
-        - AppConfiguresBuild
-        - AppConfiguresSession
-
 ::: redsun.containers.HookError
     options:
       show_root_heading: true
@@ -49,6 +34,10 @@
     options:
       show_root_heading: true
 
+::: redsun.containers._hooks.WrapsBuild
+    options:
+      show_root_heading: true
+
 ::: redsun.qt.QtAppContainer
     options:
       show_root_heading: true
@@ -59,4 +48,5 @@
       members:
         - QtCreatesApplication
         - QtConfiguresApplication
+        - QtWrapsBuild
         - QtConfiguresMainView
