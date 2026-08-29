@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0009-inherited-component-configuration/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/configure-logging/">
       
       
-        <link rel="prev" href="../0008-container-hooks-and-the-phase-registry/">
+        <link rel="prev" href="../build-docs/">
       
       
-        <link rel="next" href="../0010-toolkit-hook-points/">
+        <link rel="next" href="../install-hooks/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.57">
     
     
       
-        <title>9. Inherited and layered component configuration - Redsun</title>
+        <title>Configure logging - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.5da3a30f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.5da3a30f.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#9-inherited-and-layered-component-configuration" class="md-skip">
+        <a href="#configure-logging" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              9. Inherited and layered component configuration
+              Configure logging
             
           </span>
         </div>
@@ -215,13 +215,53 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   Redsun
 
       </a>
     </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../explanation/" class="md-tabs__link">
+          
+  
+  Explanation
+
+        </a>
+      </li>
+    
   
 
       
@@ -256,47 +296,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
-          
-  
-  Explanation
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-      
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../how-to/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   How to
@@ -328,7 +328,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -358,7 +358,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -391,7 +391,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -421,7 +421,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -444,8 +444,6 @@
       
   
   
-    
-  
   
   
     
@@ -471,23 +469,20 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../../explanation/" class="md-nav__link ">
               
   
   
@@ -504,13 +499,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -529,7 +524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../component-system/" class="md-nav__link">
+      <a href="../../explanation/component-system/" class="md-nav__link">
         
   
   
@@ -556,7 +551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../container-architecture/" class="md-nav__link">
+      <a href="../../explanation/container-architecture/" class="md-nav__link">
         
   
   
@@ -583,7 +578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../statement/" class="md-nav__link">
+      <a href="../../explanation/statement/" class="md-nav__link">
         
   
   
@@ -610,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../storage/" class="md-nav__link">
+      <a href="../../explanation/storage/" class="md-nav__link">
         
   
   
@@ -655,20 +650,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
             
   
   
@@ -702,7 +694,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/devices/" class="md-nav__link">
+      <a href="../../explanation/architecture/devices/" class="md-nav__link">
         
   
   
@@ -729,7 +721,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/plans/" class="md-nav__link">
+      <a href="../../explanation/architecture/plans/" class="md-nav__link">
         
   
   
@@ -756,7 +748,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/presenters/" class="md-nav__link">
+      <a href="../../explanation/architecture/presenters/" class="md-nav__link">
         
   
   
@@ -783,7 +775,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/qt-widgets/" class="md-nav__link">
+      <a href="../../explanation/architecture/qt-widgets/" class="md-nav__link">
         
   
   
@@ -810,7 +802,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/virtual/" class="md-nav__link">
+      <a href="../../explanation/architecture/virtual/" class="md-nav__link">
         
   
   
@@ -842,10 +834,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -874,21 +864,18 @@
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
             
   
   
@@ -905,7 +892,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -922,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -949,7 +936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -976,7 +963,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -1003,7 +990,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -1030,7 +1017,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../../explanation/decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -1057,7 +1044,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -1084,7 +1071,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../../explanation/decisions/0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -1111,7 +1098,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -1135,36 +1122,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited and layered component configuration
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0009-inherited-component-configuration/" class="md-nav__link">
         
   
   
@@ -1179,71 +1140,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Status
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Context
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Decision
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Consequences
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1256,7 +1152,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
+      <a href="../../explanation/decisions/0010-toolkit-hook-points/" class="md-nav__link">
         
   
   
@@ -1295,6 +1191,8 @@
       
   
   
+    
+  
   
   
     
@@ -1320,20 +1218,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../how-to/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1350,13 +1251,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1375,7 +1276,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/build-docs/" class="md-nav__link">
+      <a href="../build-docs/" class="md-nav__link">
         
   
   
@@ -1399,10 +1300,36 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../how-to/configure-logging/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Configure logging
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1417,6 +1344,82 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#set-the-level-for-a-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Set the level for a session
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-the-level-anywhere-else" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Set the level anywhere else
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#send-records-somewhere-else-as-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Send records somewhere else as well
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-from-your-own-component" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Log from your own component
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keep-redsun-out-of-your-own-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Keep redsun out of your own logging
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1429,7 +1432,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/install-hooks/" class="md-nav__link">
+      <a href="../install-hooks/" class="md-nav__link">
         
   
   
@@ -1456,7 +1459,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -1483,7 +1486,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/run-tests/" class="md-nav__link">
+      <a href="../run-tests/" class="md-nav__link">
         
   
   
@@ -1510,7 +1513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/wire-components/" class="md-nav__link">
+      <a href="../wire-components/" class="md-nav__link">
         
   
   
@@ -1571,7 +1574,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../reference/" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1613,7 +1616,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/changelog/" class="md-nav__link">
+      <a href="../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1712,7 +1715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/aio/" class="md-nav__link">
+      <a href="../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -1739,7 +1742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/container/" class="md-nav__link">
+      <a href="../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1766,7 +1769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
+      <a href="../../reference/api/device/" class="md-nav__link">
         
   
   
@@ -1793,7 +1796,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/engine/" class="md-nav__link">
+      <a href="../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1820,7 +1823,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/log/" class="md-nav__link">
+      <a href="../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1847,7 +1850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1874,7 +1877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/storage/" class="md-nav__link">
+      <a href="../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -1901,7 +1904,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/utils/" class="md-nav__link">
+      <a href="../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -1928,7 +1931,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/view/" class="md-nav__link">
+      <a href="../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -1955,7 +1958,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -2022,7 +2025,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../tutorials/" class="md-nav__link ">
+            <a href="../../tutorials/" class="md-nav__link ">
               
   
   
@@ -2064,7 +2067,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/custom-storage-backend/" class="md-nav__link">
+      <a href="../../tutorials/custom-storage-backend/" class="md-nav__link">
         
   
   
@@ -2132,10 +2135,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#set-the-level-for-a-session" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Status
+        Set the level for a session
       </span>
     </span>
   </a>
@@ -2143,10 +2146,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#set-the-level-anywhere-else" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Context
+        Set the level anywhere else
       </span>
     </span>
   </a>
@@ -2154,10 +2157,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#send-records-somewhere-else-as-well" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Decision
+        Send records somewhere else as well
       </span>
     </span>
   </a>
@@ -2165,10 +2168,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#log-from-your-own-component" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Consequences
+        Log from your own component
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#keep-redsun-out-of-your-own-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Keep redsun out of your own logging
       </span>
     </span>
   </a>
@@ -2193,127 +2207,129 @@
   
 
 
-<h1 id="9-inherited-and-layered-component-configuration">9. Inherited and layered component configuration<a class="headerlink" href="#9-inherited-and-layered-component-configuration" title="Permanent link">&para;</a></h1>
-<p>Date: 2026-08-28</p>
-<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Two sessions of the same instrument differ in their hardware and in almost
-nothing else. A simulated microscope and the real one declare the same
-presenters, the same views and the same wiring; only the devices and the
-configuration change. Written as two container classes, everything but the
-devices is duplicated, and the duplication is the part that carries the
-application's structure.</p>
-<p>Python already has the mechanism for that: a base class holding the shared
-declarations, subclassed once per session. It did not work here, for two
-reasons that both come from <code>from_config</code> being resolved as the class body is
-read.</p>
-<p>A base class has no configuration file of its own - the file is the thing that
-differs - so every <code>from_config</code> field in it raised at class creation:
-<code>Component field 'ui' in InstrumentApp has from_config set but no config path
-was provided</code>. Giving the base a file instead makes the resolution happen
-against that file, and <code>__init_subclass__</code> then copies the built wrappers into
-the subclass, so a subclass naming its own <code>config</code> inherits the base's keyword
-arguments and silently ignores its own file.</p>
-<p>Both are consequences of the same thing: the fields were consumed at class
-creation and not kept, so nothing was left for a subclass to re-resolve.</p>
-<p>Sharing the declarations is only half of it. <code>config</code> named a single file and a
-subclass replaced its base's rather than adding to it, so a subclass had to
-restate every section its base's file carried. The duplication would move from
-the Python to the YAML rather than going away.</p>
-<p>The objection to layering files is that a reader would have to consult two of
-them to know one component's arguments. That objection is real, and it is the
-same one that made <a href="../0008-container-hooks-and-the-phase-registry/">container hooks</a>
-refuse a silent override between two sources. It is not the same situation. A
-hook override is invisible: two files name the same hook point and nothing in
-either says which wins. A layered configuration is declared at the class that
-does the layering - <code>class Simulation(InstrumentApp, config="simulation.yaml")</code>
-reads as "this session, on top of what InstrumentApp set up" - and the order is the
-class hierarchy, which the reader is already holding.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>The declared fields outlive class creation.</strong> <code>AppContainer._component_fields</code>
-records every <code>declare_*</code> field a container and its bases declared, keyed by
-attribute name. It is accumulated the way the component wrappers already are:
-bases first, then the class's own body.</p>
-<p><strong>Every class resolves the whole inherited set against its own files.</strong>
-<code>__init_subclass__</code> no longer resolves only the fields written in that body; it
-resolves everything in <code>_component_fields</code>. A subclass therefore rebuilds the
-wrappers it inherited, reading its own configuration.</p>
-<p><strong>A missing configuration file is refused at construction, not at class
-creation.</strong> A base class exists to be subclassed, and the subclass is where
-<code>config</code> is named, so a class body cannot know whether a file will arrive. The
-<code>TypeError</code> moves to <code>AppContainer.__init__</code>, and names every field that asked
-for a section rather than the first one reached.</p>
-<p>Resolution stays at class creation for a class that has a file. It is what lets
-a type checker read a component's type off the class body, and moving it to
-build time would buy nothing that the subclass rule does not already give.</p>
-<p><strong><code>_config_paths</code> is a tuple, and a subclass appends to it.</strong> <code>config</code> accepts
-one path or a sequence of them, and what a class declares is read <em>after</em> what
-its bases declared. A subclass does not replace its base's file; it lays its own
-over the top.</p>
-<p><strong>Files merge as mappings, recursively.</strong> <code>merge_config</code> takes a key from the
-later file unless both values are mappings, which merge in turn. A list or a
-scalar is replaced rather than combined, because there is no combination of two
-lists that is right more often than it is wrong.</p>
-<p><strong>A component entry is the exception: it is replaced whole.</strong> Under <code>devices</code>,
-<code>presenters</code> and <code>views</code> the section still merges by component name, so an
-overlay adds components and leaves alone the ones it does not mention - but a
-component it <em>does</em> name is taken from it entirely. Those entries are not a
-tree of settings; they are the keyword arguments of <code>cls(name, **kwargs)</code>.
-Assembling one constructor call from two files is how a session ends up running
-with an argument nobody reading its file can see, and this framework drives
-stages and cameras. One file owns one component's arguments, and a reader finds
-them by looking at the last file that names it and stopping.</p>
-<p>The hazard is not hypothetical. Two sessions of one instrument routinely give
-the same component name to different classes - a mock light source and a real
-one - so merged keyword arguments would reach two different constructors and
-fail, if they failed at all, at build time naming the component but not the
-file that contributed the key.</p>
-<p><strong>Required keys are checked on the merged result, not on each file.</strong> A file
-that sits under another is a fragment - it has no reason to carry
-<code>schema_version</code> or <code>frontend</code>, which belong to the session rather than to the
-components. <code>_read_yaml</code> reads a file without judging it, and <code>_load_yaml</code>
-validates once, after the merge, naming every file that took part.</p>
-<p><strong>Two files may not disagree about what kind of session this is.</strong>
-<code>schema_version</code> and <code>frontend</code> name the session's identity rather than its
-content, so a later file giving a different value is a contradiction rather
-than an override, and raises. Restating an identical value is legal. Everything
-else, <code>session</code> included, follows the ordinary rule that the later file wins -
-naming the session per layer is the point of layering it.</p>
-<p><code>frontend</code> earns the rule twice over: on a declarative container it is already
-inert, since the class is <code>QtAppContainer</code> whatever the file says. An overlay
-flipping it would leave <code>container.config["frontend"]</code> reporting a toolkit the
-container is not running, and nothing would say so.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<ul>
-<li>A base class can carry the presenters, views, hooks and <code>wire</code> that two
-  sessions share, with each subclass supplying only its devices and the file
-  that differs; a file common to both sits under the base.</li>
-<li>A class that previously failed at import now fails when constructed. The
-  message is the same and names more; the timing is not.</li>
-<li>A configuration file is no longer necessarily a whole session. A file naming
-  only a <code>presenters</code> section is legal as long as something under it supplies
-  what <code>AppConfig</code> requires.</li>
-<li>The order is the class hierarchy, so a reader who wants a component's
-  arguments reads the files from the base down. <code>_config_paths</code> reports that
-  order. Every base contributes, and a file reached twice through the hierarchy
-  is read once.</li>
-<li>The files a container read, and every component one file took from another,
-  are logged at debug level, so an investigation into an unexpected keyword
-  argument starts from the layer chain rather than from a guess.</li>
-<li><strong>An overlay naming a component restates all of its arguments.</strong> That is the
-  cost of the rule, and it is the one that buys back a reader's ability to know
-  a component's arguments from one place. Where two sessions genuinely share a
-  component, it belongs in the file underneath and the overlay says nothing.</li>
-<li>A key whose value is a list cannot be extended by an overlay, only replaced.
-  An overlay wanting to add one axis to three restates all four.</li>
-<li>An inherited field whose section is missing from the merged configuration
-  falls back to its inline keyword arguments with a warning, exactly as a
-  directly declared one does. Treating inheritance as a stronger statement of
-  intent, and raising instead, stays available as a later change.</li>
-<li>Nothing changes for a container naming a single file, which is still what
-  <code>AppContainer.from_config</code> builds and what most sessions are.</li>
-</ul>
+<h1 id="configure-logging">Configure logging<a class="headerlink" href="#configure-logging" title="Permanent link">&para;</a></h1>
+<p>Everything redsun writes goes to one logger, named <code>redsun</code>. Out of the box it
+is set to <code>INFO</code> and writes to <code>sys.stdout</code> through a formatter that adds the
+component a record came from:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[29-08-26|14:02:46][INFO][MyMotor -&gt; stage]: Connected
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>[29-08-26|14:02:46][DEBUG][MyMotor -&gt; stage]: setpoint=1.5 (motor.py:88)
+</span></code></pre></div>
+<p>Every record opens with the timestamp and the level. What follows depends on
+what wrote it:</p>
+<table>
+<thead>
+<tr>
+<th>Written by</th>
+<th>Shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Loggable&lt;/span&gt;" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> declaring a <code>name</code></td>
+<td><code>[Class -&gt; name]</code></td>
+</tr>
+<tr>
+<td>A <code>Loggable</code> declaring none, or an empty one</td>
+<td><code>[Class]</code></td>
+</tr>
+<tr>
+<td><code>logging.getLogger("redsun")</code> directly</td>
+<td>neither, just the message</td>
+</tr>
+</tbody>
+</table>
+<p>A record below <code>INFO</code> carries the file and line it came from as well, since
+that is where it is useful.</p>
+<h2 id="set-the-level-for-a-session">Set the level for a session<a class="headerlink" href="#set-the-level-for-a-session" title="Permanent link">&para;</a></h2>
+<p>Pass <code>log_level</code> when you build the container. It takes a <code>logging</code> constant or
+a level name, exactly as
+<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/logging.html#logging.Logger.setLevel"><code>logging.Logger.setLevel</code></a> does:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtAppContainer</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"session.yaml"</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">(</span><span class="n">log_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>AppContainer.from_config</code> takes the same keyword and hands it to the container
+it builds:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">AppContainer</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">"session.yaml"</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Leave it out and the logger keeps whatever level it has, which is <code>INFO</code> unless
+something already changed it.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The level is a keyword rather than a key in the configuration file. It says
+how much a particular run should report, which is usually a decision about
+the run rather than about the session.</p>
+</div>
+<h2 id="set-the-level-anywhere-else">Set the level anywhere else<a class="headerlink" href="#set-the-level-anywhere-else" title="Permanent link">&para;</a></h2>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;set_level&lt;/span&gt;" href="../../reference/api/log/#redsun.log.set_level"><code>set_level</code></a> reaches the logger directly, for a script or
+a notebook that never builds a container:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_level</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">set_level</span><span class="p">(</span><span class="s2">"debug"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A name is matched without regard to case, so a value taken straight from a
+command-line flag works. One that names no level raises <code>ValueError</code>.</p>
+<h2 id="send-records-somewhere-else-as-well">Send records somewhere else as well<a class="headerlink" href="#send-records-somewhere-else-as-well" title="Permanent link">&para;</a></h2>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;add_handler&lt;/span&gt;" href="../../reference/api/log/#redsun.log.add_handler"><code>add_handler</code></a> adds a destination without disturbing
+the one already there, and <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;remove_handler&lt;/span&gt;" href="../../reference/api/log/#redsun.log.remove_handler"><code>remove_handler</code></a> takes
+it away again:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_handler</span><span class="p">,</span> <span class="n">remove_handler</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">to_file</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">"session.log"</span><span class="p">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="o">...</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">remove_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A handler carrying no formatter of its own is given the one stdout writes
+through, so a record reads the same wherever it lands. Set a formatter on the
+handler first to keep your own:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">to_file</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2"> </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">))</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Handlers have levels of their own, so a destination can be quieter than the
+logger but never louder: the logger's level decides which records exist at all.
+To write everything to a file while keeping the console at <code>INFO</code>, lower the
+logger and raise the console handler.</p>
+<h2 id="log-from-your-own-component">Log from your own component<a class="headerlink" href="#log-from-your-own-component" title="Permanent link">&para;</a></h2>
+<p>Inherit <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Loggable&lt;/span&gt;" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> and use <code>self.logger</code>. It is an
+adapter over the same <code>redsun</code> logger, and it fills in the class and name shown
+in the output:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Loggable</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presenter</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">(</span><span class="n">Presenter</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">):</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Device</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Initialized"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The name in the output is the component's own <code>name</code> attribute, so a message
+says which of several instances wrote it without you passing the name in:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[29-08-26|14:02:46][INFO][MyController -&gt; motor_ctrl]: Initialized
+</span></code></pre></div>
+<p>A class that declares no <code>name</code> still logs, with the class alone in the
+brackets. So does one whose <code>name</code> is empty or <code>None</code>, since the field is
+dropped when there is nothing to show:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[29-08-26|14:02:46][INFO][MyController]: Initialized
+</span></code></pre></div>
+<h2 id="keep-redsun-out-of-your-own-logging">Keep redsun out of your own logging<a class="headerlink" href="#keep-redsun-out-of-your-own-logging" title="Permanent link">&para;</a></h2>
+<p>The <code>redsun</code> logger propagates, so a handler on the root logger sees redsun's
+records alongside your application's. If you configure the root logger yourself
+and do not want them there, either raise redsun's level or stop the propagation:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"redsun"</span><span class="p">)</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
+</span></code></pre></div>
+<p>Nothing redsun does touches the root logger or any logger outside <code>redsun</code>, so
+configuring your own logging does not have to work around it.</p>
 
 
 
@@ -2353,7 +2369,7 @@ container is not running, and nothing would say so.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0008-container-hooks-and-the-phase-registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 8. Container hooks and the build phase registry">
+          <a href="../build-docs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Build documentation">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2363,20 +2379,20 @@ container is not running, and nothing would say so.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                8. Container hooks and the build phase registry
+                Build documentation
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0010-toolkit-hook-points/" class="md-footer__link md-footer__link--next" aria-label="Next: 10. Toolkit hook points">
+          <a href="../install-hooks/" class="md-footer__link md-footer__link--next" aria-label="Next: Install container hooks">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                10. Toolkit hook points
+                Install container hooks
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2440,10 +2456,10 @@ container is not running, and nothing would say so.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.49251538.min.js"></script>
+      <script src="../../assets/javascripts/bundle.49251538.min.js"></script>
       
     
   </body>
