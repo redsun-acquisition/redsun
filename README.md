@@ -109,7 +109,7 @@ AppContainer.from_config("session.yaml").run()
 
 Each `redsun` container is structured as a [Device-View-Presenter](https://redsun-acquisition.github.io/redsun/explanation/container-architecture/) (DVP) application. This resembles the Model-View-Presenter (MVP) architecture, with the difference that at the lower level of the application sits the *Device layer*, leveraging [`ophyd-async`](https://github.com/bluesky/ophyd-async), to interact with hardware components.
 
-This is to make a clear separation statement: `redsun` is about primarely about device control, and tries to do it well.
+This is to make a clear statement: `redsun` is primarely about device control, and tries to do it well.
 
 ## Documentation
 
