@@ -51,6 +51,7 @@ from redsun.containers.components import (
     _ViewField,
     expects_positionals,
 )
+from redsun.log import set_level
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
@@ -298,7 +299,18 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
 
 
 class AppContainer:
-    """Application container for MVP architecture."""
+    """Application container for MVP architecture.
+
+    Parameters
+    ----------
+    session : str
+        Session display name.
+    frontend : str
+        Frontend toolkit identifier.
+    log_level : int or str, optional
+        Level to put on the ``redsun`` logger, as a `logging` constant or a
+        level name. Left as it is when not given.
+    """
 
     __slots__ = (
         "_built_devices",
@@ -505,8 +517,16 @@ class AppContainer:
                 f"{len(views)} views"
             )
 
-    def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
+    def __init__(
+        self,
+        *,
+        session: str = "Redsun",
+        frontend: str = "pyqt",
+        log_level: int | str | None = None,
+    ) -> None:
         self._refuse_unresolved_fields()
+        if log_level is not None:
+            set_level(log_level)
         self._config: AppConfig = {
             "schema_version": 1.0,
             "session": session,
@@ -923,8 +943,13 @@ class AppContainer:
         logger.info(f"Starting application with frontend: {frontend}")
 
     @classmethod
-    def from_config(cls, config_path: str) -> AppContainer:
-        """Build a container dynamically from a YAML configuration file."""
+    def from_config(
+        cls, config_path: str, *, log_level: int | str | None = None
+    ) -> AppContainer:
+        """Build a container dynamically from a YAML configuration file.
+
+        *log_level* is passed to the container it builds.
+        """
         config, plugin_types = cls._load_configuration(config_path)
 
         namespace: dict[str, Any] = {}
@@ -952,6 +977,7 @@ class AppContainer:
         instance = DynamicApp(
             session=config.get("session", "Redsun"),
             frontend=frontend,
+            log_level=log_level,
         )
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
