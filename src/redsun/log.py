@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import logging
-import logging.config
+import sys
 from functools import cached_property
-
-__all__ = ["Loggable"]
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from typing import Any, ClassVar
+
+__all__ = ["Loggable", "add_handler", "remove_handler", "set_level"]
+
+DEFAULT_LEVEL: Final = "INFO"
+"""The level the ``redsun`` logger starts at."""
+
+DATE_FORMAT: Final = "%d-%m-%y|%H:%M:%S"
+"""How a record's timestamp is written."""
+
+logger = logging.getLogger("redsun")
 
 
 class GlobalFormatter(logging.Formatter):
@@ -73,55 +80,40 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
         return msg, kwargs
 
 
-class InfoFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
+def set_level(level: int | str) -> None:
+    """Set the level of the ``redsun`` logger.
 
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno >= logging.INFO
+    A named level is matched without regard to case.
 
-
-class DebugFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno < logging.INFO
+    Raises
+    ------
+    ValueError
+        If a name names no level.
+    """
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
 
 
-config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {"()": lambda: GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")}
-    },
-    "filters": {
-        "info_filter": {"()": InfoFilter},
-        "debug_filter": {"()": DebugFilter},
-    },
-    "handlers": {
-        "info": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["info_filter"],
-        },
-        "debug": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["debug_filter"],
-        },
-    },
-    "loggers": {
-        "redsun": {"level": "DEBUG", "propagate": True, "handlers": ["info", "debug"]}
-    },
-}
+def add_handler(handler: logging.Handler) -> None:
+    """Send the ``redsun`` logger's records to *handler* as well.
 
-logging.config.dictConfig(config)
-logger = logging.getLogger("redsun")
+    A handler carrying no formatter of its own is given the one every other
+    destination writes through, so a record reads the same wherever it lands.
+    """
+    if handler.formatter is None:
+        handler.setFormatter(GlobalFormatter(datefmt=DATE_FORMAT))
+    logger.addHandler(handler)
+
+
+def remove_handler(handler: logging.Handler) -> None:
+    """Stop sending the ``redsun`` logger's records to *handler*.
+
+    A handler that is not installed is left alone.
+    """
+    logger.removeHandler(handler)
+
+
+logger.setLevel(DEFAULT_LEVEL)
+add_handler(logging.StreamHandler(sys.stdout))
 
 
 class Loggable:

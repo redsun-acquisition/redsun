@@ -114,10 +114,25 @@ fields in this priority order:
 2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
 3. `*args: MyDevice` (VAR_POSITIONAL) -> multi-select
 4. `MyDevice` (bare protocol) -> single-select
-5. Everything else -> delegated to magicgui
+5. Everything else -> a plain value, left to the view layer to render
 
-Plans with required parameters that fall through to step 5 and are not
-magicgui-resolvable raise `UnresolvableAnnotationError` and are skipped.
+Step 5 accepts:
+
+- `int`, `float`, `str`, `bool`, `bytes` and `range`
+- `Path`
+- `datetime`, `date`, `time` and `timedelta`
+- any `Enum` subclass
+- a sequence of anything that is not a device
+
+A *required* parameter annotated with anything else raises
+`UnresolvableAnnotationError`, and the plan is skipped rather than shown with a
+control nobody can fill in correctly. `Any` is excluded deliberately: it would
+accept everything and render as a bare text field.
+
+The check is pure Python and imports no toolkit, so a plan can be inspected
+before any application object exists. Turning these descriptions into actual
+widgets belongs to the view layer; for the Qt one, see
+[Qt widgets - plans](qt-widgets.md).
 
 ### Collecting and resolving arguments
 

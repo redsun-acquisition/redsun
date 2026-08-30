@@ -1,8 +1,10 @@
 # Install container hooks
 
-A component acts on its own behalf. A **hook** acts on the application as a
-whole: it themes every window, adds a step to the build, or reads the finished
-session. It is an ordinary object, with no base class to inherit.
+A component acts on its own behalf. A **hook** acts on the toolkit the session
+runs on: it supplies the application object, themes every window, or covers the
+build with a splash screen. It is an ordinary object, with no base class to
+inherit, and it never changes what the container builds or the order it builds
+it in.
 
 Each hook point is named by the method it calls, and a container installs one
 provider per point. A provider is named in one of two places, and every example
@@ -26,20 +28,19 @@ on any other page of this documentation, to the same form.
 |---|---|---|
 | `create_application` | `argv` | before anything else, and only when no `QApplication` exists yet |
 | `configure_application` | the application | before the build constructs any view |
-| `configure_build` | the container | before the first build phase |
-| `configure_session` | the container | after the last build phase, with `is_built` set |
+| `during_build` | the application | around the whole build, closing once the window is shown |
 | `configure_main_view` | the main window | when the window is built, before it is shown |
 
-`configure_build` and `configure_session` are toolkit-neutral and live on every
-container. The other three are Qt points and exist only on
-[`QtAppContainer`][redsun.qt.QtAppContainer]; naming one on a plain
-[`AppContainer`][redsun.containers.container.AppContainer] is refused.
+Every point belongs to a toolkit, so all four live on
+[`QtAppContainer`][redsun.qt.QtAppContainer]. A plain
+[`AppContainer`][redsun.containers.container.AppContainer] calls none, and
+naming one on it is refused; a container for another toolkit declares the
+moments that toolkit actually has.
 
 Each point has a protocol carrying its one method:
 [`CreatesApplication`][redsun.containers._hooks.CreatesApplication],
 [`ConfiguresApplication`][redsun.containers._hooks.ConfiguresApplication],
-[`ConfiguresBuild`][redsun.containers.ConfiguresBuild],
-[`ConfiguresSession`][redsun.containers.ConfiguresSession] and
+[`WrapsBuild`][redsun.containers._hooks.WrapsBuild] and
 [`ConfiguresMainView`][redsun.containers._hooks.ConfiguresMainView]. Implement
 the method and the provider satisfies the protocol; there is nothing to
 subclass and nothing to register.
@@ -72,11 +73,10 @@ def takes_a_theme(provider: QtConfiguresApplication) -> None: ...
 ```
 
 The aliases are [`QtCreatesApplication`][redsun.containers.qt._hooks.QtCreatesApplication],
-[`QtConfiguresApplication`][redsun.containers.qt._hooks.QtConfiguresApplication]
-and [`QtConfiguresMainView`][redsun.containers.qt._hooks.QtConfiguresMainView],
-all exported from `redsun.qt`. The container points are
-[`AppConfiguresBuild`][redsun.containers._hooks.AppConfiguresBuild] and
-[`AppConfiguresSession`][redsun.containers._hooks.AppConfiguresSession].
+[`QtConfiguresApplication`][redsun.containers.qt._hooks.QtConfiguresApplication],
+[`QtWrapsBuild`][redsun.containers.qt._hooks.QtWrapsBuild] and
+[`QtConfiguresMainView`][redsun.containers.qt._hooks.QtConfiguresMainView], all
+exported from `redsun.qt`.
 
 !!! note
 
@@ -191,53 +191,188 @@ Two separate entries naming the same provider with the same arguments are
 refused, because whether they mean one shared object or two identical ones
 cannot be read off the file. Give them different arguments to build two.
 
-## Add a step to the build
+## Cover the build with a splash screen
 
-`configure_build` is the only point at which
-[`register_phase`][redsun.containers.container.AppContainer.register_phase] and
-[`unregister_phase`][redsun.containers.container.AppContainer.unregister_phase]
-are legal. `after` is required, and names an existing phase:
+`during_build` is a span rather than a moment: it returns a context manager
+entered before the first component is built and left once the window is on
+screen. What the context manager yields is called with the name of each step as
+it starts.
 
 ```python
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+
+from qtpy.QtGui import QPixmap
+from qtpy.QtWidgets import QApplication, QSplashScreen
+
+
+class Splash:
+    def __init__(self, image: str) -> None:
+        self.pixmap = QPixmap(image)
+        if self.pixmap.isNull():
+            raise ValueError(f"no image at {image!r}")
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        screen = QSplashScreen(self.pixmap)
+        screen.show()
+        app.processEvents()
+
+        def report(step: str) -> None:
+            screen.showMessage(step)
+            app.processEvents()
+
+        try:
+            yield report
+        finally:
+            screen.close()
+```
+
+Build the `QPixmap` in the constructor and check it. `QPixmap` reports a
+missing file by being null rather than by raising, and `QSplashScreen` given a
+null pixmap is a window of size 0x0 - so a mistyped path produces a splash that
+silently shows nothing.
+
+The steps reported are
+[`AppContainer.BUILD_STEPS`][redsun.containers.container.AppContainer.BUILD_STEPS]:
+`virtual container`, `devices`, `presenters`, `views`, `providers`, `wiring`
+and `injection`, in that order. Size a display from that tuple rather than from
+a count of your own, which would drift the day the sequence changes.
+
+The span is left through the context manager, so a build that raises closes the
+splash on the way out rather than leaving it over an application that never got
+a window. Anything else wanting to surround the build belongs here too: a busy
+cursor, a profiler, a logging context.
+
+The span opens only on [`run`][redsun.qt.QtAppContainer.run]. Calling `build` on
+its own reports nothing, which is what a test driving the container directly
+wants.
+
+### Show progress
+
+Each step is reported as it *starts*, so a bar showing how many are finished
+sets the value before advancing its own count, and fills to the total after the
+`yield` returns. Map the step names to whatever wording you want:
+
+```python
+from functools import partial
+
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QProgressBar
+
 from redsun.containers import AppContainer
 
+LABELS = {
+    "virtual container": "Building virtual layer...",
+    "devices": "Connecting devices...",
+    "presenters": "Starting presenters...",
+    "views": "Laying out views...",
+    "providers": "Registering providers...",
+    "wiring": "Wiring signals...",
+    "injection": "Injecting dependencies...",
+}
 
-class Calibration:
-    def __init__(self, passes: int = 1) -> None:
-        self.passes = passes
 
-    def configure_build(self, container: AppContainer) -> None:
-        container.register_phase("calibrate", self._run, after="injection")
+class ProgressSplash:
+    def __init__(self, image: str, labels: dict[str, str]) -> None:
+        self.pixmap = QPixmap(image)
+        if self.pixmap.isNull():
+            raise ValueError(f"no image at {image!r}")
+        self.labels = labels
+        self._done = 0
 
-    def _run(self) -> None: ...
+    def report(
+        self, screen: QSplashScreen, bar: QProgressBar, app: QApplication, step: str
+    ) -> None:
+        bar.setValue(self._done)
+        screen.showMessage(
+            self.labels.get(step, f"{step}..."), Qt.AlignmentFlag.AlignBottom
+        )
+        self._done += 1
+        app.processEvents()
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        total = len(AppContainer.BUILD_STEPS)
+        self._done = 0
+        screen = QSplashScreen(self.pixmap)
+        bar = QProgressBar(screen)
+        bar.setRange(0, total)
+        bar.setGeometry(0, self.pixmap.height() - 18, self.pixmap.width(), 18)
+        screen.show()
+        bar.show()
+        app.processEvents()
+
+        try:
+            yield partial(self.report, screen, bar, app)
+            bar.setValue(total)
+            screen.showMessage("Ready", Qt.AlignmentFlag.AlignBottom)
+            app.processEvents()
+        finally:
+            screen.close()
 ```
 
-Read the sequence a container will run with
-[`phases`][redsun.containers.container.AppContainer.phases]. The built-in phases
-cannot be removed or reordered.
+`report` is an ordinary method taking the widgets it draws on, and
+`functools.partial` binds them to give the container the `Callable[[str], None]`
+it expects. Only the count is instance state, because only the count has to
+survive from one call to the next; the widgets belong to one span and stay
+local to it. Resetting `_done` when the span opens rather than only in
+`__init__` is what lets one provider serve a container that is built twice.
 
-To watch the build rather than take part in it, connect to
-[`sig_phase_complete`][redsun.containers.container.AppContainer.sig_phase_complete],
-which carries the name of each phase as it finishes:
+Filling the bar after the `yield` rather than inside `report` is what makes it
+reach the total: the last step is announced when it begins, and nothing is
+reported once it finishes. Statements after the `yield` run only on a build
+that succeeded, so a failed build leaves the bar where it stopped and the
+`finally` still closes the splash.
+
+### Hand over to the window rather than closing
+
+`close` dismisses the splash at once. Qt's own handoff is
+[`finish`](https://doc.qt.io/qt-6/qsplashscreen.html#finish), which keeps the
+splash up until the widget passed to it is displayed. A provider reaches the
+window by serving `configure_main_view` as well, and is installed at both
+points as one object:
 
 ```python
+from qtpy.QtWidgets import QMainWindow
+
+
 class Splash:
-    def configure_build(self, container: AppContainer) -> None:
-        container.sig_phase_complete.connect(self._show)
+    def __init__(self, image: str) -> None:
+        self.pixmap = QPixmap(image)
+        if self.pixmap.isNull():
+            raise ValueError(f"no image at {image!r}")
+        self.window: QMainWindow | None = None
 
-    def _show(self, phase: str) -> None: ...
+    def configure_main_view(self, view: QMainWindow) -> None:
+        self.window = view
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        screen = QSplashScreen(self.pixmap)
+        screen.show()
+        app.processEvents()
+
+        def report(step: str) -> None:
+            screen.showMessage(step)
+            app.processEvents()
+
+        try:
+            yield report
+        finally:
+            if self.window is None:
+                screen.close()
+            else:
+                screen.finish(self.window)
 ```
 
-## Read the finished session
+`configure_main_view` runs inside the span, before it is left, so the window is
+there by the time the splash is dismissed. It stays `None` when the build
+raises before the window exists, which is why the fallback is kept.
 
-`configure_session` runs after the last phase with `is_built` already set, so
-`devices`, `presenters` and `views` are readable:
-
-```python
-class Inventory:
-    def configure_session(self, container: AppContainer) -> None:
-        self.built = sorted(container.devices) + sorted(container.presenters)
-```
+`run` processes events once after showing the window and before leaving the
+span, so the window has painted either way; `finish` additionally waits for it
+to be shown on platforms where that takes longer than one pass.
 
 ## Undo what a hook did
 
@@ -256,9 +391,9 @@ class DarkTheme:
         self._app.setStyleSheet(self._previous)
 ```
 
-A phase a hook registered is removed by the container itself, so a hook that
-only calls `register_phase` needs no `shutdown`. A failing `shutdown` is logged
-and does not stop the rest.
+A `during_build` provider needs no `shutdown`: its context manager already
+closes what it opened. A failing `shutdown` is logged and does not stop the
+rest.
 
 ## Read a failure
 
@@ -297,8 +432,7 @@ source wins: drop one.
 
 ## Related
 
-- [Container hooks and the build phase
-  registry](../explanation/decisions/0008-container-hooks-and-the-phase-registry.md)
+- [Toolkit hook points](../explanation/decisions/0010-toolkit-hook-points.md)
   for why the points are what they are.
 - [Wire components together](wire-components.md) for connecting components,
   which hooks do not do.

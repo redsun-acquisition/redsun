@@ -20,7 +20,6 @@ from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
-    AppConfig,
     AppContainer,
     declare_device,
     declare_presenter,
@@ -170,9 +169,15 @@ class TestComponentCollection:
 class TestAppContainerBuild:
     """Tests for the build lifecycle."""
 
-    def test_phases_are_registered_in_build_order(self) -> None:
-        assert list(AppContainer()._phases) == [
-            "virtual_container",
+    def test_build_reports_every_step_in_order(self) -> None:
+        app = AppContainer()
+        seen: list[str] = []
+        app._report = seen.append
+
+        app.build()
+
+        assert seen == [
+            "virtual container",
             "devices",
             "presenters",
             "views",
@@ -180,25 +185,6 @@ class TestAppContainerBuild:
             "wiring",
             "injection",
         ]
-
-    def test_build_runs_every_registered_phase_in_order(self) -> None:
-        calls: list[str] = []
-
-        def recorded(name: str, phase: Callable[[], None]) -> Callable[[], None]:
-            def run() -> None:
-                calls.append(name)
-                phase()
-
-            return run
-
-        app = AppContainer()
-        expected = list(app._phases)
-        for name, phase in list(app._phases.items()):
-            app._phases[name] = recorded(name, phase)
-
-        app.build()
-
-        assert calls == expected
 
     def test_a_subclass_overriding_a_phase_is_the_one_that_runs(self) -> None:
         calls: list[str] = []
@@ -855,40 +841,73 @@ class TestConfigField:
 
 
 class TestAppConfig:
-    """Tests for AppConfig TypedDict and RedSunConfig inheritance."""
-
-    def test_app_config_has_schema_version(self) -> None:
-
-        cfg: AppConfig = {
-            "schema_version": 1.0,
-            "session": "s",
-            "frontend": "pyqt",
-        }
-        assert cfg["schema_version"] == 1.0
-        # AppConfig extends RedSunConfig - verify required keys are inherited
-        assert "schema_version" in AppConfig.__required_keys__
-        assert "frontend" in AppConfig.__required_keys__
-        # session is NotRequired since 0.10.0
-        assert "session" in AppConfig.__optional_keys__
-
-    def test_app_config_has_component_fields(self) -> None:
-
-        cfg: AppConfig = {
-            "schema_version": 1.0,
-            "session": "s",
-            "frontend": "pyqt",
-            "devices": {"cam": {}},
-            "presenters": {},
-            "views": {},
-        }
-        assert "devices" in cfg
-        assert "cam" in cfg["devices"]
+    """Tests for the boundary between the two configuration schemas."""
 
     def test_redsun_config_no_component_fields(self) -> None:
         """RedSunConfig must not expose devices/presenters/views."""
         assert "devices" not in RedSunConfig.__annotations__
         assert "presenters" not in RedSunConfig.__annotations__
         assert "views" not in RedSunConfig.__annotations__
+
+
+class TestLogLevel:
+    """Tests for the level the ``redsun`` logger runs at."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_level(self) -> Iterator[None]:
+        logger = logging.getLogger("redsun")
+        level = logger.level
+        yield
+        logger.setLevel(level)
+
+    def test_a_container_leaves_the_level_alone_by_default(self) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        AppContainer()
+
+        assert logging.getLogger("redsun").level == logging.WARNING
+
+    @pytest.mark.parametrize(
+        ("level", "expected"),
+        [
+            pytest.param(logging.DEBUG, logging.DEBUG, id="constant"),
+            pytest.param("DEBUG", logging.DEBUG, id="name"),
+            pytest.param("debug", logging.DEBUG, id="lowercase-name"),
+            pytest.param(logging.WARNING, logging.WARNING, id="another-constant"),
+        ],
+    )
+    def test_a_keyword_sets_the_level(self, level: int | str, expected: int) -> None:
+        AppContainer(log_level=level)
+
+        assert logging.getLogger("redsun").level == expected
+
+    @pytest.mark.parametrize(
+        ("level", "error"),
+        [
+            pytest.param("verbose", ValueError, id="not-a-level"),
+            pytest.param(3.5, TypeError, id="not-a-level-at-all"),
+        ],
+    )
+    def test_a_level_naming_nothing_is_refused(
+        self, level: Any, error: type[Exception]
+    ) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        with pytest.raises(error):
+            AppContainer(log_level=level)
+
+        assert logging.getLogger("redsun").level == logging.WARNING
+
+    def test_from_config_passes_the_level_on(
+        self, mock_entry_points: None, config_path: Path
+    ) -> None:
+        logging.getLogger("redsun").setLevel(logging.WARNING)
+
+        AppContainer.from_config(
+            str(config_path / "mock_motor_config.yaml"), log_level=logging.DEBUG
+        )
+
+        assert logging.getLogger("redsun").level == logging.DEBUG
 
 
 @pytest.mark.qt

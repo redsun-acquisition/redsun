@@ -8,3 +8,4 @@
 ## Building an application
 - **[Wire components together](wire-components.md)**
 - **[Install container hooks](install-hooks.md)**
+- **[Configure logging](configure-logging.md)**

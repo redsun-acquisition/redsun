@@ -1,13 +1,14 @@
 """Logging helpers for the experimental layer.
 
 A copy rather than a re-export, so this package depends on nothing in the
-supported layer.
+supported layer. It configures nothing: the ``redsun`` logger it writes to is
+set up once, by `redsun.log`, and a second configuration here would replace
+that one rather than add to it.
 """
 
 from __future__ import annotations
 
 import logging
-import logging.config
 from functools import cached_property
 
 __all__ = ["Loggable"]
@@ -79,54 +80,6 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
         return msg, kwargs
 
 
-class InfoFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno >= logging.INFO
-
-
-class DebugFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno < logging.INFO
-
-
-config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {"()": lambda: GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")}
-    },
-    "filters": {
-        "info_filter": {"()": InfoFilter},
-        "debug_filter": {"()": DebugFilter},
-    },
-    "handlers": {
-        "info": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["info_filter"],
-        },
-        "debug": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["debug_filter"],
-        },
-    },
-    "loggers": {
-        "redsun": {"level": "DEBUG", "propagate": True, "handlers": ["info", "debug"]}
-    },
-}
-
-logging.config.dictConfig(config)
 logger = logging.getLogger("redsun")
 
 

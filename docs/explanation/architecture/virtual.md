@@ -4,7 +4,7 @@ At application construction, `redsun` creates a [`VirtualContainer`][redsun.virt
 
 - a registration point for [`psygnal.Signals`][psygnal.Signal] declared in your component;
 - a registration point for `bluesky`-compliant callbacks to consume documents produced by a `RunEngine` during a plan execution;
-- a way to dynamically registering any kind of resource to make them available to the rest of the application, giving control to the single component to expose whatever additional information it can provide or should be able to retrieve.
+- a registration point for any other resource a component wants to share, so each component decides for itself what to expose and what to look up.
 
 Additionally it provides a view of the configuration file app-level fields, described in [`RedSunConfig`][redsun.virtual.RedSunConfig].
 
@@ -13,23 +13,26 @@ Additionally it provides a view of the configuration file app-level fields, desc
 Components that may wish to inject one of the above functionalities must implement the [`IsProvider`][redsun.virtual.IsProvider] protocol, by adding the following method:
 
 ```python
+from typing import Any
 
-from redsun.virtual import VirtualContainer
 from dependency_injector import providers
 from event_model.documents import Document
+from psygnal import Signal
+
+from redsun.virtual import VirtualContainer
+
 
 class MyComponent:
-
-    my_signal: Signal()
-    my_other_signal: Signal(int)
+    my_signal = Signal()
+    my_other_signal = Signal(int)
 
     my_provider: dict[str, Any] = {}
 
-    def my_callback(name: str, document: Document) -> None
-        # a callback a RunEngine can consume
+    def my_callback(self, name: str, document: Document) -> None:
+        """A callback a RunEngine can consume."""
 
-    def my_other_callback(name: str, document: Document) -> None
-        # a second callback from the same owner
+    def my_other_callback(self, name: str, document: Document) -> None:
+        """A second callback from the same owner."""
 
     def register_providers(self, container: VirtualContainer) -> None:
         # register a signal via "register signals", which can be accessed via
@@ -56,18 +59,20 @@ class MyComponent:
         # if you need to expose more than one callback from the same owner,
         # use the callback_map parameter; each entry is registered independently
         # under its own key, and the owner-level name is ignored
-        container.register_callbacks(self, callback_map={
-            "live-data": self.my_callback,
-            "scan-meta": self.my_other_callback,
-        })
+        container.register_callbacks(
+            self,
+            callback_map={
+                "live-data": self.my_callback,
+                "scan-meta": self.my_other_callback,
+            },
+        )
 
         # you can dynamically register objects the other components can get access to,
         # using the dependency_injector.providers module
         container.my_object = providers.Object(self.my_provider)
-
 ```
 
-[`python-dependency-injector`](https://python-dependency-injector.ets-labs.org/index.html) offers a great deal of options of what kind of resource to shared with other components. Refer to its documentation for more information.
+[`python-dependency-injector`](https://python-dependency-injector.ets-labs.org/index.html) offers many more provider kinds than `Object`. See its documentation for the full set.
 
 ## Typed provider keys
 

@@ -5,18 +5,16 @@
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# Redsun
+# `redsun`
 
-**Event-driven data acquisition software for scientific applications**
+!!! note
+    `redsun` is slowly reaching maturity, enough that it is safe to start being deployed. Still, expect major breaking changes as the API crystallizes.
 
-!!! warning
-    This project is currently under active development and it may (and most likely will) receive breaking changes. Use at your own risk.
-
-Redsun is an acquisition software written in [CPython], with the concept of building modular user interfaces for scientific data acquisition.
+`redsun` is an acquisition software written in [CPython], with the concept of building modular softwares for scientific data acquisition.
 
 It leverages the [Bluesky] ecosystem to provide a flexible, hardware-agnostic and unopinionated framework for building a control software tailored to the specific needs of different users in different scientific fields.
 
-The philosophy of Redsun is to:
+The philosophy of `redsun` is to:
 
 - not "reinvent the wheel", but rather "ship the tools to build the wheel";
 - be extensible and modular: pick only the tools you need to get the job done;

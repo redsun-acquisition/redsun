@@ -10,26 +10,20 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-    from typing import TypeAlias
-
-    from redsun.containers.container import AppContainer
+    from collections.abc import Callable, Iterable
+    from contextlib import AbstractContextManager
 
 __all__ = [
-    "AppConfiguresBuild",
-    "AppConfiguresSession",
     "ConfiguresApplication",
-    "ConfiguresBuild",
     "ConfiguresMainView",
-    "ConfiguresSession",
     "CreatesApplication",
     "HookError",
+    "WrapsBuild",
 ]
 
 AppT_co = TypeVar("AppT_co", covariant=True)
 AppT_contra = TypeVar("AppT_contra", contravariant=True)
 ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
-ContainerT_contra = TypeVar("ContainerT_contra", contravariant=True)
 
 ENTRY_KEYS = ("provider", "kwargs")
 
@@ -38,6 +32,21 @@ logger = logging.getLogger("redsun")
 
 class HookError(RuntimeError):
     """A ``hooks`` configuration entry cannot be turned into a provider."""
+
+
+def known_points(moments: Iterable[str]) -> str:
+    """Name the hook points a container calls, to close an error message.
+
+    A container calling none is the ordinary case for one that is not bound to
+    a toolkit, so it is said in words rather than as an empty list.
+    """
+    listed = ", ".join(moments)
+    if not listed:
+        return (
+            "it calls none. Every hook point belongs to a toolkit, so a hook "
+            "is declared on a toolkit container such as QtAppContainer"
+        )
+    return f"expected one of: {listed}"
 
 
 @runtime_checkable
@@ -71,34 +80,23 @@ class ConfiguresMainView(Protocol[ViewT_contra]):
 
 
 @runtime_checkable
-class ConfiguresBuild(Protocol[ContainerT_contra]):
-    """Adjusts the build sequence before any phase of it runs."""
+class WrapsBuild(Protocol[AppT_contra]):
+    """Surrounds the build, from before the first component to after the window.
+
+    The only hook point that is a span rather than a moment: a splash screen
+    appears before anything is built, reports progress while it is, and closes
+    once the window is on screen.
+    """
 
     @abstractmethod
-    def configure_build(self, container: ContainerT_contra) -> None:
-        """Register or remove build phases on *container*."""
+    def during_build(
+        self, app: AppT_contra
+    ) -> AbstractContextManager[Callable[[str], None]]:
+        """Return a context manager open for the whole build.
+
+        What it yields is called with the name of each step as it starts.
+        """
         ...
-
-
-@runtime_checkable
-class ConfiguresSession(Protocol[ContainerT_contra]):
-    """Runs once every component is built, wired and injected."""
-
-    @abstractmethod
-    def configure_session(self, container: ContainerT_contra) -> None:
-        """Act on *container* now that the whole session exists."""
-        ...
-
-
-AppConfiguresBuild: TypeAlias = ConfiguresBuild["AppContainer"]
-"""Adjusts the build sequence of an `redsun.containers.AppContainer`.
-
-Bound to the container whose phases a hook registers against, so that the
-protocol itself stays free of any one container implementation.
-"""
-
-AppConfiguresSession: TypeAlias = ConfiguresSession["AppContainer"]
-"""Runs against an `redsun.containers.AppContainer` once its session exists."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,10 +131,9 @@ def parse_hook_specs(
     grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
     for moment, entry in raw.items():
         if moment not in moments:
-            known = ", ".join(moments)
             raise HookError(
                 f"hooks key {moment!r} is not a hook point {owner} calls; "
-                f"expected one of: {known}"
+                f"{known_points(moments)}"
             )
         if not isinstance(entry, Mapping):
             raise HookError(

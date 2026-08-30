@@ -11,7 +11,8 @@ Checked by the project's normal mypy invocation; see CLAUDE.md.
 
 from __future__ import annotations
 
-from typing import assert_type
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, assert_type
 
 from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
 
@@ -19,7 +20,11 @@ from redsun.qt import (
     QtConfiguresApplication,
     QtConfiguresMainView,
     QtCreatesApplication,
+    QtWrapsBuild,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
 
 
 class StyleProvider:
@@ -31,6 +36,10 @@ class StyleProvider:
     def configure_application(self, app: QApplication) -> None: ...
 
     def configure_main_view(self, view: QMainWindow) -> None: ...
+
+    @contextmanager
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+        yield lambda step: None
 
 
 class WrongToolkit:
@@ -48,16 +57,22 @@ class WrongToolkit:
 
     def configure_main_view(self, view: QApplication) -> None: ...
 
+    @contextmanager
+    def during_build(self, view: QMainWindow) -> Generator[Callable[[str], None]]:
+        yield lambda step: None
+
 
 def takes_creates(_: QtCreatesApplication) -> None: ...
 def takes_configures(_: QtConfiguresApplication) -> None: ...
 def takes_window(_: QtConfiguresMainView) -> None: ...
+def takes_span(_: QtWrapsBuild) -> None: ...
 
 
 def check_a_qt_provider_satisfies_the_aliases(provider: StyleProvider) -> None:
     takes_creates(provider)
     takes_configures(provider)
     takes_window(provider)
+    takes_span(provider)
 
     assert_type(provider.create_application([]), QApplication)
 
@@ -66,3 +81,4 @@ def check_the_wrong_toolkit_is_refused(provider: WrongToolkit) -> None:
     takes_creates(provider)  # type: ignore[arg-type]
     takes_configures(provider)  # type: ignore[arg-type]
     takes_window(provider)  # type: ignore[arg-type]
+    takes_span(provider)  # type: ignore[arg-type]
