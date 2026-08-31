@@ -194,10 +194,7 @@ def test_the_frontend_lists_exactly_what_it_attaches() -> None:
 
 
 def _menus(window: QMainWindow) -> list[QMenu]:
-    bar = window.menuBar()
-    assert bar is not None
-    found = [action.menu() for action in bar.actions()]
-    return [menu for menu in found if menu is not None]
+    return window.findChildren(QMenu)
 
 
 def _widget(dock: QDockWidget) -> QWidget:

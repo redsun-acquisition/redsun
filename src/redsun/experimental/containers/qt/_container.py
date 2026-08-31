@@ -277,12 +277,14 @@ def _menu(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
     bar = window.menuBar()
     if bar is None:
         raise TypeError(f"{type(window).__name__} has no menu bar to add a menu to")
-    for existing in bar.actions():
-        menu = existing.menu()
-        if menu is not None and menu.title() == placement.menu:
-            menu.addAction(action)
-            return
+    # found by object name rather than through QAction.menu(), which the two
+    # bindings type differently: QMenu under pyqt6, QObject under pyside6
+    existing = window.findChildren(QMenu, placement.menu)
+    if existing:
+        existing[0].addAction(action)
+        return
     created = QMenu(placement.menu, window)
+    created.setObjectName(placement.menu)
     created.addAction(action)
     bar.addMenu(created)
 
