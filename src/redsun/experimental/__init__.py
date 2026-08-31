@@ -35,6 +35,10 @@ from redsun.experimental.containers._declarations import (
 )
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import PluginError
+from redsun.experimental.containers._protocols import (
+    AttachableComponent,
+    NamedComponent,
+)
 from redsun.experimental.containers.components import AsDevice, AsPresenter, AsView
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement
@@ -44,7 +48,6 @@ from redsun.experimental.virtual._container import (
     SessionConfig,
     VirtualContainer,
 )
-from redsun.experimental.virtual._protocols import PPresenter, PView
 from redsun.experimental.virtual._provides import provides
 from redsun.experimental.virtual._requires import (
     DevicesOf,
@@ -61,6 +64,7 @@ __all__ = [
     "AsDevice",
     "AsPresenter",
     "AsView",
+    "AttachableComponent",
     "BlueskyCallbackRegistry",
     "Connection",
     "Declare",
@@ -69,8 +73,7 @@ __all__ = [
     "FromConfig",
     "Frontend",
     "Layer",
-    "PPresenter",
-    "PView",
+    "NamedComponent",
     "Placement",
     "PluginError",
     "Requires",

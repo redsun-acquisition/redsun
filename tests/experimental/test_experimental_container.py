@@ -238,6 +238,32 @@ class App(AppContainer):
     widget: Annotated[AsView[Widget], Declare(label="inline")]
 
 
+class Nameless:
+    """Presenter taking the name the framework hands it and dropping it."""
+
+    def __init__(self, name: str, /) -> None:
+        self.gain = 1.0
+
+
+class NamelessView(Nameless, Attachable):
+    """View doing the same, reached through the placement half of the protocol."""
+
+    placement: Placement = Panel("left")
+
+
+class NamelessApp(AppContainer):
+    __slots__ = ()
+
+    ctrl: AsPresenter[Nameless]
+
+
+class NamelessViewApp(AppContainer):
+    __slots__ = ()
+
+    frontend = Toy
+    panel: AsView[NamelessView]
+
+
 class Deferred:
     """View answering its placement from a property rather than the class."""
 
@@ -625,6 +651,18 @@ def test_a_view_is_refused_at_declaration_for_its_placement(
     """The class answers both halves, so nothing has to be built to find out."""
     with pytest.raises(TypeError, match=match):
         check(target, Layer.VIEW, "somewhere", Toy)
+
+
+@pytest.mark.parametrize(
+    ("app", "protocol"),
+    [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
+)
+def test_a_component_that_drops_its_name_is_refused(
+    app: type[AppContainer], protocol: str
+) -> None:
+    """The constructor is made to take a name; keeping it is the other half."""
+    with pytest.raises(TypeError, match=f"does not satisfy {protocol!r}: 'name'"):
+        app().build()
 
 
 def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:

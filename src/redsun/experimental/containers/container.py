@@ -26,9 +26,12 @@ from redsun.experimental.containers import (
 )
 from redsun.experimental.containers._declarations import Layer
 from redsun.experimental.containers._frontend import Frontend
+from redsun.experimental.containers._protocols import (
+    AttachableComponent,
+    NamedComponent,
+)
 from redsun.experimental.virtual import _provides
 from redsun.experimental.virtual._container import VirtualContainer
-from redsun.experimental.virtual._protocols import PPresenter, PView
 from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
 
 if TYPE_CHECKING:
@@ -160,12 +163,12 @@ class AppContainer:
         return dict(self._devices)
 
     @property
-    def presenters(self) -> Mapping[str, PPresenter]:
+    def presenters(self) -> Mapping[str, NamedComponent]:
         """The presenters that built successfully."""
         return self._built(Layer.PRESENTER)
 
     @property
-    def views(self) -> Mapping[str, PView]:
+    def views(self) -> Mapping[str, AttachableComponent]:
         """The views that built successfully, ready for a frontend to attach."""
         return self._built(Layer.VIEW)
 
@@ -431,7 +434,7 @@ class AppContainer:
             if instance is None:
                 continue
             view = declaration.kind is Layer.VIEW
-            protocol: type = PView if view else PPresenter
+            protocol: type = AttachableComponent if view else NamedComponent
             reasons = _structural.problems(instance, protocol)
             if reasons:
                 raise TypeError(

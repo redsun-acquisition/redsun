@@ -18,7 +18,12 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from redsun.experimental import AppContainer, AsView, Placement, PView
+from redsun.experimental import (
+    AppContainer,
+    AsView,
+    AttachableComponent,
+    Placement,
+)
 from redsun.experimental.containers.qt import (
     Central,
     Dock,
@@ -165,7 +170,10 @@ def test_every_placement_lands_where_it_asked(window: QMainWindow) -> None:
 def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
     """The menu is created once and found again, not created per entry."""
     # a QAction is not reparented by addAction, so the caller keeps it alive
-    views: dict[str, PView] = {"save": Save("save"), "open": Open("open")}
+    views: dict[str, AttachableComponent] = {
+        "save": Save("save"),
+        "open": Open("open"),
+    }
     attach(window, views)
 
     menus = _menus(window)

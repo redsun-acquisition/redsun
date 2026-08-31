@@ -34,12 +34,12 @@ AsDevice: TypeAlias = Annotated[T, Layer.DEVICE]
 AsPresenter: TypeAlias = Annotated[T, Layer.PRESENTER]
 """A component holding application logic, taking ``name`` first.
 
-Satisfies `redsun.experimental.PPresenter`, and declares no placement.
+Satisfies `redsun.experimental.NamedComponent`, and declares no placement.
 """
 
 AsView: TypeAlias = Annotated[T, Layer.VIEW]
 """A component presenting an interface, taking ``name`` first.
 
-Satisfies `redsun.experimental.PView`, so it declares the
+Satisfies `redsun.experimental.AttachableComponent`, so it declares the
 `redsun.experimental.Placement` it asks the frontend to attach it at.
 """
