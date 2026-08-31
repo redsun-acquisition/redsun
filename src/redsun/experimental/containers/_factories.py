@@ -9,12 +9,12 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    get_type_hints,
 )
 
 from dishka import Has
 from typing_extensions import TypeForm
 
+from redsun.experimental.containers._declarations import takes_name_by_keyword
 from redsun.experimental.virtual._requires import key_for, question_of
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "absent",
+    "constructor",
     "defaulted",
     "factory",
     "injectable",
@@ -68,6 +69,25 @@ def synthesize(
     return fn
 
 
+def constructor(cls: type) -> inspect.Signature:
+    """Return the signature of *cls*, with its annotations resolved.
+
+    Raises
+    ------
+    TypeError
+        If an annotation names something that does not exist at runtime.
+    """
+    try:
+        return inspect.signature(cls, eval_str=True)
+    except NameError as e:
+        raise TypeError(
+            f"cannot read the constructor of {cls.__qualname__}: {e.name!r} is "
+            "not available at runtime. A type a component is injected by must "
+            "be imported outside 'if TYPE_CHECKING', because the graph "
+            "evaluates the annotation."
+        ) from e
+
+
 def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[Any]]:
     """Return the constructor parameters the graph is responsible for.
 
@@ -78,32 +98,27 @@ def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[A
     fills it when something provides ``X`` and leaves the default alone when
     nothing does.
 
+    Annotations are read from the signature rather than from ``__init__``,
+    because a class may synthesize one: a pydantic model's real ``__init__``
+    takes ``**data``, and its fields appear only in the signature.
+
     Raises
     ------
     TypeError
         If a remaining parameter carries no annotation.
     """
-    try:
-        hints = get_type_hints(cls.__init__, include_extras=True)  # type: ignore[misc]
-    except NameError as e:
-        raise TypeError(
-            f"cannot read the constructor of {cls.__qualname__}: {e.name!r} is "
-            "not available at runtime. A type a component is injected by must "
-            "be imported outside 'if TYPE_CHECKING', because the graph "
-            "evaluates the annotation."
-        ) from e
     wanted: dict[str, TypeForm[Any]] = {}
-    for pname, param in inspect.signature(cls).parameters.items():
+    for pname, param in constructor(cls).parameters.items():
         if pname in ("self", "name") or pname in cfg_kwargs:
             continue
         if param.kind in (param.VAR_KEYWORD, param.VAR_POSITIONAL):
             continue
-        if pname not in hints:
+        if param.annotation is param.empty:
             raise TypeError(
                 f"{cls.__name__}.{pname} has no annotation; the container "
                 "cannot tell what to inject"
             )
-        hint = hints[pname]
+        hint = param.annotation
         question = question_of(hint)
         if question is not None:
             wanted[pname] = key_for(question)
@@ -123,11 +138,10 @@ def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:
     """
     found: dict[Question, list[str]] = {}
     for declaration in declarations:
-        hints = get_type_hints(declaration.cls.__init__, include_extras=True)  # type: ignore[misc]
-        for pname, hint in hints.items():
+        for pname, param in constructor(declaration.cls).parameters.items():
             if pname in declaration.cfg_kwargs:
                 continue
-            question = question_of(hint)
+            question = question_of(param.annotation)
             if question is None:
                 continue
             askers = found.setdefault(question, [])
@@ -173,6 +187,9 @@ def factory(
     """
     params = injectable(declaration.cls, declaration.cfg_kwargs)
     optional = defaulted(declaration.cls, params)
+    # a pydantic model exposes its fields as keyword-only, so the name cannot
+    # travel positionally to every component
+    by_keyword = takes_name_by_keyword(declaration.cls)
 
     def build(**deps: Any) -> Any:
         supplied = {
@@ -180,8 +197,10 @@ def factory(
             for pname, value in deps.items()
             if value is not None or pname not in optional
         }
+        named = {"name": declaration.name} if by_keyword else {}
+        positional = () if by_keyword else (declaration.name,)
         instance = declaration.cls(
-            declaration.name, **declaration.cfg_kwargs, **supplied
+            *positional, **named, **declaration.cfg_kwargs, **supplied
         )
         on_built(declaration, instance)
         return instance

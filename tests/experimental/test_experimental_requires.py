@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, Protocol, get_type_hints, runtime_checkable
 
+import pydantic
 import pytest
 from ophyd_async.core import Device
 
@@ -21,6 +22,7 @@ from redsun.experimental import (
     RequiresMaybe,
     RequiresOne,
 )
+from redsun.experimental.containers._declarations import Declaration, Layer
 from redsun.experimental.containers._factories import requirements
 from redsun.experimental.virtual._requires import (
     Devices,
@@ -800,3 +802,23 @@ def test_a_question_answered_by_a_later_layer_is_refused() -> None:
     """Choosing the one component cannot choose one built after the asker."""
     with pytest.raises(TypeError, match="is built before a view"):
         BackwardsQuestionApp().build()
+
+
+class PydanticSession(pydantic.BaseModel):
+    """Presenter asking a question from a class that synthesizes its signature."""
+
+    name: str
+    resettable: Requires[Resettable]
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+
+def test_a_keyword_only_component_asks_the_same_question() -> None:
+    """The marker is read off the signature, which is where pydantic keeps it."""
+    declarations = [
+        Declaration(Session, "plain", Layer.PRESENTER, {}),
+        Declaration(PydanticSession, "pyd", Layer.PRESENTER, {}),
+    ]
+    assert requirements(declarations) == {
+        Question(Resettable, Every()): ["plain", "pyd"]
+    }

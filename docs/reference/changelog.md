@@ -33,9 +33,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   replacing it, so the attribute stays typed as what it holds. One of them is
   required: it is what marks an annotation as a component, so a container class
   may hold ordinary attributes beside its components, and the layer is stated
-  rather than inferred from the class. It is checked, so a device must subclass
-  `ophyd_async.core.Device` and a presenter or view must take `name` first;
-  declaring one in the wrong layer fails when the declarations are read. Devices
+  rather than inferred from the class. It is checked when the declarations are
+  read. A device must subclass `ophyd_async.core.Device`, and a class that
+  subclasses it is refused in either other layer before anything else about it
+  is considered. A presenter or view must take `name` as its first parameter,
+  positionally or as a keyword, so a pydantic model whose fields are all
+  keyword-only can be a presenter; a name that could only arrive inside
+  `*args` or `**kwargs` is refused. Devices
   are therefore still built before the graph runs. A component appearing only in
   the session file takes its layer from the section it sits under, and is
   checked the same way. The three are also reachable as

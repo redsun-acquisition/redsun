@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
+    Final,
     NewType,
     TypeAlias,
     get_args,
@@ -177,13 +178,40 @@ def check(
     return target
 
 
+NAME_KINDS: Final = frozenset(
+    {
+        inspect.Parameter.POSITIONAL_ONLY,
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.KEYWORD_ONLY,
+    }
+)
+"""The parameter kinds the framework can pass a component's name as."""
+
+
 def leads_with_name(cls: type) -> bool:
-    """Whether *cls* takes ``name`` as its first parameter."""
+    """Whether the framework can hand *cls* its name.
+
+    True when the first parameter is called ``name`` and is of a kind that can
+    be passed one value. A variadic first parameter is refused: a name arriving
+    inside ``*args`` or ``**kwargs`` is not a name the component can be built
+    with.
+    """
+    first = _first_parameter(cls)
+    return first is not None and first.name == "name" and first.kind in NAME_KINDS
+
+
+def takes_name_by_keyword(cls: type) -> bool:
+    """Whether *cls* wants its name as a keyword rather than positionally."""
+    first = _first_parameter(cls)
+    return first is not None and first.kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def _first_parameter(cls: type) -> inspect.Parameter | None:
     try:
         params = list(inspect.signature(cls).parameters.values())
     except (TypeError, ValueError):
-        return False
-    return bool(params) and params[0].name == "name"
+        return None
+    return params[0] if params else None
 
 
 def read(

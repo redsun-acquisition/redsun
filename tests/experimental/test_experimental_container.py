@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, ClassVar, NewType
 
+import pydantic
 import pytest
 from ophyd_async.core import Device
 from psygnal import Signal
@@ -27,7 +28,11 @@ from redsun.experimental import (
     provides,
     slot,
 )
-from redsun.experimental.containers._declarations import Layer, check
+from redsun.experimental.containers._declarations import (
+    Layer,
+    check,
+    leads_with_name,
+)
 from redsun.experimental.containers._factories import (
     injectable,
     optional_arg,
@@ -515,11 +520,18 @@ def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
     assert check(target, declared, "somewhere") is target
 
 
+class VariadicDevice(Device):
+    """A device whose constructor would also fail the name check."""
+
+    def __init__(self, *args: object) -> None: ...
+
+
 @pytest.mark.parametrize(
     ("target", "declared", "match"),
     [
         (Stage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Stage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
+        (VariadicDevice, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Ctrl, Layer.DEVICE, "does not subclass 'ophyd_async.core.Device'"),
         (int, Layer.PRESENTER, "does not take 'name'"),
         ("not a type", Layer.VIEW, "is not a class"),
@@ -670,3 +682,104 @@ def test_synthesize_agrees_with_both_introspection_routes() -> None:
     )
     assert build.__annotations__ == {"a": int, "b": str, "return": Readings}
     assert signature.return_annotation is Readings
+
+
+class PydanticCtrl(pydantic.BaseModel):
+    """Presenter whose fields are keyword-only, as every pydantic model's are."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+
+class PydanticApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
+
+
+def test_a_keyword_only_component_is_built() -> None:
+    """A pydantic model takes its name as a keyword; the container looks first."""
+    app = PydanticApp().build()
+    assert app.ctrl.name == "ctrl"
+    assert app.ctrl.gain == 7.5
+    assert dict(app.ctrl.devices) == {"motor": app.motor}
+
+
+def test_the_two_constructor_shapes_are_read_alike() -> None:
+    """A pydantic model and an ordinary class must not drift apart.
+
+    Their annotations live in different places: an ordinary class states them
+    on ``__init__``, a pydantic model only in its synthesized signature.
+    """
+    assert injectable(PydanticCtrl, {}) == injectable(Ctrl, {})
+    assert injectable(PydanticCtrl, {"gain": 1.0}) == injectable(Ctrl, {"gain": 1.0})
+
+
+class VariadicName:
+    def __init__(self, *name: str) -> None: ...
+
+
+class KeywordName:
+    def __init__(self, *, name: str) -> None: ...
+
+
+@pytest.mark.parametrize(
+    ("cls", "accepted"),
+    [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
+)
+def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> None:
+    """A name arriving inside ``*args`` is not a name the component can be built with."""
+    assert leads_with_name(cls) is accepted
+
+
+@dataclass
+class DataclassCtrl:
+    """Presenter whose annotations live on a generated ``__init__``."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+@dataclass(kw_only=True)
+class KwOnlyCtrl:
+    """The stdlib route to a keyword-only constructor."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenCtrl:
+    """Frozen and slotted, which change what the class carries at runtime."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+class DataclassApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
+
+
+class KwOnlyApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
+
+
+class FrozenApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
+
+
+@pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])
+def test_a_dataclass_is_an_ordinary_component(app: type[AppContainer]) -> None:
+    """Every dataclass flavour builds, whatever kind its fields become."""
+    built = app().build()
+    assert built.ctrl.name == "ctrl"
+    assert built.ctrl.gain == 7.5
+    assert dict(built.ctrl.devices) == {"motor": built.motor}
