@@ -59,6 +59,21 @@ wheels = [
 ]
 
 [[package]]
+name = "app-model"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "in-n-out" },
+    { name = "psygnal" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/5e/a6ab504f9f11f3dfd8ce2861bd76822d8a22588affbc480f21d886d1714b/app_model-0.5.1.tar.gz", hash = "sha256:5623e7ba9d8244a67fdbe803f7c6cf48e544a128da9ed1745236307fe33cc9d8", size = 120500, upload-time = "2025-11-09T18:49:59.193Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/4f/e284b04faa34e540429cfaf7a44de9555691afc244000316da6e0c5a1154/app_model-0.5.1-py3-none-any.whl", hash = "sha256:6318c220c1c7b3c033c392be2ed22c4a92488636922d7571b16379f0917ef9e8", size = 65220, upload-time = "2025-11-09T18:49:57.796Z" },
+]
+
+[[package]]
 name = "ast-serialize"
 version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -623,6 +638,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5f/f7/abb373e5757eaec4b922b92f97ec8d6d7e057cf06778247604fbc4e7c3f3/idna-3.19.tar.gz", hash = "sha256:5e0811a4383b21dc5838069f801c4fb62113b7447663d2530d2bd6e77b49bf15", size = 215237, upload-time = "2026-08-18T05:14:24.27Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/57/b0/0e52c878c53f245edd3a11020f20979b3f490f245af532c7cae3027754b5/idna-3.19-py3-none-any.whl", hash = "sha256:815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4", size = 68550, upload-time = "2026-08-18T05:14:22.343Z" },
+]
+
+[[package]]
+name = "in-n-out"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/08/07edfac98a38ab0208557524cbdd94a296f565b0558417ccb2c03d14a6ea/in_n_out-0.2.1.tar.gz", hash = "sha256:43cde2b7de981d41a6d70618a2b7bd989481095922a53ead4dc75f2bbd5dffea", size = 26026, upload-time = "2024-04-22T18:56:50.418Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/06/711a4d105ad3d01d3ef351a1039bb5cc517a57dbf377d7da9a0808e34c77/in_n_out-0.2.1-py3-none-any.whl", hash = "sha256:343e81edb27cf41ec946134a92964f408465abdf6a065c6c55fe96f53bc3c8b7", size = 19951, upload-time = "2024-04-22T18:56:48.572Z" },
 ]
 
 [[package]]
@@ -1932,16 +1956,19 @@ experimental = [
     { name = "dishka" },
 ]
 pyqt = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
 ]
 pyside = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
 ]
 qt-common = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
 ]
@@ -1952,6 +1979,7 @@ zarr = [
 [package.dev-dependencies]
 dev = [
     { name = "acquire-zarr" },
+    { name = "app-model" },
     { name = "dishka" },
     { name = "griffe-fieldz" },
     { name = "magicgui" },
@@ -1976,16 +2004,19 @@ experimental = [
     { name = "dishka" },
 ]
 pyqt = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
 ]
 pyside = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
 ]
 qt-common = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
 ]
@@ -1996,6 +2027,9 @@ zarr = [
 [package.metadata]
 requires-dist = [
     { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.8.1" },
+    { name = "app-model", marker = "extra == 'pyqt'", specifier = ">=0.5.1" },
+    { name = "app-model", marker = "extra == 'pyside'", specifier = ">=0.5.1" },
+    { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
     { name = "dependency-injector", specifier = ">=4.49.1" },
@@ -2019,6 +2053,7 @@ provides-extras = ["experimental", "pyqt", "pyside", "qt-common", "zarr"]
 [package.metadata.requires-dev]
 dev = [
     { name = "acquire-zarr", specifier = ">=0.9.0" },
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "dishka", specifier = ">=1.7.0" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
     { name = "magicgui", specifier = ">=0.10.2" },
@@ -2041,16 +2076,19 @@ docs = [
 ]
 experimental = [{ name = "dishka", specifier = ">=1.7.0" }]
 pyqt = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
 pyside = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6", specifier = ">=6.11.0" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
 qt-common = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]

@@ -1,5 +1,5 @@
 schema_version: 1.0
-session: mock-session
+name: mock-session
 
 providers:
   services:

@@ -1,4 +1,4 @@
-session: "My test session"
+name: "My test session"
 frontend: pyqt
 controllers:
   MyController:

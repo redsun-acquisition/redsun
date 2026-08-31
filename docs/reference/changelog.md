@@ -199,6 +199,40 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [The experimental container](../explanation/experimental-container.md) for
   the architecture, what it lifts off component authors, and what it gives up.
 
+### Changed
+
+- The session configuration key `session` is now `name`, in both container
+  layers, and identifies the session rather than titling its window. It names
+  the session's application, so two sessions in one process must not share it.
+
+  ```yaml
+  name: my-session
+  frontend: pyqt
+  ```
+
+  A container that declares no name is named after its own class, so
+  `class Instrument(AppContainer)` builds a session called `Instrument`. A
+  session built from a configuration alone has no class of its own, so
+  `AppContainer.from_config` refuses a file that omits the key.
+
+  `RedSunConfig.session` is `RedSunConfig.name`, `AppContainer.__init__` takes
+  `name` in place of `session`, and `VirtualContainer.session` is
+  `VirtualContainer.name` in both layers.
+
+- `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
+  `magicgui`.
+
+- `redsun.experimental.containers.qt.QtAppContainer` builds an
+  `app_model.Application` named after the session, readable as `model`, and
+  destroys it at `shutdown` so the name is free for the next session built
+  under it. Reading `model` before `build` raises `RuntimeError`, and two live
+  sessions of one name raise `ValueError`.
+
+  ```python
+  app = MyApp().build()
+  app.model.register_action(...)
+  ```
+
 ## [0.12.0] - 29-08-2026
 
 ### Added
@@ -312,7 +346,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `schema_version` and `frontend` must agree across layered files. They name
   what kind of session this is rather than what it contains, so a later file
   giving a different value raises `ValueError` instead of overriding. Every
-  other key, `session` included, is taken from the later file.
+  other key, `name` included, is taken from the later file.
 - A container reading more than one configuration file logs them at debug
   level, in the order they layer, and logs each component an upper file takes
   from a lower one.

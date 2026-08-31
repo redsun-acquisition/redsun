@@ -254,7 +254,7 @@ container to build on, so this session comes up on `QtAppContainer` without ever
 importing it:
 
 ```yaml
-session: my-session
+name: my-session
 frontend: pyqt
 
 devices:

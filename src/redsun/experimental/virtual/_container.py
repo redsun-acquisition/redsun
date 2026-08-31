@@ -181,7 +181,7 @@ class SessionConfig:
 
     schema_version: float = 1.0
     frontend: str = "pyqt"
-    session: str = "Redsun"
+    name: str = "Redsun"
     metadata: dict[str, object] = field(default_factory=dict)
 
 
@@ -258,21 +258,25 @@ class VirtualContainer(Loggable):
         return self._config.frontend
 
     @property
-    def session(self) -> str:
-        """The session display name specified in the configuration."""
-        return self._config.session
+    def name(self) -> str:
+        """The session identity specified in the configuration."""
+        return self._config.name
 
     @property
     def metadata(self) -> dict[str, object]:
         """The session metadata specified in the configuration."""
         return self._config.metadata
 
-    def _set_configuration(self, config: Mapping[str, Any]) -> None:
-        """Set the application configuration, for use by the container."""
+    def _set_configuration(self, config: Mapping[str, Any], name: str) -> None:
+        """Set the application configuration, for use by the container.
+
+        *name* is what the session is called when the configuration does not
+        say, which the container takes from its own class.
+        """
         self._config = SessionConfig(
             schema_version=config.get("schema_version", 1.0),
             frontend=config.get("frontend", "pyqt"),
-            session=config.get("session", "Redsun"),
+            name=config.get("name", name),
             metadata=dict(config.get("metadata", {})),
         )
 

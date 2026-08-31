@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: rejected-view-session
+name: rejected-view-session
 views:
   BadView:
     plugin_name: mock-pkg

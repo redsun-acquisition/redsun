@@ -200,7 +200,7 @@ class AppContainer:
             return self
 
         config = _read_config(self.config if self._config is None else self._config)
-        self._virtual._set_configuration(config)
+        self._virtual._set_configuration(config, type(self).__name__)
         self._declarations = _declarations.read(type(self), config, self.frontend)
         self._build_devices()
 

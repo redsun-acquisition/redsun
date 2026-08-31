@@ -38,6 +38,8 @@ from typing import (
     cast,
 )
 
+from app_model import Application
+
 # psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
@@ -141,7 +143,7 @@ class QtAppContainer(AppContainer):
     ```
     """
 
-    __slots__ = ("_main_window", "_qt_app")
+    __slots__ = ("_main_window", "_model", "_qt_app")
 
     frontend = Qt
 
@@ -158,11 +160,25 @@ class QtAppContainer(AppContainer):
         )
         set_async_backend()
         self._main_window = QMainWindow()
+        self._model: Application | None = None
 
     @property
     def main_window(self) -> QMainWindow:
         """The window the views are attached to, empty until `build`."""
         return self._main_window
+
+    @property
+    def model(self) -> Application:
+        """The application this session's commands and menus are registered on.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`, which is where it is created.
+        """
+        if self._model is None:
+            raise RuntimeError("Call build() before reading the application")
+        return self._model
 
     def build(self) -> Self:
         """Build the components, then attach the views to the main window.
@@ -173,13 +189,23 @@ class QtAppContainer(AppContainer):
         already = self.is_built
         super().build()
         if not already:
-            self._main_window.setWindowTitle(self.virtual_container.session)
+            name = self.virtual_container.name
+            self._model = Application(name)
+            self._main_window.setWindowTitle(name)
             attach(self._main_window, self.views)
         return self
 
     def shutdown(self) -> None:
-        """Tear the application down, then the async backend it ran on."""
+        """Tear the application down, then the async backend it ran on.
+
+        The application is destroyed by name rather than dropped, which frees
+        the name for the next session built under it.
+        """
+        name = self.virtual_container.name if self._model is not None else None
         super().shutdown()
+        if name is not None:
+            Application.destroy(name)
+            self._model = None
         clear_async_backend()
 
     def run(self) -> NoReturn:

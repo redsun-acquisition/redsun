@@ -285,6 +285,26 @@ def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
     return data
 
 
+def _named(config: Mapping[str, Any]) -> str:
+    """Return the session identity *config* declares.
+
+    Raises
+    ------
+    KeyError
+        If it declares none. A session built from a configuration has no class
+        of its own to be named after, and two that both went unnamed would be
+        indistinguishable.
+    """
+    name = config.get("name")
+    if not isinstance(name, str) or not name:
+        raise KeyError(
+            "a session built from a configuration must declare 'name'. It "
+            "identifies the session, and two that both went unnamed could not "
+            "be told apart."
+        )
+    return name
+
+
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
     """Resolve a frontend string to the appropriate container class."""
     dotted_path = _FRONTEND_CONTAINERS.get(frontend)
@@ -303,8 +323,9 @@ class AppContainer:
 
     Parameters
     ----------
-    session : str
-        Session display name.
+    name : str | None
+        Session identity. Defaults to the container class's own name, which is
+        distinct per session where a shared constant would not be.
     frontend : str
         Frontend toolkit identifier.
     log_level : int or str, optional
@@ -520,7 +541,7 @@ class AppContainer:
     def __init__(
         self,
         *,
-        session: str = "Redsun",
+        name: str | None = None,
         frontend: str = "pyqt",
         log_level: int | str | None = None,
     ) -> None:
@@ -529,7 +550,7 @@ class AppContainer:
             set_level(log_level)
         self._config: AppConfig = {
             "schema_version": 1.0,
-            "session": session,
+            "name": name or type(self).__name__,
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
@@ -825,7 +846,7 @@ class AppContainer:
 
         base_cfg: RedSunConfig = {
             "schema_version": self._config.get("schema_version", 1.0),
-            "session": self._config.get("session", "Redsun"),
+            "name": self._config["name"],
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
@@ -975,7 +996,7 @@ class AppContainer:
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
 
         instance = DynamicApp(
-            session=config.get("session", "Redsun"),
+            name=_named(config),
             frontend=frontend,
             log_level=log_level,
         )

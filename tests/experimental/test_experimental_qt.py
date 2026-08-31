@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from app_model import Application
 
 # qtpy reaches QAction through a plain named import, which strict mode counts
 # as no export at all and resolves to Any
@@ -101,6 +102,37 @@ class QtApp(QtAppContainer):
     acquire: AsView[Acquire]
 
 
+def test_the_session_owns_an_application_named_after_it(qapp: Any) -> None:
+    """Commands, menus and keybindings belong to the session, not the process."""
+    app = QtApp()
+    with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
+        _ = app.model
+    app.build()
+    try:
+        assert app.model is Application.get_app("QtApp")
+    finally:
+        app.shutdown()
+    assert Application.get_app("QtApp") is None
+
+
+def test_two_sessions_of_one_name_refuse_to_coexist(qapp: Any) -> None:
+    """The name is an identity, so a collision is loud rather than shared."""
+    first = QtApp().build()
+    try:
+        with pytest.raises(ValueError, match="already exists"):
+            QtApp().build()
+    finally:
+        first.shutdown()
+
+
+def test_the_name_is_free_again_after_shutdown(qapp: Any) -> None:
+    """A suite building one session repeatedly is the case this serves."""
+    for _ in range(3):
+        app = QtApp().build()
+        assert app.model.name == "QtApp"
+        app.shutdown()
+
+
 @pytest.fixture
 def window(qapp: Any) -> QMainWindow:
     return QMainWindow()
@@ -111,7 +143,7 @@ def test_the_container_builds_its_own_window(qapp: Any) -> None:
     app = QtApp().build()
     try:
         window = app.main_window
-        assert window.windowTitle() == "Redsun"
+        assert window.windowTitle() == "QtApp"
         docks = window.findChildren(QDockWidget)
         assert [_widget(d).objectName() for d in docks] == ["panel"]
         central = window.centralWidget()
@@ -135,7 +167,7 @@ def test_the_window_exists_before_the_build_and_is_kept(qapp: Any) -> None:
 
 def test_the_configuration_names_the_container(qapp: Any) -> None:
     """A session naming Qt comes up on the Qt container without a class."""
-    app = AppContainer.from_config({"frontend": "pyqt", "session": "from-file"})
+    app = AppContainer.from_config({"frontend": "pyqt", "name": "from-file"})
     assert isinstance(app, QtAppContainer)
     assert app.frontend is Qt
     try:
