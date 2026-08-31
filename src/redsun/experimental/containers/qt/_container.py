@@ -253,14 +253,18 @@ def _checked(name: str, view: PView, placement: Placement) -> QWidget | QAction:
         If the view is not that type.
     """
     required = REQUIRES[type(placement)]
-    if not isinstance(view, required):
+    # checked as 'object': mypy cannot represent the intersection of a protocol
+    # with a union of unrelated toolkit classes, narrows it to Never, and calls
+    # everything below unreachable wherever those classes are properly typed
+    candidate: object = view
+    if not isinstance(candidate, required):
         raise TypeError(
             f"view {name!r} asks to be attached as {type(placement).__name__!r}, "
             f"which needs a {required.__name__}, but {type(view).__name__} is "
             "not one"
         )
-    view.setObjectName(name)
-    return view
+    candidate.setObjectName(name)
+    return candidate
 
 
 def _dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
