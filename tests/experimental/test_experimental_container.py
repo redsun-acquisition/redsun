@@ -718,6 +718,51 @@ def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
         app.shutdown()
 
 
+def test_a_component_nothing_reaches_is_reported(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A half-finished declaration, or a wiring rule with a typo in the name."""
+
+    class Inert(AppContainer):
+        __slots__ = ()
+
+        recorder: AsPresenter[Recorder]
+
+    app = Inert().build()
+    try:
+        assert (
+            "'recorder' shares nothing, asks for nothing and is wired to nothing"
+            in caplog.text
+        )
+    finally:
+        app.shutdown()
+
+
+def test_a_component_another_is_built_from_is_not_reported(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Being injected is being used, though the component asks for nothing itself."""
+    app = OrderedApp().build()
+    try:
+        assert "'first' shares nothing" not in caplog.text
+    finally:
+        app.shutdown()
+
+
+def test_a_shared_value_nothing_asks_for_is_reported(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Usually the consumer was renamed or removed while the producer stayed."""
+    app = App().build()
+    try:
+        assert (
+            "ctrl.descriptions shares 'Descriptions', which no component asks for"
+            in caplog.text
+        )
+    finally:
+        app.shutdown()
+
+
 def test_a_forgotten_layer_is_reported(caplog: pytest.LogCaptureFixture) -> None:
     """Omitting the marker is silent by design, so a likely component is flagged."""
 

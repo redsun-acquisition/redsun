@@ -226,6 +226,7 @@ class AppContainer:
         self._virtual._seal()
         self.wire()
         self._apply_wiring_config(config)
+        self._warn_unused()
         self._is_built = True
         logger.info(
             "Container built: %d devices, %d presenters, %d views",
@@ -518,6 +519,70 @@ class AppContainer:
     def _apply_wiring_config(self, config: Mapping[str, Any]) -> None:
         for rule in config.get("wiring", []):
             self._virtual.connect_paths(rule["from"], rule["to"])
+
+    def _warn_unused(self) -> None:
+        """Report a component and a shared value the session never uses.
+
+        Both are legal, so neither stops the build: a session under
+        construction has components nothing reaches yet, and a bundle may ship
+        one a particular session does not need.
+
+        Runs after the wiring, which is the last thing that can put a
+        component to use.
+        """
+        declarations = self._components()
+        wanted = {
+            _factories.optional_arg(hint) or hint
+            for declaration in declarations
+            for hint in _factories.injectable(
+                declaration.cls, declaration.cfg_kwargs
+            ).values()
+        }
+        used = self._used(declarations, wanted)
+        for declaration in declarations:
+            provided = _provides.shared(declaration.cls)
+            for method, key in provided.items():
+                if key not in wanted:
+                    logger.warning(
+                        "%s.%s shares %r, which no component asks for",
+                        declaration.name,
+                        method,
+                        getattr(key, "__name__", key),
+                    )
+            requires = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            if not provided and not requires and declaration.name not in used:
+                logger.warning(
+                    "%r shares nothing, asks for nothing and is wired to nothing; "
+                    "it is built and reachable, and does nothing",
+                    declaration.name,
+                )
+
+    def _used(
+        self, declarations: list[_declarations.Declaration], wanted: set[Any]
+    ) -> set[str]:
+        """Check the components something in the session reaches.
+
+        *wanted* is every type a constructor asks for, so a component another
+        one is built from counts, by its key or by its class.
+        """
+        names = {c.publisher for c in self._virtual.connections}
+        names |= {c.consumer for c in self._virtual.connections}
+        names |= {s.consumer for s in self._virtual.subscriptions}
+        names |= {
+            chosen.name for chosen in self._answers.values() if chosen is not None
+        }
+        names |= {
+            declaration.name
+            for declaration in declarations
+            if declaration.key in wanted or declaration.cls in wanted
+        }
+        for question in _factories.requirements(declarations):
+            names |= {
+                declaration.name
+                for declaration in declarations
+                if _structural.satisfies(declaration.cls, question.protocol)
+            }
+        return names
 
 
 def _owners(

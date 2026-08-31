@@ -174,6 +174,18 @@ Dates are specified in the format `DD-MM-YYYY`.
   from redsun.experimental import AttachableComponent, NamedComponent
   ```
 
+  Once the wiring is applied, two relations are reported without stopping the
+  build. A component that shares nothing, asks for nothing and is wired to
+  nothing is named, which is what a wiring rule with a typo in a component name
+  looks like: the rule naming a component that does not exist already fails, and
+  the component no rule names did not. A `provides` return type no component
+  asks for is named with its method, which is what a consumer removed while the
+  producer stayed looks like. Both are legal, so both are warnings: a session
+  under construction has components nothing reaches yet, and a bundle may ship
+  one a particular session does not need. Being injected by another component
+  counts as being used, as does answering a `Requires`, `RequiresOne` or
+  `RequiresMaybe` question.
+
   A plugin bundle may ship a dishka `Provider` of its own, declared at dishka's
   `Scope.APP`; an application has one stage, so no narrower scope is entered and
   a provider written for another dishka application drops in unchanged.
