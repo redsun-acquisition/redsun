@@ -17,12 +17,12 @@ from dishka import AnyOf, Provider, Scope, make_container
 # runtime import: the annotations below are evaluated by the graph
 from ophyd_async.core import Device  # noqa: TC002
 
+from redsun import _structural
 from redsun.aio import run_coro
 from redsun.experimental.containers import (
     _declarations,
     _factories,
     _plugins,
-    _structural,
 )
 from redsun.experimental.containers._declarations import Layer
 from redsun.experimental.containers._frontend import Frontend, check_placement

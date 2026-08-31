@@ -13,12 +13,7 @@ from typing import (
     get_origin,
 )
 
-from redsun.experimental.containers._structural import (
-    members,
-    methods,
-    problems,
-    satisfies,
-)
+from redsun._structural import members, methods, problems, satisfies
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
