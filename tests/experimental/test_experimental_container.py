@@ -24,7 +24,6 @@ from redsun.experimental import (
     Frontend,
     Placement,
     VirtualContainer,
-    check_placement,
     provides,
     slot,
 )
@@ -93,10 +92,32 @@ class Elsewhere(Placement):
     """A placement no frontend attaches."""
 
 
+class Attachable:
+    """The type Toy demands of a view, standing in for a toolkit class."""
+
+
+class Attached(Attachable):
+    """A view Toy can attach."""
+
+    placement: Placement = Panel("left")
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+
+class Unattachable:
+    """A view asking for a placement Toy attaches, without being what it demands."""
+
+    placement: Placement = Panel("left")
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+
 class Toy(Frontend):
     """A frontend that attaches one placement, standing in for a real one."""
 
-    placements: ClassVar[frozenset[type[Placement]]] = frozenset({Panel})
+    requires: ClassVar[Mapping[type[Placement], type]] = {Panel: Attachable}
 
 
 class Widget:
@@ -548,36 +569,66 @@ def test_a_class_declared_in_the_wrong_layer_is_refused(
 
 
 @pytest.mark.parametrize(
-    ("frontend", "placement"),
+    ("view", "frontend", "placement"),
     [
-        (Toy, Panel("left")),
-        (Frontend, Panel("left")),
-        (Frontend, Elsewhere()),
+        (Attached, Toy, Panel("left")),
+        (Attached("view"), Toy, Panel("left")),
+        (Unattachable, Frontend, Panel("left")),
+        (Unattachable, Frontend, Elsewhere()),
     ],
 )
-def test_a_frontend_accepts_the_placements_it_attaches(
-    frontend: type[Frontend], placement: Placement
+def test_a_frontend_accepts_what_it_attaches(
+    view: type | object, frontend: type[Frontend], placement: Placement
 ) -> None:
-    """An application naming no toolkit constrains nothing."""
-    check_placement(placement, frontend, "somewhere")
+    """A class and an instance answer alike, and no toolkit constrains nothing."""
+    frontend.check_placement(view, placement, "somewhere")
 
 
-def test_a_placement_the_frontend_cannot_attach_is_refused() -> None:
-    with pytest.raises(TypeError, match="'Elsewhere', which Toy does not attach"):
-        check_placement(Elsewhere(), Toy, "somewhere")
+@pytest.mark.parametrize(
+    ("view", "placement", "match"),
+    [
+        (Attached, Elsewhere(), "'Elsewhere', which Toy does not attach"),
+        (
+            Unattachable,
+            Panel("left"),
+            "needs a Attachable, but Unattachable is not one",
+        ),
+    ],
+)
+def test_a_frontend_refuses_what_it_cannot_attach(
+    view: type, placement: Placement, match: str
+) -> None:
+    """Either half of the pairing can be wrong, and each says which."""
+    with pytest.raises(TypeError, match=match):
+        Toy.check_placement(view, placement, "somewhere")
 
 
-def test_a_view_is_refused_at_declaration_for_its_placement() -> None:
-    """The class answers, so nothing has to be built to find out."""
+class Stray:
+    """A view asking for a placement Toy does not attach."""
 
-    class Stray:
-        placement: Placement = Elsewhere()
+    placement: Placement = Elsewhere()
 
-        def __init__(self, name: str, /) -> None:
-            self.name = name
+    def __init__(self, name: str, /) -> None:
+        self.name = name
 
-    with pytest.raises(TypeError, match="does not attach"):
-        check(Stray, Layer.VIEW, "somewhere", Toy)
+
+@pytest.mark.parametrize(
+    ("target", "match"),
+    [
+        (Stray, "does not attach"),
+        (Unattachable, "needs a Attachable"),
+    ],
+)
+def test_a_view_is_refused_at_declaration_for_its_placement(
+    target: type, match: str
+) -> None:
+    """The class answers both halves, so nothing has to be built to find out."""
+    with pytest.raises(TypeError, match=match):
+        check(target, Layer.VIEW, "somewhere", Toy)
+
+
+def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
+    assert check(Attached, Layer.VIEW, "somewhere", Toy) is Attached
 
 
 def test_a_view_answering_from_an_instance_is_checked_after_it_is_built() -> None:

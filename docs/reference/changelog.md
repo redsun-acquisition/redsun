@@ -142,15 +142,27 @@ Dates are specified in the format `DD-MM-YYYY`.
   what separates it from a presenter. The core defines `Placement` and no
   concrete one: a dock, a menu bar and a toolbar are window concepts, so
   `redsun.experimental.containers.qt` owns `Dock`, `Central`, `MenuItem` and `ToolBarItem`
-  alongside the `Qt` frontend that lists them in `Frontend.placements` and the
-  `attach` that fills a `QMainWindow` from a container's `views`. Each is paired
-  there with the toolkit type it demands - a `QWidget` for a dock or the centre,
-  a `QAction` for a menu or toolbar entry - so no toolkit name reaches the core,
-  and a frontend for something other than a desktop window brings placements of
-  its own. Declaring the placement on the class lets a view be
-  refused before anything is built, both for asking a frontend to attach
-  something it does not, and for being declared in the wrong layer; a view
-  answering from a property is checked once it exists. `PView` and `PPresenter`
+  alongside the `Qt` frontend that pairs each with the toolkit type it demands
+  in `Frontend.requires` - a `QWidget` for a dock or the centre, a `QAction` for
+  a menu or toolbar entry - and the `attach` that fills a `QMainWindow` from a
+  container's `views`. No toolkit name reaches the core, and a frontend for
+  something other than a desktop window brings placements and a table of its
+  own:
+
+  ```python
+  from redsun.experimental import Frontend
+
+
+  class Web(Frontend):
+      requires = {Route: Page}
+  ```
+
+  `Frontend.check_placement` reads that table and is what a frontend overrides
+  when its demand is not a subclass relation. Declaring the placement on the
+  class lets a view be refused before anything is built, for asking a frontend
+  to attach something it does not, for not being the type that placement
+  demands, and for being declared in the wrong layer; a view answering from a
+  property is checked once it exists. `PView` and `PPresenter`
   are the protocols the built components are held to, without a base class to
   inherit: `PPresenter` is `name` alone, because devices are now an injected
   dependency rather than part of a presenter's shape.
