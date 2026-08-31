@@ -31,7 +31,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Component shape | `PPresenter`, `PView` |
 | Sharing | `provides` |
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
-| Session | `VirtualContainer`, `DeviceMapping`, `DocumentCallbacks`, `slot` |
+| Session | `DeviceMapping`, `BlueskyCallbackRegistry`, `slot` |
 
 The Qt frontend is `redsun.experimental.containers.qt`: `QtAppContainer` to subclass,
 `Qt` as the frontend itself, the placements it attaches (`Central`, `Dock`,
@@ -552,12 +552,26 @@ that has one registers it as it comes up. So a component that wants to see *all*
 of them has a problem: at the moment it is constructed, the components after it
 have not registered anything yet.
 
-The answer is that `DocumentCallbacks` is a **live view**, not a copy. You hold
-on to it and read it later, when the application is running:
+`BlueskyCallbackRegistry` is both halves of that registry. A component
+registers its own callbacks on it as it is built:
+
+```python
+from redsun.experimental import BlueskyCallbackRegistry
+
+
+class MyPresenter:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+        self.name = name
+        callbacks.register(self, name=name)
+```
+
+and reading is the part that has to wait. The answer is that
+`BlueskyCallbackRegistry` is a **live view**, not a copy. You hold on to it and
+read it later, when the application is running:
 
 ```python
 class AcquisitionPresenter:
-    def __init__(self, name: str, /, callbacks: DocumentCallbacks) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
         self.callbacks = callbacks  # keep the view
 
@@ -569,7 +583,7 @@ class AcquisitionPresenter:
 Reading it too early raises, rather than quietly handing you half a registry:
 
 ```python
-def __init__(self, name: str, /, callbacks: DocumentCallbacks) -> None:
+def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
     self.copy = dict(callbacks)  # LookupError
 ```
 
@@ -991,7 +1005,8 @@ application is running: it is a component, it is a `@provides` method on a
 component, or it comes from a `Provider` registered before the build.
 
 If something genuinely fills up over time, it has to be designed as a live view,
-the way `DocumentCallbacks` is. That works, but it is a decision you make per
+the way `BlueskyCallbackRegistry` is. That works, but it is a decision you make
+per
 case, not something you get for free.
 
 ### Deciding at runtime whether to provide something

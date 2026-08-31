@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
@@ -33,9 +33,9 @@ if TYPE_CHECKING:
     from redsun.experimental.virtual._wiring import SlotThread
 
 __all__ = [
+    "BlueskyCallbackRegistry",
     "CallbackType",
     "DeviceMapping",
-    "DocumentCallbacks",
     "SessionConfig",
     "VirtualContainer",
 ]
@@ -56,13 +56,53 @@ SignalCache: TypeAlias = dict[str, SignalInstance]
 """The signals one component declares, by attribute name."""
 
 
-class DocumentCallbacks(Mapping[str, CallbackType]):
-    """Live view of the document-callback registry.
+def validate_callback(callback: object) -> CallbackType:
+    """Return *callback* unchanged if it can be called as ``(name, doc)``.
 
-    A component receives this while it is being built, when the components
-    after it have registered nothing yet. It holds the view and reads it when
-    it runs; reading it before the application has finished building raises,
-    because the answer would be incomplete.
+    Raises
+    ------
+    TypeError
+        If *callback* is not callable, or its signature is incompatible
+        with ``(str, Document)``.
+    """
+    if isinstance(callback, DocumentRouter):
+        return callback
+
+    if not callable(callback):
+        raise TypeError(
+            f"{callback!r} is not callable. "
+            "A callback must be a DocumentRouter subclass instance or a "
+            "callable accepting (str, Document) arguments."
+        )
+
+    try:
+        inspect.signature(callback.__call__).bind(None, None)
+    except TypeError as e:
+        raise TypeError(
+            f"{callback!r} is callable but its signature is not compatible "
+            "with the expected (str, Document) callback interface."
+        ) from e
+
+    return callback
+
+
+class BlueskyCallbackRegistry(Mapping[str, CallbackType]):
+    """The bluesky document-callback registry, as a component sees it.
+
+    A component receives this while it is being built. It may register its own
+    callbacks straight away, and it may hold the mapping and read it when it
+    runs. Reading it before the application has finished building raises,
+    because the components after it have registered nothing yet and the answer
+    would be incomplete.
+
+    Parameters
+    ----------
+    registry : MutableMapping[str, CallbackType]
+        The mapping every component registers into, held rather than copied so
+        that a component reads what later ones added.
+    ready : Callable[[], bool]
+        Answers whether every component has been built. Reading the mapping
+        before it answers ``True`` raises.
 
     Raises
     ------
@@ -71,10 +111,46 @@ class DocumentCallbacks(Mapping[str, CallbackType]):
     """
 
     def __init__(
-        self, registry: Mapping[str, CallbackType], ready: Callable[[], bool]
+        self, registry: MutableMapping[str, CallbackType], ready: Callable[[], bool]
     ) -> None:
         self._registry = registry
         self._ready = ready
+
+    def register(
+        self,
+        owner: HasName,
+        *,
+        name: str | None = None,
+        callback_map: dict[str, CallbackType] | None = None,
+    ) -> None:
+        """Register one or more document callbacks.
+
+        Parameters
+        ----------
+        owner : HasName
+            The component registering callbacks, and the callback itself when
+            *callback_map* is ``None``.
+        name : str | None
+            Registry key for *owner*. Defaults to ``owner.name``; ignored when
+            *callback_map* is given.
+        callback_map : dict[str, CallbackType] | None
+            Several callbacks from one owner, each registered under its own
+            key. *owner* is then not registered itself.
+
+        Raises
+        ------
+        TypeError
+            If a callback is not callable or its signature is incompatible
+            with ``(str, Document)``.
+        """
+        if callback_map is not None:
+            for key, callback in callback_map.items():
+                self._registry[key] = validate_callback(callback)
+            return
+
+        self._registry[name if name is not None else owner.name] = validate_callback(
+            owner
+        )
 
     def _complete(self) -> Mapping[str, CallbackType]:
         if not self._ready():
@@ -96,7 +172,7 @@ class DocumentCallbacks(Mapping[str, CallbackType]):
 
     def __repr__(self) -> str:
         state = "live" if self._ready() else "pending"
-        return f"DocumentCallbacks({state}, {len(self._registry)} registered)"
+        return f"BlueskyCallbackRegistry({state}, {len(self._registry)} registered)"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -150,6 +226,7 @@ class VirtualContainer(Loggable):
             tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
         ] = []
         self._subscription_records: list[Subscription] = []
+        self._registry = BlueskyCallbackRegistry(self._callbacks, lambda: self._sealed)
 
     def provider(self, devices: Callable[[], DeviceMapping]) -> Provider:
         """Return the framework's dependency provider.
@@ -160,13 +237,9 @@ class VirtualContainer(Loggable):
         constraint of its own.
         """
         provider = Provider(scope=Scope.APP)
-        provider.provide(lambda: self, provides=VirtualContainer)
         provider.provide(lambda: self._config, provides=SessionConfig)
         provider.provide(devices, provides=DeviceMapping)
-        provider.provide(
-            lambda: DocumentCallbacks(self._callbacks, lambda: self._sealed),
-            provides=DocumentCallbacks,
-        )
+        provider.provide(lambda: self._registry, provides=BlueskyCallbackRegistry)
         return provider
 
     @property
@@ -241,36 +314,6 @@ class VirtualContainer(Loggable):
         """The currently registered signals."""
         return dict(self._signals)
 
-    @staticmethod
-    def _validate_callback(callback: object) -> CallbackType:
-        """Return *callback* unchanged if it can be called as ``(name, doc)``.
-
-        Raises
-        ------
-        TypeError
-            If *callback* is not callable, or its signature is incompatible
-            with ``(str, Document)``.
-        """
-        if isinstance(callback, DocumentRouter):
-            return callback
-
-        if not callable(callback):
-            raise TypeError(
-                f"{callback!r} is not callable. "
-                "A callback must be a DocumentRouter subclass instance or a "
-                "callable accepting (str, Document) arguments."
-            )
-
-        try:
-            inspect.signature(callback.__call__).bind(None, None)
-        except TypeError as e:
-            raise TypeError(
-                f"{callback!r} is callable but its signature is not compatible "
-                "with the expected (str, Document) callback interface."
-            ) from e
-
-        return callback
-
     def register_callbacks(
         self,
         owner: HasName,
@@ -297,13 +340,7 @@ class VirtualContainer(Loggable):
             If a callback is not callable or its signature is incompatible
             with ``(str, Document)``.
         """
-        if callback_map is not None:
-            for key, callback in callback_map.items():
-                self._callbacks[key] = self._validate_callback(callback)
-            return
-
-        cache_entry = name if name is not None else owner.name
-        self._callbacks[cache_entry] = self._validate_callback(owner)
+        self._registry.register(owner, name=name, callback_map=callback_map)
 
     @property
     def callbacks(self) -> dict[str, CallbackType]:

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from psygnal import Signal
 
-from redsun.experimental import Placement, VirtualContainer, slot
+from redsun.experimental import BlueskyCallbackRegistry, Placement, slot
 
 from .keys import Absent, Readings
 
@@ -24,13 +24,13 @@ class MockMotorView:
         self,
         name: str,
         /,
-        virtual: VirtualContainer,
+        callbacks: BlueskyCallbackRegistry,
         readings: Readings,
         missing: Absent | None = None,
         title: str = "",
     ) -> None:
         self.name = name
-        self.virtual = virtual
+        self.callbacks = callbacks
         self.readings = readings
         self.missing = missing
         self.title = title

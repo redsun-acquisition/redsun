@@ -16,9 +16,9 @@ from redsun.experimental import (
     AsDevice,
     AsPresenter,
     AsView,
+    BlueskyCallbackRegistry,
     Declare,
     DeviceMapping,
-    DocumentCallbacks,
     FromConfig,
     Frontend,
     Placement,
@@ -103,13 +103,13 @@ class Widget:
         self,
         name: str,
         /,
-        bus: VirtualContainer,
+        callbacks: BlueskyCallbackRegistry,
         readings: Readings,
         missing: Missing | None = None,
         label: str = "",
     ) -> None:
         self.name = name
-        self.bus = bus
+        self.callbacks = callbacks
         self.readings = readings
         self.missing = missing
         self.label = label
@@ -122,7 +122,7 @@ class Widget:
 class Late:
     """Presenter reading a registry that fills after it is built."""
 
-    def __init__(self, name: str, /, callbacks: DocumentCallbacks) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
         self.callbacks = callbacks
 
@@ -133,10 +133,10 @@ class Late:
 class Registrar:
     """Presenter that registers a document callback while it is built."""
 
-    def __init__(self, name: str, /, bus: VirtualContainer) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
         self.closed = False
-        bus.register_callbacks(self, name=name)
+        callbacks.register(self, name=name)
 
     def __call__(self, name: str, doc: Any) -> None: ...
 
@@ -158,7 +158,7 @@ class Tunable:
 class Eager:
     """Presenter copying the live registry while it is still filling."""
 
-    def __init__(self, name: str, /, callbacks: DocumentCallbacks) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
         self.copy = dict(callbacks)
 
@@ -286,9 +286,29 @@ def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
 
 
 def test_framework_objects_are_injectable(app: App) -> None:
-    """The bus and the device map are ordinary dependencies."""
-    assert app.widget.bus is app.virtual_container
+    """The device map and the callback registry are ordinary dependencies."""
     assert dict(app.ctrl.devices) == {"motor": app.motor}
+    assert app.widget.callbacks is app.late.callbacks
+
+
+class WantsTheContainer:
+    def __init__(self, name: str, /, bus: VirtualContainer) -> None:
+        self.name = name
+        self.bus = bus
+
+
+class LocatorApp(AppContainer):
+    greedy: AsPresenter[WantsTheContainer]
+
+
+def test_the_container_itself_is_not_injectable() -> None:
+    """A component cannot ask for the whole bus and help itself from it.
+
+    The exception type belongs to whatever resolves the graph, so only the
+    name of the key it could not find is pinned.
+    """
+    with pytest.raises(Exception, match="VirtualContainer"):
+        LocatorApp().build()
 
 
 def test_live_registry_is_complete_after_the_build(app: App) -> None:

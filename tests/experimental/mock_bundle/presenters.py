@@ -5,9 +5,8 @@ from typing import Any
 from psygnal import Signal
 
 from redsun.experimental import (
+    BlueskyCallbackRegistry,
     DeviceMapping,
-    DocumentCallbacks,
-    VirtualContainer,
     provides,
     slot,
 )
@@ -53,7 +52,7 @@ class MockLatePresenter:
     component independent of the order it was built in.
     """
 
-    def __init__(self, name: str, /, callbacks: DocumentCallbacks) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
         self.callbacks = callbacks
 
@@ -65,9 +64,9 @@ class MockLatePresenter:
 class MockRegistrar:
     """Presenter registering a document callback while it is built."""
 
-    def __init__(self, name: str, /, virtual: VirtualContainer) -> None:
+    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
         self.name = name
-        virtual.register_callbacks(self, name=name)
+        callbacks.register(self, name=name)
 
     def __call__(self, name: str, doc: Any) -> None:
         self.last = name

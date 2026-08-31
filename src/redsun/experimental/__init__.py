@@ -39,8 +39,8 @@ from redsun.experimental.containers.components import AsDevice, AsPresenter, AsV
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement
 from redsun.experimental.virtual._container import (
+    BlueskyCallbackRegistry,
     DeviceMapping,
-    DocumentCallbacks,
     SessionConfig,
     VirtualContainer,
 )
@@ -61,11 +61,11 @@ __all__ = [
     "AsDevice",
     "AsPresenter",
     "AsView",
+    "BlueskyCallbackRegistry",
     "Connection",
     "Declare",
     "DeviceMapping",
     "DevicesOf",
-    "DocumentCallbacks",
     "FromConfig",
     "Frontend",
     "Layer",
