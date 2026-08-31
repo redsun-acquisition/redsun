@@ -46,6 +46,7 @@ earlier:
 | Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands |
 | Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no component depends on a layer built after its own |
 | After the build | Every component against `NamedComponent`, and a view against `AttachableComponent`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
+| After the wiring | Nothing new is refused, and two things are reported: a component that shares nothing, asks for nothing and is wired to nothing, and a shared value no component asks for |
 | Attaching | Nothing the declarations could settle; a view answering its placement from a property is checked once it exists |
 | Reading a component | Its name does not shadow one the container answers itself, such as `devices` or `run` |
 
