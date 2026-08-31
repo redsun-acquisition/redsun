@@ -122,8 +122,6 @@ include = [
 
 [tool.mypy]
 files = "."
-# TEMPORARY: sketches/ is untracked design exploration, delete before merge
-exclude = ["docs", "^sketches/"]
 mypy_path = ["src", "tests/container"]
 explicit_package_bases = true
 disable_error_code = [
@@ -134,19 +132,6 @@ pretty = true
 strict = true
 warn_unreachable = true
 warn_no_return = true
-
-# qtpy resolves QAction to Any on some platforms and to the real class on
-# others, from identical qtpy sources: every other qtpy.QtGui name resolves
-# everywhere, only this one does not. The modules below therefore need an
-# ignore that is used on one platform and unused on another, so the staleness
-# check is off for them and nowhere else. Remove once qtpy exports QAction
-# explicitly.
-[[tool.mypy.overrides]]
-module = [
-    "redsun.experimental.containers.qt._container",
-    "tests.experimental.test_experimental_qt",
-]
-warn_unused_ignores = false
 
 # mock_bundle is put on sys.path by tests/experimental/conftest.py, which mypy
 # does not run; the directory cannot join mypy_path because its conftest would

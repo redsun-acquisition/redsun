@@ -42,10 +42,7 @@ from typing import (
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import Qt as QtNamespace
-
-# qtpy reaches QAction through a plain named import, which strict mode counts
-# as no export at all and resolves to Any
-from qtpy.QtGui import QAction  # type: ignore[attr-defined]
+from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
@@ -244,7 +241,9 @@ def _checked(name: str, view: PView, placement: Central | Dock) -> QWidget: ...
 def _checked(name: str, view: PView, placement: MenuItem | ToolBarItem) -> QAction: ...
 
 
-def _checked(name: str, view: PView, placement: Placement) -> QWidget | QAction:
+# taken as 'object' rather than 'PView': narrowing a protocol against a union
+# of classes leaves mypy nothing it can name, and it yields Never
+def _checked(name: str, view: object, placement: Placement) -> QWidget | QAction:
     """Return *view* as the toolkit type *placement* demands, named after it.
 
     Raises
@@ -253,18 +252,14 @@ def _checked(name: str, view: PView, placement: Placement) -> QWidget | QAction:
         If the view is not that type.
     """
     required = REQUIRES[type(placement)]
-    # checked as 'object': mypy cannot represent the intersection of a protocol
-    # with a union of unrelated toolkit classes, narrows it to Never, and calls
-    # everything below unreachable wherever those classes are properly typed
-    candidate: object = view
-    if not isinstance(candidate, required):
+    if not isinstance(view, required):
         raise TypeError(
             f"view {name!r} asks to be attached as {type(placement).__name__!r}, "
             f"which needs a {required.__name__}, but {type(view).__name__} is "
             "not one"
         )
-    candidate.setObjectName(name)
-    return candidate
+    view.setObjectName(name)
+    return view
 
 
 def _dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:

@@ -8,7 +8,7 @@ import pytest
 
 # qtpy reaches QAction through a plain named import, which strict mode counts
 # as no export at all and resolves to Any
-from qtpy.QtGui import QAction  # type: ignore[attr-defined]
+from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QDockWidget,
     QMainWindow,
@@ -57,7 +57,7 @@ class Other(QWidget):
         self.name = name
 
 
-class Save(QAction):  # type: ignore[misc]
+class Save(QAction):
     placement: Placement = MenuItem("File")
 
     def __init__(self, name: str, /) -> None:
@@ -65,7 +65,7 @@ class Save(QAction):  # type: ignore[misc]
         self.name = name
 
 
-class Open(QAction):  # type: ignore[misc]
+class Open(QAction):
     placement: Placement = MenuItem("File")
 
     def __init__(self, name: str, /) -> None:
@@ -73,7 +73,7 @@ class Open(QAction):  # type: ignore[misc]
         self.name = name
 
 
-class Acquire(QAction):  # type: ignore[misc]
+class Acquire(QAction):
     placement: Placement = ToolBarItem("Plans")
 
     def __init__(self, name: str, /) -> None:
