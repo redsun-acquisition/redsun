@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, TypeAlias
 
-    from redsun.experimental.virtual._protocols import PView
+    from redsun.experimental.containers._protocols import AttachableComponent
 
 __all__ = [
     "Area",
@@ -199,7 +199,7 @@ _AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
 }
 
 
-def attach(window: QMainWindow, views: Mapping[str, PView]) -> None:
+def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> None:
     """Attach every view of *views* to *window* where it asks to be.
 
     Raises
@@ -231,8 +231,8 @@ def attach(window: QMainWindow, views: Mapping[str, PView]) -> None:
     _center(window, central)
 
 
-# taken as 'object' rather than 'PView': narrowing a protocol against a type
-# variable leaves mypy nothing it can name, and it yields Never
+# taken as 'object' rather than 'AttachableComponent': narrowing a protocol
+# against a type variable leaves mypy nothing it can name, and it yields Never
 def _named(name: str, view: object, placement: Placement, required: type[T]) -> T:
     """Return *view* as *required*, named after *name* so it can be found again.
 

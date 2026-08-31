@@ -28,7 +28,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Assembling | `AppContainer`, `Frontend` |
 | Declaring | `AsDevice`, `AsPresenter`, `AsView`, `Declare`, `FromConfig`, `Alias` |
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
-| Component shape | `PPresenter`, `PView` |
+| Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `DeviceMapping`, `BlueskyCallbackRegistry`, `slot` |
@@ -45,7 +45,7 @@ earlier:
 | --- | --- |
 | Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands |
 | Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no component depends on a layer built after its own |
-| After the build | Every component against `PPresenter` or `PView`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
+| After the build | Every component against `NamedComponent`, and a view against `AttachableComponent`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
 | Attaching | Nothing the declarations could settle; a view answering its placement from a property is checked once it exists |
 | Reading a component | Its name does not shadow one the container answers itself, such as `devices` or `run` |
 
@@ -931,7 +931,7 @@ connect them in `wire` and skip the question entirely.
 | What a view must be | a `QWidget`, in practice | whatever its placement demands |
 | Cleanup | `HasShutdown` sweep, plus disconnect | one teardown path |
 | A session built from a file | `AppContainer.from_config(path)` | the same, and it keeps the class's own declarations |
-| Protocols to implement | `IsProvider`, `IsInjectable`, `HasShutdown` | none; `PPresenter` and `PView` are satisfied structurally |
+| Protocols to implement | `IsProvider`, `IsInjectable`, `HasShutdown` | none; `NamedComponent` and `AttachableComponent` are satisfied structurally |
 
 ## What gets easier
 
@@ -1132,11 +1132,13 @@ Today a presenter is checked twice: its constructor must lead with
 dependency, so a presenter that talks to none never asks for the mapping, and
 there is no fixed constructor shape left to check beyond `name`.
 
-The dual gate itself survives, and the view half of it is stronger than before:
-a view is refused at declaration time for a placement its frontend cannot
-attach, where today `view_position` is only read once the window is built.
-`PPresenter` correspondingly loses `devices` and keeps `name`, which is all the
-framework ever reads.
+Both checks survive, and the view half is stronger than before: a view is
+refused at declaration time for a placement its frontend cannot attach and for
+not being the type that placement demands, where today `view_position` is only
+read once the window is built. `NamedComponent` is what replaces `PPresenter`,
+carrying `name` alone, which is all the framework ever reads; a session may
+declare two components of one class, and the declared name is what tells them
+apart, so a component that drops the name it was constructed with is refused.
 
 So the layers are no longer symmetric. A view is defined by something the
 frontend can see and act on; a presenter is what is left over. That is the trade

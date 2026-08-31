@@ -162,10 +162,17 @@ Dates are specified in the format `DD-MM-YYYY`.
   class lets a view be refused before anything is built, for asking a frontend
   to attach something it does not, for not being the type that placement
   demands, and for being declared in the wrong layer; a view answering from a
-  property is checked once it exists. `PView` and `PPresenter`
-  are the protocols the built components are held to, without a base class to
-  inherit: `PPresenter` is `name` alone, because devices are now an injected
-  dependency rather than part of a presenter's shape.
+  property is checked once it exists. `NamedComponent` and
+  `AttachableComponent` are the protocols the built components are held to,
+  without a base class to inherit. `NamedComponent` is `name` alone, and every
+  component clears it: a session may declare two components of one class, and
+  the declared name is what tells them apart, so one that drops the name it was
+  constructed with is refused. `AttachableComponent` adds `placement` to it, and
+  is what `AppContainer.views` is typed by.
+
+  ```python
+  from redsun.experimental import AttachableComponent, NamedComponent
+  ```
 
   A plugin bundle may ship a dishka `Provider` of its own, declared at dishka's
   `Scope.APP`; an application has one stage, so no narrower scope is entered and
