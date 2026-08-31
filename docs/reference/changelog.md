@@ -49,20 +49,34 @@ Dates are specified in the format `DD-MM-YYYY`.
   session provides neither a value nor a configuration entry for it, so a
   tunable does not have to be repeated in the configuration file to be
   constructible. `IsProvider`, `IsInjectable`, `ProviderKey` and the
-  `provide`/`require` pair have no equivalent and are not needed.
+  `provide`/`require` pair have no equivalent and are not needed, and
+  `VirtualContainer` itself is not among the types a component may ask for: a
+  component names the values it needs, not the session that holds them.
 
   Build order is derived from the dependency graph rather than fixed phases.
-  `DocumentCallbacks` is a live view of the callback registry rather than a
-  snapshot of it, so a component that consumes the registry carries no ordering
-  constraint: it holds the view and reads it once the application is built.
-  Reading it during construction raises `LookupError`, because the answer would
-  be incomplete.
+  `BlueskyCallbackRegistry` is the callback registry as a component sees it,
+  and it is a live view rather than a snapshot. A component registers its own
+  callbacks through `BlueskyCallbackRegistry.register` while it is built, and
+  holds the view to read once the application is, so consuming the registry
+  carries no ordering constraint. Reading it during construction raises
+  `LookupError`, because the answer would be incomplete.
+
+  ```python
+  from redsun.experimental import BlueskyCallbackRegistry
+
+
+  class MyPresenter:
+      def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+          self.name = name
+          callbacks.register(self, name=name)
+  ```
 
   `Requires[P]` asks the session which of its components satisfy a protocol,
   instead of asking for one value. It is spelled
   `Annotated[Mapping[str, P], Every()]`, so the parameter is an ordinary mapping
   of names to components, and it is a live view for the same reason
-  `DocumentCallbacks` is. A component satisfying *P* appears in its own answer.
+  `BlueskyCallbackRegistry` is. A component satisfying *P* appears in its own
+  answer.
 
   `RequiresOne[P]` and `RequiresMaybe[P]` ask the same question expecting a
   single answer, and are ordinary dependencies rather than live views: the
