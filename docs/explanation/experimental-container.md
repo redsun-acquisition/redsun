@@ -43,10 +43,10 @@ earlier:
 
 | Moment | What is confirmed |
 | --- | --- |
-| Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement |
+| Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands |
 | Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no component depends on a layer built after its own |
 | After the build | Every component against `PPresenter` or `PView`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
-| Attaching | The toolkit type the placement demands, which only the frontend knows |
+| Attaching | Nothing the declarations could settle; a view answering its placement from a property is checked once it exists |
 | Reading a component | Its name does not shadow one the container answers itself, such as `devices` or `run` |
 
 **What is not there yet:**
@@ -359,25 +359,39 @@ class SaveAction(QAction):
 The core defines `Placement` and nothing else. A dock, a menu bar and a toolbar
 are window concepts, so they belong to the frontend that has a window:
 `redsun.experimental.containers.qt` defines them next to the code that attaches them, and
-pairs each with the toolkit type it demands, a `QWidget` for a dock or the
-centre and a `QAction` for a menu or toolbar entry.
+pairs each in `Frontend.requires` with the toolkit type it demands, a
+`QWidget` for a dock or the centre and a `QAction` for a menu or toolbar entry.
 
 That keeps the vocabulary open. A frontend for something other than a desktop
 window defines placements of its own in its own package, and the core learns
 nothing:
 
 ```python
+from dataclasses import dataclass
+
+from redsun.experimental import Frontend, Placement
+
+
+class Page:
+    """What this frontend renders."""
+
+
 @dataclass(frozen=True)
 class Route(Placement):
     path: str
 
 
 class Web(Frontend):
-    placements = frozenset({Route})
+    requires = {Route: Page}
 ```
 
-It also means frontend-specific detail is not a leak. A dock that starts
-floating is a field on a Qt class, which is where Qt is allowed to be.
+The table is what a container reads. `Web` refuses a view asking for `Dock`,
+and refuses one asking for `Route` that is not a `Page`, both where the view is
+declared. A frontend whose demand is not a subclass relation overrides
+`Frontend.check_placement` and answers however it likes.
+
+It also means frontend-specific detail stays inside the frontend. A dock that
+starts floating is a field on a Qt class, which is where Qt is allowed to be.
 
 This is also the whole of the difference between the two component layers. A
 view declares a placement; a presenter does not:

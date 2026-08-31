@@ -3,39 +3,59 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from redsun.experimental.view._placement import Placement
 
-__all__ = ["Frontend", "check_placement"]
+__all__ = ["Frontend"]
 
 
 class Frontend:
     """The toolkit an application is built against.
 
-    ``placements`` is the vocabulary of `redsun.experimental.Placement` the
-    frontend knows how to attach, so a view asking for anything else is
-    refused before it is built. Listing them is all a container needs; the
-    placements themselves, the attaching, and the toolkit type each placement
-    demands live in the frontend's own package.
+    ``requires`` pairs each `redsun.experimental.Placement` the frontend
+    attaches with the toolkit type it demands of the view asking for it. A view
+    asking for a placement the frontend does not list, or one whose class is
+    not the type its placement demands, is refused before it is built. The
+    table is all a container needs; the placements themselves and the attaching
+    live in the frontend's own package.
 
-    Listing none constrains nothing, which is what an application that names
+    An empty table constrains nothing, which is what an application that names
     no toolkit gets.
     """
 
-    placements: ClassVar[frozenset[type[Placement]]] = frozenset()
+    requires: ClassVar[Mapping[type[Placement], type]] = {}
 
+    @classmethod
+    def check_placement(
+        cls, view: type | object, placement: Placement, where: str
+    ) -> None:
+        """Confirm the frontend attaches *placement*, and *view* is what it demands.
 
-def check_placement(placement: Placement, frontend: type[Frontend], where: str) -> None:
-    """Confirm *frontend* knows how to attach *placement*.
+        *view* is the class before anything is built and the instance
+        afterwards; either answers the question, since the demand is on the
+        class.
 
-    Raises
-    ------
-    TypeError
-        If the frontend lists the placements it attaches and this is not one.
-    """
-    if not frontend.placements or type(placement) in frontend.placements:
-        return
-    known = ", ".join(sorted(p.__name__ for p in frontend.placements))
-    raise TypeError(
-        f"{where} asks to be attached as {type(placement).__name__!r}, which "
-        f"{frontend.__name__} does not attach. It attaches: {known}."
-    )
+        Raises
+        ------
+        TypeError
+            If the frontend lists what it attaches and this is not one of
+            them, or if the view is not the toolkit type that placement
+            demands.
+        """
+        if not cls.requires:
+            return
+        asked = type(placement)
+        required = cls.requires.get(asked)
+        if required is None:
+            known = ", ".join(sorted(p.__name__ for p in cls.requires))
+            raise TypeError(
+                f"{where} asks to be attached as {asked.__name__!r}, which "
+                f"{cls.__name__} does not attach. It attaches: {known}."
+            )
+        candidate = view if isinstance(view, type) else type(view)
+        if not issubclass(candidate, required):
+            raise TypeError(
+                f"{where} asks to be attached as {asked.__name__!r}, which needs "
+                f"a {required.__name__}, but {candidate.__name__} is not one"
+            )

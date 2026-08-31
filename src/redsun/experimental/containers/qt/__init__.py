@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ._container import (
-    REQUIRES,
     Area,
     Central,
     Dock,
@@ -15,7 +14,6 @@ from ._container import (
 )
 
 __all__ = [
-    "REQUIRES",
     "Area",
     "Central",
     "Dock",

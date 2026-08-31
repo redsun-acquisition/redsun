@@ -33,7 +33,7 @@ from redsun.experimental.containers._declarations import (
     FromConfig,
     Layer,
 )
-from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import PluginError
 from redsun.experimental.containers.components import AsDevice, AsPresenter, AsView
 from redsun.experimental.containers.container import AppContainer
@@ -79,7 +79,6 @@ __all__ = [
     "Satisfying",
     "SessionConfig",
     "VirtualContainer",
-    "check_placement",
     "provides",
     "satisfies",
     "slot",

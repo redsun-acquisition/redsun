@@ -20,7 +20,6 @@ from qtpy.QtWidgets import (
 
 from redsun.experimental import AppContainer, AsView, Placement, PView
 from redsun.experimental.containers.qt import (
-    REQUIRES,
     Central,
     Dock,
     MenuItem,
@@ -188,9 +187,20 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused(window: QMainWindow) -> Non
         attach(window, {"stray": NotAWidget("stray")})
 
 
-def test_the_frontend_lists_exactly_what_it_attaches() -> None:
-    """A placement Qt claims and one it cannot attach must not drift apart."""
-    assert Qt.placements == frozenset(REQUIRES)
+def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built(
+    qapp: Any,
+) -> None:
+    """Qt's requirement table is read with the declarations, not at attach."""
+
+    class Wrong(QtAppContainer):
+        __slots__ = ()
+
+        stray: AsView[NotAWidget]
+
+    with pytest.raises(
+        TypeError, match=r"Wrong\.stray .* needs a QWidget, but NotAWidget is not one"
+    ):
+        Wrong().build()
 
 
 def _menus(window: QMainWindow) -> list[QMenu]:

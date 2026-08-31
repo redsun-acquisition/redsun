@@ -34,13 +34,14 @@ from typing import (
     Literal,
     NoReturn,
     Self,
+    TypeVar,
     cast,
-    overload,
 )
 
 # psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
+from qtpy.QtCore import QObject
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
@@ -66,7 +67,6 @@ if TYPE_CHECKING:
     from redsun.experimental.virtual._protocols import PView
 
 __all__ = [
-    "REQUIRES",
     "Area",
     "Central",
     "Dock",
@@ -78,6 +78,8 @@ __all__ = [
 ]
 
 Area: TypeAlias = Literal["left", "right", "top", "bottom"]
+
+T = TypeVar("T", bound=QObject)
 
 
 @dataclass(frozen=True)
@@ -106,19 +108,15 @@ class ToolBarItem(Placement):
     toolbar: str
 
 
-REQUIRES: Final[dict[type[Placement], type[QWidget | QAction]]] = {
-    Central: QWidget,
-    Dock: QWidget,
-    MenuItem: QAction,
-    ToolBarItem: QAction,
-}
-"""The toolkit type each placement demands of the view asking for it."""
-
-
 class Qt(Frontend):
     """Qt frontend, attached by `redsun.experimental.containers.qt.attach`."""
 
-    placements: ClassVar[frozenset[type[Placement]]] = frozenset(REQUIRES)
+    requires: ClassVar[Mapping[type[Placement], type]] = {
+        Central: QWidget,
+        Dock: QWidget,
+        MenuItem: QAction,
+        ToolBarItem: QAction,
+    }
 
 
 class QtAppContainer(AppContainer):
@@ -215,43 +213,34 @@ def attach(window: QMainWindow, views: Mapping[str, PView]) -> None:
         placement = view.placement
         match placement:
             case Central():
-                central[name] = _checked(name, view, placement)
+                central[name] = _named(name, view, placement, QWidget)
             case Dock():
-                _dock(window, name, _checked(name, view, placement), placement)
+                _dock(window, name, _named(name, view, placement, QWidget), placement)
             case MenuItem():
-                _menu(window, _checked(name, view, placement), placement)
+                _menu(window, _named(name, view, placement, QAction), placement)
             case ToolBarItem():
-                _toolbar(window, _checked(name, view, placement), placement)
+                _toolbar(window, _named(name, view, placement, QAction), placement)
             case _:
                 raise TypeError(
                     f"view {name!r} asks to be attached as "
                     f"{type(placement).__name__!r}, which Qt does not attach. "
                     "It attaches: "
-                    + ", ".join(sorted(p.__name__ for p in REQUIRES))
+                    + ", ".join(sorted(p.__name__ for p in Qt.requires))
                     + "."
                 )
     _center(window, central)
 
 
-@overload
-def _checked(name: str, view: PView, placement: Central | Dock) -> QWidget: ...
-
-
-@overload
-def _checked(name: str, view: PView, placement: MenuItem | ToolBarItem) -> QAction: ...
-
-
-# taken as 'object' rather than 'PView': narrowing a protocol against a union
-# of classes leaves mypy nothing it can name, and it yields Never
-def _checked(name: str, view: object, placement: Placement) -> QWidget | QAction:
-    """Return *view* as the toolkit type *placement* demands, named after it.
+# taken as 'object' rather than 'PView': narrowing a protocol against a type
+# variable leaves mypy nothing it can name, and it yields Never
+def _named(name: str, view: object, placement: Placement, required: type[T]) -> T:
+    """Return *view* as *required*, named after *name* so it can be found again.
 
     Raises
     ------
     TypeError
         If the view is not that type.
     """
-    required = REQUIRES[type(placement)]
     if not isinstance(view, required):
         raise TypeError(
             f"view {name!r} asks to be attached as {type(placement).__name__!r}, "

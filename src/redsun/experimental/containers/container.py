@@ -25,7 +25,7 @@ from redsun.experimental.containers import (
     _plugins,
 )
 from redsun.experimental.containers._declarations import Layer
-from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.virtual import _provides
 from redsun.experimental.virtual._container import VirtualContainer
 from redsun.experimental.virtual._protocols import PPresenter, PView
@@ -440,8 +440,8 @@ class AppContainer:
                     f"{protocol.__name__!r}: " + "; ".join(reasons)
                 )
             if view:
-                check_placement(
-                    instance.placement, frontend, f"view {declaration.name!r}"
+                frontend.check_placement(
+                    instance, instance.placement, f"view {declaration.name!r}"
                 )
 
     def _verify_answers(self) -> None:

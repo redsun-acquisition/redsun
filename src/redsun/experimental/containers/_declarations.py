@@ -18,7 +18,7 @@ from typing import (
 
 from ophyd_async.core import Device
 
-from redsun.experimental.containers._frontend import Frontend, check_placement
+from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import META_KEYS, resolve
 from redsun.experimental.view._placement import Placement
 
@@ -174,7 +174,7 @@ def check(
             "attaches nowhere is a presenter."
         )
     if isinstance(declared, Placement):
-        check_placement(declared, frontend, where)
+        frontend.check_placement(target, declared, where)
     return target
 
 
