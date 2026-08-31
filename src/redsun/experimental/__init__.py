@@ -26,6 +26,7 @@ class MyApp(QtAppContainer):
 Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 """
 
+from redsun._structural import satisfies
 from redsun.experimental.containers._declarations import (
     Alias,
     Declare,
@@ -34,7 +35,6 @@ from redsun.experimental.containers._declarations import (
 )
 from redsun.experimental.containers._frontend import Frontend, check_placement
 from redsun.experimental.containers._plugins import PluginError
-from redsun.experimental.containers._structural import satisfies
 from redsun.experimental.containers.components import AsDevice, AsPresenter, AsView
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement

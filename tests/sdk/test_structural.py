@@ -4,7 +4,7 @@ from typing import Protocol, runtime_checkable
 
 import pytest
 
-from redsun.containers._structural import problems
+from redsun._structural import members, methods, problems, satisfies
 
 
 @runtime_checkable
@@ -126,3 +126,42 @@ def test_staticmethod_keeps_its_first_parameter() -> None:
 def test_class_leaves_data_members_unchecked() -> None:
     assert problems(MissingData, Greets) == []
     assert problems(MissingData(), Greets) == ["'label' is missing"]
+
+
+def test_members_and_methods_split_data_from_callables() -> None:
+    """The split decides what a class can be checked for and what needs an instance."""
+    assert members(Greets) == {"label", "greet", "parse"}
+    assert methods(Greets) == {"greet", "parse"}
+
+
+@runtime_checkable
+class Named(Protocol):
+    @property
+    def name(self) -> str: ...
+
+
+class NameAsProperty:
+    @property
+    def name(self) -> str:
+        return "x"
+
+
+class NameAsAttribute:
+    def __init__(self) -> None:
+        self.name = "x"
+
+
+class Nameless:
+    pass
+
+
+@pytest.mark.parametrize(
+    ("candidate", "expected"),
+    [(NameAsProperty(), True), (NameAsAttribute(), True), (Nameless(), False)],
+)
+def test_a_property_member_is_data_not_a_call(
+    candidate: object, expected: bool
+) -> None:
+    """A protocol property is answered by any instance holding the name."""
+    assert methods(Named) == frozenset()
+    assert satisfies(candidate, Named) is expected
