@@ -3,21 +3,15 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-
-# resolved at runtime: a container subclass inherits the annotations below,
-# and get_type_hints evaluates them against this module's globals
-from collections.abc import Mapping  # noqa: TC003
+from collections.abc import Mapping, Sequence  # noqa: TC003
 from importlib import import_module
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
-import yaml
 from dishka import AnyOf, Provider, Scope, make_container
-
-# runtime import: the annotations below are evaluated by the graph
 from ophyd_async.core import Device  # noqa: TC002
 
 from redsun import _structural
+from redsun._config import Source, as_sources, load
 from redsun.aio import run_coro
 from redsun.experimental.containers import (
     _declarations,
@@ -96,7 +90,15 @@ class AppContainer:
         "_virtual",
     )
 
-    config: ClassVar[str | Path | Mapping[str, Any] | None] = None
+    config: ClassVar[Source | Sequence[Source] | None] = None
+    """The configuration this container is declared with.
+
+    One source or several, each a path to a YAML file or a mapping already in
+    hand. Several layer in the order given, and a subclass's layer over its
+    bases', so a base holds what every session of an instrument shares and a
+    subclass holds what makes it that session.
+    """
+
     providers: ClassVar[list[Provider]] = []
     frontend: ClassVar[type[Frontend]] = Frontend
     """The toolkit this container is built against.
@@ -105,11 +107,11 @@ class AppContainer:
     default attaches nothing and constrains no view.
     """
 
-    def __init__(self, config: str | Path | Mapping[str, Any] | None = None) -> None:
+    def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
         """Prepare an empty container, to be filled by `build`.
 
-        *config* is the session configuration, overriding the class attribute
-        of the same name for this instance alone.
+        *config* layers over whatever the class declares rather than replacing
+        it, so a caller naming one key changes that key and leaves the rest.
         """
         self._config = config
         self._virtual = VirtualContainer()
@@ -134,7 +136,7 @@ class AppContainer:
         raise AttributeError(f"{type(self).__name__!r} declares no component {name!r}")
 
     @classmethod
-    def from_config(cls, source: str | Path | Mapping[str, Any]) -> Self:
+    def from_config(cls, source: Source | Sequence[Source]) -> Self:
         """Return a container for a session described entirely by *source*.
 
         Every component the configuration names is declared, its layer coming
@@ -154,7 +156,7 @@ class AppContainer:
         TypeError
             If it names one this container is not built against.
         """
-        config = _read_config(source)
+        config = load(source)
         return cast("Self", _base_for(cls, config.get("frontend"))(config))
 
     @property
@@ -187,6 +189,18 @@ class AppContainer:
         """Whether `build` has completed."""
         return self._is_built
 
+    def _sources(self) -> list[Source]:
+        """Every configuration source this session layers, outermost last.
+
+        A class contributes what its own body declares, so a subclass layers
+        over its bases rather than replacing them, and the sources given to
+        the constructor come last.
+        """
+        found: list[Source] = []
+        for klass in reversed(type(self).__mro__):
+            found.extend(as_sources(klass.__dict__.get("config")))
+        return found + as_sources(self._config)
+
     def build(self) -> Self:
         """Instantiate the application.
 
@@ -199,7 +213,7 @@ class AppContainer:
             logger.warning("Container already built, skipping rebuild")
             return self
 
-        config = _read_config(self.config if self._config is None else self._config)
+        config = load(self._sources())
         self._virtual._set_configuration(config, type(self).__name__)
         self._declarations = _declarations.read(type(self), config, self.frontend)
         self._build_devices()
@@ -666,13 +680,3 @@ def _base_for(cls: type[AppContainer], frontend: object) -> type[AppContainer]:
             f"{cls.__name__}, which is not one of those."
         )
     return resolved
-
-
-def _read_config(source: str | Path | Mapping[str, Any] | None) -> Mapping[str, Any]:
-    if source is None:
-        return {}
-    if isinstance(source, (str, Path)):
-        with open(source) as fh:
-            loaded = yaml.safe_load(fh)
-        return dict(loaded or {})
-    return source

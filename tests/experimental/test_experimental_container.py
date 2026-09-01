@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Annotated, Any, ClassVar, NewType
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
 
 import pydantic
 import pytest
@@ -37,6 +37,9 @@ from redsun.experimental.containers._factories import (
     optional_arg,
     synthesize,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 Readings = NewType("Readings", "dict[str, float]")
 Descriptions = NewType("Descriptions", "dict[str, str]")
@@ -930,3 +933,95 @@ def test_a_dataclass_is_an_ordinary_component(app: type[AppContainer]) -> None:
     assert built.ctrl.name == "ctrl"
     assert built.ctrl.gain == 7.5
     assert dict(built.ctrl.devices) == {"motor": built.motor}
+
+
+class Shared(AppContainer):
+    """A base holding what every session of one instrument shares."""
+
+    config: ClassVar[Mapping[str, Any]] = {
+        "schema_version": 1.0,
+        "name": "shared",
+        "devices": {"motor": {"axis": "Z"}},
+        "presenters": {"ctrl": {"gain": 1.0}},
+    }
+
+    motor: AsDevice[Stage]
+    ctrl: AsPresenter[Ctrl]
+
+
+class Layered(Shared):
+    """A session laying its own configuration over the base's."""
+
+    config: ClassVar[Mapping[str, Any]] = {
+        "name": "layered",
+        "presenters": {"ctrl": {"gain": 9.0}},
+    }
+
+
+class Sideways(AppContainer):
+    """A second base, so that Shared can be reached by two paths at once."""
+
+    config: ClassVar[Mapping[str, Any]] = {"devices": {"motor": {"axis": "Y"}}}
+
+
+class Diamond(Layered, Sideways):
+    """Inherits from both, and must resolve the two the way Python does."""
+
+
+def test_a_subclass_layers_over_its_base() -> None:
+    """The base holds the instrument, the subclass holds the session."""
+    app = Layered().build()
+    assert app.virtual_container.name == "layered"
+    assert app.ctrl.gain == 9.0
+    assert app.motor.axis == "Z"
+
+
+def test_layering_follows_the_mro() -> None:
+    """Reading the bases in the order they are written would give 'Y'."""
+    app = Diamond().build()
+    assert app.motor.axis == "Z"
+    assert app.ctrl.gain == 9.0
+
+
+def test_the_constructor_layers_over_the_class() -> None:
+    """Naming one key changes that key, rather than replacing the whole."""
+    app = Layered({"presenters": {"ctrl": {"gain": 4.0}}}).build()
+    assert app.ctrl.gain == 4.0
+    assert app.virtual_container.name == "layered"
+    assert app.motor.axis == "Z"
+
+
+def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
+    """A string is a path, not the sequence of characters it also is."""
+    shared = tmp_path / "shared.yaml"
+    shared.write_text("name: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
+
+    class Mixed(AppContainer):
+        config: ClassVar[list[Any]] = [str(shared), {"name": "from-mapping"}]
+
+        motor: AsDevice[Stage]
+        ctrl: AsPresenter[Ctrl]
+
+    app = Mixed().build()
+    assert app.virtual_container.name == "from-mapping"
+    assert app.ctrl.gain == 3.0
+
+
+def test_sources_must_agree_on_what_the_session_is() -> None:
+    """A later source says more about a session, never that it is another."""
+
+    class Contradiction(AppContainer):
+        config: ClassVar[list[Any]] = [{"frontend": "pyqt"}, {"frontend": "pyside"}]
+
+    with pytest.raises(ValueError, match="frontend"):
+        Contradiction().build()
+
+
+def test_a_later_source_may_rename_the_session() -> None:
+    """The name is content rather than identity, so an overlay may set it."""
+
+    class Renamed(AppContainer):
+        config: ClassVar[list[Any]] = [{"name": "first"}, {"name": "second"}]
+
+    app = Renamed().build()
+    assert app.virtual_container.name == "second"
