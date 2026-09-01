@@ -6,9 +6,6 @@ from typing import Any
 
 import pytest
 from app_model import Application
-
-# qtpy reaches QAction through a plain named import, which strict mode counts
-# as no export at all and resolves to Any
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QDockWidget,

@@ -49,12 +49,13 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 - **`VirtualContainer`** subclasses `dependency_injector.DynamicContainer` and
   is simultaneously the DI container, the psygnal signal bus, and the
   document-callback registry. Config is frozen (`_FrozenConfig`); read it via
-  the `schema_version` / `frontend` / `session` / `metadata` properties.
-- **`AppContainer.build()` phase order is load-bearing** and documented in its
-  docstring: VirtualContainer -> devices -> presenters -> views ->
-  `register_providers` -> `wire` -> `inject_dependencies`. Providers must all
-  be registered before any injection runs; never interleave the last two phases,
-  never move work into `__init__` that belongs in a phase.
+  the `schema_version` / `frontend` / `name` / `metadata` properties.
+- **`AppContainer.build()` runs its phases in a fixed order**, documented in
+  its docstring: VirtualContainer -> devices -> presenters -> views ->
+  `register_providers` -> `wire` -> `inject_dependencies`. Changing the order
+  breaks the build: providers must all be registered before any injection runs.
+  Never interleave the last two phases, and never move work into `__init__`
+  that belongs in a phase.
 - Device build failures are logged and skipped; presenter/view build failures
   re-raise. Preserve that asymmetry: a missing device must not abort the app.
 - Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
@@ -64,9 +65,9 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   them plain attributes (breaks structural subtyping for property-based and
   covariant implementers). The `Presenter`/`View` ABCs must NOT inherit the
   protocols (property descriptors shadow instance attributes at runtime).
-  Presenter/view validation is a **dual gate**: constructor positional shape
-  (`(name, devices)` / `(name,)` via `expects_positionals`) at
-  declaration/discovery, protocol `isinstance` on the **built instance** in
+  A presenter or view is checked twice: its constructor's positional shape
+  (`(name, devices)` / `(name,)` via `expects_positionals`) when it is declared
+  or discovered, then protocol `isinstance` on the **built instance** in
   `_PresenterComponent.build`/`_ViewComponent.build`. Never reintroduce
   class-level attribute checks.
   Rationale: `docs/explanation/decisions/0003-structural-subtyping-for-presenters-and-views.md`.
@@ -91,7 +92,7 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 
 ## Code conventions
 
-- Python ≥3.11, `from __future__ import annotations` everywhere (ruff `FA102`).
+- Python >=3.11, `from __future__ import annotations` everywhere (ruff `FA102`).
 - Ruff lint has `D` (numpy docstring convention) and `TC` (type-check imports)
   enabled: runtime-unneeded imports go under `if TYPE_CHECKING:`. Public
   symbols need docstrings; `D100`/`D104` are ignored.
@@ -130,7 +131,18 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   back to a strong reference when it cannot; a slotted class cannot be referred
   to weakly without that slot, and on the fallback the owner is never collected
   - taking everything it holds with it. A class with a `__dict__` never reaches
-  that path, so this only bites where `__slots__` is declared.
+  that path, so this goes wrong only where `__slots__` is declared.
+- **Don't alias an attribute to a local for a single use.**
+  `window = self.main_window` followed by one `window.show()` gives the reader
+  a second name for the same thing. Write `self.main_window.show()`. A local
+  is worth having when the value is read several times and reaching it costs
+  something (a property that computes, a call with side effects), when a type
+  checker needs the narrowing it gives, or when the expression is long enough
+  that repeating it hides the line. Decide per line, not by habit.
+- **No comments in the import block.** Not above an import, not above a group,
+  and not to explain a `# noqa` or an import kept at runtime. The suppression
+  code already names the rule. If a runtime import is surprising, the place to
+  say why is the annotation that needs it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring + `docs/reference/changelog.md` entry. The root
   `CHANGELOG.md` is only a redirect to it; never add entries there.
@@ -172,7 +184,7 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
 ## Docs conventions
 
 See the `docs-conventions` skill: Diataxis layout, ADR recording, and the
-mkdocstrings pitfalls that a green `zensical build` will not catch.
+mkdocstrings mistakes a green `zensical build` will not catch.
 
 - **Examples are agnostic.** Every snippet, class name and configuration
   fragment in the docs is written for a reader who has only this repository.

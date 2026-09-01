@@ -38,10 +38,10 @@ naming one on it is refused; a container for another toolkit declares the
 moments that toolkit actually has.
 
 Each point has a protocol carrying its one method:
-[`CreatesApplication`][redsun.containers._hooks.CreatesApplication],
-[`ConfiguresApplication`][redsun.containers._hooks.ConfiguresApplication],
-[`WrapsBuild`][redsun.containers._hooks.WrapsBuild] and
-[`ConfiguresMainView`][redsun.containers._hooks.ConfiguresMainView]. Implement
+[`CreatesApplication`][redsun._hooks.CreatesApplication],
+[`ConfiguresApplication`][redsun._hooks.ConfiguresApplication],
+[`WrapsBuild`][redsun._hooks.WrapsBuild] and
+[`ConfiguresMainView`][redsun._hooks.ConfiguresMainView]. Implement
 the method and the provider satisfies the protocol; there is nothing to
 subclass and nothing to register.
 

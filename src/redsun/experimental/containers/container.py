@@ -12,6 +12,7 @@ from ophyd_async.core import Device  # noqa: TC002
 
 from redsun import _structural
 from redsun._config import Source, as_sources, load
+from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental.containers import (
     _declarations,
@@ -42,8 +43,24 @@ __all__ = ["AppContainer"]
 
 logger = logging.getLogger("redsun")
 
+
+def _silent(step: str) -> None:
+    """Take a build step's name and do nothing with it.
+
+    What a container reports progress to when no hook asked for it, so the
+    build has one path whether or not anything is watching.
+    """
+
+
 _ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
+
+BUILD_STEPS: Final[tuple[str, ...]] = ("devices", "presenters", "views", "wiring")
+"""The steps a build reports, in order, to whatever is watching it.
+
+A progress display sizes itself from this. The configuration is read before the
+first step, because what reads it decides whether anything is watching at all.
+"""
 
 _FRONTENDS: Final[dict[str, str]] = {
     "pyqt": "redsun.experimental.containers.qt:QtAppContainer",
@@ -86,7 +103,10 @@ class AppContainer:
         "_declarations",
         "_devices",
         "_di",
+        "_hooks",
         "_is_built",
+        "_merged",
+        "_report",
         "_virtual",
     )
 
@@ -100,6 +120,13 @@ class AppContainer:
     """
 
     providers: ClassVar[list[Provider]] = []
+    hook_points: ClassVar[Mapping[str, type]] = {}
+    """The points this container calls a hook at, by the protocol each demands.
+
+    Empty here: every hook point belongs to a toolkit, so a toolkit container
+    such as `redsun.experimental.containers.qt.QtAppContainer` names its own.
+    """
+
     frontend: ClassVar[type[Frontend]] = Frontend
     """The toolkit this container is built against.
 
@@ -114,6 +141,9 @@ class AppContainer:
         it, so a caller naming one key changes that key and leaves the rest.
         """
         self._config = config
+        self._merged: dict[str, Any] | None = None
+        self._hooks: dict[str, object] | None = None
+        self._report: Callable[[str], None] = _silent
         self._virtual = VirtualContainer()
         self._di: Container | None = None
         self._declarations: dict[str, _declarations.Declaration] = {}
@@ -201,6 +231,75 @@ class AppContainer:
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
+    def _configuration(self) -> dict[str, Any]:
+        """Merge every source this session layers, reading each one once.
+
+        The result is kept, so that a subclass needing it before the
+        components are built does not read the files a second time.
+        """
+        if self._merged is None:
+            self._merged = load(self._sources())
+        return self._merged
+
+    @property
+    def hooks(self) -> Mapping[str, object]:
+        """The hook provider this session installs at each point, built once.
+
+        A subclass firing a point calls this rather than resolving again, so
+        that every point of one build acts on one set of providers.
+
+        Raises
+        ------
+        HookError
+            If a point is claimed by more than one provider, a provider cannot
+            be built, or one does not implement the protocol its point calls.
+        """
+        if self._hooks is None:
+            self._hooks = self._resolve_hooks(self._configuration())
+        return self._hooks
+
+    def _resolve_hooks(self, config: Mapping[str, Any]) -> dict[str, object]:
+        """Build the providers this class declares and the configuration names.
+
+        Raises
+        ------
+        HookError
+            If both name one point, a provider cannot be built, or one does
+            not implement the protocol its point calls.
+        """
+        points = self.hook_points
+        owner = type(self).__name__
+        built: dict[int, object] = {}
+        declared: dict[str, object] = {}
+        for moment, declaration in _declarations.read_hooks(type(self), points).items():
+            provider = built.get(id(declaration))
+            if provider is None:
+                provider = _instantiate(declaration, owner)
+                built[id(declaration)] = provider
+            declared[moment] = provider
+
+        configured = resolve_hooks(
+            parse_hook_specs(config.get("hooks", {}), points, owner)
+        )
+        both = sorted(declared.keys() & configured.keys())
+        if both:
+            named = ", ".join(repr(moment) for moment in both)
+            raise HookError(
+                f"hook point(s) {named} are named both on {owner} and in the "
+                "configuration; a hook point takes one provider, so drop one "
+                "of the two"
+            )
+
+        resolved = {**declared, **configured}
+        for moment, provider in resolved.items():
+            protocol = points[moment]
+            if not isinstance(provider, protocol):
+                raise HookError(
+                    f"hook provider {type(provider).__name__!r} at {moment!r} "
+                    f"does not implement {protocol.__name__}"
+                )
+        return resolved
+
     def build(self) -> Self:
         """Instantiate the application.
 
@@ -213,9 +312,12 @@ class AppContainer:
             logger.warning("Container already built, skipping rebuild")
             return self
 
-        config = load(self._sources())
+        config = self._configuration()
+        installed = self.hooks
+        logger.debug("Hooks installed at: %s", ", ".join(installed) or "no points")
         self._virtual._set_configuration(config, type(self).__name__)
         self._declarations = _declarations.read(type(self), config, self.frontend)
+        self._report("devices")
         self._build_devices()
 
         framework = self._virtual.provider(lambda: dict(self._devices))
@@ -238,6 +340,7 @@ class AppContainer:
             }
         )
         self._virtual._seal()
+        self._report("wiring")
         self.wire()
         self._apply_wiring_config(config)
         self._warn_unused()
@@ -504,7 +607,18 @@ class AppContainer:
             self._register_teardown(device)
 
     def _resolve(self, scope: Container) -> None:
-        for declaration in self._components():
+        """Ask the graph for every component, a layer at a time.
+
+        The graph decides the order within a layer, since it alone knows what
+        depends on what. Walking the layers in build order is what lets the
+        step being reported be the step happening.
+        """
+        announced = ""
+        for declaration in sorted(self._components(), key=lambda d: _ORDER[d.kind]):
+            step = f"{declaration.kind}s"
+            if step != announced:
+                self._report(step)
+                announced = step
             scope.get(declaration.key)
 
     def _on_built(self, declaration: _declarations.Declaration, instance: Any) -> None:
@@ -680,3 +794,22 @@ def _base_for(cls: type[AppContainer], frontend: object) -> type[AppContainer]:
             f"{cls.__name__}, which is not one of those."
         )
     return resolved
+
+
+def _instantiate(declaration: _declarations.HookDeclaration, owner: str) -> object:
+    """Construct the provider *declaration* names.
+
+    Raises
+    ------
+    HookError
+        If the class rejects the keys given.
+    """
+    named = ", ".join(repr(moment) for moment in declaration.moments)
+    try:
+        return declaration.cls(**declaration.kwargs)
+    except TypeError as e:
+        raise HookError(
+            f"cannot construct hook provider {declaration.cls.__name__!r} "
+            f"declared on {owner} at {named} with "
+            f"{sorted(declaration.kwargs)}: {e}"
+        ) from e
