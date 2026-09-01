@@ -39,8 +39,6 @@ from typing import (
 )
 
 from app_model import Application
-
-# psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QObject
@@ -62,10 +60,10 @@ from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-    from pathlib import Path
-    from typing import Any, TypeAlias
+    from collections.abc import Mapping, Sequence
+    from typing import TypeAlias
 
+    from redsun._config import Source
     from redsun.experimental.containers._protocols import AttachableComponent
 
 __all__ = [
@@ -130,9 +128,8 @@ class QtAppContainer(AppContainer):
     is why it lives here and not beside the container it extends.
 
     The base container builds the components; this one puts them in a window.
-    Everything the toolkit needs in place before a component exists is built in
-    ``__init__``, so an override of `build` or `shutdown` calls ``super()``
-    first and does its own work afterwards.
+    Constructing the container touches no toolkit object and reads no file:
+    the application, the async backend and the window are all made by `build`.
 
     ```python
     class MyApp(QtAppContainer):
@@ -143,28 +140,27 @@ class QtAppContainer(AppContainer):
     ```
     """
 
-    __slots__ = ("_main_window", "_model", "_qt_app")
+    __slots__ = ("_main_window", "_model")
 
     frontend = Qt
 
-    def __init__(self, config: str | Path | Mapping[str, Any] | None = None) -> None:
-        """Put the toolkit in place, before any component can need it.
-
-        A ``QApplication`` has to exist before any widget is constructed and
-        the async backend before any coroutine slot is connected, so neither
-        can wait for `build`. The window is empty until then.
-        """
+    def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
+        """Prepare an empty container, to be filled by `build`."""
         super().__init__(config)
-        self._qt_app = cast(
-            "QApplication", QApplication.instance() or QApplication(sys.argv)
-        )
-        set_async_backend()
-        self._main_window = QMainWindow()
+        self._main_window: QMainWindow | None = None
         self._model: Application | None = None
 
     @property
     def main_window(self) -> QMainWindow:
-        """The window the views are attached to, empty until `build`."""
+        """The window the views are attached to.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`, which is where it is created.
+        """
+        if self._main_window is None:
+            raise RuntimeError("Call build() before reading the main window")
         return self._main_window
 
     @property
@@ -181,18 +177,27 @@ class QtAppContainer(AppContainer):
         return self._model
 
     def build(self) -> Self:
-        """Build the components, then attach the views to the main window.
+        """Put the toolkit in place, build the components, then arrange them.
+
+        A ``QApplication`` has to exist before any widget is constructed and
+        the async backend before any coroutine slot is connected, so both are
+        made before the components are. The window is made after them, once
+        the configuration has said what to call it.
 
         Refusing a second build is the base container's to do, so a call that
         it turns away attaches nothing rather than filling the window twice.
         """
-        already = self.is_built
+        if self.is_built:
+            return super().build()
+        application()
+        set_async_backend()
         super().build()
-        if not already:
-            name = self.virtual_container.name
-            self._model = Application(name)
-            self._main_window.setWindowTitle(name)
-            attach(self._main_window, self.views)
+        name = self.virtual_container.name
+        window = QMainWindow()
+        window.setWindowTitle(name)
+        self._main_window = window
+        self._model = Application(name)
+        attach(window, self.views)
         return self
 
     def shutdown(self) -> None:
@@ -206,15 +211,22 @@ class QtAppContainer(AppContainer):
         if name is not None:
             Application.destroy(name)
             self._model = None
+            self._main_window = None
         clear_async_backend()
 
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
         self.build()
-        self._qt_app.aboutToQuit.connect(self.shutdown)
+        qt_app = application()
+        qt_app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
-        self._main_window.show()
-        sys.exit(self._qt_app.exec())
+        self.main_window.show()
+        sys.exit(qt_app.exec())
+
+
+def application() -> QApplication:
+    """Return the running application, or start the one this session needs."""
+    return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
 
 
 _AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {

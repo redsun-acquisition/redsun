@@ -154,13 +154,13 @@ def test_the_container_builds_its_own_window(qapp: Any) -> None:
         app.shutdown()
 
 
-def test_the_window_exists_before_the_build_and_is_kept(qapp: Any) -> None:
-    """The toolkit is in place from construction; only its content waits."""
+def test_no_toolkit_object_exists_before_the_build(qapp: Any) -> None:
+    """Constructing a session touches no toolkit object and reads no file."""
     app = QtApp()
-    window = app.main_window
-    assert window.findChildren(QDockWidget) == []
+    with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
+        _ = app.main_window
     try:
-        assert app.build().main_window is window
+        assert app.build().main_window.findChildren(QDockWidget) != []
     finally:
         app.shutdown()
 
