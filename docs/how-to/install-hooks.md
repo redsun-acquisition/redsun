@@ -105,7 +105,7 @@ exported from `redsun.qt`.
     ```yaml
     schema_version: 1.0
     frontend: pyqt
-    session: My session
+    name: My session
 
     hooks:
       configure_application:

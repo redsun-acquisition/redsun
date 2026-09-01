@@ -224,7 +224,7 @@ class OrderedApp(AppContainer):
 
 class App(AppContainer):
     config: ClassVar[Mapping[str, Any]] = {
-        "session": "test-session",
+        "name": "test-session",
         "devices": {"stage": {"axis": "Z"}},
         "presenters": {"ctrl": {"gain": 2.0}},
         "views": {"widget": {"label": "from-config"}},
@@ -314,7 +314,7 @@ def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
     """The attribute name is the config key, and Declare wins over the file."""
     assert app.ctrl.gain == 2.0
     assert app.widget.label == "inline"
-    assert app.virtual_container.session == "test-session"
+    assert app.virtual_container.name == "test-session"
 
 
 def test_shared_value_is_bound_to_its_owner(app: App) -> None:
@@ -759,6 +759,19 @@ def test_a_shared_value_nothing_asks_for_is_reported(
             "ctrl.descriptions shares 'Descriptions', which no component asks for"
             in caplog.text
         )
+    finally:
+        app.shutdown()
+
+
+def test_a_session_is_named_after_its_class_when_it_says_nothing() -> None:
+    """A shared constant would let two unrelated sessions collide silently."""
+
+    class Instrument(AppContainer):
+        __slots__ = ()
+
+    app = Instrument().build()
+    try:
+        assert app.virtual_container.name == "Instrument"
     finally:
         app.shutdown()
 

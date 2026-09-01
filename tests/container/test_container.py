@@ -256,14 +256,26 @@ class TestAppContainerBuild:
             _ = app.virtual_container
 
     def test_config_defaults(self) -> None:
-        app = AppContainer()
-        assert app.config["session"] == "Redsun"
-        assert app.config["frontend"] == "pyqt"
-        assert app.config["schema_version"] == 1.0
+        """An unnamed session is named after its class, never a shared constant."""
+
+        class Instrument(AppContainer):
+            pass
+
+        assert AppContainer().config["name"] == "AppContainer"
+        assert Instrument().config["name"] == "Instrument"
+        assert AppContainer().config["frontend"] == "pyqt"
+        assert AppContainer().config["schema_version"] == 1.0
+
+    def test_a_configured_session_must_name_itself(self, tmp_path: Path) -> None:
+        """It has no class of its own to be named after."""
+        config = tmp_path / "unnamed.yaml"
+        config.write_text("schema_version: 1.0\nfrontend: pyqt\n")
+        with pytest.raises(KeyError, match="must declare 'name'"):
+            AppContainer.from_config(str(config))
 
     def test_config_override(self) -> None:
-        app = AppContainer(session="MySession", frontend="pyside")
-        assert app.config["session"] == "MySession"
+        app = AppContainer(name="MySession", frontend="pyside")
+        assert app.config["name"] == "MySession"
         assert app.config["frontend"] == "pyside"
 
     def test_shutdown(self) -> None:
@@ -286,9 +298,9 @@ class TestAppContainerBuild:
         class EmptyApp(AppContainer):
             pass
 
-        app = EmptyApp(session="TestSession", frontend="pyqt")
+        app = EmptyApp(name="TestSession", frontend="pyqt")
         app.build()
-        assert app.virtual_container.session == "TestSession"
+        assert app.virtual_container.name == "TestSession"
         assert app.virtual_container.frontend == "pyqt"
         assert app.virtual_container.schema_version == 1.0
 
@@ -574,7 +586,7 @@ class TestConfigField:
 
         # the overlay adds a component and leaves the one it does not name
         assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert TestApp().config["session"] == "mock-overlay-session"
+        assert TestApp().config["name"] == "mock-overlay-session"
 
     def test_a_subclass_layers_its_config_over_its_base(
         self, config_path: Path
@@ -587,7 +599,7 @@ class TestConfigField:
 
         assert Base._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
         assert Derived._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert Derived().config["session"] == "mock-overlay-session"
+        assert Derived().config["name"] == "mock-overlay-session"
 
     def test_required_keys_are_checked_on_the_merged_configuration(
         self, config_path: Path
@@ -1251,7 +1263,7 @@ class TestBuiltinPlugins:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "session": "builtin-session",
+            "name": "builtin-session",
             "presenters": {
                 "storage": {
                     "plugin_name": "redsun",

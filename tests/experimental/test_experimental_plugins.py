@@ -207,7 +207,7 @@ def test_a_session_needs_no_container_class(
             "late_ctrl",
             "motor_widget",
         }
-        assert app.virtual_container.session == "mock-session"
+        assert app.virtual_container.name == "mock-session"
     finally:
         app.shutdown()
 

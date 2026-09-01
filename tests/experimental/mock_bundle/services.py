@@ -14,4 +14,4 @@ class MockServices(Provider):
 
     @provide
     def calibration(self, config: SessionConfig) -> Calibration:
-        return Calibration(len(config.session) / 10)
+        return Calibration(len(config.name) / 10)

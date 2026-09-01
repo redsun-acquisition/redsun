@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-common-session
+name: mock-common-session
 devices:
   motor:
     egu: "mm"

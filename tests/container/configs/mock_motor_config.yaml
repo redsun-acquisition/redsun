@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-session
+name: mock-session
 devices:
   Single axis motor:
     plugin_name: mock-pkg
