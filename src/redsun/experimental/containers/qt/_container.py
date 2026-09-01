@@ -26,7 +26,10 @@ MyApp().run()
 from __future__ import annotations
 
 import sys
+from collections.abc import Mapping  # noqa: TC003
+from contextlib import nullcontext
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     ClassVar,
@@ -54,13 +57,20 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from redsun._hooks import (
+    ConfiguresApplication,
+    ConfiguresMainView,
+    CreatesApplication,
+    WrapsBuild,
+)
 from redsun.aio import set_async_backend
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Sequence
+    from contextlib import AbstractContextManager
     from typing import TypeAlias
 
     from redsun._config import Source
@@ -73,6 +83,7 @@ __all__ = [
     "MenuItem",
     "Qt",
     "QtAppContainer",
+    "QtHook",
     "ToolBarItem",
     "attach",
 ]
@@ -106,6 +117,20 @@ class ToolBarItem(Placement):
     """An entry in a named toolbar."""
 
     toolbar: str
+
+
+class QtHook(StrEnum):
+    """The points a Qt session calls a hook at.
+
+    A member is its own string, so the attribute name declaring a hook, the key
+    of a ``hooks`` configuration entry and a member here are the same thing
+    said three ways.
+    """
+
+    CREATE_APPLICATION = "create_application"
+    CONFIGURE_APPLICATION = "configure_application"
+    DURING_BUILD = "during_build"
+    CONFIGURE_MAIN_VIEW = "configure_main_view"
 
 
 class Qt(Frontend):
@@ -143,6 +168,12 @@ class QtAppContainer(AppContainer):
     __slots__ = ("_main_window", "_model")
 
     frontend = Qt
+    hook_points: ClassVar[Mapping[str, type]] = {
+        QtHook.CREATE_APPLICATION: CreatesApplication,
+        QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
+        QtHook.DURING_BUILD: WrapsBuild,
+        QtHook.CONFIGURE_MAIN_VIEW: ConfiguresMainView,
+    }
 
     def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
         """Prepare an empty container, to be filled by `build`."""
@@ -179,26 +210,56 @@ class QtAppContainer(AppContainer):
     def build(self) -> Self:
         """Put the toolkit in place, build the components, then arrange them.
 
-        A ``QApplication`` has to exist before any widget is constructed and
-        the async backend before any coroutine slot is connected, so both are
-        made before the components are. The window is made after them, once
-        the configuration has said what to call it.
+        The hooks are resolved first, from the class and from the ``hooks``
+        section, so that one may supply the ``QApplication`` itself. A
+        ``QApplication`` has to exist before any widget is constructed and the
+        async backend before any coroutine slot is connected, so both are made
+        before the components are. The window is made after them, once the
+        configuration has said what to call it.
 
         Refusing a second build is the base container's to do, so a call that
         it turns away attaches nothing rather than filling the window twice.
         """
         if self.is_built:
             return super().build()
-        application()
+        hooks = self.hooks
+        creator = hooks.get(QtHook.CREATE_APPLICATION)
+        if QApplication.instance() is None and isinstance(creator, CreatesApplication):
+            qt_app = cast("QApplication", creator.create_application(sys.argv))
+        else:
+            qt_app = application()
         set_async_backend()
-        super().build()
-        name = self.virtual_container.name
-        window = QMainWindow()
-        window.setWindowTitle(name)
-        self._main_window = window
-        self._model = Application(name)
-        attach(window, self.views)
+
+        configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
+        if isinstance(configurer, ConfiguresApplication):
+            configurer.configure_application(qt_app)
+
+        with self._during_build(qt_app) as report:
+            self._report = report
+            super().build()
+            name = self.virtual_container.name
+            window = QMainWindow()
+            window.setWindowTitle(name)
+            self._main_window = window
+            self._model = Application(name)
+            attach(window, self.views)
+            dresser = hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
+            if isinstance(dresser, ConfiguresMainView):
+                dresser.configure_main_view(window)
         return self
+
+    def _during_build(
+        self, qt_app: QApplication
+    ) -> AbstractContextManager[Callable[[str], None]]:
+        """Open the span a `QtHook.DURING_BUILD` hook wraps the build in.
+
+        Without one, reporting stays where it was and nothing brackets the
+        build.
+        """
+        hook = self.hooks.get(QtHook.DURING_BUILD)
+        if isinstance(hook, WrapsBuild):
+            return hook.during_build(qt_app)
+        return nullcontext(self._report)
 
     def shutdown(self) -> None:
         """Tear the application down, then the async backend it ran on.

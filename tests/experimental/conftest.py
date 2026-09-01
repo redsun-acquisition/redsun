@@ -9,8 +9,6 @@ from unittest import mock
 
 import pytest
 
-# mock_bundle is imported by dotted path from the manifest, so it must be
-# importable the way an installed bundle would be
 _TESTS_DIR = str(Path(__file__).parent)
 if _TESTS_DIR not in sys.path:
     sys.path.insert(0, _TESTS_DIR)

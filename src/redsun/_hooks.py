@@ -1,4 +1,8 @@
-"""Hook providers a session installs on its application container."""
+"""Hook providers a session installs on its application container.
+
+Lives at the package root because `redsun.containers` and `redsun.experimental`
+both need it and neither may import the other's private modules.
+"""
 
 from __future__ import annotations
 

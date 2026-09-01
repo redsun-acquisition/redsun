@@ -26,12 +26,14 @@ class MyApp(QtAppContainer):
 Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 """
 
+from redsun._hooks import HookError
 from redsun._structural import satisfies
 from redsun.experimental.containers._declarations import (
     Alias,
     Declare,
     FromConfig,
     Layer,
+    Serves,
 )
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import PluginError
@@ -39,7 +41,12 @@ from redsun.experimental.containers._protocols import (
     AttachableComponent,
     NamedComponent,
 )
-from redsun.experimental.containers.components import AsDevice, AsPresenter, AsView
+from redsun.experimental.containers.components import (
+    AsDevice,
+    AsHook,
+    AsPresenter,
+    AsView,
+)
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.view._placement import Placement
 from redsun.experimental.virtual._container import (
@@ -62,6 +69,7 @@ __all__ = [
     "Alias",
     "AppContainer",
     "AsDevice",
+    "AsHook",
     "AsPresenter",
     "AsView",
     "AttachableComponent",
@@ -72,6 +80,7 @@ __all__ = [
     "DevicesOf",
     "FromConfig",
     "Frontend",
+    "HookError",
     "Layer",
     "NamedComponent",
     "Placement",
@@ -80,6 +89,7 @@ __all__ = [
     "RequiresMaybe",
     "RequiresOne",
     "Satisfying",
+    "Serves",
     "SessionConfig",
     "VirtualContainer",
     "provides",

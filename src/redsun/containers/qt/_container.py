@@ -7,18 +7,17 @@ import sys
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, ClassVar, NoReturn, cast
 
-# psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
-from redsun.aio import set_async_backend
-from redsun.containers._hooks import (
+from redsun._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
     WrapsBuild,
 )
+from redsun.aio import set_async_backend
 from redsun.containers.container import AppContainer, _silent
 from redsun.containers.qt._mainview import QtMainView
 

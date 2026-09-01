@@ -233,6 +233,34 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.model.register_action(...)
   ```
 
+- `redsun.experimental` calls hooks. A hook is an annotation carrying
+  `AsHook`, and the attribute name is the point it serves:
+
+  ```python
+  class MyApp(QtAppContainer):
+      configure_application: Annotated[AsHook[MyTheme], Declare(palette="nord")]
+      configure_main_view: AsHook[MyBranding]
+  ```
+
+  `Serves` names the points instead, and naming several is how one provider
+  instance serves them all. `Declare`, `FromConfig` and `Alias` work as they do
+  on a component. `QtHook` names the four points
+  `redsun.experimental.containers.qt.QtAppContainer` calls:
+  `create_application`, `configure_application`, `during_build` and
+  `configure_main_view`. `AppContainer.hook_points` is empty, so a hook
+  declared on a container bound to no toolkit is refused.
+
+  A `hooks:` configuration section takes the same points as keys, each entry
+  carrying `provider` and `kwargs`, and a YAML anchor aliased under two keys
+  gives one provider serving both. A point named on the class and in the
+  section raises `HookError`, as does a point claimed twice, a point the
+  container does not call, and a provider that does not implement the protocol
+  its point calls.
+
+  `AppContainer.hooks` is the provider installed at each point, built once per
+  build. `BUILD_STEPS` names the steps a build reports to a `during_build`
+  hook: `devices`, `presenters`, `views`, `wiring`.
+
 - `redsun.experimental.containers.qt.QtAppContainer` creates no toolkit object
   in `__init__`. The `QApplication`, the async backend and the `QMainWindow`
   are all made by `build`, so constructing a container is cheap and reads

@@ -18,6 +18,7 @@ from typing import (
 
 from ophyd_async.core import Device
 
+from redsun._hooks import HookError, known_points
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import META_KEYS, resolve
 from redsun.experimental.view._placement import Placement
@@ -32,10 +33,14 @@ __all__ = [
     "Declaration",
     "Declare",
     "FromConfig",
+    "Hook",
+    "HookDeclaration",
     "Key",
     "Layer",
+    "Serves",
     "check",
     "read",
+    "read_hooks",
 ]
 
 Key: TypeAlias = Any
@@ -95,7 +100,40 @@ class Alias:
     name: str
 
 
-_MARKERS = (Declare, FromConfig, Alias)
+@dataclass(frozen=True)
+class Hook:
+    """Marks an annotation as a hook rather than a component.
+
+    Carried by `redsun.experimental.AsHook`. A hook is a callback at a fixed
+    point in the toolkit's startup sequence; it is built and called, never
+    injected, and it is not a layer.
+    """
+
+
+@dataclass(frozen=True)
+class Serves:
+    """The hook points one provider serves, when the attribute name is not one.
+
+    Declaring several is how one provider instance serves several points: the
+    annotation names the class once, so one object is built for them all.
+    """
+
+    moments: tuple[str, ...]
+
+    def __init__(self, *moments: str) -> None:
+        object.__setattr__(self, "moments", tuple(moments))
+
+
+@dataclass(frozen=True)
+class HookDeclaration:
+    """A declared hook provider, and the points it was declared to serve."""
+
+    cls: type
+    moments: tuple[str, ...]
+    kwargs: dict[str, Any]
+
+
+_MARKERS = (Declare, FromConfig, Alias, Serves)
 
 
 class Declaration:
@@ -238,7 +276,7 @@ def read(
     declarations: dict[str, Declaration] = {}
 
     for attr, hint in _hints(cls).items():
-        if attr.startswith("_"):
+        if attr.startswith("_") or _is_hook(hint):
             continue
         target, metadata, kind = _split(hint)
         if kind is None:
@@ -265,6 +303,53 @@ def read(
     declarations.update(_from_config(config, declarations.keys(), frontend))
     _refuse_shadowed(cls, declarations)
     return declarations
+
+
+def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclaration]:
+    """Collect the hook declarations of *cls*, by the point each serves.
+
+    The attribute name is the point; a `Serves` marker names them instead, and
+    naming several is how one provider instance serves several. `Declare`
+    carries the provider's constructor arguments.
+
+    Raises
+    ------
+    HookError
+        If a declaration is not a class, names a point *cls* does not call, or
+        two declarations claim one point.
+    """
+    found: dict[str, HookDeclaration] = {}
+    for attr, hint in _hints(cls).items():
+        if attr.startswith("_") or not _is_hook(hint):
+            continue
+        target, metadata, _ = _split(hint)
+        where = f"{cls.__qualname__}.{attr}"
+        if not isinstance(target, type):
+            raise HookError(
+                f"{where} is declared as a hook, but {target!r} is not a class"
+            )
+        served: tuple[str, ...] = (attr,)
+        kwargs: dict[str, Any] = {}
+        for marker in metadata:
+            if isinstance(marker, Serves):
+                served = marker.moments
+            elif isinstance(marker, Declare):
+                kwargs = marker.kwargs
+        declaration = HookDeclaration(target, served, kwargs)
+        for moment in served:
+            if moment not in points:
+                raise HookError(
+                    f"{where} declares a hook at {moment!r}, which is not a "
+                    f"hook point {cls.__name__} calls; {known_points(points)}"
+                )
+            claimed = found.get(moment)
+            if claimed is not None:
+                raise HookError(
+                    f"{where} and {claimed.cls.__name__} both claim the hook "
+                    f"point {moment!r}; a hook point takes one provider"
+                )
+            found[moment] = declaration
+    return found
 
 
 def _refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
@@ -377,6 +462,12 @@ def _split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
     layers = [m for m in metadata if isinstance(m, Layer)]
     markers = tuple(m for m in metadata if isinstance(m, _MARKERS))
     return target, markers, layers[0] if layers else None
+
+
+def _is_hook(hint: Any) -> bool:
+    if get_origin(hint) is not Annotated:
+        return False
+    return any(isinstance(m, Hook) for m in get_args(hint)[1:])
 
 
 def _entry(section: Mapping[str, Any], key: str) -> dict[str, Any]:

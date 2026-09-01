@@ -8,9 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-
-# resolved at runtime: the ClassVar annotation below is evaluated by ruff's
-# runtime-evaluated rules and by anything calling get_type_hints on a subclass
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -32,15 +29,15 @@ import yaml
 from ophyd_async.core import Device
 
 from redsun._config import COMPONENT_SECTIONS, load
-from redsun.aio import _loop_factory, run_coro
-from redsun.containers._config import AppConfig
-from redsun.containers._hooks import (
+from redsun._hooks import (
     HookError,
     distinct,
     known_points,
     parse_hook_specs,
     resolve_hooks,
 )
+from redsun.aio import _loop_factory, run_coro
+from redsun.containers._config import AppConfig
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,

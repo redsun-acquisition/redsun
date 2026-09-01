@@ -22,9 +22,9 @@ from __future__ import annotations
 
 from typing import Annotated, TypeAlias, TypeVar
 
-from redsun.experimental.containers._declarations import Layer
+from redsun.experimental.containers._declarations import Hook, Layer
 
-__all__ = ["AsDevice", "AsPresenter", "AsView"]
+__all__ = ["AsDevice", "AsHook", "AsPresenter", "AsView"]
 
 T = TypeVar("T")
 
@@ -42,4 +42,14 @@ AsView: TypeAlias = Annotated[T, Layer.VIEW]
 
 Satisfies `redsun.experimental.AttachableComponent`, so it declares the
 `redsun.experimental.Placement` it asks the frontend to attach it at.
+"""
+
+
+AsHook: TypeAlias = Annotated[T, Hook()]
+"""A callback the container calls at one point of the toolkit's startup.
+
+The attribute name is the point, `redsun.experimental.Serves` names them
+instead, and `redsun.experimental.Declare` carries the constructor arguments.
+A hook is not a component: it is never injected, nothing may depend on it, and
+it has no say in what the container builds.
 """
