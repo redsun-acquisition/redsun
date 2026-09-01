@@ -233,6 +233,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.model.register_action(...)
   ```
 
+- `redsun.experimental.containers.qt.QtAppContainer` creates no toolkit object
+  in `__init__`. The `QApplication`, the async backend and the `QMainWindow`
+  are all made by `build`, so constructing a container is cheap and reads
+  nothing. `main_window` raises `RuntimeError` before `build`, as `model`
+  already did, and is cleared again by `shutdown`.
+
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:
 
