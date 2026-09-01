@@ -233,6 +233,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.model.register_action(...)
   ```
 
+- `redsun.experimental.AppContainer.config` accepts several sources, each a
+  path to a YAML file or a mapping, and layers them in the order given:
+
+  ```python
+  class MyApp(AppContainer):
+      config = ["instrument.yaml", {"name": "morning-run"}]
+  ```
+
+  A subclass's sources layer over its bases', in the order the method
+  resolution order gives, and the sources passed to the constructor layer over
+  the class's rather than replacing them. `AppContainer.from_config` accepts
+  the same. Sources must agree on `schema_version` and `frontend`, and
+  `ValueError` names the source that disagrees; every other key, `name`
+  included, is taken from the last source setting it. A component entry under
+  `devices`, `presenters` or `views` is replaced whole rather than merged.
+
 ## [0.12.0] - 29-08-2026
 
 ### Added

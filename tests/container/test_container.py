@@ -807,7 +807,7 @@ class TestConfigField:
             ):
                 motor = declare_device(MyMotor, from_config="motor")
 
-        assert "Reading configuration from 2 files" in caplog.text
+        assert "Reading configuration from 2 sources" in caplog.text
         assert "mock_common_config.yaml" in caplog.text
         assert "mock_overlay_config.yaml" in caplog.text
 
