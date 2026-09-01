@@ -233,6 +233,39 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.model.register_action(...)
   ```
 
+- `redsun.experimental` no longer depends on `dishka`. The `experimental` extra
+  now carries `in-n-out`, which `app-model` already brings to `qt-common`.
+
+  Components are built in layer order, and within a layer in the order they are
+  built from one another, so a component may be written above the one it
+  depends on. Two components of one layer built from each other raise
+  `TypeError` rather than failing to resolve.
+
+  `AppContainer.providers` is a list of ordinary classes rather than
+  `dishka.Provider` subclasses, and a `providers:` manifest entry resolves to
+  one. A provider's constructor is filled from the session, and every method it
+  marks with `provides` registers a value under the type that method returns:
+
+  ```python
+  class MyServices:
+      def __init__(self, config: SessionConfig) -> None:
+          self._config = config
+
+      @provides
+      def calibration(self) -> Calibration:
+          return Calibration(...)
+  ```
+
+  A provider may be a plain class, a dataclass (frozen and slotted included) or
+  a pydantic model: its constructor is read from the signature, the way a
+  component's is. Unlike a component it is given no name, so a parameter called
+  `name` is one the session must answer like any other.
+
+  `AppContainer.name` is what the session is called, readable before `build`.
+  `redsun.experimental.containers.qt.QtAppContainer` builds its components out
+  of its `app_model.Application`'s injection store, so a command registered on
+  the application is filled from the components the session built.
+
 - `redsun.experimental` calls hooks. A hook is an annotation carrying
   `AsHook`, and the attribute name is the point it serves:
 

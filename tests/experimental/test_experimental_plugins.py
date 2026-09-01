@@ -83,7 +83,7 @@ def test_config_kwargs_reach_the_constructor(
 def test_plugin_provider_supplies_a_dependency(
     mock_plugin: None, config_path: Path
 ) -> None:
-    """The bundle's own dishka provider is loaded from the manifest."""
+    """The bundle's own shared services are loaded from the manifest."""
     app = _build(ConfiguredApp, config_path)
     try:
         presenter = app.declarations["motor_ctrl"].instance

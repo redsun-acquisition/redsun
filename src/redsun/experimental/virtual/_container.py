@@ -5,7 +5,6 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, MutableMappin
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
-from dishka import Provider, Scope
 from event_model import DocumentRouter
 from event_model.documents import Document
 from ophyd_async.core import Device
@@ -28,6 +27,7 @@ from redsun.experimental.virtual._wiring import (
 
 if TYPE_CHECKING:
     from bluesky.protocols import HasName
+    from in_n_out import Store
     from ophyd_async.core import SignalR
 
     from redsun.experimental.virtual._wiring import SlotThread
@@ -40,7 +40,7 @@ __all__ = [
     "VirtualContainer",
 ]
 
-# these three are dishka keys, so every name in them must resolve at runtime:
+# these three are dependency keys, so every name in them must resolve at runtime:
 # the graph evaluates the annotation, and a TYPE_CHECKING-only import fails there
 CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
 """A document callback: a `DocumentRouter`, or anything callable as ``(name, doc)``."""
@@ -228,19 +228,18 @@ class VirtualContainer(Loggable):
         self._subscription_records: list[Subscription] = []
         self._registry = BlueskyCallbackRegistry(self._callbacks, lambda: self._sealed)
 
-    def provider(self, devices: Callable[[], DeviceMapping]) -> Provider:
-        """Return the framework's dependency provider.
+    def register(self, store: Store, devices: Callable[[], DeviceMapping]) -> None:
+        """Register everything the framework knows on *store*.
 
-        Everything the framework knows is registered here, and every component
-        may ask for it by type. The callback registry is a live view, so it is
-        available at construction like the rest and carries no ordering
-        constraint of its own.
+        Every component may ask for it by type. The callback registry is a live
+        view, so it is available at construction like the rest and carries no
+        ordering constraint of its own.
         """
-        provider = Provider(scope=Scope.APP)
-        provider.provide(lambda: self._config, provides=SessionConfig)
-        provider.provide(devices, provides=DeviceMapping)
-        provider.provide(lambda: self._registry, provides=BlueskyCallbackRegistry)
-        return provider
+        store.register_provider(lambda: self._config, type_hint=SessionConfig)
+        store.register_provider(devices, type_hint=DeviceMapping)
+        store.register_provider(
+            lambda: self._registry, type_hint=BlueskyCallbackRegistry
+        )
 
     @property
     def config(self) -> SessionConfig:

@@ -292,9 +292,9 @@ _KEYS: dict[Question, Key] = {}
 def key_for(question: Question) -> Key:
     """Return the dependency key standing for *question*.
 
-    dishka discards the metadata of an ``Annotated`` type when it keys on it, so
-    a question would otherwise be indistinguishable from a plain value of the
-    same shape.
+    The metadata of an ``Annotated`` type is discarded when a registry keys on
+    it, so a question would otherwise be indistinguishable from a plain value
+    of the same shape.
     """
     if question not in _KEYS:
         _KEYS[question] = NewType(

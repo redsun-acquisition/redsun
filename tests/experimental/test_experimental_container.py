@@ -1,4 +1,4 @@
-"""Tests for the experimental dishka-backed container."""
+"""Tests for the experimental container."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from redsun.experimental import (
     FromConfig,
     Frontend,
     Placement,
+    SessionConfig,
     VirtualContainer,
     provides,
     slot,
@@ -1025,3 +1026,135 @@ def test_a_later_source_may_rename_the_session() -> None:
 
     app = Renamed().build()
     assert app.virtual_container.name == "second"
+
+
+class Ping:
+    """Presenter built from `Pong`, which is built from this one."""
+
+    def __init__(self, name: str, /, other: Pong) -> None:
+        self.name = name
+        self.other = other
+
+
+class Pong:
+    """The other half of the cycle."""
+
+    def __init__(self, name: str, /, other: Ping) -> None:
+        self.name = name
+        self.other = other
+
+
+class CircularApp(AppContainer):
+    ping: AsPresenter[Ping]
+    pong: AsPresenter[Pong]
+
+
+def test_two_components_built_from_each_other_are_refused() -> None:
+    """One of them would have to exist before it could be constructed."""
+    with pytest.raises(TypeError, match="built from each other"):
+        CircularApp().build()
+
+
+def test_a_session_knows_what_it_is_called() -> None:
+    """The name is read from the configuration before anything is built."""
+
+    class Instrument(AppContainer):
+        __slots__ = ()
+
+    assert Instrument().name == "Instrument"
+    assert Instrument({"name": "morning-run"}).name == "morning-run"
+
+
+Calibration = NewType("Calibration", "float")
+Offset = NewType("Offset", "float")
+Scale = NewType("Scale", "float")
+
+
+@dataclass
+class DataclassServices:
+    """Shared service whose fields are its constructor."""
+
+    config: SessionConfig
+
+    @provides
+    def calibration(self) -> Calibration:
+        return Calibration(len(self.config.name) / 10)
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenServices:
+    """Frozen and slotted, which change what the class carries at runtime."""
+
+    config: SessionConfig
+
+    @provides
+    def offset(self) -> Offset:
+        return Offset(1.5)
+
+
+class ModelServices(pydantic.BaseModel):
+    """Shared service whose fields are keyword-only and validated."""
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    config: SessionConfig
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(2.5)
+
+
+@dataclass
+class NamedServices:
+    """Shared service with a field the framework binds on a component."""
+
+    name: str
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(0.0)
+
+
+class Served:
+    """Presenter taking one value from each shared service."""
+
+    def __init__(
+        self, name: str, /, calibration: Calibration, offset: Offset, scale: Scale
+    ) -> None:
+        self.name = name
+        self.values = (calibration, offset, scale)
+
+
+class ServicesApp(AppContainer):
+    providers: ClassVar[list[type]] = [
+        DataclassServices,
+        FrozenServices,
+        ModelServices,
+    ]
+
+    served: AsPresenter[Served]
+
+
+class NamedServicesApp(AppContainer):
+    providers: ClassVar[list[type]] = [NamedServices]
+
+    served: AsPresenter[Served]
+
+
+def test_a_shared_service_may_be_any_kind_of_class() -> None:
+    """Its constructor is read from the signature, as a component's is.
+
+    The first value is derived from the session, which is how the injected
+    ``SessionConfig`` shows up in what the component receives.
+    """
+    app = ServicesApp().build()
+    try:
+        assert app.served.values == (len(app.name) / 10, 1.5, 2.5)
+    finally:
+        app.shutdown()
+
+
+def test_a_shared_service_is_given_no_name() -> None:
+    """A component is handed its name; a provider has none, so it must ask."""
+    with pytest.raises(TypeError, match="'NamedServices' asks for 'name'"):
+        NamedServicesApp().build()

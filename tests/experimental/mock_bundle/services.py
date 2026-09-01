@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from dishka import Provider, Scope, provide
-
-from redsun.experimental import SessionConfig
+from redsun.experimental import SessionConfig, provides
 
 from .keys import Calibration
 
 
-class MockServices(Provider):
+class MockServices:
     """Shared services this bundle ships, listed in its manifest."""
 
-    scope = Scope.APP
+    def __init__(self, config: SessionConfig) -> None:
+        self._config = config
 
-    @provide
-    def calibration(self, config: SessionConfig) -> Calibration:
-        return Calibration(len(config.name) / 10)
+    @provides
+    def calibration(self) -> Calibration:
+        """Derive a calibration from the session the bundle was installed into."""
+        return Calibration(len(self._config.name) / 10)

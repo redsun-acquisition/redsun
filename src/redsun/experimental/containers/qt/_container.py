@@ -73,6 +73,8 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
     from typing import TypeAlias
 
+    from in_n_out import Store
+
     from redsun._config import Source
     from redsun.experimental.containers._protocols import AttachableComponent
 
@@ -214,8 +216,9 @@ class QtAppContainer(AppContainer):
         section, so that one may supply the ``QApplication`` itself. A
         ``QApplication`` has to exist before any widget is constructed and the
         async backend before any coroutine slot is connected, so both are made
-        before the components are. The window is made after them, once the
-        configuration has said what to call it.
+        before the components are. The application follows, because the
+        components are built out of its store, and the window last. A build
+        that fails destroys the application rather than leaving its name taken.
 
         Refusing a second build is the base container's to do, so a call that
         it turns away attaches nothing rather than filling the window twice.
@@ -234,19 +237,31 @@ class QtAppContainer(AppContainer):
         if isinstance(configurer, ConfiguresApplication):
             configurer.configure_application(qt_app)
 
-        with self._during_build(qt_app) as report:
-            self._report = report
-            super().build()
-            name = self.virtual_container.name
-            window = QMainWindow()
-            window.setWindowTitle(name)
-            self._main_window = window
-            self._model = Application(name)
-            attach(window, self.views)
-            dresser = hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
-            if isinstance(dresser, ConfiguresMainView):
-                dresser.configure_main_view(window)
+        self._model = Application(self.name)
+        try:
+            with self._during_build(qt_app) as report:
+                self._report = report
+                super().build()
+                window = QMainWindow()
+                window.setWindowTitle(self.name)
+                self._main_window = window
+                attach(window, self.views)
+                dresser = hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
+                if isinstance(dresser, ConfiguresMainView):
+                    dresser.configure_main_view(window)
+        except BaseException:
+            Application.destroy(self.name)
+            self._model = None
+            raise
         return self
+
+    def _store(self) -> Store:
+        """Return the application's store, which is the session's too.
+
+        Sharing it is what lets a command registered on the application be
+        filled from the components this session built.
+        """
+        return self.model.injection_store
 
     def _during_build(
         self, qt_app: QApplication

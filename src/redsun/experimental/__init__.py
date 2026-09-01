@@ -1,4 +1,4 @@
-"""Experimental container layer, built on dishka.
+"""Experimental container layer.
 
 Not covered by any stability guarantee: names and behaviour here may change or
 be withdrawn in any release. The supported container layer is

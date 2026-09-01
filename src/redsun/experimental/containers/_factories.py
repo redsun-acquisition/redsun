@@ -6,33 +6,28 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Union,
-    cast,
     get_args,
     get_origin,
 )
 
-from dishka import Has
 from typing_extensions import TypeForm
 
 from redsun.experimental.containers._declarations import takes_name_by_keyword
-from redsun.experimental.virtual._requires import key_for, question_of
+from redsun.experimental.virtual._requires import Maybe, key_for, question_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
-
-    from dishka import Provider
 
     from redsun.experimental.containers._declarations import Declaration, Key
     from redsun.experimental.virtual._requires import Question
 
 __all__ = [
-    "absent",
     "constructor",
     "defaulted",
     "factory",
     "injectable",
     "optional_arg",
-    "register_optionals",
+    "provider",
     "requirements",
     "synthesize",
 ]
@@ -88,15 +83,19 @@ def constructor(cls: type) -> inspect.Signature:
         ) from e
 
 
-def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[Any]]:
-    """Return the constructor parameters the graph is responsible for.
+def injectable(
+    cls: type, cfg_kwargs: Mapping[str, Any], binds_name: bool = True
+) -> dict[str, TypeForm[Any]]:
+    """Return the constructor parameters the session is responsible for.
 
-    Excludes ``name``, which the framework binds, anything the configuration
-    supplied, and variadics.
+    Excludes anything the configuration supplied and variadics, and ``name``
+    when the session binds it. A shared service is given no name, so every
+    parameter of one is the session's to answer.
 
     A parameter carrying a default is widened to ``X | None``, so the container
     fills it when something provides ``X`` and leaves the default alone when
-    nothing does.
+    nothing does. A question at most one component may answer is widened the
+    same way, since nothing may answer it.
 
     Annotations are read from the signature rather than from ``__init__``,
     because a class may synthesize one: a pydantic model's real ``__init__``
@@ -108,8 +107,9 @@ def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[A
         If a remaining parameter carries no annotation.
     """
     wanted: dict[str, TypeForm[Any]] = {}
+    bound = ("self", "name") if binds_name else ("self",)
     for pname, param in constructor(cls).parameters.items():
-        if pname in ("self", "name") or pname in cfg_kwargs:
+        if pname in bound or pname in cfg_kwargs:
             continue
         if param.kind in (param.VAR_KEYWORD, param.VAR_POSITIONAL):
             continue
@@ -121,7 +121,8 @@ def injectable(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, TypeForm[A
         hint = param.annotation
         question = question_of(hint)
         if question is not None:
-            wanted[pname] = key_for(question)
+            key = key_for(question)
+            wanted[pname] = key | None if isinstance(question.marker, Maybe) else key
             continue
         if param.default is not param.empty and not _is_union(hint):
             hint = hint | None
@@ -175,15 +176,15 @@ def _is_union(hint: TypeForm[Any]) -> bool:
 def factory(
     declaration: Declaration, on_built: Callable[[Declaration, Any], None]
 ) -> Callable[..., Any]:
-    """Return the callable dishka inspects and calls for *declaration*.
+    """Return the callable the store fills and calls for *declaration*.
 
     *on_built* runs the moment the instance exists, which is what makes the
     order components are created in observable: the graph, not the caller,
     decides it.
 
-    Optional parameters stay in the signature; `register_optionals` makes
-    ``X | None`` resolvable whether or not anything provides ``X``. A parameter
-    nothing provides is left out of the call, so its own default applies.
+    Optional parameters stay in the signature: the store fills ``X | None``
+    with ``None`` when nothing provides ``X``. A parameter answered that way is
+    left out of the call, so its own default applies.
     """
     params = injectable(declaration.cls, declaration.cfg_kwargs)
     optional = defaulted(declaration.cls, params)
@@ -208,41 +209,15 @@ def factory(
     return synthesize(build, params, declaration.key, f"build_{declaration.name}")
 
 
-def register_optionals(provider: Provider, declarations: list[Declaration]) -> None:
-    """Make every ``X | None`` a component asks for resolvable.
+def provider(cls: type, name: str) -> Callable[..., Any]:
+    """Return the callable the store fills to build the shared service *cls*.
 
-    One pair per optional type: an alias to ``X`` when the graph offers it,
-    and a factory yielding ``None`` when it does not. Registering variants of
-    the component instead would be exponential in its optional parameters.
+    A provider takes no name of its own, so every annotated parameter of its
+    constructor is the store's to answer, ``name`` included.
     """
-    seen: set[TypeForm[Any]] = set()
-    for declaration in declarations:
-        params = injectable(declaration.cls, declaration.cfg_kwargs)
-        for hint in params.values():
-            inner = optional_arg(hint)
-            if inner is None or inner in seen:
-                continue
-            seen.add(inner)
-            provider.alias(
-                source=cast("type", inner),
-                provides=inner | None,
-                when=Has(inner),
-            )
-            provider.provide(
-                absent(inner | None, _readable_name(inner)), when=~Has(inner)
-            )
+    params = injectable(cls, {}, binds_name=False)
 
+    def build(**deps: Any) -> Any:
+        return cls(**deps)
 
-def absent(key: Key, label: str | None = None) -> Callable[..., Any]:
-    """Return a factory answering *key* with ``None``."""
-
-    # a fresh function per key: synthesize rewrites the object it is given,
-    # so a shared one would keep only the last set of annotations
-    def build(**_: Any) -> None:
-        return None
-
-    return synthesize(build, {}, key, f"absent_{label or _readable_name(key)}")
-
-
-def _readable_name(hint: Key) -> str:
-    return str(getattr(hint, "__name__", hint)).replace(".", "_")
+    return synthesize(build, params, cls, f"build_{name}")
