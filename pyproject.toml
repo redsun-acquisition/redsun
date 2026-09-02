@@ -79,12 +79,12 @@ zarr = [
 ]
 
 experimental = [
-    "dishka>=1.7.0",
+    "in-n-out>=0.2.1",
 ]
 
 [project.optional-dependencies]
 experimental = [
-    "dishka>=1.7.0",
+    "in-n-out>=0.2.1",
 ]
 zarr = [
     "acquire-zarr>=0.8.1",

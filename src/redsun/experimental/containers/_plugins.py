@@ -7,7 +7,6 @@ from importlib.resources import as_file, files
 from typing import TYPE_CHECKING, Any
 
 import yaml
-from dishka import Provider
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -51,32 +50,33 @@ def resolve(entry: Mapping[str, Any], group: str) -> type | None:
     return _import(_class_path(entry["plugin_name"], entry["plugin_id"], group))
 
 
-def load_providers(config: Mapping[str, Any]) -> list[Provider]:
-    """Instantiate the dependency providers a configuration names.
+def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
+    """Return the shared-service classes a configuration names, by entry name.
 
     Read from the ``providers`` section, so that a session assembled from a
-    file gets a plugin's shared services without naming them in Python.
+    file gets a plugin's shared services without naming them in Python. A
+    provider is an ordinary class: its constructor is filled from the session
+    the way a component's is, and every method it marks with ``provides``
+    registers a value under the type that method returns.
 
     Raises
     ------
     PluginError
-        If an entry does not resolve, or names a class that is not a
-        `dishka.Provider`.
+        If an entry does not resolve, or names something that is not a class.
     """
-    providers: list[Provider] = []
+    found: dict[str, type] = {}
     for name, entry in config.get("providers", {}).items():
         if not isinstance(entry, dict):
             continue
         cls = resolve(entry, "providers")
         if cls is None:
             continue
-        if not (isinstance(cls, type) and issubclass(cls, Provider)):
+        if not isinstance(cls, type):
             raise PluginError(
-                f"provider {name!r} resolves to {cls!r}, which is not a "
-                "dishka Provider subclass"
+                f"provider {name!r} resolves to {cls!r}, which is not a class"
             )
-        providers.append(cls())
-    return providers
+        found[name] = cls
+    return found
 
 
 def _class_path(plugin_name: str, plugin_id: str, group: str) -> str:

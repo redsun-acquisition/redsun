@@ -7,8 +7,10 @@
     The supported container is [`AppContainer`][redsun.AppContainer], described
     in [Container architecture](container-architecture.md).
 
-`redsun.experimental` is a second version of the container, built on
-[dishka](https://dishka.readthedocs.io/) instead of `dependency-injector`.
+`redsun.experimental` is a second version of the container. It resolves what a
+component needs from its constructor rather than through `dependency-injector`,
+keeping the values a session shares in an
+[in-n-out](https://github.com/pyapp-kit/in-n-out) store.
 
 The parts you already know stay the same: devices, presenters and views, the
 virtual container, signals and slots, and the YAML session file. What changes is
@@ -970,27 +972,29 @@ def test_readings() -> None:
 Today you have to build a virtual container first and prime it so that
 `inject_dependencies` finds what it is looking for.
 
-**A plugin can ship shared services, not just components.** A bundle can include
-its own dishka provider in its manifest, so a value that is not a component can
-still be offered to the session:
+**A plugin can ship shared services, not just components.** A bundle names them
+in the `providers` section of its manifest, so a value that is not a component
+can still be offered to the session:
 
 ```python
-from dishka import Provider, Scope, provide
+from redsun.experimental import SessionConfig, provides
 
 
-class MyServices(Provider):
-    scope = Scope.APP
+class MyServices:
+    def __init__(self, config: SessionConfig) -> None:
+        self._config = config
 
-    @provide
-    def calibration(self, config: SessionConfig) -> Calibration:
+    @provides
+    def calibration(self) -> Calibration:
         return Calibration(...)
 ```
 
-The scope is dishka's own `Scope.APP`, not one of ours, so a provider already
-written for another dishka application drops in unchanged. An application has
-one stage, so nothing here enters a narrower scope; a provider declared at one
-that is never entered fails when the container is created, naming the component
-it cannot build.
+A provider is an ordinary class. Its constructor is filled from the session the
+way a component's is, and `provides` is the same decorator a component uses to
+share a value, so a bundle author learns one of them rather than two. A
+provider has no name, no layer and no wiring: it is built before the first
+component, and exists to put values in the session for components to ask for
+by type.
 
 ## What you give up
 

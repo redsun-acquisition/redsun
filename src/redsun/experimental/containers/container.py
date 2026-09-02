@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence  # noqa: TC003
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
-from dishka import AnyOf, Provider, Scope, make_container
+from in_n_out import Store
 from ophyd_async.core import Device  # noqa: TC002
 
 from redsun import _structural
@@ -32,7 +32,6 @@ from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from dishka import Container
     from psygnal import SignalInstance
 
     from redsun.experimental.containers._declarations import Key
@@ -102,7 +101,6 @@ class AppContainer:
         "_config",
         "_declarations",
         "_devices",
-        "_di",
         "_hooks",
         "_is_built",
         "_merged",
@@ -119,7 +117,14 @@ class AppContainer:
     subclass holds what makes it that session.
     """
 
-    providers: ClassVar[list[Provider]] = []
+    providers: ClassVar[list[type]] = []
+    """The shared services this container installs before any component.
+
+    Each is an ordinary class whose methods marked with
+    `redsun.experimental.provides` put values in the session for components to
+    ask for by type. A provider has no name, no layer and no wiring.
+    """
+
     hook_points: ClassVar[Mapping[str, type]] = {}
     """The points this container calls a hook at, by the protocol each demands.
 
@@ -145,7 +150,6 @@ class AppContainer:
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = _silent
         self._virtual = VirtualContainer()
-        self._di: Container | None = None
         self._declarations: dict[str, _declarations.Declaration] = {}
         self._devices: dict[str, Device] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
@@ -300,13 +304,60 @@ class AppContainer:
                 )
         return resolved
 
+    @property
+    def name(self) -> str:
+        """What this session is called.
+
+        The configuration's ``name``, or this container's own class name when
+        the configuration says nothing. A class name is distinct per session
+        where a shared constant would not be.
+        """
+        declared = self._configuration().get("name")
+        if isinstance(declared, str) and declared:
+            return declared
+        return type(self).__name__
+
+    def _store(self) -> Store:
+        """Return the registry this session builds its components out of.
+
+        Named after the session and constructed rather than registered:
+        ``Store.create`` would enter it in the process-wide registry, where a
+        second session of one name refuses to start and an unfinished one
+        keeps the name until it is destroyed. Nothing here looks a store up by
+        name, so the registry buys nothing and costs a teardown obligation on
+        every session that ends without one.
+
+        A container owning an application of its own overrides this to share
+        that application's store, which is what lets a command reach a
+        component. That one *is* registered, by app-model, and freed by
+        ``Application.destroy``.
+        """
+        return Store(self.name)
+
+    def _share(self, store: Store, config: Mapping[str, Any]) -> None:
+        """Build the shared services this session installs, before any component.
+
+        A provider owns no name, no layer and no wiring. It exists to put
+        values in the store, through methods marked with
+        `redsun.experimental.provides`, and its own constructor is filled from
+        the store like anything else.
+        """
+        shared: dict[Key, str] = {}
+        classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
+        classes.update(_plugins.load_providers(config))
+        for name, cls in classes.items():
+            params = _factories.injectable(cls, {}, binds_name=False)
+            _refuse_unanswered(store, name, params)
+            instance = store.inject(_factories.provider(cls, name))()
+            _provides.register(store, instance, cls, name, shared)
+
     def build(self) -> Self:
         """Instantiate the application.
 
-        Devices are built directly rather than through the graph, so that one
-        which fails is logged and skipped; a graph edge could not be. The
-        components come out of a single scope, ordered only by what they
-        depend on.
+        Devices are built first and on their own, so that one which fails is
+        logged and skipped rather than stopping the build. The components
+        follow in layer order, and within a layer in the order they are built
+        from one another.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -315,20 +366,15 @@ class AppContainer:
         config = self._configuration()
         installed = self.hooks
         logger.debug("Hooks installed at: %s", ", ".join(installed) or "no points")
-        self._virtual._set_configuration(config, type(self).__name__)
+        self._virtual._set_configuration(config, self.name)
         self._declarations = _declarations.read(type(self), config, self.frontend)
         self._report("devices")
         self._build_devices()
 
-        framework = self._virtual.provider(lambda: dict(self._devices))
-        providers = [framework, *self.providers, *_plugins.load_providers(config)]
-        components = self._component_provider()
-
-        self._di = make_container(components, *providers)
-        # first registered, so last run: a provider's own finalizers close
-        # after every component that may still be using them
-        self._virtual.on_release(self._di.close)
-        self._resolve(self._di)
+        store = self._store()
+        self._virtual.register(store, lambda: dict(self._devices))
+        self._share(store, config)
+        self._construct(store)
         self._verify_components()
         self._verify_answers()
 
@@ -411,25 +457,77 @@ class AppContainer:
     def _components(self) -> list[_declarations.Declaration]:
         return [d for d in self._declarations.values() if d.kind is not Layer.DEVICE]
 
-    def _component_provider(self) -> Provider:
-        declarations = self._components()
-        provider = Provider(scope=Scope.APP)
-        shared: dict[Key, str] = {}
-        for declaration in declarations:
-            provider.provide(
-                _factories.factory(declaration, self._on_built),
-                provides=(
-                    AnyOf[declaration.key, declaration.cls]
-                    if self._is_unique(declaration)
-                    else declaration.key
-                ),
-            )
-            _provides.register(provider, declaration, shared)
+    def _construct(self, store: Store) -> None:
+        """Build every component and register what it is and what it shares.
 
+        A component is registered under its own key, and under its class when
+        no other declaration names that class, so a collaborator may ask for it
+        either way.
+        """
+        declarations = self._components()
         self._check_layers(declarations)
-        _factories.register_optionals(provider, declarations)
-        self._register_requirements(provider, declarations)
-        return provider
+        self._answer(store, declarations)
+        shared: dict[Key, str] = {}
+        announced = ""
+        for declaration in self._ordered(declarations):
+            step = f"{declaration.kind}s"
+            if step != announced:
+                self._report(step)
+                announced = step
+            params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            _refuse_unanswered(store, declaration.name, params)
+            factory = _factories.factory(declaration, self._on_built)
+            instance = store.inject(factory)()
+            store.register_provider(_constant(instance), type_hint=declaration.key)
+            if self._is_unique(declaration):
+                store.register_provider(_constant(instance), type_hint=declaration.cls)
+            _provides.register(
+                store, instance, declaration.cls, declaration.name, shared
+            )
+
+    def _ordered(
+        self, declarations: list[_declarations.Declaration]
+    ) -> list[_declarations.Declaration]:
+        """Return *declarations* in the order they have to be built.
+
+        Layers first, since `_check_layers` has already refused an edge
+        pointing the other way. Within a layer the order is what depends on
+        what, which declaration order does not give: a component may be
+        written above the one it is built from.
+        """
+        needs = self._edges(declarations)
+        ordered: list[_declarations.Declaration] = []
+        for layer in sorted({d.kind for d in declarations}, key=lambda k: _ORDER[k]):
+            ordered.extend(
+                _sorted_by_need([d for d in declarations if d.kind is layer], needs)
+            )
+        return ordered
+
+    def _edges(
+        self, declarations: list[_declarations.Declaration]
+    ) -> dict[str, set[str]]:
+        """Return the components each component is built from, by name.
+
+        A census is left out: it is a live view of the session rather than a
+        value one component takes from another, so it carries no order.
+        """
+        owners = _owners(declarations)
+        owners.update({d.key: d for d in declarations})
+        needs: dict[str, set[str]] = {d.name: set() for d in declarations}
+        for declaration in declarations:
+            params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            for hint in params.values():
+                target = owners.get(_factories.optional_arg(hint) or hint)
+                if target is not None and target is not declaration:
+                    needs[declaration.name].add(target.name)
+        for question, askers in _factories.requirements(declarations).items():
+            chosen = self._answers.get(question)
+            if chosen is None:
+                continue
+            for asker in askers:
+                if asker != chosen.name:
+                    needs[asker].add(chosen.name)
+        return needs
 
     def _check_layers(self, declarations: list[_declarations.Declaration]) -> None:
         """Refuse a component whose constructor reaches into a later layer.
@@ -452,48 +550,46 @@ class AppContainer:
                     continue
                 _refuse_backwards(declaration, target, f"its {pname!r} parameter")
 
-    def _register_requirements(
-        self, provider: Provider, declarations: list[_declarations.Declaration]
+    def _answer(
+        self, store: Store, declarations: list[_declarations.Declaration]
     ) -> None:
         """Answer each question a component asks about the session.
 
         One answer per question, not per component that asks. A census of the
         components is answered with a live view, because a component may be part
         of its own answer; one of the devices is answered with the mapping
-        itself, since every device exists before any component is built. A
-        question expecting a single component is answered with an edge to that
-        component, so it is built first.
+        itself, since every device exists before any component is built.
         """
         for question, askers in _factories.requirements(declarations).items():
             key = key_for(question)
             if isinstance(question.marker, Devices):
-                provider.provide(self._device_census(question.protocol, key))
+                store.register_provider(
+                    self._device_census(question.protocol), type_hint=key
+                )
             elif isinstance(question.marker, (One, Maybe)):
-                self._select(provider, question, key, askers, declarations)
+                self._select(store, question, key, askers, declarations)
             else:
-                provider.provide(self._census(question.protocol, key))
+                store.register_provider(self._census(question.protocol), type_hint=key)
 
-    def _census(self, protocol: type, key: Key) -> Callable[..., Any]:
-        # the protocol is closed over rather than carried as a default
-        # argument, which would leak into the signature dishka inspects
-        def build(**_: Any) -> Any:
+    def _census(self, protocol: type) -> Callable[[], Any]:
+        def read() -> Any:
             return self._virtual.satisfying(protocol)
 
-        return _factories.synthesize(build, {}, key, f"every_{protocol.__name__}")
+        return read
 
-    def _device_census(self, protocol: type, key: Key) -> Callable[..., Any]:
-        def build(**_: Any) -> Any:
+    def _device_census(self, protocol: type) -> Callable[[], Any]:
+        def read() -> Any:
             return {
                 name: device
                 for name, device in self._devices.items()
                 if _structural.satisfies(device, protocol)
             }
 
-        return _factories.synthesize(build, {}, key, f"devices_of_{protocol.__name__}")
+        return read
 
     def _select(
         self,
-        provider: Provider,
+        store: Store,
         question: Question,
         key: Key,
         askers: list[str],
@@ -501,8 +597,13 @@ class AppContainer:
     ) -> None:
         """Bind the one component answering *question*, or refuse to build.
 
-        Nothing exists yet, so the choice is made from the declared classes.
-        `_verify_answers` confirms it once the instance is there.
+        Nothing exists yet, so the choice is made from the declared classes,
+        and the answer reads the instance when something asks for it. Ordering
+        puts the chosen component first, so by then there is one.
+        `_verify_answers` confirms the choice once the instance is there.
+
+        A question at most one component may answer, and none does, is left
+        unregistered: its key is widened, so the store fills it with ``None``.
         """
         protocol = question.protocol
         matches = [d for d in declarations if _structural.satisfies(d.cls, protocol)]
@@ -523,7 +624,6 @@ class AppContainer:
                     f"{protocol.__name__!r}, and the session holds none."
                     + _near_misses(declarations, protocol)
                 )
-            provider.provide(_factories.absent(key, protocol.__name__))
             return
         chosen = matches[0]
         for asker in askers:
@@ -537,7 +637,7 @@ class AppContainer:
                 f"'Requires[{protocol.__name__}]', which may include the asker."
             )
         self._answers[question] = chosen
-        provider.alias(source=chosen.key, provides=key)
+        store.register_provider(_built(chosen), type_hint=key)
 
     def _verify_components(self) -> None:
         """Check every built component against the protocol of its layer.
@@ -605,21 +705,6 @@ class AppContainer:
             self._devices[declaration.name] = device
             declaration.instance = device
             self._register_teardown(device)
-
-    def _resolve(self, scope: Container) -> None:
-        """Ask the graph for every component, a layer at a time.
-
-        The graph decides the order within a layer, since it alone knows what
-        depends on what. Walking the layers in build order is what lets the
-        step being reported be the step happening.
-        """
-        announced = ""
-        for declaration in sorted(self._components(), key=lambda d: _ORDER[d.kind]):
-            step = f"{declaration.kind}s"
-            if step != announced:
-                self._report(step)
-                announced = step
-            scope.get(declaration.key)
 
     def _on_built(self, declaration: _declarations.Declaration, instance: Any) -> None:
         declaration.instance = instance
@@ -711,6 +796,90 @@ class AppContainer:
                 if _structural.satisfies(declaration.cls, question.protocol)
             }
         return names
+
+
+def _refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> None:
+    """Refuse *name* asking for something the session does not hold.
+
+    Everything it may be built from is registered by now, so a parameter with
+    no provider has none coming.
+
+    Raises
+    ------
+    TypeError
+        Naming the parameters and the types nothing answers.
+    """
+    unanswered = [
+        f"{pname!r} ({getattr(hint, '__name__', hint)})"
+        for pname, hint in params.items()
+        if _factories.optional_arg(hint) is None
+        and next(store.iter_providers(hint), None) is None
+    ]
+    if not unanswered:
+        return
+    raise TypeError(
+        f"{name!r} asks for {_listed_plain(unanswered)}, which nothing in the "
+        "session provides. A component names the values it needs, and the "
+        "session is not one of them."
+    )
+
+
+def _listed_plain(items: list[str]) -> str:
+    if len(items) < 2:
+        return items[0] if items else "nothing"
+    return f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _constant(value: Any) -> Callable[[], Any]:
+    """Return a callable answering with *value*."""
+
+    def read() -> Any:
+        return value
+
+    return read
+
+
+def _built(declaration: _declarations.Declaration) -> Callable[[], Any]:
+    """Return a callable answering with what *declaration* was built into."""
+
+    def read() -> Any:
+        return declaration.instance
+
+    return read
+
+
+def _sorted_by_need(
+    group: list[_declarations.Declaration], needs: Mapping[str, set[str]]
+) -> list[_declarations.Declaration]:
+    """Return *group* with each component after the ones it is built from.
+
+    Only edges inside *group* matter: anything in an earlier layer is already
+    built. Ties keep declaration order, so a session that states no dependency
+    builds in the order it is written.
+
+    Raises
+    ------
+    TypeError
+        If two components of one layer are built from each other.
+    """
+    names = {d.name for d in group}
+    pending = {d.name: {n for n in needs[d.name] if n in names} for d in group}
+    ordered: list[_declarations.Declaration] = []
+    remaining = list(group)
+    while remaining:
+        ready = [d for d in remaining if not pending[d.name]]
+        if not ready:
+            named = _listed(sorted(d.name for d in remaining))
+            raise TypeError(
+                f"{named} are built from each other, so none of them can be "
+                "built first. Break the cycle, or share the value one way only."
+            )
+        for declaration in ready:
+            ordered.append(declaration)
+            for other in pending.values():
+                other.discard(declaration.name)
+        remaining = [d for d in remaining if d not in ready]
+    return ordered
 
 
 def _owners(

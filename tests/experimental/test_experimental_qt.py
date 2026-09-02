@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from app_model import Application
+from app_model import Action, Application
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QDockWidget,
@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
 
 from redsun.experimental import (
     AppContainer,
+    AsPresenter,
     AsView,
     AttachableComponent,
     Placement,
@@ -248,3 +249,31 @@ def _widget(dock: QDockWidget) -> QWidget:
     inner = dock.widget()
     assert inner is not None
     return inner
+
+
+class Gain:
+    """A presenter a command can be filled with."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.value = 3.0
+
+
+class CommandApp(QtAppContainer):
+    gain: AsPresenter[Gain]
+
+
+def test_a_command_is_filled_from_the_session(qapp: Any) -> None:
+    """The session builds its components out of the application's own store."""
+    app = CommandApp().build()
+    seen: list[Gain] = []
+
+    def note(gain: Gain) -> None:
+        seen.append(gain)
+
+    try:
+        app.model.register_action(Action(id="probe.note", title="Note", callback=note))
+        app.model.commands.execute_command("probe.note")
+        assert seen == [app.gain]
+    finally:
+        app.shutdown()

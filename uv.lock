@@ -544,15 +544,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dishka"
-version = "1.10.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/97/da/b75b5fe665d16725e1d46e291c8dd4b0ed1731c7964f41087fda92f03d40/dishka-1.10.1.tar.gz", hash = "sha256:51fb624b9acc948b90f57128460061d1f3a1780121fe1c7d14c565e8bbff2083", size = 282008, upload-time = "2026-04-25T12:07:57.587Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/08/dd3259a319ba45c48d975caf237c830c7873a203288cb4ab186cc5bef585/dishka-1.10.1-py3-none-any.whl", hash = "sha256:84f40c1115eb391ce3fb558fd7946c5bcaf6361c35b77b7a185b7697a5720ec7", size = 120062, upload-time = "2026-04-25T12:07:59.153Z" },
-]
-
-[[package]]
 name = "docstring-parser"
 version = "0.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1953,7 +1944,7 @@ dependencies = [
 
 [package.optional-dependencies]
 experimental = [
-    { name = "dishka" },
+    { name = "in-n-out" },
 ]
 pyqt = [
     { name = "app-model" },
@@ -1980,8 +1971,8 @@ zarr = [
 dev = [
     { name = "acquire-zarr" },
     { name = "app-model" },
-    { name = "dishka" },
     { name = "griffe-fieldz" },
+    { name = "in-n-out" },
     { name = "magicgui" },
     { name = "mypy" },
     { name = "prek" },
@@ -2001,7 +1992,7 @@ docs = [
     { name = "zensical" },
 ]
 experimental = [
-    { name = "dishka" },
+    { name = "in-n-out" },
 ]
 pyqt = [
     { name = "app-model" },
@@ -2033,7 +2024,7 @@ requires-dist = [
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
     { name = "dependency-injector", specifier = ">=4.49.1" },
-    { name = "dishka", marker = "extra == 'experimental'", specifier = ">=1.7.0" },
+    { name = "in-n-out", marker = "extra == 'experimental'", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
@@ -2054,8 +2045,8 @@ provides-extras = ["experimental", "pyqt", "pyside", "qt-common", "zarr"]
 dev = [
     { name = "acquire-zarr", specifier = ">=0.9.0" },
     { name = "app-model", specifier = ">=0.5.1" },
-    { name = "dishka", specifier = ">=1.7.0" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "mypy", specifier = ">=2.3.1" },
     { name = "prek", specifier = ">=0.5.0" },
@@ -2074,7 +2065,7 @@ docs = [
     { name = "mkdocstrings-python", specifier = ">=2.0.7" },
     { name = "zensical", specifier = ">=0.0.57" },
 ]
-experimental = [{ name = "dishka", specifier = ">=1.7.0" }]
+experimental = [{ name = "in-n-out", specifier = ">=0.2.1" }]
 pyqt = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },

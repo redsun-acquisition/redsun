@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar, get_type_hints
 
-from redsun.experimental.containers._factories import synthesize
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from dishka import Provider
+    from in_n_out import Store
 
-    from redsun.experimental.containers._declarations import Declaration, Key
+    from redsun.experimental.containers._declarations import Key
 
 __all__ = ["provides", "register", "shared"]
 
@@ -61,42 +59,35 @@ def shared(cls: type) -> dict[str, Key]:
 
 
 def register(
-    provider: Provider, declaration: Declaration, seen: dict[Key, str]
+    store: Store, instance: object, cls: type, name: str, seen: dict[Key, str]
 ) -> None:
-    """Add the shared values of *declaration* to *provider*.
+    """Register what *instance* shares on *store*, under the annotated types.
 
-    Each is bound to that component instance. *seen* accumulates the types
-    already claimed, so a clash names both components.
+    *seen* accumulates the types already claimed, so a clash names both
+    components.
 
     Raises
     ------
     TypeError
         If two components share one type.
     """
-    for method_name, provided in shared(declaration.cls).items():
+    for method_name, provided in shared(cls).items():
         owner = seen.get(provided)
         if owner is not None:
             raise TypeError(
-                f"{declaration.name!r} and {owner!r} both share "
+                f"{name!r} and {owner!r} both share "
                 f"{getattr(provided, '__name__', provided)!r}. A shared type "
                 "identifies one value; give them distinct types."
             )
-        seen[provided] = declaration.name
-        provider.provide(_bound(declaration, method_name, provided))
+        seen[provided] = name
+        store.register_provider(_value(instance, method_name), type_hint=provided)
 
 
-def _bound(
-    declaration: Declaration, method_name: str, provided: Key
-) -> Callable[..., Any]:
-    # the method name is closed over here rather than carried as a default
-    # argument, which would leak into the signature dishka inspects
-    def build(**deps: Any) -> Any:
-        member = getattr(deps["component"], method_name)
+def _value(instance: object, method_name: str) -> Callable[[], Any]:
+    """Return a callable giving what *instance* shares through *method_name*."""
+
+    def read() -> Any:
+        member = getattr(instance, method_name)
         return member() if callable(member) else member
 
-    return synthesize(
-        build,
-        {"component": declaration.key},
-        provided,
-        f"{declaration.name}_{method_name}",
-    )
+    return read
