@@ -40,6 +40,20 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`AppContainer.devices`**, **`AppContainer.presenters`** and
+  **`AppContainer.views`** (`redsun.containers.container`) return the
+  components the container built. A device whose build failed is absent from
+  `devices`, where reading the mapping raised `RuntimeError` before:
+
+  ```python
+  class App(AppContainer):
+      ok = declare_device(MyMotor, egu="mm")
+      bad = declare_device(BrokenMotor)
+
+
+  set(App().build().devices)  # {"ok"}
+  ```
+
 - A wiring report could name a component after a different, released one.
   **`VirtualContainer`** (`redsun.virtual`) resolves component names by
   identity rather than by `id()`, and forgets the built components at shutdown.

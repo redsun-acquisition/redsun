@@ -607,35 +607,38 @@ class AppContainer:
             )
         return cast("T", self._built[comp])
 
+    def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
+        """Return what this container built from *declared*, by name.
+
+        A declaration the build did not reach, or one whose build failed, is
+        absent, so the mapping can be shorter than *declared*.
+        """
+        return {
+            name: cast("T", self._built[comp])
+            for name, comp in declared.items()
+            if comp in self._built
+        }
+
     @property
     def devices(self) -> dict[str, Device]:
         """Return built device instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._device_components.items()
-        }
+        return self._built_of(self._device_components)
 
     @property
     def presenters(self) -> dict[str, PPresenter]:
         """Return built presenter instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._presenter_components.items()
-        }
+        return self._built_of(self._presenter_components)
 
     @property
     def views(self) -> dict[str, PView]:
         """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._view_components.items()
-        }
+        return self._built_of(self._view_components)
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -886,8 +889,7 @@ class AppContainer:
 
     def _register_providers(self) -> None:
         """Let every component providing dependencies register them."""
-        for component in self._components.values():
-            instance = self._instance_of(component)
+        for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
 
@@ -897,16 +899,13 @@ class AppContainer:
         The names reach the VirtualContainer first because both `wire` and the
         ``wiring`` configuration section resolve components by name.
         """
-        self.virtual_container._set_components(
-            {name: self._instance_of(comp) for name, comp in self._components.items()}
-        )
+        self.virtual_container._set_components(self._built_of(self._components))
         self.wire()
         self._apply_wiring_config()
 
     def _inject_dependencies(self) -> None:
         """Let every component taking dependencies receive them."""
-        for component in self._components.values():
-            instance = self._instance_of(component)
+        for instance in self._built_of(self._components).values():
             if isinstance(instance, IsInjectable):
                 instance.inject_dependencies(self.virtual_container)
 
@@ -974,8 +973,7 @@ class AppContainer:
 
         One presenter failing to shut down does not stop the others.
         """
-        for name, comp in self._presenter_components.items():
-            presenter = self._instance_of(comp)
+        for name, presenter in self._built_of(self._presenter_components).items():
             if isinstance(presenter, HasShutdown):
                 try:
                     presenter.shutdown()

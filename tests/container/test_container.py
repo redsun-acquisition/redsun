@@ -14,7 +14,7 @@ from mock_pkg.controller import (
     GroupedController,
     MockController,
 )
-from mock_pkg.device import MockOAMotor, MyMotor
+from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
 from mock_pkg.view import MockQtView
 from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
@@ -299,6 +299,21 @@ class TestAppContainerBuild:
         assert app.virtual_container.session == "TestSession"
         assert app.virtual_container.frontend == "pyqt"
         assert app.virtual_container.schema_version == 1.0
+
+
+class TestBuildTolerance:
+    """Tests for a build that carries on past a component it could not make."""
+
+    def test_devices_lists_what_was_built(self) -> None:
+        """A device that failed is absent from the mapping rather than raising."""
+
+        class TestApp(AppContainer):
+            ok = declare_device(MyMotor, egu="mm", string="s")
+            bad = declare_device(BrokenDevice)
+
+        app = TestApp().build()
+
+        assert set(app.devices) == {"ok"}
 
 
 class TestFromConfig:
