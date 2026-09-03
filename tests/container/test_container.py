@@ -11,11 +11,12 @@ import yaml
 from helpers import component
 from mock_pkg.controller import (
     AsyncMotorController,
+    BrokenController,
     GroupedController,
     MockController,
 )
-from mock_pkg.device import MockOAMotor, MyMotor
-from mock_pkg.view import MockQtView
+from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
+from mock_pkg.view import BrokenView, MockMotorView, MockQtView
 from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
@@ -299,6 +300,116 @@ class TestAppContainerBuild:
         assert app.virtual_container.session == "TestSession"
         assert app.virtual_container.frontend == "pyqt"
         assert app.virtual_container.schema_version == 1.0
+
+
+class TestBuildTolerance:
+    """Tests for a build that carries on past a component it could not make."""
+
+    def test_devices_lists_what_was_built(self) -> None:
+        """A device that failed is absent from the mapping rather than raising."""
+
+        class TestApp(AppContainer):
+            ok = declare_device(MyMotor, egu="mm", string="s")
+            bad = declare_device(BrokenDevice)
+
+        app = TestApp().build()
+
+        assert set(app.devices) == {"ok"}
+
+    def test_a_presenter_that_fails_does_not_abort_the_build(self) -> None:
+        """The build returns, and the presenters that built are reachable."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            bad = declare_presenter(BrokenController)
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+
+    @pytest.mark.qt
+    def test_a_view_that_fails_does_not_abort_the_build(
+        self, qapp: QApplication
+    ) -> None:
+        """The build returns, leaving alive the widgets of the views that built."""
+
+        class TestApp(AppContainer):
+            ok = declare_view(MockQtView)
+            bad = declare_view(BrokenView)
+
+        before = len(QApplication.topLevelWidgets())
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.views) == {"ok"}
+        assert len(QApplication.topLevelWidgets()) == before + 1
+
+        app.shutdown()
+
+    @pytest.mark.parametrize(
+        ("declare", "expected"),
+        [
+            (
+                lambda: declare_device(BrokenDevice),
+                "Failed to build device 'bad': This device is broken",
+            ),
+            (
+                lambda: declare_presenter(BrokenController),
+                "Failed to build presenter 'bad': Broken controller",
+            ),
+            (
+                lambda: declare_view(BrokenView),
+                "Failed to build view 'bad': Broken view",
+            ),
+        ],
+    )
+    def test_a_failure_is_logged_against_the_component_name(
+        self,
+        declare: Callable[[], Any],
+        expected: str,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The log names what failed and why, which is the whole report for now."""
+
+        class TestApp(AppContainer):
+            bad = declare()
+
+        with caplog.at_level(logging.ERROR, logger="redsun"):
+            TestApp().build()
+
+        assert expected in caplog.text
+
+    def test_the_closing_line_rises_to_warning_when_something_failed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A build that missed something says so above the level it reports at."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            bad = declare_presenter(BrokenController)
+
+        with caplog.at_level(logging.INFO, logger="redsun"):
+            TestApp().build()
+
+        closing = [r for r in caplog.records if r.message.startswith("Container built")]
+        assert [r.levelno for r in closing] == [logging.WARNING]
+        assert "bad (presenter)" in closing[0].message
+
+    def test_the_closing_line_stays_at_info_when_nothing_failed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Nothing missing is not a warning."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+
+        with caplog.at_level(logging.INFO, logger="redsun"):
+            TestApp().build()
+
+        closing = [r for r in caplog.records if r.message.startswith("Container built")]
+        assert [r.levelno for r in closing] == [logging.INFO]
 
 
 class TestFromConfig:
@@ -1435,6 +1546,42 @@ class _MismatchedSlotApp(AppContainer):
         self.connect(self.mover.sig_motor_moved, self.ctrl.on_too_many)
 
 
+class _PartlyBuiltApp(AppContainer):
+    """Names a presenter that cannot build, alongside two that can."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ctrl = declare_presenter(MockController)
+    broken = declare_presenter(BrokenController)
+
+    def wire(self) -> None:
+        self.connect(self.broken.sig_motor_moved, self.ctrl.on_motor_moved)
+        self.connect(self.mover.sig_motor_moved, self.ctrl.on_motor_moved)
+
+
+class _TypoApp(AppContainer):
+    """Names a port that the presenter it belongs to does not have."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ctrl = declare_presenter(MockController)
+
+    def wire(self) -> None:
+        # the ignore is the point: mypy already rejects the typo, and the
+        # runtime failure is what protects a container without static typing
+        self.connect(self.mover.sig_typo, self.ctrl.on_motor_moved)  # type: ignore[attr-defined]
+
+
+class _PartlyBuiltViewApp(AppContainer):
+    """Wires a view that cannot build and one that can."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ok = declare_view(MockMotorView)
+    bad = declare_view(BrokenView)
+
+    def wire(self) -> None:
+        self.connect(self.mover.sig_motor_moved, self.bad.note_position)
+        self.connect(self.mover.sig_motor_moved, self.ok.note_position)
+
+
 class TestWiring:
     """Tests for the ``wire`` hook and the connections it records."""
 
@@ -1467,6 +1614,52 @@ class TestWiring:
 
         assert ctrl.moved == []
         assert app.virtual_container.connections == []
+
+    def test_a_connection_naming_a_failed_component_is_skipped(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The rest of ``wire`` runs, and the link that was dropped is reported."""
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            app = _PartlyBuiltApp().build()
+
+        app.mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert app.ctrl.moved == [("motor", 1.0)]
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ctrl.on_motor_moved"
+        ]
+        assert any(
+            "broken" in record.message and record.levelno == logging.WARNING
+            for record in caplog.records
+        )
+        app.shutdown()
+
+    def test_a_shut_down_container_gives_the_declaration_again(self) -> None:
+        """The stand-in lasts as long as the build that produced it."""
+        app = _PartlyBuiltApp().build()
+        app.shutdown()
+
+        assert isinstance(app.broken, _PresenterComponent)
+
+    def test_a_port_a_built_component_lacks_still_fails_the_build(self) -> None:
+        """Only a component that failed is absorbed, so a typo is still an error."""
+        with pytest.raises(AttributeError, match="sig_typo"):
+            _TypoApp().build()
+
+    @pytest.mark.qt
+    def test_a_failed_view_leaves_the_widgets_of_the_views_that_built(
+        self, qapp: QApplication
+    ) -> None:
+        """A build that returns instead of raising keeps what it made."""
+        before = len(QApplication.topLevelWidgets())
+
+        app = _PartlyBuiltViewApp().build()
+
+        assert len(QApplication.topLevelWidgets()) == before + 1
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ok.note_position  [thread=main]"
+        ]
+        app.shutdown()
 
     def test_connecting_an_unmarked_method_fails_the_build(self) -> None:
         """Only a marked method is connectable, so a typo cannot pass silently."""
@@ -1577,6 +1770,44 @@ class TestYamlWiring:
 
         with pytest.raises(WiringError, match=expected):
             AppContainer.from_config(str(broken)).build()
+
+    def test_a_rule_naming_a_component_that_failed_is_skipped(
+        self,
+        mock_entry_points: None,
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The build returns, having made every rule that names what it built.
+
+        The rule it dropped is reported, so that a connection cannot go missing
+        without a record of it.
+        """
+        source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
+        source["presenters"]["broken"] = {
+            "plugin_name": "mock-pkg",
+            "plugin_id": "broken_controller",
+        }
+        source["wiring"].append(
+            {"from": "mover.sig_motor_moved", "to": "broken.on_motor_moved"}
+        )
+        tolerated = tmp_path / "tolerated_wiring.yaml"
+        tolerated.write_text(yaml.safe_dump(source))
+
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            app = AppContainer.from_config(str(tolerated)).build()
+
+        assert "broken" not in app.presenters
+        assert any(
+            "broken.on_motor_moved" in record.message
+            and record.levelno == logging.WARNING
+            for record in caplog.records
+        )
+        assert sorted(str(link) for link in app.virtual_container.connections) == [
+            "grouped.filtered -> grouped.absorb",
+            "grouped.median -> grouped.absorb",
+            "mover.sig_motor_moved -> ctrl.on_motor_moved",
+        ]
 
     def test_an_unmarked_method_is_not_a_slot_port(
         self, mock_entry_points: None, config_path: Path

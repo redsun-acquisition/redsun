@@ -46,6 +46,7 @@ from redsun.containers.components import (
     _DeviceComponent,
     _DeviceField,
     _HookField,
+    _NotBuilt,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
@@ -56,6 +57,7 @@ from redsun.log import set_level
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
+    ComponentNotBuilt,
     Connection,
     HasShutdown,
     IsInjectable,
@@ -319,6 +321,7 @@ class AppContainer:
         "_components",
         "_config",
         "_devices_connected",
+        "_failed",
         "_hook_by_moment",
         "_hooks",
         "_is_built",
@@ -543,6 +546,10 @@ class AppContainer:
         # container of the class; this is per container, so the objects go when
         # it does and the next container starts from nothing.
         self._built: dict[_ComponentBase[Any], Any] = {}
+        # what the build could not make, by component name, so that a phase
+        # after the one that failed can tell a component that is not there
+        # from a name that was never declared
+        self._failed: dict[str, BaseException] = {}
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
         self._components: dict[str, _ComponentBase[Any]] = {
@@ -607,35 +614,38 @@ class AppContainer:
             )
         return cast("T", self._built[comp])
 
+    def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
+        """Return what this container built from *declared*, by name.
+
+        A declaration the build did not reach, or one whose build failed, is
+        absent, so the mapping can be shorter than *declared*.
+        """
+        return {
+            name: cast("T", self._built[comp])
+            for name, comp in declared.items()
+            if comp in self._built
+        }
+
     @property
     def devices(self) -> dict[str, Device]:
         """Return built device instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._device_components.items()
-        }
+        return self._built_of(self._device_components)
 
     @property
     def presenters(self) -> dict[str, PPresenter]:
         """Return built presenter instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._presenter_components.items()
-        }
+        return self._built_of(self._presenter_components)
 
     @property
     def views(self) -> dict[str, PView]:
         """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: self._instance_of(comp)
-            for name, comp in self._view_components.items()
-        }
+        return self._built_of(self._view_components)
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -674,22 +684,57 @@ class AppContainer:
         slot: Callable[..., Any],
         *,
         thread: SlotThread = None,
-    ) -> Connection:
+    ) -> Connection | None:
         """Connect a signal to a slot, recording the link for teardown.
+
+        Returns ``None``, having connected nothing, when either end belongs to
+        a component that failed to build: the link is logged at ``WARNING`` and
+        the rest of `wire` runs. Every other way of naming a port wrongly still
+        raises.
 
         See [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect].
         """
+        ends: tuple[object, object] = (signal, slot)
+        absent = {end.component for end in ends if isinstance(end, _NotBuilt)}
+        if absent:
+            named = ", ".join(repr(name) for name in sorted(absent))
+            logger.warning(
+                f"Not connecting {self._end_path(signal)} -> "
+                f"{self._end_path(slot)}: {named} not built"
+            )
+            return None
         return self.virtual_container.connect(signal, slot, thread=thread)
 
+    def _end_path(self, end: object) -> str:
+        """Return one end of a connection as ``component.port``."""
+        if isinstance(end, _NotBuilt):
+            return str(end)
+        owner = getattr(end, "__self__", None) or getattr(end, "instance", None)
+        port = getattr(end, "name", None) or getattr(end, "__name__", "<anonymous>")
+        return f"{self.virtual_container._label(owner)}.{port}"
+
     def _apply_wiring_config(self) -> None:
-        """Connect the port pairs listed in the ``wiring`` configuration section."""
+        """Connect the port pairs listed in the ``wiring`` configuration section.
+
+        A rule naming a component the build failed on is warned about and
+        skipped. Every other way of getting a rule wrong stays fatal, a name
+        that was never declared included.
+        """
         for index, rule in enumerate(self._config.get("wiring", [])):
             if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
                 raise WiringError(
                     f"wiring entry {index} must be a mapping with exactly the "
                     f"keys 'from' and 'to', got {rule!r}"
                 )
-            self.virtual_container.connect_paths(rule["from"], rule["to"])
+            try:
+                self.virtual_container.connect_paths(rule["from"], rule["to"])
+            except ComponentNotBuilt as e:
+                if e.component not in self._failed:
+                    raise
+                logger.warning(
+                    f"Not connecting {rule['from']} -> {rule['to']}: "
+                    f"component {e.component!r} was not built"
+                )
 
     def build(self) -> Self:
         """Instantiate all components in dependency order.
@@ -735,14 +780,37 @@ class AppContainer:
         self._inject_dependencies()
 
         self._is_built = True
-        logger.info(
-            f"Container built: "
-            f"{len(self._device_components)} devices, "
-            f"{len(self._presenter_components)} presenters, "
-            f"{len(self._view_components)} views"
-        )
+        summary = self._summarise_build()
+        if self._failed:
+            logger.warning(summary)
+        else:
+            logger.info(summary)
 
         return self
+
+    def _summarise_build(self) -> str:
+        """Return what the build made, counted against what was declared.
+
+        A build that missed nothing is one line; one that did names what it
+        could not make on a second.
+        """
+        declared: tuple[tuple[str, Mapping[str, _ComponentBase[Any]]], ...] = (
+            ("device", self._device_components),
+            ("presenter", self._presenter_components),
+            ("view", self._view_components),
+        )
+        counts = ", ".join(
+            f"{len(self._built_of(components))}/{len(components)} {kind}s"
+            for kind, components in declared
+        )
+        summary = f"Container built: {counts}"
+        if not self._failed:
+            return summary
+        kind_of = {name: kind for kind, components in declared for name in components}
+        missing = ", ".join(
+            f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+        )
+        return f"{summary}\nNot built: {missing}"
 
     @classmethod
     def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
@@ -861,33 +929,36 @@ class AppContainer:
                 built_devices[name] = self._built[device_comp] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
+                self._failed[name] = e
                 logger.error(f"Failed to build device '{name}': {e}")
         self._built_devices = built_devices
 
     def _build_presenters(self) -> None:
-        """Build every declared presenter against the built devices."""
+        """Build every declared presenter against the built devices.
+
+        A presenter that fails is skipped, as a device that fails is.
+        """
         for comp_name, presenter_component in self._presenter_components.items():
             try:
                 self._built[presenter_component] = presenter_component.build(
                     self._built_devices
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - a missing presenter must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
-                raise
 
     def _build_views(self) -> None:
-        """Build every declared view."""
+        """Build every declared view, skipping the ones that fail."""
         for comp_name, view_component in self._view_components.items():
             try:
                 self._built[view_component] = view_component.build()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - a missing view must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build view '{comp_name}': {e}")
-                raise
 
     def _register_providers(self) -> None:
         """Let every component providing dependencies register them."""
-        for component in self._components.values():
-            instance = self._instance_of(component)
+        for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
 
@@ -897,16 +968,13 @@ class AppContainer:
         The names reach the VirtualContainer first because both `wire` and the
         ``wiring`` configuration section resolve components by name.
         """
-        self.virtual_container._set_components(
-            {name: self._instance_of(comp) for name, comp in self._components.items()}
-        )
+        self.virtual_container._set_components(self._built_of(self._components))
         self.wire()
         self._apply_wiring_config()
 
     def _inject_dependencies(self) -> None:
         """Let every component taking dependencies receive them."""
-        for component in self._components.values():
-            instance = self._instance_of(component)
+        for instance in self._built_of(self._components).values():
             if isinstance(instance, IsInjectable):
                 instance.inject_dependencies(self.virtual_container)
 
@@ -974,8 +1042,7 @@ class AppContainer:
 
         One presenter failing to shut down does not stop the others.
         """
-        for name, comp in self._presenter_components.items():
-            presenter = self._instance_of(comp)
+        for name, presenter in self._built_of(self._presenter_components).items():
             if isinstance(presenter, HasShutdown):
                 try:
                     presenter.shutdown()
@@ -992,6 +1059,7 @@ class AppContainer:
             self._virtual_container._clear_components()
         released = list(self._built.values())
         self._built.clear()
+        self._failed.clear()
         self._built_devices = {}
         return released
 
