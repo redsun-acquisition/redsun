@@ -9,11 +9,22 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Added
+
+- **`ComponentNotBuilt`** (`redsun.virtual`) - the `WiringError`
+  `VirtualContainer.connect_paths` raises for a port path naming a component
+  that is not there. It carries the name as `component`.
+
 ### Changed
 
 - **`AppContainer.build`** (`redsun.containers.container`) logs a presenter or
   a view that fails to build and carries on, as it already did for a device.
   The build returns, and the component is absent from `presenters` or `views`.
+
+- A `wiring` rule naming a component that failed to build is logged at
+  `WARNING` and skipped, and the rules around it connect. A rule naming a
+  component that was never declared, one naming a port a built component does
+  not expose, a signature mismatch and a malformed rule all still raise.
 
 - **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
   device, presenter and view the container built. `devices`, `presenters` and

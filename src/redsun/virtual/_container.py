@@ -22,6 +22,7 @@ from redsun.log import Loggable
 from redsun.virtual._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
+    ComponentNotBuilt,
     Connection,
     Slot,
     SlotThread,
@@ -519,9 +520,10 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         WiringError
-            If either path is malformed, names a component that was not built,
-            or names a port that component does not expose. The message lists
-            what does exist.
+            If either path is malformed or names a port the component does not
+            expose. The message lists what does exist.
+        ComponentNotBuilt
+            If either path names a component that is not there.
         """
         signal = self._resolve_port(source, "signal")
         slot = self._resolve_port(target, "slot")
@@ -539,9 +541,10 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         component = self._components.get(component_name)
         if component is None:
             known = ", ".join(sorted(self._components)) or "none"
-            raise WiringError(
+            raise ComponentNotBuilt(
+                component_name,
                 f"{path!r} names component {component_name!r}, which was not "
-                f"built. Built: {known}"
+                f"built. Built: {known}",
             )
         surface = ports(component)
         available = surface.signals if kind == "signal" else surface.slots

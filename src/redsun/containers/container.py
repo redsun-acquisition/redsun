@@ -56,6 +56,7 @@ from redsun.log import set_level
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
+    ComponentNotBuilt,
     Connection,
     HasShutdown,
     IsInjectable,
@@ -690,14 +691,27 @@ class AppContainer:
         return self.virtual_container.connect(signal, slot, thread=thread)
 
     def _apply_wiring_config(self) -> None:
-        """Connect the port pairs listed in the ``wiring`` configuration section."""
+        """Connect the port pairs listed in the ``wiring`` configuration section.
+
+        A rule naming a component the build failed on is warned about and
+        skipped. Every other way of getting a rule wrong stays fatal, a name
+        that was never declared included.
+        """
         for index, rule in enumerate(self._config.get("wiring", [])):
             if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
                 raise WiringError(
                     f"wiring entry {index} must be a mapping with exactly the "
                     f"keys 'from' and 'to', got {rule!r}"
                 )
-            self.virtual_container.connect_paths(rule["from"], rule["to"])
+            try:
+                self.virtual_container.connect_paths(rule["from"], rule["to"])
+            except ComponentNotBuilt as e:
+                if e.component not in self._failed:
+                    raise
+                logger.warning(
+                    f"Not connecting {rule['from']} -> {rule['to']}: "
+                    f"component {e.component!r} was not built"
+                )
 
     def build(self) -> Self:
         """Instantiate all components in dependency order.

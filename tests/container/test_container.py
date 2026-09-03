@@ -1639,6 +1639,30 @@ class TestYamlWiring:
         with pytest.raises(WiringError, match=expected):
             AppContainer.from_config(str(broken)).build()
 
+    def test_a_rule_naming_a_component_that_failed_is_skipped(
+        self, mock_entry_points: None, config_path: Path, tmp_path: Path
+    ) -> None:
+        """The build returns, having made every rule that names what it built."""
+        source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
+        source["presenters"]["broken"] = {
+            "plugin_name": "mock-pkg",
+            "plugin_id": "broken_controller",
+        }
+        source["wiring"].append(
+            {"from": "mover.sig_motor_moved", "to": "broken.on_motor_moved"}
+        )
+        tolerated = tmp_path / "tolerated_wiring.yaml"
+        tolerated.write_text(yaml.safe_dump(source))
+
+        app = AppContainer.from_config(str(tolerated)).build()
+
+        assert "broken" not in app.presenters
+        assert sorted(str(link) for link in app.virtual_container.connections) == [
+            "grouped.filtered -> grouped.absorb",
+            "grouped.median -> grouped.absorb",
+            "mover.sig_motor_moved -> ctrl.on_motor_moved",
+        ]
+
     def test_an_unmarked_method_is_not_a_slot_port(
         self, mock_entry_points: None, config_path: Path
     ) -> None:
