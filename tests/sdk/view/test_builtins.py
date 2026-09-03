@@ -67,10 +67,12 @@ def test_without_a_presenter_the_view_degrades(qapp: QApplication) -> None:
 def test_shutdown_releases_the_subscription(app: _App) -> None:
     """The regression this port exists to fix: the callback is taken back."""
     assert len(app.virtual_container.subscriptions) == 1
-    before = app.widget._root_dir_edit.text()
+    # read before shutdown: a shut-down container owns no component
+    storage, widget = app.storage, app.widget
+    before = widget._root_dir_edit.text()
 
     app.shutdown()
-    app.storage.path_provider.set_base_dir(BASE_DIR / "after-shutdown")
+    storage.path_provider.set_base_dir(BASE_DIR / "after-shutdown")
 
-    assert app.widget._root_dir_edit.text() == before
+    assert widget._root_dir_edit.text() == before
     assert app.virtual_container.subscriptions == []

@@ -25,6 +25,7 @@ from typing import (
     TypeGuard,
     TypeVar,
     assert_never,
+    cast,
     overload,
 )
 
@@ -313,6 +314,7 @@ class AppContainer:
     """
 
     __slots__ = (
+        "_built",
         "_built_devices",
         "_components",
         "_config",
@@ -536,9 +538,14 @@ class AppContainer:
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
+        # what this container built, keyed by the declaration it was built
+        # from. The declaration registries are class attributes shared by every
+        # container of the class; this is per container, so the objects go when
+        # it does and the next container starts from nothing.
+        self._built: dict[_ComponentBase[Any], Any] = {}
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
-        self._components: dict[str, _PresenterComponent | _ViewComponent] = {
+        self._components: dict[str, _ComponentBase[Any]] = {
             **self._presenter_components,
             **self._view_components,
         }
@@ -592,12 +599,23 @@ class AppContainer:
         """Return the application configuration."""
         return self._config
 
+    def _instance_of(self, comp: _ComponentBase[T]) -> T:
+        """Return what this container built from *comp*."""
+        if comp not in self._built:
+            raise RuntimeError(
+                f"Component {comp.name} has not been instantiated yet. Call 'build' first."
+            )
+        return cast("T", self._built[comp])
+
     @property
     def devices(self) -> dict[str, Device]:
         """Return built device instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {name: comp.instance for name, comp in self._device_components.items()}
+        return {
+            name: self._instance_of(comp)
+            for name, comp in self._device_components.items()
+        }
 
     @property
     def presenters(self) -> dict[str, PPresenter]:
@@ -605,7 +623,8 @@ class AppContainer:
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return {
-            name: comp.instance for name, comp in self._presenter_components.items()
+            name: self._instance_of(comp)
+            for name, comp in self._presenter_components.items()
         }
 
     @property
@@ -613,7 +632,10 @@ class AppContainer:
         """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {name: comp.instance for name, comp in self._view_components.items()}
+        return {
+            name: self._instance_of(comp)
+            for name, comp in self._view_components.items()
+        }
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -836,7 +858,7 @@ class AppContainer:
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
-                built_devices[name] = device_comp.build()
+                built_devices[name] = self._built[device_comp] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 logger.error(f"Failed to build device '{name}': {e}")
@@ -846,7 +868,9 @@ class AppContainer:
         """Build every declared presenter against the built devices."""
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter_component.build(self._built_devices)
+                self._built[presenter_component] = presenter_component.build(
+                    self._built_devices
+                )
             except Exception as e:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
                 raise
@@ -855,7 +879,7 @@ class AppContainer:
         """Build every declared view."""
         for comp_name, view_component in self._view_components.items():
             try:
-                view_component.build()
+                self._built[view_component] = view_component.build()
             except Exception as e:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
                 raise
@@ -863,8 +887,9 @@ class AppContainer:
     def _register_providers(self) -> None:
         """Let every component providing dependencies register them."""
         for component in self._components.values():
-            if isinstance(component.instance, IsProvider):
-                component.instance.register_providers(self.virtual_container)
+            instance = self._instance_of(component)
+            if isinstance(instance, IsProvider):
+                instance.register_providers(self.virtual_container)
 
     def _apply_wiring(self) -> None:
         """Publish the built components by name, then connect them.
@@ -873,7 +898,7 @@ class AppContainer:
         ``wiring`` configuration section resolve components by name.
         """
         self.virtual_container._set_components(
-            {name: comp.instance for name, comp in self._components.items()}
+            {name: self._instance_of(comp) for name, comp in self._components.items()}
         )
         self.wire()
         self._apply_wiring_config()
@@ -881,8 +906,9 @@ class AppContainer:
     def _inject_dependencies(self) -> None:
         """Let every component taking dependencies receive them."""
         for component in self._components.values():
-            if isinstance(component.instance, IsInjectable):
-                component.instance.inject_dependencies(self.virtual_container)
+            instance = self._instance_of(component)
+            if isinstance(instance, IsInjectable):
+                instance.inject_dependencies(self.virtual_container)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect all devices via ophyd-async's async connect lifecycle.
@@ -912,25 +938,75 @@ class AppContainer:
         self._devices_connected = True
 
     def shutdown(self) -> None:
-        """Shutdown all presenters and hooks that implement ``HasShutdown``."""
+        """Undo the build, one phase at a time.
+
+        The phases run in the order below, each of them a method a subclass
+        may override the way the build phases are overridden:
+
+        1. ``_disconnect`` - undo the wiring.
+        2. ``_shutdown_presenters`` - shut every presenter down.
+        3. ``_shutdown_hooks`` - undo what the hook providers installed.
+        4. ``_release_components`` - drop every built component.
+        5. ``_destroy`` - end what dropping a reference does not end.
+
+        Afterwards the container holds nothing it built, so ``devices``,
+        ``presenters`` and ``views`` raise until the next ``build()``.
+        """
         if not self._is_built:
             return
 
-        if self._virtual_container is not None:
-            self._virtual_container.disconnect_all()
-
-        for name, comp in self._presenter_components.items():
-            if isinstance(comp.instance, HasShutdown):
-                try:
-                    comp.instance.shutdown()
-                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
-                    logger.error(f"Error shutting down presenter '{name}': {e}")
-
+        self._disconnect()
+        self._shutdown_presenters()
         # after the components, which may still be using what a hook installed
         self._shutdown_hooks()
+        self._destroy(self._release_components())
 
         self._is_built = False
         logger.info("Container shutdown complete")
+
+    def _disconnect(self) -> None:
+        """Undo every connection and subscription the wiring made."""
+        if self._virtual_container is not None:
+            self._virtual_container.disconnect_all()
+
+    def _shutdown_presenters(self) -> None:
+        """Shut down every presenter implementing ``HasShutdown``.
+
+        One presenter failing to shut down does not stop the others.
+        """
+        for name, comp in self._presenter_components.items():
+            presenter = self._instance_of(comp)
+            if isinstance(presenter, HasShutdown):
+                try:
+                    presenter.shutdown()
+                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
+                    logger.error(f"Error shutting down presenter '{name}': {e}")
+
+    def _release_components(self) -> Sequence[object]:
+        """Drop every built component, and return what was dropped.
+
+        The virtual container forgets them too, so that what the container
+        built is reachable from nowhere the framework owns.
+        """
+        if self._virtual_container is not None:
+            self._virtual_container._clear_components()
+        released = list(self._built.values())
+        self._built.clear()
+        self._built_devices = {}
+        return released
+
+    def _destroy(self, components: Sequence[object]) -> None:
+        """Destroy the components the container has just released.
+
+        Dropping the last reference is everything a toolkit-agnostic container
+        can do, and for a toolkit whose objects are owned by something other
+        than Python it is not enough. Such a toolkit overrides this to end
+        them, so that a shut-down container leaves nothing behind whatever it
+        was built on.
+
+        *components* have already been released: neither this container nor the
+        virtual container holds them any more.
+        """
 
     def run(self) -> None:
         """Build and connect devices if needed, then start the application."""

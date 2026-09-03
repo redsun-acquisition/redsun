@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, ClassVar, NoReturn, cast
 # psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
-from qtpy.QtWidgets import QApplication
+from qtpy.QtCore import QEvent
+from qtpy.QtWidgets import QApplication, QWidget
 
 from redsun.aio import set_async_backend
 from redsun.containers._hooks import (
@@ -23,7 +24,7 @@ from redsun.containers.container import AppContainer, _silent
 from redsun.containers.qt._mainview import QtMainView
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from contextlib import AbstractContextManager
     from typing import Any
 
@@ -141,6 +142,38 @@ class QtAppContainer(AppContainer):
         """Shut components down, then tear the async backend down."""
         super().shutdown()
         clear_async_backend()
+
+    def _destroy(self, components: Sequence[object]) -> None:
+        """Destroy the widgets among *components*, and the main window.
+
+        A ``QWidget`` lives on past its last Python reference whenever C++ owns
+        it, so releasing one does not end it and ``deleteLater`` is what does.
+        Closing first gives a widget holding resources, an embedded canvas for
+        instance, its ``closeEvent`` before it goes.
+
+        The window is destroyed after the views it docks, and only exists at
+        all when the session was started through ``run``: a container that was
+        built and never run holds its views as parentless top-level widgets,
+        with no window to take them down.
+
+        A reference taken before the shutdown is left wrapping a destroyed
+        widget, and using it raises ``RuntimeError``.
+        """
+        for component in components:
+            if isinstance(component, QWidget):
+                component.close()
+                component.deleteLater()
+        if self._main_view is not None:
+            self._main_view.close()
+            self._main_view.deleteLater()
+            # the property reports an unbuilt window rather than handing back a
+            # wrapper whose widget is gone, and a rebuild makes a new one
+            self._main_view = None
+        if self._qt_app is not None:
+            # deleteLater only posts the deletion, and a container shut down
+            # without an event loop running would never reach the pass that
+            # carries it out
+            self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     def _during_build(
         self, app: QApplication
