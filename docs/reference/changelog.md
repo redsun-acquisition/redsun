@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
-## [Unreleased]
+## [0.12.1] - 03-09-2026
 
 ### Added
 
@@ -823,6 +823,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
