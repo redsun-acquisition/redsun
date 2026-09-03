@@ -14,6 +14,8 @@ from redsun.view import PView
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from redsun.containers.container import AppContainer
+
 T = TypeVar("T")
 
 
@@ -211,44 +213,74 @@ def declare_presenter(
     )
 
 
+class _NotBuilt:
+    """Stands in for a component the build failed on.
+
+    Reading any attribute gives another of these, carrying the name that was
+    read, so a ``wire`` body naming a component that is not there reaches
+    ``connect`` instead of raising and the connections around it are still
+    made.
+    """
+
+    __slots__ = ("component", "port")
+
+    def __init__(self, component: str, port: str = "") -> None:
+        self.component = component
+        self.port = port
+
+    def __getattr__(self, name: str) -> _NotBuilt:
+        # a dunder answered with a stand-in would make this object claim
+        # protocols it does not implement, copy and pickle among them
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return _NotBuilt(self.component, name)
+
+    def __str__(self) -> str:
+        return f"{self.component}.{self.port}" if self.port else self.component
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self!s})"
+
+
 class _ComponentBase(Generic[T]):
     """Generic base class for components.
 
     The ``name`` attribute holds the fully-resolved component name.
     For declarative fields it is ``alias`` (if set) or the attribute name;
     for ``from_config()``-built containers it is the YAML key.
+
+    A wrapper is a declaration and holds no built object. The container it was
+    declared on keeps what it built, keyed by the wrapper, so two containers of
+    the same class build their own components and neither outlives the
+    container that built it.
     """
 
-    __slots__ = ("_instance", "cls", "kwargs", "name")
+    __slots__ = ("cls", "kwargs", "name")
 
     def __init__(self, cls: Callable[..., T], name: str, /, **kwargs: Any) -> None:
         self.cls = cls
         self.name = name
         self.kwargs = kwargs
-        self._instance: T | None = None
-
-    @property
-    def instance(self) -> T:
-        """Return the built instance, raising ``RuntimeError`` if not yet built."""
-        if self._instance is None:
-            raise RuntimeError(
-                f"Component {self.name} has not been instantiated yet. Call 'build' first."
-            )
-        return self._instance
 
     def __get__(self, obj: object, objtype: type | None = None) -> Any:
-        """Resolve to the built instance when read from a container instance.
+        """Resolve to the built instance when read from a built container.
 
-        Reading the attribute on the class, or before the component is built,
-        gives the wrapper itself.
+        Reading the attribute on the class, on a container that has not been
+        built, or on one that has been shut down, gives the wrapper itself. A
+        component whose build failed gives a `_NotBuilt` for as long as that
+        build lasts.
         """
-        if obj is None or self._instance is None:
+        if obj is None:
             return self
-        return self._instance
+        container = cast("AppContainer", obj)
+        if self in container._built:
+            return container._built[self]
+        if self.name in container._failed:
+            return _NotBuilt(self.name)
+        return self
 
     def __repr__(self) -> str:
-        status = "built" if self._instance is not None else "pending"
-        return f"{self.__class__.__name__}({self.name!r}, {status})"
+        return f"{self.__class__.__name__}({self.name!r})"
 
 
 class _DeviceComponent(_ComponentBase[Device]):
@@ -262,7 +294,6 @@ class _DeviceComponent(_ComponentBase[Device]):
                 f"{type(instance).__name__!r} (device {self.name!r}) is not an "
                 "ophyd-async Device."
             )
-        self._instance = instance
         return instance
 
 
@@ -296,7 +327,6 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
                 "implement the PPresenter protocol: "
                 + "; ".join(problems(instance, PPresenter))
             )
-        self._instance = instance
         return instance
 
 
@@ -326,7 +356,6 @@ class _ViewComponent(_ComponentBase[PView]):
                 f"{type(instance).__name__!r} (view {self.name!r}) does not "
                 "implement the PView protocol: " + "; ".join(problems(instance, PView))
             )
-        self._instance = instance
         return instance
 
 

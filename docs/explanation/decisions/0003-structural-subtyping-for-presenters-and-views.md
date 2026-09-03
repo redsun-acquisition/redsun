@@ -4,7 +4,13 @@ Date: 2026-07-24
 
 ## Status
 
-Accepted
+Accepted, superseded in part by
+[11. Tolerating a component that fails to build](0011-tolerating-a-component-that-fails-to-build.md).
+
+A presenter or view whose instance fails the protocol check is logged and
+skipped there rather than re-raising. What remains in force is the dual gate
+itself: the constructor's positional shape is checked at declaration or
+discovery, protocol compliance on the built instance.
 
 ## Context
 

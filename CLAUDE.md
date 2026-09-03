@@ -50,14 +50,17 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   is simultaneously the DI container, the psygnal signal bus, and the
   document-callback registry. Config is frozen (`_FrozenConfig`); read it via
   the `schema_version` / `frontend` / `name` / `metadata` properties.
-- **`AppContainer.build()` runs its phases in a fixed order**, documented in
-  its docstring: VirtualContainer -> devices -> presenters -> views ->
-  `register_providers` -> `wire` -> `inject_dependencies`. Changing the order
-  breaks the build: providers must all be registered before any injection runs.
-  Never interleave the last two phases, and never move work into `__init__`
-  that belongs in a phase.
-- Device build failures are logged and skipped; presenter/view build failures
-  re-raise. Preserve that asymmetry: a missing device must not abort the app.
+- **`AppContainer.build()` phase order is load-bearing** and documented in its
+  docstring: VirtualContainer -> devices -> presenters -> views ->
+  `register_providers` -> `wire` -> `inject_dependencies`. Providers must all
+  be registered before any injection runs; never interleave the last two phases,
+  never move work into `__init__` that belongs in a phase.
+- **A component that fails to build is logged and skipped, in every layer.**
+  The build records the exception under the component's name in `_failed` and
+  carries on; `build` returns and the session runs with what it has. Phases and
+  the `devices`/`presenters`/`views` properties read `_built_of`, never the
+  declarations, so a mapping can be shorter than what was declared.
+  Rationale: `docs/explanation/decisions/0011-tolerating-a-component-that-fails-to-build.md`.
 - Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
   `HasShutdown` (sync, presenters) and `HasAsyncShutdown` (async, devices) are
   `@runtime_checkable` Protocols checked with `isinstance`.

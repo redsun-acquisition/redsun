@@ -316,6 +316,88 @@ Dates are specified in the format `DD-MM-YYYY`.
   included, is taken from the last source setting it. A component entry under
   `devices`, `presenters` or `views` is replaced whole rather than merged.
 
+## [0.12.1] - 03-09-2026
+
+### Added
+
+- **`ComponentNotBuilt`** (`redsun.virtual`) - the `WiringError`
+  `VirtualContainer.connect_paths` raises for a port path naming a component
+  that is not there. It carries the name as `component`.
+
+### Changed
+
+- **`AppContainer.build`** (`redsun.containers.container`) logs a presenter or
+  a view that fails to build and carries on, as it already did for a device.
+  The build returns, and the component is absent from `presenters` or `views`.
+
+- **`AppContainer.connect`** (`redsun.containers.container`) returns
+  `Connection | None`. Either end belonging to a component that failed to
+  build is logged at `WARNING` and connects nothing, so the rest of `wire`
+  runs. A `declare_*` attribute of such a component reads back as a stand-in
+  for the length of that build, and naming a port a *built* component does not
+  have still raises `AttributeError`.
+
+- The line closing a build counts what was built against what was declared,
+  and names what is missing. It is logged at `WARNING` rather than `INFO` when
+  anything failed to build:
+
+  ```
+  Container built: 3/4 devices, 2/2 presenters, 4/5 views
+  Not built: bad_camera (device), log_panel (view)
+  ```
+
+- A `wiring` rule naming a component that failed to build is logged at
+  `WARNING` and skipped, and the rules around it connect. A rule naming a
+  component that was never declared, one naming a port a built component does
+  not expose, a signature mismatch and a malformed rule all still raise.
+
+- **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
+  device, presenter and view the container built. `devices`, `presenters` and
+  `views` raise until the next `build()`, and a `declare_*` attribute read on a
+  shut-down container gives the declaration rather than the built object. Take
+  a reference before the shutdown to keep using a component:
+
+  ```python
+  app = MyApp().build()
+  ctrl = app.ctrl
+  app.shutdown()
+  ctrl.stop()
+  ```
+
+- **`AppContainer.shutdown`** runs as named phases, each overridable by a
+  subclass: `_disconnect`, `_shutdown_presenters`, `_shutdown_hooks`,
+  `_release_components` and `_destroy`. `_destroy` takes what
+  `_release_components` returned and does nothing by default; a toolkit
+  overrides it to end objects that releasing does not end.
+
+- **`QtAppContainer`** (`redsun.qt`) closes and destroys the widgets the
+  container built and the main window, rather than only releasing them. A view
+  read before the shutdown is left wrapping a destroyed widget and raises
+  `RuntimeError` on use; presenters are unaffected.
+
+- **`AppContainer`** builds its own components even when another container of
+  the same class was built before it. The two no longer share instances.
+
+### Fixed
+
+- **`AppContainer.devices`**, **`AppContainer.presenters`** and
+  **`AppContainer.views`** (`redsun.containers.container`) return the
+  components the container built. A device whose build failed is absent from
+  `devices`, where reading the mapping raised `RuntimeError` before:
+
+  ```python
+  class App(AppContainer):
+      ok = declare_device(MyMotor, egu="mm")
+      bad = declare_device(BrokenMotor)
+
+
+  set(App().build().devices)  # {"ok"}
+  ```
+
+- A wiring report could name a component after a different, released one.
+  **`VirtualContainer`** (`redsun.virtual`) resolves component names by
+  identity rather than by `id()`, and forgets the built components at shutdown.
+
 ## [0.12.0] - 29-08-2026
 
 ### Added
@@ -1050,6 +1132,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
