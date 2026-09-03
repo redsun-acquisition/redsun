@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
@@ -1158,3 +1159,95 @@ def test_a_shared_service_is_given_no_name() -> None:
     """A component is handed its name; a provider has none, so it must ask."""
     with pytest.raises(TypeError, match="'NamedServices' asks for 'name'"):
         NamedServicesApp().build()
+
+
+class BrokenPresenter:
+    """Presenter whose construction cannot succeed."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no hardware")
+
+
+class BrokenView(Attachable):
+    """View whose construction cannot succeed."""
+
+    placement: Placement = Panel("left")
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no widget")
+
+
+class NeedsBroken:
+    """Presenter built from one that cannot be constructed."""
+
+    def __init__(self, name: str, /, other: BrokenPresenter) -> None:
+        self.name = name
+        self.other = other
+
+
+class ToleratedApp(AppContainer):
+    frontend = Toy
+
+    ok: AsPresenter[Recorder]
+    bad: AsPresenter[BrokenPresenter]
+    panel: AsView[Attached]
+    broken_panel: AsView[BrokenView]
+
+
+class DependsOnBrokenApp(AppContainer):
+    bad: AsPresenter[BrokenPresenter]
+    dependent: AsPresenter[NeedsBroken]
+    ok: AsPresenter[Recorder]
+
+
+def test_a_component_that_fails_to_build_is_skipped() -> None:
+    """The build returns, and every component that could be made is there."""
+    app = ToleratedApp().build()
+    try:
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+        assert set(app.views) == {"panel"}
+    finally:
+        app.shutdown()
+
+
+def test_a_failure_is_logged_against_the_component_name(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The log is the whole report, so it names what failed and why."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        ToleratedApp().build().shutdown()
+
+    assert "Failed to build presenter 'bad': no hardware" in caplog.text
+    assert "Failed to build view 'broken_panel': no widget" in caplog.text
+
+
+def test_a_component_whose_collaborator_failed_is_skipped_too() -> None:
+    """One that cannot be built does not take its dependents down with it."""
+    app = DependsOnBrokenApp().build()
+    try:
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+    finally:
+        app.shutdown()
+
+
+def test_asking_for_something_nothing_ever_declared_still_raises() -> None:
+    """Only a component the session tried and failed to build is tolerated."""
+    with pytest.raises(TypeError, match="which nothing in the session provides"):
+        NamedServicesApp().build()
+
+
+def test_the_closing_line_names_what_is_missing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A build that missed something says so above the level it reports at."""
+    with caplog.at_level(logging.INFO, logger="redsun"):
+        ToleratedApp().build().shutdown()
+
+    closing = [
+        r for r in caplog.records if r.getMessage().startswith("Container built")
+    ]
+    assert [r.levelno for r in closing] == [logging.WARNING]
+    assert "bad (presenter)" in closing[0].getMessage()
+    assert "broken_panel (view)" in closing[0].getMessage()

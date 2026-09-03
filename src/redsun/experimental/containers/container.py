@@ -28,9 +28,10 @@ from redsun.experimental.containers._protocols import (
 from redsun.experimental.virtual import _provides
 from redsun.experimental.virtual._container import VirtualContainer
 from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
+from redsun.experimental.virtual._wiring import SessionNotBuilt
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from psygnal import SignalInstance
 
@@ -101,6 +102,7 @@ class AppContainer:
         "_config",
         "_declarations",
         "_devices",
+        "_failed",
         "_hooks",
         "_is_built",
         "_merged",
@@ -152,6 +154,9 @@ class AppContainer:
         self._virtual = VirtualContainer()
         self._declarations: dict[str, _declarations.Declaration] = {}
         self._devices: dict[str, Device] = {}
+        # what the build could not make, by component name, so that a
+        # component built from one of them is skipped rather than refused
+        self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
         self._is_built = False
 
@@ -391,13 +396,31 @@ class AppContainer:
         self._apply_wiring_config(config)
         self._warn_unused()
         self._is_built = True
-        logger.info(
-            "Container built: %d devices, %d presenters, %d views",
-            len(self._devices),
-            sum(1 for d in self._components() if d.kind is Layer.PRESENTER),
-            sum(1 for d in self._components() if d.kind is Layer.VIEW),
-        )
+        summary = self._summarise_build()
+        if self._failed:
+            logger.warning(summary)
+        else:
+            logger.info(summary)
         return self
+
+    def _summarise_build(self) -> str:
+        """Return what the build made, counted against what was declared.
+
+        A build that missed nothing is one line; one that did names what it
+        could not make on a second.
+        """
+        counted = []
+        for layer in Layer:
+            declared = [d for d in self._declarations.values() if d.kind is layer]
+            built = sum(1 for d in declared if d.instance is not None)
+            counted.append(f"{built}/{len(declared)} {layer}s")
+        summary = f"Container built: {', '.join(counted)}"
+        if not self._failed:
+            return summary
+        missing = ", ".join(
+            f"{name} ({self._declarations[name].kind})" for name in self._failed
+        )
+        return summary + "\nNot built: " + missing
 
     def wire(self) -> None:
         """Connect the signals and slots of built components.
@@ -463,6 +486,9 @@ class AppContainer:
         A component is registered under its own key, and under its class when
         no other declaration names that class, so a collaborator may ask for it
         either way.
+
+        One that cannot be built is logged and skipped, and so is one built
+        from it, so that a session missing a part of itself still comes up.
         """
         declarations = self._components()
         self._check_layers(declarations)
@@ -475,15 +501,80 @@ class AppContainer:
                 self._report(step)
                 announced = step
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
-            _refuse_unanswered(store, declaration.name, params)
+            if self._refuse_or_skip(store, declaration, params):
+                continue
             factory = _factories.factory(declaration, self._on_built)
-            instance = store.inject(factory)()
+            try:
+                instance = store.inject(factory)()
+            except SessionNotBuilt:
+                # a component asking the session a question it cannot answer
+                # yet is written wrongly, which is not a part being absent
+                raise
+            except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
+                self._skip(declaration, e)
+                continue
             store.register_provider(_constant(instance), type_hint=declaration.key)
             if self._is_unique(declaration):
                 store.register_provider(_constant(instance), type_hint=declaration.cls)
             _provides.register(
                 store, instance, declaration.cls, declaration.name, shared
             )
+
+    def _refuse_or_skip(
+        self,
+        store: Store,
+        declaration: _declarations.Declaration,
+        params: Mapping[str, Any],
+    ) -> bool:
+        """Return whether *declaration* is skipped for want of a collaborator.
+
+        A parameter left unanswered by a component this build already failed
+        on is a consequence of that failure, and skipping is what the session
+        does with it. One nothing ever declared is a mistake in the session
+        and still raises.
+
+        Raises
+        ------
+        TypeError
+            Naming the parameters and the types nothing answers.
+        """
+        unanswered = _unanswered(store, params)
+        if not unanswered:
+            return False
+        absent = self._blamed(hint for _, hint in unanswered)
+        if not absent:
+            raise TypeError(_unanswered_message(declaration.name, unanswered))
+        named = _listed_plain(sorted(repr(name) for name in absent))
+        reason = TypeError(f"{named} was not built")
+        self._skip(declaration, reason)
+        return True
+
+    def _blamed(self, hints: Iterable[Any]) -> set[str]:
+        """Return the names of failed components that would have answered *hints*.
+
+        A component registers itself under its key and, when it is the only
+        declaration naming its class, under that class too, so those are the
+        two ways a collaborator can have asked for it.
+        """
+        wanted = set(hints)
+        return {
+            declaration.name
+            for declaration in self._declarations.values()
+            if declaration.name in self._failed
+            and (
+                declaration.key in wanted
+                or (declaration.cls in wanted and self._is_unique(declaration))
+            )
+        }
+
+    def _skip(
+        self, declaration: _declarations.Declaration, reason: BaseException
+    ) -> None:
+        """Record and report a component the session is going on without."""
+        self._failed[declaration.name] = reason
+        logger.error(
+            "Failed to build %s '%s': %s", declaration.kind, declaration.name, reason
+        )
 
     def _ordered(
         self, declarations: list[_declarations.Declaration]
@@ -700,6 +791,7 @@ class AppContainer:
             try:
                 device = declaration.cls(declaration.name, **declaration.cfg_kwargs)
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
+                self._failed[declaration.name] = e
                 logger.error("Failed to build device '%s': %s", declaration.name, e)
                 continue
             self._devices[declaration.name] = device
@@ -743,7 +835,7 @@ class AppContainer:
         Runs after the wiring, which is the last thing that can put a
         component to use.
         """
-        declarations = self._components()
+        declarations = [d for d in self._components() if d.instance is not None]
         wanted = {
             _factories.optional_arg(hint) or hint
             for declaration in declarations
@@ -798,30 +890,43 @@ class AppContainer:
         return names
 
 
+def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, Any]]:
+    """Return the parameters of *params* nothing in the store answers.
+
+    Everything a component may be built from is registered by the time it is
+    reached, so a parameter with no provider has none coming.
+    """
+    return [
+        (pname, hint)
+        for pname, hint in params.items()
+        if _factories.optional_arg(hint) is None
+        and next(store.iter_providers(hint), None) is None
+    ]
+
+
+def _unanswered_message(name: str, unanswered: list[tuple[str, Any]]) -> str:
+    """Return the refusal naming what *name* asked for and did not get."""
+    named = _listed_plain(
+        [f"{pname!r} ({getattr(hint, '__name__', hint)})" for pname, hint in unanswered]
+    )
+    return (
+        f"{name!r} asks for {named}, which nothing in the session provides. "
+        "A component names the values it needs, and the session is not one of "
+        "them."
+    )
+
+
 def _refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> None:
     """Refuse *name* asking for something the session does not hold.
-
-    Everything it may be built from is registered by now, so a parameter with
-    no provider has none coming.
 
     Raises
     ------
     TypeError
         Naming the parameters and the types nothing answers.
     """
-    unanswered = [
-        f"{pname!r} ({getattr(hint, '__name__', hint)})"
-        for pname, hint in params.items()
-        if _factories.optional_arg(hint) is None
-        and next(store.iter_providers(hint), None) is None
-    ]
-    if not unanswered:
-        return
-    raise TypeError(
-        f"{name!r} asks for {_listed_plain(unanswered)}, which nothing in the "
-        "session provides. A component names the values it needs, and the "
-        "session is not one of them."
-    )
+    unanswered = _unanswered(store, params)
+    if unanswered:
+        raise TypeError(_unanswered_message(name, unanswered))
 
 
 def _listed_plain(items: list[str]) -> str:
