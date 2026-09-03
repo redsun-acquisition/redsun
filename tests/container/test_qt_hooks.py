@@ -50,6 +50,8 @@ class TestQtApplicationHook:
         assert isinstance(view, StyleRecordingView)
         assert view.stylesheet_at_build == hook.stylesheet
 
+        app.shutdown()
+
     def test_a_qt_point_is_refused_by_a_headless_container(self) -> None:
         with pytest.raises(HookError, match="is not a hook point it calls"):
 
@@ -69,6 +71,8 @@ class TestQtApplicationHook:
         assert resolved["configure_application"] is resolved["configure_main_view"]
         assert app._ensure_hooks() is resolved
 
+        app.shutdown()
+
 
 class TestQtHooksFromAFile:
     """Tests for a session assembled from a configuration file on disk."""
@@ -87,6 +91,8 @@ class TestQtHooksFromAFile:
             hook.stylesheet
         )
 
+        app.shutdown()
+
     def test_from_config_shares_an_anchored_provider(self, config_path: Path) -> None:
         app = AppContainer.from_config(
             str(config_path / "mock_qt_shared_hook_config.yaml")
@@ -96,6 +102,8 @@ class TestQtHooksFromAFile:
 
         hook = app._hook_by_moment["configure_application"]
         assert hook is app._hook_by_moment["configure_main_view"]
+
+        app.shutdown()
 
 
 class TestQtBuildSpan:
@@ -138,6 +146,8 @@ class TestQtBuildSpan:
             "injection",
         ]
 
+        app.shutdown()
+
     def test_a_span_closes_when_the_build_raises(self, qapp: QApplication) -> None:
         span = mock_hooks.RecordingSpan()
 
@@ -169,11 +179,14 @@ class TestQtMainViewHook:
             configure_main_view = declare_hook(hook)
 
         app = TestApp().build()
-        assert hook.window is None
+        before = hook.window
 
         main_view = app._ensure_main_view()
 
+        assert before is None
         assert hook.window is main_view
+
+        app.shutdown()
 
     def test_one_provider_serves_the_application_and_the_window(self) -> None:
         hook = mock_hooks.QtStyleHook()
@@ -188,6 +201,8 @@ class TestQtMainViewHook:
         assert hook.window is main_view
         assert hook._app is app._qt_app
 
+        app.shutdown()
+
     def test_the_window_is_built_once(self) -> None:
         class TestApp(QtAppContainer):
             configure_main_view = declare_hook(mock_hooks.QtStyleHook)
@@ -195,6 +210,8 @@ class TestQtMainViewHook:
         app = TestApp().build()
 
         assert app._ensure_main_view() is app._ensure_main_view()
+
+        app.shutdown()
 
 
 class TestQtApplicationFactory:
@@ -216,6 +233,8 @@ class TestQtApplicationFactory:
         assert hook.calls == [sys.argv]
         assert app._qt_app is qapp
 
+        app.shutdown()
+
     def test_a_claimant_is_skipped_when_an_application_is_running(
         self, qapp: QApplication
     ) -> None:
@@ -228,6 +247,8 @@ class TestQtApplicationFactory:
 
         assert hook.calls == []
         assert app._qt_app is qapp
+
+        app.shutdown()
 
     def test_the_point_named_on_the_class_and_in_the_config_is_refused(
         self, qapp: QApplication
