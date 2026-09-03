@@ -21,6 +21,15 @@ Dates are specified in the format `DD-MM-YYYY`.
   a view that fails to build and carries on, as it already did for a device.
   The build returns, and the component is absent from `presenters` or `views`.
 
+- The line closing a build counts what was built against what was declared,
+  and names what is missing. It is logged at `WARNING` rather than `INFO` when
+  anything failed to build:
+
+  ```
+  Container built: 3/4 devices, 2/2 presenters, 4/5 views
+  Not built: bad_camera (device), log_panel (view)
+  ```
+
 - A `wiring` rule naming a component that failed to build is logged at
   `WARNING` and skipped, and the rules around it connect. A rule naming a
   component that was never declared, one naming a port a built component does

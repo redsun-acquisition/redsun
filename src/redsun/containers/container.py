@@ -757,14 +757,37 @@ class AppContainer:
         self._inject_dependencies()
 
         self._is_built = True
-        logger.info(
-            f"Container built: "
-            f"{len(self._device_components)} devices, "
-            f"{len(self._presenter_components)} presenters, "
-            f"{len(self._view_components)} views"
-        )
+        summary = self._summarise_build()
+        if self._failed:
+            logger.warning(summary)
+        else:
+            logger.info(summary)
 
         return self
+
+    def _summarise_build(self) -> str:
+        """Return what the build made, counted against what was declared.
+
+        A build that missed nothing is one line; one that did names what it
+        could not make on a second.
+        """
+        declared: tuple[tuple[str, Mapping[str, _ComponentBase[Any]]], ...] = (
+            ("device", self._device_components),
+            ("presenter", self._presenter_components),
+            ("view", self._view_components),
+        )
+        counts = ", ".join(
+            f"{len(self._built_of(components))}/{len(components)} {kind}s"
+            for kind, components in declared
+        )
+        summary = f"Container built: {counts}"
+        if not self._failed:
+            return summary
+        kind_of = {name: kind for kind, components in declared for name in components}
+        missing = ", ".join(
+            f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+        )
+        return f"{summary}\nNot built: {missing}"
 
     @classmethod
     def _build_hook_provider(cls, moment: str, field: _HookField) -> object:

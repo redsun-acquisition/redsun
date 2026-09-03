@@ -348,18 +348,68 @@ class TestBuildTolerance:
 
         app.shutdown()
 
+    @pytest.mark.parametrize(
+        ("declare", "expected"),
+        [
+            (
+                lambda: declare_device(BrokenDevice),
+                "Failed to build device 'bad': This device is broken",
+            ),
+            (
+                lambda: declare_presenter(BrokenController),
+                "Failed to build presenter 'bad': Broken controller",
+            ),
+            (
+                lambda: declare_view(BrokenView),
+                "Failed to build view 'bad': Broken view",
+            ),
+        ],
+    )
     def test_a_failure_is_logged_against_the_component_name(
-        self, caplog: pytest.LogCaptureFixture
+        self,
+        declare: Callable[[], Any],
+        expected: str,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """The log names what failed and why, which is the whole report for now."""
 
         class TestApp(AppContainer):
-            bad = declare_presenter(BrokenController)
+            bad = declare()
 
         with caplog.at_level(logging.ERROR, logger="redsun"):
             TestApp().build()
 
-        assert "Failed to build presenter 'bad': Broken controller" in caplog.text
+        assert expected in caplog.text
+
+    def test_the_closing_line_rises_to_warning_when_something_failed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A build that missed something says so above the level it reports at."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            bad = declare_presenter(BrokenController)
+
+        with caplog.at_level(logging.INFO, logger="redsun"):
+            TestApp().build()
+
+        closing = [r for r in caplog.records if r.message.startswith("Container built")]
+        assert [r.levelno for r in closing] == [logging.WARNING]
+        assert "bad (presenter)" in closing[0].message
+
+    def test_the_closing_line_stays_at_info_when_nothing_failed(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Nothing missing is not a warning."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+
+        with caplog.at_level(logging.INFO, logger="redsun"):
+            TestApp().build()
+
+        closing = [r for r in caplog.records if r.message.startswith("Container built")]
+        assert [r.levelno for r in closing] == [logging.INFO]
 
 
 class TestFromConfig:
@@ -1640,9 +1690,17 @@ class TestYamlWiring:
             AppContainer.from_config(str(broken)).build()
 
     def test_a_rule_naming_a_component_that_failed_is_skipped(
-        self, mock_entry_points: None, config_path: Path, tmp_path: Path
+        self,
+        mock_entry_points: None,
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """The build returns, having made every rule that names what it built."""
+        """The build returns, having made every rule that names what it built.
+
+        The rule it dropped is reported, so that a connection cannot go missing
+        without a record of it.
+        """
         source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
         source["presenters"]["broken"] = {
             "plugin_name": "mock-pkg",
@@ -1654,9 +1712,15 @@ class TestYamlWiring:
         tolerated = tmp_path / "tolerated_wiring.yaml"
         tolerated.write_text(yaml.safe_dump(source))
 
-        app = AppContainer.from_config(str(tolerated)).build()
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            app = AppContainer.from_config(str(tolerated)).build()
 
         assert "broken" not in app.presenters
+        assert any(
+            "broken.on_motor_moved" in record.message
+            and record.levelno == logging.WARNING
+            for record in caplog.records
+        )
         assert sorted(str(link) for link in app.virtual_container.connections) == [
             "grouped.filtered -> grouped.absorb",
             "grouped.median -> grouped.absorb",
