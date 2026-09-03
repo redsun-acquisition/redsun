@@ -219,6 +219,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   `TypeError`, and one reading a live view of the session during its own
   construction raises `SessionNotBuilt`.
 
+  `Requires[P]` holds the components the session built, so one that failed is
+  absent from it. An asker of `RequiresOne[P]` is skipped when the component
+  chosen to answer it failed; an asker of `RequiresMaybe[P]` is built with
+  `None`.
+
 - The session configuration key `session` is now `name`, in both container
   layers, and identifies the session rather than titling its window. It names
   the session's application, so two sessions in one process must not share it.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, Protocol, get_type_hints, runtime_checkable
@@ -822,3 +823,73 @@ def test_a_keyword_only_component_asks_the_same_question() -> None:
     assert requirements(declarations) == {
         Question(Resettable, Every()): ["plain", "pyd"]
     }
+
+
+class BrokenCamera:
+    """The one component satisfying `Linkable`, which cannot be built."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no camera")
+
+    def apply_camera(self, zoom: float) -> None: ...
+
+
+class AsksAboutLinkables:
+    """Holds the census of `Linkable`, so it can be read after the build."""
+
+    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
+        self.name = name
+        self.peers = peers
+
+
+class CensusReaderApp(AppContainer):
+    camera: AsPresenter[Camera]
+    broken: AsPresenter[BrokenCamera]
+    reader: AsPresenter[AsksAboutLinkables]
+
+
+class BrokenOneApp(AppContainer):
+    """Asks for the one `Linkable`, which cannot be built."""
+
+    broken: AsPresenter[BrokenCamera]
+    roi: AsPresenter[RoiWidget]
+
+
+class BrokenMaybeApp(AppContainer):
+    """Asks for a `Linkable` it can do without, which cannot be built."""
+
+    broken: AsPresenter[BrokenCamera]
+    widget: AsPresenter[MaybeWidget]
+
+
+def test_the_census_leaves_out_a_component_that_failed() -> None:
+    """A component asks what the session holds, not what it declared."""
+    app = CensusReaderApp().build()
+    try:
+        assert set(app.reader.peers) == {"camera"}
+    finally:
+        app.shutdown()
+
+
+def test_the_one_answer_failing_skips_whoever_asked(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Exactly one was demanded, so `None` is not an answer the asker can take."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        app = BrokenOneApp().build()
+    try:
+        assert app.is_built
+        assert set(app.presenters) == set()
+        assert "Failed to build presenter 'roi': 'broken' was not built" in caplog.text
+    finally:
+        app.shutdown()
+
+
+def test_an_optional_answer_failing_leaves_the_asker_without_one() -> None:
+    """At most one was asked for, and the session ended up holding none."""
+    app = BrokenMaybeApp().build()
+    try:
+        assert set(app.presenters) == {"widget"}
+        assert app.widget.camera is None
+    finally:
+        app.shutdown()
