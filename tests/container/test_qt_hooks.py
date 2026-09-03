@@ -9,6 +9,7 @@ import pytest
 from mock_pkg import hooks as mock_hooks
 from mock_pkg.controller import AsyncMotorController, MockController
 from mock_pkg.view import StyleRecordingView
+from qtpy.QtCore import QEvent
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
@@ -255,6 +256,19 @@ class TestQtApplicationFactory:
             app.build()
 
 
+def _views_alive(qapp: QApplication) -> int:
+    """How many ``StyleRecordingView`` widgets are left.
+
+    Deletions already posted by an earlier test are carried out first, and only
+    the class under test is counted, so the number does not depend on what ran
+    before.
+    """
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    return len(
+        [w for w in QApplication.topLevelWidgets() if isinstance(w, StyleRecordingView)]
+    )
+
+
 class TestQtShutdown:
     """Tests for what a Qt container leaves behind once it is shut down."""
 
@@ -269,13 +283,13 @@ class TestQtShutdown:
         class TestApp(QtAppContainer):
             ui = declare_view(StyleRecordingView)
 
-        before = len(QApplication.topLevelWidgets())
+        before = _views_alive(qapp)
 
         app = TestApp().build()
         view = app.views["ui"]
         app.shutdown()
 
-        assert len(QApplication.topLevelWidgets()) == before
+        assert _views_alive(qapp) == before
         with pytest.raises(RuntimeError):
             cast("StyleRecordingView", view).isVisible()
 
@@ -297,7 +311,7 @@ class TestQtShutdown:
             def wire(self) -> None:
                 self.connect(self.mover.sig_motor_moved, self.ctrl.not_connectable)
 
-        before = len(QApplication.topLevelWidgets())
+        before = _views_alive(qapp)
         # the container stays in scope: releasing it would drop the widgets
         # anyway, and what is under test is that they go without that
         app = TestApp()
@@ -305,4 +319,4 @@ class TestQtShutdown:
         with pytest.raises(WiringError, match="not connectable"):
             app.build()
 
-        assert len(QApplication.topLevelWidgets()) == before
+        assert _views_alive(qapp) == before
