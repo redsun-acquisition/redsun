@@ -78,3 +78,14 @@ class StyleRecordingView(QtView):
     @property
     def view_position(self) -> ViewPosition:
         return ViewPosition.CENTER
+
+
+class BrokenView(QtView):
+    """Refuses construction, so that a build has a view it cannot make."""
+
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        raise RuntimeError("Broken view")
+
+    @property
+    def view_position(self) -> ViewPosition:
+        return ViewPosition.CENTER

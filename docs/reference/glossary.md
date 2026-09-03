@@ -42,7 +42,8 @@ container rather than holding references to one another.
 
 A piece of hardware, or a stand-in for one, as an `ophyd-async` device.
 Hardware access is asynchronous throughout. A device that fails to build is
-logged and skipped, so a missing instrument does not abort the session.
+logged and skipped, as any component is, so a missing instrument does not
+abort the session.
 
 ### Frontend
 

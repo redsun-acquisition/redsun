@@ -55,8 +55,12 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   `register_providers` -> `wire` -> `inject_dependencies`. Providers must all
   be registered before any injection runs; never interleave the last two phases,
   never move work into `__init__` that belongs in a phase.
-- Device build failures are logged and skipped; presenter/view build failures
-  re-raise. Preserve that asymmetry: a missing device must not abort the app.
+- **A component that fails to build is logged and skipped, in every layer.**
+  The build records the exception under the component's name in `_failed` and
+  carries on; `build` returns and the session runs with what it has. Phases and
+  the `devices`/`presenters`/`views` properties read `_built_of`, never the
+  declarations, so a mapping can be shorter than what was declared.
+  Rationale: `docs/explanation/decisions/0011-tolerating-a-component-that-fails-to-build.md`.
 - Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
   `HasShutdown` (sync, presenters) and `HasAsyncShutdown` (async, devices) are
   `@runtime_checkable` Protocols checked with `isinstance`.

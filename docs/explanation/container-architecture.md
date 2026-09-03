@@ -251,9 +251,12 @@ components are declared or discovered (leading positionals must be
 `(name, devices)` / `(name,)`), and every built instance is validated
 against its layer contract (`ophyd_async.core.Device`,
 [`PPresenter`][redsun.presenter.PPresenter],
-[`PView`][redsun.view.PView]). Failures follow the layer asymmetry: a
-failing device is logged and skipped, while a failing presenter or view
-re-raises and aborts the build.
+[`PView`][redsun.view.PView]). A component that fails either check, or
+whose constructor raises, is logged at `ERROR` and skipped: the build
+returns and the session runs with the components it has. `devices`,
+`presenters` and `views` hold what was built, so a mapping can be shorter
+than the declarations it came from. See
+[ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md).
 
 **Provider registration** - the step `providers`:
 

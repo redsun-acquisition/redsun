@@ -11,6 +11,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- **`AppContainer.build`** (`redsun.containers.container`) logs a presenter or
+  a view that fails to build and carries on, as it already did for a device.
+  The build returns, and the component is absent from `presenters` or `views`.
+
 - **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
   device, presenter and view the container built. `devices`, `presenters` and
   `views` raise until the next `build()`, and a `declare_*` attribute read on a

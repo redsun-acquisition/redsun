@@ -11,11 +11,12 @@ import yaml
 from helpers import component
 from mock_pkg.controller import (
     AsyncMotorController,
+    BrokenController,
     GroupedController,
     MockController,
 )
 from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
-from mock_pkg.view import MockQtView
+from mock_pkg.view import BrokenView, MockQtView
 from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
@@ -314,6 +315,51 @@ class TestBuildTolerance:
         app = TestApp().build()
 
         assert set(app.devices) == {"ok"}
+
+    def test_a_presenter_that_fails_does_not_abort_the_build(self) -> None:
+        """The build returns, and the presenters that built are reachable."""
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            bad = declare_presenter(BrokenController)
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+
+    @pytest.mark.qt
+    def test_a_view_that_fails_does_not_abort_the_build(
+        self, qapp: QApplication
+    ) -> None:
+        """The build returns, leaving alive the widgets of the views that built."""
+
+        class TestApp(AppContainer):
+            ok = declare_view(MockQtView)
+            bad = declare_view(BrokenView)
+
+        before = len(QApplication.topLevelWidgets())
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.views) == {"ok"}
+        assert len(QApplication.topLevelWidgets()) == before + 1
+
+        app.shutdown()
+
+    def test_a_failure_is_logged_against_the_component_name(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The log names what failed and why, which is the whole report for now."""
+
+        class TestApp(AppContainer):
+            bad = declare_presenter(BrokenController)
+
+        with caplog.at_level(logging.ERROR, logger="redsun"):
+            TestApp().build()
+
+        assert "Failed to build presenter 'bad': Broken controller" in caplog.text
 
 
 class TestFromConfig:

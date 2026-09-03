@@ -319,6 +319,7 @@ class AppContainer:
         "_components",
         "_config",
         "_devices_connected",
+        "_failed",
         "_hook_by_moment",
         "_hooks",
         "_is_built",
@@ -543,6 +544,10 @@ class AppContainer:
         # container of the class; this is per container, so the objects go when
         # it does and the next container starts from nothing.
         self._built: dict[_ComponentBase[Any], Any] = {}
+        # what the build could not make, by component name, so that a phase
+        # after the one that failed can tell a component that is not there
+        # from a name that was never declared
+        self._failed: dict[str, BaseException] = {}
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
         self._components: dict[str, _ComponentBase[Any]] = {
@@ -864,28 +869,32 @@ class AppContainer:
                 built_devices[name] = self._built[device_comp] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
+                self._failed[name] = e
                 logger.error(f"Failed to build device '{name}': {e}")
         self._built_devices = built_devices
 
     def _build_presenters(self) -> None:
-        """Build every declared presenter against the built devices."""
+        """Build every declared presenter against the built devices.
+
+        A presenter that fails is skipped, as a device that fails is.
+        """
         for comp_name, presenter_component in self._presenter_components.items():
             try:
                 self._built[presenter_component] = presenter_component.build(
                     self._built_devices
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - a missing presenter must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
-                raise
 
     def _build_views(self) -> None:
-        """Build every declared view."""
+        """Build every declared view, skipping the ones that fail."""
         for comp_name, view_component in self._view_components.items():
             try:
                 self._built[view_component] = view_component.build()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - a missing view must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build view '{comp_name}': {e}")
-                raise
 
     def _register_providers(self) -> None:
         """Let every component providing dependencies register them."""
@@ -990,6 +999,7 @@ class AppContainer:
             self._virtual_container._clear_components()
         released = list(self._built.values())
         self._built.clear()
+        self._failed.clear()
         self._built_devices = {}
         return released
 
