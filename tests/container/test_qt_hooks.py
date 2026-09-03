@@ -7,11 +7,19 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 from mock_pkg import hooks as mock_hooks
+from mock_pkg.controller import AsyncMotorController, MockController
 from mock_pkg.view import StyleRecordingView
 from qtpy.QtWidgets import QApplication
 
-from redsun.containers import AppContainer, HookError, declare_hook, declare_view
+from redsun.containers import (
+    AppContainer,
+    HookError,
+    declare_hook,
+    declare_presenter,
+    declare_view,
+)
 from redsun.qt import QtAppContainer
+from redsun.virtual import WiringError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -270,3 +278,31 @@ class TestQtShutdown:
         assert len(QApplication.topLevelWidgets()) == before
         with pytest.raises(RuntimeError):
             cast("StyleRecordingView", view).isVisible()
+
+    def test_a_refused_build_destroys_the_widgets_it_built(
+        self, qapp: QApplication
+    ) -> None:
+        """Wiring that raises destroys the widgets built before it.
+
+        ``shutdown`` acts only on a built container, so nothing else will:
+        the widgets would outlive the failure as parentless top-level ones,
+        to be freed at whatever later moment the collector picks.
+        """
+
+        class TestApp(QtAppContainer):
+            ui = declare_view(StyleRecordingView)
+            mover = declare_presenter(AsyncMotorController)
+            ctrl = declare_presenter(MockController)
+
+            def wire(self) -> None:
+                self.connect(self.mover.sig_motor_moved, self.ctrl.not_connectable)
+
+        before = len(QApplication.topLevelWidgets())
+        # the container stays in scope: releasing it would drop the widgets
+        # anyway, and what is under test is that they go without that
+        app = TestApp()
+
+        with pytest.raises(WiringError, match="not connectable"):
+            app.build()
+
+        assert len(QApplication.topLevelWidgets()) == before

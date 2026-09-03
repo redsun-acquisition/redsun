@@ -138,9 +138,13 @@ class QtAppContainer(AppContainer):
         super().build()
         return self
 
-    def shutdown(self) -> None:
-        """Shut components down, then tear the async backend down."""
-        super().shutdown()
+    def _teardown(self) -> None:
+        """Run the shutdown phases, then tear the async backend down.
+
+        The backend is resolved by ``build``, so a build that raises has to
+        tear it down the way a shutdown does.
+        """
+        super()._teardown()
         clear_async_backend()
 
     def _destroy(self, components: Sequence[object]) -> None:
@@ -166,8 +170,8 @@ class QtAppContainer(AppContainer):
         if self._main_view is not None:
             self._main_view.close()
             self._main_view.deleteLater()
-            # the property reports an unbuilt window rather than handing back a
-            # wrapper whose widget is gone, and a rebuild makes a new one
+            # the property reports an unbuilt window rather than handing back
+            # a wrapper whose widget is gone
             self._main_view = None
         if self._qt_app is not None:
             # deleteLater only posts the deletion, and a container shut down

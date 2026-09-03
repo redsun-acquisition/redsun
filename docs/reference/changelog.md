@@ -13,9 +13,9 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
   device, presenter and view the container built. `devices`, `presenters` and
-  `views` raise until the next `build()`, and a `declare_*` attribute read on a
-  shut-down container gives the declaration rather than the built object. Take
-  a reference before the shutdown to keep using a component:
+  `views` raise afterwards, and a `declare_*` attribute read on a shut-down
+  container gives the declaration rather than the built object. Take a
+  reference before the shutdown to keep using a component:
 
   ```python
   app = MyApp().build()
@@ -39,6 +39,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   the same class was built before it. The two no longer share instances.
 
 ### Fixed
+
+- A build refused after its components were built kept them, and under
+  **`QtAppContainer`** (`redsun.qt`) left their widgets undestroyed.
+  **`AppContainer.build`** (`redsun.containers.container`) runs the shutdown
+  phases before it re-raises a provider, wiring or injection error.
 
 - A wiring report could name a component after a different, released one.
   **`VirtualContainer`** (`redsun.virtual`) resolves component names by

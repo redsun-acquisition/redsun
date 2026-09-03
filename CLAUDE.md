@@ -57,6 +57,16 @@ uv run python scripts/check_xrefs.py    # docs xref guard (after a build)
   never move work into `__init__` that belongs in a phase.
 - Device build failures are logged and skipped; presenter/view build failures
   re-raise. Preserve that asymmetry: a missing device must not abort the app.
+- **An application is built, run and shut down once.** `build()` refuses a
+  second call while the container is built, and a shut-down container is
+  finished rather than reset: nothing supports building it again in the same
+  script. Do not add state a rebuild would have to clear, and do not write
+  docstrings promising one.
+- A phase that raises once the components are built (providers, wiring,
+  injection) runs the shutdown phases through `AppContainer._teardown` before
+  re-raising, since `shutdown()` returns without acting on a container that
+  never finished building. The component build phases stay outside that, so
+  the asymmetry above is what decides the fate of a component that fails.
 - Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
   `HasShutdown` (sync, presenters) and `HasAsyncShutdown` (async, devices) are
   `@runtime_checkable` Protocols checked with `isinstance`.

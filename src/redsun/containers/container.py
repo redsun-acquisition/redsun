@@ -727,12 +727,19 @@ class AppContainer:
         self._build_presenters()
         self._report("views")
         self._build_views()
-        self._report("providers")
-        self._register_providers()
-        self._report("wiring")
-        self._apply_wiring()
-        self._report("injection")
-        self._inject_dependencies()
+
+        # every component exists by here, so a phase that raises from now on
+        # is the application refusing to run rather than one component missing
+        try:
+            self._report("providers")
+            self._register_providers()
+            self._report("wiring")
+            self._apply_wiring()
+            self._report("injection")
+            self._inject_dependencies()
+        except Exception:
+            self._teardown()
+            raise
 
         self._is_built = True
         logger.info(
@@ -950,19 +957,28 @@ class AppContainer:
         5. ``_destroy`` - end what dropping a reference does not end.
 
         Afterwards the container holds nothing it built, so ``devices``,
-        ``presenters`` and ``views`` raise until the next ``build()``.
+        ``presenters`` and ``views`` raise.
         """
         if not self._is_built:
             return
 
+        self._teardown()
+
+        self._is_built = False
+        logger.info("Container shutdown complete")
+
+    def _teardown(self) -> None:
+        """Run the shutdown phases over the components the container holds.
+
+        ``shutdown`` returns without acting on a container that never finished
+        building, so ``build`` calls this itself when a phase raises after the
+        components are built.
+        """
         self._disconnect()
         self._shutdown_presenters()
         # after the components, which may still be using what a hook installed
         self._shutdown_hooks()
         self._destroy(self._release_components())
-
-        self._is_built = False
-        logger.info("Container shutdown complete")
 
     def _disconnect(self) -> None:
         """Undo every connection and subscription the wiring made."""
