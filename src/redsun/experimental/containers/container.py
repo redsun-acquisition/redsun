@@ -493,6 +493,7 @@ class AppContainer:
         declarations = self._components()
         self._check_layers(declarations)
         self._answer(store, declarations)
+        chosen_for = self._chosen_for(declarations)
         shared: dict[Key, str] = {}
         announced = ""
         for declaration in self._ordered(declarations):
@@ -500,6 +501,11 @@ class AppContainer:
             if step != announced:
                 self._report(step)
                 announced = step
+            absent = chosen_for.get(declaration.name, set()) & set(self._failed)
+            if absent:
+                named = _listed_plain(sorted(repr(name) for name in absent))
+                self._skip(declaration, TypeError(f"{named} was not built"))
+                continue
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
             if self._refuse_or_skip(store, declaration, params):
                 continue
@@ -519,6 +525,24 @@ class AppContainer:
             _provides.register(
                 store, instance, declaration.cls, declaration.name, shared
             )
+
+    def _chosen_for(
+        self, declarations: list[_declarations.Declaration]
+    ) -> dict[str, set[str]]:
+        """Return, by asker, the components chosen for the questions it asks.
+
+        Only a question demanding exactly one component is here. One that
+        allows none is answered with nothing when the component chosen for it
+        cannot be built, which is an answer the asker already accepts.
+        """
+        found: dict[str, set[str]] = {}
+        for question, askers in _factories.requirements(declarations).items():
+            chosen = self._answers.get(question)
+            if chosen is None or not isinstance(question.marker, One):
+                continue
+            for asker in askers:
+                found.setdefault(asker, set()).add(chosen.name)
+        return found
 
     def _refuse_or_skip(
         self,
