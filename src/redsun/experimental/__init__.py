@@ -63,7 +63,7 @@ from redsun.experimental.virtual._requires import (
     RequiresOne,
     Satisfying,
 )
-from redsun.experimental.virtual._wiring import Connection, slot
+from redsun.experimental.virtual._wiring import Connection, SessionNotBuilt, slot
 
 __all__ = [
     "Alias",
@@ -91,6 +91,7 @@ __all__ = [
     "Satisfying",
     "Serves",
     "SessionConfig",
+    "SessionNotBuilt",
     "VirtualContainer",
     "provides",
     "satisfies",

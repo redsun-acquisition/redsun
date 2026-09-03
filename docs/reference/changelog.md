@@ -199,7 +199,25 @@ Dates are specified in the format `DD-MM-YYYY`.
   See [The experimental container](../explanation/experimental-container.md) for
   the architecture, what it lifts off component authors, and what it gives up.
 
+- **`SessionNotBuilt`** (`redsun.experimental`) - the `LookupError` a live view
+  of the session raises when a component reads it during its own construction.
+
 ### Changed
+
+- **`redsun.experimental.AppContainer.build`** logs a component that fails to
+  build and carries on, in every layer. The component is absent from
+  `presenters` or `views`, and so is one built from it. The line closing the
+  build counts what was built against what was declared, names what is missing,
+  and is logged at `WARNING` when anything failed:
+
+  ```
+  Container built: 1/2 devices, 1/3 presenters, 0/0 views
+  Not built: bad_stage (device), broken (presenter), dependent (presenter)
+  ```
+
+  A component asking for something nothing in the session declares still raises
+  `TypeError`, and one reading a live view of the session during its own
+  construction raises `SessionNotBuilt`.
 
 - The session configuration key `session` is now `name`, in both container
   layers, and identifies the session rather than titling its window. It names

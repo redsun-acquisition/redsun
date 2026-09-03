@@ -100,11 +100,15 @@ class Panel(QWidget):
         self.name = name
 
 
-class Broken:
-    """Presenter whose construction fails, to end a build part way through."""
+class Unanswerable:
+    """Presenter asking for something no session declares.
 
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("this presenter refuses to be built")
+    A component whose constructor raises is logged and skipped, so ending a
+    build part way through takes a fault the session cannot go on without.
+    """
+
+    def __init__(self, name: str, /, missing: QMainWindow) -> None:
+        self.name = name
 
 
 @pytest.fixture(autouse=True)
@@ -261,9 +265,9 @@ def test_the_span_closes_on_a_failed_build(qapp: Any) -> None:
 
     class App(QtAppContainer):
         during_build: AsHook[Splash]
-        broken: AsPresenter[Broken]
+        broken: AsPresenter[Unanswerable]
 
-    with pytest.raises(Exception, match="refuses to be built"):
+    with pytest.raises(TypeError, match="which nothing in the session provides"):
         App().build()
     assert Splash.entered == 1
     assert Splash.exited == 1

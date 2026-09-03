@@ -48,6 +48,16 @@ class WiringError(RuntimeError):
     """Raised when a connection between two components cannot be made."""
 
 
+class SessionNotBuilt(LookupError):
+    """Raised when a view of the session is read before the session is built.
+
+    A component asking this while it is being constructed has asked a question
+    the session cannot answer yet, which is a mistake in the component rather
+    than something missing from the session. The build refuses it rather than
+    going on without the component.
+    """
+
+
 class Slot:
     """What [`slot`][redsun.virtual.slot] records on a method."""
 

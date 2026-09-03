@@ -14,6 +14,7 @@ from typing import (
 )
 
 from redsun._structural import members, methods, problems, satisfies
+from redsun.experimental.virtual._wiring import SessionNotBuilt
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -178,7 +179,7 @@ class Satisfying(Mapping[str, Any]):
 
     def _complete(self) -> dict[str, Any]:
         if not self._ready():
-            raise LookupError(
+            raise SessionNotBuilt(
                 f"the components satisfying {self._protocol.__name__!r} are not "
                 "known until every component exists. Hold this view and read it "
                 "when the component runs, rather than copying it while it is "

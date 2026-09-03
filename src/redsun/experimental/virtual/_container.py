@@ -17,6 +17,7 @@ from redsun.experimental.virtual._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
     Connection,
+    SessionNotBuilt,
     Slot,
     Subscription,
     Unconnected,
@@ -154,7 +155,7 @@ class BlueskyCallbackRegistry(Mapping[str, CallbackType]):
 
     def _complete(self) -> Mapping[str, CallbackType]:
         if not self._ready():
-            raise LookupError(
+            raise SessionNotBuilt(
                 "the document-callback registry is not complete until every "
                 "component exists. Hold this view and read it when the "
                 "component runs, rather than copying it while it is built."
