@@ -89,3 +89,6 @@ class BrokenView(QtView):
     @property
     def view_position(self) -> ViewPosition:
         return ViewPosition.CENTER
+
+    @slot
+    def note_position(self, motor: str, position: float) -> None: ...

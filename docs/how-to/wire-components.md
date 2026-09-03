@@ -74,6 +74,11 @@ already a port.
     misspelled port is an error before the application runs; if it reaches the
     build anyway, it is an `AttributeError` on the line that names it.
 
+    A component that failed to build is the one case `connect` does not raise
+    on. It returns `None`, logs the link it did not make, and the connections
+    around it are still made, so one panel refusing to construct does not cost
+    the session its other wiring.
+
 === "Configuration file"
 
     Each end is addressed as `component.port`:
@@ -323,11 +328,12 @@ application uses; the report says what is unused, not what is wrong.
 ## Read a failure
 
 Every way of getting a connection wrong fails at build, naming both ends. The
-exception is a rule whose component failed to build: that one is logged at
-`WARNING` and skipped, and the rules around it still connect.
+exception is a connection whose component failed to build, in `wire` or in the
+configuration file: that one is logged at `WARNING` and skipped, and the
+connections around it are still made.
 
 ```
-Not connecting mover.sig_motor_moved -> panel.on_moved: component 'panel' was not built
+Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
 ```
 
 === "Container class"

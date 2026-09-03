@@ -214,6 +214,35 @@ def declare_presenter(
     )
 
 
+class _NotBuilt:
+    """Stands in for a component the build failed on.
+
+    Reading any attribute gives another of these, carrying the name that was
+    read, so a ``wire`` body naming a component that is not there reaches
+    ``connect`` instead of raising and the connections around it are still
+    made.
+    """
+
+    __slots__ = ("component", "port")
+
+    def __init__(self, component: str, port: str = "") -> None:
+        self.component = component
+        self.port = port
+
+    def __getattr__(self, name: str) -> _NotBuilt:
+        # a dunder answered with a stand-in would make this object claim
+        # protocols it does not implement, copy and pickle among them
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return _NotBuilt(self.component, name)
+
+    def __str__(self) -> str:
+        return f"{self.component}.{self.port}" if self.port else self.component
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self!s})"
+
+
 class _ComponentBase(Generic[T]):
     """Generic base class for components.
 
@@ -238,11 +267,18 @@ class _ComponentBase(Generic[T]):
         """Resolve to the built instance when read from a built container.
 
         Reading the attribute on the class, on a container that has not been
-        built, or on one that has been shut down, gives the wrapper itself.
+        built, or on one that has been shut down, gives the wrapper itself. A
+        component whose build failed gives a `_NotBuilt` for as long as that
+        build lasts.
         """
         if obj is None:
             return self
-        return cast("AppContainer", obj)._built.get(self, self)
+        container = cast("AppContainer", obj)
+        if self in container._built:
+            return container._built[self]
+        if self.name in container._failed:
+            return _NotBuilt(self.name)
+        return self
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"

@@ -46,6 +46,7 @@ from redsun.containers.components import (
     _DeviceComponent,
     _DeviceField,
     _HookField,
+    _NotBuilt,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
@@ -683,12 +684,34 @@ class AppContainer:
         slot: Callable[..., Any],
         *,
         thread: SlotThread = None,
-    ) -> Connection:
+    ) -> Connection | None:
         """Connect a signal to a slot, recording the link for teardown.
+
+        Returns ``None``, having connected nothing, when either end belongs to
+        a component that failed to build: the link is logged at ``WARNING`` and
+        the rest of `wire` runs. Every other way of naming a port wrongly still
+        raises.
 
         See [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect].
         """
+        ends: tuple[object, object] = (signal, slot)
+        absent = {end.component for end in ends if isinstance(end, _NotBuilt)}
+        if absent:
+            named = ", ".join(repr(name) for name in sorted(absent))
+            logger.warning(
+                f"Not connecting {self._end_path(signal)} -> "
+                f"{self._end_path(slot)}: {named} not built"
+            )
+            return None
         return self.virtual_container.connect(signal, slot, thread=thread)
+
+    def _end_path(self, end: object) -> str:
+        """Return one end of a connection as ``component.port``."""
+        if isinstance(end, _NotBuilt):
+            return str(end)
+        owner = getattr(end, "__self__", None) or getattr(end, "instance", None)
+        port = getattr(end, "name", None) or getattr(end, "__name__", "<anonymous>")
+        return f"{self.virtual_container._label(owner)}.{port}"
 
     def _apply_wiring_config(self) -> None:
         """Connect the port pairs listed in the ``wiring`` configuration section.

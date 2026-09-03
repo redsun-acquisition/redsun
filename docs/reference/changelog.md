@@ -21,6 +21,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   a view that fails to build and carries on, as it already did for a device.
   The build returns, and the component is absent from `presenters` or `views`.
 
+- **`AppContainer.connect`** (`redsun.containers.container`) returns
+  `Connection | None`. Either end belonging to a component that failed to
+  build is logged at `WARNING` and connects nothing, so the rest of `wire`
+  runs. A `declare_*` attribute of such a component reads back as a stand-in
+  for the length of that build, and naming a port a *built* component does not
+  have still raises `AttributeError`.
+
 - The line closing a build counts what was built against what was declared,
   and names what is missing. It is logged at `WARNING` rather than `INFO` when
   anything failed to build:

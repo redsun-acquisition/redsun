@@ -16,7 +16,7 @@ from mock_pkg.controller import (
     MockController,
 )
 from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
-from mock_pkg.view import BrokenView, MockQtView
+from mock_pkg.view import BrokenView, MockMotorView, MockQtView
 from ophyd_async.core import Device
 from qtpy.QtWidgets import QApplication
 
@@ -1546,6 +1546,42 @@ class _MismatchedSlotApp(AppContainer):
         self.connect(self.mover.sig_motor_moved, self.ctrl.on_too_many)
 
 
+class _PartlyBuiltApp(AppContainer):
+    """Names a presenter that cannot build, alongside two that can."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ctrl = declare_presenter(MockController)
+    broken = declare_presenter(BrokenController)
+
+    def wire(self) -> None:
+        self.connect(self.broken.sig_motor_moved, self.ctrl.on_motor_moved)
+        self.connect(self.mover.sig_motor_moved, self.ctrl.on_motor_moved)
+
+
+class _TypoApp(AppContainer):
+    """Names a port that the presenter it belongs to does not have."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ctrl = declare_presenter(MockController)
+
+    def wire(self) -> None:
+        # the ignore is the point: mypy already rejects the typo, and the
+        # runtime failure is what protects a container without static typing
+        self.connect(self.mover.sig_typo, self.ctrl.on_motor_moved)  # type: ignore[attr-defined]
+
+
+class _PartlyBuiltViewApp(AppContainer):
+    """Wires a view that cannot build and one that can."""
+
+    mover = declare_presenter(AsyncMotorController)
+    ok = declare_view(MockMotorView)
+    bad = declare_view(BrokenView)
+
+    def wire(self) -> None:
+        self.connect(self.mover.sig_motor_moved, self.bad.note_position)
+        self.connect(self.mover.sig_motor_moved, self.ok.note_position)
+
+
 class TestWiring:
     """Tests for the ``wire`` hook and the connections it records."""
 
@@ -1578,6 +1614,52 @@ class TestWiring:
 
         assert ctrl.moved == []
         assert app.virtual_container.connections == []
+
+    def test_a_connection_naming_a_failed_component_is_skipped(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The rest of ``wire`` runs, and the link that was dropped is reported."""
+        with caplog.at_level(logging.WARNING, logger="redsun"):
+            app = _PartlyBuiltApp().build()
+
+        app.mover.sig_motor_moved.emit("motor", 1.0)
+
+        assert app.ctrl.moved == [("motor", 1.0)]
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ctrl.on_motor_moved"
+        ]
+        assert any(
+            "broken" in record.message and record.levelno == logging.WARNING
+            for record in caplog.records
+        )
+        app.shutdown()
+
+    def test_a_shut_down_container_gives_the_declaration_again(self) -> None:
+        """The stand-in lasts as long as the build that produced it."""
+        app = _PartlyBuiltApp().build()
+        app.shutdown()
+
+        assert isinstance(app.broken, _PresenterComponent)
+
+    def test_a_port_a_built_component_lacks_still_fails_the_build(self) -> None:
+        """Only a component that failed is absorbed, so a typo is still an error."""
+        with pytest.raises(AttributeError, match="sig_typo"):
+            _TypoApp().build()
+
+    @pytest.mark.qt
+    def test_a_failed_view_leaves_the_widgets_of_the_views_that_built(
+        self, qapp: QApplication
+    ) -> None:
+        """A build that returns instead of raising keeps what it made."""
+        before = len(QApplication.topLevelWidgets())
+
+        app = _PartlyBuiltViewApp().build()
+
+        assert len(QApplication.topLevelWidgets()) == before + 1
+        assert [str(link) for link in app.virtual_container.connections] == [
+            "mover.sig_motor_moved -> ok.note_position  [thread=main]"
+        ]
+        app.shutdown()
 
     def test_connecting_an_unmarked_method_fails_the_build(self) -> None:
         """Only a marked method is connectable, so a typo cannot pass silently."""
