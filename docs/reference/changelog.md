@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Changed
+
+- **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
+  device, presenter and view the container built. `devices`, `presenters` and
+  `views` raise until the next `build()`, and a `declare_*` attribute read on a
+  shut-down container gives the declaration rather than the built object. Take
+  a reference before the shutdown to keep using a component:
+
+  ```python
+  app = MyApp().build()
+  ctrl = app.ctrl
+  app.shutdown()
+  ctrl.stop()
+  ```
+
+- **`AppContainer.shutdown`** runs as named phases, each overridable by a
+  subclass: `_disconnect`, `_shutdown_presenters`, `_shutdown_hooks`,
+  `_release_components` and `_destroy`. `_destroy` takes what
+  `_release_components` returned and does nothing by default; a toolkit
+  overrides it to end objects that releasing does not end.
+
+- **`QtAppContainer`** (`redsun.qt`) closes and destroys the widgets the
+  container built and the main window, rather than only releasing them. A view
+  read before the shutdown is left wrapping a destroyed widget and raises
+  `RuntimeError` on use; presenters are unaffected.
+
+- **`AppContainer`** builds its own components even when another container of
+  the same class was built before it. The two no longer share instances.
+
+### Fixed
+
+- A wiring report could name a component after a different, released one.
+  **`VirtualContainer`** (`redsun.virtual`) resolves component names by
+  identity rather than by `id()`, and forgets the built components at shutdown.
+
 ## [0.12.0] - 29-08-2026
 
 ### Added

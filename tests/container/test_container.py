@@ -44,20 +44,6 @@ if TYPE_CHECKING:
 class TestComponentWrappers:
     """Tests for _DeviceComponent, _PresenterComponent, _ViewComponent."""
 
-    def test_device_component_pending_repr(self) -> None:
-
-        comp = _DeviceComponent(
-            MyMotor,
-            "m",
-            axis=["X"],
-            step_size={"X": 0.1},
-            egu="mm",
-            integer=1,
-            floating=1.0,
-            string="s",
-        )
-        assert "pending" in repr(comp)
-
     def test_device_component_build(self) -> None:
 
         comp = _DeviceComponent(
@@ -72,22 +58,6 @@ class TestComponentWrappers:
         )
         device = comp.build()
         assert device.name == "m"
-        assert "built" in repr(comp)
-
-    def test_instance_before_build_raises(self) -> None:
-
-        comp = _DeviceComponent(
-            MyMotor,
-            "m",
-            axis=["X"],
-            step_size={"X": 0.1},
-            egu="mm",
-            integer=1,
-            floating=1.0,
-            string="s",
-        )
-        with pytest.raises(RuntimeError, match="not been instantiated"):
-            _ = comp.instance
 
     def test_presenter_component_build(self) -> None:
 
@@ -100,16 +70,14 @@ class TestComponentWrappers:
             boolean=False,
         )
         presenter = comp.build({})
-        assert presenter is comp.instance
-        assert "built" in repr(comp)
+        assert presenter.name == "ctrl"
 
     @pytest.mark.qt
     def test_view_component_build(self, qapp: QApplication) -> None:
 
         comp = _ViewComponent(MockQtView, "v")
         view = comp.build()
-        assert view is comp.instance
-        assert "built" in repr(comp)
+        assert view.name == "v"
 
 
 class TestComponentCollection:
@@ -279,6 +247,46 @@ class TestAppContainerBuild:
     def test_shutdown_noop_when_not_built(self) -> None:
         app = AppContainer()
         app.shutdown()  # should not raise
+
+    @pytest.mark.qt
+    def test_shutdown_drops_what_it_built(self, qapp: QApplication) -> None:
+        """A shut-down container reports nothing built and leaves no widget.
+
+        The declaration registries are class attributes, so a component left
+        in one outlives its container and reaches the next one.
+        """
+
+        class ViewApp(AppContainer):
+            ui = declare_view(MockQtView)
+
+        before = len(QApplication.topLevelWidgets())
+
+        app = ViewApp()
+        app.build()
+        assert set(app.views) == {"ui"}
+        app.shutdown()
+
+        with pytest.raises(RuntimeError):
+            _ = app.views
+        assert len(QApplication.topLevelWidgets()) == before
+
+    @pytest.mark.qt
+    def test_two_containers_do_not_share_components(self, qapp: QApplication) -> None:
+        """Each container of a class builds and owns its own components."""
+
+        class ViewApp(AppContainer):
+            ui = declare_view(MockQtView)
+
+        first = ViewApp()
+        first.build()
+        second = ViewApp()
+        second.build()
+
+        assert first.views["ui"] is not second.views["ui"]
+
+        first.shutdown()
+        assert set(second.views) == {"ui"}
+        second.shutdown()
 
     def test_virtual_container_carries_config(self) -> None:
         """After build(), virtual_container.configuration holds base config fields."""
@@ -1289,7 +1297,6 @@ class TestProtocolValidationAtBuild:
 
         comp = _PresenterComponent(DuckPresenter, "duck")
         instance = comp.build({})
-        assert instance is comp.instance
         assert isinstance(instance, PPresenter)
 
     def test_non_compliant_presenter_raises_at_build(self) -> None:
@@ -1452,11 +1459,13 @@ class TestWiring:
 
     def test_shutdown_disconnects(self, app: _WiredApp) -> None:
         """Teardown drops the links the container made."""
+        # read before shutdown: a shut-down container owns no component
+        mover, ctrl = app.mover, app.ctrl
         app.shutdown()
 
-        app.mover.sig_motor_moved.emit("motor", 1.0)
+        mover.sig_motor_moved.emit("motor", 1.0)
 
-        assert app.ctrl.moved == []
+        assert ctrl.moved == []
         assert app.virtual_container.connections == []
 
     def test_connecting_an_unmarked_method_fails_the_build(self) -> None:

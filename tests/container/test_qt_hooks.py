@@ -245,3 +245,28 @@ class TestQtApplicationFactory:
 
         with pytest.raises(HookError, match="named both on TestApp"):
             app.build()
+
+
+class TestQtShutdown:
+    """Tests for what a Qt container leaves behind once it is shut down."""
+
+    def test_shutdown_destroys_the_widgets_it_built(self, qapp: QApplication) -> None:
+        """Releasing a widget does not end it; the container has to destroy it.
+
+        C++ owns a widget past its last Python reference, so a container that
+        only dropped its own would leave the window alive for the rest of the
+        process.
+        """
+
+        class TestApp(QtAppContainer):
+            ui = declare_view(StyleRecordingView)
+
+        before = len(QApplication.topLevelWidgets())
+
+        app = TestApp().build()
+        view = app.views["ui"]
+        app.shutdown()
+
+        assert len(QApplication.topLevelWidgets()) == before
+        with pytest.raises(RuntimeError):
+            cast("StyleRecordingView", view).isVisible()

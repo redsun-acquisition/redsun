@@ -121,7 +121,6 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._callbacks = dip.Factory(dict[str, CallbackType])
         self._config = dip.Singleton(_FrozenConfig)
         self._components: dict[str, object] = {}
-        self._names: dict[int, str] = {}
         self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
         self._connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
@@ -365,12 +364,17 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     def _set_components(self, components: Mapping[str, object]) -> None:
         """Record the names built components are known by, for the wiring report."""
         self._components = dict(components)
-        self._names = {id(component): name for name, component in components.items()}
 
     def _label(self, component: object | None) -> str:
+        # searched by identity rather than read from an id-keyed index: an id
+        # identifies an object only while it is alive, and CPython hands a
+        # released component's id to the next object of that size
         if component is None:
             return "<unknown>"
-        return self._names.get(id(component), type(component).__name__)
+        for name, candidate in self._components.items():
+            if candidate is component:
+                return name
+        return type(component).__name__
 
     def connect(
         self,
@@ -609,3 +613,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
             relay.disconnect()
         self._subscriptions.clear()
         self._subscription_records.clear()
+
+    def _clear_components(self) -> None:
+        """Forget the built components, once they have been disconnected."""
+        self._components = {}
