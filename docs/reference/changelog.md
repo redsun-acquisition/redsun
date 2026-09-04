@@ -11,10 +11,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- `redsun.experimental` - a container layer built on
-  [dishka](https://dishka.readthedocs.io), behind the `experimental` extra.
-  **Not covered by any stability guarantee**: names and behaviour may change or
-  be withdrawn in any release. `redsun.containers` remains the supported layer.
+- `redsun.experimental` - a second container layer, behind the `experimental`
+  extra, which carries `in-n-out`. **Not covered by any stability guarantee**:
+  names and behaviour may change or be withdrawn in any release.
+  `redsun.containers` remains the supported layer. See
+  [The experimental container](../explanation/experimental-container.md) for the
+  architecture, what it lifts off component authors, and what it gives up.
 
   Components are declared as annotations rather than `declare_*` calls, each
   naming the layer it belongs to, and a component's collaborators are
@@ -29,245 +31,35 @@ Dates are specified in the format `DD-MM-YYYY`.
       motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
   ```
 
-  `AsDevice`, `AsPresenter` and `AsView` wrap the component's own type without
-  replacing it, so the attribute stays typed as what it holds. One of them is
-  required: it is what marks an annotation as a component, so a container class
-  may hold ordinary attributes beside its components, and the layer is stated
-  rather than inferred from the class. It is checked when the declarations are
-  read. A device must subclass `ophyd_async.core.Device`, and a class that
-  subclasses it is refused in either other layer before anything else about it
-  is considered. A presenter or view must take `name` as its first parameter,
+- `AsDevice`, `AsPresenter` and `AsView` wrap the component's own type without
+  replacing it, so the attribute stays typed as what it holds. One of them marks
+  an annotation as a component, so a container class may hold ordinary
+  attributes beside its components. A device must subclass
+  `ophyd_async.core.Device`, and a class that subclasses it is refused in either
+  other layer. A presenter or view must take `name` as its first parameter,
   positionally or as a keyword, so a pydantic model whose fields are all
-  keyword-only can be a presenter; a name that could only arrive inside
-  `*args` or `**kwargs` is refused. Devices
-  are therefore still built before the graph runs. A component appearing only in
-  the session file takes its layer from the section it sits under, and is
-  checked the same way. The three are also reachable as
-  `redsun.experimental.containers.components`.
+  keyword-only can be a presenter; a name that could only arrive inside `*args`
+  or `**kwargs` is refused. A component appearing only in the session file takes
+  its layer from the section it sits under, and is checked the same way. The
+  three are also reachable as `redsun.experimental.containers.components`.
 
-  The attribute name is both the component name and its configuration key;
-  `Alias` and `FromConfig` override each. `provides` marks a method whose
-  return value other components may ask for, replacing `register_providers`.
-  A parameter annotated `X | None` is `None` when nothing supplies `X`,
-  replacing `try_require`. A parameter carrying a default keeps it when the
-  session provides neither a value nor a configuration entry for it, so a
-  tunable does not have to be repeated in the configuration file to be
-  constructible. `IsProvider`, `IsInjectable`, `ProviderKey` and the
-  `provide`/`require` pair have no equivalent and are not needed, and
-  `VirtualContainer` itself is not among the types a component may ask for: a
-  component names the values it needs, not the session that holds them.
+- `Declare`, `FromConfig` and `Alias` - inline keyword arguments, the
+  configuration key an entry is read from, and the name a component is declared
+  under. The attribute name is both by default. A component may not be named
+  after something the container already answers, such as `devices` or `run`.
 
-  Build order is derived from the dependency graph rather than fixed phases.
-  `BlueskyCallbackRegistry` is the callback registry as a component sees it,
-  and it is a live view rather than a snapshot. A component registers its own
-  callbacks through `BlueskyCallbackRegistry.register` while it is built, and
-  holds the view to read once the application is, so consuming the registry
-  carries no ordering constraint. Reading it during construction raises
-  `LookupError`, because the answer would be incomplete.
+- `provides` marks a method whose return value other components may ask for,
+  replacing `register_providers`. A parameter annotated `X | None` is `None`
+  when nothing supplies `X`, replacing `try_require`, and a parameter carrying a
+  default keeps it when the session supplies neither a value nor a configuration
+  entry. `IsProvider`, `IsInjectable`, `ProviderKey` and the `provide`/`require`
+  pair have no equivalent, and `VirtualContainer` is not among the types a
+  component may ask for.
 
-  ```python
-  from redsun.experimental import BlueskyCallbackRegistry
-
-
-  class MyPresenter:
-      def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
-          self.name = name
-          callbacks.register(self, name=name)
-  ```
-
-  `Requires[P]` asks the session which of its components satisfy a protocol,
-  instead of asking for one value. It is spelled
-  `Annotated[Mapping[str, P], Every()]`, so the parameter is an ordinary mapping
-  of names to components, and it is a live view for the same reason
-  `BlueskyCallbackRegistry` is. A component satisfying *P* appears in its own
-  answer.
-
-  `RequiresOne[P]` and `RequiresMaybe[P]` ask the same question expecting a
-  single answer, and are ordinary dependencies rather than live views: the
-  component arrives built, and whatever answers is constructed first. Which
-  component answers is settled before anything is built, so a session holding
-  none (`RequiresOne`) or more than one fails to build, naming the components
-  that nearly matched and why. `RequiresMaybe` answers `None` for an empty
-  session. Both require *P* to declare at least one method, because a member
-  assigned in `__init__` cannot be seen that early; it is confirmed once the
-  instance exists.
-
-  `DevicesOf[P]` asks the same question of the devices, which `Requires[P]`
-  never answers over. It is spelled `Annotated[Mapping[str, P], Devices()]`, and
-  unlike the component census it is not a live view: devices exist before any
-  component is built, so the mapping arrives complete and may be read in
-  `__init__`. Ask for `DeviceMapping` to receive every device unfiltered.
-
-  Membership is decided structurally rather than with `isinstance`: an
-  implementation must accept every call the protocol permits, so a renamed
-  parameter or an extra required one is no longer a match, while an extra
-  defaulted parameter still is. Types are not compared, which a type checker
-  does at the call site. `satisfies` exposes the same check, and
-  `Satisfying.rejected` reports why each near miss was left out. *P* must still
-  be `runtime_checkable`, which is how a protocol declares it is meant to be
-  matched at runtime.
-
-  A container names its toolkit by subclassing, as `redsun.experimental.containers.qt`'s
-  `QtAppContainer` does; `AppContainer.frontend` is a class attribute, and
-  `AppContainer` on its own names no toolkit and accepts any placement. The base
-  container builds the components and the toolkit one arranges them:
-  `QtAppContainer.__init__` puts a `QApplication`, the async backend and an empty
-  `QMainWindow` in place, since a widget cannot be built before any of them
-  exist; `build` builds and attaches the views to that window, exposed as
-  `main_window`; `run` shows it and hands over to the event loop. A component may
-  not be named after something the container already answers, such as `devices`
-  or `run`, since it could never be read back.
-
-  Layers are a build order, so a component may depend on its own layer or an
-  earlier one and never on a later one. Two views sharing a value is therefore
-  allowed and needs no publish-then-resolve pass: one shares it with `provides`,
-  the other asks for it in `__init__`, and the owner is built first because the
-  graph says so. A presenter naming a view, or a type only a view shares, is
-  refused before anything is constructed, naming both components and both
-  layers. `Requires[P]` is exempt: it is a live view of the session rather than
-  a dependency.
-
-  `AppContainer.from_config` returns a container for a session described by a
-  file or a mapping, for a session with no class of its own to declare anything.
-  The `frontend:` key picks the container to build on, so a session naming `pyqt`
-  comes up on `QtAppContainer` without importing it, and one naming a frontend
-  the class it was called on is not built against is refused rather than ignored.
-  Calling it on a class keeps that class's own declarations, its `wire` and its
-  toolkit, and what comes back is unbuilt, so whatever the file cannot say is
-  still said in Python before `build` runs. `AppContainer()` also takes the
-  session directly, overriding the `config` class attribute for that instance
-  alone.
-
-  A view declares the `Placement` it asks the frontend to attach it at, which is
-  what separates it from a presenter. The core defines `Placement` and no
-  concrete one: a dock, a menu bar and a toolbar are window concepts, so
-  `redsun.experimental.containers.qt` owns `Dock`, `Central`, `MenuItem` and `ToolBarItem`
-  alongside the `Qt` frontend that pairs each with the toolkit type it demands
-  in `Frontend.requires` - a `QWidget` for a dock or the centre, a `QAction` for
-  a menu or toolbar entry - and the `attach` that fills a `QMainWindow` from a
-  container's `views`. No toolkit name reaches the core, and a frontend for
-  something other than a desktop window brings placements and a table of its
-  own:
-
-  ```python
-  from redsun.experimental import Frontend
-
-
-  class Web(Frontend):
-      requires = {Route: Page}
-  ```
-
-  `Frontend.check_placement` reads that table and is what a frontend overrides
-  when its demand is not a subclass relation. Declaring the placement on the
-  class lets a view be refused before anything is built, for asking a frontend
-  to attach something it does not, for not being the type that placement
-  demands, and for being declared in the wrong layer; a view answering from a
-  property is checked once it exists. `NamedComponent` and
-  `AttachableComponent` are the protocols the built components are held to,
-  without a base class to inherit. `NamedComponent` is `name` alone, and every
-  component clears it: a session may declare two components of one class, and
-  the declared name is what tells them apart, so one that drops the name it was
-  constructed with is refused. `AttachableComponent` adds `placement` to it, and
-  is what `AppContainer.views` is typed by.
-
-  ```python
-  from redsun.experimental import AttachableComponent, NamedComponent
-  ```
-
-  Once the wiring is applied, two relations are reported without stopping the
-  build. A component that shares nothing, asks for nothing and is wired to
-  nothing is named, which is what a wiring rule with a typo in a component name
-  looks like: the rule naming a component that does not exist already fails, and
-  the component no rule names did not. A `provides` return type no component
-  asks for is named with its method, which is what a consumer removed while the
-  producer stayed looks like. Both are legal, so both are warnings: a session
-  under construction has components nothing reaches yet, and a bundle may ship
-  one a particular session does not need. Being injected by another component
-  counts as being used, as does answering a `Requires`, `RequiresOne` or
-  `RequiresMaybe` question.
-
-  A plugin bundle may ship a dishka `Provider` of its own, declared at dishka's
-  `Scope.APP`; an application has one stage, so no narrower scope is entered and
-  a provider written for another dishka application drops in unchanged.
-
-  `VirtualContainer` owns the application's lifetime. `on_release` registers a
-  finalizer and `release` undoes everything in reverse: connections first, then
-  each component's `shutdown` in reverse construction order, then the dependency
-  graph, then devices. A component takes part by declaring `shutdown`, sync or
-  async, and nothing else.
-
-  See [The experimental container](../explanation/experimental-container.md) for
-  the architecture, what it lifts off component authors, and what it gives up.
-
-- **`SessionNotBuilt`** (`redsun.experimental`) - the `LookupError` a live view
-  of the session raises when a component reads it during its own construction.
-
-### Changed
-
-- **`redsun.experimental.AppContainer.build`** logs a component that fails to
-  build and carries on, in every layer. The component is absent from
-  `presenters` or `views`, and so is one built from it. The line closing the
-  build counts what was built against what was declared, names what is missing,
-  and is logged at `WARNING` when anything failed:
-
-  ```
-  Container built: 1/2 devices, 1/3 presenters, 0/0 views
-  Not built: bad_stage (device), broken (presenter), dependent (presenter)
-  ```
-
-  A component asking for something nothing in the session declares still raises
-  `TypeError`, and one reading a live view of the session during its own
-  construction raises `SessionNotBuilt`.
-
-  `Requires[P]` holds the components the session built, so one that failed is
-  absent from it. An asker of `RequiresOne[P]` is skipped when the component
-  chosen to answer it failed; an asker of `RequiresMaybe[P]` is built with
-  `None`.
-
-- The session configuration key `session` is now `name`, in both container
-  layers, and identifies the session rather than titling its window. It names
-  the session's application, so two sessions in one process must not share it.
-
-  ```yaml
-  name: my-session
-  frontend: pyqt
-  ```
-
-  A container that declares no name is named after its own class, so
-  `class Instrument(AppContainer)` builds a session called `Instrument`. A
-  session built from a configuration alone has no class of its own, so
-  `AppContainer.from_config` refuses a file that omits the key.
-
-  `RedSunConfig.session` is `RedSunConfig.name`, `AppContainer.__init__` takes
-  `name` in place of `session`, and `VirtualContainer.session` is
-  `VirtualContainer.name` in both layers.
-
-- `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
-  `magicgui`.
-
-- `redsun.experimental.containers.qt.QtAppContainer` builds an
-  `app_model.Application` named after the session, readable as `model`, and
-  destroys it at `shutdown` so the name is free for the next session built
-  under it. Reading `model` before `build` raises `RuntimeError`, and two live
-  sessions of one name raise `ValueError`.
-
-  ```python
-  app = MyApp().build()
-  app.model.register_action(...)
-  ```
-
-- `redsun.experimental` no longer depends on `dishka`. The `experimental` extra
-  now carries `in-n-out`, which `app-model` already brings to `qt-common`.
-
-  Components are built in layer order, and within a layer in the order they are
-  built from one another, so a component may be written above the one it
-  depends on. Two components of one layer built from each other raise
-  `TypeError` rather than failing to resolve.
-
-  `AppContainer.providers` is a list of ordinary classes rather than
-  `dishka.Provider` subclasses, and a `providers:` manifest entry resolves to
-  one. A provider's constructor is filled from the session, and every method it
-  marks with `provides` registers a value under the type that method returns:
+- `AppContainer.providers` - a list of ordinary classes, one of which a
+  `providers:` manifest entry resolves to. A provider's constructor is filled
+  from the session, and every method it marks with `provides` registers a value
+  under that method's return type:
 
   ```python
   class MyServices:
@@ -280,17 +72,202 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
   A provider may be a plain class, a dataclass (frozen and slotted included) or
-  a pydantic model: its constructor is read from the signature, the way a
-  component's is. Unlike a component it is given no name, so a parameter called
-  `name` is one the session must answer like any other.
+  a pydantic model. It is given no name, so a parameter called `name` is one the
+  session must answer like any other.
 
-  `AppContainer.name` is what the session is called, readable before `build`.
-  `redsun.experimental.containers.qt.QtAppContainer` builds its components out
-  of its `app_model.Application`'s injection store, so a command registered on
-  the application is filled from the components the session built.
+- Components are built in layer order, and within a layer in the order they are
+  built from one another, so a component may be written above the one it depends
+  on. Two components of one layer built from each other raise `TypeError`. A
+  component may depend on its own layer or an earlier one and never on a later
+  one, so a presenter naming a view, or a type only a view shares, is refused
+  before anything is constructed, naming both components and both layers. Two
+  views sharing a value needs no publish-then-resolve pass: one shares it with
+  `provides`, the other asks for it in `__init__`. `Requires[P]` is exempt.
 
-- `redsun.experimental` calls hooks. A hook is an annotation carrying
-  `AsHook`, and the attribute name is the point it serves:
+- `AppContainer.build` logs a component that fails to build and carries on, in
+  every layer. The component is absent from `presenters` or `views`, and so is
+  one built from it. The closing line counts what was built against what was
+  declared and is logged at `WARNING` when anything failed:
+
+  ```
+  Container built: 1/2 devices, 1/3 presenters, 0/0 views
+  Not built: bad_stage (device), broken (presenter), dependent (presenter)
+  ```
+
+  A component asking for something nothing in the session declares still raises
+  `TypeError`.
+
+- `BlueskyCallbackRegistry` - the callback registry as a component sees it, a
+  live view rather than a snapshot. A component registers through
+  `BlueskyCallbackRegistry.register` while it is built and reads the view once
+  the session is built:
+
+  ```python
+  class MyPresenter:
+      def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+          self.name = name
+          callbacks.register(self, name=name)
+  ```
+
+- `Requires[P]` - the components of the session that satisfy a protocol, spelled
+  `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
+  made, so a component that failed is absent from it. A component satisfying *P*
+  appears in its own answer.
+
+- `RequiresOne[P]` and `RequiresMaybe[P]` - the same question expecting a single
+  answer, and ordinary dependencies rather than live views: the component
+  arrives built, and whatever answers is constructed first. Which component
+  answers is settled before anything is built, so a session holding none
+  (`RequiresOne`) or more than one fails to build, naming the components that
+  nearly matched and why. `RequiresMaybe` answers `None` for an empty session
+  and for one whose answering component failed to build; an asker of
+  `RequiresOne` is skipped instead. Both require *P* to declare at least one
+  method.
+
+- `DevicesOf[P]` - the same question asked of the devices, which `Requires[P]`
+  never answers over, spelled `Annotated[Mapping[str, P], Devices()]`. It is not
+  a live view, so it may be read in `__init__`. Ask for `DeviceMapping` to
+  receive every device unfiltered.
+
+- `satisfies` and `Satisfying.rejected` - the membership check and why each near
+  miss was left out. Membership is structural rather than `isinstance`: an
+  implementation must accept every call the protocol permits, so a renamed
+  parameter or an extra required one is not a match, while an extra defaulted
+  parameter is. Types are not compared, which a type checker does at the call
+  site. *P* must be `runtime_checkable`.
+
+- `SessionNotBuilt` - the `LookupError` a live view of the session raises when a
+  component reads it during its own construction.
+
+- `Placement`, `Frontend` and `Frontend.requires` - what a view asks the
+  frontend to attach it at, the toolkit a container is built against, and the
+  table pairing each placement with the type it demands. A container names its
+  toolkit by subclassing, `AppContainer.frontend` being a class attribute;
+  `AppContainer` itself names none and accepts any placement.
+  The core defines `Placement` and no concrete one:
+  `redsun.experimental.containers.qt` owns `Dock`, `Central`, `MenuItem` and
+  `ToolBarItem` alongside the `Qt` frontend that demands a `QWidget` for a dock
+  or the centre and a `QAction` for a menu or toolbar entry, and the `attach`
+  that fills a `QMainWindow` from a container's `views`:
+
+  ```python
+  class Web(Frontend):
+      requires = {Route: Page}
+  ```
+
+  `Frontend.check_placement` reads that table, and a frontend whose demand is
+  not a subclass relation overrides it. A view is refused before anything is
+  built for asking a frontend to attach something it does not, for not being the
+  type that placement demands, and for being declared in the wrong layer; one
+  answering from a property is checked once it exists.
+
+- `NamedComponent` and `AttachableComponent` - the protocols the built
+  components are held to, without a base class to inherit. `NamedComponent` is
+  `name` alone, and a component that drops the name it was constructed with is
+  refused. `AttachableComponent` adds `placement`, and is what
+  `AppContainer.views` is typed by.
+
+- `Serializable` - a component supplying the configuration entry that would
+  rebuild it:
+
+  ```python
+  class MotorPresenter:
+      def __init__(self, name: str, /, step: float = 5.0) -> None:
+          self.name = name
+          self.step = step
+
+      def serialize(self) -> dict[str, float]:
+          return {"step": self.step}
+  ```
+
+  `AppContainer.serialize` returns the merged configuration, holding what each
+  built component asked for under that component's own name and nowhere else. A
+  component that implements none of it keeps the entry the session was built
+  from, and so does one that asks for a key its constructor does not accept; the
+  session reports that at `WARNING` with the component, the keys and the class.
+  The constructor's parameters decide which keys are accepted, not the entry the
+  session loaded, so the session writes a parameter that took its default, and a
+  constructor taking `**kwargs` accepts every key. One refused key discards the
+  whole entry rather than only itself.
+
+- `Settings` - what a session remembers about how one user likes to run it, kept
+  as one JSON file per session name under `platformdirs.user_config_dir`:
+
+  ```python
+  session.settings.set("ask_on_close", False)
+  session.settings.get("ask_on_close", True)
+  ```
+
+  `AppContainer.settings` opens it in the `registry` step and registers it, so
+  an action asks for it by type. A value is written as it is set. A file that is
+  missing, unreadable, or not an object leaves the session on the defaults its
+  callers ask for, and says so at `WARNING`.
+
+- `BuildableSession` - the steps a session's build runs, a protocol with one
+  public abstract method per step, inherited rather than satisfied:
+
+  ```python
+  class MyFrontend(AppContainer):
+      def start_runtime(self) -> None: ...
+      def present(self) -> None: ...
+  ```
+
+  `AppContainer.build` calls the steps in order and does nothing else.
+  `start_runtime` puts in place what a component cannot be constructed without,
+  and `present` assembles what was built into whatever shows it; a container
+  bound to no toolkit answers both with nothing. The other steps are
+  `read_configuration`, `build_devices`, `open_registry`, `build_presenters`,
+  `build_views`, `seal`, `apply_wiring` and `log_summary`, with `make_store`,
+  `open_span`, `on_release` and `shutdown` beside them. A session missing a step
+  raises `TypeError` when it is constructed, and a type checker refuses it.
+
+- `DesktopSession` - `BuildableSession` plus `main_window` and `run`, generic
+  over the window's type, so `QtAppContainer` inherits
+  `DesktopSession[QMainWindow]`. `main_window` is a property, and an implementer
+  answers it with a property of its own.
+
+- `AppContainer.on_release` and `AppContainer.shutdown` - a step registers how
+  to give something back as it takes it, and `shutdown` runs those in reverse:
+  connections first, then each component's own `shutdown` in reverse
+  construction order, then the devices. A component takes part by declaring
+  `shutdown`, sync or async, and nothing else. A build that raises runs the
+  releases its finished steps earned before the exception leaves. `shutdown` may
+  be called twice, or on a session that was never built, and runs nothing the
+  second time.
+
+- `AppContainer.from_config` - a container for a session described by a file or
+  a mapping, for a session with no class of its own. The `frontend:` key picks
+  the container to build on, so a session naming `pyqt` comes up on
+  `QtAppContainer` without importing it, and one naming a frontend the class it
+  was called on is not built against is refused. Calling it on a class keeps
+  that class's declarations, its `wire` and its toolkit, and what comes back is
+  unbuilt. `AppContainer()` also takes the session directly, overriding the
+  `config` class attribute for that instance alone.
+
+- `AppContainer.config` accepts several sources, each a path to a YAML file or a
+  mapping, and layers them in the order given:
+
+  ```python
+  class MyApp(AppContainer):
+      config = ["instrument.yaml", {"name": "morning-run"}]
+  ```
+
+  A subclass's sources layer over its bases', in the order the method resolution
+  order gives, and the sources passed to the constructor layer over the class's
+  rather than replacing them. `from_config` accepts the same. Sources must agree
+  on `schema_version` and `frontend`, and `ValueError` names the source that
+  disagrees; every other key, `name` included, is taken from the last source
+  setting it. A component entry under `devices`, `presenters` or `views` is
+  replaced whole rather than merged.
+
+- `AppContainer.name` - what the session is called, readable before `build`.
+  `Layer.section` - the configuration section a layer's components are declared
+  under, the member's own name pluralised, so `Layer.DEVICE.section` is
+  `"devices"`.
+
+- `AsHook`, `Serves`, `QtHook` and a `hooks:` configuration section. A hook is
+  an annotation carrying `AsHook`, and the attribute name is the point it
+  serves:
 
   ```python
   class MyApp(QtAppContainer):
@@ -300,44 +277,25 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   `Serves` names the points instead, and naming several is how one provider
   instance serves them all. `Declare`, `FromConfig` and `Alias` work as they do
-  on a component. `QtHook` names the four points
-  `redsun.experimental.containers.qt.QtAppContainer` calls:
-  `create_application`, `configure_application`, `during_build` and
-  `configure_main_view`. `AppContainer.hook_points` is empty, so a hook
-  declared on a container bound to no toolkit is refused.
+  on a component. `QtHook` names the four points `QtAppContainer` calls:
+  `create_application`, which supplies the `QApplication`,
+  `configure_application`, `during_build` and `configure_main_view`. `AppContainer.hook_points` is empty, so a hook declared
+  on a container bound to no toolkit is refused.
 
-  A `hooks:` configuration section takes the same points as keys, each entry
-  carrying `provider` and `kwargs`, and a YAML anchor aliased under two keys
-  gives one provider serving both. A point named on the class and in the
-  section raises `HookError`, as does a point claimed twice, a point the
-  container does not call, and a provider that does not implement the protocol
-  its point calls.
+  The `hooks:` section takes the same points as keys, each entry carrying
+  `provider` and `kwargs`; a YAML anchor aliased under two keys gives one
+  provider serving both. `AppContainer.hooks` is the provider installed at each
+  point, built once per build. `HookError` covers a point named on the class and
+  in the section, a point claimed twice, a point the container does not call,
+  and a provider that does not implement the protocol its point calls.
 
-  `AppContainer.hooks` is the provider installed at each point, built once per
-  build. `BUILD_STEPS` names the steps a build reports to a `during_build`
-  hook: `devices`, `presenters`, `views`, `wiring`.
+  A `during_build` hook is told `devices`, `registry`, `presenters`, `views`,
+  `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
+  `start_runtime` run before the span it opens and are not announced to it.
 
-- `redsun.experimental.containers.qt.QtAppContainer` creates no toolkit object
-  in `__init__`. The `QApplication`, the async backend and the `QMainWindow`
-  are all made by `build`, so constructing a container is cheap and reads
-  nothing. `main_window` raises `RuntimeError` before `build`, as `model`
-  already did, and is cleared again by `shutdown`.
-
-- `redsun.experimental.containers.qt.QtAppContainer.main_window` is a
-  `QModelMainWindow` built against the session's `model`, where it was a bare
-  `QMainWindow`. `setModelMenuBar` and `addModelToolBar` fill a menu bar and a
-  toolbar from that application's registries:
-
-  ```python
-  app = MyApp().build()
-  app.main_window.setModelMenuBar({"myapp/file": "File"})
-  ```
-
-  Views attach as before.
-
-- An `actions:` section in the configuration of an experimental Qt session,
-  read at build and registered on the `Application` the session owns. An entry
-  is the keyword arguments of an app-model `Action`:
+- An `actions:` section in the configuration of a Qt session, read at build and
+  registered on the `Application` the session owns. An entry is the keyword
+  arguments of an app-model `Action`:
 
   ```yaml
   actions:
@@ -350,91 +308,37 @@ Dates are specified in the format `DD-MM-YYYY`.
   A `callback` stays the `module:function` string it was written as, and
   app-model imports it when the command first runs, so reading the section
   imports nothing. The callback's parameters are filled from the session's
-  store when it runs, which is the same store the components were built out
-  of. The registration is undone when the session is released.
+  store, which is the store the components were built out of. The registration
+  is undone when the session is released.
+  `redsun.experimental.containers.qt.ActionError` names the entry that cannot be
+  made: a section that is not a list, an entry that is not a mapping, an entry
+  carrying a key an action does not take, or one app-model refuses.
 
-  `redsun.experimental.containers.qt.ActionError` names the entry that cannot
-  be made: a section that is not a list, an entry that is not a mapping, an
-  entry carrying a key an action does not take, or one app-model refuses. A
-  build it refuses destroys the application rather than leaving its name taken.
-
-- `redsun.experimental.BuildableSession` - the steps a session's build runs,
-  a protocol with one public abstract method per step. A session inherits it:
+- `QtAppContainer.model`, `.app` and `.main_window` - the `app_model.Application`
+  named after the session, the toolkit application the session runs on, and the
+  `QModelMainWindow` built against that application. All three raise
+  `RuntimeError` before `build` and are dropped at release, and two live sessions
+  of one name raise `ValueError`. `setModelMenuBar` and `addModelToolBar` fill a
+  menu bar and a toolbar from the application's registries:
 
   ```python
-  class MyFrontend(AppContainer):
-      def start_runtime(self) -> None: ...
-      def present(self) -> None: ...
+  app = MyApp().build()
+  app.main_window.setModelMenuBar({"myapp/file": "File"})
   ```
 
-  `redsun.experimental.AppContainer.build` calls the steps in order and does
-  nothing else. `start_runtime` puts in place what a component cannot be
-  constructed without, and `present` assembles what was built into whatever
-  shows it; a container bound to no toolkit answers both with nothing. The
-  other steps are `read_configuration`, `build_devices`, `open_registry`,
-  `build_presenters`, `build_views`, `seal`, `apply_wiring` and `log_summary`,
-  with `make_store`, `open_span` and `abandon` beside them.
+  `QtAppContainer` builds its components out of the application's injection
+  store, so a command registered on the application is filled from the
+  components the session built. Constructing a container makes no toolkit
+  object: `build` makes all three.
 
-  A session missing a step raises `TypeError` when it is constructed, and a
-  type checker refuses it. Each protocol body declares `__slots__ = ()`, so
-  inheriting one adds no `__dict__`.
+- `AppContainer` carries `__weakref__` among its slots, so a session can be
+  referred to weakly, as `aboutToQuit.connect(session.shutdown)` needs.
+  Instances still carry no `__dict__`.
 
-  A step that takes something registers how to give it back with `on_release`
-  as it takes it, and `redsun.experimental.AppContainer.shutdown` runs those in
-  reverse. A build that raises runs the releases its finished steps earned
-  before the exception leaves, so a session that stopped halfway frees the
-  toolkit it had started. `shutdown` may be called twice, or on a session that
-  was never built, and runs nothing the second time.
-
-  `redsun.experimental.DesktopSession` adds `main_window` and `run`, generic
-  over the window's type:
-  `redsun.experimental.containers.qt.QtAppContainer` inherits
-  `DesktopSession[QMainWindow]`. `main_window` is a property, so an
-  implementer answers it with a property of its own rather than by assigning
-  it in `__init__`.
-
-  `QtAppContainer` no longer defines `build`. It fills `start_runtime` with
-  the `QApplication`, the async backend and the application, and `present`
-  with the window and the attachment. `AppContainer._store` is renamed
-  `make_store` and `_during_build` is renamed `open_span`.
-
-  A `during_build` hook is told `devices`, `registry`, `presenters`, `views`,
-  `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
-  `start_runtime` run before the span it opens and are not announced to it.
-  `BUILD_STEPS`, which a hook counting the steps reads for the total, is
-  renamed `_BUILD_STEPS` and stays private while the layer is.
-
-- `redsun.experimental.AppContainer` skips a `wiring:` rule naming a
-  component the build failed on, warning about it, so one component that could
-  not be made does not keep the session from coming up:
-
-  ```
-  Not connecting stage.readback -> panel.on_moved: component 'stage' was not built
-  ```
-
-  Every other way of getting a rule wrong stays fatal, a name that was never
-  declared included, and a rule that is not a mapping of exactly `from` and
-  `to` raises `WiringError` naming the entry's position.
-  `redsun.experimental.ComponentNotBuilt`, a `WiringError`, carries the
-  `component` a port path named, so a caller that knows which components failed
-  can tell one of those from a name that was never declared. Both are exported
-  from `redsun.experimental`, where neither was reachable before.
-
-- `redsun.experimental.containers.qt.QtAppContainer.app` - the toolkit
-  application the session runs on, held by the session for as long as it
-  runs. It raises before `build`, as `main_window` and `model` do, and is
-  dropped at release. A session that created its own application no longer
-  aborts when its first view is constructed.
-
-- `redsun.experimental.AppContainer` carries `__weakref__` among its slots,
-  so a session can be referred to weakly. Connecting a toolkit signal to one
-  of its methods requires that, and `aboutToQuit.connect(session.shutdown)`
-  raised `TypeError: cannot create weak reference`. Instances still carry no
-  `__dict__`.
-
-- Every Qt session pins a colour-scheme control to a toolbar of its own, at
-  the right of the window. Nothing is declared for it, and a `color_scheme`
-  key says which mode to start in:
+- A colour-scheme control on every Qt session, pinned to the right of a toolbar
+  of its own behind an expanding spacer. That toolbar is added rather than set
+  and holds nothing else, so a menu bar and a view's own toolbar are left alone.
+  A `color_scheme` key says which mode to start in:
 
   ```yaml
   color_scheme: dark
@@ -443,108 +347,68 @@ Dates are specified in the format `DD-MM-YYYY`.
   `redsun.experimental.containers.qt.ColorSchemeMode` is `system`, `light` or
   `dark`, and `ColorSchemeButton` cycles them in that order, calling
   `QStyleHints.setColorScheme` for the last two and `unsetColorScheme` for
-  `system`. A session without the key starts at `system`. The glyph shows the
-  mode asked for rather than the scheme in force.
-
-  The control sits at the right of a toolbar of its own, behind an expanding
-  spacer. The toolbar is added rather than set and holds nothing else, so a
-  menu bar and a view's own toolbar are both left alone.
-
-  `ColorSchemeMode.from_config` reads the key, `apply` asks the platform,
-  `next` gives the order and `glyph` the character.
+  `system`. A session without the key starts at `system`, and the glyph shows
+  the mode asked for rather than the scheme in force.
+  `ColorSchemeMode.from_config` reads the key, `apply` asks the platform, `next`
+  gives the order and `glyph` the character.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
-- `redsun.experimental.Serializable` - a component supplying the configuration
-  entry that would rebuild it:
+- `QtAppContainer.save_layout` and `.restore_layout` - where a user left the
+  window. `save_layout` puts `saveGeometry` and `saveState` in the session's
+  settings under `window.geometry` and `window.state`, base64 encoded;
+  `restore_layout` puts them back once every dock exists,
+  and does nothing for a session this user has never run. `run` asks for the
+  save as the session ends, so a session built without being shown writes
+  nothing. A dock is named after the view it holds, which is what Qt matches a
+  saved place against.
 
-  ```python
-  class MotorPresenter:
-      def __init__(self, name: str, /, step: float = 5.0) -> None:
-          self.name = name
-          self.step = step
-
-      def serialize(self) -> dict[str, float]:
-          return {"step": self.step}
-  ```
-
-  `redsun.experimental.AppContainer.serialize` returns the merged
-  configuration, holding what each built component asked for under that
-  component's own name and nowhere else. A component that implements none of
-  it keeps the entry the session was built from, and so does one that asks
-  for a key its constructor does not accept; the session reports that at
-  `WARNING` with the component, the keys and the class. The constructor's
-  parameters decide which keys are accepted, not the entry the session
-  loaded, so the session writes a parameter that took its default, and a
-  constructor taking `**kwargs` accepts every key. One refused key discards
-  the whole entry rather than only itself.
-
-- `redsun.experimental.containers.qt.QtAppContainer` destroys the widgets it
-  built. A `QWidget` outlives its last Python reference whenever C++ owns it,
-  so a session used to leave its window and every view in it alive for as long
-  as the process ran. Each view is closed and then deleted, and the window
-  goes after the views it docks, leaving `main_window` reporting an unbuilt
-  session again. Closing is what runs a view's `closeEvent`: deleting a widget
-  does not send one, and closing the window does not send one to a view docked
-  inside it.
-
-  This runs after every component's own `shutdown` and before the application
-  is destroyed, since a widget needs both. A reference held across the
-  shutdown is left wrapping a destroyed widget, and using it raises
+- `QtAppContainer` destroys the widgets it built, after every component's own
+  `shutdown` and before the application is destroyed. Each view is closed and
+  then deleted, and the window goes after the views it docks, leaving
+  `main_window` reporting an unbuilt session again. A view is closed before it
+  is deleted, so its `closeEvent` runs. A reference held across the shutdown is left wrapping a destroyed widget, and using it raises
   `RuntimeError`.
 
-- `redsun.experimental.containers.qt.QtAppContainer` remembers where a user
-  left the window. `save_layout` puts `saveGeometry` and `saveState` in the
-  session's settings under `window.geometry` and `window.state`, base64
-  encoded because the file holds JSON; `restore_layout` puts them back once
-  every dock exists, and does nothing for a session this user has never run.
+- `ComponentNotBuilt`, a `WiringError` carrying the `component` a port path
+  named. A `wiring:` rule naming a component the build failed on is skipped with
+  a warning:
 
-  `run` asks for the save as the session ends, so a session built without
-  being shown writes nothing. A dock is named after the view it holds, which
-  is what Qt matches a saved place against; one with no object name is
-  dropped from the layout.
-
-- `redsun.experimental.Settings` - what a session remembers about how one user
-  likes to run it, kept as one JSON file per session name under
-  `platformdirs.user_config_dir`, which is `%LOCALAPPDATA%\redsun` on Windows,
-  `~/.config/redsun` on Linux and `~/Library/Application Support/redsun` on
-  macOS:
-
-  ```python
-  session.settings.set("ask_on_close", False)
-  session.settings.get("ask_on_close", True)
+  ```
+  Not connecting stage.readback -> panel.on_moved: component 'stage' was not built
   ```
 
-  Per user and per machine rather than part of the session file, so two
-  microscopes sharing a configuration do not inherit each other's answers. A
-  value is written as it is set, and the file appears the first time something
-  is set rather than when a session starts.
+  Every other way of getting a rule wrong stays fatal, a name that was never
+  declared included, and a rule that is not a mapping of exactly `from` and `to`
+  raises `WiringError` naming the entry's position.
 
-  `redsun.experimental.AppContainer.settings` opens it in the `registry` step
-  and registers it, so an action asks for it by type. A file that is missing,
-  unreadable, or not an object leaves the session on the defaults its callers
-  ask for, and says so at `WARNING`.
+- A component that shares nothing, asks for nothing and is wired to nothing is
+  named once the wiring is applied, as is a `provides` return type no component
+  asks for. Both are warnings rather than failures. Being injected by another
+  component counts as being used, as does answering a `Requires`, `RequiresOne`
+  or `RequiresMaybe` question.
 
-- `redsun.experimental.Layer.section` - the configuration section a layer's
-  components are declared under, which is the member's own name pluralised:
-  `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that
-  paired the two by hand.
+### Changed
 
-- `redsun.experimental.AppContainer.config` accepts several sources, each a
-  path to a YAML file or a mapping, and layers them in the order given:
+- The session configuration key `session` is now `name`, in both container
+  layers, and identifies the session rather than titling its window. It names
+  the session's application, so two sessions in one process must not share it:
 
-  ```python
-  class MyApp(AppContainer):
-      config = ["instrument.yaml", {"name": "morning-run"}]
+  ```yaml
+  name: my-session
+  frontend: pyqt
   ```
 
-  A subclass's sources layer over its bases', in the order the method
-  resolution order gives, and the sources passed to the constructor layer over
-  the class's rather than replacing them. `AppContainer.from_config` accepts
-  the same. Sources must agree on `schema_version` and `frontend`, and
-  `ValueError` names the source that disagrees; every other key, `name`
-  included, is taken from the last source setting it. A component entry under
-  `devices`, `presenters` or `views` is replaced whole rather than merged.
+  A container that declares no name is named after its own class, so
+  `class Instrument(AppContainer)` builds a session called `Instrument`.
+  `AppContainer.from_config` refuses a file that omits the key, a session built
+  from a configuration alone having no class of its own. `RedSunConfig.session`
+  is `RedSunConfig.name`, `AppContainer.__init__` takes `name` in place of
+  `session`, and `VirtualContainer.session` is `VirtualContainer.name` in both
+  layers.
+
+- `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
+  `magicgui`.
 
 ## [0.12.1] - 03-09-2026
 
