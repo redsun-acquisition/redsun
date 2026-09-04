@@ -141,6 +141,7 @@ class AppContainer(BuildableSession):
     __slots__ = (
         "__weakref__",
         "_answers",
+        "_baseline",
         "_config",
         "_declarations",
         "_devices",
@@ -205,6 +206,7 @@ class AppContainer(BuildableSession):
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
+        self._baseline: dict[str, Mapping[str, Any]] = {}
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -532,6 +534,7 @@ class AppContainer(BuildableSession):
             }
         )
         self._virtual._seal()
+        self._baseline = self._serialized()
 
     def apply_wiring(self) -> None:
         """Connect the ports the class declares, then those the file names."""
@@ -640,6 +643,30 @@ class AppContainer(BuildableSession):
                 section = config.setdefault(declaration.kind.section, {})
                 section[declaration.name] = entry
         return config
+
+    def has_changes(self) -> bool:
+        """Whether any component asks to be written differently than at build.
+
+        The session compares against what each component serialized once the
+        build finished, not against the configuration it was built from.
+
+        A value changed and changed back reads as unchanged, and a component
+        that does not serialize itself never reports a change.
+        """
+        return self._serialized() != self._baseline
+
+    def _serialized(self) -> dict[str, Mapping[str, Any]]:
+        """Return what each built component that serializes itself asks for.
+
+        The keys are not checked against the constructor, as they are where
+        `serialize` places an entry: a key that would be refused there still
+        tells whether the component has changed.
+        """
+        return {
+            declaration.name: declaration.instance.serialize()
+            for declaration in self._declarations.values()
+            if isinstance(declaration.instance, Serializable)
+        }
 
     def _entry_for(
         self, declaration: _declarations.Declaration

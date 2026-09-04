@@ -190,6 +190,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   constructor taking `**kwargs` accepts every key. One refused key discards the
   whole entry rather than only itself.
 
+  `AppContainer.has_changes` reports whether any component now asks to be
+  written differently than it did at the end of the build. The comparison is
+  against what each component serialized once the build finished, not against
+  the configuration it was built from. A value changed and changed back reads
+  as unchanged, and a component that does not serialize itself never reports a
+  change.
+
 - `Settings` - what a session remembers about how one user likes to run it, kept
   as one JSON file per session name under `platformdirs.user_config_dir`:
 

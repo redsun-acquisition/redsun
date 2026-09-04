@@ -143,3 +143,43 @@ def test_a_constructor_taking_kwargs_accepts_every_key() -> None:
 
     assert session.serialize()["presenters"]["anything"] == {"whatever": 1}
     session.shutdown()
+
+
+def test_a_session_nobody_has_touched_has_no_changes() -> None:
+    session = App().build()
+
+    assert not session.has_changes()
+    session.shutdown()
+
+
+def test_a_component_asking_to_be_written_differently_is_a_change() -> None:
+    session = App().build()
+    session.ctrl.step = 9.0
+
+    assert session.has_changes()
+    session.shutdown()
+
+
+def test_a_value_changed_and_changed_back_reads_as_unchanged() -> None:
+    session = App().build()
+    session.ctrl.step = 9.0
+    session.ctrl.step = 7.5
+
+    assert not session.has_changes()
+    session.shutdown()
+
+
+def test_a_component_that_serializes_nothing_never_changes() -> None:
+    session = App().build()
+    session.quiet.gain = 8.0
+
+    assert not session.has_changes()
+    session.shutdown()
+
+
+def test_a_refused_key_still_counts_as_a_change() -> None:
+    session = RefusingApp().build()
+    session.renamed.step = 9.0
+
+    assert session.has_changes()
+    session.shutdown()
