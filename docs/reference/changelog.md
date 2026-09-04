@@ -455,9 +455,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
+- `redsun.experimental.containers.qt.QtAppContainer` remembers where a user
+  left the window. `save_layout` puts `saveGeometry` and `saveState` in the
+  session's settings under `window.geometry` and `window.state`, base64
+  encoded because the file holds JSON; `restore_layout` puts them back once
+  every dock exists, and does nothing for a session this user has never run.
+
+  `run` asks for the save as the session ends, so a session built without
+  being shown writes nothing. A dock is named after the view it holds, which
+  is what Qt matches a saved place against; one with no object name is
+  dropped from the layout.
+
 - `redsun.experimental.Settings` - what a session remembers about how one user
-  likes to run it, kept under `platformdirs.user_config_dir` as one JSON file
-  per session name:
+  likes to run it, kept as one JSON file per session name under
+  `platformdirs.user_config_dir`, which is `%LOCALAPPDATA%\redsun` on Windows,
+  `~/.config/redsun` on Linux and `~/Library/Application Support/redsun` on
+  macOS:
 
   ```python
   session.settings.set("ask_on_close", False)

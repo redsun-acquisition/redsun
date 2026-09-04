@@ -455,6 +455,54 @@ session file are built whether or not the class mentions them. Writing an
 annotation is how you get a typed attribute to reach one by, not how you make it
 exist.
 
+## What a session remembers between runs
+
+A session keeps two kinds of state, and only one of them is the configuration
+file. What the session *is* (its components, their arguments, the wiring) is
+the file you wrote. How one person happens to run it (where they dragged the
+docks, which colour scheme they picked, an answer they gave a prompt once) is
+theirs, and belongs to their machine rather than to the instrument. Two
+microscopes sharing a configuration should not inherit each other's window
+layout.
+
+That second kind lives in `Settings`, one JSON file per session name under
+`platformdirs.user_config_dir`:
+
+| Platform | Where a session called `my-session` writes |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\redsun\my-session.json` |
+| Linux | `~/.config/redsun/my-session.json` |
+| macOS | `~/Library/Application Support/redsun/my-session.json` |
+
+The file appears the first time something is set, so a session that only reads
+defaults writes nothing. Delete it to put the session back to how it comes out
+of the box; nothing else depends on it, and the next run writes a new one.
+
+`AppContainer.settings` opens it and registers it, so an action asks for it by
+type:
+
+```python
+def forget_the_answer(settings: Settings) -> None:
+    settings.set("ask_on_close", True)
+```
+
+What a Qt session keeps there today:
+
+| Key | Written by |
+| --- | --- |
+| `window.geometry` | `QtAppContainer.save_layout`, from `QMainWindow.saveGeometry` |
+| `window.state` | `QtAppContainer.save_layout`, from `QMainWindow.saveState` |
+
+Both are base64 text, since the file holds JSON rather than bytes. `run` asks
+for the save as the session ends, so a session built without being shown never
+writes over a layout. A dock is named after the view it holds, which is what
+Qt matches a saved place against.
+
+A file that is missing, unreadable, or holding something other than an object
+leaves the session on the defaults its callers ask for, and says so at
+`WARNING`. A settings file is written by the program and read by it, so damage
+to one is not a mistake a user should be stopped for.
+
 ## Sharing something with other components
 
 === "Today"

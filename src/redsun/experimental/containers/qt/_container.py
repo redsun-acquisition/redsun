@@ -25,6 +25,7 @@ MyApp().run()
 
 from __future__ import annotations
 
+import base64
 import logging
 import sys
 from collections.abc import Mapping  # noqa: TC003
@@ -45,7 +46,7 @@ from app_model import Application
 from app_model.backends.qt import QModelMainWindow
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QByteArray, QObject
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
@@ -305,6 +306,34 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
+        self.restore_layout()
+
+    def restore_layout(self) -> None:
+        """Put the window back where this user last left it.
+
+        Runs once every dock exists, since Qt places a dock by object name and
+        ignores one it has not seen. A session this user has never run finds
+        nothing saved and keeps the layout its views asked for.
+        """
+        for key, restore in (
+            ("window.geometry", self.main_window.restoreGeometry),
+            ("window.state", self.main_window.restoreState),
+        ):
+            saved = self.settings.get(key)
+            if isinstance(saved, str):
+                restore(QByteArray(base64.b64decode(saved)))
+
+    def save_layout(self) -> None:
+        """Remember where this user left the window.
+
+        `run` asks for this as the session ends, so a window that was shown is
+        the only one that writes: a session built for a test never displayed
+        one, and its geometry means nothing.
+        """
+        if self._main_window is None:
+            return
+        self.settings.set("window.geometry", _encoded(self._main_window.saveGeometry()))
+        self.settings.set("window.state", _encoded(self._main_window.saveState()))
 
     def _forget_window(self) -> None:
         """Drop the window, so reading it reports an unbuilt session again."""
@@ -358,10 +387,16 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
         self.build()
+        self.on_release(self.save_layout)
         self.app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
         self.main_window.show()
         sys.exit(self.app.exec())
+
+
+def _encoded(state: QByteArray) -> str:
+    """Return *state* as text, the settings file holding JSON rather than bytes."""
+    return base64.b64encode(state.data()).decode("ascii")
 
 
 def application() -> QApplication:
@@ -430,7 +465,10 @@ def _named(name: str, view: object, placement: Placement, required: type[T]) -> 
 
 
 def _dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
+    # Qt matches a dock to its saved place by object name, and drops one that
+    # has none, so the component's declared name is what carries the layout
     dock = QDockWidget(name, window)
+    dock.setObjectName(name)
     dock.setWidget(widget)
     window.addDockWidget(_AREAS[placement.area], dock)
 
