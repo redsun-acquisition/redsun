@@ -591,11 +591,35 @@ class AppContainer(BuildableSession):
         *,
         thread: SlotThread = None,
     ) -> Connection:
-        """Connect a signal to a slot, recording the link for teardown."""
+        """Connect a signal to a slot, recording the link for teardown.
+
+        Parameters
+        ----------
+        signal : SignalInstance
+            The psygnal signal to connect from.
+        slot : Callable[..., Any]
+            What the signal calls, a method marked with `redsun.experimental.slot`
+            where a configuration file is to name it.
+        thread : SlotThread, optional
+            Which thread the slot runs on. ``None`` leaves it to the
+            connection, and a Qt view's slots run on the main thread whatever
+            this says.
+
+        Returns
+        -------
+        Connection
+            The link, which teardown undoes.
+        """
         return self._virtual.connect(signal, slot, thread=thread)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect every built device through ophyd-async.
+
+        Parameters
+        ----------
+        mock : bool
+            Connect each device to a simulated backend rather than to the
+            hardware it names.
 
         Raises
         ------

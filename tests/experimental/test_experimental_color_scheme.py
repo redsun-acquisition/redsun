@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from qtpy.QtGui import QGuiApplication
@@ -14,6 +14,9 @@ from redsun.experimental.containers.qt import (
     ColorSchemeMode,
     QtAppContainer,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 pytestmark = pytest.mark.qt
 
@@ -44,76 +47,73 @@ def _control(app: QtAppContainer) -> ColorSchemeButton:
     return found[0]
 
 
-def test_every_session_pins_the_control_to_a_toolbar(qapp: Any) -> None:
+def test_every_session_pins_the_control_to_a_toolbar(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """It is part of the session, so a session declaring nothing still has it."""
-    app = PlainApp().build()
-    try:
-        control = _control(app)
-        assert control.mode is ColorSchemeMode.SYSTEM
-        assert control.parent() in app.main_window.findChildren(QToolBar)
-    finally:
-        app.shutdown()
+    app = build(PlainApp)
+    control = _control(app)
+
+    assert control.mode is ColorSchemeMode.SYSTEM
+    assert control.parent() in app.main_window.findChildren(QToolBar)
 
 
-def test_the_configuration_says_which_mode_to_start_in(qapp: Any) -> None:
-    """A session overrides the platform's own setting only when it asks to.
+def test_the_configuration_says_which_mode_to_start_in(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
+    """The scheme Qt reports is not asserted.
 
-    The scheme Qt reports is not asserted: the offscreen platform the suite
-    runs on ignores ``setColorScheme`` and keeps reporting ``Unknown``.
+    The offscreen platform the suite runs on ignores ``setColorScheme`` and
+    keeps reporting ``Unknown``, so only the mode asked for can be pinned.
     """
-    app = DarkApp().build()
-    try:
-        assert _control(app).mode is ColorSchemeMode.DARK
-    finally:
-        app.shutdown()
+    assert _control(build(DarkApp)).mode is ColorSchemeMode.DARK
 
 
-def test_clicking_cycles_system_light_dark_and_round(qapp: Any) -> None:
-    """One button reaches all three, which is what the glyph has to keep up with."""
-    app = PlainApp().build()
-    try:
-        control = _control(app)
-        seen = []
-        for _ in range(4):
-            seen.append((control.mode, control.text()))
-            control.click()
-        assert [mode for mode, _ in seen] == [
-            ColorSchemeMode.SYSTEM,
-            ColorSchemeMode.LIGHT,
-            ColorSchemeMode.DARK,
-            ColorSchemeMode.SYSTEM,
-        ]
-        assert len({glyph for _, glyph in seen[:3]}) == 3
-    finally:
-        app.shutdown()
+def test_clicking_cycles_system_light_dark_and_round(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
+    """One button reaches all three, which the glyph has to keep up with."""
+    control = _control(build(PlainApp))
+    seen = []
+
+    for _ in range(4):
+        seen.append((control.mode, control.text()))
+        control.click()
+
+    assert [mode for mode, _ in seen] == [
+        ColorSchemeMode.SYSTEM,
+        ColorSchemeMode.LIGHT,
+        ColorSchemeMode.DARK,
+        ColorSchemeMode.SYSTEM,
+    ]
+    assert len({glyph for _, glyph in seen[:3]}) == 3
 
 
-def test_the_control_is_pushed_to_the_right_edge(qapp: Any) -> None:
+def test_the_control_is_pushed_to_the_right_edge(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """An expanding spacer before it is what pins it, so the toolbar holds two."""
-    app = PlainApp().build()
-    try:
-        control = _control(app)
-        bar = control.parent()
-        assert isinstance(bar, QToolBar)
-        spacer, pinned = (bar.widgetForAction(action) for action in bar.actions())
-        assert pinned is control
-        assert spacer is not None
-        assert spacer.sizePolicy().horizontalPolicy() is (
-            spacer.sizePolicy().Policy.Expanding
-        )
-    finally:
-        app.shutdown()
+    control = _control(build(PlainApp))
+    bar = control.parent()
+    assert isinstance(bar, QToolBar)
+
+    spacer, pinned = (bar.widgetForAction(action) for action in bar.actions())
+
+    assert pinned is control
+    assert spacer is not None
+    assert spacer.sizePolicy().horizontalPolicy() is (
+        spacer.sizePolicy().Policy.Expanding
+    )
 
 
-def test_a_session_from_a_file_carries_it_too(qapp: Any) -> None:
+def test_a_session_from_a_file_carries_it_too(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """The mode is an ordinary configuration key, so a file may set it."""
-    app = AppContainer.from_config({"frontend": "pyqt", "color_scheme": "light"})
-    assert isinstance(app, QtAppContainer)
-    app.build()
-    try:
-        assert _control(app).mode is ColorSchemeMode.LIGHT
-    finally:
-        app.shutdown()
+    unbuilt = AppContainer.from_config({"frontend": "pyqt", "color_scheme": "light"})
+    assert isinstance(unbuilt, QtAppContainer)
+
+    assert _control(build(unbuilt)).mode is ColorSchemeMode.LIGHT
 
 
 def test_a_mode_the_control_does_not_offer_is_refused(qapp: Any) -> None:
@@ -128,8 +128,7 @@ def test_a_mode_the_control_does_not_offer_is_refused(qapp: Any) -> None:
         Sepia().build()
 
 
-def test_the_glyph_shows_the_mode_asked_for(qapp: Any) -> None:
-    """It tracks the mode, not the scheme, so ``system`` stays right."""
-    control = ColorSchemeButton(ColorSchemeMode.DARK)
-    assert control.mode is ColorSchemeMode.DARK
-    assert control.toolTip().endswith("(click to change)")
+def test_the_control_says_it_can_be_clicked(qapp: Any) -> None:
+    assert (
+        ColorSchemeButton(ColorSchemeMode.DARK).toolTip().endswith("(click to change)")
+    )

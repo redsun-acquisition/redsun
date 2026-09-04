@@ -100,6 +100,9 @@ def slot(
 
     Parameters
     ----------
+    fn : F | None
+        The method, when the decorator is written bare. ``None`` when it is
+        written with arguments, which returns the decorator itself.
     name : str | None
         Port name a configuration file addresses the method by. Defaults to
         the method name without leading underscores.

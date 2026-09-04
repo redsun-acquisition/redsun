@@ -163,6 +163,19 @@ def check(
 ) -> type:
     """Confirm *target* may be declared in *layer*, and return it.
 
+    Parameters
+    ----------
+    target : object
+        What the annotation named, which need not be a class.
+    layer : Layer
+        The layer the annotation declared it in.
+    where : str
+        How to name the declaration in a refusal, such as
+        ``"'panel' on MyApp"``.
+    frontend : type[Frontend]
+        The toolkit to check a placement against. The default attaches
+        nothing and constrains no view.
+
     A view is a class declaring a ``placement``; a presenter is one that does
     not. When the placement is a value on the class it is checked against the
     frontend here, and when it is a property only the built instance can

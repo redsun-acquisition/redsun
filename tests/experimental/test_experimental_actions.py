@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from app_model import Application
@@ -11,6 +11,9 @@ from qtpy.QtWidgets import QMenu
 
 from redsun.experimental import AppContainer
 from redsun.experimental.containers.qt import ActionError, QtAppContainer
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 pytestmark = pytest.mark.qt
 
@@ -32,47 +35,53 @@ def session(*declared: dict[str, Any]) -> QtAppContainer:
     return container
 
 
-def test_the_section_registers_commands_on_the_session(qapp: Any) -> None:
-    """A session's contributions are read from its file and run against it."""
-    app = session(
-        {
-            "id": "probe.note",
-            "title": "Note",
-            "callback": "mock_bundle.actions:note",
-            "menus": [{"id": "probe/tools"}],
-        },
-        {
-            "id": "probe.twice",
-            "title": "Twice",
-            "callback": "mock_bundle.actions:note_twice",
-        },
-    ).build()
-    try:
+def test_the_section_registers_commands_on_the_session(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
+    app = build(
+        session(
+            {
+                "id": "probe.note",
+                "title": "Note",
+                "callback": "mock_bundle.actions:note",
+                "menus": [{"id": "probe/tools"}],
+            },
+            {
+                "id": "probe.twice",
+                "title": "Twice",
+                "callback": "mock_bundle.actions:note_twice",
+            },
+        )
+    )
+
+    app.model.commands.execute_command("probe.note")
+    app.model.commands.execute_command("probe.twice")
+    menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
+    tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
+
+    assert actions.executed == ["note", "twice", "twice"]
+    assert [entry.text() for entry in tools.actions()] == ["Note"]
+
+
+def test_releasing_the_session_takes_its_commands_with_it(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
+    app = build(
+        session(
+            {
+                "id": "probe.note",
+                "title": "Note",
+                "callback": "mock_bundle.actions:note",
+            }
+        )
+    )
+    app.model.commands.execute_command("probe.note")
+    assert actions.executed == ["note"]
+
+    app.virtual_container.release()
+
+    with pytest.raises(KeyError, match="probe.note"):
         app.model.commands.execute_command("probe.note")
-        app.model.commands.execute_command("probe.twice")
-        assert actions.executed == ["note", "twice", "twice"]
-
-        menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
-        tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
-        assert [entry.text() for entry in tools.actions()] == ["Note"]
-    finally:
-        app.shutdown()
-
-
-def test_releasing_the_session_takes_its_commands_with_it(qapp: Any) -> None:
-    """The disposer is held for release, so the registry does not outlive it."""
-    app = session(
-        {"id": "probe.note", "title": "Note", "callback": "mock_bundle.actions:note"}
-    ).build()
-    try:
-        app.model.commands.execute_command("probe.note")
-        assert actions.executed == ["note"]
-
-        app.virtual_container.release()
-        with pytest.raises(KeyError, match="probe.note"):
-            app.model.commands.execute_command("probe.note")
-    finally:
-        app.shutdown()
 
 
 @pytest.mark.parametrize(
@@ -105,7 +114,6 @@ def test_releasing_the_session_takes_its_commands_with_it(qapp: Any) -> None:
 def test_a_section_that_is_not_actions_is_refused(
     qapp: Any, declared: Any, message: str
 ) -> None:
-    """A contribution that cannot be made is loud, and frees the name it took."""
     app = AppContainer.from_config({**SESSION, "actions": declared})
     with pytest.raises(ActionError, match=message):
         app.build()

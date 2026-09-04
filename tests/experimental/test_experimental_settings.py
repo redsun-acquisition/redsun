@@ -11,6 +11,7 @@ from redsun.experimental import AppContainer, AsPresenter, Settings
 from redsun.experimental.containers.qt import QtAppContainer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -46,7 +47,6 @@ def test_reading_a_session_that_has_written_nothing_gives_the_default(
 
 
 def test_what_is_set_survives_the_session_that_set_it(tmp_path: Path) -> None:
-    """The point of the store is the next run, so the next run is the test."""
     path = tmp_path / "nested" / "session.json"
     Settings(path).set("ask_on_close", False)
 
@@ -77,48 +77,33 @@ def test_a_file_holding_something_other_than_an_object_is_ignored(
 
 
 def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
-    """A caller storing something unserializable hears about it at once."""
     with pytest.raises(TypeError):
         Settings(tmp_path / "settings.json").set("window", object())
 
 
-def test_a_session_opens_its_own_and_registers_it(
-    monkeypatch: Any, tmp_path: Path
+def test_a_session_opens_its_own_only_once_it_is_built(
+    config_home: Path, build: Callable[..., Any]
 ) -> None:
-    """A session opens its own, named for it, and only when it is built."""
-    monkeypatch.setattr(
-        "redsun.experimental._settings.user_config_dir", lambda *a, **k: str(tmp_path)
-    )
-    session = App()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
-        _ = session.settings
+        _ = App().settings
 
-    session.build()
-    try:
-        assert session.settings.path == tmp_path / "settings-session.json"
-    finally:
-        session.shutdown()
+    assert build(App).settings.path == config_home / "settings-session.json"
 
 
 @pytest.mark.qt
 def test_an_action_asks_for_the_settings_by_type(
-    qapp: Any, monkeypatch: Any, tmp_path: Path
+    qapp: Any, config_home: Path, build: Callable[..., Any]
 ) -> None:
-    """Which is the whole reason they are registered rather than just held."""
-    monkeypatch.setattr(
-        "redsun.experimental._settings.user_config_dir", lambda *a, **k: str(tmp_path)
-    )
     seen: list[Settings] = []
 
     def remember(settings: Settings) -> None:
         seen.append(settings)
 
-    session = QtApp().build()
-    try:
-        session.model.register_action(
-            Action(id="probe.settings", title="Settings", callback=remember)
-        )
-        session.model.commands.execute_command("probe.settings")
-        assert seen == [session.settings]
-    finally:
-        session.shutdown()
+    session = build(QtApp)
+    session.model.register_action(
+        Action(id="probe.settings", title="Settings", callback=remember)
+    )
+
+    session.model.commands.execute_command("probe.settings")
+
+    assert seen == [session.settings]

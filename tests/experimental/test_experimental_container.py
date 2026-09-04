@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import weakref
 from collections.abc import Mapping
@@ -44,6 +45,7 @@ from redsun.experimental.containers._factories import (
 from redsun.experimental.virtual._wiring import WiringError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 Readings = NewType("Readings", "dict[str, float]")
@@ -512,22 +514,16 @@ class ViewOnAPresenter(AppContainer):
     holder: AsView[HoldingAPresenter]
 
 
-def test_two_views_of_one_layer_may_share() -> None:
+def test_two_views_of_one_layer_may_share(build: Callable[..., Any]) -> None:
     """The owner is built first because the graph says so, not by hand."""
-    app = SameLayerApp().build()
-    try:
-        assert app.control.viewer is app.display.viewer()
-    finally:
-        app.shutdown()
+    app = build(SameLayerApp)
+    assert app.control.viewer is app.display.viewer()
 
 
-def test_a_view_may_depend_on_a_presenter() -> None:
+def test_a_view_may_depend_on_a_presenter(build: Callable[..., Any]) -> None:
     """A view is built after a presenter, so naming one is the allowed direction."""
-    app = ViewOnAPresenter().build()
-    try:
-        assert app.holder.ctrl is app.recorder
-    finally:
-        app.shutdown()
+    app = build(ViewOnAPresenter)
+    assert app.holder.ctrl is app.recorder
 
 
 @pytest.mark.parametrize(
@@ -708,7 +704,7 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
 
 
 def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
 ) -> None:
     """A declaration is opt-in, so a container may hold plain attributes."""
 
@@ -718,16 +714,13 @@ def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
         threshold: int
         ctrl: AsPresenter[Ctrl]
 
-    app = Plain().build()
-    try:
-        assert set(app.declarations) == {"ctrl"}
-        assert "declares no layer" not in caplog.text
-    finally:
-        app.shutdown()
+    app = build(Plain)
+    assert set(app.declarations) == {"ctrl"}
+    assert "declares no layer" not in caplog.text
 
 
 def test_a_component_nothing_reaches_is_reported(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
 ) -> None:
     """A half-finished declaration, or a wiring rule with a typo in the name."""
 
@@ -736,55 +729,47 @@ def test_a_component_nothing_reaches_is_reported(
 
         recorder: AsPresenter[Recorder]
 
-    app = Inert().build()
-    try:
-        assert (
-            "'recorder' shares nothing, asks for nothing and is wired to nothing"
-            in caplog.text
-        )
-    finally:
-        app.shutdown()
+    build(Inert)
+    assert (
+        "'recorder' shares nothing, asks for nothing and is wired to nothing"
+        in caplog.text
+    )
 
 
 def test_a_component_another_is_built_from_is_not_reported(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
 ) -> None:
     """Being injected is being used, though the component asks for nothing itself."""
-    app = OrderedApp().build()
-    try:
-        assert "'first' shares nothing" not in caplog.text
-    finally:
-        app.shutdown()
+    build(OrderedApp)
+    assert "'first' shares nothing" not in caplog.text
 
 
 def test_a_shared_value_nothing_asks_for_is_reported(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
 ) -> None:
     """Usually the consumer was renamed or removed while the producer stayed."""
-    app = App().build()
-    try:
-        assert (
-            "ctrl.descriptions shares 'Descriptions', which no component asks for"
-            in caplog.text
-        )
-    finally:
-        app.shutdown()
+    build(App)
+    assert (
+        "ctrl.descriptions shares 'Descriptions', which no component asks for"
+        in caplog.text
+    )
 
 
-def test_a_session_is_named_after_its_class_when_it_says_nothing() -> None:
+def test_a_session_is_named_after_its_class_when_it_says_nothing(
+    build: Callable[..., Any],
+) -> None:
     """A shared constant would let two unrelated sessions collide silently."""
 
     class Instrument(AppContainer):
         __slots__ = ()
 
-    app = Instrument().build()
-    try:
-        assert app.virtual_container.name == "Instrument"
-    finally:
-        app.shutdown()
+    app = build(Instrument)
+    assert app.virtual_container.name == "Instrument"
 
 
-def test_a_forgotten_layer_is_reported(caplog: pytest.LogCaptureFixture) -> None:
+def test_a_forgotten_layer_is_reported(
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
+) -> None:
     """Omitting the marker is silent by design, so a likely component is flagged."""
 
     class Forgot(AppContainer):
@@ -792,12 +777,9 @@ def test_a_forgotten_layer_is_reported(caplog: pytest.LogCaptureFixture) -> None
 
         ctrl: Ctrl
 
-    app = Forgot().build()
-    try:
-        assert dict(app.declarations) == {}
-        assert "Forgot.ctrl annotates Ctrl but declares no layer" in caplog.text
-    finally:
-        app.shutdown()
+    app = build(Forgot)
+    assert dict(app.declarations) == {}
+    assert "Forgot.ctrl annotates Ctrl but declares no layer" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -821,21 +803,18 @@ def test_injectable_excludes_name_and_config_kwargs() -> None:
 
 
 def test_synthesize_agrees_with_both_introspection_routes() -> None:
-    """Dishka reads the signature and the annotations; they must match."""
-    import inspect
-
-    def build(**deps: Any) -> Any:
+    def make(**deps: Any) -> Any:
         return deps
 
-    synthesize(build, {"a": int, "b": str}, Readings, "build_thing")
+    synthesize(make, {"a": int, "b": str}, Readings, "build_thing")
 
-    signature = inspect.signature(build)
-    assert build.__name__ == "build_thing"
+    signature = inspect.signature(make)
+    assert make.__name__ == "build_thing"
     assert list(signature.parameters) == ["a", "b"]
     assert all(
         p.kind is inspect.Parameter.KEYWORD_ONLY for p in signature.parameters.values()
     )
-    assert build.__annotations__ == {"a": int, "b": str, "return": Readings}
+    assert make.__annotations__ == {"a": int, "b": str, "return": Readings}
     assert signature.return_annotation is Readings
 
 
@@ -1145,17 +1124,14 @@ class NamedServicesApp(AppContainer):
     served: AsPresenter[Served]
 
 
-def test_a_shared_service_may_be_any_kind_of_class() -> None:
+def test_a_shared_service_may_be_any_kind_of_class(build: Callable[..., Any]) -> None:
     """Its constructor is read from the signature, as a component's is.
 
     The first value is derived from the session, which is how the injected
     ``SessionConfig`` shows up in what the component receives.
     """
-    app = ServicesApp().build()
-    try:
-        assert app.served.values == (len(app.name) / 10, 1.5, 2.5)
-    finally:
-        app.shutdown()
+    app = build(ServicesApp)
+    assert app.served.values == (len(app.name) / 10, 1.5, 2.5)
 
 
 def test_a_shared_service_is_given_no_name() -> None:
@@ -1203,15 +1179,12 @@ class DependsOnBrokenApp(AppContainer):
     ok: AsPresenter[Recorder]
 
 
-def test_a_component_that_fails_to_build_is_skipped() -> None:
+def test_a_component_that_fails_to_build_is_skipped(build: Callable[..., Any]) -> None:
     """The build returns, and every component that could be made is there."""
-    app = ToleratedApp().build()
-    try:
-        assert app.is_built
-        assert set(app.presenters) == {"ok"}
-        assert set(app.views) == {"panel"}
-    finally:
-        app.shutdown()
+    app = build(ToleratedApp)
+    assert app.is_built
+    assert set(app.presenters) == {"ok"}
+    assert set(app.views) == {"panel"}
 
 
 def test_a_failure_is_logged_against_the_component_name(
@@ -1225,14 +1198,13 @@ def test_a_failure_is_logged_against_the_component_name(
     assert "Failed to build view 'broken_panel': no widget" in caplog.text
 
 
-def test_a_component_whose_collaborator_failed_is_skipped_too() -> None:
+def test_a_component_whose_collaborator_failed_is_skipped_too(
+    build: Callable[..., Any],
+) -> None:
     """One that cannot be built does not take its dependents down with it."""
-    app = DependsOnBrokenApp().build()
-    try:
-        assert app.is_built
-        assert set(app.presenters) == {"ok"}
-    finally:
-        app.shutdown()
+    app = build(DependsOnBrokenApp)
+    assert app.is_built
+    assert set(app.presenters) == {"ok"}
 
 
 def test_asking_for_something_nothing_ever_declared_still_raises() -> None:
@@ -1364,7 +1336,7 @@ class Unmakeable:
 
 
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Any]
 ) -> None:
     """One component that could not be made must not keep the session down."""
 
@@ -1378,13 +1350,10 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
             "wiring": [{"from": "broken.sig_done", "to": "recorder.on_done"}]
         }
 
-    app = Half().build()
-    try:
-        assert app.is_built
-        assert set(app.presenters) == {"recorder"}
-        assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
-    finally:
-        app.shutdown()
+    app = build(Half)
+    assert app.is_built
+    assert set(app.presenters) == {"recorder"}
+    assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
 
 
 @pytest.mark.parametrize(

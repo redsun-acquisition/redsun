@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import (
+    Callable,
+    Mapping,
+)
 from dataclasses import dataclass
 from typing import Annotated, Any, Protocol, get_type_hints, runtime_checkable
 
@@ -490,76 +493,61 @@ def test_driving_every_component_through_the_answer(app: App) -> None:
     assert (app.motor.resets, app.detector.resets) == (1, 1)
 
 
-def test_peers_see_the_whole_set_including_themselves() -> None:
+def test_peers_see_the_whole_set_including_themselves(
+    build: Callable[..., Any],
+) -> None:
     """The answer describes the session, not the component that asked."""
-    app = PeerApp().build()
-    try:
-        assert sorted(app.left.peers) == ["left", "middle", "right"]
-        assert sorted(app.right.peers) == ["left", "middle", "right"]
-    finally:
-        app.shutdown()
+    app = build(PeerApp)
+    assert sorted(app.left.peers) == ["left", "middle", "right"]
+    assert sorted(app.right.peers) == ["left", "middle", "right"]
 
 
-def test_a_peer_leaves_itself_out_where_it_matters() -> None:
+def test_a_peer_leaves_itself_out_where_it_matters(build: Callable[..., Any]) -> None:
     """Only the component knows whether excluding itself is meaningful."""
-    app = PeerApp().build()
-    try:
-        assert app.left.link_targets() == ["middle", "right"]
-        assert app.right.link_targets() == ["left", "middle"]
-    finally:
-        app.shutdown()
+    app = build(PeerApp)
+    assert app.left.link_targets() == ["middle", "right"]
+    assert app.right.link_targets() == ["left", "middle"]
 
 
-def test_peers_act_on_each_other() -> None:
-    app = PeerApp().build()
-    try:
-        app.left.linked_to = "right"
-        app.left.zoom_to(4.0)
-        assert app.right.zoom == 4.0
-        assert app.middle.zoom == 1.0
-    finally:
-        app.shutdown()
+def test_peers_act_on_each_other(build: Callable[..., Any]) -> None:
+    app = build(PeerApp)
+    app.left.linked_to = "right"
+    app.left.zoom_to(4.0)
+    assert app.right.zoom == 4.0
+    assert app.middle.zoom == 1.0
 
 
-def test_a_component_that_did_not_mean_to_offer_is_still_counted() -> None:
+def test_a_component_that_did_not_mean_to_offer_is_still_counted(
+    build: Callable[..., Any],
+) -> None:
     """Satisfying a protocol by accident puts a component in the answer."""
-    app = AccidentalApp().build()
-    try:
-        app.bookkeeper.reset_all()
-        assert app.motor.resets == 1
-        assert app.bookkeeper.resets == 1, "it reset itself, which it did not intend"
-    finally:
-        app.shutdown()
+    app = build(AccidentalApp)
+    app.bookkeeper.reset_all()
+    assert app.motor.resets == 1
+    assert app.bookkeeper.resets == 1, "it reset itself, which it did not intend"
 
 
-def test_a_mismatched_signature_is_not_a_match() -> None:
+def test_a_mismatched_signature_is_not_a_match(build: Callable[..., Any]) -> None:
     """Membership compares signatures, so a call the protocol permits works."""
-    app = LooseApp().build()
-    try:
-        assert "loose" not in app.session.resettable
-        app.session.reset_all()
-    finally:
-        app.shutdown()
+    app = build(LooseApp)
+    assert "loose" not in app.session.resettable
+    app.session.reset_all()
 
 
-def test_a_near_miss_explains_itself() -> None:
+def test_a_near_miss_explains_itself(build: Callable[..., Any]) -> None:
     """A component carrying some of the protocol reports why it was left out."""
-    app = LooseApp().build()
-    try:
-        rejected = app.virtual_container.satisfying(Resettable).rejected
-        assert set(rejected) == {"loose"}
-        assert "cannot be called as reset()" in rejected["loose"][0]
-    finally:
-        app.shutdown()
+    app = build(LooseApp)
+    rejected = app.virtual_container.satisfying(Resettable).rejected
+    assert set(rejected) == {"loose"}
+    assert "cannot be called as reset()" in rejected["loose"][0]
 
 
-def test_a_component_missing_every_member_is_not_a_near_miss() -> None:
+def test_a_component_missing_every_member_is_not_a_near_miss(
+    build: Callable[..., Any],
+) -> None:
     """Only components that nearly match are worth reporting."""
-    app = App().build()
-    try:
-        assert app.virtual_container.satisfying(Resettable).rejected == {}
-    finally:
-        app.shutdown()
+    app = build(App)
+    assert app.virtual_container.satisfying(Resettable).rejected == {}
 
 
 def test_reading_the_answer_early_is_refused() -> None:
@@ -619,15 +607,12 @@ def test_requirements_are_collected_once_per_question() -> None:
     assert requirements(declarations) == {Question(Resettable, Every()): ["a", "b"]}
 
 
-def test_one_arrives_built() -> None:
+def test_one_arrives_built(build: Callable[..., Any]) -> None:
     """Unlike a census, a single answer is an ordinary dependency."""
-    app = OneApp().build()
-    try:
-        assert app.roi.camera is app.camera
-        app.roi.zoom_to(3.0)
-        assert app.camera.zoom == 3.0
-    finally:
-        app.shutdown()
+    app = build(OneApp)
+    assert app.roi.camera is app.camera
+    app.roi.zoom_to(3.0)
+    assert app.camera.zoom == 3.0
 
 
 def test_one_refuses_an_empty_session() -> None:
@@ -646,20 +631,14 @@ def test_one_refuses_to_answer_with_the_asker() -> None:
         SelfApp().build()
 
 
-def test_maybe_is_answered_when_present() -> None:
-    app = MaybeApp().build()
-    try:
-        assert app.widget.camera is app.camera
-    finally:
-        app.shutdown()
+def test_maybe_is_answered_when_present(build: Callable[..., Any]) -> None:
+    app = build(MaybeApp)
+    assert app.widget.camera is app.camera
 
 
-def test_maybe_is_none_when_absent() -> None:
-    app = MaybeEmptyApp().build()
-    try:
-        assert app.widget.camera is None
-    finally:
-        app.shutdown()
+def test_maybe_is_none_when_absent(build: Callable[..., Any]) -> None:
+    app = build(MaybeEmptyApp)
+    assert app.widget.camera is None
 
 
 def test_maybe_still_refuses_two_answers() -> None:
@@ -679,24 +658,20 @@ def test_a_near_miss_is_named_when_nothing_answers() -> None:
         RenamedApp().build()
 
 
-def test_an_extra_defaulted_parameter_still_answers() -> None:
+def test_an_extra_defaulted_parameter_still_answers(build: Callable[..., Any]) -> None:
     """Widening an implementation does not break the protocol's calls."""
-    app = TolerantApp().build()
-    try:
-        assert app.roi.camera is app.camera
-        app.roi.zoom_to(2.0)
-        assert app.camera.zoom == 2.0
-    finally:
-        app.shutdown()
+    app = build(TolerantApp)
+    assert app.roi.camera is app.camera
+    app.roi.zoom_to(2.0)
+    assert app.camera.zoom == 2.0
 
 
-def test_a_data_member_assigned_in_init_still_answers() -> None:
+def test_a_data_member_assigned_in_init_still_answers(
+    build: Callable[..., Any],
+) -> None:
     """The choice ignores what only an instance can show, then confirms it."""
-    app = CountApp().build()
-    try:
-        assert app.needs.counter is app.counter
-    finally:
-        app.shutdown()
+    app = build(CountApp)
+    assert app.needs.counter is app.counter
 
 
 def test_a_data_member_never_assigned_is_caught_after_the_build() -> None:
@@ -709,47 +684,38 @@ def test_a_protocol_with_no_method_cannot_be_asked_for_one() -> None:
         DataOnlyApp().build()
 
 
-def test_the_device_census_holds_every_matching_device() -> None:
-    app = DeviceApp().build()
-    try:
-        assert dict(app.motors.motors) == {"stage": app.stage, "spare": app.spare}
-    finally:
-        app.shutdown()
+def test_the_device_census_holds_every_matching_device(
+    build: Callable[..., Any],
+) -> None:
+    app = build(DeviceApp)
+    assert dict(app.motors.motors) == {"stage": app.stage, "spare": app.spare}
 
 
-def test_a_device_that_does_not_match_is_absent() -> None:
-    app = DeviceApp().build()
-    try:
-        assert "shutter" not in app.motors.motors
-    finally:
-        app.shutdown()
+def test_a_device_that_does_not_match_is_absent(build: Callable[..., Any]) -> None:
+    app = build(DeviceApp)
+    assert "shutter" not in app.motors.motors
 
 
-def test_the_device_census_is_readable_while_the_component_is_built() -> None:
+def test_the_device_census_is_readable_while_the_component_is_built(
+    build: Callable[..., Any],
+) -> None:
     """Every device exists before any component, so the answer is not a live view."""
-    app = DeviceApp().build()
-    try:
-        assert app.motors.names == ["spare", "stage"]
-    finally:
-        app.shutdown()
+    app = build(DeviceApp)
+    assert app.motors.names == ["spare", "stage"]
 
 
-def test_the_device_census_is_empty_without_devices() -> None:
-    app = NoDeviceApp().build()
-    try:
-        assert dict(app.motors.motors) == {}
-    finally:
-        app.shutdown()
+def test_the_device_census_is_empty_without_devices(build: Callable[..., Any]) -> None:
+    app = build(NoDeviceApp)
+    assert dict(app.motors.motors) == {}
 
 
-def test_the_two_censuses_answer_over_different_populations() -> None:
+def test_the_two_censuses_answer_over_different_populations(
+    build: Callable[..., Any],
+) -> None:
     """A device is never in the component census, and a component never in this one."""
-    app = BothCensusApp().build()
-    try:
-        assert sorted(app.both.motors) == ["stage"]
-        assert sorted(app.both.resettable) == ["motor"]
-    finally:
-        app.shutdown()
+    app = build(BothCensusApp)
+    assert sorted(app.both.motors) == ["stage"]
+    assert sorted(app.both.resettable) == ["motor"]
 
 
 def test_devices_of_expands_to_an_annotated_mapping() -> None:
@@ -862,13 +828,12 @@ class BrokenMaybeApp(AppContainer):
     widget: AsPresenter[MaybeWidget]
 
 
-def test_the_census_leaves_out_a_component_that_failed() -> None:
+def test_the_census_leaves_out_a_component_that_failed(
+    build: Callable[..., Any],
+) -> None:
     """A component asks what the session holds, not what it declared."""
-    app = CensusReaderApp().build()
-    try:
-        assert set(app.reader.peers) == {"camera"}
-    finally:
-        app.shutdown()
+    app = build(CensusReaderApp)
+    assert set(app.reader.peers) == {"camera"}
 
 
 def test_the_one_answer_failing_skips_whoever_asked(
@@ -885,11 +850,10 @@ def test_the_one_answer_failing_skips_whoever_asked(
         app.shutdown()
 
 
-def test_an_optional_answer_failing_leaves_the_asker_without_one() -> None:
+def test_an_optional_answer_failing_leaves_the_asker_without_one(
+    build: Callable[..., Any],
+) -> None:
     """At most one was asked for, and the session ended up holding none."""
-    app = BrokenMaybeApp().build()
-    try:
-        assert set(app.presenters) == {"widget"}
-        assert app.widget.camera is None
-    finally:
-        app.shutdown()
+    app = build(BrokenMaybeApp)
+    assert set(app.presenters) == {"widget"}
+    assert app.widget.camera is None

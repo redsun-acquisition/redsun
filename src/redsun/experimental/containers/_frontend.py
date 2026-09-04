@@ -32,9 +32,16 @@ class Frontend:
     ) -> None:
         """Confirm the frontend attaches *placement*, and *view* is what it demands.
 
-        *view* is the class before anything is built and the instance
-        afterwards; either answers the question, since the demand is on the
-        class.
+        Parameters
+        ----------
+        view : type | object
+            The class before anything is built and the instance afterwards.
+            Either answers the question, the demand being on the class.
+        placement : Placement
+            Where the view asks to be attached.
+        where : str
+            How to name the view in a refusal, such as
+            ``"view 'panel'"``.
 
         Raises
         ------

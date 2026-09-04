@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -117,14 +118,13 @@ def test_the_session_owns_an_application_named_after_it(qapp: Any) -> None:
     assert Application.get_app("QtApp") is None
 
 
-def test_two_sessions_of_one_name_refuse_to_coexist(qapp: Any) -> None:
+def test_two_sessions_of_one_name_refuse_to_coexist(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """The name is an identity, so a collision is loud rather than shared."""
-    first = QtApp().build()
-    try:
-        with pytest.raises(ValueError, match="already exists"):
-            QtApp().build()
-    finally:
-        first.shutdown()
+    build(QtApp)
+    with pytest.raises(ValueError, match="already exists"):
+        QtApp().build()
 
 
 def test_the_name_is_free_again_after_shutdown(qapp: Any) -> None:
@@ -140,20 +140,19 @@ def window(qapp: Any) -> QMainWindow:
     return QMainWindow()
 
 
-def test_the_container_builds_its_own_window(qapp: Any) -> None:
+def test_the_container_builds_its_own_window(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """The base container builds the components; this one arranges them."""
-    app = QtApp().build()
-    try:
-        window = app.main_window
-        assert window.windowTitle() == "QtApp"
-        docks = window.findChildren(QDockWidget)
-        assert [_widget(d).objectName() for d in docks] == ["panel"]
-        central = window.centralWidget()
-        assert central is not None
-        assert central.objectName() == "canvas"
-        assert app.build().main_window is window
-    finally:
-        app.shutdown()
+    app = build(QtApp)
+    window = app.main_window
+    assert window.windowTitle() == "QtApp"
+    docks = window.findChildren(QDockWidget)
+    assert [_widget(d).objectName() for d in docks] == ["panel"]
+    central = window.centralWidget()
+    assert central is not None
+    assert central.objectName() == "canvas"
+    assert app.build().main_window is window
 
 
 def test_no_toolkit_object_exists_before_the_build(qapp: Any) -> None:
@@ -178,28 +177,27 @@ def test_the_configuration_names_the_container(qapp: Any) -> None:
         app.shutdown()
 
 
-def test_every_placement_lands_where_it_asked(window: QMainWindow) -> None:
+def test_every_placement_lands_where_it_asked(
+    window: QMainWindow, build: Callable[..., Any]
+) -> None:
     """One pass over the views fills docks, the centre, a menu and a toolbar."""
-    app = QtApp().build()
-    try:
-        # inspected before the shutdown, which destroys the widgets it built
-        attach(window, dict(app.views))
+    app = build(QtApp)
+    # inspected before the shutdown, which destroys the widgets it built
+    attach(window, dict(app.views))
 
-        docks = window.findChildren(QDockWidget)
-        assert [_widget(d).objectName() for d in docks] == ["panel"]
-        central = window.centralWidget()
-        assert central is not None
-        assert central.objectName() == "canvas"
+    docks = window.findChildren(QDockWidget)
+    assert [_widget(d).objectName() for d in docks] == ["panel"]
+    central = window.centralWidget()
+    assert central is not None
+    assert central.objectName() == "canvas"
 
-        menus = _menus(window)
-        assert [m.title() for m in menus] == ["File"]
-        assert [a.objectName() for a in menus[0].actions()] == ["save"]
+    menus = _menus(window)
+    assert [m.title() for m in menus] == ["File"]
+    assert [a.objectName() for a in menus[0].actions()] == ["save"]
 
-        toolbars = window.findChildren(QToolBar)
-        assert [t.objectName() for t in toolbars] == ["Plans"]
-        assert [a.objectName() for a in toolbars[0].actions()] == ["acquire"]
-    finally:
-        app.shutdown()
+    toolbars = window.findChildren(QToolBar)
+    assert [t.objectName() for t in toolbars] == ["Plans"]
+    assert [a.objectName() for a in toolbars[0].actions()] == ["acquire"]
 
 
 def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
@@ -284,23 +282,22 @@ def test_a_command_is_filled_from_the_session(qapp: Any) -> None:
         app.shutdown()
 
 
-def test_the_window_is_built_against_the_session_application(qapp: Any) -> None:
+def test_the_window_is_built_against_the_session_application(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """A menu bar on the window is filled from the session's own registries."""
-    app = CommandApp().build()
-    try:
-        app.model.register_action(
-            Action(
-                id="probe.note",
-                title="Note",
-                callback=lambda: None,
-                menus=[MenuRule(id="probe/tools")],
-            )
+    app = build(CommandApp)
+    app.model.register_action(
+        Action(
+            id="probe.note",
+            title="Note",
+            callback=lambda: None,
+            menus=[MenuRule(id="probe/tools")],
         )
-        menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
-        tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
-        assert [a.text() for a in tools.actions()] == ["Note"]
-    finally:
-        app.shutdown()
+    )
+    menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
+    tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
+    assert [a.text() for a in tools.actions()] == ["Note"]
 
 
 def test_the_session_holds_the_application_it_runs_on(qapp: Any) -> None:

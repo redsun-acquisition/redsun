@@ -16,13 +16,50 @@ if _TESTS_DIR not in sys.path:
 _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
 
 @pytest.fixture
 def config_path() -> Path:
     """Return the directory holding the test session configurations."""
     return Path(__file__).parent / "configs"
+
+
+@pytest.fixture
+def build() -> Generator[Callable[..., Any], None, None]:
+    """Return a function building a session and shutting it down afterwards.
+
+    Parameters
+    ----------
+    container : type | AppContainer
+        A container class, constructed with whatever else is passed, or a
+        container already in hand.
+
+    Every session it built is shut down in reverse order once the test ends,
+    and a test may shut one down itself, ``shutdown`` running nothing the
+    second time.
+    """
+    built: list[Any] = []
+
+    def build_one(container: Any, *args: Any, **kwargs: Any) -> Any:
+        unbuilt = (
+            container(*args, **kwargs) if isinstance(container, type) else container
+        )
+        built.append(unbuilt.build())
+        return built[-1]
+
+    yield build_one
+    for session in reversed(built):
+        session.shutdown()
+
+
+@pytest.fixture
+def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """Point the settings store at *tmp_path*, off the user's own directory."""
+    monkeypatch.setattr(
+        "redsun.experimental._settings.user_config_dir", lambda *a, **k: str(tmp_path)
+    )
+    return tmp_path
 
 
 @pytest.fixture

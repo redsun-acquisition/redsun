@@ -131,35 +131,35 @@ def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
         Headless().build()
 
 
-def test_a_hook_runs_at_the_point_its_attribute_names(qapp: Any) -> None:
+def test_a_hook_runs_at_the_point_its_attribute_names(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """The attribute name is the point, with no marker needed to say so."""
 
     class App(QtAppContainer):
         configure_application: AsHook[Styler]
 
-    app = App().build()
-    try:
-        installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
-        assert installed.seen == [qapp]
-    finally:
-        app.shutdown()
+    app = build(App)
+    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    assert installed.seen == [qapp]
 
 
-def test_declare_carries_the_providers_arguments(qapp: Any) -> None:
+def test_declare_carries_the_providers_arguments(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """A hook is constructed the way everything else declared here is."""
 
     class App(QtAppContainer):
         configure_application: Annotated[AsHook[Styler], Declare(style="dark")]
 
-    app = App().build()
-    try:
-        installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
-        assert installed.style == "dark"
-    finally:
-        app.shutdown()
+    app = build(App)
+    installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    assert installed.style == "dark"
 
 
-def test_one_annotation_serves_several_points(qapp: Any) -> None:
+def test_one_annotation_serves_several_points(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """The class is named once, so one instance answers at both points."""
 
     class App(QtAppContainer):
@@ -168,13 +168,10 @@ def test_one_annotation_serves_several_points(qapp: Any) -> None:
             Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
         ]
 
-    app = App().build()
-    try:
-        hooks = app.hooks
-        assert hooks[QtHook.CONFIGURE_APPLICATION] is hooks[QtHook.CONFIGURE_MAIN_VIEW]
-        assert app.main_window.windowTitle() == "branded"
-    finally:
-        app.shutdown()
+    app = build(App)
+    hooks = app.hooks
+    assert hooks[QtHook.CONFIGURE_APPLICATION] is hooks[QtHook.CONFIGURE_MAIN_VIEW]
+    assert app.main_window.windowTitle() == "branded"
 
 
 def test_two_declarations_may_not_claim_one_point(qapp: Any) -> None:
@@ -208,7 +205,9 @@ def test_a_provider_missing_the_method_is_refused(qapp: Any) -> None:
         App().build()
 
 
-def test_the_configuration_names_a_provider(qapp: Any) -> None:
+def test_the_configuration_names_a_provider(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """A session installs a bundle's hook without naming it in Python."""
 
     class App(QtAppContainer):
@@ -221,11 +220,8 @@ def test_the_configuration_names_a_provider(qapp: Any) -> None:
             }
         }
 
-    app = App().build()
-    try:
-        assert app.main_window.windowTitle() == "from-file"
-    finally:
-        app.shutdown()
+    app = build(App)
+    assert app.main_window.windowTitle() == "from-file"
 
 
 def test_one_point_may_not_be_named_twice_over(qapp: Any) -> None:
@@ -243,7 +239,9 @@ def test_one_point_may_not_be_named_twice_over(qapp: Any) -> None:
         App().build()
 
 
-def test_during_build_brackets_the_build_and_names_every_step(qapp: Any) -> None:
+def test_during_build_brackets_the_build_and_names_every_step(
+    qapp: Any, build: Callable[..., Any]
+) -> None:
     """A splash opens before the first component and closes once the window is up."""
 
     class App(QtAppContainer):
@@ -251,23 +249,20 @@ def test_during_build_brackets_the_build_and_names_every_step(qapp: Any) -> None
         ctrl: AsPresenter[Counter]
         panel: AsView[Panel]
 
-    app = App().build()
-    try:
-        assert Splash.entered == 1
-        assert Splash.exited == 1
-        assert Splash.steps == list(_BUILD_STEPS)
-        assert Splash.steps == [
-            "devices",
-            "registry",
-            "presenters",
-            "views",
-            "seal",
-            "wiring",
-            "presentation",
-            "report",
-        ]
-    finally:
-        app.shutdown()
+    build(App)
+    assert Splash.entered == 1
+    assert Splash.exited == 1
+    assert Splash.steps == list(_BUILD_STEPS)
+    assert Splash.steps == [
+        "devices",
+        "registry",
+        "presenters",
+        "views",
+        "seal",
+        "wiring",
+        "presentation",
+        "report",
+    ]
 
 
 def test_the_span_closes_on_a_failed_build(qapp: Any) -> None:
@@ -284,7 +279,7 @@ def test_the_span_closes_on_a_failed_build(qapp: Any) -> None:
 
 
 def test_create_application_is_consulted_only_with_none_running(
-    qapp: Any, monkeypatch: pytest.MonkeyPatch
+    qapp: Any, monkeypatch: pytest.MonkeyPatch, build: Callable[..., Any]
 ) -> None:
     """A running application is adopted as it is, whoever else offered one."""
 
@@ -295,8 +290,5 @@ def test_create_application_is_consulted_only_with_none_running(
     assert Founder.seen == []
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
-    app = App().build()
-    try:
-        assert Founder.seen == [sys.argv]
-    finally:
-        app.shutdown()
+    build(App)
+    assert Founder.seen == [sys.argv]
