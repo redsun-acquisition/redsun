@@ -54,9 +54,10 @@ earlier:
 
 **What is not there yet:**
 
-- The window `QtAppContainer` builds is a bare `QMainWindow`. Stable's
-  `QtMainView` also carries a menu bar with "save configuration"; nothing here
-  does.
+- The window carries no menu bar of its own. It is a `QModelMainWindow`, so
+  one can be filled from the session's application, but nothing declares an
+  entry yet; stable's `QtMainView` carries a File menu with "save
+  configuration".
 - `redsun.experimental.virtual._wiring` is a copy of `redsun.virtual._wiring`. The two
   fold back together if this graduates.
 - No decision recorded. This page is the whole of the rationale; no ADR revisits
@@ -222,11 +223,12 @@ requires the Qt bindings. `AppContainer` on its own names no toolkit: it builds
 and it accepts any placement, which is what a headless test wants.
 
 The split follows: the base container builds the components, and the toolkit
-one arranges them. `QtAppContainer.__init__` puts a `QApplication`, the async
-backend and an empty `QMainWindow` in place, because a widget cannot be built
-before any of them exist; `build` calls `super().build()` and then attaches the
-views to that window; `run` shows it and hands over to the event loop;
-`shutdown` tears the async backend down after the components.
+one arranges them. `QtAppContainer.__init__` touches no toolkit object; `build`
+puts a `QApplication` and the async backend in place, because a widget cannot
+be built before either exists, then calls `super().build()` and attaches the
+views to a `QModelMainWindow` made against the session's application; `run`
+shows it and hands over to the event loop; `shutdown` tears the async backend
+down after the components.
 
 ```python
 class MyApp(QtAppContainer):

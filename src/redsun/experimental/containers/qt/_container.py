@@ -42,6 +42,7 @@ from typing import (
 )
 
 from app_model import Application
+from app_model.backends.qt import QModelMainWindow
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QObject
@@ -180,12 +181,15 @@ class QtAppContainer(AppContainer):
     def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
         """Prepare an empty container, to be filled by `build`."""
         super().__init__(config)
-        self._main_window: QMainWindow | None = None
+        self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
 
     @property
-    def main_window(self) -> QMainWindow:
+    def main_window(self) -> QModelMainWindow:
         """The window the views are attached to.
+
+        It is built against `model`, so a menu bar or a toolbar filled from
+        that application's registries can be asked for on it.
 
         Raises
         ------
@@ -217,8 +221,9 @@ class QtAppContainer(AppContainer):
         ``QApplication`` has to exist before any widget is constructed and the
         async backend before any coroutine slot is connected, so both are made
         before the components are. The application follows, because the
-        components are built out of its store, and the window last. A build
-        that fails destroys the application rather than leaving its name taken.
+        components are built out of its store, and the window last, which is
+        made against the application. A build that fails destroys the
+        application rather than leaving its name taken.
 
         Refusing a second build is the base container's to do, so a call that
         it turns away attaches nothing rather than filling the window twice.
@@ -242,7 +247,7 @@ class QtAppContainer(AppContainer):
             with self._during_build(qt_app) as report:
                 self._report = report
                 super().build()
-                window = QMainWindow()
+                window = QModelMainWindow(self._model)
                 window.setWindowTitle(self.name)
                 self._main_window = window
                 attach(window, self.views)

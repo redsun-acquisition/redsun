@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from app_model import Action, Application
+from app_model.types import MenuRule
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QDockWidget,
@@ -275,5 +276,24 @@ def test_a_command_is_filled_from_the_session(qapp: Any) -> None:
         app.model.register_action(Action(id="probe.note", title="Note", callback=note))
         app.model.commands.execute_command("probe.note")
         assert seen == [app.gain]
+    finally:
+        app.shutdown()
+
+
+def test_the_window_is_built_against_the_session_application(qapp: Any) -> None:
+    """A menu bar on the window is filled from the session's own registries."""
+    app = CommandApp().build()
+    try:
+        app.model.register_action(
+            Action(
+                id="probe.note",
+                title="Note",
+                callback=lambda: None,
+                menus=[MenuRule(id="probe/tools")],
+            )
+        )
+        menu_bar = app.main_window.setModelMenuBar({"probe/tools": "Tools"})
+        tools = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Tools")
+        assert [a.text() for a in tools.actions()] == ["Note"]
     finally:
         app.shutdown()

@@ -323,6 +323,18 @@ Dates are specified in the format `DD-MM-YYYY`.
   nothing. `main_window` raises `RuntimeError` before `build`, as `model`
   already did, and is cleared again by `shutdown`.
 
+- `redsun.experimental.containers.qt.QtAppContainer.main_window` is a
+  `QModelMainWindow` built against the session's `model`, where it was a bare
+  `QMainWindow`. `setModelMenuBar` and `addModelToolBar` fill a menu bar and a
+  toolbar from that application's registries:
+
+  ```python
+  app = MyApp().build()
+  app.main_window.setModelMenuBar({"myapp/file": "File"})
+  ```
+
+  Views attach as before.
+
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:
 
