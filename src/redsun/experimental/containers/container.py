@@ -30,7 +30,11 @@ from redsun.experimental.containers._protocols import (
 from redsun.experimental.virtual import _provides
 from redsun.experimental.virtual._container import VirtualContainer
 from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
-from redsun.experimental.virtual._wiring import SessionNotBuilt
+from redsun.experimental.virtual._wiring import (
+    ComponentNotBuilt,
+    SessionNotBuilt,
+    WiringError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -963,8 +967,36 @@ class AppContainer(BuildableSession):
         self._virtual.on_release(close)
 
     def _apply_wiring_config(self, config: Mapping[str, Any]) -> None:
-        for rule in config.get("wiring", []):
-            self._virtual.connect_paths(rule["from"], rule["to"])
+        """Connect the port pairs the ``wiring`` section lists.
+
+        A rule naming a component the build failed on is warned about and
+        skipped, so one component that could not be made does not keep the
+        session from coming up. Every other way of getting a rule wrong stays
+        fatal, a name that was never declared included.
+
+        Raises
+        ------
+        WiringError
+            If a rule is not a mapping of exactly ``from`` and ``to``, or
+            names a port that cannot be resolved for any other reason.
+        """
+        for index, rule in enumerate(config.get("wiring", [])):
+            if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
+                raise WiringError(
+                    f"wiring entry {index} must be a mapping with exactly the "
+                    f"keys 'from' and 'to', got {rule!r}"
+                )
+            try:
+                self._virtual.connect_paths(rule["from"], rule["to"])
+            except ComponentNotBuilt as e:
+                if e.component not in self._failed:
+                    raise
+                logger.warning(
+                    "Not connecting %s -> %s: component %r was not built",
+                    rule["from"],
+                    rule["to"],
+                    e.component,
+                )
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.

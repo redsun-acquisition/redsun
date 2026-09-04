@@ -48,6 +48,19 @@ class WiringError(RuntimeError):
     """Raised when a connection between two components cannot be made."""
 
 
+class ComponentNotBuilt(WiringError):
+    """Raised when a port path names a component that is not there.
+
+    ``component`` is the name the path used, so a caller that knows which
+    components failed to build can tell one of those from a name that was
+    never declared.
+    """
+
+    def __init__(self, component: str, message: str) -> None:
+        super().__init__(message)
+        self.component = component
+
+
 class SessionNotBuilt(LookupError):
     """Raised when a view of the session is read before the session is built.
 

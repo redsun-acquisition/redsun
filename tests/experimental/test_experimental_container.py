@@ -40,6 +40,7 @@ from redsun.experimental.containers._factories import (
     optional_arg,
     synthesize,
 )
+from redsun.experimental.virtual._wiring import WiringError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -1311,3 +1312,70 @@ def test_a_session_missing_a_step_cannot_be_constructed() -> None:
 def test_a_session_keeps_its_instances_free_of_a_dict() -> None:
     """A protocol body without `__slots__` would give every session one."""
     assert not hasattr(AppContainer(), "__dict__")
+
+
+class Unmakeable:
+    """A presenter whose constructor raises, so the build skips it."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("this presenter cannot be made")
+
+
+def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """One component that could not be made must not keep the session down."""
+
+    class Half(AppContainer):
+        __slots__ = ()
+
+        broken: AsPresenter[Unmakeable]
+        recorder: AsPresenter[Recorder]
+
+        config: ClassVar[Mapping[str, Any]] = {
+            "wiring": [{"from": "broken.sig_done", "to": "recorder.on_done"}]
+        }
+
+    app = Half().build()
+    try:
+        assert app.is_built
+        assert set(app.presenters) == {"recorder"}
+        assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
+    finally:
+        app.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("rules", "message"),
+    [
+        pytest.param(
+            [{"from": "absent.sig_done", "to": "recorder.on_done"}],
+            "names component 'absent', which was not built",
+            id="never-declared",
+        ),
+        pytest.param(
+            [{"from": "recorder.sig_done"}],
+            "must be a mapping with exactly the keys",
+            id="missing-key",
+        ),
+        pytest.param(
+            ["recorder.sig_done -> recorder.on_done"],
+            "must be a mapping with exactly the keys",
+            id="not-a-mapping",
+        ),
+    ],
+)
+def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
+    rules: list[Any], message: str
+) -> None:
+    """Only a component the build skipped is forgiven, not a typo."""
+
+    class Wrong(AppContainer):
+        __slots__ = ()
+
+        recorder: AsPresenter[Recorder]
+
+        config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
+
+    with pytest.raises(WiringError, match=message):
+        Wrong().build()

@@ -65,7 +65,13 @@ from redsun.experimental.virtual._requires import (
     RequiresOne,
     Satisfying,
 )
-from redsun.experimental.virtual._wiring import Connection, SessionNotBuilt, slot
+from redsun.experimental.virtual._wiring import (
+    ComponentNotBuilt,
+    Connection,
+    SessionNotBuilt,
+    WiringError,
+    slot,
+)
 
 __all__ = [
     "Alias",
@@ -77,6 +83,7 @@ __all__ = [
     "AttachableComponent",
     "BlueskyCallbackRegistry",
     "BuildableSession",
+    "ComponentNotBuilt",
     "Connection",
     "Declare",
     "DesktopSession",
@@ -97,6 +104,7 @@ __all__ = [
     "SessionConfig",
     "SessionNotBuilt",
     "VirtualContainer",
+    "WiringError",
     "provides",
     "satisfies",
     "slot",

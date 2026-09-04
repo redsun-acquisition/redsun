@@ -402,6 +402,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that
   paired the two by hand.
 
+- `redsun.experimental.AppContainer` skips a `wiring:` rule naming a
+  component the build failed on, warning about it, so one component that could
+  not be made does not keep the session from coming up:
+
+  ```
+  Not connecting stage.readback -> panel.on_moved: component 'stage' was not built
+  ```
+
+  Every other way of getting a rule wrong stays fatal, a name that was never
+  declared included, and a rule that is not a mapping of exactly `from` and
+  `to` raises `WiringError` naming the entry's position.
+  `redsun.experimental.ComponentNotBuilt`, a `WiringError`, carries the
+  `component` a port path named, so a caller that knows which components failed
+  can tell one of those from a name that was never declared. Both are exported
+  from `redsun.experimental`, where neither was reachable before.
+
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:
 

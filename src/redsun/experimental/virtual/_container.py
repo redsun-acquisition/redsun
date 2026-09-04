@@ -16,6 +16,7 @@ from redsun.experimental.virtual._requires import Satisfying
 from redsun.experimental.virtual._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
+    ComponentNotBuilt,
     Connection,
     SessionNotBuilt,
     Slot,
@@ -540,9 +541,10 @@ class VirtualContainer(Loggable):
         component = self._components.get(component_name)
         if component is None:
             known = ", ".join(sorted(self._components)) or "none"
-            raise WiringError(
+            raise ComponentNotBuilt(
+                component_name,
                 f"{path!r} names component {component_name!r}, which was not "
-                f"built. Built: {known}"
+                f"built. Built: {known}",
             )
         surface = ports(component)
         available = surface.signals if kind == "signal" else surface.slots
