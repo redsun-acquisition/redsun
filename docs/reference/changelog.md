@@ -432,6 +432,29 @@ Dates are specified in the format `DD-MM-YYYY`.
   raised `TypeError: cannot create weak reference`. Instances still carry no
   `__dict__`.
 
+- Every Qt session pins a colour-scheme control to a toolbar of its own, at
+  the right of the window. Nothing is declared for it, and a `color_scheme`
+  key says which mode to start in:
+
+  ```yaml
+  color_scheme: dark
+  ```
+
+  `redsun.experimental.containers.qt.ColorSchemeMode` is `system`, `light` or
+  `dark`, and `ColorSchemeButton` cycles them in that order, calling
+  `QStyleHints.setColorScheme` for the last two and `unsetColorScheme` for
+  `system`. A session without the key starts at `system`. The glyph shows the
+  mode asked for rather than the scheme in force.
+
+  The control sits at the right of a toolbar of its own, behind an expanding
+  spacer. The toolbar is added rather than set and holds nothing else, so a
+  menu bar and a view's own toolbar are both left alone.
+
+  `ColorSchemeMode.from_config` reads the key, `apply` asks the platform,
+  `next` gives the order and `glyph` the character.
+  `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
+  outside a session.
+
 - `redsun.experimental.Layer.section` - the configuration section a layer's
   components are declared under, which is the member's own name pluralised:
   `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that

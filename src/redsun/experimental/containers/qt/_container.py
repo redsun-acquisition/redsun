@@ -69,6 +69,10 @@ from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._protocols import DesktopSession
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.containers.qt._actions import read_actions
+from redsun.experimental.containers.qt._color_scheme import (
+    ColorSchemeButton,
+    ColorSchemeMode,
+)
 from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
@@ -244,7 +248,10 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         may supply the ``QApplication`` itself. The session's own application
         follows, because the components are built out of its store, and the
         ``actions`` section is registered on it at once, so a hook dressing the
-        window finds every command it may put in a menu. Each of them
+        window finds every command it may put in a menu. The colour scheme is
+        asked for before any widget exists to be painted in the wrong one, and
+        a ``configure_application`` hook runs last, so one restyling the
+        application does so over a scheme already in force. Each of them
         registers how it is given back as it is taken, so ``shutdown`` frees
         the name and the backend without this class defining one.
         """
@@ -265,6 +272,8 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         self.on_release(self._forget_application)
         self._register_actions()
 
+        ColorSchemeMode.from_config(self._configuration()).apply()
+
         configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
         if isinstance(configurer, ConfiguresApplication):
             configurer.configure_application(qt_app)
@@ -279,11 +288,19 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         self._qt_app = None
 
     def present(self) -> None:
-        """Make the window, put every view where it asks to be, and dress it."""
+        """Make the window, put every view where it asks to be, and dress it.
+
+        The colour-scheme toolbar goes on before the views are attached, and
+        is added rather than set, so it neither replaces a menu bar nor takes
+        a dock area a view asked for.
+        """
         window = QModelMainWindow(self.model)
         window.setWindowTitle(self.name)
         self._main_window = window
         self.on_release(self._forget_window)
+        ColorSchemeButton.pin_to(
+            window, ColorSchemeMode.from_config(self._configuration())
+        )
         attach(window, self.views)
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):

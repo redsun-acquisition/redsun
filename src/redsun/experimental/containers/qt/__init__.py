@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ._actions import ActionError
+from ._color_scheme import ColorSchemeButton, ColorSchemeMode
 from ._container import (
     Area,
     Central,
@@ -19,6 +20,8 @@ __all__ = [
     "ActionError",
     "Area",
     "Central",
+    "ColorSchemeButton",
+    "ColorSchemeMode",
     "Dock",
     "MenuItem",
     "Qt",
