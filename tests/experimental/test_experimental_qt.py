@@ -409,7 +409,8 @@ class Closing(QWidget):
 
     def closeEvent(self, event: QCloseEvent | None) -> None:
         TEARDOWN_ORDER.append("closed")
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
 
 class ClosingApp(QtAppContainer):
