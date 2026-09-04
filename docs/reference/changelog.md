@@ -420,6 +420,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   can tell one of those from a name that was never declared. Both are exported
   from `redsun.experimental`, where neither was reachable before.
 
+- `redsun.experimental.AppContainer` carries `__weakref__` among its slots,
+  so a session can be referred to weakly. Connecting a toolkit signal to one
+  of its methods requires that, and `aboutToQuit.connect(session.shutdown)`
+  raised `TypeError: cannot create weak reference`. Instances still carry no
+  `__dict__`.
+
 - `redsun.experimental.Layer.section` - the configuration section a layer's
   components are declared under, which is the member's own name pluralised:
   `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that

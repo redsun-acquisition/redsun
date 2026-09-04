@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import weakref
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
@@ -1420,3 +1421,13 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
 
     with pytest.raises(WiringError, match=message):
         Wrong().build()
+
+
+def test_a_session_can_be_referred_to_weakly() -> None:
+    """A toolkit connecting one of its signals to a session's method needs it.
+
+    ``__slots__`` without ``__weakref__`` refuses a weak reference outright,
+    which is a `TypeError` from the class rather than anything to do with how
+    long an instance is kept.
+    """
+    assert weakref.ref(AppContainer())() is not None

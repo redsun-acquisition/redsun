@@ -122,6 +122,9 @@ class AppContainer(BuildableSession):
     """
 
     __slots__ = (
+        # a slotted class cannot be referred to weakly without it, and a
+        # toolkit connecting a signal to a session's method takes exactly that
+        "__weakref__",
         "_answers",
         "_config",
         "_declarations",
