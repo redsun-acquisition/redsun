@@ -29,24 +29,15 @@ jobs:
           args: "format --check"
           src: "."
 
-  mypy-pyqt:
+  mypy:
     strategy:
         matrix:
             python-version: ["3.14"]
             frontend: ["pyside", "pyqt"]
             os: [ubuntu-latest]
-            include:
-                - frontend: pyside
-                  qt-api: pyside6
-                - frontend: pyqt
-                  qt-api: pyqt6
 
     name: mypy with Qt
     runs-on: ${{ matrix.os }}
-    env:
-        # dev pulls pyqt6 unconditionally; pin the binding qtpy resolves
-        # against so the pyside leg actually checks pyside6
-        QT_API: ${{ matrix.qt-api }}
     steps:
       - uses: actions/checkout@v6
 
@@ -54,16 +45,12 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-          cache-dependency-glob: "pyproject.toml"
+          cache-dependency-glob: "uv.lock"
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-          uv sync --group dev --group ${{ matrix.frontend }}
-
-      # config-driven invocation (no path argument) so tests and
-      # benchmarks stay in scope — see CLAUDE.md
+      # the environment, the binding and the flags all come from
+      # [tool.tox] in pyproject.toml, so this runs what a contributor runs
       - name: Run mypy
-        run: uv run mypy --ignore-missing-imports $(uv run qtpy mypy-args)
+        run: uv run tox -e mypy-${{ matrix.frontend }}
