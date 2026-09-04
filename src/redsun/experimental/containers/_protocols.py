@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import (
     TYPE_CHECKING,
+    Any,
     NoReturn,
     Protocol,
     Self,
@@ -11,7 +12,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from contextlib import AbstractContextManager
 
     from in_n_out import Store
@@ -23,6 +24,7 @@ __all__ = [
     "BuildableSession",
     "DesktopSession",
     "NamedComponent",
+    "Serializable",
 ]
 
 WindowT_co = TypeVar("WindowT_co", covariant=True)
@@ -197,4 +199,25 @@ class DesktopSession(BuildableSession, Protocol[WindowT_co]):
     @abstractmethod
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
+        ...
+
+
+@runtime_checkable
+class Serializable(Protocol):
+    """A component that supplies the configuration entry rebuilding it.
+
+    ``serialize`` returns the keyword arguments the component's own entry
+    would carry. The session writes them under that component's name and
+    nowhere else, so a component reaches no entry but its own, and the next
+    session reads back what this one wrote.
+
+    Implementing it is optional, and a component that leaves it out keeps
+    whatever the configuration already said about it.
+
+    A value that moves on its own, such as a stage position or a frame count,
+    is not a constructor argument and does not belong in the result.
+    """
+
+    def serialize(self) -> Mapping[str, Any]:
+        """Return the keyword arguments this component would be rebuilt from."""
         ...

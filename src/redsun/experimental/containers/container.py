@@ -5,6 +5,7 @@ import inspect
 import logging
 from collections.abc import Mapping, Sequence  # noqa: TC003
 from contextlib import ExitStack, nullcontext
+from copy import deepcopy
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
@@ -27,6 +28,7 @@ from redsun.experimental.containers._protocols import (
     AttachableComponent,
     BuildableSession,
     NamedComponent,
+    Serializable,
 )
 from redsun.experimental.virtual import _provides
 from redsun.experimental.virtual._container import VirtualContainer
@@ -50,6 +52,20 @@ if TYPE_CHECKING:
 __all__ = ["AppContainer"]
 
 logger = logging.getLogger("redsun")
+
+
+def _unaccepted(cls: type, entry: Mapping[str, Any]) -> list[str]:
+    """Return the keys of *entry* that *cls* would refuse to be built from.
+
+    The constructor's parameters decide this, not the keys the configuration
+    carried. A component serializes every parameter it has, including one
+    that took its default and that no source named, and that key is correct.
+    A constructor taking ``**kwargs`` accepts anything, so it refuses none.
+    """
+    params = _factories.constructor(cls).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
+        return []
+    return sorted(set(entry) - {name for name in params if name != "name"})
 
 
 def _silent(step: str) -> None:
@@ -604,6 +620,54 @@ class AppContainer(BuildableSession):
         self._is_built = False
         self._releases.close()
         logger.info("Container shutdown complete")
+
+    def serialize(self) -> dict[str, Any]:
+        """Return the configuration that would rebuild this session.
+
+        The merged configuration, holding the entry each built component
+        asked for through `redsun.experimental.Serializable`. A component
+        that implements none of it, that failed to build, or that asked for a
+        key its constructor would refuse keeps the entry the session was
+        built from, and no other component is affected by that.
+
+        Layered sources are merged before anything is built, so what comes
+        back is one flat configuration whatever the session was built from.
+        """
+        config = deepcopy(self._configuration())
+        for declaration in self._declarations.values():
+            entry = self._entry_for(declaration)
+            if entry is not None:
+                section = config.setdefault(declaration.kind.section, {})
+                section[declaration.name] = entry
+        return config
+
+    def _entry_for(
+        self, declaration: _declarations.Declaration
+    ) -> dict[str, Any] | None:
+        """Return the entry *declaration*'s component asks to be written.
+
+        ``None`` where there is nothing to write, which leaves the entry the
+        session loaded in place. One refused key discards the whole entry
+        rather than only itself: dropping the key alone would leave an entry
+        the component never asked for, where a renamed setting writes the new
+        key, loses it, and keeps the old one beside values that assume the
+        rename.
+        """
+        instance = declaration.instance
+        if instance is None or not isinstance(instance, Serializable):
+            return None
+        entry = dict(instance.serialize())
+        unaccepted = _unaccepted(declaration.cls, entry)
+        if not unaccepted:
+            return entry
+        logger.warning(
+            "'%s' tried to save %s, which %s does not accept; keeping the "
+            "entry as loaded",
+            declaration.name,
+            ", ".join(unaccepted),
+            type(instance).__name__,
+        )
+        return None
 
     def _built(self, layer: Layer) -> dict[str, Any]:
         return {

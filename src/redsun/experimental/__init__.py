@@ -43,6 +43,7 @@ from redsun.experimental.containers._protocols import (
     BuildableSession,
     DesktopSession,
     NamedComponent,
+    Serializable,
 )
 from redsun.experimental.containers.components import (
     AsDevice,
@@ -101,6 +102,7 @@ __all__ = [
     "RequiresMaybe",
     "RequiresOne",
     "Satisfying",
+    "Serializable",
     "Serves",
     "SessionConfig",
     "SessionNotBuilt",

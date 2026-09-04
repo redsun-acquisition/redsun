@@ -455,6 +455,30 @@ Dates are specified in the format `DD-MM-YYYY`.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
+- `redsun.experimental.Serializable` - a component supplying the configuration
+  entry that would rebuild it:
+
+  ```python
+  class MotorPresenter:
+      def __init__(self, name: str, /, step: float = 5.0) -> None:
+          self.name = name
+          self.step = step
+
+      def serialize(self) -> dict[str, float]:
+          return {"step": self.step}
+  ```
+
+  `redsun.experimental.AppContainer.serialize` returns the merged
+  configuration, holding what each built component asked for under that
+  component's own name and nowhere else. A component that implements none of
+  it keeps the entry the session was built from, and so does one that asks
+  for a key its constructor does not accept; the session reports that at
+  `WARNING` with the component, the keys and the class. The constructor's
+  parameters decide which keys are accepted, not the entry the session
+  loaded, so the session writes a parameter that took its default, and a
+  constructor taking `**kwargs` accepts every key. One refused key discards
+  the whole entry rather than only itself.
+
 - `redsun.experimental.containers.qt.QtAppContainer` destroys the widgets it
   built. A `QWidget` outlives its last Python reference whenever C++ owns it,
   so a session used to leave its window and every view in it alive for as long
