@@ -25,6 +25,7 @@ MyApp().run()
 
 from __future__ import annotations
 
+import logging
 import sys
 from collections.abc import Mapping  # noqa: TC003
 from contextlib import nullcontext
@@ -67,6 +68,7 @@ from redsun._hooks import (
 from redsun.aio import set_async_backend
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers.container import AppContainer
+from redsun.experimental.containers.qt._actions import read_actions
 from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
@@ -90,6 +92,8 @@ __all__ = [
     "ToolBarItem",
     "attach",
 ]
+
+logger = logging.getLogger("redsun")
 
 Area: TypeAlias = Literal["left", "right", "top", "bottom"]
 
@@ -222,8 +226,10 @@ class QtAppContainer(AppContainer):
         async backend before any coroutine slot is connected, so both are made
         before the components are. The application follows, because the
         components are built out of its store, and the window last, which is
-        made against the application. A build that fails destroys the
-        application rather than leaving its name taken.
+        made against the application. The ``actions`` section is registered on
+        the application before anything is built, so a hook dressing the
+        window finds every command it may put in a menu. A build that fails
+        destroys the application rather than leaving its name taken.
 
         Refusing a second build is the base container's to do, so a call that
         it turns away attaches nothing rather than filling the window twice.
@@ -244,6 +250,7 @@ class QtAppContainer(AppContainer):
 
         self._model = Application(self.name)
         try:
+            self._register_actions()
             with self._during_build(qt_app) as report:
                 self._report = report
                 super().build()
@@ -259,6 +266,30 @@ class QtAppContainer(AppContainer):
             self._model = None
             raise
         return self
+
+    def _register_actions(self) -> None:
+        """Register what the ``actions`` section declares on the application.
+
+        The disposer is held for release, so a second session under the same
+        name starts against a registry holding nothing of the first.
+
+        Raises
+        ------
+        ActionError
+            If the section is not a list, or an entry is not an action.
+        """
+        actions = read_actions(
+            self._configuration().get("actions"), type(self).__name__
+        )
+        if not actions:
+            return
+        self.virtual_container.on_release(self.model.register_actions(actions))
+        logger.debug(
+            "Registered %d action(s) on %r: %s",
+            len(actions),
+            self.name,
+            ", ".join(action.id for action in actions),
+        )
 
     def _store(self) -> Store:
         """Return the application's store, which is the session's too.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ._actions import ActionError
 from ._container import (
     Area,
     Central,
@@ -15,6 +16,7 @@ from ._container import (
 )
 
 __all__ = [
+    "ActionError",
     "Area",
     "Central",
     "Dock",

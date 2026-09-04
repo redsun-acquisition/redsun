@@ -54,9 +54,11 @@ earlier:
 
 **What is not there yet:**
 
-- The window carries no menu bar of its own. It is a `QModelMainWindow`, so
-  one can be filled from the session's application, but nothing declares an
-  entry yet; stable's `QtMainView` carries a File menu with "save
+- Nothing puts a model menu bar on the window. It is a `QModelMainWindow` and
+  an `actions:` section can declare the entries, but the session never calls
+  `setModelMenuBar`, so a hook has to - and a hook that does discards the menu
+  bar the placed views were attached to, since `setMenuBar` deletes the one
+  already there. Stable's `QtMainView` carries a File menu with "save
   configuration".
 - `redsun.experimental.virtual._wiring` is a copy of `redsun.virtual._wiring`. The two
   fold back together if this graduates.

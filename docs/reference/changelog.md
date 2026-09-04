@@ -335,6 +335,29 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   Views attach as before.
 
+- An `actions:` section in the configuration of an experimental Qt session,
+  read at build and registered on the `Application` the session owns. An entry
+  is the keyword arguments of an app-model `Action`:
+
+  ```yaml
+  actions:
+    - id: myapp.log.verbose
+      title: Verbose logging
+      callback: "mylab.contributions:enable_debug_logging"
+      menus: [{ id: "myapp/settings" }]
+  ```
+
+  A `callback` stays the `module:function` string it was written as, and
+  app-model imports it when the command first runs, so reading the section
+  imports nothing. The callback's parameters are filled from the session's
+  store when it runs, which is the same store the components were built out
+  of. The registration is undone when the session is released.
+
+  `redsun.experimental.containers.qt.ActionError` names the entry that cannot
+  be made: a section that is not a list, an entry that is not a mapping, an
+  entry carrying a key an action does not take, or one app-model refuses. A
+  build it refuses destroys the application rather than leaving its name taken.
+
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:
 
