@@ -420,6 +420,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   can tell one of those from a name that was never declared. Both are exported
   from `redsun.experimental`, where neither was reachable before.
 
+- `redsun.experimental.containers.qt.QtAppContainer.app` - the toolkit
+  application the session runs on, held by the session for as long as it
+  runs. It raises before `build`, as `main_window` and `model` do, and is
+  dropped at release. A session that created its own application no longer
+  aborts when its first view is constructed.
+
 - `redsun.experimental.AppContainer` carries `__weakref__` among its slots,
   so a session can be referred to weakly. Connecting a toolkit signal to one
   of its methods requires that, and `aboutToQuit.connect(session.shutdown)`

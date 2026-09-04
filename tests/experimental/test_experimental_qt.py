@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -9,6 +11,7 @@ from app_model import Action, Application
 from app_model.types import MenuRule
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
+    QApplication,
     QDockWidget,
     QMainWindow,
     QMenu,
@@ -297,3 +300,67 @@ def test_the_window_is_built_against_the_session_application(qapp: Any) -> None:
         assert [a.text() for a in tools.actions()] == ["Note"]
     finally:
         app.shutdown()
+
+
+def test_the_session_holds_the_application_it_runs_on(qapp: Any) -> None:
+    """A session adopting a running application still keeps a reference."""
+    app = QtApp()
+    with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
+        _ = app.app
+    app.build()
+    try:
+        assert app.app is QApplication.instance()
+    finally:
+        app.shutdown()
+
+
+BUILDS_ITS_OWN = """
+from qtpy.QtWidgets import QApplication, QWidget
+
+from redsun.experimental import AsView, Placement
+from redsun.experimental.containers.qt import Central, QtAppContainer
+
+
+class Panel(QWidget):
+    placement: Placement = Central()
+
+    def __init__(self, name, /):
+        super().__init__()
+        self.name = name
+
+
+class Standalone(QtAppContainer):
+    __slots__ = ()
+
+    panel: AsView[Panel]
+
+
+assert QApplication.instance() is None
+session = Standalone().build()
+assert session.app is QApplication.instance()
+assert session.main_window.centralWidget() is not None
+# what run() does before handing over to the event loop
+session.app.aboutToQuit.connect(session.shutdown)
+session.shutdown()
+"""
+
+
+def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
+    """Drive a session the way a program does, with no fixture holding anything.
+
+    Run in a subprocess, because the suite's ``qapp`` fixture holds an
+    application for the whole run and Qt allows one per process, so nothing in
+    here can reach this path. It covers two things the fixture hides: an
+    application the session made is collected between build steps unless the
+    session holds it, and Qt aborts when the next widget is constructed; and
+    connecting ``aboutToQuit`` to a session's method takes a weak reference to
+    the session. The exit code is the assertion, since the first of those
+    aborts the process rather than raising.
+    """
+    result = subprocess.run(
+        [sys.executable, "-c", BUILDS_ITS_OWN],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

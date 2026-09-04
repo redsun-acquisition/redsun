@@ -172,7 +172,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
     ```
     """
 
-    __slots__ = ("_main_window", "_model")
+    __slots__ = ("_main_window", "_model", "_qt_app")
 
     frontend = Qt
     hook_points: ClassVar[Mapping[str, type]] = {
@@ -187,6 +187,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         super().__init__(config)
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
+        self._qt_app: QApplication | None = None
 
     @property
     def main_window(self) -> QModelMainWindow:
@@ -203,6 +204,23 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         if self._main_window is None:
             raise RuntimeError("Call build() before reading the main window")
         return self._main_window
+
+    @property
+    def app(self) -> QApplication:
+        """The toolkit application this session runs on, and keeps alive.
+
+        Nothing else holds one that the session created, and a collected
+        ``QApplication`` takes the next widget built with it, so the session
+        keeps the reference until it is released.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`, which is where it is put in place.
+        """
+        if self._qt_app is None:
+            raise RuntimeError("Call build() before reading the application")
+        return self._qt_app
 
     @property
     def model(self) -> Application:
@@ -223,12 +241,12 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         A ``QApplication`` has to exist before any widget is constructed and
         the async backend before any coroutine slot is connected, so both are
         made here. The hooks were resolved by the step before this one, so one
-        may supply the ``QApplication`` itself. The application follows,
-        because the components are built out of its store, and the ``actions``
-        section is registered on it at once, so a hook dressing the window
-        finds every command it may put in a menu. Each of them registers how
-        it is given back as it is taken, so ``shutdown`` frees the name and
-        the backend without this class defining one.
+        may supply the ``QApplication`` itself. The session's own application
+        follows, because the components are built out of its store, and the
+        ``actions`` section is registered on it at once, so a hook dressing the
+        window finds every command it may put in a menu. Each of them
+        registers how it is given back as it is taken, so ``shutdown`` frees
+        the name and the backend without this class defining one.
         """
         hooks = self.hooks
         creator = hooks.get(QtHook.CREATE_APPLICATION)
@@ -236,21 +254,29 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
             qt_app = cast("QApplication", creator.create_application(sys.argv))
         else:
             qt_app = application()
+        # the session holds it: nothing else does, and a collected
+        # QApplication takes the next widget built with it
+        self._qt_app = qt_app
+        self.on_release(self._forget_application_object)
         set_async_backend()
         self.on_release(clear_async_backend)
-
-        configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
-        if isinstance(configurer, ConfiguresApplication):
-            configurer.configure_application(qt_app)
 
         self._model = Application(self.name)
         self.on_release(self._forget_application)
         self._register_actions()
 
+        configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
+        if isinstance(configurer, ConfiguresApplication):
+            configurer.configure_application(qt_app)
+
     def _forget_application(self) -> None:
         """Destroy the application by name, freeing the name for the next session."""
         Application.destroy(self.name)
         self._model = None
+
+    def _forget_application_object(self) -> None:
+        """Drop the toolkit application, which the session was holding up."""
+        self._qt_app = None
 
     def present(self) -> None:
         """Make the window, put every view where it asks to be, and dress it."""
@@ -309,17 +335,16 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         """
         hook = self.hooks.get(QtHook.DURING_BUILD)
         if isinstance(hook, WrapsBuild):
-            return hook.during_build(application())
+            return hook.during_build(self.app)
         return nullcontext(self._report)
 
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
         self.build()
-        qt_app = application()
-        qt_app.aboutToQuit.connect(self.shutdown)
+        self.app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()
         self.main_window.show()
-        sys.exit(qt_app.exec())
+        sys.exit(self.app.exec())
 
 
 def application() -> QApplication:
