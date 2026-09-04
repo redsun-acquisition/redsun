@@ -77,7 +77,11 @@ class BuildableSession(Protocol):
 
     Every step takes nothing and returns nothing. What a step needs it reads
     from the session, and what it leaves it leaves on the session, so a step
-    can be replaced without the ones around it knowing.
+    can be replaced without the ones around it knowing. A step taking
+    something that has to be given back registers how with `on_release` at the
+    moment it takes it, and `shutdown` runs those in reverse, so a teardown is
+    the build read backwards and a build that fails runs the releases its
+    finished steps earned.
 
     Inherit it rather than satisfying it structurally. The members are
     abstract, so a session missing one is refused when it is constructed and a
@@ -159,8 +163,13 @@ class BuildableSession(Protocol):
         ...
 
     @abstractmethod
-    def abandon(self) -> None:
-        """Give back what the finished steps took, for a build that will not."""
+    def on_release(self, release: Callable[[], None]) -> None:
+        """Register how to give something back, as the step takes it."""
+        ...
+
+    @abstractmethod
+    def shutdown(self) -> None:
+        """Run every registered release, in the reverse of the order taken."""
         ...
 
 

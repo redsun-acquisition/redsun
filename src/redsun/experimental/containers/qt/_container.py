@@ -226,7 +226,9 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         may supply the ``QApplication`` itself. The application follows,
         because the components are built out of its store, and the ``actions``
         section is registered on it at once, so a hook dressing the window
-        finds every command it may put in a menu.
+        finds every command it may put in a menu. Each of them registers how
+        it is given back as it is taken, so ``shutdown`` frees the name and
+        the backend without this class defining one.
         """
         hooks = self.hooks
         creator = hooks.get(QtHook.CREATE_APPLICATION)
@@ -235,35 +237,42 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         else:
             qt_app = application()
         set_async_backend()
+        self.on_release(clear_async_backend)
 
         configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
         if isinstance(configurer, ConfiguresApplication):
             configurer.configure_application(qt_app)
 
         self._model = Application(self.name)
+        self.on_release(self._forget_application)
         self._register_actions()
+
+    def _forget_application(self) -> None:
+        """Destroy the application by name, freeing the name for the next session."""
+        Application.destroy(self.name)
+        self._model = None
 
     def present(self) -> None:
         """Make the window, put every view where it asks to be, and dress it."""
         window = QModelMainWindow(self.model)
         window.setWindowTitle(self.name)
         self._main_window = window
+        self.on_release(self._forget_window)
         attach(window, self.views)
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
 
-    def abandon(self) -> None:
-        """Destroy the application, so a failed build leaves its name free."""
-        if self._model is not None:
-            Application.destroy(self.name)
-            self._model = None
+    def _forget_window(self) -> None:
+        """Drop the window, so reading it reports an unbuilt session again."""
+        self._main_window = None
 
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.
 
-        The disposer is held for release, so a second session under the same
-        name starts against a registry holding nothing of the first.
+        The disposer goes on the virtual container, which is released before
+        the application is destroyed, so a second session under the same name
+        starts against a registry holding nothing of the first.
 
         Raises
         ------
@@ -302,20 +311,6 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         if isinstance(hook, WrapsBuild):
             return hook.during_build(application())
         return nullcontext(self._report)
-
-    def shutdown(self) -> None:
-        """Tear the application down, then the async backend it ran on.
-
-        The application is destroyed by name rather than dropped, which frees
-        the name for the next session built under it.
-        """
-        name = self.virtual_container.name if self._model is not None else None
-        super().shutdown()
-        if name is not None:
-            Application.destroy(name)
-            self._model = None
-            self._main_window = None
-        clear_async_backend()
 
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""

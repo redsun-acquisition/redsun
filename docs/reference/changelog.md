@@ -379,6 +379,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   type checker refuses it. Each protocol body declares `__slots__ = ()`, so
   inheriting one adds no `__dict__`.
 
+  A step that takes something registers how to give it back with `on_release`
+  as it takes it, and `redsun.experimental.AppContainer.shutdown` runs those in
+  reverse. A build that raises runs the releases its finished steps earned
+  before the exception leaves, so a session that stopped halfway frees the
+  toolkit it had started. `shutdown` may be called twice, or on a session that
+  was never built, and runs nothing the second time.
+
   `redsun.experimental.DesktopSession` adds `main_window` and `run`, generic
   over the window's type:
   `redsun.experimental.containers.qt.QtAppContainer` inherits
@@ -397,11 +404,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   `BUILD_STEPS`, which a hook counting the steps reads for the total, is
   renamed `_BUILD_STEPS` and stays private while the layer is.
 
-- `redsun.experimental.Layer.section` - the configuration section a layer's
-  components are declared under, which is the member's own name pluralised:
-  `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that
-  paired the two by hand.
-
 - `redsun.experimental.AppContainer` skips a `wiring:` rule naming a
   component the build failed on, warning about it, so one component that could
   not be made does not keep the session from coming up:
@@ -417,6 +419,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   `component` a port path named, so a caller that knows which components failed
   can tell one of those from a name that was never declared. Both are exported
   from `redsun.experimental`, where neither was reachable before.
+
+- `redsun.experimental.Layer.section` - the configuration section a layer's
+  components are declared under, which is the member's own name pluralised:
+  `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that
+  paired the two by hand.
 
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:

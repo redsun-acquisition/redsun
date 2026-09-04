@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import logging
 from collections.abc import Mapping, Sequence  # noqa: TC003
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
@@ -130,6 +130,7 @@ class AppContainer(BuildableSession):
         "_hooks",
         "_is_built",
         "_merged",
+        "_releases",
         "_report",
         "_shared",
         "_store",
@@ -177,6 +178,7 @@ class AppContainer(BuildableSession):
         self._merged: dict[str, Any] | None = None
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = _silent
+        self._releases = ExitStack()
         self._virtual = VirtualContainer()
         self._declarations: dict[str, _declarations.Declaration] = {}
         self._devices: dict[str, Device] = {}
@@ -400,8 +402,9 @@ class AppContainer(BuildableSession):
         `read_configuration` and `start_runtime` run before the span opens and
         are not announced, a hook covering the build being a toolkit object
         that cannot exist before the runtime it is shown on. A step that
-        raises reaches `abandon` and the build stops there, which is the one
-        failure a session does not carry on past.
+        raises stops the build, which is the one failure a session does not
+        carry on past, and `shutdown` gives back what the finished steps took
+        before the exception leaves.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -409,6 +412,9 @@ class AppContainer(BuildableSession):
         try:
             self.read_configuration()
             self.start_runtime()
+            # every component teardown is registered on the virtual container,
+            # which is therefore emptied before the runtime they were built on
+            self.on_release(self._virtual.release)
             with self.open_span() as report:
                 self._report = report
                 for step, run in (
@@ -424,7 +430,7 @@ class AppContainer(BuildableSession):
                     self._report(step)
                     run()
         except BaseException:
-            self.abandon()
+            self.shutdown()
             raise
         self._is_built = True
         return self
@@ -437,13 +443,14 @@ class AppContainer(BuildableSession):
         """
         return nullcontext(self._report)
 
-    def abandon(self) -> None:
-        """Give back what the finished steps took, for a build that will not.
+    def on_release(self, release: Callable[[], None]) -> None:
+        """Register how to give something back, as the step takes it.
 
-        Nothing here: the base takes nothing a failed build has to return. A
-        container that takes something outside itself, a named application for
-        one, overrides this to free it.
+        Registering at the moment of taking is what lets one teardown serve a
+        finished session and a build that stopped halfway: either way what
+        runs is what was actually taken.
         """
+        self._releases.callback(release)
 
     def read_configuration(self) -> None:
         """Merge the sources, install the hooks, and read the declarations."""
@@ -565,16 +572,15 @@ class AppContainer(BuildableSession):
         run_coro(connect_all())
 
     def shutdown(self) -> None:
-        """Tear the application down.
+        """Run every registered release, in the reverse of the order taken.
 
-        One owner does all of it: connections, the ``shutdown`` method of
-        every component that has one, and the dependency graph itself, in
-        reverse build order.
+        That covers the connections, the ``shutdown`` method of every
+        component that has one, and whatever a toolkit put in place. Calling
+        it a second time, or on a session that was never built, runs nothing:
+        a release is dropped as it runs.
         """
-        if not self._is_built:
-            return
         self._is_built = False
-        self._virtual.release()
+        self._releases.close()
         logger.info("Container shutdown complete")
 
     def _built(self, layer: Layer) -> dict[str, Any]:

@@ -234,8 +234,10 @@ with the `Application` the components are built out of; it fills `present` with
 a `QModelMainWindow` and the attachment of the views to it. Nothing else about
 the sequence is Qt's, and `QtAppContainer` does not define `build` at all. It
 inherits `DesktopSession[QMainWindow]`, which adds the window and the `run`
-that shows it and hands over to the event loop; `shutdown` tears the async
-backend down after the components. A session missing a step cannot be
+that shows it and hands over to the event loop. Neither class defines a
+teardown of its own: a step registers how to give back what it takes at the
+moment it takes it, and `shutdown` runs those in reverse, which is also what a
+build that raises halfway runs. A session missing a step cannot be
 constructed, which is what inheriting the protocol buys over satisfying it:
 a session answers an unknown attribute with the component of that name, so
 nothing structural can tell a missing step from a component.

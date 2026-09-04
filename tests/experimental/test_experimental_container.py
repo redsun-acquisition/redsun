@@ -1314,6 +1314,47 @@ def test_a_session_keeps_its_instances_free_of_a_dict() -> None:
     assert not hasattr(AppContainer(), "__dict__")
 
 
+def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
+    """A build that stops halfway releases what ran before it, and no more."""
+    released: list[str] = []
+
+    class Failing(AppContainer):
+        __slots__ = ()
+
+        def start_runtime(self) -> None:
+            self.on_release(lambda: released.append("runtime"))
+
+        def present(self) -> None:
+            self.on_release(lambda: released.append("presentation"))
+            raise RuntimeError("no window here")
+
+    with pytest.raises(RuntimeError, match="no window here"):
+        Failing().build()
+    assert released == ["presentation", "runtime"]
+
+
+def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
+    """A step's release runs before the release of the step that preceded it."""
+    released: list[str] = []
+
+    class Ordered(AppContainer):
+        __slots__ = ()
+
+        def start_runtime(self) -> None:
+            self.on_release(lambda: released.append("runtime"))
+
+        def present(self) -> None:
+            self.on_release(lambda: released.append("presentation"))
+
+    app = Ordered().build()
+    assert released == []
+    app.shutdown()
+    assert released == ["presentation", "runtime"]
+
+    app.shutdown()
+    assert released == ["presentation", "runtime"]
+
+
 class Unmakeable:
     """A presenter whose constructor raises, so the build skips it."""
 
