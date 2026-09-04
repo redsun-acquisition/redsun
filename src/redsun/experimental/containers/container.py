@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 from collections.abc import Mapping, Sequence  # noqa: TC003
+from contextlib import nullcontext
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
@@ -23,6 +24,7 @@ from redsun.experimental.containers._declarations import Layer
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._protocols import (
     AttachableComponent,
+    BuildableSession,
     NamedComponent,
 )
 from redsun.experimental.virtual import _provides
@@ -32,6 +34,7 @@ from redsun.experimental.virtual._wiring import SessionNotBuilt
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
+    from contextlib import AbstractContextManager
 
     from psygnal import SignalInstance
 
@@ -55,11 +58,28 @@ def _silent(step: str) -> None:
 _ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
 
-BUILD_STEPS: Final[tuple[str, ...]] = ("devices", "presenters", "views", "wiring")
+_BUILD_STEPS: Final[tuple[str, ...]] = (
+    "devices",
+    "registry",
+    "presenters",
+    "views",
+    "seal",
+    "wiring",
+    "presentation",
+    "report",
+)
 """The steps a build reports, in order, to whatever is watching it.
 
-A progress display sizes itself from this. The configuration is read before the
-first step, because what reads it decides whether anything is watching at all.
+A `during_build` hook is told one of these names as each step starts, so a
+progress display that counts them needs the total in advance to show how far
+along it is. It is private while this layer is: a hook reaching it is reaching
+into the module, and publishing it is part of the layer graduating.
+
+`AppContainer.build` runs two steps before the first of these, reading the
+configuration and starting the toolkit's runtime, and reports neither. A hook
+covering the build is a toolkit object itself, a splash screen being the case
+it was written for, so nothing can be watching until the runtime that shows it
+exists.
 """
 
 _FRONTENDS: Final[dict[str, str]] = {
@@ -69,7 +89,7 @@ _FRONTENDS: Final[dict[str, str]] = {
 """The container a session builds on, by the name its configuration gives."""
 
 
-class AppContainer:
+class AppContainer(BuildableSession):
     """Application container whose components are declared as annotations.
 
     ```python
@@ -107,6 +127,8 @@ class AppContainer:
         "_is_built",
         "_merged",
         "_report",
+        "_shared",
+        "_store",
         "_virtual",
     )
 
@@ -158,6 +180,10 @@ class AppContainer:
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
+        self._store: Store | None = None
+        # the component sharing each key, carried across the layer steps so
+        # that a presenter and a view offering one type still clash
+        self._shared: dict[Key, str] = {}
         self._is_built = False
 
     def __getattr__(self, name: str) -> Any:
@@ -322,7 +348,7 @@ class AppContainer:
             return declared
         return type(self).__name__
 
-    def _store(self) -> Store:
+    def make_store(self) -> Store:
         """Return the registry this session builds its components out of.
 
         Named after the session and constructed rather than registered:
@@ -357,32 +383,98 @@ class AppContainer:
             _provides.register(store, instance, cls, name, shared)
 
     def build(self) -> Self:
-        """Instantiate the application.
+        """Run each step of `BuildableSession` in turn, announcing all but two.
 
         Devices are built first and on their own, so that one which fails is
         logged and skipped rather than stopping the build. The components
         follow in layer order, and within a layer in the order they are built
         from one another.
+
+        A container built against a toolkit fills `start_runtime` and
+        `present` rather than overriding this method, so the order the steps
+        run in is written once and a toolkit can act between two of them.
+        `read_configuration` and `start_runtime` run before the span opens and
+        are not announced, a hook covering the build being a toolkit object
+        that cannot exist before the runtime it is shown on. A step that
+        raises reaches `abandon` and the build stops there, which is the one
+        failure a session does not carry on past.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
             return self
+        try:
+            self.read_configuration()
+            self.start_runtime()
+            with self.open_span() as report:
+                self._report = report
+                for step, run in (
+                    ("devices", self.build_devices),
+                    ("registry", self.open_registry),
+                    ("presenters", self.build_presenters),
+                    ("views", self.build_views),
+                    ("seal", self.seal),
+                    ("wiring", self.apply_wiring),
+                    ("presentation", self.present),
+                    ("report", self.log_summary),
+                ):
+                    self._report(step)
+                    run()
+        except BaseException:
+            self.abandon()
+            raise
+        self._is_built = True
+        return self
 
+    def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
+        """Return the span the build announces its steps to.
+
+        Nothing watches by default, so this is the reporter already in place
+        and the build has one path whether or not a hook opened a span.
+        """
+        return nullcontext(self._report)
+
+    def abandon(self) -> None:
+        """Give back what the finished steps took, for a build that will not.
+
+        Nothing here: the base takes nothing a failed build has to return. A
+        container that takes something outside itself, a named application for
+        one, overrides this to free it.
+        """
+
+    def read_configuration(self) -> None:
+        """Merge the sources, install the hooks, and read the declarations."""
         config = self._configuration()
-        installed = self.hooks
-        logger.debug("Hooks installed at: %s", ", ".join(installed) or "no points")
+        logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._virtual._set_configuration(config, self.name)
         self._declarations = _declarations.read(type(self), config, self.frontend)
-        self._report("devices")
-        self._build_devices()
 
-        store = self._store()
+    def start_runtime(self) -> None:
+        """Put in place what a component may not be constructed without.
+
+        Nothing here: a container bound to no toolkit has no runtime of its
+        own. One that is bound to a toolkit makes its objects here, before the
+        first component exists and before anything can watch the build.
+        """
+
+    def open_registry(self) -> None:
+        """Open the store the components are built out of, and fill it.
+
+        The shared services come first and the questions the components ask
+        are answered next, so that everything a constructor may reach for is
+        registered before the first one runs.
+        """
+        store = self.make_store()
+        self._store = store
         self._virtual.register(store, lambda: dict(self._devices))
-        self._share(store, config)
-        self._construct(store)
+        self._share(store, self._configuration())
+        declarations = self._components()
+        self._check_layers(declarations)
+        self._answer(store, declarations)
+
+    def seal(self) -> None:
+        """Check what was built, then close the session to further building."""
         self._verify_components()
         self._verify_answers()
-
         self._virtual._set_components(
             {
                 declaration.name: declaration.instance
@@ -391,17 +483,28 @@ class AppContainer:
             }
         )
         self._virtual._seal()
-        self._report("wiring")
+
+    def apply_wiring(self) -> None:
+        """Connect the ports the class declares, then those the file names."""
         self.wire()
-        self._apply_wiring_config(config)
+        self._apply_wiring_config(self._configuration())
         self._warn_unused()
-        self._is_built = True
+
+    def present(self) -> None:
+        """Assemble what was built into whatever shows it.
+
+        Nothing here: a container bound to no toolkit shows nothing, which is
+        what a headless test wants. One bound to a toolkit puts its views
+        where each asks to be.
+        """
+
+    def log_summary(self) -> None:
+        """Log what the build made, counted against what was declared."""
         summary = self._summarise_build()
         if self._failed:
             logger.warning(summary)
         else:
             logger.info(summary)
-        return self
 
     def _summarise_build(self) -> str:
         """Return what the build made, counted against what was declared.
@@ -480,8 +583,16 @@ class AppContainer:
     def _components(self) -> list[_declarations.Declaration]:
         return [d for d in self._declarations.values() if d.kind is not Layer.DEVICE]
 
-    def _construct(self, store: Store) -> None:
-        """Build every component and register what it is and what it shares.
+    def build_presenters(self) -> None:
+        """Construct the presenter layer, in the order it depends in."""
+        self._construct(Layer.PRESENTER)
+
+    def build_views(self) -> None:
+        """Construct the view layer, in the order it depends in."""
+        self._construct(Layer.VIEW)
+
+    def _construct(self, layer: Layer) -> None:
+        """Build every component of *layer* and register what it shares.
 
         A component is registered under its own key, and under its class when
         no other declaration names that class, so a collaborator may ask for it
@@ -489,18 +600,19 @@ class AppContainer:
 
         One that cannot be built is logged and skipped, and so is one built
         from it, so that a session missing a part of itself still comes up.
+
+        Raises
+        ------
+        RuntimeError
+            If the registry step has not opened the store yet.
         """
-        declarations = self._components()
-        self._check_layers(declarations)
-        self._answer(store, declarations)
+        store = self._store
+        if store is None:
+            raise RuntimeError("The registry step has to run before a component is")
+        declarations = [d for d in self._components() if d.kind is layer]
         chosen_for = self._chosen_for(declarations)
-        shared: dict[Key, str] = {}
-        announced = ""
+        shared = self._shared
         for declaration in self._ordered(declarations):
-            step = f"{declaration.kind}s"
-            if step != announced:
-                self._report(step)
-                announced = step
             absent = chosen_for.get(declaration.name, set()) & set(self._failed)
             if absent:
                 named = _listed_plain(sorted(repr(name) for name in absent))
@@ -808,7 +920,12 @@ class AppContainer:
         )
         return False
 
-    def _build_devices(self) -> None:
+    def build_devices(self) -> None:
+        """Construct the devices, which are built from no other component.
+
+        They come before the store because a device is made from its own
+        declaration and asks the session for nothing.
+        """
         for declaration in self._declarations.values():
             if declaration.kind is not Layer.DEVICE:
                 continue

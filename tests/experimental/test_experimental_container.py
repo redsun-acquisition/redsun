@@ -19,6 +19,7 @@ from redsun.experimental import (
     AsPresenter,
     AsView,
     BlueskyCallbackRegistry,
+    BuildableSession,
     Declare,
     DeviceMapping,
     FromConfig,
@@ -1251,3 +1252,62 @@ def test_the_closing_line_names_what_is_missing(
     assert [r.levelno for r in closing] == [logging.WARNING]
     assert "bad (presenter)" in closing[0].getMessage()
     assert "broken_panel (view)" in closing[0].getMessage()
+
+
+STEP_ORDER: list[str] = []
+
+
+class Marker:
+    """A presenter that records when the build reached its layer."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        STEP_ORDER.append("built the presenter")
+
+
+class SteppedApp(AppContainer):
+    """A session filling the two steps a toolkit owns, and nothing else."""
+
+    __slots__ = ()
+
+    ctrl: AsPresenter[Marker]
+
+    def start_runtime(self) -> None:
+        STEP_ORDER.append("runtime")
+
+    def present(self) -> None:
+        STEP_ORDER.append("presentation")
+
+
+def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> None:
+    """A toolkit's two steps run around the components without overriding build."""
+    STEP_ORDER.clear()
+    app = SteppedApp().build()
+    try:
+        assert STEP_ORDER == ["runtime", "built the presenter", "presentation"]
+    finally:
+        app.shutdown()
+        STEP_ORDER.clear()
+
+
+def test_a_session_missing_a_step_cannot_be_constructed() -> None:
+    """Inheriting the protocol is what makes a missing step refusable.
+
+    A session answers an unknown attribute with the component of that name, so
+    `isinstance` and a type checker both accept one that is missing a step.
+    The abstract members are read off the class when it is created, which no
+    `__getattr__` reaches.
+    """
+
+    class Partial(BuildableSession):
+        __slots__ = ()
+
+        def present(self) -> None: ...
+
+    with pytest.raises(TypeError, match="abstract"):
+        Partial()  # type: ignore[abstract]
+
+
+def test_a_session_keeps_its_instances_free_of_a_dict() -> None:
+    """A protocol body without `__slots__` would give every session one."""
+    assert not hasattr(AppContainer(), "__dict__")

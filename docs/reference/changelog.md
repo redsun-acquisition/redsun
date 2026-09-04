@@ -358,6 +358,50 @@ Dates are specified in the format `DD-MM-YYYY`.
   entry carrying a key an action does not take, or one app-model refuses. A
   build it refuses destroys the application rather than leaving its name taken.
 
+- `redsun.experimental.BuildableSession` - the steps a session's build runs,
+  a protocol with one public abstract method per step. A session inherits it:
+
+  ```python
+  class MyFrontend(AppContainer):
+      def start_runtime(self) -> None: ...
+      def present(self) -> None: ...
+  ```
+
+  `redsun.experimental.AppContainer.build` calls the steps in order and does
+  nothing else. `start_runtime` puts in place what a component cannot be
+  constructed without, and `present` assembles what was built into whatever
+  shows it; a container bound to no toolkit answers both with nothing. The
+  other steps are `read_configuration`, `build_devices`, `open_registry`,
+  `build_presenters`, `build_views`, `seal`, `apply_wiring` and `log_summary`,
+  with `make_store`, `open_span` and `abandon` beside them.
+
+  A session missing a step raises `TypeError` when it is constructed, and a
+  type checker refuses it. Each protocol body declares `__slots__ = ()`, so
+  inheriting one adds no `__dict__`.
+
+  `redsun.experimental.DesktopSession` adds `main_window` and `run`, generic
+  over the window's type:
+  `redsun.experimental.containers.qt.QtAppContainer` inherits
+  `DesktopSession[QMainWindow]`. `main_window` is a property, so an
+  implementer answers it with a property of its own rather than by assigning
+  it in `__init__`.
+
+  `QtAppContainer` no longer defines `build`. It fills `start_runtime` with
+  the `QApplication`, the async backend and the application, and `present`
+  with the window and the attachment. `AppContainer._store` is renamed
+  `make_store` and `_during_build` is renamed `open_span`.
+
+  A `during_build` hook is told `devices`, `registry`, `presenters`, `views`,
+  `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
+  `start_runtime` run before the span it opens and are not announced to it.
+  `BUILD_STEPS`, which a hook counting the steps reads for the total, is
+  renamed `_BUILD_STEPS` and stays private while the layer is.
+
+- `redsun.experimental.Layer.section` - the configuration section a layer's
+  components are declared under, which is the member's own name pluralised:
+  `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that
+  paired the two by hand.
+
 - `redsun.experimental.AppContainer.config` accepts several sources, each a
   path to a YAML file or a mapping, and layers them in the order given:
 

@@ -225,12 +225,19 @@ requires the Qt bindings. `AppContainer` on its own names no toolkit: it builds
 and it accepts any placement, which is what a headless test wants.
 
 The split follows: the base container builds the components, and the toolkit
-one arranges them. `QtAppContainer.__init__` touches no toolkit object; `build`
-puts a `QApplication` and the async backend in place, because a widget cannot
-be built before either exists, then calls `super().build()` and attaches the
-views to a `QModelMainWindow` made against the session's application; `run`
-shows it and hands over to the event loop; `shutdown` tears the async backend
-down after the components.
+one arranges them. `BuildableSession` names each step of a build as an abstract
+method, `build` calls them in order and does nothing else, and two of them
+belong to the toolkit. `QtAppContainer` fills `start_runtime` with a `QApplication` and
+the async backend, because a widget cannot be built before either exists, and
+with the `Application` the components are built out of; it fills `present` with
+a `QModelMainWindow` and the attachment of the views to it. Nothing else about
+the sequence is Qt's, and `QtAppContainer` does not define `build` at all. It
+inherits `DesktopSession[QMainWindow]`, which adds the window and the `run`
+that shows it and hands over to the event loop; `shutdown` tears the async
+backend down after the components. A session missing a step cannot be
+constructed, which is what inheriting the protocol buys over satisfying it:
+a session answers an unknown attribute with the component of that name, so
+nothing structural can tell a missing step from a component.
 
 ```python
 class MyApp(QtAppContainer):

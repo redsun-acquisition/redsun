@@ -37,7 +37,6 @@ from typing import (
     Final,
     Literal,
     NoReturn,
-    Self,
     TypeVar,
     cast,
 )
@@ -67,6 +66,7 @@ from redsun._hooks import (
 )
 from redsun.aio import set_async_backend
 from redsun.experimental.containers._frontend import Frontend
+from redsun.experimental.containers._protocols import DesktopSession
 from redsun.experimental.containers.container import AppContainer
 from redsun.experimental.containers.qt._actions import read_actions
 from redsun.experimental.view._placement import Placement
@@ -151,7 +151,7 @@ class Qt(Frontend):
     }
 
 
-class QtAppContainer(AppContainer):
+class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
     """Application container whose views are attached to a Qt main window.
 
     Subclass this rather than `redsun.experimental.AppContainer` to build
@@ -217,25 +217,17 @@ class QtAppContainer(AppContainer):
             raise RuntimeError("Call build() before reading the application")
         return self._model
 
-    def build(self) -> Self:
-        """Put the toolkit in place, build the components, then arrange them.
+    def start_runtime(self) -> None:
+        """Put the toolkit in place, before the first component is built.
 
-        The hooks are resolved first, from the class and from the ``hooks``
-        section, so that one may supply the ``QApplication`` itself. A
-        ``QApplication`` has to exist before any widget is constructed and the
-        async backend before any coroutine slot is connected, so both are made
-        before the components are. The application follows, because the
-        components are built out of its store, and the window last, which is
-        made against the application. The ``actions`` section is registered on
-        the application before anything is built, so a hook dressing the
-        window finds every command it may put in a menu. A build that fails
-        destroys the application rather than leaving its name taken.
-
-        Refusing a second build is the base container's to do, so a call that
-        it turns away attaches nothing rather than filling the window twice.
+        A ``QApplication`` has to exist before any widget is constructed and
+        the async backend before any coroutine slot is connected, so both are
+        made here. The hooks were resolved by the step before this one, so one
+        may supply the ``QApplication`` itself. The application follows,
+        because the components are built out of its store, and the ``actions``
+        section is registered on it at once, so a hook dressing the window
+        finds every command it may put in a menu.
         """
-        if self.is_built:
-            return super().build()
         hooks = self.hooks
         creator = hooks.get(QtHook.CREATE_APPLICATION)
         if QApplication.instance() is None and isinstance(creator, CreatesApplication):
@@ -249,23 +241,23 @@ class QtAppContainer(AppContainer):
             configurer.configure_application(qt_app)
 
         self._model = Application(self.name)
-        try:
-            self._register_actions()
-            with self._during_build(qt_app) as report:
-                self._report = report
-                super().build()
-                window = QModelMainWindow(self._model)
-                window.setWindowTitle(self.name)
-                self._main_window = window
-                attach(window, self.views)
-                dresser = hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
-                if isinstance(dresser, ConfiguresMainView):
-                    dresser.configure_main_view(window)
-        except BaseException:
+        self._register_actions()
+
+    def present(self) -> None:
+        """Make the window, put every view where it asks to be, and dress it."""
+        window = QModelMainWindow(self.model)
+        window.setWindowTitle(self.name)
+        self._main_window = window
+        attach(window, self.views)
+        dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
+        if isinstance(dresser, ConfiguresMainView):
+            dresser.configure_main_view(window)
+
+    def abandon(self) -> None:
+        """Destroy the application, so a failed build leaves its name free."""
+        if self._model is not None:
             Application.destroy(self.name)
             self._model = None
-            raise
-        return self
 
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.
@@ -291,7 +283,7 @@ class QtAppContainer(AppContainer):
             ", ".join(action.id for action in actions),
         )
 
-    def _store(self) -> Store:
+    def make_store(self) -> Store:
         """Return the application's store, which is the session's too.
 
         Sharing it is what lets a command registered on the application be
@@ -299,17 +291,16 @@ class QtAppContainer(AppContainer):
         """
         return self.model.injection_store
 
-    def _during_build(
-        self, qt_app: QApplication
-    ) -> AbstractContextManager[Callable[[str], None]]:
+    def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
         """Open the span a `QtHook.DURING_BUILD` hook wraps the build in.
 
         Without one, reporting stays where it was and nothing brackets the
-        build.
+        build. The ``runtime`` step has run by now, so the ``QApplication`` a
+        hook is handed exists.
         """
         hook = self.hooks.get(QtHook.DURING_BUILD)
         if isinstance(hook, WrapsBuild):
-            return hook.during_build(qt_app)
+            return hook.during_build(application())
         return nullcontext(self._report)
 
     def shutdown(self) -> None:

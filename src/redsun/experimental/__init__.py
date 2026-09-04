@@ -39,6 +39,8 @@ from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._plugins import PluginError
 from redsun.experimental.containers._protocols import (
     AttachableComponent,
+    BuildableSession,
+    DesktopSession,
     NamedComponent,
 )
 from redsun.experimental.containers.components import (
@@ -74,8 +76,10 @@ __all__ = [
     "AsView",
     "AttachableComponent",
     "BlueskyCallbackRegistry",
+    "BuildableSession",
     "Connection",
     "Declare",
+    "DesktopSession",
     "DeviceMapping",
     "DevicesOf",
     "FromConfig",

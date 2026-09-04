@@ -18,11 +18,11 @@ from redsun.experimental import (
     HookError,
     Serves,
 )
-from redsun.experimental.containers.container import BUILD_STEPS
+from redsun.experimental.containers.container import _BUILD_STEPS
 from redsun.experimental.containers.qt import Dock, QtAppContainer, QtHook
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
 pytestmark = pytest.mark.qt
 
@@ -59,7 +59,7 @@ class Splash:
     steps: ClassVar[list[str]] = []
 
     @contextmanager
-    def during_build(self, app: QApplication) -> Iterator[Callable[[str], None]]:
+    def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
         """Open for the whole build, collecting the name of each step."""
         type(self).entered += 1
         try:
@@ -255,7 +255,17 @@ def test_during_build_brackets_the_build_and_names_every_step(qapp: Any) -> None
     try:
         assert Splash.entered == 1
         assert Splash.exited == 1
-        assert Splash.steps == list(BUILD_STEPS)
+        assert Splash.steps == list(_BUILD_STEPS)
+        assert Splash.steps == [
+            "devices",
+            "registry",
+            "presenters",
+            "views",
+            "seal",
+            "wiring",
+            "presentation",
+            "report",
+        ]
     finally:
         app.shutdown()
 

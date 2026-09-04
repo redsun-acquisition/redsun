@@ -57,19 +57,17 @@ class Layer(StrEnum):
 
     Carried as the metadata of a declaration's annotation. `redsun.experimental.containers.components`
     spells the three out. A member is its own name in a message, so it needs no
-    ``.value``.
+    ``.value``, and its ``section`` is that name pluralised.
     """
 
     DEVICE = "device"
     PRESENTER = "presenter"
     VIEW = "view"
 
-
-SECTIONS = {
-    Layer.DEVICE: "devices",
-    Layer.PRESENTER: "presenters",
-    Layer.VIEW: "views",
-}
+    @property
+    def section(self) -> str:
+        """The configuration section this layer's components are declared under."""
+        return f"{self}s"
 
 
 @dataclass(frozen=True)
@@ -295,7 +293,7 @@ def read(
             elif isinstance(marker, Alias):
                 name = marker.name
 
-        section = config.get(SECTIONS[kind], {})
+        section = config.get(kind.section, {})
         declarations[name] = Declaration(
             target, name, kind, {**_entry(section, cfg_key), **inline}
         )
@@ -404,7 +402,8 @@ def _from_config(
     marked; it is checked against that layer all the same.
     """
     found: dict[str, Declaration] = {}
-    for kind, section_name in SECTIONS.items():
+    for kind in Layer:
+        section_name = kind.section
         for cfg_key, entry in config.get(section_name, {}).items():
             if cfg_key in declared or not isinstance(entry, dict):
                 continue

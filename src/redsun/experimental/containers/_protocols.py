@@ -1,11 +1,31 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from abc import abstractmethod
+from typing import (
+    TYPE_CHECKING,
+    NoReturn,
+    Protocol,
+    Self,
+    TypeVar,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from contextlib import AbstractContextManager
+
+    from in_n_out import Store
+
     from redsun.experimental.view._placement import Placement
 
-__all__ = ["AttachableComponent", "NamedComponent"]
+__all__ = [
+    "AttachableComponent",
+    "BuildableSession",
+    "DesktopSession",
+    "NamedComponent",
+]
+
+WindowT_co = TypeVar("WindowT_co", covariant=True)
 
 
 @runtime_checkable
@@ -41,4 +61,131 @@ class AttachableComponent(NamedComponent, Protocol):
     @property
     def placement(self) -> Placement:
         """Where the component asks to be attached."""
+        ...
+
+
+@runtime_checkable
+class BuildableSession(Protocol):
+    """The steps a session's build runs, each one a method of its own.
+
+    ``build`` calls them in the order they are written here and does nothing
+    else, so what a session varies is a step rather than the sequence. A
+    session bound to no toolkit answers ``start_runtime`` and ``present`` with
+    nothing, and one bound to a toolkit fills exactly those two: what has to
+    exist before a component can be constructed, and how what was built is
+    assembled into whatever shows it.
+
+    Every step takes nothing and returns nothing. What a step needs it reads
+    from the session, and what it leaves it leaves on the session, so a step
+    can be replaced without the ones around it knowing.
+
+    Inherit it rather than satisfying it structurally. The members are
+    abstract, so a session missing one is refused when it is constructed and a
+    type checker refuses it too, where a structural check cannot: a session
+    answers an unknown attribute with the component of that name, and anything
+    with a ``__getattr__`` satisfies every protocol both `isinstance` and a
+    type checker can express.
+
+    ``__slots__`` is empty here because a protocol whose body omits it gives a
+    ``__dict__`` to every class that inherits it, which would undo the one
+    `redsun.experimental.AppContainer` declares.
+    """
+
+    __slots__ = ()
+
+    @abstractmethod
+    def build(self) -> Self:
+        """Run every step below, in order, and return the built session."""
+        ...
+
+    @abstractmethod
+    def read_configuration(self) -> None:
+        """Merge the sources, install the hooks, and read the declarations."""
+        ...
+
+    @abstractmethod
+    def start_runtime(self) -> None:
+        """Put in place what a component may not be constructed without."""
+        ...
+
+    @abstractmethod
+    def build_devices(self) -> None:
+        """Construct the devices, which are built from no other component."""
+        ...
+
+    @abstractmethod
+    def open_registry(self) -> None:
+        """Open the store the components are built out of, and fill it."""
+        ...
+
+    @abstractmethod
+    def build_presenters(self) -> None:
+        """Construct the presenter layer, in the order it depends in."""
+        ...
+
+    @abstractmethod
+    def build_views(self) -> None:
+        """Construct the view layer, in the order it depends in."""
+        ...
+
+    @abstractmethod
+    def seal(self) -> None:
+        """Check what was built, then close the session to further building."""
+        ...
+
+    @abstractmethod
+    def apply_wiring(self) -> None:
+        """Connect the ports the class declares, then those the file names."""
+        ...
+
+    @abstractmethod
+    def present(self) -> None:
+        """Assemble what was built into whatever shows it."""
+        ...
+
+    @abstractmethod
+    def log_summary(self) -> None:
+        """Say what the build made, counted against what was declared."""
+        ...
+
+    @abstractmethod
+    def make_store(self) -> Store:
+        """Return the registry ``open_registry`` fills and builds out of."""
+        ...
+
+    @abstractmethod
+    def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
+        """Return the span the build announces its steps to."""
+        ...
+
+    @abstractmethod
+    def abandon(self) -> None:
+        """Give back what the finished steps took, for a build that will not."""
+        ...
+
+
+@runtime_checkable
+class DesktopSession(BuildableSession, Protocol[WindowT_co]):
+    """A session whose views are attached to a window and shown on a screen.
+
+    The window's type is the parameter, since it is the toolkit's and no two
+    toolkits share one: a session built on Qt satisfies
+    ``DesktopSession[QMainWindow]``.
+
+    ``main_window`` is a property here, so it is a data descriptor in every
+    implementer's method resolution order: answer it with a property of its
+    own, never by assigning ``self.main_window`` in ``__init__``.
+    """
+
+    __slots__ = ()
+
+    @property
+    @abstractmethod
+    def main_window(self) -> WindowT_co:
+        """The window the views are attached to."""
+        ...
+
+    @abstractmethod
+    def run(self) -> NoReturn:
+        """Build, show the window, and hand over to the event loop."""
         ...
