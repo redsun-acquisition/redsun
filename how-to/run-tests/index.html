@@ -1485,21 +1485,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-all-tests" class="md-nav__link">
+  <a href="#run-everything" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run all tests
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#generate-coverage-report" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Generate coverage report
+        Run everything
       </span>
     </span>
   </a>
@@ -1518,10 +1507,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#type-check-the-test-suite" class="md-nav__link">
+  <a href="#type-check-against-both-qt-bindings" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Type-check the test suite
+        Type-check against both Qt bindings
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-a-coverage-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Generate a coverage report
       </span>
     </span>
   </a>
@@ -2206,21 +2206,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-all-tests" class="md-nav__link">
+  <a href="#run-everything" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Run all tests
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#generate-coverage-report" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Generate coverage report
+        Run everything
       </span>
     </span>
   </a>
@@ -2239,10 +2228,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#type-check-the-test-suite" class="md-nav__link">
+  <a href="#type-check-against-both-qt-bindings" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Type-check the test suite
+        Type-check against both Qt bindings
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#generate-a-coverage-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Generate a coverage report
       </span>
     </span>
   </a>
@@ -2268,39 +2268,81 @@
 
 
 <h1 id="run-tests">Run tests<a class="headerlink" href="#run-tests" title="Permanent link">&para;</a></h1>
-<p>This guide covers how to run the <code>redsun</code> test suite and generate coverage reports.</p>
+<p>This guide covers how to run the <code>redsun</code> test suite, check its types against
+both Qt bindings, and generate coverage reports.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Make sure you have <a href="../installation/#install-development-dependencies">installed <code>redsun</code> with development dependencies</a>.</p>
-<h2 id="run-all-tests">Run all tests<a class="headerlink" href="#run-all-tests" title="Permanent link">&para;</a></h2>
-<p>Run the tests from the project root:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest
+<h2 id="run-everything">Run everything<a class="headerlink" href="#run-everything" title="Permanent link">&para;</a></h2>
+<p><code>tox</code> runs the same environments CI does, each built from <code>uv.lock</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox
+</span></code></pre></div>
+<p>That covers linting, both Qt type-checking legs, the test suite and the
+documentation build. Run one environment on its own with <code>-e</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>mypy-pyqt
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>environment</th>
+<th>what it runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lint</code></td>
+<td><code>ruff check --fix</code> then <code>ruff format</code></td>
+</tr>
+<tr>
+<td><code>mypy-pyqt</code> / <code>mypy-pyside</code></td>
+<td>mypy against that Qt binding</td>
+</tr>
+<tr>
+<td><code>tests</code></td>
+<td><code>pytest -q</code></td>
+</tr>
+<tr>
+<td><code>docs</code></td>
+<td><code>zensical build</code> then the cross-reference guard</td>
+</tr>
+</tbody>
+</table>
+<h2 id="run-specific-tests">Run specific tests<a class="headerlink" href="#run-specific-tests" title="Permanent link">&para;</a></h2>
+<p>Arguments after <code>--</code> reach pytest:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># SDK tests only</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests<span class="w"> </span>--<span class="w"> </span>tests/sdk/
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># a specific test function</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests<span class="w"> </span>--<span class="w"> </span>tests/container/test_container.py::test_function_name
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># everything matching a pattern</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests<span class="w"> </span>--<span class="w"> </span>-k<span class="w"> </span><span class="s2">"test_storage"</span>
+</span></code></pre></div>
+<p>For a fast edit-and-run loop the project environment is quicker, since it skips
+the sync:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/sdk/<span class="w"> </span>-x
 </span></code></pre></div>
 <p>Qt-dependent tests are marked with <code>@pytest.mark.qt</code> and are skipped
 automatically when no display environment is available.</p>
-<h2 id="generate-coverage-report">Generate coverage report<a class="headerlink" href="#generate-coverage-report" title="Permanent link">&para;</a></h2>
+<h2 id="type-check-against-both-qt-bindings">Type-check against both Qt bindings<a class="headerlink" href="#type-check-against-both-qt-bindings" title="Permanent link">&para;</a></h2>
+<p>Tests are covered by mypy strict mode alongside the sources. <code>redsun</code> supports
+PyQt6 and PySide6, whose type stubs disagree about some signatures, so both are
+checked:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>mypy-pyqt,mypy-pyside
+</span></code></pre></div>
+<p>Each environment installs only its own binding and sets <code>QT_API</code>, which is what
+decides the branches <code>qtpy</code> exposes to the type checker. A green <code>mypy-pyqt</code>
+says nothing about <code>mypy-pyside</code>.</p>
+<p>Running <code>mypy</code> against the project environment instead is not equivalent: that
+environment holds both bindings at once, so it reports errors neither binding
+produces on its own and can miss errors CI catches.</p>
+<h2 id="generate-a-coverage-report">Generate a coverage report<a class="headerlink" href="#generate-a-coverage-report" title="Permanent link">&para;</a></h2>
 <p>Coverage sources are configured in <code>pyproject.toml</code>, so no extra flags are
 needed:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="w"> </span>--cov-report<span class="o">=</span>html
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="w"> </span>--cov-report<span class="o">=</span>html
 </span></code></pre></div>
-<p>This generates an <code>htmlcov/</code> directory. Open <code>htmlcov/index.html</code> in your browser to view it.</p>
-<h2 id="run-specific-tests">Run specific tests<a class="headerlink" href="#run-specific-tests" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Run SDK tests only</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/sdk/
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run container tests only</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/container/
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Run a specific test function</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/container/test_container.py::test_function_name
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Run tests matching a pattern</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-k<span class="w"> </span><span class="s2">"test_storage"</span>
-</span></code></pre></div>
-<h2 id="type-check-the-test-suite">Type-check the test suite<a class="headerlink" href="#type-check-the-test-suite" title="Permanent link">&para;</a></h2>
-<p>Tests are covered by mypy strict mode alongside the sources. Run the
-configuration-driven form (the Qt binding shim pins what CI checks):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>--ignore-missing-imports<span class="w"> </span><span class="k">$(</span>uv<span class="w"> </span>run<span class="w"> </span>qtpy<span class="w"> </span>mypy-args<span class="k">)</span>
-</span></code></pre></div>
+<p>This generates an <code>htmlcov/</code> directory. Open <code>htmlcov/index.html</code> in your
+browser to view it.</p>
 
 
 
