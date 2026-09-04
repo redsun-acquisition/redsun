@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 import subprocess
 import sys
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
+import yaml
 from app_model import Action, Application
 from app_model.types import MenuRule
 from qtpy.QtGui import QAction, QCloseEvent
@@ -23,6 +20,10 @@ from qtpy.QtWidgets import (
     QToolBar,
     QWidget,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 from redsun.experimental import (
     AppContainer,
@@ -40,6 +41,7 @@ from redsun.experimental.containers.qt import (
     ToolBarItem,
     attach,
 )
+from redsun.experimental.containers.qt._container import SAVE_MENU
 
 pytestmark = pytest.mark.qt
 
@@ -421,3 +423,81 @@ def test_a_view_is_shut_down_before_its_widget_is_destroyed() -> None:
     TEARDOWN_ORDER.clear()
     ClosingApp().build().shutdown()
     assert TEARDOWN_ORDER == ["shutdown", "closed"]
+
+
+class SaveApp(QtAppContainer):
+    __slots__ = ()
+
+    config: ClassVar[dict[str, Any]] = {"name": "save-session"}
+
+
+def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
+    """Make the save dialog return *path* without showing anything."""
+    monkeypatch.setattr(
+        "redsun.experimental.containers.qt._container.QFileDialog.getSaveFileName",
+        staticmethod(lambda *a, **k: (path, "")),
+    )
+
+
+def test_the_save_action_writes_where_the_dialog_points(
+    qapp: QApplication,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    target = tmp_path / "written.yaml"
+    _answer(monkeypatch, str(target))
+    session = build(SaveApp)
+
+    session.model.commands.execute_command("save-session.save_configuration")
+
+    assert yaml.safe_load(target.read_text())["name"] == "save-session"
+
+
+def test_a_cancelled_dialog_writes_nothing(
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    _answer(monkeypatch, "")
+    asked: list[object] = []
+    monkeypatch.setattr(SaveApp, "write", lambda self, path: asked.append(path))
+    session = build(SaveApp)
+
+    session.model.commands.execute_command("save-session.save_configuration")
+
+    assert asked == []
+
+
+def test_choosing_a_source_is_reported_rather_than_written(
+    qapp: QApplication,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    """Only the session knows which files it read, so Qt cannot refuse this."""
+    source = tmp_path / "shared.yaml"
+    source.write_text(yaml.safe_dump({"name": "save-session"}))
+    _answer(monkeypatch, str(source))
+    warned: list[str] = []
+    monkeypatch.setattr(
+        "redsun.experimental.containers.qt._container.QMessageBox.warning",
+        staticmethod(lambda _parent, _title, text, *a, **k: warned.append(text)),
+    )
+    session = build(SaveApp, str(source))
+
+    session.model.commands.execute_command("save-session.save_configuration")
+
+    assert yaml.safe_load(source.read_text()) == {"name": "save-session"}
+    assert "shared.yaml is a source this session was built from" in warned[0]
+
+
+def test_the_action_joins_the_menu_a_window_can_show(
+    qapp: QApplication, build: Callable[..., QtAppContainer]
+) -> None:
+    session = build(SaveApp)
+
+    menu_bar = session.main_window.setModelMenuBar({SAVE_MENU: "File"})
+
+    entries = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "File")
+    assert [entry.text() for entry in entries.actions()] == ["Save configuration as..."]

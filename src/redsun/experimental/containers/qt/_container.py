@@ -42,8 +42,10 @@ from typing import (
     cast,
 )
 
-from app_model import Application
+from app_model import Action, Application
 from app_model.backends.qt import QModelMainWindow
+from app_model.types import MenuRule
+from platformdirs import user_documents_dir
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QByteArray, QEvent, QObject
@@ -52,8 +54,10 @@ from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
+    QFileDialog,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QTabWidget,
     QToolBar,
     QWidget,
@@ -68,7 +72,10 @@ from redsun._hooks import (
 from redsun.aio import set_async_backend
 from redsun.experimental.containers._frontend import Frontend
 from redsun.experimental.containers._protocols import DesktopSession
-from redsun.experimental.containers.container import AppContainer
+from redsun.experimental.containers.container import (
+    AppContainer,
+    ConfigurationInUse,
+)
 from redsun.experimental.containers.qt._actions import read_actions
 from redsun.experimental.containers.qt._color_scheme import (
     ColorSchemeButton,
@@ -85,6 +92,9 @@ if TYPE_CHECKING:
 
     from redsun._config import Source
     from redsun.experimental.containers._protocols import AttachableComponent
+
+SAVE_MENU: Final[str] = "redsun/file"
+"""The menu a session's own actions join, which a window may show by name."""
 
 __all__ = [
     "Area",
@@ -275,6 +285,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         # application goes, since a widget needs both
         self.on_release(self._destroy_widgets)
         self._register_actions()
+        self._register_save_action()
 
         ColorSchemeMode.from_config(self._configuration()).apply()
 
@@ -368,6 +379,41 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
             # with no loop running would never reach the pass that carries
             # it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def _register_save_action(self) -> None:
+        """Register the action writing the session out to a file the user picks.
+
+        It joins `SAVE_MENU`, so a window showing that menu by name offers it
+        without the session naming a widget.
+        """
+        action = Action(
+            id=f"{self.name}.save_configuration",
+            title="Save configuration as...",
+            callback=self._save_configuration,
+            menus=[MenuRule(id=SAVE_MENU)],
+        )
+        self.virtual_container.on_release(self.model.register_action(action))
+
+    def _save_configuration(self) -> None:
+        """Ask where to write the session, and write it there.
+
+        The dialog says comments are not kept, the file being written rather
+        than edited. A path the session was built from is refused after the
+        dialog has accepted it, since only the session knows which files those
+        are and what else reads them.
+        """
+        path, _ = QFileDialog.getSaveFileName(
+            self._main_window,
+            "Save configuration as (comments are not kept)",
+            user_documents_dir(),
+            "YAML (*.yaml *.yml)",
+        )
+        if not path:
+            return
+        try:
+            self.write(path)
+        except ConfigurationInUse as reason:
+            QMessageBox.warning(self._main_window, "Configuration in use", str(reason))
 
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.

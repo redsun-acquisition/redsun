@@ -190,6 +190,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   constructor taking `**kwargs` accepts every key. One refused key discards the
   whole entry rather than only itself.
 
+  `AppContainer.write` writes that configuration to a path as YAML and returns
+  it, one flat file whatever the session was built from, so it opens on its own
+  with nothing to assemble first. Keys come out in the order the merged
+  configuration holds them, and comments do not survive. A path the session was
+  built from raises `ConfigurationInUse`: overwriting one replaces what every
+  other session reading it gets.
+
+  Every Qt session registers a `Save configuration as...` action under the
+  command id `<name>.save_configuration`, joining the menu
+  `redsun.experimental.containers.qt.SAVE_MENU`, which a window offers by
+  passing that id to `setModelMenuBar`. It asks for a path, says in the dialog
+  that comments are not kept, writes nothing when the dialog is cancelled, and
+  reports a refused path in a warning box rather than failing silently.
+
   `AppContainer.has_changes` reports whether any component now asks to be
   written differently than it did at the end of the build. The comparison is
   against what each component serialized once the build finished, not against

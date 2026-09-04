@@ -7,8 +7,10 @@ from collections.abc import Mapping, Sequence  # noqa: TC003
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from importlib import import_module
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 
+import yaml
 from in_n_out import Store
 from ophyd_async.core import Device  # noqa: TC002
 
@@ -49,7 +51,20 @@ if TYPE_CHECKING:
     from redsun.experimental.virtual._requires import Question
     from redsun.experimental.virtual._wiring import Connection, SlotThread
 
-__all__ = ["AppContainer"]
+__all__ = ["AppContainer", "ConfigurationInUse"]
+
+
+class ConfigurationInUse(OSError):
+    """Raised when a session is asked to write over a source it was built from.
+
+    A saved file is one flat session, where a source may be shared by several
+    and hand-written. Overwriting one replaces what those other sessions read.
+    """
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"{path} is a source this session was built from")
+        self.path = path
+
 
 logger = logging.getLogger("redsun")
 
@@ -667,6 +682,36 @@ class AppContainer(BuildableSession):
                 section = config.setdefault(declaration.kind.section, {})
                 section[declaration.name] = entry
         return config
+
+    def write(self, path: str | Path) -> Path:
+        """Write the configuration that would rebuild this session to *path*.
+
+        One flat file whatever the session was built from, so it opens on its
+        own with nothing to assemble first. Comments do not survive, the file
+        being written rather than edited, and the keys come out in the order
+        the merged configuration holds them.
+
+        Raises
+        ------
+        ConfigurationInUse
+            If *path* is a source this session was built from.
+        """
+        target = Path(path)
+        if target.resolve() in self._source_paths():
+            raise ConfigurationInUse(target)
+        target.write_text(
+            yaml.safe_dump(self.serialize(), sort_keys=False), encoding="utf-8"
+        )
+        logger.info("Wrote the configuration of '%s' to %s", self.name, target)
+        return target
+
+    def _source_paths(self) -> set[Path]:
+        """Return the files this session was built from, resolved."""
+        return {
+            Path(source).resolve()
+            for source in self._sources()
+            if isinstance(source, (str, Path))
+        }
 
     def has_changes(self) -> bool:
         """Whether any component asks to be written differently than at build.

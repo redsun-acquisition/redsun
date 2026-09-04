@@ -7,12 +7,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
+import yaml
 from ophyd_async.core import Device
 
-from redsun.experimental import AppContainer, AsDevice, AsPresenter
+from redsun.experimental import (
+    AppContainer,
+    AsDevice,
+    AsPresenter,
+    ConfigurationInUse,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
 class Stage(Device):
@@ -186,3 +193,44 @@ def test_a_refused_key_still_counts_as_a_change(
     session.renamed.step = 9.0
 
     assert session.has_changes()
+
+
+def test_a_written_session_comes_back_from_the_file(
+    tmp_path: Path, build: Callable[..., AppContainer]
+) -> None:
+    session = build(App)
+    session.ctrl.step = 9.0
+    written = session.write(tmp_path / "session.yaml")
+    session.shutdown()
+
+    rebuilt = build(App, str(written))
+
+    assert rebuilt.ctrl.step == 9.0
+    assert yaml.safe_load(written.read_text()) == session.serialize()
+
+
+def test_the_written_file_is_one_flat_session(
+    tmp_path: Path, build: Callable[..., AppContainer]
+) -> None:
+    """A session layered from several sources writes what the merge produced."""
+    base = tmp_path / "instrument.yaml"
+    base.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 1.5}}}))
+
+    written = build(App, [str(base), {"name": "layered"}]).write(tmp_path / "out.yaml")
+
+    assert yaml.safe_load(written.read_text())["name"] == "layered"
+    assert yaml.safe_load(written.read_text())["presenters"]["ctrl"]["step"] == 1.5
+
+
+def test_writing_over_a_source_is_refused(
+    tmp_path: Path, build: Callable[..., AppContainer]
+) -> None:
+    """Overwriting one replaces what every session sharing it reads."""
+    source = tmp_path / "shared.yaml"
+    source.write_text(yaml.safe_dump({"name": "shared"}))
+    session = build(App, str(source))
+
+    with pytest.raises(ConfigurationInUse, match="shared.yaml"):
+        session.write(tmp_path / ".." / source.parent.name / "shared.yaml")
+
+    assert yaml.safe_load(source.read_text()) == {"name": "shared"}

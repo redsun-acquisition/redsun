@@ -51,7 +51,7 @@ from redsun.experimental.containers.components import (
     AsPresenter,
     AsView,
 )
-from redsun.experimental.containers.container import AppContainer
+from redsun.experimental.containers.container import AppContainer, ConfigurationInUse
 from redsun.experimental.view._placement import Placement
 from redsun.experimental.virtual._container import (
     BlueskyCallbackRegistry,
@@ -86,6 +86,7 @@ __all__ = [
     "BlueskyCallbackRegistry",
     "BuildableSession",
     "ComponentNotBuilt",
+    "ConfigurationInUse",
     "Connection",
     "Declare",
     "DesktopSession",
