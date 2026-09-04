@@ -28,6 +28,7 @@ Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 
 from redsun._hooks import HookError
 from redsun._structural import satisfies
+from redsun.experimental._settings import Settings
 from redsun.experimental.containers._declarations import (
     Alias,
     Declare,
@@ -103,6 +104,7 @@ __all__ = [
     "Serves",
     "SessionConfig",
     "SessionNotBuilt",
+    "Settings",
     "VirtualContainer",
     "WiringError",
     "provides",

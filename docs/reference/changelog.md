@@ -455,6 +455,25 @@ Dates are specified in the format `DD-MM-YYYY`.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
+- `redsun.experimental.Settings` - what a session remembers about how one user
+  likes to run it, kept under `platformdirs.user_config_dir` as one JSON file
+  per session name:
+
+  ```python
+  session.settings.set("ask_on_close", False)
+  session.settings.get("ask_on_close", True)
+  ```
+
+  Per user and per machine rather than part of the session file, so two
+  microscopes sharing a configuration do not inherit each other's answers. A
+  value is written as it is set, and the file appears the first time something
+  is set rather than when a session starts.
+
+  `redsun.experimental.AppContainer.settings` opens it in the `registry` step
+  and registers it, so an action asks for it by type. A file that is missing,
+  unreadable, or not an object leaves the session on the defaults its callers
+  ask for, and says so at `WARNING`.
+
 - `redsun.experimental.Layer.section` - the configuration section a layer's
   components are declared under, which is the member's own name pluralised:
   `Layer.DEVICE.section` is `"devices"`. It replaces the `SECTIONS` table that

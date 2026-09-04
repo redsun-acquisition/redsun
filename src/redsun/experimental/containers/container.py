@@ -15,6 +15,7 @@ from redsun import _structural
 from redsun._config import Source, as_sources, load
 from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
+from redsun.experimental._settings import Settings
 from redsun.experimental.containers import (
     _declarations,
     _factories,
@@ -133,6 +134,7 @@ class AppContainer(BuildableSession):
         "_merged",
         "_releases",
         "_report",
+        "_settings",
         "_shared",
         "_store",
         "_virtual",
@@ -187,6 +189,7 @@ class AppContainer(BuildableSession):
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
+        self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
         # that a presenter and a view offering one type still clash
@@ -255,6 +258,22 @@ class AppContainer(BuildableSession):
     def virtual_container(self) -> VirtualContainer:
         """The data exchange layer shared by every component."""
         return self._virtual
+
+    @property
+    def settings(self) -> Settings:
+        """What this session remembers about how one user likes to run it.
+
+        Per user and per machine rather than part of the session file, and
+        registered in the store, so an action asks for it by type.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`, which is where it is opened.
+        """
+        if self._settings is None:
+            raise RuntimeError("Call build() before reading the settings")
+        return self._settings
 
     @property
     def is_built(self) -> bool:
@@ -471,12 +490,14 @@ class AppContainer(BuildableSession):
     def open_registry(self) -> None:
         """Open the store the components are built out of, and fill it.
 
-        The shared services come first and the questions the components ask
-        are answered next, so that everything a constructor may reach for is
-        registered before the first one runs.
+        The settings and the shared services come first and the questions
+        the components ask are answered next, so that everything a
+        constructor may reach for is registered before the first one runs.
         """
         store = self.make_store()
         self._store = store
+        self._settings = Settings.for_session(self.name)
+        store.register_provider(_constant(self._settings), type_hint=Settings)
         self._virtual.register(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
         declarations = self._components()
