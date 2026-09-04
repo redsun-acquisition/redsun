@@ -455,6 +455,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
+- `redsun.experimental.containers.qt.QtAppContainer` destroys the widgets it
+  built. A `QWidget` outlives its last Python reference whenever C++ owns it,
+  so a session used to leave its window and every view in it alive for as long
+  as the process ran. Each view is closed and then deleted, and the window
+  goes after the views it docks, leaving `main_window` reporting an unbuilt
+  session again. Closing is what runs a view's `closeEvent`: deleting a widget
+  does not send one, and closing the window does not send one to a view docked
+  inside it.
+
+  This runs after every component's own `shutdown` and before the application
+  is destroyed, since a widget needs both. A reference held across the
+  shutdown is left wrapping a destroyed widget, and using it raises
+  `RuntimeError`.
+
 - `redsun.experimental.containers.qt.QtAppContainer` remembers where a user
   left the window. `save_layout` puts `saveGeometry` and `saveState` in the
   session's settings under `window.geometry` and `window.state`, base64

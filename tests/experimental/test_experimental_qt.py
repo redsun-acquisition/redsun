@@ -182,23 +182,24 @@ def test_every_placement_lands_where_it_asked(window: QMainWindow) -> None:
     """One pass over the views fills docks, the centre, a menu and a toolbar."""
     app = QtApp().build()
     try:
+        # inspected before the shutdown, which destroys the widgets it built
         attach(window, dict(app.views))
+
+        docks = window.findChildren(QDockWidget)
+        assert [_widget(d).objectName() for d in docks] == ["panel"]
+        central = window.centralWidget()
+        assert central is not None
+        assert central.objectName() == "canvas"
+
+        menus = _menus(window)
+        assert [m.title() for m in menus] == ["File"]
+        assert [a.objectName() for a in menus[0].actions()] == ["save"]
+
+        toolbars = window.findChildren(QToolBar)
+        assert [t.objectName() for t in toolbars] == ["Plans"]
+        assert [a.objectName() for a in toolbars[0].actions()] == ["acquire"]
     finally:
         app.shutdown()
-
-    docks = window.findChildren(QDockWidget)
-    assert [_widget(d).objectName() for d in docks] == ["panel"]
-    central = window.centralWidget()
-    assert central is not None
-    assert central.objectName() == "canvas"
-
-    menus = _menus(window)
-    assert [m.title() for m in menus] == ["File"]
-    assert [a.objectName() for a in menus[0].actions()] == ["save"]
-
-    toolbars = window.findChildren(QToolBar)
-    assert [t.objectName() for t in toolbars] == ["Plans"]
-    assert [a.objectName() for a in toolbars[0].actions()] == ["acquire"]
 
 
 def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
@@ -364,3 +365,58 @@ def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_shutdown_destroys_the_widgets_the_session_built(qapp: Any) -> None:
+    """A QWidget outlives its last Python reference whenever C++ owns it.
+
+    Holding a view across the shutdown is what shows the difference: dropping
+    the component would leave the widget alive, and the wrapper only reports a
+    destroyed one once ``deleteLater`` has been carried out.
+    """
+    app = QtApp().build()
+    panel = app.views["panel"]
+    window = app.main_window
+    assert isinstance(panel, QWidget)
+
+    app.shutdown()
+
+    with pytest.raises(RuntimeError):
+        panel.objectName()
+    with pytest.raises(RuntimeError):
+        window.windowTitle()
+    with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
+        _ = app.main_window
+
+
+TEARDOWN_ORDER: list[str] = []
+
+
+class Closing(QWidget):
+    """A view that records its own teardown and its widget's."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
+        self.name = name
+
+    def shutdown(self) -> None:
+        TEARDOWN_ORDER.append("shutdown")
+
+    def closeEvent(self, event: Any) -> None:
+        TEARDOWN_ORDER.append("closed")
+        super().closeEvent(event)
+
+
+class ClosingApp(QtAppContainer):
+    __slots__ = ()
+
+    panel: AsView[Closing]
+
+
+def test_a_view_is_shut_down_before_its_widget_is_destroyed(qapp: Any) -> None:
+    """A component's own teardown may touch the widget it was built around."""
+    TEARDOWN_ORDER.clear()
+    ClosingApp().build().shutdown()
+    assert TEARDOWN_ORDER == ["shutdown", "closed"]

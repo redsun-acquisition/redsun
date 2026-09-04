@@ -46,7 +46,7 @@ from app_model import Application
 from app_model.backends.qt import QModelMainWindow
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
-from qtpy.QtCore import QByteArray, QObject
+from qtpy.QtCore import QByteArray, QEvent, QObject
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
@@ -271,6 +271,9 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
 
         self._model = Application(self.name)
         self.on_release(self._forget_application)
+        # released after the components have shut down and before the
+        # application goes, since a widget needs both
+        self.on_release(self._destroy_widgets)
         self._register_actions()
 
         ColorSchemeMode.from_config(self._configuration()).apply()
@@ -298,7 +301,6 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         window = QModelMainWindow(self.model)
         window.setWindowTitle(self.name)
         self._main_window = window
-        self.on_release(self._forget_window)
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration())
         )
@@ -335,9 +337,37 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         self.settings.set("window.geometry", _encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", _encoded(self._main_window.saveState()))
 
-    def _forget_window(self) -> None:
-        """Drop the window, so reading it reports an unbuilt session again."""
-        self._main_window = None
+    def _destroy_widgets(self) -> None:
+        """Close and delete the views, then the window that holds them.
+
+        A ``QWidget`` outlives its last Python reference whenever C++ owns it,
+        so dropping a component does not end its widget and ``deleteLater`` is
+        what does. It is closed first because that is the only way its
+        ``closeEvent`` runs: deleting a widget does not send one, and closing
+        the window does not send one to a view docked inside it. A component
+        written here has ``shutdown`` for its own teardown and needs none of
+        this; a view that *is* a third-party widget, wrapping a viewer whose
+        cleanup it inherits, has nowhere else for that cleanup to happen.
+
+        The views go in reverse build order, as their own teardowns did, and
+        the window after the views it docks. Reading it afterwards
+        reports an unbuilt session rather than handing back a wrapper whose
+        widget is gone. A reference taken before the shutdown is left wrapping
+        a destroyed widget, and using it raises ``RuntimeError``.
+        """
+        for view in reversed(list(self.views.values())):
+            if isinstance(view, QWidget):
+                view.close()
+                view.deleteLater()
+        if self._main_window is not None:
+            self._main_window.close()
+            self._main_window.deleteLater()
+            self._main_window = None
+        if self._qt_app is not None:
+            # deleteLater only posts the deletion, and a session shut down
+            # with no loop running would never reach the pass that carries
+            # it out
+            self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.
