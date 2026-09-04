@@ -132,7 +132,8 @@ def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
 
 
 def test_a_hook_runs_at_the_point_its_attribute_names(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The attribute name is the point, with no marker needed to say so."""
 
@@ -145,7 +146,8 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
 
 
 def test_declare_carries_the_providers_arguments(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """A hook is constructed the way everything else declared here is."""
 
@@ -158,7 +160,8 @@ def test_declare_carries_the_providers_arguments(
 
 
 def test_one_annotation_serves_several_points(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The class is named once, so one instance answers at both points."""
 
@@ -174,7 +177,7 @@ def test_one_annotation_serves_several_points(
     assert app.main_window.windowTitle() == "branded"
 
 
-def test_two_declarations_may_not_claim_one_point(qapp: Any) -> None:
+def test_two_declarations_may_not_claim_one_point() -> None:
     """A point holds one provider, and nothing combines two."""
 
     class App(QtAppContainer):
@@ -185,7 +188,7 @@ def test_two_declarations_may_not_claim_one_point(qapp: Any) -> None:
         App().build()
 
 
-def test_a_point_the_container_does_not_call_is_refused(qapp: Any) -> None:
+def test_a_point_the_container_does_not_call_is_refused() -> None:
     """A misspelled point is named against the four this container calls."""
 
     class App(QtAppContainer):
@@ -195,7 +198,7 @@ def test_a_point_the_container_does_not_call_is_refused(qapp: Any) -> None:
         App().build()
 
 
-def test_a_provider_missing_the_method_is_refused(qapp: Any) -> None:
+def test_a_provider_missing_the_method_is_refused() -> None:
     """The point names a protocol, and the provider is checked against it."""
 
     class App(QtAppContainer):
@@ -206,7 +209,8 @@ def test_a_provider_missing_the_method_is_refused(qapp: Any) -> None:
 
 
 def test_the_configuration_names_a_provider(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """A session installs a bundle's hook without naming it in Python."""
 
@@ -224,7 +228,7 @@ def test_the_configuration_names_a_provider(
     assert app.main_window.windowTitle() == "from-file"
 
 
-def test_one_point_may_not_be_named_twice_over(qapp: Any) -> None:
+def test_one_point_may_not_be_named_twice_over() -> None:
     """The class and the configuration are separate, so neither layers."""
 
     class App(QtAppContainer):
@@ -240,7 +244,8 @@ def test_one_point_may_not_be_named_twice_over(qapp: Any) -> None:
 
 
 def test_during_build_brackets_the_build_and_names_every_step(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """A splash opens before the first component and closes once the window is up."""
 
@@ -265,7 +270,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
     ]
 
 
-def test_the_span_closes_on_a_failed_build(qapp: Any) -> None:
+def test_the_span_closes_on_a_failed_build() -> None:
     """Nothing is left covering an application that never got a window."""
 
     class App(QtAppContainer):
@@ -279,7 +284,9 @@ def test_the_span_closes_on_a_failed_build(qapp: Any) -> None:
 
 
 def test_create_application_is_consulted_only_with_none_running(
-    qapp: Any, monkeypatch: pytest.MonkeyPatch, build: Callable[..., Any]
+    qapp: QApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """A running application is adopted as it is, whoever else offered one."""
 

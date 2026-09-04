@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from qtpy.QtGui import QGuiApplication
-from qtpy.QtWidgets import QToolBar
+from qtpy.QtWidgets import QApplication, QToolBar
 
 from redsun.experimental import AppContainer
 from redsun.experimental.containers.qt import (
@@ -32,7 +32,7 @@ class DarkApp(QtAppContainer):
 
 
 @pytest.fixture(autouse=True)
-def restore_scheme(qapp: Any) -> Any:
+def restore_scheme() -> Any:
     """Stop asking for a scheme, the style hints being process-wide."""
     yield
     hints = QGuiApplication.styleHints()
@@ -48,7 +48,8 @@ def _control(app: QtAppContainer) -> ColorSchemeButton:
 
 
 def test_every_session_pins_the_control_to_a_toolbar(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """It is part of the session, so a session declaring nothing still has it."""
     app = build(PlainApp)
@@ -59,7 +60,8 @@ def test_every_session_pins_the_control_to_a_toolbar(
 
 
 def test_the_configuration_says_which_mode_to_start_in(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The scheme Qt reports is not asserted.
 
@@ -70,7 +72,8 @@ def test_the_configuration_says_which_mode_to_start_in(
 
 
 def test_clicking_cycles_system_light_dark_and_round(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """One button reaches all three, which the glyph has to keep up with."""
     control = _control(build(PlainApp))
@@ -90,7 +93,8 @@ def test_clicking_cycles_system_light_dark_and_round(
 
 
 def test_the_control_is_pushed_to_the_right_edge(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """An expanding spacer before it is what pins it, so the toolbar holds two."""
     control = _control(build(PlainApp))
@@ -107,7 +111,8 @@ def test_the_control_is_pushed_to_the_right_edge(
 
 
 def test_a_session_from_a_file_carries_it_too(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The mode is an ordinary configuration key, so a file may set it."""
     unbuilt = AppContainer.from_config({"frontend": "pyqt", "color_scheme": "light"})
@@ -116,7 +121,7 @@ def test_a_session_from_a_file_carries_it_too(
     assert _control(build(unbuilt)).mode is ColorSchemeMode.LIGHT
 
 
-def test_a_mode_the_control_does_not_offer_is_refused(qapp: Any) -> None:
+def test_a_mode_the_control_does_not_offer_is_refused() -> None:
     """The mode comes from a configuration file, so it is checked."""
 
     class Sepia(QtAppContainer):
@@ -128,7 +133,7 @@ def test_a_mode_the_control_does_not_offer_is_refused(qapp: Any) -> None:
         Sepia().build()
 
 
-def test_the_control_says_it_can_be_clicked(qapp: Any) -> None:
+def test_the_control_says_it_can_be_clicked() -> None:
     assert (
         ColorSchemeButton(ColorSchemeMode.DARK).toolTip().endswith("(click to change)")
     )

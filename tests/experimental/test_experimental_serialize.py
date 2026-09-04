@@ -22,7 +22,7 @@ class Stage(Device):
         super().__init__(name=name)
         self.axis = axis
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, str]:
         return {"axis": self.axis}
 
 
@@ -34,7 +34,7 @@ class Ctrl:
     step: float = 5.0
     timeout: float = 2.0
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, float]:
         return {"step": self.step, "timeout": self.timeout}
 
 
@@ -53,18 +53,18 @@ class Renamed:
         self.name = name
         self.step = step
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, float]:
         return {"stepsize": self.step}
 
 
 class Anything:
     """Presenter whose constructor accepts every key, through ``**kwargs``."""
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(self, name: str, /, **kwargs: object) -> None:
         self.name = name
         self.kwargs = kwargs
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, int]:
         return {"whatever": 1}
 
 
@@ -91,7 +91,7 @@ class App(AppContainer):
 
 
 def test_a_changed_session_rebuilds_from_what_it_wrote(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -107,7 +107,7 @@ def test_a_changed_session_rebuilds_from_what_it_wrote(
 
 
 def test_serialize_writes_a_parameter_no_source_named(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     entry = build(App).serialize()["presenters"]["ctrl"]
 
@@ -115,7 +115,7 @@ def test_serialize_writes_a_parameter_no_source_named(
 
 
 def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -124,7 +124,7 @@ def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
 
 
 def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
-    build: Callable[..., Any], caplog: pytest.LogCaptureFixture
+    build: Callable[..., AppContainer], caplog: pytest.LogCaptureFixture
 ) -> None:
     session = build(App)
 
@@ -138,7 +138,7 @@ def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
 
 
 def test_a_constructor_taking_kwargs_accepts_every_key(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     entry = build(App).serialize()["presenters"]["anything"]
 
@@ -146,13 +146,13 @@ def test_a_constructor_taking_kwargs_accepts_every_key(
 
 
 def test_a_session_nobody_has_touched_has_no_changes(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     assert not build(App).has_changes()
 
 
 def test_a_component_asking_to_be_written_differently_is_a_change(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -161,7 +161,7 @@ def test_a_component_asking_to_be_written_differently_is_a_change(
 
 
 def test_a_value_changed_and_changed_back_reads_as_unchanged(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -171,7 +171,7 @@ def test_a_value_changed_and_changed_back_reads_as_unchanged(
 
 
 def test_a_component_that_serializes_nothing_never_changes(
-    build: Callable[..., Any],
+    build: Callable[..., AppContainer],
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -179,7 +179,9 @@ def test_a_component_that_serializes_nothing_never_changes(
     assert not session.has_changes()
 
 
-def test_a_refused_key_still_counts_as_a_change(build: Callable[..., Any]) -> None:
+def test_a_refused_key_still_counts_as_a_change(
+    build: Callable[..., AppContainer],
+) -> None:
     session = build(App)
     session.renamed.step = 9.0
 

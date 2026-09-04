@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar
 
 import pytest
 import yaml
@@ -53,12 +53,14 @@ DECLARED = {"stage", "motor_ctrl", "late_ctrl", "motor_widget"}
 
 
 @pytest.fixture
-def configured(mock_plugin: None, config_path: Path, build: Callable[..., Any]) -> Any:
+def configured(
+    mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
+) -> ConfiguredApp:
     """Return the session ``mock_session.yaml`` describes, built."""
     return build(ConfiguredApp, str(config_path / SESSION))
 
 
-def test_components_come_up_from_the_file_alone(configured: Any) -> None:
+def test_components_come_up_from_the_file_alone(configured: ConfiguredApp) -> None:
     """A class declaring nothing still builds the whole configured session."""
     assert set(configured.declarations) == DECLARED
     assert isinstance(
@@ -68,7 +70,7 @@ def test_components_come_up_from_the_file_alone(configured: Any) -> None:
     assert isinstance(configured.devices["stage"], MockStage)
 
 
-def test_config_kwargs_reach_the_constructor(configured: Any) -> None:
+def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
     """Plugin metadata is stripped; everything else is a keyword argument."""
     stage = configured.devices["stage"]
 
@@ -78,14 +80,14 @@ def test_config_kwargs_reach_the_constructor(configured: Any) -> None:
     assert configured.declarations["motor_widget"].instance.title == "from-config"
 
 
-def test_plugin_provider_supplies_a_dependency(configured: Any) -> None:
+def test_plugin_provider_supplies_a_dependency(configured: ConfiguredApp) -> None:
     """The bundle's own shared services are loaded from the manifest."""
     presenter = configured.declarations["motor_ctrl"].instance
 
     assert presenter.calibration == pytest.approx(Calibration(1.2))
 
 
-def test_shared_value_crosses_from_presenter_to_view(configured: Any) -> None:
+def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) -> None:
     """`provides` works for components the class never named."""
     widget = configured.declarations["motor_widget"].instance
 
@@ -93,7 +95,7 @@ def test_shared_value_crosses_from_presenter_to_view(configured: Any) -> None:
     assert widget.missing is None
 
 
-def test_wiring_section_is_applied(configured: Any) -> None:
+def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
     """Ports named as strings connect once every component exists."""
     links = configured.virtual_container.connections
 
@@ -103,7 +105,7 @@ def test_wiring_section_is_applied(configured: Any) -> None:
 
 
 def test_annotation_and_config_describe_one_component(
-    mock_plugin: None, config_path: Path, build: Callable[..., Any]
+    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
 ) -> None:
     app = build(PartlyDeclaredApp, str(config_path / SESSION))
 
@@ -113,7 +115,7 @@ def test_annotation_and_config_describe_one_component(
 
 
 def test_configured_component_reads_the_live_registry(
-    mock_plugin: None, config_path: Path, build: Callable[..., Any]
+    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
 ) -> None:
     class WithRegistrar(AppContainer):
         __slots__ = ()
@@ -146,7 +148,7 @@ def test_unresolvable_entries_are_reported(
 
 
 def test_entry_without_plugin_metadata_is_not_a_component(
-    mock_plugin: None, tmp_path: Path, build: Callable[..., Any]
+    mock_plugin: None, tmp_path: Path, build: Callable[..., AppContainer]
 ) -> None:
     path = tmp_path / "plain.yaml"
     path.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 2.0}}}))
@@ -159,7 +161,7 @@ def test_entry_without_plugin_metadata_is_not_a_component(
 
 
 def test_a_session_needs_no_container_class(
-    mock_plugin: None, config_path: Path, build: Callable[..., Any]
+    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
 ) -> None:
     unbuilt = AppContainer.from_config(str(config_path / "mock_headless.yaml"))
     assert not unbuilt.is_built
@@ -171,7 +173,7 @@ def test_a_session_needs_no_container_class(
 
 
 def test_from_config_takes_the_configuration_itself(
-    mock_plugin: None, build: Callable[..., Any]
+    mock_plugin: None, build: Callable[..., AppContainer]
 ) -> None:
     app = build(
         AppContainer.from_config(
@@ -197,7 +199,7 @@ def test_from_config_takes_the_configuration_itself(
 
 
 def test_the_class_keeps_what_it_declares(
-    mock_plugin: None, config_path: Path, build: Callable[..., Any]
+    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
 ) -> None:
     app = build(HeadlessApp.from_config(str(config_path / "mock_headless.yaml")))
 

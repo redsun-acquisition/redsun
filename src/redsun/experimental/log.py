@@ -58,13 +58,13 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
     ----------
     logger: logging.Logger
         Logger instance to wrap.
-    obj: Any
+    obj: object
         The object to add context to.
     """
 
     logger: logging.Logger
 
-    def __init__(self, logger: logging.Logger, obj: Any) -> None:
+    def __init__(self, logger: logging.Logger, obj: object) -> None:
         super().__init__(logger, {"obj": obj})
         self.obj = obj
 

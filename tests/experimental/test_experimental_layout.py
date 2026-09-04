@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from qtpy.QtCore import Qt as QtNamespace
-from qtpy.QtWidgets import QDockWidget, QWidget
+from qtpy.QtWidgets import QApplication, QDockWidget, QWidget
 
 from redsun.experimental import AsView, Placement
 from redsun.experimental.containers.qt import Dock, QtAppContainer
@@ -52,7 +52,7 @@ def _dock(app: QtAppContainer, name: str) -> QDockWidget:
 
 
 def test_a_dock_is_named_after_the_view_it_holds(
-    qapp: Any, config_home: Path, build: Callable[..., Any]
+    qapp: QApplication, config_home: Path, build: Callable[..., QtAppContainer]
 ) -> None:
     """Qt places a dock by object name and drops one that has none."""
     app = build(LayoutApp)
@@ -62,7 +62,7 @@ def test_a_dock_is_named_after_the_view_it_holds(
 
 
 def test_a_layout_saved_by_one_run_is_restored_by_the_next(
-    qapp: Any, config_home: Path, build: Callable[..., Any]
+    qapp: QApplication, config_home: Path, build: Callable[..., QtAppContainer]
 ) -> None:
     """Which is the whole of the deliverable, so it is driven end to end."""
     first = build(LayoutApp)
@@ -77,7 +77,7 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
 
 
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
-    qapp: Any, config_home: Path, build: Callable[..., Any]
+    qapp: QApplication, config_home: Path, build: Callable[..., QtAppContainer]
 ) -> None:
     """Nothing saved is the common case, and it must not disturb the layout."""
     app = build(LayoutApp)
@@ -86,7 +86,7 @@ def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
 
 
 def test_the_layout_goes_to_the_settings_file_as_text(
-    qapp: Any, config_home: Path, build: Callable[..., Any]
+    qapp: QApplication, config_home: Path, build: Callable[..., QtAppContainer]
 ) -> None:
     """The settings file holds JSON, so a QByteArray cannot go in as it is."""
     build(LayoutApp).save_layout()
@@ -97,7 +97,7 @@ def test_the_layout_goes_to_the_settings_file_as_text(
 
 
 def test_a_session_that_was_never_shown_writes_nothing(
-    qapp: Any, config_home: Path, build: Callable[..., Any]
+    qapp: QApplication, config_home: Path, build: Callable[..., QtAppContainer]
 ) -> None:
     """``run`` asks for the save, so building alone leaves the file alone."""
     build(LayoutApp).shutdown()

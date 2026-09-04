@@ -54,7 +54,7 @@ __all__ = ["AppContainer"]
 logger = logging.getLogger("redsun")
 
 
-def _unaccepted(cls: type, entry: Mapping[str, Any]) -> list[str]:
+def _unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     """Return the keys of *entry* that *cls* would refuse to be built from.
 
     The constructor's parameters decide this, not the keys the configuration
@@ -206,7 +206,7 @@ class AppContainer(BuildableSession):
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
-        self._baseline: dict[str, Mapping[str, Any]] = {}
+        self._baseline: dict[str, Mapping[str, object]] = {}
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -679,7 +679,7 @@ class AppContainer(BuildableSession):
         """
         return self._serialized() != self._baseline
 
-    def _serialized(self) -> dict[str, Mapping[str, Any]]:
+    def _serialized(self) -> dict[str, Mapping[str, object]]:
         """Return what each built component that serializes itself asks for.
 
         The keys are not checked against the constructor, as they are where
@@ -832,7 +832,7 @@ class AppContainer(BuildableSession):
         self._skip(declaration, reason)
         return True
 
-    def _blamed(self, hints: Iterable[Any]) -> set[str]:
+    def _blamed(self, hints: Iterable[object]) -> set[str]:
         """Return the names of failed components that would have answered *hints*.
 
         A component registers itself under its key and, when it is the only
@@ -1086,7 +1086,9 @@ class AppContainer(BuildableSession):
             declaration.instance = device
             self._register_teardown(device)
 
-    def _on_built(self, declaration: _declarations.Declaration, instance: Any) -> None:
+    def _on_built(
+        self, declaration: _declarations.Declaration, instance: NamedComponent
+    ) -> None:
         declaration.instance = instance
         self._virtual.register_signals(instance, name=declaration.name)
         self._register_teardown(instance)
@@ -1206,7 +1208,7 @@ class AppContainer(BuildableSession):
         return names
 
 
-def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, Any]]:
+def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, object]]:
     """Return the parameters of *params* nothing in the store answers.
 
     Everything a component may be built from is registered by the time it is
@@ -1220,7 +1222,7 @@ def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, Any]
     ]
 
 
-def _unanswered_message(name: str, unanswered: list[tuple[str, Any]]) -> str:
+def _unanswered_message(name: str, unanswered: list[tuple[str, object]]) -> str:
     """Return the refusal naming what *name* asked for and did not get."""
     named = _listed_plain(
         [f"{pname!r} ({getattr(hint, '__name__', hint)})" for pname, hint in unanswered]

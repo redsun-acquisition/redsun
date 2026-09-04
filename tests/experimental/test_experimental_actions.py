@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 from app_model import Application
 from mock_bundle import actions
-from qtpy.QtWidgets import QMenu
+from qtpy.QtWidgets import QApplication, QMenu
 
 from redsun.experimental import AppContainer
 from redsun.experimental.containers.qt import ActionError, QtAppContainer
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 pytestmark = pytest.mark.qt
 
@@ -21,14 +21,14 @@ SESSION = {"frontend": "pyqt", "name": "actions-session"}
 
 
 @pytest.fixture(autouse=True)
-def clear_record() -> Any:
+def clear_record() -> Iterator[None]:
     """Forget what earlier commands recorded, the module list outliving a test."""
     actions.executed.clear()
     yield
     actions.executed.clear()
 
 
-def session(*declared: dict[str, Any]) -> QtAppContainer:
+def session(*declared: dict[str, object]) -> QtAppContainer:
     """Return an unbuilt Qt session declaring *declared* under ``actions``."""
     container = AppContainer.from_config({**SESSION, "actions": list(declared)})
     assert isinstance(container, QtAppContainer)
@@ -36,7 +36,8 @@ def session(*declared: dict[str, Any]) -> QtAppContainer:
 
 
 def test_the_section_registers_commands_on_the_session(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     app = build(
         session(
@@ -64,7 +65,8 @@ def test_the_section_registers_commands_on_the_session(
 
 
 def test_releasing_the_session_takes_its_commands_with_it(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     app = build(
         session(
@@ -112,7 +114,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
     ],
 )
 def test_a_section_that_is_not_actions_is_refused(
-    qapp: Any, declared: Any, message: str
+    qapp: QApplication, declared: object, message: str
 ) -> None:
     app = AppContainer.from_config({**SESSION, "actions": declared})
     with pytest.raises(ActionError, match=message):

@@ -4,10 +4,13 @@ import contextlib
 import sys
 from importlib.metadata import EntryPoint
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Protocol, TypeVar
 from unittest import mock
 
 import pytest
+
+from redsun._config import Source
+from redsun.experimental import AppContainer
 
 _TESTS_DIR = str(Path(__file__).parent)
 if _TESTS_DIR not in sys.path:
@@ -16,7 +19,17 @@ if _TESTS_DIR not in sys.path:
 _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Generator
+
+SessionT = TypeVar("SessionT", bound=AppContainer)
+
+
+class BuildSession(Protocol):
+    """Build a session, and hand it back typed as what was asked for."""
+
+    def __call__(
+        self, container: type[SessionT] | SessionT, config: Source | None = ..., /
+    ) -> SessionT: ...
 
 
 @pytest.fixture
@@ -26,27 +39,29 @@ def config_path() -> Path:
 
 
 @pytest.fixture
-def build() -> Generator[Callable[..., Any], None, None]:
+def build() -> Generator[BuildSession, None, None]:
     """Return a function building a session and shutting it down afterwards.
 
     Parameters
     ----------
-    container : type | AppContainer
-        A container class, constructed with whatever else is passed, or a
-        container already in hand.
+    container : type[SessionT] | SessionT
+        A container class, or a container already in hand.
+    config : Source | None
+        Laid over what the class declares, for a container built here.
 
     Every session it built is shut down in reverse order once the test ends,
     and a test may shut one down itself, ``shutdown`` running nothing the
     second time.
     """
-    built: list[Any] = []
+    built: list[AppContainer] = []
 
-    def build_one(container: Any, *args: Any, **kwargs: Any) -> Any:
-        unbuilt = (
-            container(*args, **kwargs) if isinstance(container, type) else container
-        )
-        built.append(unbuilt.build())
-        return built[-1]
+    def build_one(
+        container: type[SessionT] | SessionT, config: Source | None = None, /
+    ) -> SessionT:
+        unbuilt = container(config) if isinstance(container, type) else container
+        session = unbuilt.build()
+        built.append(session)
+        return session
 
     yield build_one
     for session in reversed(built):
@@ -76,7 +91,7 @@ def mock_plugin() -> Generator[None, None, None]:
     entry.group = "redsun.plugins"
 
     @contextlib.contextmanager
-    def as_file(path: Any) -> Generator[Path, None, None]:
+    def as_file(path: str | Path) -> Generator[Path, None, None]:
         yield path if isinstance(path, Path) else Path(path)
 
     with (

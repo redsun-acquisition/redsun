@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 import subprocess
 import sys
-from collections.abc import Callable
-from typing import Any
 
 import pytest
 from app_model import Action, Application
 from app_model.types import MenuRule
-from qtpy.QtGui import QAction
+from qtpy.QtGui import QAction, QCloseEvent
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
@@ -105,7 +108,7 @@ class QtApp(QtAppContainer):
     acquire: AsView[Acquire]
 
 
-def test_the_session_owns_an_application_named_after_it(qapp: Any) -> None:
+def test_the_session_owns_an_application_named_after_it() -> None:
     """Commands, menus and keybindings belong to the session, not the process."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
@@ -119,7 +122,8 @@ def test_the_session_owns_an_application_named_after_it(qapp: Any) -> None:
 
 
 def test_two_sessions_of_one_name_refuse_to_coexist(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The name is an identity, so a collision is loud rather than shared."""
     build(QtApp)
@@ -127,7 +131,7 @@ def test_two_sessions_of_one_name_refuse_to_coexist(
         QtApp().build()
 
 
-def test_the_name_is_free_again_after_shutdown(qapp: Any) -> None:
+def test_the_name_is_free_again_after_shutdown() -> None:
     """A suite building one session repeatedly is the case this serves."""
     for _ in range(3):
         app = QtApp().build()
@@ -136,12 +140,13 @@ def test_the_name_is_free_again_after_shutdown(qapp: Any) -> None:
 
 
 @pytest.fixture
-def window(qapp: Any) -> QMainWindow:
+def window() -> QMainWindow:
     return QMainWindow()
 
 
 def test_the_container_builds_its_own_window(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """The base container builds the components; this one arranges them."""
     app = build(QtApp)
@@ -155,7 +160,7 @@ def test_the_container_builds_its_own_window(
     assert app.build().main_window is window
 
 
-def test_no_toolkit_object_exists_before_the_build(qapp: Any) -> None:
+def test_no_toolkit_object_exists_before_the_build() -> None:
     """Constructing a session touches no toolkit object and reads no file."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
@@ -166,7 +171,7 @@ def test_no_toolkit_object_exists_before_the_build(qapp: Any) -> None:
         app.shutdown()
 
 
-def test_the_configuration_names_the_container(qapp: Any) -> None:
+def test_the_configuration_names_the_container() -> None:
     """A session naming Qt comes up on the Qt container without a class."""
     app = AppContainer.from_config({"frontend": "pyqt", "name": "from-file"})
     assert isinstance(app, QtAppContainer)
@@ -178,7 +183,7 @@ def test_the_configuration_names_the_container(qapp: Any) -> None:
 
 
 def test_every_placement_lands_where_it_asked(
-    window: QMainWindow, build: Callable[..., Any]
+    window: QMainWindow, build: Callable[..., QtAppContainer]
 ) -> None:
     """One pass over the views fills docks, the centre, a menu and a toolbar."""
     app = build(QtApp)
@@ -228,9 +233,7 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused(window: QMainWindow) -> Non
         attach(window, {"stray": NotAWidget("stray")})
 
 
-def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built(
-    qapp: Any,
-) -> None:
+def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built() -> None:
     """Qt's requirement table is read with the declarations, not at attach."""
 
     class Wrong(QtAppContainer):
@@ -266,7 +269,7 @@ class CommandApp(QtAppContainer):
     gain: AsPresenter[Gain]
 
 
-def test_a_command_is_filled_from_the_session(qapp: Any) -> None:
+def test_a_command_is_filled_from_the_session() -> None:
     """The session builds its components out of the application's own store."""
     app = CommandApp().build()
     seen: list[Gain] = []
@@ -283,7 +286,8 @@ def test_a_command_is_filled_from_the_session(qapp: Any) -> None:
 
 
 def test_the_window_is_built_against_the_session_application(
-    qapp: Any, build: Callable[..., Any]
+    qapp: QApplication,
+    build: Callable[..., QtAppContainer],
 ) -> None:
     """A menu bar on the window is filled from the session's own registries."""
     app = build(CommandApp)
@@ -300,7 +304,7 @@ def test_the_window_is_built_against_the_session_application(
     assert [a.text() for a in tools.actions()] == ["Note"]
 
 
-def test_the_session_holds_the_application_it_runs_on(qapp: Any) -> None:
+def test_the_session_holds_the_application_it_runs_on() -> None:
     """A session adopting a running application still keeps a reference."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
@@ -364,7 +368,7 @@ def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_shutdown_destroys_the_widgets_the_session_built(qapp: Any) -> None:
+def test_shutdown_destroys_the_widgets_the_session_built() -> None:
     """A QWidget outlives its last Python reference whenever C++ owns it.
 
     Holding a view across the shutdown is what shows the difference: dropping
@@ -401,7 +405,7 @@ class Closing(QWidget):
     def shutdown(self) -> None:
         TEARDOWN_ORDER.append("shutdown")
 
-    def closeEvent(self, event: Any) -> None:
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         TEARDOWN_ORDER.append("closed")
         super().closeEvent(event)
 
@@ -412,7 +416,7 @@ class ClosingApp(QtAppContainer):
     panel: AsView[Closing]
 
 
-def test_a_view_is_shut_down_before_its_widget_is_destroyed(qapp: Any) -> None:
+def test_a_view_is_shut_down_before_its_widget_is_destroyed() -> None:
     """A component's own teardown may touch the widget it was built around."""
     TEARDOWN_ORDER.clear()
     ClosingApp().build().shutdown()
