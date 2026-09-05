@@ -7,8 +7,6 @@ from typing import Any, ClassVar
 import pytest
 from ophyd_async.core import soft_signal_rw
 from psygnal import SignalGroup
-
-# psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 
 from redsun.aio import set_async_backend

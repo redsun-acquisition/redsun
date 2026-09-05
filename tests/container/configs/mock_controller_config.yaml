@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-session
+name: mock-session
 presenters:
   MockController:
     plugin_name: mock-pkg

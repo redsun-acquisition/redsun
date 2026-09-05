@@ -70,7 +70,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 - **`VirtualContainer`** subclasses `dependency_injector.DynamicContainer` and
   is at once the DI container, the psygnal signal bus, and the
   document-callback registry. Config is frozen (`_FrozenConfig`); read it
-  through the `schema_version` / `frontend` / `session` / `metadata`
+  through the `schema_version` / `frontend` / `name` / `metadata`
   properties.
 - **`AppContainer.build()` phase order cannot change**, and its docstring
   records it: VirtualContainer -> devices -> presenters -> views ->

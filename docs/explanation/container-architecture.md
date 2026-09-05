@@ -224,7 +224,7 @@ that:
   constructor call, so one file owns all of a component's arguments.
 - **`schema_version` and `frontend` must agree.** They name what kind of session
   this is rather than what it contains, so a later file giving a different value
-  raises rather than overriding. `session` overrides normally.
+  raises rather than overriding. `name` overrides normally.
 
 Only the merged result has to satisfy [`AppConfig`][redsun.containers.AppConfig],
 so a file layered under another may carry a fragment - a `presenters` section
@@ -328,7 +328,7 @@ The `VirtualContainer` is created during [`build()`][redsun.containers.container
 
     ```yaml
     schema_version: 1.0
-    session: "My Experiment"
+    name: "My Experiment"
     frontend: "pyqt"
 
     devices:

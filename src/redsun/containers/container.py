@@ -8,9 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-
-# resolved at runtime: the ClassVar annotation below is evaluated by ruff's
-# runtime-evaluated rules and by anything calling get_type_hints on a subclass
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -32,15 +29,16 @@ from typing import (
 import yaml
 from ophyd_async.core import Device
 
-from redsun.aio import _loop_factory, run_coro
-from redsun.containers._config import AppConfig
-from redsun.containers._hooks import (
+from redsun._config import COMPONENT_SECTIONS, load
+from redsun._hooks import (
     HookError,
     distinct,
     known_points,
     parse_hook_specs,
     resolve_hooks,
 )
+from redsun.aio import _loop_factory, run_coro
+from redsun.containers._config import AppConfig
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
@@ -177,115 +175,30 @@ def _silent(step: str) -> None:
     """
 
 
-_COMPONENT_SECTIONS: frozenset[str] = frozenset({"devices", "presenters", "views"})
-"""The configuration sections whose entries are a component's constructor call."""
-
-_IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
-"""Keys naming what kind of session this is, which every layered file must agree on.
-
-Everything else describes the session's content, where a later file legitimately
-overrides an earlier one.
-"""
-
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
 
 
-def _read_yaml(path: Path) -> dict[str, Any]:
-    """Read one YAML file into a mapping, without validating what it carries."""
-    with open(path) as fh:
-        data = yaml.safe_load(fh)
-    if not isinstance(data, dict):
-        raise TypeError(
-            f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
-        )
-    return data
-
-
-def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """Return *base* with *overlay* laid over it, merging nested mappings.
-
-    A key present in both is taken from *overlay* unless both values are
-    mappings, which merge in turn. Anything that is not a mapping - a list, a
-    scalar - is replaced rather than combined.
-
-    A component entry is the exception: under ``devices``, ``presenters`` and
-    ``views`` the section merges by component name, but a component *named* in
-    *overlay* is taken from it whole. Those entries are the keyword arguments
-    of a constructor call rather than a tree of settings, so one file owns one
-    component's arguments and a reader stops at the last file naming it.
-    """
-    merged = dict(base)
-    for key, value in overlay.items():
-        current = merged.get(key)
-        if not (isinstance(current, dict) and isinstance(value, dict)):
-            merged[key] = value
-        elif key in _COMPONENT_SECTIONS:
-            for shadowed in current.keys() & value.keys():
-                logger.debug(
-                    f"Component '{shadowed}' in '{key}' is taken from a later "
-                    f"configuration file, replacing the entry under it"
-                )
-            merged[key] = {**current, **value}
-        else:
-            merged[key] = merge_config(current, value)
-    return merged
-
-
-def _refuse_identity_conflict(
-    data: dict[str, Any], overlay: dict[str, Any], path: Path
-) -> None:
-    """Refuse a file that contradicts what an earlier one said the session is.
+def _named(config: Mapping[str, Any]) -> str:
+    """Return the session identity *config* declares.
 
     Raises
     ------
-    ValueError
-        If *overlay* gives a different value for a key naming the session's
-        identity rather than its content.
-    """
-    for key in _IDENTITY_KEYS:
-        if key in data and key in overlay and data[key] != overlay[key]:
-            raise ValueError(
-                f"Configuration file {path} sets {key}={overlay[key]!r}, "
-                f"which contradicts {data[key]!r} from a file layered under it. "
-                f"{key} names what kind of session this is, so every file must "
-                f"agree on it."
-            )
-
-
-def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
-    """Read *paths* in order, lay each over the last, and validate the result.
-
-    Required keys are checked against the merged mapping rather than against
-    each file, so a file layered under another may carry a fragment.
-
-    Raises
-    ------
-    ValueError
-        If two files disagree about the session's schema version or frontend.
     KeyError
-        If the merged mapping is missing a key `AppConfig` requires.
+        If it declares none. A session built from a configuration has no class
+        of its own to be named after, and two that both went unnamed would be
+        indistinguishable.
     """
-    if len(paths) > 1:
-        logger.debug(
-            f"Reading configuration from {len(paths)} files, in order: "
-            f"{', '.join(str(path) for path in paths)}"
-        )
-    data: dict[str, Any] = {}
-    for path in paths:
-        overlay = _read_yaml(path)
-        _refuse_identity_conflict(data, overlay, path)
-        data = merge_config(data, overlay)
-    missing = AppConfig.__required_keys__ - data.keys()
-    if missing:
-        named = ", ".join(str(path) for path in paths)
+    name = config.get("name")
+    if not isinstance(name, str) or not name:
         raise KeyError(
-            f"Configuration ({named}) is missing required keys: "
-            f"{', '.join(sorted(missing))}"
+            "a session built from a configuration must declare 'name'. It "
+            "identifies the session, and two that both went unnamed could not "
+            "be told apart."
         )
-    return data
+    return name
 
 
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
@@ -306,8 +219,9 @@ class AppContainer:
 
     Parameters
     ----------
-    session : str
-        Session display name.
+    name : str | None
+        Session identity. Defaults to the container class's own name, which is
+        distinct per session where a shared constant would not be.
     frontend : str
         Frontend toolkit identifier.
     log_level : int or str, optional
@@ -453,7 +367,7 @@ class AppContainer:
         if component_fields:
             config_data: dict[str, Any] = {}
             if cls._config_paths:
-                config_data = _load_yaml(cls._config_paths)
+                config_data = load(cls._config_paths, AppConfig.__required_keys__)
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -525,7 +439,7 @@ class AppContainer:
     def __init__(
         self,
         *,
-        session: str = "Redsun",
+        name: str | None = None,
         frontend: str = "pyqt",
         log_level: int | str | None = None,
     ) -> None:
@@ -534,7 +448,7 @@ class AppContainer:
             set_level(log_level)
         self._config: AppConfig = {
             "schema_version": 1.0,
-            "session": session,
+            "name": name or type(self).__name__,
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
@@ -566,13 +480,13 @@ class AppContainer:
         config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
         if config_paths:
             try:
-                yaml_data = _load_yaml(config_paths)
+                yaml_data = load(config_paths, AppConfig.__required_keys__)
             except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
                 named = ", ".join(str(path) for path in config_paths)
                 logger.warning(f"Could not read config file(s) {named}: {e}")
                 yaml_data = {}
             for key, value in yaml_data.items():
-                if key not in _COMPONENT_SECTIONS:
+                if key not in COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
 
     @classmethod
@@ -915,7 +829,7 @@ class AppContainer:
 
         base_cfg: RedSunConfig = {
             "schema_version": self._config.get("schema_version", 1.0),
-            "session": self._config.get("session", "Redsun"),
+            "name": self._config["name"],
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
@@ -1119,7 +1033,7 @@ class AppContainer:
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
 
         instance = DynamicApp(
-            session=config.get("session", "Redsun"),
+            name=_named(config),
             frontend=frontend,
             log_level=log_level,
         )

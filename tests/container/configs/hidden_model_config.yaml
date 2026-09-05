@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: hidden-device-session
+name: hidden-device-session
 devices:
   iSCAT channel:
     plugin_name: mock-pkg

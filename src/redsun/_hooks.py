@@ -1,4 +1,8 @@
-"""Hook providers a session installs on its application container."""
+"""Hook providers a session installs on its application container.
+
+Lives at the package root because `redsun.containers` and `redsun.experimental`
+both need it and neither may import the other's private modules.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ConfiguresApplication",
     "ConfiguresMainView",
+    "ConfirmsClose",
     "CreatesApplication",
     "HookError",
     "WrapsBuild",
@@ -76,6 +81,20 @@ class ConfiguresMainView(Protocol[ViewT_contra]):
     @abstractmethod
     def configure_main_view(self, view: ViewT_contra) -> None:
         """Act on *view*, the window the session is about to show."""
+        ...
+
+
+@runtime_checkable
+class ConfirmsClose(Protocol):
+    """Decides whether the session may close, and can refuse.
+
+    The session acts on this point's answer, where it only tells the other
+    points what happened. ``False`` leaves the session running.
+    """
+
+    @abstractmethod
+    def confirm_close(self) -> bool:
+        """Return whether the session may close now."""
         ...
 
 

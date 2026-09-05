@@ -1,3 +1,9 @@
+"""Runtime protocol checking, shared by both container layers.
+
+Lives at the package root because `redsun.containers` and `redsun.experimental`
+both need it and neither may import the other's private modules.
+"""
+
 from __future__ import annotations
 
 import inspect
@@ -10,22 +16,33 @@ from typing_extensions import get_protocol_members
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-__all__ = ["problems"]
+__all__ = ["members", "methods", "problems", "satisfies"]
 
 _PROBE = object()
 
 
 @cache
-def _methods(protocol: type) -> frozenset[str]:
+def members(protocol: type) -> frozenset[str]:
+    """Return the member names *protocol* requires."""
+    return frozenset(get_protocol_members(protocol))
+
+
+@cache
+def methods(protocol: type) -> frozenset[str]:
     """Return the member names of *protocol* that must be callable.
 
     The rest are data members, which only an instance can be asked about.
     """
     return frozenset(
         name
-        for name in get_protocol_members(protocol)
+        for name in members(protocol)
         if _call_signature(protocol, name) is not None
     )
+
+
+def satisfies(candidate: type | object, protocol: type) -> bool:
+    """Whether *candidate* satisfies *protocol*."""
+    return not problems(candidate, protocol)
 
 
 def problems(candidate: type | object, protocol: type) -> list[str]:
@@ -45,7 +62,7 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
     if not isinstance(candidate, type):
         found.extend(
             f"{name!r} is missing"
-            for name in sorted(get_protocol_members(protocol) - _methods(protocol))
+            for name in sorted(members(protocol) - methods(protocol))
             if not hasattr(candidate, name)
         )
     return found
@@ -54,7 +71,7 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
 @cache
 def _signature_problems(cls: type, protocol: type) -> tuple[str, ...]:
     found: list[str] = []
-    for name in sorted(_methods(protocol)):
+    for name in sorted(methods(protocol)):
         wanted = _call_signature(protocol, name)
         if wanted is None:
             continue

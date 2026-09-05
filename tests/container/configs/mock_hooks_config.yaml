@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-hooks-session
+name: mock-hooks-session
 hooks:
   greet:
     provider: "mock_pkg.hooks:GreetingHook"
