@@ -1149,7 +1149,7 @@ class Session(BuildableSession):
         for declaration in self._ordered(declarations):
             absent = chosen_for.get(declaration.name, set()) & set(self._failed)
             if absent:
-                named = _listed_plain(sorted(repr(name) for name in absent))
+                named = _listed(sorted(absent))
                 self._skip(declaration, TypeError(f"{named} was not built"))
                 continue
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
@@ -1214,7 +1214,7 @@ class Session(BuildableSession):
         absent = self._blamed(hint for _, hint in unanswered)
         if not absent:
             raise TypeError(_unanswered_message(declaration.name, unanswered))
-        named = _listed_plain(sorted(repr(name) for name in absent))
+        named = _listed(sorted(absent))
         reason = TypeError(f"{named} was not built")
         self._skip(declaration, reason)
         return True
@@ -1398,7 +1398,7 @@ class Session(BuildableSession):
                 f"'Requires[{protocol.__name__}]', which may include the asker."
             )
         self._answers[question] = chosen
-        store.register_provider(_built(chosen), type_hint=key)
+        store.register_provider(_instance_of(chosen), type_hint=key)
 
     def _verify_components(self) -> None:
         """Check every built component against the protocol of its layer.
@@ -1610,8 +1610,12 @@ def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, obje
 
 def _unanswered_message(name: str, unanswered: list[tuple[str, object]]) -> str:
     """Return the refusal naming what *name* asked for and did not get."""
-    named = _listed_plain(
-        [f"{pname!r} ({getattr(hint, '__name__', hint)})" for pname, hint in unanswered]
+    named = _listed(
+        [
+            f"{pname!r} ({getattr(hint, '__name__', hint)})"
+            for pname, hint in unanswered
+        ],
+        quote=False,
     )
     return (
         f"{name!r} asks for {named}, which nothing in the session provides. "
@@ -1633,12 +1637,6 @@ def _refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> No
         raise TypeError(_unanswered_message(name, unanswered))
 
 
-def _listed_plain(items: list[str]) -> str:
-    if len(items) < 2:
-        return items[0] if items else "nothing"
-    return f"{', '.join(items[:-1])} and {items[-1]}"
-
-
 def _constant(value: Any) -> Callable[[], Any]:
     """Return a callable answering with *value*."""
 
@@ -1648,8 +1646,12 @@ def _constant(value: Any) -> Callable[[], Any]:
     return read
 
 
-def _built(declaration: _declarations.Declaration) -> Callable[[], Any]:
-    """Return a callable answering with what *declaration* was built into."""
+def _instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
+    """Return a callable answering with what *declaration* was built into.
+
+    Read at call time rather than captured, the declaration having no instance
+    yet when the store is filled.
+    """
 
     def read() -> Any:
         return declaration.instance
@@ -1727,11 +1729,15 @@ def _refuse_backwards(
     )
 
 
-def _listed(names: list[str]) -> str:
-    quoted = [repr(name) for name in names]
-    if len(quoted) < 2:
-        return quoted[0] if quoted else "nothing"
-    return f"{', '.join(quoted[:-1])} and {quoted[-1]}"
+def _listed(names: Iterable[str], *, quote: bool = True) -> str:
+    """Return *names* as an English list, empty reading as "nothing".
+
+    Quoted unless the caller has already formatted each item.
+    """
+    items = [repr(name) for name in names] if quote else list(names)
+    if len(items) < 2:
+        return items[0] if items else "nothing"
+    return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 def _near_misses(declarations: list[_declarations.Declaration], protocol: type) -> str:
