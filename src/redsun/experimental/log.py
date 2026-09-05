@@ -1,23 +1,35 @@
 """Logging helpers for the experimental layer.
 
-A copy rather than a re-export, so this package depends on nothing in the
-supported layer. It configures nothing: the ``redsun`` logger it writes to is
-set up once, by `redsun.log`, and a second configuration here would replace
-that one rather than add to it.
+A copy of `redsun.log` rather than a re-export, so this package depends on
+nothing in the supported layer and can replace it when that one is retired.
+The duplication is deliberate and is expected to end there.
+
+What is not copied is the configuration `redsun.log` performs at import,
+setting the level and installing a handler. Both modules write to the same
+``redsun`` logger, so doing it here as well would put a second handler on it
+and print every record twice for as long as both exist. Whichever module
+survives keeps those two lines.
 """
 
 from __future__ import annotations
 
 import logging
 from functools import cached_property
-
-__all__ = ["Loggable"]
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from typing import Any, ClassVar
+
+__all__ = ["Loggable", "add_handler", "remove_handler", "set_level"]
+
+DEFAULT_LEVEL: Final = "INFO"
+"""The level the ``redsun`` logger starts at."""
+
+DATE_FORMAT: Final = "%d-%m-%y|%H:%M:%S"
+"""How a record's timestamp is written."""
+
+logger = logging.getLogger("redsun")
 
 
 class GlobalFormatter(logging.Formatter):
@@ -80,7 +92,36 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
         return msg, kwargs
 
 
-logger = logging.getLogger("redsun")
+def set_level(level: int | str) -> None:
+    """Set the level of the ``redsun`` logger.
+
+    A named level is matched without regard to case.
+
+    Raises
+    ------
+    ValueError
+        If a name names no level.
+    """
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
+
+
+def add_handler(handler: logging.Handler) -> None:
+    """Send the ``redsun`` logger's records to *handler* as well.
+
+    A handler carrying no formatter of its own is given the one every other
+    destination writes through, so a record reads the same wherever it lands.
+    """
+    if handler.formatter is None:
+        handler.setFormatter(GlobalFormatter(datefmt=DATE_FORMAT))
+    logger.addHandler(handler)
+
+
+def remove_handler(handler: logging.Handler) -> None:
+    """Stop sending the ``redsun`` logger's records to *handler*.
+
+    A handler that is not installed is left alone.
+    """
+    logger.removeHandler(handler)
 
 
 class Loggable:
