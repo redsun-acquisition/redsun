@@ -20,7 +20,6 @@ from ophyd_async.core import Device
 
 from redsun.experimental import (
     Alias,
-    AppContainer,
     AsDevice,
     AsPresenter,
     AsView,
@@ -29,9 +28,10 @@ from redsun.experimental import (
     Requires,
     RequiresMaybe,
     RequiresOne,
+    Session,
 )
-from redsun.experimental.containers._declarations import Declaration, Layer
-from redsun.experimental.containers._factories import requirements
+from redsun.experimental.session._declarations import Declaration, Layer
+from redsun.experimental.session._factories import requirements
 from redsun.experimental.virtual._requires import (
     Devices,
     Every,
@@ -90,7 +90,7 @@ class Readout:
         self.name = name
 
 
-class Session:
+class Resetter:
     """Presenter driving every resettable component in the session."""
 
     def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
@@ -351,118 +351,118 @@ class MisshapenDevices:
         self.name = name
 
 
-class App(AppContainer):
-    session: AsPresenter[Session]
+class App(Session):
+    session: AsPresenter[Resetter]
     motor: AsPresenter[Motor]
     detector: AsPresenter[Detector]
     readout: AsPresenter[Readout]
 
 
-class PeerApp(AppContainer):
+class PeerApp(Session):
     left: Annotated[AsView[ImageView], Alias("left")]
     middle: Annotated[AsView[ImageView], Alias("middle")]
     right: Annotated[AsView[ImageView], Alias("right")]
 
 
-class AccidentalApp(AppContainer):
+class AccidentalApp(Session):
     bookkeeper: AsPresenter[Bookkeeper]
     motor: AsPresenter[Motor]
 
 
-class LooseApp(AppContainer):
-    session: AsPresenter[Session]
+class LooseApp(Session):
+    session: AsPresenter[Resetter]
     loose: AsPresenter[Loose]
 
 
-class EagerApp(AppContainer):
+class EagerApp(Session):
     eager: AsPresenter[Eager]
     motor: AsPresenter[Motor]
 
 
-class UnsatisfiableApp(AppContainer):
+class UnsatisfiableApp(Session):
     broken: AsPresenter[Unsatisfiable]
 
 
-class MisshapenApp(AppContainer):
+class MisshapenApp(Session):
     broken: AsPresenter[Misshapen]
 
 
-class OneApp(AppContainer):
+class OneApp(Session):
     roi: AsPresenter[RoiWidget]
     camera: AsPresenter[Camera]
 
 
-class NoneApp(AppContainer):
+class NoneApp(Session):
     roi: AsPresenter[RoiWidget]
 
 
-class TwoApp(AppContainer):
+class TwoApp(Session):
     roi: AsPresenter[RoiWidget]
     camera: Annotated[AsPresenter[Camera], Alias("camera")]
     spare: Annotated[AsPresenter[Camera], Alias("spare")]
 
 
-class SelfApp(AppContainer):
+class SelfApp(Session):
     only: AsPresenter[ImageViewAsking]
 
 
-class MaybeApp(AppContainer):
+class MaybeApp(Session):
     widget: AsPresenter[MaybeWidget]
     camera: AsPresenter[Camera]
 
 
-class MaybeEmptyApp(AppContainer):
+class MaybeEmptyApp(Session):
     widget: AsPresenter[MaybeWidget]
 
 
-class MaybeTwoApp(AppContainer):
+class MaybeTwoApp(Session):
     widget: AsPresenter[MaybeWidget]
     camera: Annotated[AsPresenter[Camera], Alias("camera")]
     spare: Annotated[AsPresenter[Camera], Alias("spare")]
 
 
-class RenamedApp(AppContainer):
+class RenamedApp(Session):
     roi: AsPresenter[RoiWidget]
     camera: AsPresenter[Renamed]
 
 
-class TolerantApp(AppContainer):
+class TolerantApp(Session):
     roi: AsPresenter[RoiWidget]
     camera: AsPresenter[Tolerant]
 
 
-class CountApp(AppContainer):
+class CountApp(Session):
     needs: AsPresenter[NeedsCount]
     counter: AsPresenter[Counter]
 
 
-class ForgetfulApp(AppContainer):
+class ForgetfulApp(Session):
     needs: AsPresenter[NeedsCount]
     counter: AsPresenter[Forgetful]
 
 
-class DataOnlyApp(AppContainer):
+class DataOnlyApp(Session):
     broken: AsPresenter[AsksDataOnly]
 
 
-class DeviceApp(AppContainer):
+class DeviceApp(Session):
     stage: Annotated[AsDevice[Stage], Alias("stage")]
     spare: Annotated[AsDevice[Stage], Alias("spare")]
     shutter: AsDevice[Shutter]
     motors: AsPresenter[MotorPresenter]
 
 
-class NoDeviceApp(AppContainer):
+class NoDeviceApp(Session):
     motors: AsPresenter[MotorPresenter]
 
 
-class BothCensusApp(AppContainer):
+class BothCensusApp(Session):
     stage: AsDevice[Stage]
     both: AsPresenter[AsksBoth]
     motor: AsPresenter[Motor]
 
 
-class MisshapenDevicesApp(AppContainer):
+class MisshapenDevicesApp(Session):
     broken: AsPresenter[MisshapenDevices]
 
 
@@ -499,7 +499,7 @@ class WantsTheCanvas:
         self.canvas = canvas
 
 
-class BackwardsQuestionApp(AppContainer):
+class BackwardsQuestionApp(Session):
     ctrl: AsPresenter[WantsTheCanvas]
     canvas: AsView[Canvas]
 
@@ -530,20 +530,20 @@ class AsksAboutLinkables:
         self.peers = peers
 
 
-class CensusReaderApp(AppContainer):
+class CensusReaderApp(Session):
     camera: AsPresenter[Camera]
     broken: AsPresenter[BrokenCamera]
     reader: AsPresenter[AsksAboutLinkables]
 
 
-class BrokenOneApp(AppContainer):
+class BrokenOneApp(Session):
     """Asks for the one `Linkable`, which cannot be built."""
 
     broken: AsPresenter[BrokenCamera]
     roi: AsPresenter[RoiWidget]
 
 
-class BrokenMaybeApp(AppContainer):
+class BrokenMaybeApp(Session):
     """Asks for a `Linkable` it can do without, which cannot be built."""
 
     broken: AsPresenter[BrokenCamera]
@@ -575,7 +575,7 @@ def test_driving_every_component_through_the_answer(app: App) -> None:
 
 
 def test_peers_see_the_whole_set_including_themselves(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """The answer describes the session, not the component that asked."""
     app = build(PeerApp)
@@ -584,7 +584,7 @@ def test_peers_see_the_whole_set_including_themselves(
 
 
 def test_a_peer_leaves_itself_out_where_it_matters(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Only the component knows whether excluding itself is meaningful."""
     app = build(PeerApp)
@@ -592,7 +592,7 @@ def test_a_peer_leaves_itself_out_where_it_matters(
     assert app.right.link_targets() == ["left", "middle"]
 
 
-def test_peers_act_on_each_other(build: Callable[..., AppContainer]) -> None:
+def test_peers_act_on_each_other(build: Callable[..., Session]) -> None:
     app = build(PeerApp)
     app.left.linked_to = "right"
     app.left.zoom_to(4.0)
@@ -601,7 +601,7 @@ def test_peers_act_on_each_other(build: Callable[..., AppContainer]) -> None:
 
 
 def test_a_component_that_did_not_mean_to_offer_is_still_counted(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Satisfying a protocol by accident puts a component in the answer."""
     app = build(AccidentalApp)
@@ -611,7 +611,7 @@ def test_a_component_that_did_not_mean_to_offer_is_still_counted(
 
 
 def test_a_mismatched_signature_is_not_a_match(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Membership compares signatures, so a call the protocol permits works."""
     app = build(LooseApp)
@@ -619,7 +619,7 @@ def test_a_mismatched_signature_is_not_a_match(
     app.session.reset_all()
 
 
-def test_a_near_miss_explains_itself(build: Callable[..., AppContainer]) -> None:
+def test_a_near_miss_explains_itself(build: Callable[..., Session]) -> None:
     """A component carrying some of the protocol reports why it was left out."""
     app = build(LooseApp)
     rejected = app.virtual_container.satisfying(Resettable).rejected
@@ -628,7 +628,7 @@ def test_a_near_miss_explains_itself(build: Callable[..., AppContainer]) -> None
 
 
 def test_a_component_missing_every_member_is_not_a_near_miss(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Only components that nearly match are worth reporting."""
     app = build(App)
@@ -683,16 +683,14 @@ def test_one_key_per_question() -> None:
 
 
 def test_requirements_are_collected_once_per_question() -> None:
-    from redsun.experimental.containers._declarations import Declaration, Layer
-
     declarations = [
-        Declaration(Session, "a", Layer.PRESENTER, {}),
-        Declaration(Session, "b", Layer.PRESENTER, {}),
+        Declaration(Resetter, "a", Layer.PRESENTER, {}),
+        Declaration(Resetter, "b", Layer.PRESENTER, {}),
     ]
     assert requirements(declarations) == {Question(Resettable, Every()): ["a", "b"]}
 
 
-def test_one_arrives_built(build: Callable[..., AppContainer]) -> None:
+def test_one_arrives_built(build: Callable[..., Session]) -> None:
     """Unlike a census, a single answer is an ordinary dependency."""
     app = build(OneApp)
     assert app.roi.camera is app.camera
@@ -716,12 +714,12 @@ def test_one_refuses_to_answer_with_the_asker() -> None:
         SelfApp().build()
 
 
-def test_maybe_is_answered_when_present(build: Callable[..., AppContainer]) -> None:
+def test_maybe_is_answered_when_present(build: Callable[..., Session]) -> None:
     app = build(MaybeApp)
     assert app.widget.camera is app.camera
 
 
-def test_maybe_is_none_when_absent(build: Callable[..., AppContainer]) -> None:
+def test_maybe_is_none_when_absent(build: Callable[..., Session]) -> None:
     app = build(MaybeEmptyApp)
     assert app.widget.camera is None
 
@@ -744,7 +742,7 @@ def test_a_near_miss_is_named_when_nothing_answers() -> None:
 
 
 def test_an_extra_defaulted_parameter_still_answers(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Widening an implementation does not break the protocol's calls."""
     app = build(TolerantApp)
@@ -754,7 +752,7 @@ def test_an_extra_defaulted_parameter_still_answers(
 
 
 def test_a_data_member_assigned_in_init_still_answers(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """The choice ignores what only an instance can show, then confirms it."""
     app = build(CountApp)
@@ -772,21 +770,21 @@ def test_a_protocol_with_no_method_cannot_be_asked_for_one() -> None:
 
 
 def test_the_device_census_holds_every_matching_device(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     app = build(DeviceApp)
     assert dict(app.motors.motors) == {"stage": app.stage, "spare": app.spare}
 
 
 def test_a_device_that_does_not_match_is_absent(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     app = build(DeviceApp)
     assert "shutter" not in app.motors.motors
 
 
 def test_the_device_census_is_readable_while_the_component_is_built(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Every device exists before any component, so the answer is not a live view."""
     app = build(DeviceApp)
@@ -794,14 +792,14 @@ def test_the_device_census_is_readable_while_the_component_is_built(
 
 
 def test_the_device_census_is_empty_without_devices(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     app = build(NoDeviceApp)
     assert dict(app.motors.motors) == {}
 
 
 def test_the_two_censuses_answer_over_different_populations(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """A device is never in the component census, and a component never in this one."""
     app = build(BothCensusApp)
@@ -834,7 +832,7 @@ def test_a_question_answered_by_a_later_layer_is_refused() -> None:
 def test_a_keyword_only_component_asks_the_same_question() -> None:
     """The marker is read off the signature, which is where pydantic keeps it."""
     declarations = [
-        Declaration(Session, "plain", Layer.PRESENTER, {}),
+        Declaration(Resetter, "plain", Layer.PRESENTER, {}),
         Declaration(PydanticSession, "pyd", Layer.PRESENTER, {}),
     ]
     assert requirements(declarations) == {
@@ -843,7 +841,7 @@ def test_a_keyword_only_component_asks_the_same_question() -> None:
 
 
 def test_the_census_leaves_out_a_component_that_failed(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """A component asks what the session holds, not what it declared."""
     app = build(CensusReaderApp)
@@ -865,7 +863,7 @@ def test_the_one_answer_failing_skips_whoever_asked(
 
 
 def test_an_optional_answer_failing_leaves_the_asker_without_one(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """At most one was asked for, and the session ended up holding none."""
     app = build(BrokenMaybeApp)

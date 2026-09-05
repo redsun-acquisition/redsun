@@ -12,11 +12,11 @@ from mock_bundle.presenters import MockMotorPresenter, MockRegistrar
 from mock_bundle.views import MockMotorView
 
 from redsun.experimental import (
-    AppContainer,
     AsPresenter,
     AsView,
     Declare,
     PluginError,
+    Session,
 )
 
 if TYPE_CHECKING:
@@ -26,13 +26,13 @@ if TYPE_CHECKING:
 SESSION = "mock_session.yaml"
 
 
-class ConfiguredApp(AppContainer):
+class ConfiguredApp(Session):
     """Every component comes from the file; the class declares none."""
 
     __slots__ = ()
 
 
-class HeadlessApp(AppContainer):
+class HeadlessApp(Session):
     """A class of its own, named against a configuration that fills it out."""
 
     __slots__ = ()
@@ -40,7 +40,7 @@ class HeadlessApp(AppContainer):
     motor_widget: Annotated[AsView[MockMotorView], Declare(title="from-class")]
 
 
-class PartlyDeclaredApp(AppContainer):
+class PartlyDeclaredApp(Session):
     """One component is annotated, so `wire` can reach it with a type."""
 
     __slots__ = ()
@@ -105,7 +105,7 @@ def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
 
 
 def test_annotation_and_config_describe_one_component(
-    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
+    mock_plugin: None, config_path: Path, build: Callable[..., Session]
 ) -> None:
     app = build(PartlyDeclaredApp, str(config_path / SESSION))
 
@@ -115,9 +115,9 @@ def test_annotation_and_config_describe_one_component(
 
 
 def test_configured_component_reads_the_live_registry(
-    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
+    mock_plugin: None, config_path: Path, build: Callable[..., Session]
 ) -> None:
-    class WithRegistrar(AppContainer):
+    class WithRegistrar(Session):
         __slots__ = ()
         registrar: AsPresenter[MockRegistrar]
 
@@ -139,7 +139,7 @@ def test_unresolvable_entries_are_reported(
     path = tmp_path / "broken.yaml"
     path.write_text(yaml.safe_dump({"presenters": {"ctrl": entry}}))
 
-    class BrokenApp(AppContainer):
+    class BrokenApp(Session):
         __slots__ = ()
         config: ClassVar[str] = str(path)
 
@@ -148,12 +148,12 @@ def test_unresolvable_entries_are_reported(
 
 
 def test_entry_without_plugin_metadata_is_not_a_component(
-    mock_plugin: None, tmp_path: Path, build: Callable[..., AppContainer]
+    mock_plugin: None, tmp_path: Path, build: Callable[..., Session]
 ) -> None:
     path = tmp_path / "plain.yaml"
     path.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 2.0}}}))
 
-    class PlainApp(AppContainer):
+    class PlainApp(Session):
         __slots__ = ()
         config: ClassVar[str] = str(path)
 
@@ -161,9 +161,9 @@ def test_entry_without_plugin_metadata_is_not_a_component(
 
 
 def test_a_session_needs_no_container_class(
-    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
+    mock_plugin: None, config_path: Path, build: Callable[..., Session]
 ) -> None:
-    unbuilt = AppContainer.from_config(str(config_path / "mock_headless.yaml"))
+    unbuilt = Session.from_config(str(config_path / "mock_headless.yaml"))
     assert not unbuilt.is_built
 
     app = build(unbuilt)
@@ -173,10 +173,10 @@ def test_a_session_needs_no_container_class(
 
 
 def test_from_config_takes_the_configuration_itself(
-    mock_plugin: None, build: Callable[..., AppContainer]
+    mock_plugin: None, build: Callable[..., Session]
 ) -> None:
     app = build(
-        AppContainer.from_config(
+        Session.from_config(
             {
                 "presenters": {
                     "motor_ctrl": {
@@ -199,7 +199,7 @@ def test_from_config_takes_the_configuration_itself(
 
 
 def test_the_class_keeps_what_it_declares(
-    mock_plugin: None, config_path: Path, build: Callable[..., AppContainer]
+    mock_plugin: None, config_path: Path, build: Callable[..., Session]
 ) -> None:
     app = build(HeadlessApp.from_config(str(config_path / "mock_headless.yaml")))
 
@@ -210,8 +210,8 @@ def test_the_class_keeps_what_it_declares(
 def test_the_configuration_is_the_instance_alone(
     mock_plugin: None, config_path: Path
 ) -> None:
-    app = AppContainer.from_config(str(config_path / "mock_headless.yaml"))
-    assert AppContainer.config is None
+    app = Session.from_config(str(config_path / "mock_headless.yaml"))
+    assert Session.config is None
     assert set(app.build().declarations)
     app.shutdown()
 
@@ -221,7 +221,7 @@ def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
     path.write_text(yaml.safe_dump({"frontend": "curses"}))
 
     with pytest.raises(ValueError, match="no container is built against"):
-        AppContainer.from_config(str(path))
+        Session.from_config(str(path))
 
 
 def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> None:

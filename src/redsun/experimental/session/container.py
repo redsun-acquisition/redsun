@@ -19,14 +19,14 @@ from redsun._config import Source, as_sources, load
 from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental._settings import Settings
-from redsun.experimental.containers import (
+from redsun.experimental.session import (
     _declarations,
     _factories,
     _plugins,
 )
-from redsun.experimental.containers._declarations import Layer
-from redsun.experimental.containers._frontend import Frontend
-from redsun.experimental.containers._protocols import (
+from redsun.experimental.session._declarations import Layer
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._protocols import (
     AttachableComponent,
     BuildableSession,
     NamedComponent,
@@ -47,11 +47,11 @@ if TYPE_CHECKING:
 
     from psygnal import SignalInstance
 
-    from redsun.experimental.containers._declarations import Key
+    from redsun.experimental.session._declarations import Key
     from redsun.experimental.virtual._requires import Question
     from redsun.experimental.virtual._wiring import Connection, SlotThread
 
-__all__ = ["AppContainer", "ConfigurationInUse"]
+__all__ = ["ConfigurationInUse", "Session"]
 
 
 class ConfigurationInUse(OSError):
@@ -111,7 +111,7 @@ progress display that counts them needs the total in advance to show how far
 along it is. It is private while this layer is: a hook reaching it is reaching
 into the module, and publishing it is part of the layer graduating.
 
-`AppContainer.build` runs two steps before the first of these, reading the
+`Session.build` runs two steps before the first of these, reading the
 configuration and starting the toolkit's runtime, and reports neither. A hook
 covering the build is a toolkit object itself, a splash screen being the case
 it was written for, so nothing can be watching until the runtime that shows it
@@ -119,17 +119,17 @@ exists.
 """
 
 _FRONTENDS: Final[dict[str, str]] = {
-    "pyqt": "redsun.experimental.containers.qt:QtAppContainer",
-    "pyside": "redsun.experimental.containers.qt:QtAppContainer",
+    "pyqt": "redsun.experimental.session.qt:QtSession",
+    "pyside": "redsun.experimental.session.qt:QtSession",
 }
 """The container a session builds on, by the name its configuration gives."""
 
 
-class AppContainer(BuildableSession):
+class Session(BuildableSession):
     """Application container whose components are declared as annotations.
 
     ```python
-    class MyApp(QtAppContainer):
+    class MyApp(QtSession):
         __slots__ = ()
 
         config = "session.yaml"
@@ -193,13 +193,13 @@ class AppContainer(BuildableSession):
     """The points this container calls a hook at, by the protocol each demands.
 
     Empty here: every hook point belongs to a toolkit, so a toolkit container
-    such as `redsun.experimental.containers.qt.QtAppContainer` names its own.
+    such as `redsun.experimental.session.qt.QtSession` names its own.
     """
 
     frontend: ClassVar[type[Frontend]] = Frontend
     """The toolkit this container is built against.
 
-    Set by subclassing, as `redsun.experimental.containers.qt.QtAppContainer` does. The
+    Set by subclassing, as `redsun.experimental.session.qt.QtSession` does. The
     default attaches nothing and constrains no view.
     """
 
@@ -1406,7 +1406,7 @@ def _near_misses(declarations: list[_declarations.Declaration], protocol: type) 
     return "".join(lines)
 
 
-def _base_for(cls: type[AppContainer], frontend: object) -> type[AppContainer]:
+def _base_for(cls: type[Session], frontend: object) -> type[Session]:
     """Return the container a session naming *frontend* is built on.
 
     A container already built against that toolkit is kept, so a subclass
@@ -1421,10 +1421,10 @@ def _base_for(cls: type[AppContainer], frontend: object) -> type[AppContainer]:
             f"is built against. Known: {', '.join(sorted(_FRONTENDS))}."
         )
     module_name, _, class_name = dotted.partition(":")
-    resolved: type[AppContainer] = getattr(import_module(module_name), class_name)
+    resolved: type[Session] = getattr(import_module(module_name), class_name)
     if issubclass(cls, resolved):
         return cls
-    if cls is not AppContainer:
+    if cls is not Session:
         raise TypeError(
             f"the configuration names frontend {frontend!r}, which builds on "
             f"{resolved.__name__}, but from_config was called on "

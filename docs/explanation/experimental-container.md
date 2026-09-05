@@ -27,7 +27,7 @@ The rest of this page is the reasoning. This section is the inventory.
 
 | | |
 | --- | --- |
-| Assembling | `AppContainer`, `Frontend` |
+| Assembling | `Session`, `Frontend` |
 | Declaring | `AsDevice`, `AsPresenter`, `AsView`, `Declare`, `FromConfig`, `Alias` |
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
 | Component shape | `NamedComponent`, `AttachableComponent` |
@@ -35,7 +35,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `DeviceMapping`, `BlueskyCallbackRegistry`, `slot` |
 
-The Qt frontend is `redsun.experimental.containers.qt`: `QtAppContainer` to subclass,
+The Qt frontend is `redsun.experimental.session.qt`: `QtSession` to subclass,
 `Qt` as the frontend itself, the placements it attaches (`Central`, `Dock`,
 `MenuItem`, `ToolBarItem`), and `attach` to fill a window. It lives apart from
 the rest so that nothing pulls in a toolkit unless it is used.
@@ -147,7 +147,7 @@ never write code to reconcile the two.
 === "Today"
 
     ```python
-    class MyApp(QtAppContainer):
+    class MyApp(QtSession):
         motor = declare_device(MyStage, axis=["X", "Y"])
         motor_ctrl = declare_presenter(MotorPresenter)
         motor_widget = declare_view(MotorView, step_size=5.0)
@@ -156,7 +156,7 @@ never write code to reconcile the two.
 === "Experimental"
 
     ```python
-    class MyApp(QtAppContainer):
+    class MyApp(QtSession):
         __slots__ = ()
 
         config = "session.yaml"
@@ -185,7 +185,7 @@ container that an annotation is a component at all, so a container class can hol
 ordinary attributes next to its components:
 
 ```python
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     threshold: float  # just an attribute
     motor_ctrl: AsPresenter[MotorPresenter]  # a component
 ```
@@ -210,29 +210,29 @@ the same way.
 ### The toolkit is a base class
 
 A container says which toolkit it is built against by subclassing, the way
-`QtAppContainer` does today:
+`QtSession` does today:
 
 ```python
-from redsun.experimental.containers.qt import QtAppContainer
+from redsun.experimental.session.qt import QtSession
 
 
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     image: AsView[ImageView]
 ```
 
-`AppContainer.frontend` is a plain class attribute, so the frontend a container
-uses is inherited like anything else, and importing `QtAppContainer` is what
-requires the Qt bindings. `AppContainer` on its own names no toolkit: it builds
+`Session.frontend` is a plain class attribute, so the frontend a container
+uses is inherited like anything else, and importing `QtSession` is what
+requires the Qt bindings. `Session` on its own names no toolkit: it builds
 and it accepts any placement, which is what a headless test wants.
 
 The split follows: the base container builds the components, and the toolkit
 one arranges them. `BuildableSession` names each step of a build as an abstract
 method, `build` calls them in order and does nothing else, and two of them
-belong to the toolkit. `QtAppContainer` fills `start_runtime` with a `QApplication` and
+belong to the toolkit. `QtSession` fills `start_runtime` with a `QApplication` and
 the async backend, because a widget cannot be built before either exists, and
 with the `Application` the components are built out of; it fills `present` with
 a `QModelMainWindow` and the attachment of the views to it. Nothing else about
-the sequence is Qt's, and `QtAppContainer` does not define `build` at all. It
+the sequence is Qt's, and `QtSession` does not define `build` at all. It
 inherits `DesktopSession[QMainWindow]`, which adds the window and the `run`
 that shows it and hands over to the event loop. Neither class defines a
 teardown of its own: a step registers how to give back what it takes at the
@@ -243,7 +243,7 @@ a session answers an unknown attribute with the component of that name, so
 nothing structural can tell a missing step from a component.
 
 ```python
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     image: AsView[ImageView]
 
 
@@ -260,13 +260,13 @@ every one of its components in the file has nothing left to hang, so
 `from_config` builds the container for it:
 
 ```python
-from redsun.experimental import AppContainer
+from redsun.experimental import Session
 
-app = AppContainer.from_config("session.yaml").build()
+app = Session.from_config("session.yaml").build()
 ```
 
 The components come from the file's sections and the `frontend:` key picks the
-container to build on, so this session comes up on `QtAppContainer` without ever
+container to build on, so this session comes up on `QtSession` without ever
 importing it:
 
 ```yaml
@@ -280,7 +280,7 @@ devices:
 ```
 
 A file naming no frontend builds on the container it was called on, which for a
-plain `AppContainer` is the headless one.
+plain `Session` is the headless one.
 
 What comes back is unbuilt, so whatever the file cannot say is still said in
 Python before `build` runs. Calling it on a class of your own is the other half
@@ -288,7 +288,7 @@ of that: the class keeps its annotations, its `wire`, and its toolkit, and the
 file fills in the rest.
 
 ```python
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     motor_ctrl: AsPresenter[MotorPresenter]
     motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
 
@@ -358,7 +358,7 @@ the main window, and it says where by declaring a placement:
 
 ```python
 from redsun.experimental import Placement
-from redsun.experimental.containers.qt import Central, Dock, MenuItem
+from redsun.experimental.session.qt import Central, Dock, MenuItem
 
 
 class MotorView(QWidget):
@@ -375,7 +375,7 @@ class SaveAction(QAction):
 
 The core defines `Placement` and nothing else. A dock, a menu bar and a toolbar
 are window concepts, so they belong to the frontend that has a window:
-`redsun.experimental.containers.qt` defines them next to the code that attaches them, and
+`redsun.experimental.session.qt` defines them next to the code that attaches them, and
 pairs each in `Frontend.requires` with the toolkit type it demands, a
 `QWidget` for a dock or the centre and a `QAction` for a menu or toolbar entry.
 
@@ -434,7 +434,7 @@ Attaching is a separate step, so a container never touches a window:
 
 ```python
 from qtpy.QtWidgets import QMainWindow
-from redsun.experimental.containers.qt import attach
+from redsun.experimental.session.qt import attach
 
 app = MyApp().build()
 window = QMainWindow()
@@ -478,7 +478,7 @@ The file appears the first time something is set, so a session that only reads
 defaults writes nothing. Delete it to put the session back to how it comes out
 of the box; nothing else depends on it, and the next run writes a new one.
 
-`AppContainer.settings` opens it and registers it, so an action asks for it by
+`Session.settings` opens it and registers it, so an action asks for it by
 type:
 
 ```python
@@ -490,8 +490,8 @@ What a Qt session keeps there today:
 
 | Key | Written by |
 | --- | --- |
-| `window.geometry` | `QtAppContainer.save_layout`, from `QMainWindow.saveGeometry` |
-| `window.state` | `QtAppContainer.save_layout`, from `QMainWindow.saveState` |
+| `window.geometry` | `QtSession.save_layout`, from `QMainWindow.saveGeometry` |
+| `window.state` | `QtSession.save_layout`, from `QMainWindow.saveState` |
 
 Both are base64 text, since the file holds JSON rather than bytes. `run` asks
 for the save as the session ends, so a session built without being shown never
@@ -614,7 +614,7 @@ gets its own identity, so `stage_x` and `stage_y` never get confused even though
 both are `MyStage`.
 
 ```python
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     stage_x: Annotated[AsDevice[MyStage], Alias("stage_x")]
     stage_y: Annotated[AsDevice[MyStage], Alias("stage_y")]
 ```
@@ -754,7 +754,7 @@ class ImageView:
 ```
 
 ```python
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     left: Annotated[AsView[ImageView], Alias("left")]
     middle: Annotated[AsView[ImageView], Alias("middle")]
     right: Annotated[AsView[ImageView], Alias("right")]
@@ -995,7 +995,7 @@ connect them in `wire` and skip the question entirely.
 | Where a view goes | `view_position`, a Qt dock area | `placement`, an intent the frontend attaches |
 | What a view must be | a `QWidget`, in practice | whatever its placement demands |
 | Cleanup | `HasShutdown` sweep, plus disconnect | one teardown path |
-| A session built from a file | `AppContainer.from_config(path)` | the same, and it keeps the class's own declarations |
+| A session built from a file | `Session.from_config(path)` | the same, and it keeps the class's own declarations |
 | Protocols to implement | `IsProvider`, `IsInjectable`, `HasShutdown` | none; `NamedComponent` and `AttachableComponent` are satisfied structurally |
 
 ## What gets easier
@@ -1014,7 +1014,7 @@ was fixed by hand.
 
 ```text
 Cannot find factory for (Calibration, component=''). It is missing or has invalid scope.
-   ▼   redsun.experimental.containers._declarations.motor_ctrl   build_motor_ctrl
+   ▼   redsun.experimental.session._declarations.motor_ctrl   build_motor_ctrl
    ╰─> Calibration                                    ???
 ```
 

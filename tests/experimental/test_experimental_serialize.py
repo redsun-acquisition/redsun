@@ -11,10 +11,10 @@ import yaml
 from ophyd_async.core import Device
 
 from redsun.experimental import (
-    AppContainer,
     AsDevice,
     AsPresenter,
     ConfigurationInUse,
+    Session,
 )
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ class Anything:
         return {"whatever": 1}
 
 
-class App(AppContainer):
+class App(Session):
     __slots__ = ()
 
     config: ClassVar[dict[str, Any]] = {
@@ -98,7 +98,7 @@ class App(AppContainer):
 
 
 def test_a_changed_session_rebuilds_from_what_it_wrote(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -114,7 +114,7 @@ def test_a_changed_session_rebuilds_from_what_it_wrote(
 
 
 def test_serialize_writes_a_parameter_no_source_named(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     entry = build(App).serialize()["presenters"]["ctrl"]
 
@@ -122,7 +122,7 @@ def test_serialize_writes_a_parameter_no_source_named(
 
 
 def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -131,7 +131,7 @@ def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
 
 
 def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
-    build: Callable[..., AppContainer], caplog: pytest.LogCaptureFixture
+    build: Callable[..., Session], caplog: pytest.LogCaptureFixture
 ) -> None:
     session = build(App)
 
@@ -145,7 +145,7 @@ def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
 
 
 def test_a_constructor_taking_kwargs_accepts_every_key(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     entry = build(App).serialize()["presenters"]["anything"]
 
@@ -153,13 +153,13 @@ def test_a_constructor_taking_kwargs_accepts_every_key(
 
 
 def test_a_session_nobody_has_touched_has_no_changes(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     assert not build(App).has_changes()
 
 
 def test_a_component_asking_to_be_written_differently_is_a_change(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -168,7 +168,7 @@ def test_a_component_asking_to_be_written_differently_is_a_change(
 
 
 def test_a_value_changed_and_changed_back_reads_as_unchanged(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -178,7 +178,7 @@ def test_a_value_changed_and_changed_back_reads_as_unchanged(
 
 
 def test_a_component_that_serializes_nothing_never_changes(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -187,7 +187,7 @@ def test_a_component_that_serializes_nothing_never_changes(
 
 
 def test_a_refused_key_still_counts_as_a_change(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     session = build(App)
     session.renamed.step = 9.0
@@ -196,7 +196,7 @@ def test_a_refused_key_still_counts_as_a_change(
 
 
 def test_a_written_session_comes_back_from_the_file(
-    tmp_path: Path, build: Callable[..., AppContainer]
+    tmp_path: Path, build: Callable[..., Session]
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -210,7 +210,7 @@ def test_a_written_session_comes_back_from_the_file(
 
 
 def test_the_written_file_is_one_flat_session(
-    tmp_path: Path, build: Callable[..., AppContainer]
+    tmp_path: Path, build: Callable[..., Session]
 ) -> None:
     """A session layered from several sources writes what the merge produced."""
     base = tmp_path / "instrument.yaml"
@@ -223,7 +223,7 @@ def test_the_written_file_is_one_flat_session(
 
 
 def test_writing_over_a_source_is_refused(
-    tmp_path: Path, build: Callable[..., AppContainer]
+    tmp_path: Path, build: Callable[..., Session]
 ) -> None:
     """Overwriting one replaces what every session sharing it reads."""
     source = tmp_path / "shared.yaml"

@@ -8,11 +8,11 @@ import pytest
 from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QApplication, QToolBar
 
-from redsun.experimental import AppContainer
-from redsun.experimental.containers.qt import (
+from redsun.experimental import Session
+from redsun.experimental.session.qt import (
     ColorSchemeButton,
     ColorSchemeMode,
-    QtAppContainer,
+    QtSession,
 )
 
 if TYPE_CHECKING:
@@ -21,11 +21,11 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.qt
 
 
-class PlainApp(QtAppContainer):
+class PlainApp(QtSession):
     __slots__ = ()
 
 
-class DarkApp(QtAppContainer):
+class DarkApp(QtSession):
     __slots__ = ()
 
     config: ClassVar[dict[str, Any]] = {"color_scheme": "dark"}
@@ -40,7 +40,7 @@ def restore_scheme() -> Any:
         hints.unsetColorScheme()
 
 
-def _control(app: QtAppContainer) -> ColorSchemeButton:
+def _control(app: QtSession) -> ColorSchemeButton:
     """Return the control the session put on its window."""
     found = app.main_window.findChildren(ColorSchemeButton)
     assert len(found) == 1
@@ -49,7 +49,7 @@ def _control(app: QtAppContainer) -> ColorSchemeButton:
 
 def test_every_session_pins_the_control_to_a_toolbar(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     """It is part of the session, so a session declaring nothing still has it."""
     app = build(PlainApp)
@@ -61,7 +61,7 @@ def test_every_session_pins_the_control_to_a_toolbar(
 
 def test_the_configuration_says_which_mode_to_start_in(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     """The scheme Qt reports is not asserted.
 
@@ -73,7 +73,7 @@ def test_the_configuration_says_which_mode_to_start_in(
 
 def test_clicking_cycles_system_light_dark_and_round(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     """One button reaches all three, which the glyph has to keep up with."""
     control = _control(build(PlainApp))
@@ -94,7 +94,7 @@ def test_clicking_cycles_system_light_dark_and_round(
 
 def test_the_control_is_pushed_to_the_right_edge(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     """An expanding spacer before it is what pins it, so the toolbar holds two."""
     control = _control(build(PlainApp))
@@ -112,11 +112,11 @@ def test_the_control_is_pushed_to_the_right_edge(
 
 def test_a_session_from_a_file_carries_it_too(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     """The mode is an ordinary configuration key, so a file may set it."""
-    unbuilt = AppContainer.from_config({"frontend": "pyqt", "color_scheme": "light"})
-    assert isinstance(unbuilt, QtAppContainer)
+    unbuilt = Session.from_config({"frontend": "pyqt", "color_scheme": "light"})
+    assert isinstance(unbuilt, QtSession)
 
     assert _control(build(unbuilt)).mode is ColorSchemeMode.LIGHT
 
@@ -124,7 +124,7 @@ def test_a_session_from_a_file_carries_it_too(
 def test_a_mode_the_control_does_not_offer_is_refused() -> None:
     """The mode comes from a configuration file, so it is checked."""
 
-    class Sepia(QtAppContainer):
+    class Sepia(QtSession):
         __slots__ = ()
 
         config: ClassVar[dict[str, Any]] = {"color_scheme": "sepia"}

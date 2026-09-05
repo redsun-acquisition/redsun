@@ -12,8 +12,8 @@ from ._container import (
     Dock,
     MenuItem,
     Qt,
-    QtAppContainer,
     QtHook,
+    QtSession,
     ToolBarItem,
     attach,
 )
@@ -29,8 +29,8 @@ __all__ = [
     "Dock",
     "MenuItem",
     "Qt",
-    "QtAppContainer",
     "QtHook",
+    "QtSession",
     "ToolBarItem",
     "attach",
 ]

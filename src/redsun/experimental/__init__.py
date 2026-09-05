@@ -12,10 +12,10 @@ by type:
 from typing import Annotated
 
 from redsun.experimental import AsDevice, AsPresenter, AsView, Declare
-from redsun.experimental.containers.qt import QtAppContainer
+from redsun.experimental.session.qt import QtSession
 
 
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     config = "session.yaml"
 
     stage: AsDevice[MyStage]
@@ -29,29 +29,29 @@ Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 from redsun._hooks import ConfirmsClose, HookError
 from redsun._structural import satisfies
 from redsun.experimental._settings import Settings
-from redsun.experimental.containers._declarations import (
+from redsun.experimental.session._declarations import (
     Alias,
     Declare,
     FromConfig,
     Layer,
     Serves,
 )
-from redsun.experimental.containers._frontend import Frontend
-from redsun.experimental.containers._plugins import PluginError
-from redsun.experimental.containers._protocols import (
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._plugins import PluginError
+from redsun.experimental.session._protocols import (
     AttachableComponent,
     BuildableSession,
     DesktopSession,
     NamedComponent,
     Serializable,
 )
-from redsun.experimental.containers.components import (
+from redsun.experimental.session.components import (
     AsDevice,
     AsHook,
     AsPresenter,
     AsView,
 )
-from redsun.experimental.containers.container import AppContainer, ConfigurationInUse
+from redsun.experimental.session.container import ConfigurationInUse, Session
 from redsun.experimental.view._placement import Placement
 from redsun.experimental.virtual._container import (
     BlueskyCallbackRegistry,
@@ -77,7 +77,6 @@ from redsun.experimental.virtual._wiring import (
 
 __all__ = [
     "Alias",
-    "AppContainer",
     "AsDevice",
     "AsHook",
     "AsPresenter",
@@ -106,6 +105,7 @@ __all__ = [
     "Satisfying",
     "Serializable",
     "Serves",
+    "Session",
     "SessionConfig",
     "SessionNotBuilt",
     "Settings",

@@ -23,7 +23,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   constructor parameters resolved by type:
 
   ```python
-  class MyApp(QtAppContainer):
+  class MyApp(QtSession):
       config = "session.yaml"
 
       stage: AsDevice[MyStage]
@@ -41,7 +41,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   keyword-only can be a presenter; a name that could only arrive inside `*args`
   or `**kwargs` is refused. A component appearing only in the session file takes
   its layer from the section it sits under, and is checked the same way. The
-  three are also reachable as `redsun.experimental.containers.components`.
+  three are also reachable as `redsun.experimental.session.components`.
 
 - `Declare`, `FromConfig` and `Alias` - inline keyword arguments, the
   configuration key an entry is read from, and the name a component is declared
@@ -56,7 +56,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   pair have no equivalent, and `VirtualContainer` is not among the types a
   component may ask for.
 
-- `AppContainer.providers` - a list of ordinary classes, one of which a
+- `Session.providers` - a list of ordinary classes, one of which a
   `providers:` manifest entry resolves to. A provider's constructor is filled
   from the session, and every method it marks with `provides` registers a value
   under that method's return type:
@@ -84,7 +84,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   views sharing a value needs no publish-then-resolve pass: one shares it with
   `provides`, the other asks for it in `__init__`. `Requires[P]` is exempt.
 
-- `AppContainer.build` logs a component that fails to build and carries on, in
+- `Session.build` logs a component that fails to build and carries on, in
   every layer. The component is absent from `presenters` or `views`, and so is
   one built from it. The closing line counts what was built against what was
   declared and is logged at `WARNING` when anything failed:
@@ -142,10 +142,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `Placement`, `Frontend` and `Frontend.requires` - what a view asks the
   frontend to attach it at, the toolkit a container is built against, and the
   table pairing each placement with the type it demands. A container names its
-  toolkit by subclassing, `AppContainer.frontend` being a class attribute;
-  `AppContainer` itself names none and accepts any placement.
+  toolkit by subclassing, `Session.frontend` being a class attribute;
+  `Session` itself names none and accepts any placement.
   The core defines `Placement` and no concrete one:
-  `redsun.experimental.containers.qt` owns `Dock`, `Central`, `MenuItem` and
+  `redsun.experimental.session.qt` owns `Dock`, `Central`, `MenuItem` and
   `ToolBarItem` alongside the `Qt` frontend that demands a `QWidget` for a dock
   or the centre and a `QAction` for a menu or toolbar entry, and the `attach`
   that fills a `QMainWindow` from a container's `views`:
@@ -165,7 +165,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   components are held to, without a base class to inherit. `NamedComponent` is
   `name` alone, and a component that drops the name it was constructed with is
   refused. `AttachableComponent` adds `placement`, and is what
-  `AppContainer.views` is typed by.
+  `Session.views` is typed by.
 
 - `Serializable` - a component supplying the configuration entry that would
   rebuild it:
@@ -180,7 +180,7 @@ Dates are specified in the format `DD-MM-YYYY`.
           return {"step": self.step}
   ```
 
-  `AppContainer.serialize` returns the merged configuration, holding what each
+  `Session.serialize` returns the merged configuration, holding what each
   built component asked for under that component's own name and nowhere else. A
   component that implements none of it keeps the entry the session was built
   from, and so does one that asks for a key its constructor does not accept; the
@@ -190,7 +190,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   constructor taking `**kwargs` accepts every key. One refused key discards the
   whole entry rather than only itself.
 
-  `AppContainer.write` writes that configuration to a path as YAML and returns
+  `Session.write` writes that configuration to a path as YAML and returns
   it, one flat file whatever the session was built from, so it opens on its own
   with nothing to assemble first. Keys come out in the order the merged
   configuration holds them, and comments do not survive. A path the session was
@@ -199,12 +199,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   Every Qt session registers a `Save configuration as...` action under the
   command id `<name>.save_configuration`, joining the menu
-  `redsun.experimental.containers.qt.SAVE_MENU`, which a window offers by
+  `redsun.experimental.session.qt.SAVE_MENU`, which a window offers by
   passing that id to `setModelMenuBar`. It asks for a path, says in the dialog
   that comments are not kept, writes nothing when the dialog is cancelled, and
   reports a refused path in a warning box rather than failing silently.
 
-  `AppContainer.has_changes` reports whether any component now asks to be
+  `Session.has_changes` reports whether any component now asks to be
   written differently than it did at the end of the build. The comparison is
   against what each component serialized once the build finished, not against
   the configuration it was built from. A value changed and changed back reads
@@ -219,7 +219,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   session.settings.get("ask_on_close", True)
   ```
 
-  `AppContainer.settings` opens it in the `registry` step and registers it, so
+  `Session.settings` opens it in the `registry` step and registers it, so
   an action asks for it by type. A value is written as it is set. A file that is
   missing, unreadable, or not an object leaves the session on the defaults its
   callers ask for, and says so at `WARNING`.
@@ -228,12 +228,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   public abstract method per step, inherited rather than satisfied:
 
   ```python
-  class MyFrontend(AppContainer):
+  class MyFrontend(Session):
       def start_runtime(self) -> None: ...
       def present(self) -> None: ...
   ```
 
-  `AppContainer.build` calls the steps in order and does nothing else.
+  `Session.build` calls the steps in order and does nothing else.
   `start_runtime` puts in place what a component cannot be constructed without,
   and `present` assembles what was built into whatever shows it; a container
   bound to no toolkit answers both with nothing. The other steps are
@@ -243,11 +243,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   raises `TypeError` when it is constructed, and a type checker refuses it.
 
 - `DesktopSession` - `BuildableSession` plus `main_window` and `run`, generic
-  over the window's type, so `QtAppContainer` inherits
+  over the window's type, so `QtSession` inherits
   `DesktopSession[QMainWindow]`. `main_window` is a property, and an implementer
   answers it with a property of its own.
 
-- `AppContainer.on_release` and `AppContainer.shutdown` - a step registers how
+- `Session.on_release` and `Session.shutdown` - a step registers how
   to give something back as it takes it, and `shutdown` runs those in reverse:
   connections first, then each component's own `shutdown` in reverse
   construction order, then the devices. A component takes part by declaring
@@ -256,20 +256,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   be called twice, or on a session that was never built, and runs nothing the
   second time.
 
-- `AppContainer.from_config` - a container for a session described by a file or
+- `Session.from_config` - a container for a session described by a file or
   a mapping, for a session with no class of its own. The `frontend:` key picks
   the container to build on, so a session naming `pyqt` comes up on
-  `QtAppContainer` without importing it, and one naming a frontend the class it
+  `QtSession` without importing it, and one naming a frontend the class it
   was called on is not built against is refused. Calling it on a class keeps
   that class's declarations, its `wire` and its toolkit, and what comes back is
-  unbuilt. `AppContainer()` also takes the session directly, overriding the
+  unbuilt. `Session()` also takes the session directly, overriding the
   `config` class attribute for that instance alone.
 
-- `AppContainer.config` accepts several sources, each a path to a YAML file or a
+- `Session.config` accepts several sources, each a path to a YAML file or a
   mapping, and layers them in the order given:
 
   ```python
-  class MyApp(AppContainer):
+  class MyApp(Session):
       config = ["instrument.yaml", {"name": "morning-run"}]
   ```
 
@@ -281,7 +281,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   setting it. A component entry under `devices`, `presenters` or `views` is
   replaced whole rather than merged.
 
-- `AppContainer.name` - what the session is called, readable before `build`.
+- `Session.name` - what the session is called, readable before `build`.
   `Layer.section` - the configuration section a layer's components are declared
   under, the member's own name pluralised, so `Layer.DEVICE.section` is
   `"devices"`.
@@ -291,21 +291,21 @@ Dates are specified in the format `DD-MM-YYYY`.
   serves:
 
   ```python
-  class MyApp(QtAppContainer):
+  class MyApp(QtSession):
       configure_application: Annotated[AsHook[MyTheme], Declare(palette="nord")]
       configure_main_view: AsHook[MyBranding]
   ```
 
   `Serves` names the points instead, and naming several is how one provider
   instance serves them all. `Declare`, `FromConfig` and `Alias` work as they do
-  on a component. `QtHook` names the four points `QtAppContainer` calls:
+  on a component. `QtHook` names the four points `QtSession` calls:
   `create_application`, which supplies the `QApplication`,
-  `configure_application`, `during_build` and `configure_main_view`. `AppContainer.hook_points` is empty, so a hook declared
+  `configure_application`, `during_build` and `configure_main_view`. `Session.hook_points` is empty, so a hook declared
   on a container bound to no toolkit is refused.
 
   The `hooks:` section takes the same points as keys, each entry carrying
   `provider` and `kwargs`; a YAML anchor aliased under two keys gives one
-  provider serving both. `AppContainer.hooks` is the provider installed at each
+  provider serving both. `Session.hooks` is the provider installed at each
   point, built once per build. `HookError` covers a point named on the class and
   in the section, a point claimed twice, a point the container does not call,
   and a provider that does not implement the protocol its point calls.
@@ -331,7 +331,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   imports nothing. The callback's parameters are filled from the session's
   store, which is the store the components were built out of. The registration
   is undone when the session is released.
-  `redsun.experimental.containers.qt.ActionError` names the entry that cannot be
+  `redsun.experimental.session.qt.ActionError` names the entry that cannot be
   made: a section that is not a list, an entry that is not a mapping, an entry
   carrying a key an action does not take, or one app-model refuses.
 
@@ -351,11 +351,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   A Qt session that installs no hook there asks about unsaved changes itself,
   offering Save, Discard and Cancel. Cancel keeps the session open, and so does
   a cancelled save dialog. The prompt carries a "don't ask again" box, which
-  writes `redsun.experimental.containers.qt.ASK_ON_CLOSE` to the settings
+  writes `redsun.experimental.session.qt.ASK_ON_CLOSE` to the settings
   store, so the answer is per user and per machine. A session whose
-  `AppContainer.has_changes` reports nothing closes without a word.
+  `Session.has_changes` reports nothing closes without a word.
 
-- `QtAppContainer.model`, `.app` and `.main_window` - the `app_model.Application`
+- `QtSession.model`, `.app` and `.main_window` - the `app_model.Application`
   named after the session, the toolkit application the session runs on, and the
   `QModelMainWindow` built against that application. All three raise
   `RuntimeError` before `build` and are dropped at release, and two live sessions
@@ -367,12 +367,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   app.main_window.setModelMenuBar({"myapp/file": "File"})
   ```
 
-  `QtAppContainer` builds its components out of the application's injection
+  `QtSession` builds its components out of the application's injection
   store, so a command registered on the application is filled from the
   components the session built. Constructing a container makes no toolkit
   object: `build` makes all three.
 
-- `AppContainer` carries `__weakref__` among its slots, so a session can be
+- `Session` carries `__weakref__` among its slots, so a session can be
   referred to weakly, as `aboutToQuit.connect(session.shutdown)` needs.
   Instances still carry no `__dict__`.
 
@@ -385,7 +385,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   color_scheme: dark
   ```
 
-  `redsun.experimental.containers.qt.ColorSchemeMode` is `system`, `light` or
+  `redsun.experimental.session.qt.ColorSchemeMode` is `system`, `light` or
   `dark`, and `ColorSchemeButton` cycles them in that order, calling
   `QStyleHints.setColorScheme` for the last two and `unsetColorScheme` for
   `system`. A session without the key starts at `system`, and the glyph shows
@@ -395,7 +395,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   `ColorSchemeButton.pin_to(window, mode)` puts a control on a window built
   outside a session.
 
-- `QtAppContainer.save_layout` and `.restore_layout` - where a user left the
+- `QtSession.save_layout` and `.restore_layout` - where a user left the
   window. `save_layout` puts `saveGeometry` and `saveState` in the session's
   settings under `window.geometry` and `window.state`, base64 encoded;
   `restore_layout` puts them back once every dock exists,
@@ -404,7 +404,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   nothing. A dock is named after the view it holds, which is what Qt matches a
   saved place against.
 
-- `QtAppContainer` destroys the widgets it built, after every component's own
+- `QtSession` destroys the widgets it built, after every component's own
   `shutdown` and before the application is destroyed. Each view is closed and
   then deleted, and the window goes after the views it docks, leaving
   `main_window` reporting an unbuilt session again. A view is closed before it
@@ -441,15 +441,27 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
   A container that declares no name is named after its own class, so
-  `class Instrument(AppContainer)` builds a session called `Instrument`.
-  `AppContainer.from_config` refuses a file that omits the key, a session built
-  from a configuration alone having no class of its own. `RedSunConfig.session`
-  is `RedSunConfig.name`, `AppContainer.__init__` takes `name` in place of
-  `session`, and `VirtualContainer.session` is `VirtualContainer.name` in both
-  layers.
+  `class Instrument(Session)` builds a session called `Instrument`, and the
+  same holds for `AppContainer` in the supported layer.
+  `from_config` refuses a file that omits the key, a session built from a
+  configuration alone having no class of its own. `RedSunConfig.session` is
+  `RedSunConfig.name`, both containers take `name` in place of `session` at
+  construction, and `VirtualContainer.session` is `VirtualContainer.name`.
 
 - `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
   `magicgui`.
+
+- The experimental layer's container is a session. The old names are gone, with
+  no aliases:
+
+  | was | is |
+  | --- | --- |
+  | `redsun.experimental.containers` | `redsun.experimental.session` |
+  | `redsun.experimental.containers.qt` | `redsun.experimental.session.qt` |
+  | `AppContainer` | `Session` |
+  | `QtAppContainer` | `QtSession` |
+
+  `redsun.containers` and its `AppContainer` are unchanged.
 
 ## [0.12.1] - 03-09-2026
 

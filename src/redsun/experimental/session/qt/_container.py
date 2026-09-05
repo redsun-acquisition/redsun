@@ -8,14 +8,14 @@ no toolkit type appears in `redsun.experimental.Placement` or in a container.
 
 ```python
 from redsun.experimental import AsView
-from redsun.experimental.containers.qt import Dock, QtAppContainer
+from redsun.experimental.session.qt import Dock, QtSession
 
 
 class ImageView(QWidget):
     placement = Dock("left")
 
 
-class MyApp(QtAppContainer):
+class MyApp(QtSession):
     image: AsView[ImageView]
 
 
@@ -73,14 +73,14 @@ from redsun._hooks import (
     WrapsBuild,
 )
 from redsun.aio import set_async_backend
-from redsun.experimental.containers._frontend import Frontend
-from redsun.experimental.containers._protocols import DesktopSession
-from redsun.experimental.containers.container import (
-    AppContainer,
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._protocols import DesktopSession
+from redsun.experimental.session.container import (
     ConfigurationInUse,
+    Session,
 )
-from redsun.experimental.containers.qt._actions import read_actions
-from redsun.experimental.containers.qt._color_scheme import (
+from redsun.experimental.session.qt._actions import read_actions
+from redsun.experimental.session.qt._color_scheme import (
     ColorSchemeButton,
     ColorSchemeMode,
 )
@@ -94,7 +94,7 @@ if TYPE_CHECKING:
     from in_n_out import Store
 
     from redsun._config import Source
-    from redsun.experimental.containers._protocols import AttachableComponent
+    from redsun.experimental.session._protocols import AttachableComponent
 
 ASK_ON_CLOSE: Final[str] = "ask_on_close"
 """The settings key holding whether the close prompt still appears."""
@@ -108,8 +108,8 @@ __all__ = [
     "Dock",
     "MenuItem",
     "Qt",
-    "QtAppContainer",
     "QtHook",
+    "QtSession",
     "ToolBarItem",
     "attach",
 ]
@@ -163,7 +163,7 @@ class QtHook(StrEnum):
 
 
 class Qt(Frontend):
-    """Qt frontend, attached by `redsun.experimental.containers.qt.attach`."""
+    """Qt frontend, attached by `redsun.experimental.session.qt.attach`."""
 
     requires: ClassVar[Mapping[type[Placement], type]] = {
         Central: QWidget,
@@ -173,10 +173,10 @@ class Qt(Frontend):
     }
 
 
-class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
+class QtSession(DesktopSession[QMainWindow], Session):
     """Application container whose views are attached to a Qt main window.
 
-    Subclass this rather than `redsun.experimental.AppContainer` to build
+    Subclass this rather than `redsun.experimental.Session` to build
     against Qt: it accepts the placements Qt attaches and refuses the rest
     when the declarations are read. Importing it needs the Qt bindings, which
     is why it lives here and not beside the container it extends.
@@ -186,7 +186,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
     the application, the async backend and the window are all made by `build`.
 
     ```python
-    class MyApp(QtAppContainer):
+    class MyApp(QtSession):
         image: AsView[ImageView]
 
 
@@ -537,7 +537,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
 class _CloseGuard(QObject):
     """Puts a window's close to the session, which may refuse it."""
 
-    def __init__(self, session: QtAppContainer) -> None:
+    def __init__(self, session: QtSession) -> None:
         super().__init__()
         self._session = weakref.ref(session)
 

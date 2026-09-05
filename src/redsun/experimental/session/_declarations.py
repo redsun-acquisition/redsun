@@ -19,8 +19,8 @@ from typing import (
 from ophyd_async.core import Device
 
 from redsun._hooks import HookError, known_points
-from redsun.experimental.containers._frontend import Frontend
-from redsun.experimental.containers._plugins import META_KEYS, resolve
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._plugins import META_KEYS, resolve
 from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ runtime, and no type checker can model one. Hints read from an annotation stay
 class Layer(StrEnum):
     """The layer a declared component belongs to.
 
-    Carried as the metadata of a declaration's annotation. `redsun.experimental.containers.components`
+    Carried as the metadata of a declaration's annotation. `redsun.experimental.session.components`
     spells the three out. A member is its own name in a message, so it needs no
     ``.value``, and its ``section`` is that name pluralised.
     """
@@ -179,7 +179,7 @@ def check(
     A view is a class declaring a ``placement``; a presenter is one that does
     not. When the placement is a value on the class it is checked against the
     frontend here, and when it is a property only the built instance can
-    answer, so `redsun.experimental.AppContainer` asks again then.
+    answer, so `redsun.experimental.Session` asks again then.
 
     Raises
     ------
@@ -273,7 +273,7 @@ def read(
     MRO, so inheritance needs no merge of its own.
 
     An annotation is a declaration only if it carries a layer, which is what
-    `redsun.experimental.containers.components` adds; anything else is an ordinary attribute.
+    `redsun.experimental.session.components` adds; anything else is an ordinary attribute.
 
     A component named in *config* but never annotated is declared too, its
     layer coming from the section it appears under; an annotation only adds a

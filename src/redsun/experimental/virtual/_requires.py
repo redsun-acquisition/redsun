@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeForm
 
-    from redsun.experimental.containers._declarations import Key
+    from redsun.experimental.session._declarations import Key
 
 __all__ = [
     "Devices",

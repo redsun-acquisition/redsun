@@ -12,13 +12,13 @@ from typing import (
 
 from typing_extensions import TypeForm
 
-from redsun.experimental.containers._declarations import takes_name_by_keyword
+from redsun.experimental.session._declarations import takes_name_by_keyword
 from redsun.experimental.virtual._requires import Maybe, key_for, question_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
-    from redsun.experimental.containers._declarations import Declaration, Key
+    from redsun.experimental.session._declarations import Declaration, Key
     from redsun.experimental.virtual._requires import Question
 
 __all__ = [

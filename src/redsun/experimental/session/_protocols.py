@@ -94,7 +94,7 @@ class BuildableSession(Protocol):
 
     ``__slots__`` is empty here because a protocol whose body omits it gives a
     ``__dict__`` to every class that inherits it, which would undo the one
-    `redsun.experimental.AppContainer` declares.
+    `redsun.experimental.Session` declares.
     """
 
     __slots__ = ()

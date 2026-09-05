@@ -8,8 +8,8 @@ import pytest
 from app_model import Action
 from qtpy.QtWidgets import QApplication
 
-from redsun.experimental import AppContainer, AsPresenter, Settings
-from redsun.experimental.containers.qt import QtAppContainer
+from redsun.experimental import AsPresenter, Session, Settings
+from redsun.experimental.session.qt import QtSession
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,7 +23,7 @@ class Recorder:
         self.name = name
 
 
-class App(AppContainer):
+class App(Session):
     __slots__ = ()
 
     config: ClassVar[dict[str, Any]] = {"name": "settings-session"}
@@ -31,7 +31,7 @@ class App(AppContainer):
     recorder: AsPresenter[Recorder]
 
 
-class QtApp(QtAppContainer):
+class QtApp(QtSession):
     __slots__ = ()
 
     config: ClassVar[dict[str, Any]] = {"name": "settings-qt-session"}
@@ -83,7 +83,7 @@ def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_session_opens_its_own_only_once_it_is_built(
-    config_home: Path, build: Callable[..., AppContainer]
+    config_home: Path, build: Callable[..., Session]
 ) -> None:
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = App().settings
@@ -93,7 +93,7 @@ def test_a_session_opens_its_own_only_once_it_is_built(
 
 @pytest.mark.qt
 def test_an_action_asks_for_the_settings_by_type(
-    qapp: QApplication, config_home: Path, build: Callable[..., AppContainer]
+    qapp: QApplication, config_home: Path, build: Callable[..., Session]
 ) -> None:
     seen: list[Settings] = []
 

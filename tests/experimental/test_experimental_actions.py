@@ -9,8 +9,8 @@ from app_model import Application
 from mock_bundle import actions
 from qtpy.QtWidgets import QApplication, QMenu
 
-from redsun.experimental import AppContainer
-from redsun.experimental.containers.qt import ActionError, QtAppContainer
+from redsun.experimental import Session
+from redsun.experimental.session.qt import ActionError, QtSession
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -28,16 +28,16 @@ def clear_record() -> Iterator[None]:
     actions.executed.clear()
 
 
-def session(*declared: dict[str, object]) -> QtAppContainer:
+def session(*declared: dict[str, object]) -> QtSession:
     """Return an unbuilt Qt session declaring *declared* under ``actions``."""
-    container = AppContainer.from_config({**SESSION, "actions": list(declared)})
-    assert isinstance(container, QtAppContainer)
+    container = Session.from_config({**SESSION, "actions": list(declared)})
+    assert isinstance(container, QtSession)
     return container
 
 
 def test_the_section_registers_commands_on_the_session(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     app = build(
         session(
@@ -66,7 +66,7 @@ def test_the_section_registers_commands_on_the_session(
 
 def test_releasing_the_session_takes_its_commands_with_it(
     qapp: QApplication,
-    build: Callable[..., QtAppContainer],
+    build: Callable[..., QtSession],
 ) -> None:
     app = build(
         session(
@@ -116,7 +116,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
 def test_a_section_that_is_not_actions_is_refused(
     qapp: QApplication, declared: object, message: str
 ) -> None:
-    app = AppContainer.from_config({**SESSION, "actions": declared})
+    app = Session.from_config({**SESSION, "actions": declared})
     with pytest.raises(ActionError, match=message):
         app.build()
     assert Application.get_app("actions-session") is None

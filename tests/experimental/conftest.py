@@ -10,7 +10,7 @@ from unittest import mock
 import pytest
 
 from redsun._config import Source
-from redsun.experimental import AppContainer
+from redsun.experimental import Session
 
 _TESTS_DIR = str(Path(__file__).parent)
 if _TESTS_DIR not in sys.path:
@@ -21,7 +21,7 @@ _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-SessionT = TypeVar("SessionT", bound=AppContainer)
+SessionT = TypeVar("SessionT", bound=Session)
 
 
 class BuildSession(Protocol):
@@ -53,7 +53,7 @@ def build() -> Generator[BuildSession, None, None]:
     and a test may shut one down itself, ``shutdown`` running nothing the
     second time.
     """
-    built: list[AppContainer] = []
+    built: list[Session] = []
 
     def build_one(
         container: type[SessionT] | SessionT, config: Source | None = None, /
@@ -96,14 +96,12 @@ def mock_plugin() -> Generator[None, None, None]:
 
     with (
         mock.patch(
-            "redsun.experimental.containers._plugins.entry_points", return_value=[entry]
+            "redsun.experimental.session._plugins.entry_points", return_value=[entry]
         ),
         mock.patch(
-            "redsun.experimental.containers._plugins.files",
+            "redsun.experimental.session._plugins.files",
             side_effect=lambda _: _MOCK_PKG_DIR,
         ),
-        mock.patch(
-            "redsun.experimental.containers._plugins.as_file", side_effect=as_file
-        ),
+        mock.patch("redsun.experimental.session._plugins.as_file", side_effect=as_file),
     ):
         yield

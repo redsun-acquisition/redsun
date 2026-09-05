@@ -19,7 +19,7 @@ from redsun.experimental import (
     NamedComponent,
     Placement,
 )
-from redsun.experimental.containers.qt import Central, Dock, QtAppContainer
+from redsun.experimental.session.qt import Central, Dock, QtSession
 
 
 class Ctrl:
@@ -43,7 +43,7 @@ class Canvas:
         return Central()
 
 
-class App(QtAppContainer):
+class App(QtSession):
     __slots__ = ()
 
     ctrl: AsPresenter[Ctrl]

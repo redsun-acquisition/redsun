@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
     from in_n_out import Store
 
-    from redsun.experimental.containers._declarations import Key
+    from redsun.experimental.session._declarations import Key
 
 __all__ = ["provides", "register", "shared"]
 

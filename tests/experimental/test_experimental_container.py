@@ -16,7 +16,6 @@ from psygnal import Signal
 
 from redsun.experimental import (
     Alias,
-    AppContainer,
     AsDevice,
     AsPresenter,
     AsView,
@@ -27,17 +26,18 @@ from redsun.experimental import (
     FromConfig,
     Frontend,
     Placement,
+    Session,
     SessionConfig,
     VirtualContainer,
     provides,
     slot,
 )
-from redsun.experimental.containers._declarations import (
+from redsun.experimental.session._declarations import (
     Layer,
     check,
     leads_with_name,
 )
-from redsun.experimental.containers._factories import (
+from redsun.experimental.session._factories import (
     injectable,
     optional_arg,
     synthesize,
@@ -228,16 +228,16 @@ class Dependent:
         teardown_order.append(self.name)
 
 
-class EagerApp(AppContainer):
+class EagerApp(Session):
     eager: AsPresenter[Eager]
 
 
-class OrderedApp(AppContainer):
+class OrderedApp(Session):
     second: Annotated[AsPresenter[Dependent], Alias("second")]
     first: Annotated[AsPresenter[Recorder], Alias("first")]
 
 
-class App(AppContainer):
+class App(Session):
     config: ClassVar[Mapping[str, Any]] = {
         "name": "test-session",
         "devices": {"stage": {"axis": "Z"}},
@@ -266,13 +266,13 @@ class NamelessView(Nameless, Attachable):
     placement: Placement = Panel("left")
 
 
-class NamelessApp(AppContainer):
+class NamelessApp(Session):
     __slots__ = ()
 
     ctrl: AsPresenter[Nameless]
 
 
-class NamelessViewApp(AppContainer):
+class NamelessViewApp(Session):
     __slots__ = ()
 
     frontend = Toy
@@ -290,7 +290,7 @@ class Deferred:
         return Elsewhere()
 
 
-class DeferredApp(AppContainer):
+class DeferredApp(Session):
     __slots__ = ()
 
     frontend = Toy
@@ -298,7 +298,7 @@ class DeferredApp(AppContainer):
     stray: AsView[Deferred]
 
 
-class ToyApp(AppContainer):
+class ToyApp(Session):
     __slots__ = ()
 
     frontend = Toy
@@ -321,7 +321,7 @@ class WantsTheContainer:
         self.bus = bus
 
 
-class LocatorApp(AppContainer):
+class LocatorApp(Session):
     greedy: AsPresenter[WantsTheContainer]
 
 
@@ -334,7 +334,7 @@ class Duplicated:
         return Readings({})
 
 
-class TwoOwners(AppContainer):
+class TwoOwners(Session):
     first: Annotated[AsPresenter[Duplicated], Alias("first")]
     second: Annotated[AsPresenter[Duplicated], Alias("second")]
 
@@ -391,22 +391,22 @@ class HoldingAPresenter:
         self.ctrl = ctrl
 
 
-class SameLayerApp(AppContainer):
+class SameLayerApp(Session):
     display: AsView[Displaying]
     control: AsView[Controlling]
 
 
-class PresenterOnAViewClass(AppContainer):
+class PresenterOnAViewClass(Session):
     watcher: AsPresenter[WatchingAView]
     display: AsView[Displaying]
 
 
-class PresenterOnAViewValue(AppContainer):
+class PresenterOnAViewValue(Session):
     wanting: AsPresenter[WantingWhatAViewOwns]
     display: AsView[Displaying]
 
 
-class ViewOnAPresenter(AppContainer):
+class ViewOnAPresenter(Session):
     recorder: AsPresenter[Recorder]
     holder: AsView[HoldingAPresenter]
 
@@ -416,7 +416,7 @@ class Unannotated:
         self.name = name
 
 
-class BadApp(AppContainer):
+class BadApp(Session):
     broken: AsPresenter[Unannotated]
 
 
@@ -445,7 +445,7 @@ class PydanticCtrl(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
 
-class PydanticApp(AppContainer):
+class PydanticApp(Session):
     motor: AsDevice[Stage]
     ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
 
@@ -485,22 +485,22 @@ class FrozenCtrl:
     gain: float = 2.0
 
 
-class DataclassApp(AppContainer):
+class DataclassApp(Session):
     motor: AsDevice[Stage]
     ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
 
 
-class KwOnlyApp(AppContainer):
+class KwOnlyApp(Session):
     motor: AsDevice[Stage]
     ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
 
 
-class FrozenApp(AppContainer):
+class FrozenApp(Session):
     motor: AsDevice[Stage]
     ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
 
 
-class Shared(AppContainer):
+class Shared(Session):
     """A base holding what every session of one instrument shares."""
 
     config: ClassVar[Mapping[str, Any]] = {
@@ -523,7 +523,7 @@ class Layered(Shared):
     }
 
 
-class Sideways(AppContainer):
+class Sideways(Session):
     """A second base, so that Shared can be reached by two paths at once."""
 
     config: ClassVar[Mapping[str, Any]] = {"devices": {"motor": {"axis": "Y"}}}
@@ -549,7 +549,7 @@ class Pong:
         self.other = other
 
 
-class CircularApp(AppContainer):
+class CircularApp(Session):
     ping: AsPresenter[Ping]
     pong: AsPresenter[Pong]
 
@@ -618,7 +618,7 @@ class Served:
         self.values = (calibration, offset, scale)
 
 
-class ServicesApp(AppContainer):
+class ServicesApp(Session):
     providers: ClassVar[list[type]] = [
         DataclassServices,
         FrozenServices,
@@ -628,7 +628,7 @@ class ServicesApp(AppContainer):
     served: AsPresenter[Served]
 
 
-class NamedServicesApp(AppContainer):
+class NamedServicesApp(Session):
     providers: ClassVar[list[type]] = [NamedServices]
 
     served: AsPresenter[Served]
@@ -658,7 +658,7 @@ class NeedsBroken:
         self.other = other
 
 
-class ToleratedApp(AppContainer):
+class ToleratedApp(Session):
     frontend = Toy
 
     ok: AsPresenter[Recorder]
@@ -667,7 +667,7 @@ class ToleratedApp(AppContainer):
     broken_panel: AsView[BrokenView]
 
 
-class DependsOnBrokenApp(AppContainer):
+class DependsOnBrokenApp(Session):
     bad: AsPresenter[BrokenPresenter]
     dependent: AsPresenter[NeedsBroken]
     ok: AsPresenter[Recorder]
@@ -684,7 +684,7 @@ class Marker:
         STEP_ORDER.append("built the presenter")
 
 
-class SteppedApp(AppContainer):
+class SteppedApp(Session):
     """A session filling the two steps a toolkit owns, and nothing else."""
 
     __slots__ = ()
@@ -813,13 +813,13 @@ def test_two_components_sharing_one_type_is_refused() -> None:
         TwoOwners().build()
 
 
-def test_two_views_of_one_layer_may_share(build: Callable[..., AppContainer]) -> None:
+def test_two_views_of_one_layer_may_share(build: Callable[..., Session]) -> None:
     """The owner is built first because the graph says so, not by hand."""
     app = build(SameLayerApp)
     assert app.control.viewer is app.display.viewer()
 
 
-def test_a_view_may_depend_on_a_presenter(build: Callable[..., AppContainer]) -> None:
+def test_a_view_may_depend_on_a_presenter(build: Callable[..., Session]) -> None:
     """A view is built after a presenter, so naming one is the allowed direction."""
     app = build(ViewOnAPresenter)
     assert app.holder.ctrl is app.recorder
@@ -833,7 +833,7 @@ def test_a_view_may_depend_on_a_presenter(build: Callable[..., AppContainer]) ->
     ],
 )
 def test_a_presenter_depending_on_a_view_is_refused(
-    app: type[AppContainer], match: str
+    app: type[Session], match: str
 ) -> None:
     """Naming the class or a type it shares is the same backwards edge."""
     with pytest.raises(TypeError, match="is built before a view"):
@@ -937,7 +937,7 @@ def test_a_view_is_refused_at_declaration_for_its_placement(
     [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
 )
 def test_a_component_that_drops_its_name_is_refused(
-    app: type[AppContainer], protocol: str
+    app: type[Session], protocol: str
 ) -> None:
     """The constructor is made to take a name; keeping it is the other half."""
     with pytest.raises(TypeError, match=f"does not satisfy {protocol!r}: 'name'"):
@@ -960,7 +960,7 @@ def test_a_view_answering_from_an_instance_is_checked_after_it_is_built() -> Non
     [(App, Frontend), (ToyApp, Toy), (InheritsToy, Toy)],
 )
 def test_the_frontend_comes_from_the_class_it_is_declared_on(
-    container: type[AppContainer], expected: type[Frontend]
+    container: type[Session], expected: type[Frontend]
 ) -> None:
     assert container.frontend is expected
 
@@ -968,7 +968,7 @@ def test_the_frontend_comes_from_the_class_it_is_declared_on(
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
     """__getattr__ never runs for a name ordinary lookup already answers."""
 
-    class Shadowed(AppContainer):
+    class Shadowed(Session):
         __slots__ = ()
 
         # mypy sees the clash too; the container has to as well
@@ -979,11 +979,11 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
 
 
 def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """A declaration is opt-in, so a container may hold plain attributes."""
 
-    class Plain(AppContainer):
+    class Plain(Session):
         __slots__ = ()
 
         threshold: int
@@ -995,11 +995,11 @@ def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
 
 
 def test_a_component_nothing_reaches_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """A half-finished declaration, or a wiring rule with a typo in the name."""
 
-    class Inert(AppContainer):
+    class Inert(Session):
         __slots__ = ()
 
         recorder: AsPresenter[Recorder]
@@ -1012,7 +1012,7 @@ def test_a_component_nothing_reaches_is_reported(
 
 
 def test_a_component_another_is_built_from_is_not_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """Being injected is being used, though the component asks for nothing itself."""
     build(OrderedApp)
@@ -1020,7 +1020,7 @@ def test_a_component_another_is_built_from_is_not_reported(
 
 
 def test_a_shared_value_nothing_asks_for_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """Usually the consumer was renamed or removed while the producer stayed."""
     build(App)
@@ -1031,11 +1031,11 @@ def test_a_shared_value_nothing_asks_for_is_reported(
 
 
 def test_a_session_is_named_after_its_class_when_it_says_nothing(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """A shared constant would let two unrelated sessions collide silently."""
 
-    class Instrument(AppContainer):
+    class Instrument(Session):
         __slots__ = ()
 
     app = build(Instrument)
@@ -1043,11 +1043,11 @@ def test_a_session_is_named_after_its_class_when_it_says_nothing(
 
 
 def test_a_forgotten_layer_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """Omitting the marker is silent by design, so a likely component is flagged."""
 
-    class Forgot(AppContainer):
+    class Forgot(Session):
         __slots__ = ()
 
         ctrl: Ctrl
@@ -1121,7 +1121,7 @@ def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> N
 
 
 @pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])
-def test_a_dataclass_is_an_ordinary_component(app: type[AppContainer]) -> None:
+def test_a_dataclass_is_an_ordinary_component(app: type[Session]) -> None:
     """Every dataclass flavour builds, whatever kind its fields become."""
     built = app().build()
     assert built.ctrl.name == "ctrl"
@@ -1157,7 +1157,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     shared = tmp_path / "shared.yaml"
     shared.write_text("name: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
 
-    class Mixed(AppContainer):
+    class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"name": "from-mapping"}]
 
         motor: AsDevice[Stage]
@@ -1171,7 +1171,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
 def test_sources_must_agree_on_what_the_session_is() -> None:
     """A later source says more about a session, never that it is another."""
 
-    class Contradiction(AppContainer):
+    class Contradiction(Session):
         config: ClassVar[list[Any]] = [{"frontend": "pyqt"}, {"frontend": "pyside"}]
 
     with pytest.raises(ValueError, match="frontend"):
@@ -1181,7 +1181,7 @@ def test_sources_must_agree_on_what_the_session_is() -> None:
 def test_a_later_source_may_rename_the_session() -> None:
     """The name is content rather than identity, so an overlay may set it."""
 
-    class Renamed(AppContainer):
+    class Renamed(Session):
         config: ClassVar[list[Any]] = [{"name": "first"}, {"name": "second"}]
 
     app = Renamed().build()
@@ -1197,7 +1197,7 @@ def test_two_components_built_from_each_other_are_refused() -> None:
 def test_a_session_knows_what_it_is_called() -> None:
     """The name is read from the configuration before anything is built."""
 
-    class Instrument(AppContainer):
+    class Instrument(Session):
         __slots__ = ()
 
     assert Instrument().name == "Instrument"
@@ -1205,7 +1205,7 @@ def test_a_session_knows_what_it_is_called() -> None:
 
 
 def test_a_shared_service_may_be_any_kind_of_class(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """Its constructor is read from the signature, as a component's is.
 
@@ -1223,7 +1223,7 @@ def test_a_shared_service_is_given_no_name() -> None:
 
 
 def test_a_component_that_fails_to_build_is_skipped(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """The build returns, and every component that could be made is there."""
     app = build(ToleratedApp)
@@ -1244,7 +1244,7 @@ def test_a_failure_is_logged_against_the_component_name(
 
 
 def test_a_component_whose_collaborator_failed_is_skipped_too(
-    build: Callable[..., AppContainer],
+    build: Callable[..., Session],
 ) -> None:
     """One that cannot be built does not take its dependents down with it."""
     app = build(DependsOnBrokenApp)
@@ -1304,14 +1304,14 @@ def test_a_session_missing_a_step_cannot_be_constructed() -> None:
 
 def test_a_session_keeps_its_instances_free_of_a_dict() -> None:
     """A protocol body without `__slots__` would give every session one."""
-    assert not hasattr(AppContainer(), "__dict__")
+    assert not hasattr(Session(), "__dict__")
 
 
 def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
     """A build that stops halfway releases what ran before it, and no more."""
     released: list[str] = []
 
-    class Failing(AppContainer):
+    class Failing(Session):
         __slots__ = ()
 
         def start_runtime(self) -> None:
@@ -1330,7 +1330,7 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
     """A step's release runs before the release of the step that preceded it."""
     released: list[str] = []
 
-    class Ordered(AppContainer):
+    class Ordered(Session):
         __slots__ = ()
 
         def start_runtime(self) -> None:
@@ -1349,11 +1349,11 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
 
 
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., AppContainer]
+    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
 ) -> None:
     """One component that could not be made must not keep the session down."""
 
-    class Half(AppContainer):
+    class Half(Session):
         __slots__ = ()
 
         broken: AsPresenter[Unmakeable]
@@ -1394,7 +1394,7 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
 ) -> None:
     """Only a component the build skipped is forgiven, not a typo."""
 
-    class Wrong(AppContainer):
+    class Wrong(Session):
         __slots__ = ()
 
         recorder: AsPresenter[Recorder]
@@ -1412,4 +1412,4 @@ def test_a_session_can_be_referred_to_weakly() -> None:
     which is a `TypeError` from the class rather than anything to do with how
     long an instance is kept.
     """
-    assert weakref.ref(AppContainer())() is not None
+    assert weakref.ref(Session())() is not None

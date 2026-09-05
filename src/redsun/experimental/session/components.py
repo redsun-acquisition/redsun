@@ -4,10 +4,10 @@ Each alias annotates the component's own type, so the attribute stays typed as
 what it holds:
 
 ```python
-from redsun.experimental import AppContainer, AsDevice, AsPresenter, AsView
+from redsun.experimental import Session, AsDevice, AsPresenter, AsView
 
 
-class MyApp(AppContainer):
+class MyApp(Session):
     stage: AsDevice[MyStage]
     motor_ctrl: AsPresenter[MotorPresenter]
     motor_widget: AsView[MotorView]
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Annotated, TypeAlias, TypeVar
 
-from redsun.experimental.containers._declarations import Hook, Layer
+from redsun.experimental.session._declarations import Hook, Layer
 
 __all__ = ["AsDevice", "AsHook", "AsPresenter", "AsView"]
 
