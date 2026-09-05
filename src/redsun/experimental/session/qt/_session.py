@@ -73,12 +73,12 @@ from redsun._hooks import (
     WrapsBuild,
 )
 from redsun.aio import set_async_backend
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._protocols import DesktopSession
-from redsun.experimental.session.container import (
+from redsun.experimental.session._base import (
     ConfigurationInUse,
     Session,
 )
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._protocols import DesktopSession
 from redsun.experimental.session.qt._actions import read_actions
 from redsun.experimental.session.qt._color_scheme import (
     ColorSchemeButton,

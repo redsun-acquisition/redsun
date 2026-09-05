@@ -29,29 +29,26 @@ Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 from redsun._hooks import ConfirmsClose, HookError
 from redsun._structural import satisfies
 from redsun.experimental._settings import Settings
-from redsun.experimental.session._declarations import (
+from redsun.experimental.session import (
     Alias,
-    Declare,
-    FromConfig,
-    Layer,
-    Serves,
-)
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._plugins import PluginError
-from redsun.experimental.session._protocols import (
-    AttachableComponent,
-    BuildableSession,
-    DesktopSession,
-    NamedComponent,
-    Serializable,
-)
-from redsun.experimental.session.components import (
     AsDevice,
     AsHook,
     AsPresenter,
     AsView,
+    AttachableComponent,
+    BuildableSession,
+    ConfigurationInUse,
+    Declare,
+    DesktopSession,
+    FromConfig,
+    Frontend,
+    Layer,
+    NamedComponent,
+    PluginError,
+    Serializable,
+    Serves,
+    Session,
 )
-from redsun.experimental.session.container import ConfigurationInUse, Session
 from redsun.experimental.view._placement import Placement
 from redsun.experimental.virtual._provides import provides
 from redsun.experimental.virtual._requires import (

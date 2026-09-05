@@ -44,7 +44,7 @@ from redsun.experimental.session.qt import (
     ToolBarItem,
     attach,
 )
-from redsun.experimental.session.qt._container import SAVE_MENU
+from redsun.experimental.session.qt._session import SAVE_MENU
 
 pytestmark = pytest.mark.qt
 
@@ -206,7 +206,7 @@ class SaveApp(QtSession):
 def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
     """Make the save dialog return *path* without showing anything."""
     monkeypatch.setattr(
-        "redsun.experimental.session.qt._container.QFileDialog.getSaveFileName",
+        "redsun.experimental.session.qt._session.QFileDialog.getSaveFileName",
         staticmethod(lambda *a, **k: (path, "")),
     )
 
@@ -540,7 +540,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
     _answer(monkeypatch, str(source))
     warned: list[str] = []
     monkeypatch.setattr(
-        "redsun.experimental.session.qt._container.QMessageBox.warning",
+        "redsun.experimental.session.qt._session.QMessageBox.warning",
         staticmethod(lambda _parent, _title, text, *a, **k: warned.append(text)),
     )
     session = build(SaveApp, str(source))

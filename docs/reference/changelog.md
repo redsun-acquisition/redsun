@@ -475,6 +475,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   | --- | --- |
   | `redsun.experimental.containers` | `redsun.experimental.session` |
   | `redsun.experimental.containers.qt` | `redsun.experimental.session.qt` |
+  | `redsun.experimental.containers.container` | `redsun.experimental.session`, the module behind it being private |
   | `AppContainer` | `Session` |
   | `QtAppContainer` | `QtSession` |
 

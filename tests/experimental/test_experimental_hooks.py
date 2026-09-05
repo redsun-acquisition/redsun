@@ -18,7 +18,7 @@ from redsun.experimental import (
     Serves,
     Session,
 )
-from redsun.experimental.session.container import _BUILD_STEPS
+from redsun.experimental.session._base import _BUILD_STEPS
 from redsun.experimental.session.qt import Dock, QtHook, QtSession
 
 if TYPE_CHECKING:
