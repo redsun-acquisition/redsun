@@ -26,7 +26,7 @@ class MyApp(QtAppContainer):
 Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 """
 
-from redsun._hooks import HookError
+from redsun._hooks import ConfirmsClose, HookError
 from redsun._structural import satisfies
 from redsun.experimental._settings import Settings
 from redsun.experimental.containers._declarations import (
@@ -87,6 +87,7 @@ __all__ = [
     "BuildableSession",
     "ComponentNotBuilt",
     "ConfigurationInUse",
+    "ConfirmsClose",
     "Connection",
     "Declare",
     "DesktopSession",

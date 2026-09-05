@@ -335,6 +335,26 @@ Dates are specified in the format `DD-MM-YYYY`.
   made: a section that is not a list, an entry that is not a mapping, an entry
   carrying a key an action does not take, or one app-model refuses.
 
+- `redsun.experimental.ConfirmsClose` and the `confirm_close` hook point. The
+  session acts on this point's answer, where it only tells the others what
+  happened, and `False` leaves the session running:
+
+  ```python
+  class KeepOpenWhileRunning:
+      def confirm_close(self) -> bool:
+          return not acquisition_is_running()
+  ```
+
+  Closing the window is what asks, so the title bar, `close()` and quitting the
+  application all reach the point.
+
+  A Qt session that installs no hook there asks about unsaved changes itself,
+  offering Save, Discard and Cancel. Cancel keeps the session open, and so does
+  a cancelled save dialog. The prompt carries a "don't ask again" box, which
+  writes `redsun.experimental.containers.qt.ASK_ON_CLOSE` to the settings
+  store, so the answer is per user and per machine. A session whose
+  `AppContainer.has_changes` reports nothing closes without a word.
+
 - `QtAppContainer.model`, `.app` and `.main_window` - the `app_model.Application`
   named after the session, the toolkit application the session runs on, and the
   `QModelMainWindow` built against that application. All three raise

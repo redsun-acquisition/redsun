@@ -48,8 +48,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+
 Readings = NewType("Readings", "dict[str, float]")
+
+
 Descriptions = NewType("Descriptions", "dict[str, str]")
+
+
 Missing = NewType("Missing", "dict[str, int]")
 
 
@@ -310,49 +315,6 @@ def app() -> Any:
     container.shutdown()
 
 
-def test_build_resolves_every_declaration(app: App) -> None:
-    """Components come up, typed attributes reach them, devices are built."""
-    assert app.is_built
-    assert isinstance(app.ctrl, Ctrl)
-    assert isinstance(app.widget, Widget)
-    assert isinstance(app.motor, Stage)
-    assert app.devices == {"motor": app.motor}
-    assert app.motor.axis == "Z"
-
-
-def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
-    """The attribute name is the config key, and Declare wins over the file."""
-    assert app.ctrl.gain == 2.0
-    assert app.widget.label == "inline"
-    assert app.virtual_container.name == "test-session"
-
-
-def test_shared_value_is_bound_to_its_owner(app: App) -> None:
-    """A @provides method is called on the built component that declares it."""
-    assert app.widget.readings == {"motor": 2.0}
-
-
-def test_absent_optional_is_none(app: App) -> None:
-    """Nothing provides Missing, so the parameter is None rather than an error."""
-    assert app.widget.missing is None
-
-
-def test_default_applies_when_nothing_provides_the_type(app: App) -> None:
-    """A parameter the session says nothing about keeps its own default."""
-    assert app.tunable.step == 1.5
-
-
-def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
-    """A defaulted parameter is still filled when the type is available."""
-    assert app.tunable.readings == {"motor": 2.0}
-
-
-def test_framework_objects_are_injectable(app: App) -> None:
-    """The device map and the callback registry are ordinary dependencies."""
-    assert dict(app.ctrl.devices) == {"motor": app.motor}
-    assert app.widget.callbacks is app.late.callbacks
-
-
 class WantsTheContainer:
     def __init__(self, name: str, /, bus: VirtualContainer) -> None:
         self.name = name
@@ -361,65 +323,6 @@ class WantsTheContainer:
 
 class LocatorApp(AppContainer):
     greedy: AsPresenter[WantsTheContainer]
-
-
-def test_the_container_itself_is_not_injectable() -> None:
-    """A component cannot ask for the whole bus and help itself from it.
-
-    The exception type belongs to whatever resolves the graph, so only the
-    name of the key it could not find is pinned.
-    """
-    with pytest.raises(Exception, match="VirtualContainer"):
-        LocatorApp().build()
-
-
-def test_live_registry_is_complete_after_the_build(app: App) -> None:
-    """The view a component was given reflects what every component registered."""
-    assert app.late.known() == {"registrar": app.registrar}
-
-
-def test_live_registry_refuses_to_be_read_early() -> None:
-    """Reading during construction would answer with a half-filled registry."""
-    with pytest.raises(LookupError, match="not complete until every component"):
-        EagerApp().build()
-
-
-def test_shutdown_finalizes_components_in_reverse_build_order() -> None:
-    """One owner runs every teardown, and the graph decides the order."""
-    teardown_order.clear()
-    container = OrderedApp().build()
-    container.shutdown()
-    assert teardown_order == ["second", "first"]
-
-
-def test_component_shutdown_runs_without_being_asked(app: App) -> None:
-    """A component declaring shutdown needs no registration of its own."""
-    registrar = app.registrar
-    assert not registrar.closed
-    app.shutdown()
-    assert registrar.closed
-
-
-def test_signals_are_registered_without_being_asked(app: App) -> None:
-    """register_signals runs for every built component."""
-    assert "sig_moved" in app.virtual_container.signals["ctrl"]
-
-
-def test_unknown_attribute_raises_attribute_error(app: App) -> None:
-    with pytest.raises(AttributeError, match="declares no component"):
-        _ = app.nonexistent
-
-
-def test_rebuild_is_a_no_op(app: App) -> None:
-    first = app.ctrl
-    app.build()
-    assert app.ctrl is first
-
-
-def test_shutdown_releases_and_allows_gc() -> None:
-    container = App().build()
-    container.shutdown()
-    assert not container.is_built
 
 
 class Duplicated:
@@ -434,12 +337,6 @@ class Duplicated:
 class TwoOwners(AppContainer):
     first: Annotated[AsPresenter[Duplicated], Alias("first")]
     second: Annotated[AsPresenter[Duplicated], Alias("second")]
-
-
-def test_two_components_sharing_one_type_is_refused() -> None:
-    """The message names both, which resolution-time failure could not."""
-    with pytest.raises(TypeError, match="both share"):
-        TwoOwners().build()
 
 
 ViewerModel = NewType("ViewerModel", "dict[str, str]")
@@ -514,6 +411,408 @@ class ViewOnAPresenter(AppContainer):
     holder: AsView[HoldingAPresenter]
 
 
+class Unannotated:
+    def __init__(self, name: str, /, thing) -> None:  # type: ignore[no-untyped-def]
+        self.name = name
+
+
+class BadApp(AppContainer):
+    broken: AsPresenter[Unannotated]
+
+
+class VariadicDevice(Device):
+    """A device whose constructor would also fail the name check."""
+
+    def __init__(self, *args: object) -> None: ...
+
+
+class Stray:
+    """A view asking for a placement Toy does not attach."""
+
+    placement: Placement = Elsewhere()
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+
+class PydanticCtrl(pydantic.BaseModel):
+    """Presenter whose fields are keyword-only, as every pydantic model's are."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+
+class PydanticApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
+
+
+class VariadicName:
+    def __init__(self, *name: str) -> None: ...
+
+
+class KeywordName:
+    def __init__(self, *, name: str) -> None: ...
+
+
+@dataclass
+class DataclassCtrl:
+    """Presenter whose annotations live on a generated ``__init__``."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+@dataclass(kw_only=True)
+class KwOnlyCtrl:
+    """The stdlib route to a keyword-only constructor."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenCtrl:
+    """Frozen and slotted, which change what the class carries at runtime."""
+
+    name: str
+    devices: DeviceMapping
+    gain: float = 2.0
+
+
+class DataclassApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
+
+
+class KwOnlyApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
+
+
+class FrozenApp(AppContainer):
+    motor: AsDevice[Stage]
+    ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
+
+
+class Shared(AppContainer):
+    """A base holding what every session of one instrument shares."""
+
+    config: ClassVar[Mapping[str, Any]] = {
+        "schema_version": 1.0,
+        "name": "shared",
+        "devices": {"motor": {"axis": "Z"}},
+        "presenters": {"ctrl": {"gain": 1.0}},
+    }
+
+    motor: AsDevice[Stage]
+    ctrl: AsPresenter[Ctrl]
+
+
+class Layered(Shared):
+    """A session laying its own configuration over the base's."""
+
+    config: ClassVar[Mapping[str, Any]] = {
+        "name": "layered",
+        "presenters": {"ctrl": {"gain": 9.0}},
+    }
+
+
+class Sideways(AppContainer):
+    """A second base, so that Shared can be reached by two paths at once."""
+
+    config: ClassVar[Mapping[str, Any]] = {"devices": {"motor": {"axis": "Y"}}}
+
+
+class Diamond(Layered, Sideways):
+    """Inherits from both, and must resolve the two the way Python does."""
+
+
+class Ping:
+    """Presenter built from `Pong`, which is built from this one."""
+
+    def __init__(self, name: str, /, other: Pong) -> None:
+        self.name = name
+        self.other = other
+
+
+class Pong:
+    """The other half of the cycle."""
+
+    def __init__(self, name: str, /, other: Ping) -> None:
+        self.name = name
+        self.other = other
+
+
+class CircularApp(AppContainer):
+    ping: AsPresenter[Ping]
+    pong: AsPresenter[Pong]
+
+
+Calibration = NewType("Calibration", "float")
+
+
+Offset = NewType("Offset", "float")
+
+
+Scale = NewType("Scale", "float")
+
+
+@dataclass
+class DataclassServices:
+    """Shared service whose fields are its constructor."""
+
+    config: SessionConfig
+
+    @provides
+    def calibration(self) -> Calibration:
+        return Calibration(len(self.config.name) / 10)
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenServices:
+    """Frozen and slotted, which change what the class carries at runtime."""
+
+    config: SessionConfig
+
+    @provides
+    def offset(self) -> Offset:
+        return Offset(1.5)
+
+
+class ModelServices(pydantic.BaseModel):
+    """Shared service whose fields are keyword-only and validated."""
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    config: SessionConfig
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(2.5)
+
+
+@dataclass
+class NamedServices:
+    """Shared service with a field the framework binds on a component."""
+
+    name: str
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(0.0)
+
+
+class Served:
+    """Presenter taking one value from each shared service."""
+
+    def __init__(
+        self, name: str, /, calibration: Calibration, offset: Offset, scale: Scale
+    ) -> None:
+        self.name = name
+        self.values = (calibration, offset, scale)
+
+
+class ServicesApp(AppContainer):
+    providers: ClassVar[list[type]] = [
+        DataclassServices,
+        FrozenServices,
+        ModelServices,
+    ]
+
+    served: AsPresenter[Served]
+
+
+class NamedServicesApp(AppContainer):
+    providers: ClassVar[list[type]] = [NamedServices]
+
+    served: AsPresenter[Served]
+
+
+class BrokenPresenter:
+    """Presenter whose construction cannot succeed."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no hardware")
+
+
+class BrokenView(Attachable):
+    """View whose construction cannot succeed."""
+
+    placement: Placement = Panel("left")
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no widget")
+
+
+class NeedsBroken:
+    """Presenter built from one that cannot be constructed."""
+
+    def __init__(self, name: str, /, other: BrokenPresenter) -> None:
+        self.name = name
+        self.other = other
+
+
+class ToleratedApp(AppContainer):
+    frontend = Toy
+
+    ok: AsPresenter[Recorder]
+    bad: AsPresenter[BrokenPresenter]
+    panel: AsView[Attached]
+    broken_panel: AsView[BrokenView]
+
+
+class DependsOnBrokenApp(AppContainer):
+    bad: AsPresenter[BrokenPresenter]
+    dependent: AsPresenter[NeedsBroken]
+    ok: AsPresenter[Recorder]
+
+
+STEP_ORDER: list[str] = []
+
+
+class Marker:
+    """A presenter that records when the build reached its layer."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        STEP_ORDER.append("built the presenter")
+
+
+class SteppedApp(AppContainer):
+    """A session filling the two steps a toolkit owns, and nothing else."""
+
+    __slots__ = ()
+
+    ctrl: AsPresenter[Marker]
+
+    def start_runtime(self) -> None:
+        STEP_ORDER.append("runtime")
+
+    def present(self) -> None:
+        STEP_ORDER.append("presentation")
+
+
+class Unmakeable:
+    """A presenter whose constructor raises, so the build skips it."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("this presenter cannot be made")
+
+
+def test_build_resolves_every_declaration(app: App) -> None:
+    """Components come up, typed attributes reach them, devices are built."""
+    assert app.is_built
+    assert isinstance(app.ctrl, Ctrl)
+    assert isinstance(app.widget, Widget)
+    assert isinstance(app.motor, Stage)
+    assert app.devices == {"motor": app.motor}
+    assert app.motor.axis == "Z"
+
+
+def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
+    """The attribute name is the config key, and Declare wins over the file."""
+    assert app.ctrl.gain == 2.0
+    assert app.widget.label == "inline"
+    assert app.virtual_container.name == "test-session"
+
+
+def test_shared_value_is_bound_to_its_owner(app: App) -> None:
+    """A @provides method is called on the built component that declares it."""
+    assert app.widget.readings == {"motor": 2.0}
+
+
+def test_absent_optional_is_none(app: App) -> None:
+    """Nothing provides Missing, so the parameter is None rather than an error."""
+    assert app.widget.missing is None
+
+
+def test_default_applies_when_nothing_provides_the_type(app: App) -> None:
+    """A parameter the session says nothing about keeps its own default."""
+    assert app.tunable.step == 1.5
+
+
+def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
+    """A defaulted parameter is still filled when the type is available."""
+    assert app.tunable.readings == {"motor": 2.0}
+
+
+def test_framework_objects_are_injectable(app: App) -> None:
+    """The device map and the callback registry are ordinary dependencies."""
+    assert dict(app.ctrl.devices) == {"motor": app.motor}
+    assert app.widget.callbacks is app.late.callbacks
+
+
+def test_the_container_itself_is_not_injectable() -> None:
+    """A component cannot ask for the whole bus and help itself from it.
+
+    The exception type belongs to whatever resolves the graph, so only the
+    name of the key it could not find is pinned.
+    """
+    with pytest.raises(Exception, match="VirtualContainer"):
+        LocatorApp().build()
+
+
+def test_live_registry_is_complete_after_the_build(app: App) -> None:
+    """The view a component was given reflects what every component registered."""
+    assert app.late.known() == {"registrar": app.registrar}
+
+
+def test_live_registry_refuses_to_be_read_early() -> None:
+    """Reading during construction would answer with a half-filled registry."""
+    with pytest.raises(LookupError, match="not complete until every component"):
+        EagerApp().build()
+
+
+def test_shutdown_finalizes_components_in_reverse_build_order() -> None:
+    """One owner runs every teardown, and the graph decides the order."""
+    teardown_order.clear()
+    container = OrderedApp().build()
+    container.shutdown()
+    assert teardown_order == ["second", "first"]
+
+
+def test_component_shutdown_runs_without_being_asked(app: App) -> None:
+    """A component declaring shutdown needs no registration of its own."""
+    registrar = app.registrar
+    assert not registrar.closed
+    app.shutdown()
+    assert registrar.closed
+
+
+def test_signals_are_registered_without_being_asked(app: App) -> None:
+    """register_signals runs for every built component."""
+    assert "sig_moved" in app.virtual_container.signals["ctrl"]
+
+
+def test_unknown_attribute_raises_attribute_error(app: App) -> None:
+    with pytest.raises(AttributeError, match="declares no component"):
+        _ = app.nonexistent
+
+
+def test_rebuild_is_a_no_op(app: App) -> None:
+    first = app.ctrl
+    app.build()
+    assert app.ctrl is first
+
+
+def test_shutdown_releases_and_allows_gc() -> None:
+    container = App().build()
+    container.shutdown()
+    assert not container.is_built
+
+
+def test_two_components_sharing_one_type_is_refused() -> None:
+    """The message names both, which resolution-time failure could not."""
+    with pytest.raises(TypeError, match="both share"):
+        TwoOwners().build()
+
+
 def test_two_views_of_one_layer_may_share(build: Callable[..., AppContainer]) -> None:
     """The owner is built first because the graph says so, not by hand."""
     app = build(SameLayerApp)
@@ -543,15 +842,6 @@ def test_a_presenter_depending_on_a_view_is_refused(
         app().build()
 
 
-class Unannotated:
-    def __init__(self, name: str, /, thing) -> None:  # type: ignore[no-untyped-def]
-        self.name = name
-
-
-class BadApp(AppContainer):
-    broken: AsPresenter[Unannotated]
-
-
 def test_unannotated_parameter_is_refused() -> None:
     with pytest.raises(TypeError, match="has no annotation"):
         BadApp().build()
@@ -569,12 +859,6 @@ def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
     target: type, declared: Layer
 ) -> None:
     assert check(target, declared, "somewhere") is target
-
-
-class VariadicDevice(Device):
-    """A device whose constructor would also fail the name check."""
-
-    def __init__(self, *args: object) -> None: ...
 
 
 @pytest.mark.parametrize(
@@ -631,15 +915,6 @@ def test_a_frontend_refuses_what_it_cannot_attach(
     """Either half of the pairing can be wrong, and each says which."""
     with pytest.raises(TypeError, match=match):
         Toy.check_placement(view, placement, "somewhere")
-
-
-class Stray:
-    """A view asking for a placement Toy does not attach."""
-
-    placement: Placement = Elsewhere()
-
-    def __init__(self, name: str, /) -> None:
-        self.name = name
 
 
 @pytest.mark.parametrize(
@@ -818,21 +1093,6 @@ def test_synthesize_agrees_with_both_introspection_routes() -> None:
     assert signature.return_annotation is Readings
 
 
-class PydanticCtrl(pydantic.BaseModel):
-    """Presenter whose fields are keyword-only, as every pydantic model's are."""
-
-    name: str
-    devices: DeviceMapping
-    gain: float = 2.0
-
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
-
-
-class PydanticApp(AppContainer):
-    motor: AsDevice[Stage]
-    ctrl: Annotated[AsPresenter[PydanticCtrl], Declare(gain=7.5)]
-
-
 def test_a_keyword_only_component_is_built() -> None:
     """A pydantic model takes its name as a keyword; the container looks first."""
     app = PydanticApp().build()
@@ -851,14 +1111,6 @@ def test_the_two_constructor_shapes_are_read_alike() -> None:
     assert injectable(PydanticCtrl, {"gain": 1.0}) == injectable(Ctrl, {"gain": 1.0})
 
 
-class VariadicName:
-    def __init__(self, *name: str) -> None: ...
-
-
-class KeywordName:
-    def __init__(self, *, name: str) -> None: ...
-
-
 @pytest.mark.parametrize(
     ("cls", "accepted"),
     [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
@@ -868,48 +1120,6 @@ def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> N
     assert leads_with_name(cls) is accepted
 
 
-@dataclass
-class DataclassCtrl:
-    """Presenter whose annotations live on a generated ``__init__``."""
-
-    name: str
-    devices: DeviceMapping
-    gain: float = 2.0
-
-
-@dataclass(kw_only=True)
-class KwOnlyCtrl:
-    """The stdlib route to a keyword-only constructor."""
-
-    name: str
-    devices: DeviceMapping
-    gain: float = 2.0
-
-
-@dataclass(frozen=True, slots=True)
-class FrozenCtrl:
-    """Frozen and slotted, which change what the class carries at runtime."""
-
-    name: str
-    devices: DeviceMapping
-    gain: float = 2.0
-
-
-class DataclassApp(AppContainer):
-    motor: AsDevice[Stage]
-    ctrl: Annotated[AsPresenter[DataclassCtrl], Declare(gain=7.5)]
-
-
-class KwOnlyApp(AppContainer):
-    motor: AsDevice[Stage]
-    ctrl: Annotated[AsPresenter[KwOnlyCtrl], Declare(gain=7.5)]
-
-
-class FrozenApp(AppContainer):
-    motor: AsDevice[Stage]
-    ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
-
-
 @pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])
 def test_a_dataclass_is_an_ordinary_component(app: type[AppContainer]) -> None:
     """Every dataclass flavour builds, whatever kind its fields become."""
@@ -917,39 +1127,6 @@ def test_a_dataclass_is_an_ordinary_component(app: type[AppContainer]) -> None:
     assert built.ctrl.name == "ctrl"
     assert built.ctrl.gain == 7.5
     assert dict(built.ctrl.devices) == {"motor": built.motor}
-
-
-class Shared(AppContainer):
-    """A base holding what every session of one instrument shares."""
-
-    config: ClassVar[Mapping[str, Any]] = {
-        "schema_version": 1.0,
-        "name": "shared",
-        "devices": {"motor": {"axis": "Z"}},
-        "presenters": {"ctrl": {"gain": 1.0}},
-    }
-
-    motor: AsDevice[Stage]
-    ctrl: AsPresenter[Ctrl]
-
-
-class Layered(Shared):
-    """A session laying its own configuration over the base's."""
-
-    config: ClassVar[Mapping[str, Any]] = {
-        "name": "layered",
-        "presenters": {"ctrl": {"gain": 9.0}},
-    }
-
-
-class Sideways(AppContainer):
-    """A second base, so that Shared can be reached by two paths at once."""
-
-    config: ClassVar[Mapping[str, Any]] = {"devices": {"motor": {"axis": "Y"}}}
-
-
-class Diamond(Layered, Sideways):
-    """Inherits from both, and must resolve the two the way Python does."""
 
 
 def test_a_subclass_layers_over_its_base() -> None:
@@ -1011,27 +1188,6 @@ def test_a_later_source_may_rename_the_session() -> None:
     assert app.virtual_container.name == "second"
 
 
-class Ping:
-    """Presenter built from `Pong`, which is built from this one."""
-
-    def __init__(self, name: str, /, other: Pong) -> None:
-        self.name = name
-        self.other = other
-
-
-class Pong:
-    """The other half of the cycle."""
-
-    def __init__(self, name: str, /, other: Ping) -> None:
-        self.name = name
-        self.other = other
-
-
-class CircularApp(AppContainer):
-    ping: AsPresenter[Ping]
-    pong: AsPresenter[Pong]
-
-
 def test_two_components_built_from_each_other_are_refused() -> None:
     """One of them would have to exist before it could be constructed."""
     with pytest.raises(TypeError, match="built from each other"):
@@ -1046,82 +1202,6 @@ def test_a_session_knows_what_it_is_called() -> None:
 
     assert Instrument().name == "Instrument"
     assert Instrument({"name": "morning-run"}).name == "morning-run"
-
-
-Calibration = NewType("Calibration", "float")
-Offset = NewType("Offset", "float")
-Scale = NewType("Scale", "float")
-
-
-@dataclass
-class DataclassServices:
-    """Shared service whose fields are its constructor."""
-
-    config: SessionConfig
-
-    @provides
-    def calibration(self) -> Calibration:
-        return Calibration(len(self.config.name) / 10)
-
-
-@dataclass(frozen=True, slots=True)
-class FrozenServices:
-    """Frozen and slotted, which change what the class carries at runtime."""
-
-    config: SessionConfig
-
-    @provides
-    def offset(self) -> Offset:
-        return Offset(1.5)
-
-
-class ModelServices(pydantic.BaseModel):
-    """Shared service whose fields are keyword-only and validated."""
-
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
-
-    config: SessionConfig
-
-    @provides
-    def scale(self) -> Scale:
-        return Scale(2.5)
-
-
-@dataclass
-class NamedServices:
-    """Shared service with a field the framework binds on a component."""
-
-    name: str
-
-    @provides
-    def scale(self) -> Scale:
-        return Scale(0.0)
-
-
-class Served:
-    """Presenter taking one value from each shared service."""
-
-    def __init__(
-        self, name: str, /, calibration: Calibration, offset: Offset, scale: Scale
-    ) -> None:
-        self.name = name
-        self.values = (calibration, offset, scale)
-
-
-class ServicesApp(AppContainer):
-    providers: ClassVar[list[type]] = [
-        DataclassServices,
-        FrozenServices,
-        ModelServices,
-    ]
-
-    served: AsPresenter[Served]
-
-
-class NamedServicesApp(AppContainer):
-    providers: ClassVar[list[type]] = [NamedServices]
-
-    served: AsPresenter[Served]
 
 
 def test_a_shared_service_may_be_any_kind_of_class(
@@ -1140,45 +1220,6 @@ def test_a_shared_service_is_given_no_name() -> None:
     """A component is handed its name; a provider has none, so it must ask."""
     with pytest.raises(TypeError, match="'NamedServices' asks for 'name'"):
         NamedServicesApp().build()
-
-
-class BrokenPresenter:
-    """Presenter whose construction cannot succeed."""
-
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("no hardware")
-
-
-class BrokenView(Attachable):
-    """View whose construction cannot succeed."""
-
-    placement: Placement = Panel("left")
-
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("no widget")
-
-
-class NeedsBroken:
-    """Presenter built from one that cannot be constructed."""
-
-    def __init__(self, name: str, /, other: BrokenPresenter) -> None:
-        self.name = name
-        self.other = other
-
-
-class ToleratedApp(AppContainer):
-    frontend = Toy
-
-    ok: AsPresenter[Recorder]
-    bad: AsPresenter[BrokenPresenter]
-    panel: AsView[Attached]
-    broken_panel: AsView[BrokenView]
-
-
-class DependsOnBrokenApp(AppContainer):
-    bad: AsPresenter[BrokenPresenter]
-    dependent: AsPresenter[NeedsBroken]
-    ok: AsPresenter[Recorder]
 
 
 def test_a_component_that_fails_to_build_is_skipped(
@@ -1230,31 +1271,6 @@ def test_the_closing_line_names_what_is_missing(
     assert [r.levelno for r in closing] == [logging.WARNING]
     assert "bad (presenter)" in closing[0].getMessage()
     assert "broken_panel (view)" in closing[0].getMessage()
-
-
-STEP_ORDER: list[str] = []
-
-
-class Marker:
-    """A presenter that records when the build reached its layer."""
-
-    def __init__(self, name: str, /) -> None:
-        self.name = name
-        STEP_ORDER.append("built the presenter")
-
-
-class SteppedApp(AppContainer):
-    """A session filling the two steps a toolkit owns, and nothing else."""
-
-    __slots__ = ()
-
-    ctrl: AsPresenter[Marker]
-
-    def start_runtime(self) -> None:
-        STEP_ORDER.append("runtime")
-
-    def present(self) -> None:
-        STEP_ORDER.append("presentation")
 
 
 def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> None:
@@ -1330,13 +1346,6 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
 
     app.shutdown()
     assert released == ["presentation", "runtime"]
-
-
-class Unmakeable:
-    """A presenter whose constructor raises, so the build skips it."""
-
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("this presenter cannot be made")
 
 
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(

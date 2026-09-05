@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
     QDockWidget,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QTabWidget,
     QToolBar,
     QWidget,
@@ -27,12 +28,14 @@ if TYPE_CHECKING:
 
 from redsun.experimental import (
     AppContainer,
+    AsHook,
     AsPresenter,
     AsView,
     AttachableComponent,
     Placement,
 )
 from redsun.experimental.containers.qt import (
+    ASK_ON_CLOSE,
     Central,
     Dock,
     MenuItem,
@@ -110,6 +113,160 @@ class QtApp(QtAppContainer):
     acquire: AsView[Acquire]
 
 
+@pytest.fixture
+def window() -> QMainWindow:
+    return QMainWindow()
+
+
+def _menus(window: QMainWindow) -> list[QMenu]:
+    return window.findChildren(QMenu)
+
+
+def _widget(dock: QDockWidget) -> QWidget:
+    inner = dock.widget()
+    assert inner is not None
+    return inner
+
+
+class Gain:
+    """A presenter a command can be filled with."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.value = 3.0
+
+
+class CommandApp(QtAppContainer):
+    gain: AsPresenter[Gain]
+
+
+BUILDS_ITS_OWN = """
+from qtpy.QtWidgets import QApplication, QWidget
+
+from redsun.experimental import AsView, Placement
+from redsun.experimental.containers.qt import Central, QtAppContainer
+
+
+class Panel(QWidget):
+    placement: Placement = Central()
+
+    def __init__(self, name, /):
+        super().__init__()
+        self.name = name
+
+
+class Standalone(QtAppContainer):
+    __slots__ = ()
+
+    panel: AsView[Panel]
+
+
+assert QApplication.instance() is None
+session = Standalone().build()
+assert session.app is QApplication.instance()
+assert session.main_window.centralWidget() is not None
+# what run() does before handing over to the event loop
+session.app.aboutToQuit.connect(session.shutdown)
+session.shutdown()
+"""
+
+TEARDOWN_ORDER: list[str] = []
+
+
+class Closing(QWidget):
+    """A view that records its own teardown and its widget's."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
+        self.name = name
+
+    def shutdown(self) -> None:
+        TEARDOWN_ORDER.append("shutdown")
+
+    def closeEvent(self, event: QCloseEvent | None) -> None:
+        TEARDOWN_ORDER.append("closed")
+        if event is not None:
+            super().closeEvent(event)
+
+
+class ClosingApp(QtAppContainer):
+    __slots__ = ()
+
+    panel: AsView[Closing]
+
+
+class SaveApp(QtAppContainer):
+    __slots__ = ()
+
+    config: ClassVar[dict[str, Any]] = {"name": "save-session"}
+
+
+def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
+    """Make the save dialog return *path* without showing anything."""
+    monkeypatch.setattr(
+        "redsun.experimental.containers.qt._container.QFileDialog.getSaveFileName",
+        staticmethod(lambda *a, **k: (path, "")),
+    )
+
+
+class Tunable:
+    """Presenter whose one setting is what a session has to offer to save."""
+
+    def __init__(self, name: str, /, step: float = 1.0) -> None:
+        self.name = name
+        self.step = step
+
+    def serialize(self) -> dict[str, float]:
+        return {"step": self.step}
+
+
+class PromptApp(QtAppContainer):
+    __slots__ = ()
+
+    config: ClassVar[dict[str, Any]] = {"name": "closing-session"}
+
+    tunable: AsPresenter[Tunable]
+
+
+class AlwaysCloses:
+    """Hook answering the close itself, in place of the prompt."""
+
+    asked = 0
+
+    def confirm_close(self) -> bool:
+        type(self).asked += 1
+        return True
+
+
+class HookedApp(PromptApp):
+    __slots__ = ()
+
+    confirm_close: AsHook[AlwaysCloses]
+
+
+def _press(
+    monkeypatch: pytest.MonkeyPatch,
+    button: QMessageBox.StandardButton,
+    *,
+    dont_ask: bool = False,
+) -> list[QMessageBox]:
+    """Answer the next close prompt with *button*, without showing it."""
+    shown: list[QMessageBox] = []
+
+    def exec_(prompt: QMessageBox) -> int:
+        shown.append(prompt)
+        if dont_ask:
+            box = prompt.checkBox()
+            assert box is not None
+            box.setChecked(True)
+        return int(button)
+
+    monkeypatch.setattr(QMessageBox, "exec", exec_)
+    return shown
+
+
 def test_the_session_owns_an_application_named_after_it() -> None:
     """Commands, menus and keybindings belong to the session, not the process."""
     app = QtApp()
@@ -139,11 +296,6 @@ def test_the_name_is_free_again_after_shutdown() -> None:
         app = QtApp().build()
         assert app.model.name == "QtApp"
         app.shutdown()
-
-
-@pytest.fixture
-def window() -> QMainWindow:
-    return QMainWindow()
 
 
 def test_the_container_builds_its_own_window(
@@ -249,28 +401,6 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built() -> Non
         Wrong().build()
 
 
-def _menus(window: QMainWindow) -> list[QMenu]:
-    return window.findChildren(QMenu)
-
-
-def _widget(dock: QDockWidget) -> QWidget:
-    inner = dock.widget()
-    assert inner is not None
-    return inner
-
-
-class Gain:
-    """A presenter a command can be filled with."""
-
-    def __init__(self, name: str, /) -> None:
-        self.name = name
-        self.value = 3.0
-
-
-class CommandApp(QtAppContainer):
-    gain: AsPresenter[Gain]
-
-
 def test_a_command_is_filled_from_the_session() -> None:
     """The session builds its components out of the application's own store."""
     app = CommandApp().build()
@@ -318,37 +448,6 @@ def test_the_session_holds_the_application_it_runs_on() -> None:
         app.shutdown()
 
 
-BUILDS_ITS_OWN = """
-from qtpy.QtWidgets import QApplication, QWidget
-
-from redsun.experimental import AsView, Placement
-from redsun.experimental.containers.qt import Central, QtAppContainer
-
-
-class Panel(QWidget):
-    placement: Placement = Central()
-
-    def __init__(self, name, /):
-        super().__init__()
-        self.name = name
-
-
-class Standalone(QtAppContainer):
-    __slots__ = ()
-
-    panel: AsView[Panel]
-
-
-assert QApplication.instance() is None
-session = Standalone().build()
-assert session.app is QApplication.instance()
-assert session.main_window.centralWidget() is not None
-# what run() does before handing over to the event loop
-session.app.aboutToQuit.connect(session.shutdown)
-session.shutdown()
-"""
-
-
 def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
     """Drive a session the way a program does, with no fixture holding anything.
 
@@ -392,52 +491,11 @@ def test_shutdown_destroys_the_widgets_the_session_built() -> None:
         _ = app.main_window
 
 
-TEARDOWN_ORDER: list[str] = []
-
-
-class Closing(QWidget):
-    """A view that records its own teardown and its widget's."""
-
-    placement: Placement = Dock("left")
-
-    def __init__(self, name: str, /) -> None:
-        super().__init__()
-        self.name = name
-
-    def shutdown(self) -> None:
-        TEARDOWN_ORDER.append("shutdown")
-
-    def closeEvent(self, event: QCloseEvent | None) -> None:
-        TEARDOWN_ORDER.append("closed")
-        if event is not None:
-            super().closeEvent(event)
-
-
-class ClosingApp(QtAppContainer):
-    __slots__ = ()
-
-    panel: AsView[Closing]
-
-
 def test_a_view_is_shut_down_before_its_widget_is_destroyed() -> None:
     """A component's own teardown may touch the widget it was built around."""
     TEARDOWN_ORDER.clear()
     ClosingApp().build().shutdown()
     assert TEARDOWN_ORDER == ["shutdown", "closed"]
-
-
-class SaveApp(QtAppContainer):
-    __slots__ = ()
-
-    config: ClassVar[dict[str, Any]] = {"name": "save-session"}
-
-
-def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
-    """Make the save dialog return *path* without showing anything."""
-    monkeypatch.setattr(
-        "redsun.experimental.containers.qt._container.QFileDialog.getSaveFileName",
-        staticmethod(lambda *a, **k: (path, "")),
-    )
 
 
 def test_the_save_action_writes_where_the_dialog_points(
@@ -502,3 +560,127 @@ def test_the_action_joins_the_menu_a_window_can_show(
 
     entries = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "File")
     assert [entry.text() for entry in entries.actions()] == ["Save configuration as..."]
+
+
+def test_a_session_nobody_has_changed_closes_without_asking(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
+
+    assert build(PromptApp).main_window.close()
+    assert shown == []
+
+
+def test_cancelling_the_prompt_keeps_the_session_open(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    session = build(PromptApp)
+    session.tunable.step = 5.0
+    _press(monkeypatch, QMessageBox.StandardButton.Cancel)
+
+    assert not session.main_window.close()
+
+
+def test_discarding_closes_without_writing(
+    qapp: QApplication,
+    config_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    session = build(PromptApp)
+    session.tunable.step = 5.0
+    _press(monkeypatch, QMessageBox.StandardButton.Discard)
+
+    assert session.main_window.close()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_saving_writes_and_then_closes(
+    qapp: QApplication,
+    config_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    target = tmp_path / "on-close.yaml"
+    _answer(monkeypatch, str(target))
+    _press(monkeypatch, QMessageBox.StandardButton.Save)
+    session = build(PromptApp)
+    session.tunable.step = 5.0
+
+    assert session.main_window.close()
+    assert yaml.safe_load(target.read_text())["presenters"]["tunable"]["step"] == 5.0
+
+
+def test_a_cancelled_save_dialog_keeps_the_session_open(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    """Closing anyway would drop the changes the user just asked to keep."""
+    _answer(monkeypatch, "")
+    _press(monkeypatch, QMessageBox.StandardButton.Save)
+    session = build(PromptApp)
+    session.tunable.step = 5.0
+
+    assert not session.main_window.close()
+
+
+def test_dont_ask_again_is_remembered_between_runs(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    first = build(PromptApp)
+    first.tunable.step = 5.0
+    _press(monkeypatch, QMessageBox.StandardButton.Discard, dont_ask=True)
+    assert first.main_window.close()
+    assert first.settings.get(ASK_ON_CLOSE) is False
+    first.shutdown()
+
+    second = build(PromptApp)
+    second.tunable.step = 9.0
+    shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
+
+    assert second.main_window.close()
+    assert shown == []
+
+
+def test_a_hook_answers_the_close_in_place_of_the_prompt(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    AlwaysCloses.asked = 0
+    session = build(HookedApp)
+    session.tunable.step = 5.0
+    shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
+
+    assert session.main_window.close()
+    assert AlwaysCloses.asked == 1
+    assert shown == []
+
+
+def test_a_refused_close_leaves_the_window_open(
+    qapp: QApplication,
+    config_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    build: Callable[..., QtAppContainer],
+) -> None:
+    """The prompt is reached through the window's own close, not by calling it."""
+    session = build(PromptApp)
+    session.tunable.step = 5.0
+    _press(monkeypatch, QMessageBox.StandardButton.Cancel)
+
+    assert not session.main_window.close()
+    assert session.main_window.isVisible() is False

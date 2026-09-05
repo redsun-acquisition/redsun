@@ -473,6 +473,83 @@ def app() -> Any:
     container.shutdown()
 
 
+@runtime_checkable
+class Displayable(Protocol):
+    """Something the session can show."""
+
+    def show(self) -> None: ...
+
+
+class Canvas:
+    """A view, and the only component that can be shown."""
+
+    placement: Placement = Somewhere()
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+    def show(self) -> None: ...
+
+
+class WantsTheCanvas:
+    """A presenter asking for the one displayable, which is a view."""
+
+    def __init__(self, name: str, /, canvas: RequiresOne[Displayable]) -> None:
+        self.name = name
+        self.canvas = canvas
+
+
+class BackwardsQuestionApp(AppContainer):
+    ctrl: AsPresenter[WantsTheCanvas]
+    canvas: AsView[Canvas]
+
+
+class PydanticSession(pydantic.BaseModel):
+    """Presenter asking a question from a class that synthesizes its signature."""
+
+    name: str
+    resettable: Requires[Resettable]
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+
+class BrokenCamera:
+    """The one component satisfying `Linkable`, which cannot be built."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("no camera")
+
+    def apply_camera(self, zoom: float) -> None: ...
+
+
+class AsksAboutLinkables:
+    """Holds the census of `Linkable`, so it can be read after the build."""
+
+    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
+        self.name = name
+        self.peers = peers
+
+
+class CensusReaderApp(AppContainer):
+    camera: AsPresenter[Camera]
+    broken: AsPresenter[BrokenCamera]
+    reader: AsPresenter[AsksAboutLinkables]
+
+
+class BrokenOneApp(AppContainer):
+    """Asks for the one `Linkable`, which cannot be built."""
+
+    broken: AsPresenter[BrokenCamera]
+    roi: AsPresenter[RoiWidget]
+
+
+class BrokenMaybeApp(AppContainer):
+    """Asks for a `Linkable` it can do without, which cannot be built."""
+
+    broken: AsPresenter[BrokenCamera]
+    widget: AsPresenter[MaybeWidget]
+
+
 def test_the_answer_holds_every_matching_component(app: App) -> None:
     """Declaration order does not matter: the question is answered after the build."""
     assert dict(app.session.resettable) == {
@@ -748,50 +825,10 @@ def test_the_device_marker_on_the_wrong_shape_names_its_own_spelling() -> None:
         MisshapenDevicesApp().build()
 
 
-@runtime_checkable
-class Displayable(Protocol):
-    """Something the session can show."""
-
-    def show(self) -> None: ...
-
-
-class Canvas:
-    """A view, and the only component that can be shown."""
-
-    placement: Placement = Somewhere()
-
-    def __init__(self, name: str, /) -> None:
-        self.name = name
-
-    def show(self) -> None: ...
-
-
-class WantsTheCanvas:
-    """A presenter asking for the one displayable, which is a view."""
-
-    def __init__(self, name: str, /, canvas: RequiresOne[Displayable]) -> None:
-        self.name = name
-        self.canvas = canvas
-
-
-class BackwardsQuestionApp(AppContainer):
-    ctrl: AsPresenter[WantsTheCanvas]
-    canvas: AsView[Canvas]
-
-
 def test_a_question_answered_by_a_later_layer_is_refused() -> None:
     """Choosing the one component cannot choose one built after the asker."""
     with pytest.raises(TypeError, match="is built before a view"):
         BackwardsQuestionApp().build()
-
-
-class PydanticSession(pydantic.BaseModel):
-    """Presenter asking a question from a class that synthesizes its signature."""
-
-    name: str
-    resettable: Requires[Resettable]
-
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
 
 def test_a_keyword_only_component_asks_the_same_question() -> None:
@@ -803,43 +840,6 @@ def test_a_keyword_only_component_asks_the_same_question() -> None:
     assert requirements(declarations) == {
         Question(Resettable, Every()): ["plain", "pyd"]
     }
-
-
-class BrokenCamera:
-    """The one component satisfying `Linkable`, which cannot be built."""
-
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("no camera")
-
-    def apply_camera(self, zoom: float) -> None: ...
-
-
-class AsksAboutLinkables:
-    """Holds the census of `Linkable`, so it can be read after the build."""
-
-    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
-        self.name = name
-        self.peers = peers
-
-
-class CensusReaderApp(AppContainer):
-    camera: AsPresenter[Camera]
-    broken: AsPresenter[BrokenCamera]
-    reader: AsPresenter[AsksAboutLinkables]
-
-
-class BrokenOneApp(AppContainer):
-    """Asks for the one `Linkable`, which cannot be built."""
-
-    broken: AsPresenter[BrokenCamera]
-    roi: AsPresenter[RoiWidget]
-
-
-class BrokenMaybeApp(AppContainer):
-    """Asks for a `Linkable` it can do without, which cannot be built."""
-
-    broken: AsPresenter[BrokenCamera]
-    widget: AsPresenter[MaybeWidget]
 
 
 def test_the_census_leaves_out_a_component_that_failed(

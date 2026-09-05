@@ -28,6 +28,7 @@ from __future__ import annotations
 import base64
 import logging
 import sys
+import weakref
 from collections.abc import Mapping  # noqa: TC003
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QApplication,
+    QCheckBox,
     QDockWidget,
     QFileDialog,
     QMainWindow,
@@ -66,6 +68,7 @@ from qtpy.QtWidgets import (
 from redsun._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
+    ConfirmsClose,
     CreatesApplication,
     WrapsBuild,
 )
@@ -92,6 +95,9 @@ if TYPE_CHECKING:
 
     from redsun._config import Source
     from redsun.experimental.containers._protocols import AttachableComponent
+
+ASK_ON_CLOSE: Final[str] = "ask_on_close"
+"""The settings key holding whether the close prompt still appears."""
 
 SAVE_MENU: Final[str] = "redsun/file"
 """The menu a session's own actions join, which a window may show by name."""
@@ -153,6 +159,7 @@ class QtHook(StrEnum):
     CONFIGURE_APPLICATION = "configure_application"
     DURING_BUILD = "during_build"
     CONFIGURE_MAIN_VIEW = "configure_main_view"
+    CONFIRM_CLOSE = "confirm_close"
 
 
 class Qt(Frontend):
@@ -187,7 +194,7 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
     ```
     """
 
-    __slots__ = ("_main_window", "_model", "_qt_app")
+    __slots__ = ("_close_guard", "_main_window", "_model", "_qt_app")
 
     frontend = Qt
     hook_points: ClassVar[Mapping[str, type]] = {
@@ -195,11 +202,13 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         QtHook.CONFIGURE_APPLICATION: ConfiguresApplication,
         QtHook.DURING_BUILD: WrapsBuild,
         QtHook.CONFIGURE_MAIN_VIEW: ConfiguresMainView,
+        QtHook.CONFIRM_CLOSE: ConfirmsClose,
     }
 
     def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
         """Prepare an empty container, to be filled by `build`."""
         super().__init__(config)
+        self._close_guard: _CloseGuard | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -312,6 +321,10 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         window = QModelMainWindow(self.model)
         window.setWindowTitle(self.name)
         self._main_window = window
+        # the guard outlives the window only if something holds it, and the
+        # window holds an event filter weakly
+        self._close_guard = _CloseGuard(self)
+        window.installEventFilter(self._close_guard)
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration())
         )
@@ -380,6 +393,55 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
             # it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
+    def _confirm_close(self) -> bool:
+        """Return whether the session may close, asking about unsaved changes.
+
+        Closing the window is what calls this, so the title bar, `close()` and
+        quitting the application all reach it. A hook installed at
+        `QtHook.CONFIRM_CLOSE` answers in place of the prompt.
+
+        Without such a hook, a session that no component asks to be written
+        differently from closes without a word, and so does one whose user has
+        ticked "don't ask again". Otherwise the prompt offers Save, Discard and
+        Cancel.
+
+        Underscored because a hook point's key is the attribute a hook is
+        declared under, which a public method of that name would collide with.
+        """
+        confirmer = self.hooks.get(QtHook.CONFIRM_CLOSE)
+        if isinstance(confirmer, ConfirmsClose):
+            return confirmer.confirm_close()
+        if not self.has_changes() or not self.settings.get(ASK_ON_CLOSE, True):
+            return True
+        return self._ask_about_changes()
+
+    def _ask_about_changes(self) -> bool:
+        """Put the unsaved-changes question to the user, and act on the answer.
+
+        Saving is the save action, so a cancelled save dialog leaves the
+        session open rather than closing it with the changes dropped.
+        """
+        prompt = QMessageBox(self._main_window)
+        prompt.setWindowTitle("Unsaved changes")
+        prompt.setText(f"'{self.name}' has changes no file holds yet.")
+        prompt.setStandardButtons(
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
+        )
+        prompt.setDefaultButton(QMessageBox.StandardButton.Save)
+        again = QCheckBox("Don't ask again")
+        prompt.setCheckBox(again)
+
+        answer = prompt.exec()
+        if again.isChecked():
+            self.settings.set(ASK_ON_CLOSE, False)
+        if answer == QMessageBox.StandardButton.Cancel:
+            return False
+        if answer == QMessageBox.StandardButton.Discard:
+            return True
+        return self._save_configuration()
+
     def _register_save_action(self) -> None:
         """Register the action writing the session out to a file the user picks.
 
@@ -394,8 +456,8 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         )
         self.virtual_container.on_release(self.model.register_action(action))
 
-    def _save_configuration(self) -> None:
-        """Ask where to write the session, and write it there.
+    def _save_configuration(self) -> bool:
+        """Ask where to write the session, write it there, and say whether it went.
 
         The dialog says comments are not kept, the file being written rather
         than edited. A path the session was built from is refused after the
@@ -409,11 +471,13 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
             "YAML (*.yaml *.yml)",
         )
         if not path:
-            return
+            return False
         try:
             self.write(path)
         except ConfigurationInUse as reason:
             QMessageBox.warning(self._main_window, "Configuration in use", str(reason))
+            return False
+        return True
 
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.
@@ -468,6 +532,28 @@ class QtAppContainer(DesktopSession[QMainWindow], AppContainer):
         start_emitting_from_queue()
         self.main_window.show()
         sys.exit(self.app.exec())
+
+
+class _CloseGuard(QObject):
+    """Puts a window's close to the session, which may refuse it."""
+
+    def __init__(self, session: QtAppContainer) -> None:
+        super().__init__()
+        self._session = weakref.ref(session)
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
+        """Refuse a close the session does not confirm."""
+        session = self._session()
+        if obj is None or event is None:
+            return False
+        if (
+            event.type() == QEvent.Type.Close
+            and session is not None
+            and not session._confirm_close()
+        ):
+            event.ignore()
+            return True
+        return super().eventFilter(obj, event)
 
 
 def _encoded(state: QByteArray) -> str:

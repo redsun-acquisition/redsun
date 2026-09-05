@@ -5,6 +5,8 @@ from __future__ import annotations
 from ._actions import ActionError
 from ._color_scheme import ColorSchemeButton, ColorSchemeMode
 from ._container import (
+    ASK_ON_CLOSE,
+    SAVE_MENU,
     Area,
     Central,
     Dock,
@@ -17,6 +19,8 @@ from ._container import (
 )
 
 __all__ = [
+    "ASK_ON_CLOSE",
+    "SAVE_MENU",
     "ActionError",
     "Area",
     "Central",
