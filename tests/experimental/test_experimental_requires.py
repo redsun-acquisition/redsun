@@ -30,9 +30,7 @@ from redsun.experimental import (
     RequiresOne,
     Session,
 )
-from redsun.experimental.session._declarations import Declaration, Layer
-from redsun.experimental.session._factories import requirements
-from redsun.experimental.virtual._requires import (
+from redsun.experimental.injection._requires import (
     Devices,
     Every,
     Maybe,
@@ -41,6 +39,8 @@ from redsun.experimental.virtual._requires import (
     key_for,
     question_of,
 )
+from redsun.experimental.session._declarations import Declaration, Layer
+from redsun.experimental.session._factories import requirements
 
 
 @dataclass(frozen=True)

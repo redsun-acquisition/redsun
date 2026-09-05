@@ -14,7 +14,7 @@ from typing import (
 )
 
 from redsun._structural import members, methods, problems, satisfies
-from redsun.experimental.virtual._wiring import SessionNotBuilt
+from redsun.experimental.ports._wiring import SessionNotBuilt
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator

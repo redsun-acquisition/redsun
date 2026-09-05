@@ -20,34 +20,15 @@ from redsun._config import Source, as_sources, load
 from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental._settings import Settings
-from redsun.experimental.session import (
-    _declarations,
-    _factories,
-    _plugins,
-)
-from redsun.experimental.session._declarations import Layer
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._protocols import (
-    AttachableComponent,
-    BuildableSession,
-    NamedComponent,
-    Serializable,
-)
-from redsun.experimental.virtual import _provides
-from redsun.experimental.virtual._requires import (
+from redsun.experimental.injection import _provides
+from redsun.experimental.injection._requires import (
     Devices,
     Maybe,
     One,
     Satisfying,
     key_for,
 )
-from redsun.experimental.virtual._shared import (
-    BlueskyCallbackRegistry,
-    CallbackType,
-    DeviceMapping,
-    SessionConfig,
-)
-from redsun.experimental.virtual._wiring import (
+from redsun.experimental.ports._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
     ComponentNotBuilt,
@@ -61,6 +42,25 @@ from redsun.experimental.virtual._wiring import (
     port_name,
     ports,
 )
+from redsun.experimental.registry._builtins import (
+    BlueskyCallbackRegistry,
+    CallbackType,
+    DeviceMapping,
+    SessionConfig,
+)
+from redsun.experimental.session import (
+    _declarations,
+    _factories,
+    _plugins,
+)
+from redsun.experimental.session._declarations import Layer
+from redsun.experimental.session._frontend import Frontend
+from redsun.experimental.session._protocols import (
+    AttachableComponent,
+    BuildableSession,
+    NamedComponent,
+    Serializable,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -69,9 +69,9 @@ if TYPE_CHECKING:
     from bluesky.protocols import HasName
     from ophyd_async.core import SignalR
 
+    from redsun.experimental.injection._requires import Question
+    from redsun.experimental.ports._wiring import SlotThread
     from redsun.experimental.session._declarations import Key
-    from redsun.experimental.virtual._requires import Question
-    from redsun.experimental.virtual._wiring import SlotThread
 
 __all__ = ["ConfigurationInUse", "Session"]
 

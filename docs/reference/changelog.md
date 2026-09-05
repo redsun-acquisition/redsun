@@ -476,10 +476,18 @@ Dates are specified in the format `DD-MM-YYYY`.
   | `redsun.experimental.containers` | `redsun.experimental.session` |
   | `redsun.experimental.containers.qt` | `redsun.experimental.session.qt` |
   | `redsun.experimental.containers.container` | `redsun.experimental.session`, the module behind it being private |
+  | `redsun.experimental.virtual` | `redsun.experimental.ports`, `.injection` and `.registry` |
   | `AppContainer` | `Session` |
   | `QtAppContainer` | `QtSession` |
 
   `redsun.containers` and its `AppContainer` are unchanged.
+
+  Each package carries its own public surface: `ports` the connectors a session
+  binds, `injection` what a component asks the session for and offers back, and
+  `registry` the framework's own values, being the session configuration, the
+  device mapping and the bluesky callback registry. `redsun.experimental`
+  re-exports all three, and is still the import a component is written
+  against.
 
 ## [0.12.1] - 03-09-2026
 

@@ -31,6 +31,7 @@ from redsun.experimental import (
     provides,
     slot,
 )
+from redsun.experimental.ports._wiring import WiringError
 from redsun.experimental.session._declarations import (
     Layer,
     check,
@@ -41,7 +42,6 @@ from redsun.experimental.session._factories import (
     optional_arg,
     synthesize,
 )
-from redsun.experimental.virtual._wiring import WiringError
 
 if TYPE_CHECKING:
     from collections.abc import Callable

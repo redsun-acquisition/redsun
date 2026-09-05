@@ -61,7 +61,7 @@ earlier:
   bar the placed views were attached to, since `setMenuBar` deletes the one
   already there. Stable's `QtMainView` carries a File menu with "save
   configuration".
-- `redsun.experimental.virtual._wiring` is a copy of `redsun.virtual._wiring`. The two
+- `redsun.experimental.ports._wiring` is a copy of `redsun.virtual._wiring`. The two
   fold back together if this graduates.
 - No decision recorded. This page is the whole of the rationale; no ADR revisits
   [ADR 3](decisions/0003-structural-subtyping-for-presenters-and-views.md) or

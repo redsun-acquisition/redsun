@@ -9,7 +9,7 @@ from event_model import DocumentRouter
 from event_model.documents import Document
 from ophyd_async.core import Device
 
-from redsun.experimental.virtual._wiring import (
+from redsun.experimental.ports._wiring import (
     SessionNotBuilt,
 )
 

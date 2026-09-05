@@ -29,6 +29,26 @@ Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 from redsun._hooks import ConfirmsClose, HookError
 from redsun._structural import satisfies
 from redsun.experimental._settings import Settings
+from redsun.experimental.injection import (
+    DevicesOf,
+    Requires,
+    RequiresMaybe,
+    RequiresOne,
+    Satisfying,
+    provides,
+)
+from redsun.experimental.ports import (
+    ComponentNotBuilt,
+    Connection,
+    SessionNotBuilt,
+    WiringError,
+    slot,
+)
+from redsun.experimental.registry import (
+    BlueskyCallbackRegistry,
+    DeviceMapping,
+    SessionConfig,
+)
 from redsun.experimental.session import (
     Alias,
     AsDevice,
@@ -49,27 +69,7 @@ from redsun.experimental.session import (
     Serves,
     Session,
 )
-from redsun.experimental.view._placement import Placement
-from redsun.experimental.virtual._provides import provides
-from redsun.experimental.virtual._requires import (
-    DevicesOf,
-    Requires,
-    RequiresMaybe,
-    RequiresOne,
-    Satisfying,
-)
-from redsun.experimental.virtual._shared import (
-    BlueskyCallbackRegistry,
-    DeviceMapping,
-    SessionConfig,
-)
-from redsun.experimental.virtual._wiring import (
-    ComponentNotBuilt,
-    Connection,
-    SessionNotBuilt,
-    WiringError,
-    slot,
-)
+from redsun.experimental.view import Placement
 
 __all__ = [
     "Alias",
