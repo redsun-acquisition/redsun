@@ -91,7 +91,7 @@ class ConfigurationInUse(OSError):
 logger = logging.getLogger("redsun")
 
 
-def _unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
+def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     """Return the keys of *entry* that *cls* would refuse to be built from.
 
     The constructor's parameters decide this, not the keys the configuration
@@ -105,7 +105,7 @@ def _unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     return sorted(set(entry) - {name for name in params if name != "name"})
 
 
-def _silent(step: str) -> None:
+def silent(step: str) -> None:
     """Take a build step's name and do nothing with it.
 
     What a session reports progress to when no hook asked for it, so the
@@ -113,10 +113,10 @@ def _silent(step: str) -> None:
     """
 
 
-_ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
+ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
 
-_BUILD_STEPS: Final[tuple[str, ...]] = (
+BUILD_STEPS: Final[tuple[str, ...]] = (
     "devices",
     "registry",
     "presenters",
@@ -140,7 +140,7 @@ it was written for, so nothing can be watching until the runtime that shows it
 exists.
 """
 
-_FRONTENDS: Final[dict[str, str]] = {
+FRONTENDS: Final[dict[str, str]] = {
     "pyqt": "redsun.experimental.session.qt:QtSession",
     "pyside": "redsun.experimental.session.qt:QtSession",
 }
@@ -243,7 +243,7 @@ class Session(BuildableSession):
         self._config = config
         self._merged: dict[str, Any] | None = None
         self._hooks: dict[str, object] | None = None
-        self._report: Callable[[str], None] = _silent
+        self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, _declarations.Declaration] = {}
         self._devices: dict[str, Device] = {}
@@ -309,7 +309,7 @@ class Session(BuildableSession):
             If it names one this session is not built against.
         """
         config = load(source)
-        return cast("Self", _base_for(cls, config.get("frontend"))(config))
+        return cast("Self", base_for(cls, config.get("frontend"))(config))
 
     @property
     def devices(self) -> Mapping[str, Device]:
@@ -407,7 +407,7 @@ class Session(BuildableSession):
         for moment, declaration in _declarations.read_hooks(type(self), points).items():
             provider = built.get(id(declaration))
             if provider is None:
-                provider = _instantiate(declaration, owner)
+                provider = instantiate(declaration, owner)
                 built[id(declaration)] = provider
             declared[moment] = provider
 
@@ -476,7 +476,7 @@ class Session(BuildableSession):
         classes.update(_plugins.load_providers(config))
         for name, cls in classes.items():
             params = _factories.injectable(cls, {}, binds_name=False)
-            _refuse_unanswered(store, name, params)
+            refuse_unanswered(store, name, params)
             instance = store.inject(_factories.provider(cls, name))()
             _provides.register(store, instance, cls, name, shared)
 
@@ -566,7 +566,7 @@ class Session(BuildableSession):
         store = self.make_store()
         self._store = store
         self._settings = Settings.for_session(self.name)
-        store.register_provider(_constant(self._settings), type_hint=Settings)
+        store.register_provider(constant(self._settings), type_hint=Settings)
         self._register_framework_values(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
         declarations = self._components()
@@ -767,14 +767,14 @@ class Session(BuildableSession):
         if instance is None or not isinstance(instance, Serializable):
             return None
         entry = dict(instance.serialize())
-        unaccepted = _unaccepted(declaration.cls, entry)
-        if not unaccepted:
+        refused = unaccepted(declaration.cls, entry)
+        if not refused:
             return entry
         logger.warning(
             "'%s' tried to save %s, which %s does not accept; keeping the "
             "entry as loaded",
             declaration.name,
-            ", ".join(unaccepted),
+            ", ".join(refused),
             type(instance).__name__,
         )
         return None
@@ -1149,7 +1149,7 @@ class Session(BuildableSession):
         for declaration in self._ordered(declarations):
             absent = chosen_for.get(declaration.name, set()) & set(self._failed)
             if absent:
-                named = _listed(sorted(absent))
+                named = listed(sorted(absent))
                 self._skip(declaration, TypeError(f"{named} was not built"))
                 continue
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
@@ -1165,9 +1165,9 @@ class Session(BuildableSession):
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
                 self._skip(declaration, e)
                 continue
-            store.register_provider(_constant(instance), type_hint=declaration.key)
+            store.register_provider(constant(instance), type_hint=declaration.key)
             if self._is_unique(declaration):
-                store.register_provider(_constant(instance), type_hint=declaration.cls)
+                store.register_provider(constant(instance), type_hint=declaration.cls)
             _provides.register(
                 store, instance, declaration.cls, declaration.name, shared
             )
@@ -1208,13 +1208,13 @@ class Session(BuildableSession):
         TypeError
             Naming the parameters and the types nothing answers.
         """
-        unanswered = _unanswered(store, params)
-        if not unanswered:
+        missing = unanswered(store, params)
+        if not missing:
             return False
-        absent = self._blamed(hint for _, hint in unanswered)
+        absent = self._blamed(hint for _, hint in missing)
         if not absent:
-            raise TypeError(_unanswered_message(declaration.name, unanswered))
-        named = _listed(sorted(absent))
+            raise TypeError(unanswered_message(declaration.name, missing))
+        named = listed(sorted(absent))
         reason = TypeError(f"{named} was not built")
         self._skip(declaration, reason)
         return True
@@ -1258,9 +1258,9 @@ class Session(BuildableSession):
         """
         needs = self._edges(declarations)
         ordered: list[_declarations.Declaration] = []
-        for layer in sorted({d.kind for d in declarations}, key=lambda k: _ORDER[k]):
+        for layer in sorted({d.kind for d in declarations}, key=lambda k: ORDER[k]):
             ordered.extend(
-                _sorted_by_need([d for d in declarations if d.kind is layer], needs)
+                sorted_by_need([d for d in declarations if d.kind is layer], needs)
             )
         return ordered
 
@@ -1272,13 +1272,13 @@ class Session(BuildableSession):
         A census is left out: it is a live view of the session rather than a
         value one component takes from another, so it carries no order.
         """
-        owners = _owners(declarations)
-        owners.update({d.key: d for d in declarations})
+        by_type = owners(declarations)
+        by_type.update({d.key: d for d in declarations})
         needs: dict[str, set[str]] = {d.name: set() for d in declarations}
         for declaration in declarations:
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
             for hint in params.values():
-                target = owners.get(_factories.optional_arg(hint) or hint)
+                target = by_type.get(_factories.optional_arg(hint) or hint)
                 if target is not None and target is not declaration:
                     needs[declaration.name].add(target.name)
         for question, askers in _factories.requirements(declarations).items():
@@ -1302,14 +1302,14 @@ class Session(BuildableSession):
         TypeError
             If a component depends on one built after it.
         """
-        owners = _owners(declarations)
+        by_type = owners(declarations)
         for declaration in declarations:
             params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
             for pname, hint in params.items():
-                target = owners.get(_factories.optional_arg(hint) or hint)
+                target = by_type.get(_factories.optional_arg(hint) or hint)
                 if target is None:
                     continue
-                _refuse_backwards(declaration, target, f"its {pname!r} parameter")
+                refuse_backwards(declaration, target, f"its {pname!r} parameter")
 
     def _answer(
         self, store: Store, declarations: list[_declarations.Declaration]
@@ -1368,12 +1368,12 @@ class Session(BuildableSession):
         """
         protocol = question.protocol
         matches = [d for d in declarations if _structural.satisfies(d.cls, protocol)]
-        asks = f"{_listed(askers)} {'requires' if len(askers) == 1 else 'require'}"
+        asks = f"{listed(askers)} {'requires' if len(askers) == 1 else 'require'}"
         wanted = "exactly one" if isinstance(question.marker, One) else "at most one"
         if len(matches) > 1:
             raise TypeError(
                 f"{asks} {wanted} component satisfying {protocol.__name__!r}, but "
-                f"{len(matches)} do: {_listed([d.name for d in matches])}. Narrow "
+                f"{len(matches)} do: {listed([d.name for d in matches])}. Narrow "
                 f"the protocol, or ask with 'Requires[{protocol.__name__}]' for "
                 "all of them."
             )
@@ -1383,13 +1383,13 @@ class Session(BuildableSession):
                 raise TypeError(
                     f"{asks} exactly one component satisfying "
                     f"{protocol.__name__!r}, and the session holds none."
-                    + _near_misses(declarations, protocol)
+                    + near_misses(declarations, protocol)
                 )
             return
         chosen = matches[0]
         for asker in askers:
             origin = next(d for d in declarations if d.name == asker)
-            _refuse_backwards(origin, chosen, f"the one {protocol.__name__!r}")
+            refuse_backwards(origin, chosen, f"the one {protocol.__name__!r}")
         if chosen.name in askers:
             raise TypeError(
                 f"{chosen.name!r} asks for the one component satisfying "
@@ -1398,7 +1398,7 @@ class Session(BuildableSession):
                 f"'Requires[{protocol.__name__}]', which may include the asker."
             )
         self._answers[question] = chosen
-        store.register_provider(_instance_of(chosen), type_hint=key)
+        store.register_provider(instance_of(chosen), type_hint=key)
 
     def _verify_components(self) -> None:
         """Check every built component against the protocol of its layer.
@@ -1594,7 +1594,7 @@ class Session(BuildableSession):
         return names
 
 
-def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, object]]:
+def unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, object]]:
     """Return the parameters of *params* nothing in the store answers.
 
     Everything a component may be built from is registered by the time it is
@@ -1608,13 +1608,10 @@ def _unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, obje
     ]
 
 
-def _unanswered_message(name: str, unanswered: list[tuple[str, object]]) -> str:
+def unanswered_message(name: str, missing: list[tuple[str, object]]) -> str:
     """Return the refusal naming what *name* asked for and did not get."""
-    named = _listed(
-        [
-            f"{pname!r} ({getattr(hint, '__name__', hint)})"
-            for pname, hint in unanswered
-        ],
+    named = listed(
+        [f"{pname!r} ({getattr(hint, '__name__', hint)})" for pname, hint in missing],
         quote=False,
     )
     return (
@@ -1624,7 +1621,7 @@ def _unanswered_message(name: str, unanswered: list[tuple[str, object]]) -> str:
     )
 
 
-def _refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> None:
+def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> None:
     """Refuse *name* asking for something the session does not hold.
 
     Raises
@@ -1632,12 +1629,12 @@ def _refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> No
     TypeError
         Naming the parameters and the types nothing answers.
     """
-    unanswered = _unanswered(store, params)
-    if unanswered:
-        raise TypeError(_unanswered_message(name, unanswered))
+    missing = unanswered(store, params)
+    if missing:
+        raise TypeError(unanswered_message(name, missing))
 
 
-def _constant(value: Any) -> Callable[[], Any]:
+def constant(value: Any) -> Callable[[], Any]:
     """Return a callable answering with *value*."""
 
     def read() -> Any:
@@ -1646,7 +1643,7 @@ def _constant(value: Any) -> Callable[[], Any]:
     return read
 
 
-def _instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
+def instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
     """Return a callable answering with what *declaration* was built into.
 
     Read at call time rather than captured, the declaration having no instance
@@ -1659,7 +1656,7 @@ def _instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
     return read
 
 
-def _sorted_by_need(
+def sorted_by_need(
     group: list[_declarations.Declaration], needs: Mapping[str, set[str]]
 ) -> list[_declarations.Declaration]:
     """Return *group* with each component after the ones it is built from.
@@ -1680,7 +1677,7 @@ def _sorted_by_need(
     while remaining:
         ready = [d for d in remaining if not pending[d.name]]
         if not ready:
-            named = _listed(sorted(d.name for d in remaining))
+            named = listed(sorted(d.name for d in remaining))
             raise TypeError(
                 f"{named} are built from each other, so none of them can be "
                 "built first. Break the cycle, or share the value one way only."
@@ -1693,7 +1690,7 @@ def _sorted_by_need(
     return ordered
 
 
-def _owners(
+def owners(
     declarations: list[_declarations.Declaration],
 ) -> dict[Any, _declarations.Declaration]:
     """Return every type naming a component, by the declaration answering it.
@@ -1713,13 +1710,13 @@ def _owners(
     return found
 
 
-def _refuse_backwards(
+def refuse_backwards(
     asker: _declarations.Declaration,
     target: _declarations.Declaration,
     where: str,
 ) -> None:
     """Refuse *asker* depending on *target*, when *target* is built later."""
-    if _ORDER[target.kind] <= _ORDER[asker.kind]:
+    if ORDER[target.kind] <= ORDER[asker.kind]:
         return
     raise TypeError(
         f"{asker.name!r} is a {asker.kind} and {where} asks for "
@@ -1729,7 +1726,7 @@ def _refuse_backwards(
     )
 
 
-def _listed(names: Iterable[str], *, quote: bool = True) -> str:
+def listed(names: Iterable[str], *, quote: bool = True) -> str:
     """Return *names* as an English list, empty reading as "nothing".
 
     Quoted unless the caller has already formatted each item.
@@ -1740,7 +1737,7 @@ def _listed(names: Iterable[str], *, quote: bool = True) -> str:
     return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
-def _near_misses(declarations: list[_declarations.Declaration], protocol: type) -> str:
+def near_misses(declarations: list[_declarations.Declaration], protocol: type) -> str:
     """Report the declared classes that carry some of *protocol*, and why not all."""
     wanted = _structural.members(protocol)
     lines = [
@@ -1753,7 +1750,7 @@ def _near_misses(declarations: list[_declarations.Declaration], protocol: type) 
     return "".join(lines)
 
 
-def _base_for(cls: type[Session], frontend: object) -> type[Session]:
+def base_for(cls: type[Session], frontend: object) -> type[Session]:
     """Return the class a session naming *frontend* is built on.
 
     A session class already built against that toolkit is kept, so a subclass
@@ -1761,11 +1758,11 @@ def _base_for(cls: type[Session], frontend: object) -> type[Session]:
     """
     if frontend is None:
         return cls
-    dotted = _FRONTENDS.get(str(frontend))
+    dotted = FRONTENDS.get(str(frontend))
     if dotted is None:
         raise ValueError(
             f"the configuration names frontend {frontend!r}, which no session "
-            f"is built against. Known: {', '.join(sorted(_FRONTENDS))}."
+            f"is built against. Known: {', '.join(sorted(FRONTENDS))}."
         )
     module_name, _, class_name = dotted.partition(":")
     resolved: type[Session] = getattr(import_module(module_name), class_name)
@@ -1780,7 +1777,7 @@ def _base_for(cls: type[Session], frontend: object) -> type[Session]:
     return resolved
 
 
-def _instantiate(declaration: _declarations.HookDeclaration, owner: str) -> object:
+def instantiate(declaration: _declarations.HookDeclaration, owner: str) -> object:
     """Construct the provider *declaration* names.
 
     Raises

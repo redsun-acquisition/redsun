@@ -39,7 +39,7 @@ class Settings:
     def __init__(self, path: Path) -> None:
         """Read *path* if it is there, and remember where to write it back."""
         self._path = path
-        self._values: dict[str, Any] = _read(path)
+        self._values: dict[str, Any] = read(path)
 
     @classmethod
     def for_session(cls, name: str) -> Self:
@@ -89,7 +89,7 @@ class Settings:
         self._path.write_text(json.dumps(self._values, indent=2), encoding="utf-8")
 
 
-def _read(path: Path) -> dict[str, Any]:
+def read(path: Path) -> dict[str, Any]:
     """Return what *path* holds, or nothing when it is absent or unreadable.
 
     A settings file is written by the program and read by it, so one that

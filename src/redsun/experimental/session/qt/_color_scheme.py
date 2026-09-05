@@ -47,7 +47,7 @@ class ColorSchemeMode(StrEnum):
     @property
     def glyph(self) -> str:
         """The character the control shows while this mode is asked for."""
-        return _GLYPHS[self]
+        return GLYPHS[self]
 
     def apply(self) -> None:
         """Ask the platform for this scheme, or stop asking under `SYSTEM`.
@@ -65,7 +65,7 @@ class ColorSchemeMode(StrEnum):
         if self is ColorSchemeMode.SYSTEM:
             hints.unsetColorScheme()
         else:
-            hints.setColorScheme(_SCHEMES[self])
+            hints.setColorScheme(SCHEMES[self])
 
     def next(self) -> ColorSchemeMode:
         """Return the mode after this one, wrapping past the last."""
@@ -73,12 +73,12 @@ class ColorSchemeMode(StrEnum):
         return order[(order.index(self) + 1) % len(order)]
 
 
-_SCHEMES: dict[ColorSchemeMode, QtNamespace.ColorScheme] = {
+SCHEMES: dict[ColorSchemeMode, QtNamespace.ColorScheme] = {
     ColorSchemeMode.LIGHT: QtNamespace.ColorScheme.Light,
     ColorSchemeMode.DARK: QtNamespace.ColorScheme.Dark,
 }
 
-_GLYPHS: dict[ColorSchemeMode, str] = {
+GLYPHS: dict[ColorSchemeMode, str] = {
     ColorSchemeMode.SYSTEM: "\u25d0",
     ColorSchemeMode.LIGHT: "\u2600",
     ColorSchemeMode.DARK: "\u263e",

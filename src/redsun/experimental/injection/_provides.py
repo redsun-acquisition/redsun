@@ -80,10 +80,10 @@ def register(
                 "identifies one value; give them distinct types."
             )
         seen[provided] = name
-        store.register_provider(_value(instance, method_name), type_hint=provided)
+        store.register_provider(value(instance, method_name), type_hint=provided)
 
 
-def _value(instance: object, method_name: str) -> Callable[[], Any]:
+def value(instance: object, method_name: str) -> Callable[[], Any]:
     """Return a callable giving what *instance* shares through *method_name*."""
 
     def read() -> Any:

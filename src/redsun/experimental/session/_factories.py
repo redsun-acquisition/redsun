@@ -124,7 +124,7 @@ def injectable(
             key = key_for(question)
             wanted[pname] = key | None if isinstance(question.marker, Maybe) else key
             continue
-        if param.default is not param.empty and not _is_union(hint):
+        if param.default is not param.empty and not is_union(hint):
             hint = hint | None
         wanted[pname] = hint
     return wanted
@@ -163,13 +163,14 @@ def defaulted(cls: type, names: Iterable[str]) -> set[str]:
 
 def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
     """Return ``X`` for ``X | None``, or ``None`` for anything else."""
-    if not _is_union(hint):
+    if not is_union(hint):
         return None
     args = [arg for arg in get_args(hint) if arg is not type(None)]
     return args[0] if len(args) == 1 else None
 
 
-def _is_union(hint: TypeForm[Any]) -> bool:
+def is_union(hint: TypeForm[Any]) -> bool:
+    """Return whether *hint* is a union, written as ``X | Y`` or ``Union[X, Y]``."""
     return get_origin(hint) in (Union, UnionType)
 
 

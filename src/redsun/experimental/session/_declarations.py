@@ -131,7 +131,7 @@ class HookDeclaration:
     kwargs: dict[str, Any]
 
 
-_MARKERS = (Declare, FromConfig, Alias, Serves)
+MARKERS = (Declare, FromConfig, Alias, Serves)
 
 
 class Declaration:
@@ -245,17 +245,21 @@ def leads_with_name(cls: type) -> bool:
     inside ``*args`` or ``**kwargs`` is not a name the component can be built
     with.
     """
-    first = _first_parameter(cls)
+    first = first_parameter(cls)
     return first is not None and first.name == "name" and first.kind in NAME_KINDS
 
 
 def takes_name_by_keyword(cls: type) -> bool:
     """Whether *cls* wants its name as a keyword rather than positionally."""
-    first = _first_parameter(cls)
+    first = first_parameter(cls)
     return first is not None and first.kind is inspect.Parameter.KEYWORD_ONLY
 
 
-def _first_parameter(cls: type) -> inspect.Parameter | None:
+def first_parameter(cls: type) -> inspect.Parameter | None:
+    """Return the first parameter of *cls*, or ``None`` if it takes none.
+
+    A class whose signature cannot be read answers ``None`` as well.
+    """
     try:
         params = list(inspect.signature(cls).parameters.values())
     except (TypeError, ValueError):
@@ -286,12 +290,12 @@ def read(
     """
     declarations: dict[str, Declaration] = {}
 
-    for attr, hint in _hints(cls).items():
-        if attr.startswith("_") or _is_hook(hint):
+    for attr, hint in hints(cls).items():
+        if attr.startswith("_") or is_hook(hint):
             continue
-        target, metadata, kind = _split(hint)
+        target, metadata, kind = split(hint)
         if kind is None:
-            _warn_if_forgotten(cls, attr, target)
+            warn_if_forgotten(cls, attr, target)
             continue
         check(target, kind, f"{cls.__qualname__}.{attr}", frontend)
 
@@ -308,11 +312,11 @@ def read(
 
         section = config.get(kind.section, {})
         declarations[name] = Declaration(
-            target, name, kind, {**_entry(section, cfg_key), **inline}
+            target, name, kind, {**entry(section, cfg_key), **inline}
         )
 
-    declarations.update(_from_config(config, declarations.keys(), frontend))
-    _refuse_shadowed(cls, declarations)
+    declarations.update(from_config(config, declarations.keys(), frontend))
+    refuse_shadowed(cls, declarations)
     return declarations
 
 
@@ -330,10 +334,10 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
         two declarations claim one point.
     """
     found: dict[str, HookDeclaration] = {}
-    for attr, hint in _hints(cls).items():
-        if attr.startswith("_") or not _is_hook(hint):
+    for attr, hint in hints(cls).items():
+        if attr.startswith("_") or not is_hook(hint):
             continue
-        target, metadata, _ = _split(hint)
+        target, metadata, _ = split(hint)
         where = f"{cls.__qualname__}.{attr}"
         if not isinstance(target, type):
             raise HookError(
@@ -363,7 +367,7 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
     return found
 
 
-def _refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
+def refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
     """Refuse a component whose name the session already answers itself.
 
     A built component is read through ``__getattr__``, which only runs when
@@ -381,7 +385,7 @@ def _refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None
         )
 
 
-def _warn_if_forgotten(cls: type, attr: str, target: object) -> None:
+def warn_if_forgotten(cls: type, attr: str, target: object) -> None:
     """Point out an annotation that looks like a component but declares no layer.
 
     Without a layer the annotation is an ordinary attribute, which is the right
@@ -401,7 +405,7 @@ def _warn_if_forgotten(cls: type, attr: str, target: object) -> None:
     )
 
 
-def _from_config(
+def from_config(
     config: Mapping[str, Any], declared: Iterable[str], frontend: type[Frontend]
 ) -> dict[str, Declaration]:
     """Collect the components named only in *config*.
@@ -426,15 +430,16 @@ def _from_config(
             check(
                 target, kind, f"configuration entry {section_name}.{cfg_key}", frontend
             )
-            found[cfg_key] = Declaration(target, cfg_key, kind, _strip(entry))
+            found[cfg_key] = Declaration(target, cfg_key, kind, without_meta(entry))
     return found
 
 
-def _strip(entry: Mapping[str, Any]) -> dict[str, Any]:
+def without_meta(entry: Mapping[str, Any]) -> dict[str, Any]:
+    """Return *entry* without the keys naming the plugin it came from."""
     return {k: v for k, v in entry.items() if k not in META_KEYS}
 
 
-def _hints(cls: type) -> dict[str, Any]:
+def hints(cls: type) -> dict[str, Any]:
     """Resolve the annotations of *cls* and its bases, one class at a time.
 
     ``from __future__ import annotations`` makes every annotation a string,
@@ -466,24 +471,27 @@ def _hints(cls: type) -> dict[str, Any]:
     return resolved
 
 
-def _split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
+def split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
     """Separate a declaration's type, its option markers, and its layer."""
     if get_origin(hint) is not Annotated:
         return hint, (), None
     target, *metadata = get_args(hint)
     layers = [m for m in metadata if isinstance(m, Layer)]
-    markers = tuple(m for m in metadata if isinstance(m, _MARKERS))
+    markers = tuple(m for m in metadata if isinstance(m, MARKERS))
     return target, markers, layers[0] if layers else None
 
 
-def _is_hook(hint: Any) -> bool:
+def is_hook(hint: Any) -> bool:
+    """Return whether *hint* is annotated as a hook implementation."""
     if get_origin(hint) is not Annotated:
         return False
     return any(isinstance(m, Hook) for m in get_args(hint)[1:])
 
 
-def _entry(section: Mapping[str, Any], key: str) -> dict[str, Any]:
-    entry = section.get(key) or {}
-    if not isinstance(entry, dict):
-        return {}
-    return {k: v for k, v in entry.items() if k not in META_KEYS}
+def entry(section: Mapping[str, Any], key: str) -> dict[str, Any]:
+    """Return the settings *section* holds under *key*, without its meta keys.
+
+    Anything that is not a table reads as no settings at all.
+    """
+    found = section.get(key) or {}
+    return without_meta(found) if isinstance(found, dict) else {}

@@ -236,12 +236,19 @@ def question_of(hint: TypeForm[Any]) -> Question | None:
     if not markers:
         return None
     marker = markers[0]
-    protocol = _protocol(hint, inner, marker)
-    _validate(protocol, marker)
+    protocol = protocol_of(hint, inner, marker)
+    validate(protocol, marker)
     return Question(protocol, marker)
 
 
-def _protocol(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
+def protocol_of(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
+    """Return the protocol *hint* asks about, given the shape *marker* expects.
+
+    Raises
+    ------
+    TypeError
+        If the annotation is not the shape the marker is written for.
+    """
     if isinstance(marker, One):
         if not isinstance(inner, type):
             raise TypeError(
@@ -268,7 +275,15 @@ def _protocol(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
     return args[1]  # type: ignore[no-any-return]
 
 
-def _validate(protocol: type, marker: Every) -> None:
+def validate(protocol: type, marker: Every) -> None:
+    """Refuse a protocol that cannot answer the question *marker* asks.
+
+    Raises
+    ------
+    TypeError
+        If the protocol is not runtime checkable, or declares no method where
+        one answer has to be chosen before the components are built.
+    """
     if not getattr(protocol, "_is_runtime_protocol", False):
         raise TypeError(
             f"{getattr(protocol, '__name__', protocol)!r} cannot be asked about: "
@@ -283,11 +298,11 @@ def _validate(protocol: type, marker: Every) -> None:
         )
 
 
-_SUPERTYPES: dict[str, Any] = {
+SUPERTYPES: dict[str, Any] = {
     "every": Mapping[str, Any],
     "devices": Mapping[str, Any],
 }
-_KEYS: dict[Question, Key] = {}
+KEYS: dict[Question, Key] = {}
 
 
 def key_for(question: Question) -> Key:
@@ -297,9 +312,9 @@ def key_for(question: Question) -> Key:
     it, so a question would otherwise be indistinguishable from a plain value
     of the same shape.
     """
-    if question not in _KEYS:
-        _KEYS[question] = NewType(
+    if question not in KEYS:
+        KEYS[question] = NewType(
             f"{question.kind.capitalize()}_{question.protocol.__name__}",
-            _SUPERTYPES.get(question.kind, object),
+            SUPERTYPES.get(question.kind, object),
         )
-    return _KEYS[question]
+    return KEYS[question]

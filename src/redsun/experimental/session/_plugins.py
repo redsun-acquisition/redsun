@@ -47,7 +47,7 @@ def resolve(entry: Mapping[str, Any], group: str) -> type | None:
     """
     if not META_KEYS <= entry.keys():
         return None
-    return _import(_class_path(entry["plugin_name"], entry["plugin_id"], group))
+    return import_class(class_path(entry["plugin_name"], entry["plugin_id"], group))
 
 
 def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
@@ -79,7 +79,7 @@ def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
     return found
 
 
-def _class_path(plugin_name: str, plugin_id: str, group: str) -> str:
+def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     """Look up ``module:Class`` for *plugin_id* in *plugin_name*'s manifest."""
     manifests: EntryPoints = entry_points(group=PLUGIN_GROUP)
     plugin = next((e for e in manifests if e.name == plugin_name), None)
@@ -109,7 +109,7 @@ def _class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     return items[plugin_id]
 
 
-def _import(class_path: str) -> type:
+def import_class(class_path: str) -> type:
     """Import ``module:Class``."""
     module_name, _, class_name = class_path.partition(":")
     if not module_name or not class_name:

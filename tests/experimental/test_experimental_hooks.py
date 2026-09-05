@@ -18,7 +18,7 @@ from redsun.experimental import (
     Serves,
     Session,
 )
-from redsun.experimental.session._base import _BUILD_STEPS
+from redsun.experimental.session._base import BUILD_STEPS
 from redsun.experimental.session.qt import Dock, QtHook, QtSession
 
 if TYPE_CHECKING:
@@ -257,7 +257,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
     build(App)
     assert Splash.entered == 1
     assert Splash.exited == 1
-    assert Splash.steps == list(_BUILD_STEPS)
+    assert Splash.steps == list(BUILD_STEPS)
     assert Splash.steps == [
         "devices",
         "registry",

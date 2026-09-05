@@ -208,7 +208,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
         """Prepare an empty container, to be filled by `build`."""
         super().__init__(config)
-        self._close_guard: _CloseGuard | None = None
+        self._close_guard: CloseGuard | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
@@ -323,7 +323,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._main_window = window
         # the guard outlives the window only if something holds it, and the
         # window holds an event filter weakly
-        self._close_guard = _CloseGuard(self)
+        self._close_guard = CloseGuard(self)
         window.installEventFilter(self._close_guard)
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration())
@@ -358,8 +358,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """
         if self._main_window is None:
             return
-        self.settings.set("window.geometry", _encoded(self._main_window.saveGeometry()))
-        self.settings.set("window.state", _encoded(self._main_window.saveState()))
+        self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
+        self.settings.set("window.state", encoded(self._main_window.saveState()))
 
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
@@ -534,7 +534,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         sys.exit(self.app.exec())
 
 
-class _CloseGuard(QObject):
+class CloseGuard(QObject):
     """Puts a window's close to the session, which may refuse it."""
 
     def __init__(self, session: QtSession) -> None:
@@ -556,7 +556,7 @@ class _CloseGuard(QObject):
         return super().eventFilter(obj, event)
 
 
-def _encoded(state: QByteArray) -> str:
+def encoded(state: QByteArray) -> str:
     """Return *state* as text, the settings file holding JSON rather than bytes."""
     return base64.b64encode(state.data()).decode("ascii")
 
@@ -566,7 +566,7 @@ def application() -> QApplication:
     return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
 
 
-_AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
+AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
     "left": QtNamespace.DockWidgetArea.LeftDockWidgetArea,
     "right": QtNamespace.DockWidgetArea.RightDockWidgetArea,
     "top": QtNamespace.DockWidgetArea.TopDockWidgetArea,
@@ -588,13 +588,15 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
         placement = view.placement
         match placement:
             case Central():
-                central[name] = _named(name, view, placement, QWidget)
+                central[name] = named(name, view, placement, QWidget)
             case Dock():
-                _dock(window, name, _named(name, view, placement, QWidget), placement)
+                add_dock(window, name, named(name, view, placement, QWidget), placement)
             case MenuItem():
-                _menu(window, _named(name, view, placement, QAction), placement)
+                add_menu_item(window, named(name, view, placement, QAction), placement)
             case ToolBarItem():
-                _toolbar(window, _named(name, view, placement, QAction), placement)
+                add_toolbar_item(
+                    window, named(name, view, placement, QAction), placement
+                )
             case _:
                 raise TypeError(
                     f"view {name!r} asks to be attached as "
@@ -603,12 +605,12 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
                     + ", ".join(sorted(p.__name__ for p in Qt.requires))
                     + "."
                 )
-    _center(window, central)
+    set_central(window, central)
 
 
 # taken as 'object' rather than 'AttachableComponent': narrowing a protocol
 # against a type variable leaves mypy nothing it can name, and it yields Never
-def _named(name: str, view: object, placement: Placement, required: type[T]) -> T:
+def named(name: str, view: object, placement: Placement, required: type[T]) -> T:
     """Return *view* as *required*, named after *name* so it can be found again.
 
     Raises
@@ -626,16 +628,24 @@ def _named(name: str, view: object, placement: Placement, required: type[T]) -> 
     return view
 
 
-def _dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
+def add_dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
+    """Put *widget* in a dock of *window*, in the area *placement* names."""
     # Qt matches a dock to its saved place by object name, and drops one that
     # has none, so the component's declared name is what carries the layout
     dock = QDockWidget(name, window)
     dock.setObjectName(name)
     dock.setWidget(widget)
-    window.addDockWidget(_AREAS[placement.area], dock)
+    window.addDockWidget(AREAS[placement.area], dock)
 
 
-def _menu(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
+def add_menu_item(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
+    """Add *action* to the menu *placement* names, creating that menu if absent.
+
+    Raises
+    ------
+    TypeError
+        If the window has no menu bar.
+    """
     bar = window.menuBar()
     if bar is None:
         raise TypeError(f"{type(window).__name__} has no menu bar to add a menu to")
@@ -651,7 +661,10 @@ def _menu(window: QMainWindow, action: QAction, placement: MenuItem) -> None:
     bar.addMenu(created)
 
 
-def _toolbar(window: QMainWindow, action: QAction, placement: ToolBarItem) -> None:
+def add_toolbar_item(
+    window: QMainWindow, action: QAction, placement: ToolBarItem
+) -> None:
+    """Add *action* to the toolbar *placement* names, creating it if absent."""
     existing = window.findChildren(QToolBar, placement.toolbar)
     if existing:
         existing[0].addAction(action)
@@ -662,7 +675,7 @@ def _toolbar(window: QMainWindow, action: QAction, placement: ToolBarItem) -> No
     bar.addAction(action)
 
 
-def _center(window: QMainWindow, central: dict[str, QWidget]) -> None:
+def set_central(window: QMainWindow, central: dict[str, QWidget]) -> None:
     """Give the central area to the one view asking, or tab them when several do."""
     if not central:
         return
