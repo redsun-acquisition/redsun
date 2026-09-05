@@ -18,8 +18,9 @@ from redsun.experimental import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from .conftest import BuildSession
 
 
 class Stage(Device):
@@ -76,8 +77,6 @@ class Anything:
 
 
 class App(Session):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {
         "schema_version": 1.0,
         "name": "round-trip",
@@ -98,7 +97,7 @@ class App(Session):
 
 
 def test_a_changed_session_rebuilds_from_what_it_wrote(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -114,7 +113,7 @@ def test_a_changed_session_rebuilds_from_what_it_wrote(
 
 
 def test_serialize_writes_a_parameter_no_source_named(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     entry = build(App).serialize()["presenters"]["ctrl"]
 
@@ -122,7 +121,7 @@ def test_serialize_writes_a_parameter_no_source_named(
 
 
 def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -131,7 +130,7 @@ def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
 
 
 def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
-    build: Callable[..., Session], caplog: pytest.LogCaptureFixture
+    build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     session = build(App)
 
@@ -145,7 +144,7 @@ def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
 
 
 def test_a_constructor_taking_kwargs_accepts_every_key(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     entry = build(App).serialize()["presenters"]["anything"]
 
@@ -153,13 +152,13 @@ def test_a_constructor_taking_kwargs_accepts_every_key(
 
 
 def test_a_session_nobody_has_touched_has_no_changes(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     assert not build(App).has_changes()
 
 
 def test_a_component_asking_to_be_written_differently_is_a_change(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -168,7 +167,7 @@ def test_a_component_asking_to_be_written_differently_is_a_change(
 
 
 def test_a_value_changed_and_changed_back_reads_as_unchanged(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -178,7 +177,7 @@ def test_a_value_changed_and_changed_back_reads_as_unchanged(
 
 
 def test_a_component_that_serializes_nothing_never_changes(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.quiet.gain = 8.0
@@ -187,7 +186,7 @@ def test_a_component_that_serializes_nothing_never_changes(
 
 
 def test_a_refused_key_still_counts_as_a_change(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.renamed.step = 9.0
@@ -196,7 +195,7 @@ def test_a_refused_key_still_counts_as_a_change(
 
 
 def test_a_written_session_comes_back_from_the_file(
-    tmp_path: Path, build: Callable[..., Session]
+    tmp_path: Path, build: BuildSession
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
@@ -210,7 +209,7 @@ def test_a_written_session_comes_back_from_the_file(
 
 
 def test_the_written_file_is_one_flat_session(
-    tmp_path: Path, build: Callable[..., Session]
+    tmp_path: Path, build: BuildSession
 ) -> None:
     """A session layered from several sources writes what the merge produced."""
     base = tmp_path / "instrument.yaml"
@@ -222,9 +221,7 @@ def test_the_written_file_is_one_flat_session(
     assert yaml.safe_load(written.read_text())["presenters"]["ctrl"]["step"] == 1.5
 
 
-def test_writing_over_a_source_is_refused(
-    tmp_path: Path, build: Callable[..., Session]
-) -> None:
+def test_writing_over_a_source_is_refused(tmp_path: Path, build: BuildSession) -> None:
     """Overwriting one replaces what every session sharing it reads."""
     source = tmp_path / "shared.yaml"
     source.write_text(yaml.safe_dump({"name": "shared"}))

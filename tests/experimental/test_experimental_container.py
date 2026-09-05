@@ -44,8 +44,9 @@ from redsun.experimental.session._factories import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from .conftest import BuildSession
 
 
 Readings = NewType("Readings", "dict[str, float]")
@@ -266,14 +267,10 @@ class NamelessView(Nameless, Attachable):
 
 
 class NamelessApp(Session):
-    __slots__ = ()
-
     ctrl: AsPresenter[Nameless]
 
 
 class NamelessViewApp(Session):
-    __slots__ = ()
-
     frontend = Toy
     panel: AsView[NamelessView]
 
@@ -290,21 +287,17 @@ class Deferred:
 
 
 class DeferredApp(Session):
-    __slots__ = ()
-
     frontend = Toy
 
     stray: AsView[Deferred]
 
 
 class ToyApp(Session):
-    __slots__ = ()
-
     frontend = Toy
 
 
 class InheritsToy(ToyApp):
-    __slots__ = ()
+    """A session inheriting its base's declarations and frontend."""
 
 
 @pytest.fixture
@@ -686,8 +679,6 @@ class Marker:
 class SteppedApp(Session):
     """A session filling the two steps a toolkit owns, and nothing else."""
 
-    __slots__ = ()
-
     ctrl: AsPresenter[Marker]
 
     def start_runtime(self) -> None:
@@ -785,8 +776,8 @@ def test_component_shutdown_runs_without_being_asked(app: App) -> None:
 
 
 def test_unknown_attribute_raises_attribute_error(app: App) -> None:
-    with pytest.raises(AttributeError, match="declares no component"):
-        _ = app.nonexistent
+    with pytest.raises(AttributeError, match="nonexistent"):
+        _ = app.nonexistent  # type: ignore[attr-defined]
 
 
 def test_rebuild_is_a_no_op(app: App) -> None:
@@ -807,13 +798,13 @@ def test_two_components_sharing_one_type_is_refused() -> None:
         TwoOwners().build()
 
 
-def test_two_views_of_one_layer_may_share(build: Callable[..., Session]) -> None:
+def test_two_views_of_one_layer_may_share(build: BuildSession) -> None:
     """The owner is built first because the graph says so, not by hand."""
     app = build(SameLayerApp)
     assert app.control.viewer is app.display.viewer()
 
 
-def test_a_view_may_depend_on_a_presenter(build: Callable[..., Session]) -> None:
+def test_a_view_may_depend_on_a_presenter(build: BuildSession) -> None:
     """A view is built after a presenter, so naming one is the allowed direction."""
     app = build(ViewOnAPresenter)
     assert app.holder.ctrl is app.recorder
@@ -963,8 +954,6 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
     """__getattr__ never runs for a name ordinary lookup already answers."""
 
     class Shadowed(Session):
-        __slots__ = ()
-
         # mypy sees the clash too; the container has to as well
         devices: AsPresenter[Ctrl]  # type: ignore[assignment]
 
@@ -973,13 +962,11 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
 
 
 def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """A declaration is opt-in, so a container may hold plain attributes."""
 
     class Plain(Session):
-        __slots__ = ()
-
         threshold: int
         ctrl: AsPresenter[Ctrl]
 
@@ -989,13 +976,11 @@ def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
 
 
 def test_a_component_nothing_reaches_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """A half-finished declaration, or a wiring rule with a typo in the name."""
 
     class Inert(Session):
-        __slots__ = ()
-
         recorder: AsPresenter[Recorder]
 
     build(Inert)
@@ -1006,7 +991,7 @@ def test_a_component_nothing_reaches_is_reported(
 
 
 def test_a_component_another_is_built_from_is_not_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Being injected is being used, though the component asks for nothing itself."""
     build(OrderedApp)
@@ -1014,7 +999,7 @@ def test_a_component_another_is_built_from_is_not_reported(
 
 
 def test_a_shared_value_nothing_asks_for_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Usually the consumer was renamed or removed while the producer stayed."""
     build(App)
@@ -1025,25 +1010,23 @@ def test_a_shared_value_nothing_asks_for_is_reported(
 
 
 def test_a_session_is_named_after_its_class_when_it_says_nothing(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A shared constant would let two unrelated sessions collide silently."""
 
     class Instrument(Session):
-        __slots__ = ()
+        """A session naming itself nothing."""
 
     app = build(Instrument)
     assert app.name == "Instrument"
 
 
 def test_a_forgotten_layer_is_reported(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """Omitting the marker is silent by design, so a likely component is flagged."""
 
     class Forgot(Session):
-        __slots__ = ()
-
         ctrl: Ctrl
 
     app = build(Forgot)
@@ -1115,7 +1098,9 @@ def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> N
 
 
 @pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])
-def test_a_dataclass_is_an_ordinary_component(app: type[Session]) -> None:
+def test_a_dataclass_is_an_ordinary_component(
+    app: type[DataclassApp | KwOnlyApp | FrozenApp],
+) -> None:
     """Every dataclass flavour builds, whatever kind its fields become."""
     built = app().build()
     assert built.ctrl.name == "ctrl"
@@ -1192,14 +1177,14 @@ def test_a_session_knows_what_it_is_called() -> None:
     """The name is read from the configuration before anything is built."""
 
     class Instrument(Session):
-        __slots__ = ()
+        """A session naming itself nothing."""
 
     assert Instrument().name == "Instrument"
     assert Instrument({"name": "morning-run"}).name == "morning-run"
 
 
 def test_a_shared_service_may_be_any_kind_of_class(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Its constructor is read from the signature, as a component's is.
 
@@ -1217,13 +1202,23 @@ def test_a_shared_service_is_given_no_name() -> None:
 
 
 def test_a_component_that_fails_to_build_is_skipped(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """The build returns, and every component that could be made is there."""
     app = build(ToleratedApp)
     assert app.is_built
     assert set(app.presenters) == {"ok"}
     assert set(app.views) == {"panel"}
+
+
+def test_a_component_that_failed_is_not_set_on_the_session(
+    build: BuildSession,
+) -> None:
+    """Reading it raises, rather than answering None typed as the component."""
+    app = build(ToleratedApp)
+
+    with pytest.raises(AttributeError, match="bad"):
+        _ = app.bad
 
 
 def test_a_failure_is_logged_against_the_component_name(
@@ -1238,7 +1233,7 @@ def test_a_failure_is_logged_against_the_component_name(
 
 
 def test_a_component_whose_collaborator_failed_is_skipped_too(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """One that cannot be built does not take its dependents down with it."""
     app = build(DependsOnBrokenApp)
@@ -1288,17 +1283,10 @@ def test_a_session_missing_a_step_cannot_be_constructed() -> None:
     """
 
     class Partial(BuildableSession):
-        __slots__ = ()
-
         def present(self) -> None: ...
 
     with pytest.raises(TypeError, match="abstract"):
         Partial()  # type: ignore[abstract]
-
-
-def test_a_session_keeps_its_instances_free_of_a_dict() -> None:
-    """A protocol body without `__slots__` would give every session one."""
-    assert not hasattr(Session(), "__dict__")
 
 
 def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
@@ -1306,8 +1294,6 @@ def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
     released: list[str] = []
 
     class Failing(Session):
-        __slots__ = ()
-
         def start_runtime(self) -> None:
             self.on_release(lambda: released.append("runtime"))
 
@@ -1325,8 +1311,6 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
     released: list[str] = []
 
     class Ordered(Session):
-        __slots__ = ()
-
         def start_runtime(self) -> None:
             self.on_release(lambda: released.append("runtime"))
 
@@ -1343,13 +1327,11 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
 
 
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
-    caplog: pytest.LogCaptureFixture, build: Callable[..., Session]
+    caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """One component that could not be made must not keep the session down."""
 
     class Half(Session):
-        __slots__ = ()
-
         broken: AsPresenter[Unmakeable]
         recorder: AsPresenter[Recorder]
 
@@ -1389,8 +1371,6 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
     """Only a component the build skipped is forgiven, not a typo."""
 
     class Wrong(Session):
-        __slots__ = ()
-
         recorder: AsPresenter[Recorder]
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}

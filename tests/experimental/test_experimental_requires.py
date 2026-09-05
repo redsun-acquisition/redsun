@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from .conftest import BuildSession
 
 import logging
 from collections.abc import (
@@ -575,7 +575,7 @@ def test_driving_every_component_through_the_answer(app: App) -> None:
 
 
 def test_peers_see_the_whole_set_including_themselves(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """The answer describes the session, not the component that asked."""
     app = build(PeerApp)
@@ -584,7 +584,7 @@ def test_peers_see_the_whole_set_including_themselves(
 
 
 def test_a_peer_leaves_itself_out_where_it_matters(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Only the component knows whether excluding itself is meaningful."""
     app = build(PeerApp)
@@ -592,7 +592,7 @@ def test_a_peer_leaves_itself_out_where_it_matters(
     assert app.right.link_targets() == ["left", "middle"]
 
 
-def test_peers_act_on_each_other(build: Callable[..., Session]) -> None:
+def test_peers_act_on_each_other(build: BuildSession) -> None:
     app = build(PeerApp)
     app.left.linked_to = "right"
     app.left.zoom_to(4.0)
@@ -601,7 +601,7 @@ def test_peers_act_on_each_other(build: Callable[..., Session]) -> None:
 
 
 def test_a_component_that_did_not_mean_to_offer_is_still_counted(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Satisfying a protocol by accident puts a component in the answer."""
     app = build(AccidentalApp)
@@ -611,7 +611,7 @@ def test_a_component_that_did_not_mean_to_offer_is_still_counted(
 
 
 def test_a_mismatched_signature_is_not_a_match(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Membership compares signatures, so a call the protocol permits works."""
     app = build(LooseApp)
@@ -619,7 +619,7 @@ def test_a_mismatched_signature_is_not_a_match(
     app.session.reset_all()
 
 
-def test_a_near_miss_explains_itself(build: Callable[..., Session]) -> None:
+def test_a_near_miss_explains_itself(build: BuildSession) -> None:
     """A component carrying some of the protocol reports why it was left out."""
     app = build(LooseApp)
     rejected = app.satisfying(Resettable).rejected
@@ -628,7 +628,7 @@ def test_a_near_miss_explains_itself(build: Callable[..., Session]) -> None:
 
 
 def test_a_component_missing_every_member_is_not_a_near_miss(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Only components that nearly match are worth reporting."""
     app = build(App)
@@ -690,7 +690,7 @@ def test_requirements_are_collected_once_per_question() -> None:
     assert requirements(declarations) == {Question(Resettable, Every()): ["a", "b"]}
 
 
-def test_one_arrives_built(build: Callable[..., Session]) -> None:
+def test_one_arrives_built(build: BuildSession) -> None:
     """Unlike a census, a single answer is an ordinary dependency."""
     app = build(OneApp)
     assert app.roi.camera is app.camera
@@ -714,12 +714,12 @@ def test_one_refuses_to_answer_with_the_asker() -> None:
         SelfApp().build()
 
 
-def test_maybe_is_answered_when_present(build: Callable[..., Session]) -> None:
+def test_maybe_is_answered_when_present(build: BuildSession) -> None:
     app = build(MaybeApp)
     assert app.widget.camera is app.camera
 
 
-def test_maybe_is_none_when_absent(build: Callable[..., Session]) -> None:
+def test_maybe_is_none_when_absent(build: BuildSession) -> None:
     app = build(MaybeEmptyApp)
     assert app.widget.camera is None
 
@@ -742,7 +742,7 @@ def test_a_near_miss_is_named_when_nothing_answers() -> None:
 
 
 def test_an_extra_defaulted_parameter_still_answers(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Widening an implementation does not break the protocol's calls."""
     app = build(TolerantApp)
@@ -752,7 +752,7 @@ def test_an_extra_defaulted_parameter_still_answers(
 
 
 def test_a_data_member_assigned_in_init_still_answers(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """The choice ignores what only an instance can show, then confirms it."""
     app = build(CountApp)
@@ -770,21 +770,21 @@ def test_a_protocol_with_no_method_cannot_be_asked_for_one() -> None:
 
 
 def test_the_device_census_holds_every_matching_device(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     app = build(DeviceApp)
     assert dict(app.motors.motors) == {"stage": app.stage, "spare": app.spare}
 
 
 def test_a_device_that_does_not_match_is_absent(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     app = build(DeviceApp)
     assert "shutter" not in app.motors.motors
 
 
 def test_the_device_census_is_readable_while_the_component_is_built(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Every device exists before any component, so the answer is not a live view."""
     app = build(DeviceApp)
@@ -792,14 +792,14 @@ def test_the_device_census_is_readable_while_the_component_is_built(
 
 
 def test_the_device_census_is_empty_without_devices(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     app = build(NoDeviceApp)
     assert dict(app.motors.motors) == {}
 
 
 def test_the_two_censuses_answer_over_different_populations(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A device is never in the component census, and a component never in this one."""
     app = build(BothCensusApp)
@@ -841,7 +841,7 @@ def test_a_keyword_only_component_asks_the_same_question() -> None:
 
 
 def test_the_census_leaves_out_a_component_that_failed(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A component asks what the session holds, not what it declared."""
     app = build(CensusReaderApp)
@@ -863,7 +863,7 @@ def test_the_one_answer_failing_skips_whoever_asked(
 
 
 def test_an_optional_answer_failing_leaves_the_asker_without_one(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """At most one was asked for, and the session ended up holding none."""
     app = build(BrokenMaybeApp)

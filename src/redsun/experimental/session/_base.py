@@ -152,8 +152,6 @@ class Session(BuildableSession):
 
     ```python
     class MyApp(QtSession):
-        __slots__ = ()
-
         config = "session.yaml"
 
         stage: AsDevice[MyStage]
@@ -170,12 +168,12 @@ class Session(BuildableSession):
     override each. Reading a declared attribute on a built session gives the
     instance, typed by its annotation.
 
-    Declarations are annotations, so they claim no slot and no class
-    attribute; a subclass adding ``__slots__ = ()`` keeps its instances free
-    of a ``__dict__``.
+    A component that failed to build is set on nothing, so reading its name
+    raises ``AttributeError`` rather than answering ``None``.
     """
 
     __slots__ = (
+        "__dict__",
         "__weakref__",
         "_answers",
         "_baseline",
@@ -272,20 +270,6 @@ class Session(BuildableSession):
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
         self._is_built = False
-
-    def __getattr__(self, name: str) -> Any:
-        """Return the built component *name*."""
-        # an unassigned slot lands here too, and answering it by reading
-        # _declarations would recurse; component names are never underscored
-        if name.startswith("_"):
-            raise AttributeError(name)
-        try:
-            declarations = object.__getattribute__(self, "_declarations")
-        except AttributeError:
-            raise AttributeError(name) from None
-        if name in declarations:
-            return declarations[name].instance
-        raise AttributeError(f"{type(self).__name__!r} declares no component {name!r}")
 
     @classmethod
     def from_config(cls, source: Source | Sequence[Source]) -> Self:
@@ -1471,12 +1455,14 @@ class Session(BuildableSession):
                 continue
             self._devices[declaration.name] = device
             declaration.instance = device
+            setattr(self, declaration.name, device)
             self._register_teardown(device)
 
     def _on_built(
         self, declaration: _declarations.Declaration, instance: NamedComponent
     ) -> None:
         declaration.instance = instance
+        setattr(self, declaration.name, instance)
         self._register_teardown(instance)
 
     def _register_teardown(self, component: object) -> None:

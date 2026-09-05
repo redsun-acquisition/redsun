@@ -41,7 +41,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   keyword-only can be a presenter; a name that could only arrive inside `*args`
   or `**kwargs` is refused. A component appearing only in the session file takes
   its layer from the section it sits under, and is checked the same way. The
-  three are also reachable as `redsun.experimental.session.components`.
+  three are also reachable as `redsun.experimental.session.components`. A built
+  component is set on the session under its name, so a name the session never
+  declared raises `AttributeError` and a type checker refuses it, and a
+  component that failed to build raises rather than reading as `None`.
 
 - `Declare`, `FromConfig` and `Alias` - inline keyword arguments, the
   configuration key an entry is read from, and the name a component is declared

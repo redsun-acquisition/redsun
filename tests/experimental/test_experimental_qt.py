@@ -23,8 +23,9 @@ from qtpy.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from .conftest import BuildSession
 
 from redsun.experimental import (
     AsHook,
@@ -105,8 +106,6 @@ class NotAWidget:
 
 
 class QtApp(QtSession):
-    __slots__ = ()
-
     panel: AsView[Panel]
     canvas: AsView[Canvas]
     save: AsView[Save]
@@ -192,14 +191,10 @@ class Closing(QWidget):
 
 
 class ClosingApp(QtSession):
-    __slots__ = ()
-
     panel: AsView[Closing]
 
 
 class SaveApp(QtSession):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "save-session"}
 
 
@@ -223,8 +218,6 @@ class Tunable:
 
 
 class PromptApp(QtSession):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "closing-session"}
 
     tunable: AsPresenter[Tunable]
@@ -241,8 +234,6 @@ class AlwaysCloses:
 
 
 class HookedApp(PromptApp):
-    __slots__ = ()
-
     confirm_close: AsHook[AlwaysCloses]
 
 
@@ -282,7 +273,7 @@ def test_the_session_owns_an_application_named_after_it() -> None:
 
 def test_two_sessions_of_one_name_refuse_to_coexist(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """The name is an identity, so a collision is loud rather than shared."""
     build(QtApp)
@@ -300,7 +291,7 @@ def test_the_name_is_free_again_after_shutdown() -> None:
 
 def test_the_container_builds_its_own_window(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """The base container builds the components; this one arranges them."""
     app = build(QtApp)
@@ -337,7 +328,7 @@ def test_the_configuration_names_the_container() -> None:
 
 
 def test_every_placement_lands_where_it_asked(
-    window: QMainWindow, build: Callable[..., QtSession]
+    window: QMainWindow, build: BuildSession
 ) -> None:
     """One pass over the views fills docks, the centre, a menu and a toolbar."""
     app = build(QtApp)
@@ -391,8 +382,6 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built() -> Non
     """Qt's requirement table is read with the declarations, not at attach."""
 
     class Wrong(QtSession):
-        __slots__ = ()
-
         stray: AsView[NotAWidget]
 
     with pytest.raises(
@@ -419,7 +408,7 @@ def test_a_command_is_filled_from_the_session() -> None:
 
 def test_the_window_is_built_against_the_session_application(
     qapp: QApplication,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """A menu bar on the window is filled from the session's own registries."""
     app = build(CommandApp)
@@ -502,7 +491,7 @@ def test_the_save_action_writes_where_the_dialog_points(
     qapp: QApplication,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     target = tmp_path / "written.yaml"
     _answer(monkeypatch, str(target))
@@ -516,7 +505,7 @@ def test_the_save_action_writes_where_the_dialog_points(
 def test_a_cancelled_dialog_writes_nothing(
     qapp: QApplication,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     _answer(monkeypatch, "")
     asked: list[object] = []
@@ -532,7 +521,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
     qapp: QApplication,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Only the session knows which files it read, so Qt cannot refuse this."""
     source = tmp_path / "shared.yaml"
@@ -552,7 +541,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
 
 
 def test_the_action_joins_the_menu_a_window_can_show(
-    qapp: QApplication, build: Callable[..., QtSession]
+    qapp: QApplication, build: BuildSession
 ) -> None:
     session = build(SaveApp)
 
@@ -566,7 +555,7 @@ def test_a_session_nobody_has_changed_closes_without_asking(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
@@ -578,7 +567,7 @@ def test_cancelling_the_prompt_keeps_the_session_open(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     session = build(PromptApp)
     session.tunable.step = 5.0
@@ -592,7 +581,7 @@ def test_discarding_closes_without_writing(
     config_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     session = build(PromptApp)
     session.tunable.step = 5.0
@@ -607,7 +596,7 @@ def test_saving_writes_and_then_closes(
     config_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     target = tmp_path / "on-close.yaml"
     _answer(monkeypatch, str(target))
@@ -623,7 +612,7 @@ def test_a_cancelled_save_dialog_keeps_the_session_open(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """Closing anyway would drop the changes the user just asked to keep."""
     _answer(monkeypatch, "")
@@ -638,7 +627,7 @@ def test_dont_ask_again_is_remembered_between_runs(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     first = build(PromptApp)
     first.tunable.step = 5.0
@@ -659,7 +648,7 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     AlwaysCloses.asked = 0
     session = build(HookedApp)
@@ -675,7 +664,7 @@ def test_a_refused_close_leaves_the_window_open(
     qapp: QApplication,
     config_home: Path,
     monkeypatch: pytest.MonkeyPatch,
-    build: Callable[..., QtSession],
+    build: BuildSession,
 ) -> None:
     """The prompt is reached through the window's own close, not by calling it."""
     session = build(PromptApp)

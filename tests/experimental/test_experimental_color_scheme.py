@@ -22,12 +22,10 @@ pytestmark = pytest.mark.qt
 
 
 class PlainApp(QtSession):
-    __slots__ = ()
+    """A session asking for no colour scheme."""
 
 
 class DarkApp(QtSession):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"color_scheme": "dark"}
 
 
@@ -125,8 +123,6 @@ def test_a_mode_the_control_does_not_offer_is_refused() -> None:
     """The mode comes from a configuration file, so it is checked."""
 
     class Sepia(QtSession):
-        __slots__ = ()
-
         config: ClassVar[dict[str, Any]] = {"color_scheme": "sepia"}
 
     with pytest.raises(ValueError, match="sepia"):

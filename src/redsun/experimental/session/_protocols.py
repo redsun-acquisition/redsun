@@ -87,14 +87,11 @@ class BuildableSession(Protocol):
 
     Inherit it rather than satisfying it structurally. The members are
     abstract, so a session missing one is refused when it is constructed and a
-    type checker refuses it too, where a structural check cannot: a session
-    answers an unknown attribute with the component of that name, and anything
-    with a ``__getattr__`` satisfies every protocol both `isinstance` and a
-    type checker can express.
+    type checker refuses it too.
 
-    ``__slots__`` is empty here because a protocol whose body omits it gives a
-    ``__dict__`` to every class that inherits it, which would undo the one
-    `redsun.experimental.Session` declares.
+    ``__slots__`` is empty here because a body omitting it gives a ``__dict__``
+    to every class that inherits it, and `redsun.experimental.Session` declares
+    its own.
     """
 
     __slots__ = ()

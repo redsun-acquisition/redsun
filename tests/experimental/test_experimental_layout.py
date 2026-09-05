@@ -36,8 +36,6 @@ class Charts(Panel):
 
 
 class LayoutApp(QtSession):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "layout-session"}
 
     panel: AsView[Panel]

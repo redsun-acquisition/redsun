@@ -44,8 +44,6 @@ class Canvas:
 
 
 class App(QtSession):
-    __slots__ = ()
-
     ctrl: AsPresenter[Ctrl]
     panel: AsView[Panel]
     canvas: AsView[Canvas]
@@ -66,3 +64,13 @@ def check_structurally(app: App) -> None:
     assert_type(from_attribute.placement, Placement)
     assert_type(from_property.placement, Placement)
     assert_type(presenter.name, str)
+
+
+def check_undeclared(app: App) -> None:
+    """Pin that a name the session never declared is refused, not ``Any``.
+
+    A session answering any attribute would also satisfy every protocol
+    structurally, which is why `BuildableSession` is inherited rather than
+    matched.
+    """
+    _ = app.no_such_component  # type: ignore[attr-defined]

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
     from ophyd_async.core import SignalR
 
+    from .conftest import BuildSession
+
 
 class Watcher:
     """Presenter whose slot records every reading it is handed."""
@@ -43,8 +45,6 @@ class Renamed:
 
 
 class App(Session):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "subscribing"}
 
     watcher: AsPresenter[Watcher]
@@ -60,7 +60,7 @@ def counter() -> tuple[SignalR[int], Callable[[int], None]]:
 
 def test_a_reading_reaches_the_slot(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """Subscribing delivers the reading the device already holds, then the rest.
 
@@ -78,7 +78,7 @@ def test_a_reading_reaches_the_slot(
 
 def test_the_subscription_is_recorded_by_both_ends(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     signal, _ = counter
     session = build(App)
@@ -95,7 +95,7 @@ def test_the_subscription_is_recorded_by_both_ends(
 
 def test_the_record_uses_the_port_name_the_slot_declares(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A configuration addresses the port, so the record must name it too."""
     signal, _ = counter
@@ -108,7 +108,7 @@ def test_the_record_uses_the_port_name_the_slot_declares(
 
 def test_a_slot_that_is_not_marked_is_refused(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     signal, _ = counter
     session = build(App)
@@ -119,7 +119,7 @@ def test_a_slot_that_is_not_marked_is_refused(
 
 def test_shutdown_stops_the_readings(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A reading delivered after teardown reaches a component being finalized."""
     signal, setter = counter
@@ -136,7 +136,7 @@ def test_shutdown_stops_the_readings(
 
 def test_shutdown_forgets_the_subscriptions(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     signal, _ = counter
     session = build(App)
@@ -149,7 +149,7 @@ def test_shutdown_forgets_the_subscriptions(
 
 def test_a_subscribed_port_is_not_reported_as_unconnected(
     counter: tuple[SignalR[int], Callable[[int], None]],
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     """A subscription is a connection, so the wiring report counts it as one."""
     signal, _ = counter

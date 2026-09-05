@@ -370,9 +370,9 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
 def refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
     """Refuse a component whose name the session already answers itself.
 
-    A built component is read through ``__getattr__``, which only runs when
-    ordinary lookup fails, so a component sharing a name with a method or a
-    property of the session could never be reached.
+    A built component is set on the session under its own name, so one sharing
+    a name with a method would hide it, and one sharing a name with a property
+    could never be set at all.
     """
     for name in declarations:
         if not hasattr(cls, name):

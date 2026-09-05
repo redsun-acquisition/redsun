@@ -12,8 +12,9 @@ from redsun.experimental import AsPresenter, Session, Settings
 from redsun.experimental.session.qt import QtSession
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
+
+    from .conftest import BuildSession
 
 
 class Recorder:
@@ -24,16 +25,12 @@ class Recorder:
 
 
 class App(Session):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "settings-session"}
 
     recorder: AsPresenter[Recorder]
 
 
 class QtApp(QtSession):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "settings-qt-session"}
 
 
@@ -83,7 +80,7 @@ def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_session_opens_its_own_only_once_it_is_built(
-    config_home: Path, build: Callable[..., Session]
+    config_home: Path, build: BuildSession
 ) -> None:
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = App().settings
@@ -93,7 +90,7 @@ def test_a_session_opens_its_own_only_once_it_is_built(
 
 @pytest.mark.qt
 def test_an_action_asks_for_the_settings_by_type(
-    qapp: QApplication, config_home: Path, build: Callable[..., Session]
+    qapp: QApplication, config_home: Path, build: BuildSession
 ) -> None:
     seen: list[Settings] = []
 

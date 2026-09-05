@@ -157,8 +157,6 @@ never write code to reconcile the two.
 
     ```python
     class MyApp(QtSession):
-        __slots__ = ()
-
         config = "session.yaml"
 
         motor: AsDevice[MyStage]
@@ -238,9 +236,7 @@ that shows it and hands over to the event loop. Neither class defines a
 teardown of its own: a step registers how to give back what it takes at the
 moment it takes it, and `shutdown` runs those in reverse, which is also what a
 build that raises halfway runs. A session missing a step cannot be
-constructed, which is what inheriting the protocol buys over satisfying it:
-a session answers an unknown attribute with the component of that name, so
-nothing structural can tell a missing step from a component.
+constructed, which is what inheriting the protocol buys over satisfying it.
 
 ```python
 class MyApp(QtSession):

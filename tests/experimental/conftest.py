@@ -19,7 +19,7 @@ if _TESTS_DIR not in sys.path:
 _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Sequence
 
 SessionT = TypeVar("SessionT", bound=Session)
 
@@ -28,7 +28,10 @@ class BuildSession(Protocol):
     """Build a session, and hand it back typed as what was asked for."""
 
     def __call__(
-        self, container: type[SessionT] | SessionT, config: Source | None = ..., /
+        self,
+        container: type[SessionT] | SessionT,
+        config: Source | Sequence[Source] | None = ...,
+        /,
     ) -> SessionT: ...
 
 
@@ -56,7 +59,9 @@ def build() -> Generator[BuildSession, None, None]:
     built: list[Session] = []
 
     def build_one(
-        container: type[SessionT] | SessionT, config: Source | None = None, /
+        container: type[SessionT] | SessionT,
+        config: Source | Sequence[Source] | None = None,
+        /,
     ) -> SessionT:
         unbuilt = container(config) if isinstance(container, type) else container
         session = unbuilt.build()

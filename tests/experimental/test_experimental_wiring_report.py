@@ -11,7 +11,7 @@ from redsun.experimental import AsPresenter, Session, WiringError, slot
 from redsun.experimental.ports._wiring import Unconnected, ports
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from .conftest import BuildSession
 
 
 class Moves(SignalGroup):
@@ -53,8 +53,6 @@ class Clashing:
 
 
 class App(Session):
-    __slots__ = ()
-
     config: ClassVar[dict[str, Any]] = {"name": "reporting"}
 
     stage: AsPresenter[Stage]
@@ -62,7 +60,7 @@ class App(Session):
 
 
 def test_a_session_wired_to_nothing_reports_every_port(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     report = build(App).unconnected
 
@@ -70,7 +68,7 @@ def test_a_session_wired_to_nothing_reports_every_port(
     assert set(report.slots) == {"stage.halt", "other.halt"}
 
 
-def test_a_connected_pair_leaves_the_report(build: Callable[..., Session]) -> None:
+def test_a_connected_pair_leaves_the_report(build: BuildSession) -> None:
     session = build(App)
 
     session.connect(session.stage.sig_moved, session.other.halt)
@@ -81,7 +79,7 @@ def test_a_connected_pair_leaves_the_report(build: Callable[..., Session]) -> No
 
 
 def test_a_fully_wired_session_reports_nothing(
-    build: Callable[..., Session],
+    build: BuildSession,
 ) -> None:
     session = build(App)
     session.connect(session.stage.sig_moved, session.other.halt)
