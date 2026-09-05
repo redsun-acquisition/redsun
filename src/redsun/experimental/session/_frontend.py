@@ -17,7 +17,7 @@ class Frontend:
     attaches with the toolkit type it demands of the view asking for it. A view
     asking for a placement the frontend does not list, or one whose class is
     not the type its placement demands, is refused before it is built. The
-    table is all a container needs; the placements themselves and the attaching
+    table is all a session needs; the placements themselves and the attaching
     live in the frontend's own package.
 
     An empty table constrains nothing, which is what an application that names

@@ -97,7 +97,7 @@ def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) 
 
 def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
     """Ports named as strings connect once every component exists."""
-    links = configured.virtual_container.connections
+    links = configured.connections
 
     assert [
         (c.publisher, c.publisher_port, c.consumer, c.consumer_port) for c in links
@@ -169,7 +169,7 @@ def test_a_session_needs_no_container_class(
     app = build(unbuilt)
 
     assert set(app.declarations) == DECLARED
-    assert app.virtual_container.name == "mock-session"
+    assert app.name == "mock-session"
 
 
 def test_from_config_takes_the_configuration_itself(
@@ -220,7 +220,7 @@ def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "curses.yaml"
     path.write_text(yaml.safe_dump({"frontend": "curses"}))
 
-    with pytest.raises(ValueError, match="no container is built against"):
+    with pytest.raises(ValueError, match="no session is built against"):
         Session.from_config(str(path))
 
 

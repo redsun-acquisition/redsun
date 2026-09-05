@@ -622,7 +622,7 @@ def test_a_mismatched_signature_is_not_a_match(
 def test_a_near_miss_explains_itself(build: Callable[..., Session]) -> None:
     """A component carrying some of the protocol reports why it was left out."""
     app = build(LooseApp)
-    rejected = app.virtual_container.satisfying(Resettable).rejected
+    rejected = app.satisfying(Resettable).rejected
     assert set(rejected) == {"loose"}
     assert "cannot be called as reset()" in rejected["loose"][0]
 
@@ -632,7 +632,7 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
 ) -> None:
     """Only components that nearly match are worth reporting."""
     app = build(App)
-    assert app.virtual_container.satisfying(Resettable).rejected == {}
+    assert app.satisfying(Resettable).rejected == {}
 
 
 def test_reading_the_answer_early_is_refused() -> None:

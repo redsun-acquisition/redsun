@@ -28,7 +28,6 @@ from redsun.experimental import (
     Placement,
     Session,
     SessionConfig,
-    VirtualContainer,
     provides,
     slot,
 )
@@ -315,14 +314,14 @@ def app() -> Any:
     container.shutdown()
 
 
-class WantsTheContainer:
-    def __init__(self, name: str, /, bus: VirtualContainer) -> None:
+class WantsTheSession:
+    def __init__(self, name: str, /, session: Session) -> None:
         self.name = name
-        self.bus = bus
+        self.session = session
 
 
 class LocatorApp(Session):
-    greedy: AsPresenter[WantsTheContainer]
+    greedy: AsPresenter[WantsTheSession]
 
 
 class Duplicated:
@@ -719,7 +718,7 @@ def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
     """The attribute name is the config key, and Declare wins over the file."""
     assert app.ctrl.gain == 2.0
     assert app.widget.label == "inline"
-    assert app.virtual_container.name == "test-session"
+    assert app.name == "test-session"
 
 
 def test_shared_value_is_bound_to_its_owner(app: App) -> None:
@@ -749,12 +748,12 @@ def test_framework_objects_are_injectable(app: App) -> None:
 
 
 def test_the_container_itself_is_not_injectable() -> None:
-    """A component cannot ask for the whole bus and help itself from it.
+    """A component cannot ask for the whole session and help itself from it.
 
     The exception type belongs to whatever resolves the graph, so only the
     name of the key it could not find is pinned.
     """
-    with pytest.raises(Exception, match="VirtualContainer"):
+    with pytest.raises(Exception, match="Session"):
         LocatorApp().build()
 
 
@@ -783,11 +782,6 @@ def test_component_shutdown_runs_without_being_asked(app: App) -> None:
     assert not registrar.closed
     app.shutdown()
     assert registrar.closed
-
-
-def test_signals_are_registered_without_being_asked(app: App) -> None:
-    """register_signals runs for every built component."""
-    assert "sig_moved" in app.virtual_container.signals["ctrl"]
 
 
 def test_unknown_attribute_raises_attribute_error(app: App) -> None:
@@ -974,7 +968,7 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
         # mypy sees the clash too; the container has to as well
         devices: AsPresenter[Ctrl]  # type: ignore[assignment]
 
-    with pytest.raises(TypeError, match="already an attribute of the container"):
+    with pytest.raises(TypeError, match="already an attribute of the session"):
         Shadowed().build()
 
 
@@ -1039,7 +1033,7 @@ def test_a_session_is_named_after_its_class_when_it_says_nothing(
         __slots__ = ()
 
     app = build(Instrument)
-    assert app.virtual_container.name == "Instrument"
+    assert app.name == "Instrument"
 
 
 def test_a_forgotten_layer_is_reported(
@@ -1132,7 +1126,7 @@ def test_a_dataclass_is_an_ordinary_component(app: type[Session]) -> None:
 def test_a_subclass_layers_over_its_base() -> None:
     """The base holds the instrument, the subclass holds the session."""
     app = Layered().build()
-    assert app.virtual_container.name == "layered"
+    assert app.name == "layered"
     assert app.ctrl.gain == 9.0
     assert app.motor.axis == "Z"
 
@@ -1148,7 +1142,7 @@ def test_the_constructor_layers_over_the_class() -> None:
     """Naming one key changes that key, rather than replacing the whole."""
     app = Layered({"presenters": {"ctrl": {"gain": 4.0}}}).build()
     assert app.ctrl.gain == 4.0
-    assert app.virtual_container.name == "layered"
+    assert app.name == "layered"
     assert app.motor.axis == "Z"
 
 
@@ -1164,7 +1158,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
         ctrl: AsPresenter[Ctrl]
 
     app = Mixed().build()
-    assert app.virtual_container.name == "from-mapping"
+    assert app.name == "from-mapping"
     assert app.ctrl.gain == 3.0
 
 
@@ -1185,7 +1179,7 @@ def test_a_later_source_may_rename_the_session() -> None:
         config: ClassVar[list[Any]] = [{"name": "first"}, {"name": "second"}]
 
     app = Renamed().build()
-    assert app.virtual_container.name == "second"
+    assert app.name == "second"
 
 
 def test_two_components_built_from_each_other_are_refused() -> None:

@@ -454,7 +454,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
             callback=self._save_configuration,
             menus=[MenuRule(id=SAVE_MENU)],
         )
-        self.virtual_container.on_release(self.model.register_action(action))
+        self.on_release(self.model.register_action(action))
 
     def _save_configuration(self) -> bool:
         """Ask where to write the session, write it there, and say whether it went.
@@ -496,7 +496,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         if not actions:
             return
-        self.virtual_container.on_release(self.model.register_actions(actions))
+        self.on_release(self.model.register_actions(actions))
         logger.debug(
             "Registered %d action(s) on %r: %s",
             len(actions),

@@ -451,6 +451,23 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
   `magicgui`.
 
+- `redsun.experimental.VirtualContainer` is gone, and so is
+  `Session.virtual_container`. Its jobs are the session's own:
+
+  | was | is |
+  | --- | --- |
+  | `virtual_container.connect`, `.connect_paths`, `.connections`, `.unconnected`, `.disconnect_all` | the same names on `Session` |
+  | `virtual_container.subscribe`, `.subscriptions` | the same names on `Session` |
+  | `virtual_container.satisfying` | `Session.satisfying` |
+  | `virtual_container.name`, `.schema_version`, `.frontend`, `.metadata` | ask for `SessionConfig` by type |
+  | `virtual_container.register_callbacks`, `.callbacks` | `BlueskyCallbackRegistry` |
+  | `virtual_container.on_release`, `.release` | `Session.on_release` and `Session.shutdown` |
+  | `virtual_container.register_signals`, `.signals` | removed |
+
+  One teardown runs where there were two. `Session.shutdown` drops the
+  connections first, then the releases in the reverse of the order taken, so a
+  component is finalized before whatever it was built on.
+
 - The experimental layer's container is a session. The old names are gone, with
   no aliases:
 

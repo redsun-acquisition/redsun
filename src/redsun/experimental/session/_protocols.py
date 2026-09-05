@@ -56,7 +56,7 @@ class AttachableComponent(NamedComponent, Protocol):
     ``placement`` is the whole of the difference between a view and a
     presenter, and it is what the frontend reads to attach the view.
     Answering it from the class rather than from a value assigned in
-    ``__init__`` lets a container refuse a view its frontend cannot attach
+    ``__init__`` lets a session refuse a view its frontend cannot attach
     before anything is built.
     """
 

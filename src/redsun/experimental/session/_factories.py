@@ -92,7 +92,7 @@ def injectable(
     when the session binds it. A shared service is given no name, so every
     parameter of one is the session's to answer.
 
-    A parameter carrying a default is widened to ``X | None``, so the container
+    A parameter carrying a default is widened to ``X | None``, so the session
     fills it when something provides ``X`` and leaves the default alone when
     nothing does. A question at most one component may answer is widened the
     same way, since nothing may answer it.
@@ -115,7 +115,7 @@ def injectable(
             continue
         if param.annotation is param.empty:
             raise TypeError(
-                f"{cls.__name__}.{pname} has no annotation; the container "
+                f"{cls.__name__}.{pname} has no annotation; the session "
                 "cannot tell what to inject"
             )
         hint = param.annotation

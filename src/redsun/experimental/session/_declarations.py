@@ -48,7 +48,7 @@ Key: TypeAlias = Any
 
 Not ``TypeForm``: a `NewType` built at runtime is a type expression only at
 runtime, and no type checker can model one. Hints read from an annotation stay
-``TypeForm[Any]``; keys the container synthesises are this.
+``TypeForm[Any]``; keys the session synthesises are this.
 """
 
 
@@ -364,18 +364,18 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
 
 
 def _refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
-    """Refuse a component whose name the container already answers itself.
+    """Refuse a component whose name the session already answers itself.
 
     A built component is read through ``__getattr__``, which only runs when
     ordinary lookup fails, so a component sharing a name with a method or a
-    property of the container could never be reached.
+    property of the session could never be reached.
     """
     for name in declarations:
         if not hasattr(cls, name):
             continue
         raise TypeError(
             f"{cls.__qualname__} declares a component named {name!r}, but that "
-            f"is already an attribute of the container, so reading it would "
+            f"is already an attribute of the session, so reading it would "
             "give the attribute rather than the component. Rename it, or name "
             "the component something else with Alias."
         )
@@ -407,7 +407,7 @@ def _from_config(
     """Collect the components named only in *config*.
 
     A configuration entry carrying ``plugin_name`` and ``plugin_id`` is a
-    component even when the container class never annotates it; the annotation
+    component even when the session class never annotates it; the annotation
     only adds a typed attribute to reach it by. An entry already declared is
     left alone, so a class-body declaration wins.
 

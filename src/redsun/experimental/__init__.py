@@ -1,10 +1,10 @@
-"""Experimental container layer.
+"""Experimental session layer.
 
 Not covered by any stability guarantee: names and behaviour here may change or
 be withdrawn in any release. The supported container layer is
 [`redsun.containers`][redsun.containers].
 
-Components are declared as annotations on a container class, each naming the
+Components are declared as annotations on a session class, each naming the
 layer it belongs to, and their dependencies are constructor parameters resolved
 by type:
 
@@ -53,12 +53,6 @@ from redsun.experimental.session.components import (
 )
 from redsun.experimental.session.container import ConfigurationInUse, Session
 from redsun.experimental.view._placement import Placement
-from redsun.experimental.virtual._container import (
-    BlueskyCallbackRegistry,
-    DeviceMapping,
-    SessionConfig,
-    VirtualContainer,
-)
 from redsun.experimental.virtual._provides import provides
 from redsun.experimental.virtual._requires import (
     DevicesOf,
@@ -66,6 +60,11 @@ from redsun.experimental.virtual._requires import (
     RequiresMaybe,
     RequiresOne,
     Satisfying,
+)
+from redsun.experimental.virtual._shared import (
+    BlueskyCallbackRegistry,
+    DeviceMapping,
+    SessionConfig,
 )
 from redsun.experimental.virtual._wiring import (
     ComponentNotBuilt,
@@ -109,7 +108,6 @@ __all__ = [
     "SessionConfig",
     "SessionNotBuilt",
     "Settings",
-    "VirtualContainer",
     "WiringError",
     "provides",
     "satisfies",

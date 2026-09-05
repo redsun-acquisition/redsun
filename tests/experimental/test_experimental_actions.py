@@ -77,13 +77,14 @@ def test_releasing_the_session_takes_its_commands_with_it(
             }
         )
     )
-    app.model.commands.execute_command("probe.note")
+    model = app.model
+    model.commands.execute_command("probe.note")
     assert actions.executed == ["note"]
 
-    app.virtual_container.release()
+    app.shutdown()
 
     with pytest.raises(KeyError, match="probe.note"):
-        app.model.commands.execute_command("probe.note")
+        model.commands.execute_command("probe.note")
 
 
 @pytest.mark.parametrize(

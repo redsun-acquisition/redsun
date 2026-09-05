@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
 import yaml
 from in_n_out import Store
 from ophyd_async.core import Device  # noqa: TC002
+from psygnal import SignalInstance
 
 from redsun import _structural
 from redsun._config import Source, as_sources, load
@@ -33,23 +34,44 @@ from redsun.experimental.session._protocols import (
     Serializable,
 )
 from redsun.experimental.virtual import _provides
-from redsun.experimental.virtual._container import VirtualContainer
-from redsun.experimental.virtual._requires import Devices, Maybe, One, key_for
+from redsun.experimental.virtual._requires import (
+    Devices,
+    Maybe,
+    One,
+    Satisfying,
+    key_for,
+)
+from redsun.experimental.virtual._shared import (
+    BlueskyCallbackRegistry,
+    CallbackType,
+    DeviceMapping,
+    SessionConfig,
+)
 from redsun.experimental.virtual._wiring import (
+    SLOT_ATTR,
+    SLOT_THREAD_ATTR,
     ComponentNotBuilt,
+    Connection,
     SessionNotBuilt,
+    Slot,
+    Subscription,
+    Unconnected,
     WiringError,
+    owner_of,
+    port_name,
+    ports,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
 
-    from psygnal import SignalInstance
+    from bluesky.protocols import HasName
+    from ophyd_async.core import SignalR
 
     from redsun.experimental.session._declarations import Key
     from redsun.experimental.virtual._requires import Question
-    from redsun.experimental.virtual._wiring import Connection, SlotThread
+    from redsun.experimental.virtual._wiring import SlotThread
 
 __all__ = ["ConfigurationInUse", "Session"]
 
@@ -86,7 +108,7 @@ def _unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
 def _silent(step: str) -> None:
     """Take a build step's name and do nothing with it.
 
-    What a container reports progress to when no hook asked for it, so the
+    What a session reports progress to when no hook asked for it, so the
     build has one path whether or not anything is watching.
     """
 
@@ -122,11 +144,11 @@ _FRONTENDS: Final[dict[str, str]] = {
     "pyqt": "redsun.experimental.session.qt:QtSession",
     "pyside": "redsun.experimental.session.qt:QtSession",
 }
-"""The container a session builds on, by the name its configuration gives."""
+"""The session class a configuration's frontend name builds on."""
 
 
 class Session(BuildableSession):
-    """Application container whose components are declared as annotations.
+    """One running application, whose components are declared as annotations.
 
     ```python
     class MyApp(QtSession):
@@ -142,10 +164,10 @@ class Session(BuildableSession):
             self.connect(self.motor_ctrl.sig_moved, self.motor_widget.update)
     ```
 
-    An annotation is a declaration only if it names a layer, so a container may
+    An annotation is a declaration only if it names a layer, so a session may
     hold ordinary attributes alongside its components. The attribute name is
     both the component name and its configuration key; `Alias` and `FromConfig`
-    override each. Reading a declared attribute on a built container gives the
+    override each. Reading a declared attribute on a built session gives the
     instance, typed by its annotation.
 
     Declarations are annotations, so they claim no slot and no class
@@ -157,23 +179,32 @@ class Session(BuildableSession):
         "__weakref__",
         "_answers",
         "_baseline",
+        "_built_components",
+        "_callbacks",
         "_config",
+        "_connections",
         "_declarations",
         "_devices",
         "_failed",
         "_hooks",
         "_is_built",
+        "_links",
         "_merged",
+        "_names",
+        "_registry",
         "_releases",
         "_report",
+        "_sealed",
+        "_session_config",
         "_settings",
         "_shared",
         "_store",
-        "_virtual",
+        "_subscription_records",
+        "_subscriptions",
     )
 
     config: ClassVar[Source | Sequence[Source] | None] = None
-    """The configuration this container is declared with.
+    """The configuration this session is declared with.
 
     One source or several, each a path to a YAML file or a mapping already in
     hand. Several layer in the order given, and a subclass's layer over its
@@ -182,7 +213,7 @@ class Session(BuildableSession):
     """
 
     providers: ClassVar[list[type]] = []
-    """The shared services this container installs before any component.
+    """The shared services this session installs before any component.
 
     Each is an ordinary class whose methods marked with
     `redsun.experimental.provides` put values in the session for components to
@@ -190,21 +221,21 @@ class Session(BuildableSession):
     """
 
     hook_points: ClassVar[Mapping[str, type]] = {}
-    """The points this container calls a hook at, by the protocol each demands.
+    """The points this session calls a hook at, by the protocol each demands.
 
-    Empty here: every hook point belongs to a toolkit, so a toolkit container
+    Empty here: every hook point belongs to a toolkit, so a toolkit session
     such as `redsun.experimental.session.qt.QtSession` names its own.
     """
 
     frontend: ClassVar[type[Frontend]] = Frontend
-    """The toolkit this container is built against.
+    """The toolkit this session is built against.
 
     Set by subclassing, as `redsun.experimental.session.qt.QtSession` does. The
     default attaches nothing and constrains no view.
     """
 
     def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
-        """Prepare an empty container, to be filled by `build`.
+        """Prepare an empty session, to be filled by `build`.
 
         *config* layers over whatever the class declares rather than replacing
         it, so a caller naming one key changes that key and leaves the rest.
@@ -214,7 +245,6 @@ class Session(BuildableSession):
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = _silent
         self._releases = ExitStack()
-        self._virtual = VirtualContainer()
         self._declarations: dict[str, _declarations.Declaration] = {}
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
@@ -222,6 +252,20 @@ class Session(BuildableSession):
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, _declarations.Declaration | None] = {}
         self._baseline: dict[str, Mapping[str, object]] = {}
+        self._session_config = SessionConfig()
+        self._callbacks: dict[str, CallbackType] = {}
+        self._built_components: dict[str, object] = {}
+        self._names: dict[int, str] = {}
+        self._sealed = False
+        self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
+        self._connections: list[Connection] = []
+        # the forwarding function is held because ophyd-async releases a
+        # subscription by identity: clear_sub needs the object back
+        self._subscriptions: list[
+            tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
+        ] = []
+        self._subscription_records: list[Subscription] = []
+        self._registry = BlueskyCallbackRegistry(self._callbacks, lambda: self._sealed)
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -245,24 +289,24 @@ class Session(BuildableSession):
 
     @classmethod
     def from_config(cls, source: Source | Sequence[Source]) -> Self:
-        """Return a container for a session described entirely by *source*.
+        """Return a session described entirely by *source*.
 
         Every component the configuration names is declared, its layer coming
-        from the section it appears under, so a session needs no container
-        class of its own. The ``frontend`` key chooses the container to build
+        from the section it appears under, so a session needs no class
+        of its own. The ``frontend`` key chooses the class to build
         on; naming none builds on this one, which is what a session with no
         toolkit wants.
 
-        The container comes back unbuilt, so that whatever the configuration
+        The session comes back unbuilt, so that whatever the configuration
         cannot say is still said in Python before `build` runs.
 
         Raises
         ------
         ValueError
-            If the configuration names a frontend no container is built
+            If the configuration names a frontend no session is built
             against.
         TypeError
-            If it names one this container is not built against.
+            If it names one this session is not built against.
         """
         config = load(source)
         return cast("Self", _base_for(cls, config.get("frontend"))(config))
@@ -286,11 +330,6 @@ class Session(BuildableSession):
     def declarations(self) -> Mapping[str, _declarations.Declaration]:
         """The declarations collected from the class."""
         return dict(self._declarations)
-
-    @property
-    def virtual_container(self) -> VirtualContainer:
-        """The data exchange layer shared by every component."""
-        return self._virtual
 
     @property
     def settings(self) -> Settings:
@@ -398,7 +437,7 @@ class Session(BuildableSession):
     def name(self) -> str:
         """What this session is called.
 
-        The configuration's ``name``, or this container's own class name when
+        The configuration's ``name``, or this session's own class name when
         the configuration says nothing. A class name is distinct per session
         where a shared constant would not be.
         """
@@ -417,7 +456,7 @@ class Session(BuildableSession):
         name, so the registry buys nothing and costs a teardown obligation on
         every session that ends without one.
 
-        A container owning an application of its own overrides this to share
+        A session owning an application of its own overrides this to share
         that application's store, which is what lets a command reach a
         component. That one *is* registered, by app-model, and freed by
         ``Application.destroy``.
@@ -449,7 +488,7 @@ class Session(BuildableSession):
         follow in layer order, and within a layer in the order they are built
         from one another.
 
-        A container built against a toolkit fills `start_runtime` and
+        A session built against a toolkit fills `start_runtime` and
         `present` rather than overriding this method, so the order the steps
         run in is written once and a toolkit can act between two of them.
         `read_configuration` and `start_runtime` run before the span opens and
@@ -465,9 +504,6 @@ class Session(BuildableSession):
         try:
             self.read_configuration()
             self.start_runtime()
-            # every component teardown is registered on the virtual container,
-            # which is therefore emptied before the runtime they were built on
-            self.on_release(self._virtual.release)
             with self.open_span() as report:
                 self._report = report
                 for step, run in (
@@ -509,13 +545,13 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, and read the declarations."""
         config = self._configuration()
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
-        self._virtual._set_configuration(config, self.name)
+        self._set_configuration(config, self.name)
         self._declarations = _declarations.read(type(self), config, self.frontend)
 
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.
 
-        Nothing here: a container bound to no toolkit has no runtime of its
+        Nothing here: a session bound to no toolkit has no runtime of its
         own. One that is bound to a toolkit makes its objects here, before the
         first component exists and before anything can watch the build.
         """
@@ -531,7 +567,7 @@ class Session(BuildableSession):
         self._store = store
         self._settings = Settings.for_session(self.name)
         store.register_provider(_constant(self._settings), type_hint=Settings)
-        self._virtual.register(store, lambda: dict(self._devices))
+        self._register_framework_values(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
         declarations = self._components()
         self._check_layers(declarations)
@@ -541,14 +577,14 @@ class Session(BuildableSession):
         """Check what was built, then close the session to further building."""
         self._verify_components()
         self._verify_answers()
-        self._virtual._set_components(
+        self._set_components(
             {
                 declaration.name: declaration.instance
                 for declaration in self._components()
                 if declaration.instance is not None
             }
         )
-        self._virtual._seal()
+        self._seal()
         self._baseline = self._serialized()
 
     def apply_wiring(self) -> None:
@@ -560,7 +596,7 @@ class Session(BuildableSession):
     def present(self) -> None:
         """Assemble what was built into whatever shows it.
 
-        Nothing here: a container bound to no toolkit shows nothing, which is
+        Nothing here: a session bound to no toolkit shows nothing, which is
         what a headless test wants. One bound to a toolkit puts its views
         where each asks to be.
         """
@@ -599,34 +635,6 @@ class Session(BuildableSession):
         default.
         """
 
-    def connect(
-        self,
-        signal: SignalInstance,
-        slot: Callable[..., Any],
-        *,
-        thread: SlotThread = None,
-    ) -> Connection:
-        """Connect a signal to a slot, recording the link for teardown.
-
-        Parameters
-        ----------
-        signal : SignalInstance
-            The psygnal signal to connect from.
-        slot : Callable[..., Any]
-            What the signal calls, a method marked with `redsun.experimental.slot`
-            where a configuration file is to name it.
-        thread : SlotThread, optional
-            Which thread the slot runs on. ``None`` leaves it to the
-            connection, and a Qt view's slots run on the main thread whatever
-            this says.
-
-        Returns
-        -------
-        Connection
-            The link, which teardown undoes.
-        """
-        return self._virtual.connect(signal, slot, thread=thread)
-
     def connect_devices(self, mock: bool = False) -> None:
         """Connect every built device through ophyd-async.
 
@@ -654,13 +662,19 @@ class Session(BuildableSession):
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.
 
-        That covers the connections, the ``shutdown`` method of every
-        component that has one, and whatever a toolkit put in place. Calling
-        it a second time, or on a session that was never built, runs nothing:
-        a release is dropped as it runs.
+        Connections go first, so nothing is delivered to a component that is
+        already finalizing. The releases follow: the ``shutdown`` method of
+        every component that has one, then whatever a toolkit put in place.
+        Calling it a second time, or on a session that was never built, runs
+        nothing: a release is dropped as it runs.
         """
         self._is_built = False
+        self._sealed = False
+        self.disconnect_all()
         self._releases.close()
+        self._callbacks.clear()
+        self._built_components.clear()
+        self._names.clear()
         logger.info("Container shutdown complete")
 
     def serialize(self) -> dict[str, Any]:
@@ -764,6 +778,334 @@ class Session(BuildableSession):
             type(instance).__name__,
         )
         return None
+
+    def _register_framework_values(
+        self, store: Store, devices: Callable[[], DeviceMapping]
+    ) -> None:
+        """Register everything the framework knows on *store*.
+
+        Every component may ask for it by type. The callback registry is a live
+        view, so it is available at construction like the rest and carries no
+        ordering constraint of its own.
+        """
+        store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
+        store.register_provider(devices, type_hint=DeviceMapping)
+        store.register_provider(
+            lambda: self._registry, type_hint=BlueskyCallbackRegistry
+        )
+
+    def _set_configuration(self, config: Mapping[str, Any], name: str) -> None:
+        """Set the session configuration, for the components to read.
+
+        *name* is what the session is called when the configuration does not
+        say, which the session takes from its own class.
+        """
+        self._session_config = SessionConfig(
+            schema_version=config.get("schema_version", 1.0),
+            frontend=config.get("frontend", "pyqt"),
+            name=config.get("name", name),
+            metadata=dict(config.get("metadata", {})),
+        )
+
+    def register_callbacks(
+        self,
+        owner: HasName,
+        name: str | None = None,
+        callback_map: dict[str, CallbackType] | None = None,
+    ) -> None:
+        """Register one or more document callbacks.
+
+        Parameters
+        ----------
+        owner : HasName
+            The component registering callbacks, and the callback itself when
+            *callback_map* is ``None``.
+        name : str | None
+            Registry key for *owner*. Defaults to ``owner.name``; ignored when
+            *callback_map* is given.
+        callback_map : dict[str, CallbackType] | None
+            Several callbacks from one owner, each registered under its own
+            key. *owner* is then not registered itself.
+
+        Raises
+        ------
+        TypeError
+            If a callback is not callable or its signature is incompatible
+            with ``(str, Document)``.
+        """
+        self._registry.register(owner, name=name, callback_map=callback_map)
+
+    @property
+    def callbacks(self) -> dict[str, CallbackType]:
+        """The currently registered document callbacks."""
+        return dict(self._callbacks)
+
+    def _set_components(self, components: Mapping[str, object]) -> None:
+        """Record the names built components are known by.
+
+        Both mappings are filled in place rather than rebound: a live view
+        handed to a component holds the mapping itself, and rebinding would
+        leave it looking at the empty one it was given during the build.
+        """
+        self._built_components.clear()
+        self._built_components.update(components)
+        self._names.clear()
+        self._names.update({id(c): name for name, c in components.items()})
+
+    def _label(self, component: object | None) -> str:
+        if component is None:
+            return "<unknown>"
+        return self._names.get(id(component), type(component).__name__)
+
+    def _affinity(self, slot: Callable[..., Any], thread: SlotThread) -> SlotThread:
+        declaration = getattr(slot, SLOT_ATTR, None)
+        if not isinstance(declaration, Slot):
+            name = getattr(slot, "__qualname__", repr(slot))
+            raise WiringError(
+                f"{name} is not connectable; mark it with the 'slot' decorator"
+            )
+        if thread is not None:
+            return thread
+        consumer = getattr(slot, "__self__", None)
+        return declaration.thread or cast(
+            "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
+        )
+
+    def connect(
+        self,
+        signal: SignalInstance,
+        slot: Callable[..., Any],
+        *,
+        thread: SlotThread = None,
+    ) -> Connection:
+        """Connect a signal to a slot and record the link.
+
+        Parameters
+        ----------
+        signal : SignalInstance
+            The emitting signal.
+        slot : Callable[..., Any]
+            A bound method marked with [`slot`][redsun.virtual.slot]. May be a
+            coroutine function.
+        thread : SlotThread
+            Delivery thread. Defaults to the affinity the slot declares, then
+            to the one its class declares.
+
+        Returns
+        -------
+        Connection
+            The recorded link.
+
+        Raises
+        ------
+        WiringError
+            If *slot* is not marked as connectable, or if psygnal rejects the
+            two signatures.
+        """
+        thread = self._affinity(slot, thread)
+        link = Connection(
+            publisher=self._label(owner_of(signal)),
+            publisher_port=signal.name or "<anonymous>",
+            consumer=self._label(getattr(slot, "__self__", None)),
+            consumer_port=port_name(slot),
+            thread=thread,
+        )
+        try:
+            signal.connect(slot, thread=thread)
+        except (TypeError, ValueError) as e:
+            raise WiringError(f"cannot connect {link}: {e}") from e
+
+        self._links.append((signal, slot))
+        self._connections.append(link)
+        logger.debug(f"Connected {link}")
+        return link
+
+    def subscribe(
+        self,
+        signal: SignalR[Any],
+        slot: Callable[..., Any],
+        *,
+        thread: SlotThread = None,
+    ) -> Subscription:
+        """Subscribe a slot to an ophyd-async device signal and record it.
+
+        Delivery is marshalled through a psygnal signal, so *thread* behaves as
+        it does for `connect`. This is the only way a device signal can reach a
+        slot with a thread affinity: ophyd-async calls its subscribers on
+        whatever thread produced the reading.
+
+        Parameters
+        ----------
+        signal : SignalR[Any]
+            The device signal to observe.
+        slot : Callable[..., Any]
+            A bound method marked with [`slot`][redsun.virtual.slot], called
+            with the reading dictionary.
+        thread : SlotThread
+            Delivery thread. Defaults to the affinity the slot declares, then
+            to the one its class declares.
+
+        Returns
+        -------
+        Subscription
+            The recorded subscription.
+
+        Raises
+        ------
+        WiringError
+            If *slot* is not marked as connectable.
+        """
+        thread = self._affinity(slot, thread)
+        relay = SignalInstance((object,), name=signal.name)
+        relay.connect(slot, thread=thread)
+
+        def forward(reading: Any) -> None:
+            relay.emit(reading)
+
+        record = Subscription(
+            source=signal.name,
+            consumer=self._label(getattr(slot, "__self__", None)),
+            consumer_port=port_name(slot),
+            thread=thread,
+        )
+
+        async def attach() -> None:
+            signal.subscribe_reading(forward)
+
+        # ophyd-async requires a running loop to subscribe, and callers run on
+        # the main thread during the build
+        run_coro(attach())
+        self._subscriptions.append((signal, forward, relay))
+        self._subscription_records.append(record)
+        logger.debug(f"Subscribed {record}")
+        return record
+
+    @property
+    def subscriptions(self) -> list[Subscription]:
+        """The device-signal subscriptions made through this session."""
+        return list(self._subscription_records)
+
+    def connect_paths(
+        self, source: str, target: str, *, thread: SlotThread = None
+    ) -> Connection:
+        """Connect two ports addressed as ``component.port``.
+
+        The string form of `connect`, used by the ``wiring`` section of a
+        configuration file.
+
+        Parameters
+        ----------
+        source : str
+            Path of the emitting signal.
+        target : str
+            Path of the consuming slot.
+        thread : SlotThread
+            Delivery thread, overriding the slot and its class.
+
+        Returns
+        -------
+        Connection
+            The recorded link.
+
+        Raises
+        ------
+        WiringError
+            If either path is malformed, names a component that was not built,
+            or names a port that component does not expose.
+        """
+        signal = self._resolve_port(source, "signal")
+        slot = self._resolve_port(target, "slot")
+        return self.connect(
+            cast("SignalInstance", signal),
+            cast("Callable[..., Any]", slot),
+            thread=thread,
+        )
+
+    def _resolve_port(self, path: str, kind: str) -> object:
+        """Look up the signal or slot a ``component.port`` path names."""
+        component_name, _, port = path.partition(".")
+        if not component_name or not port or "." in port:
+            raise WiringError(f"{path!r} is not a port path; expected 'component.port'")
+        component = self._built_components.get(component_name)
+        if component is None:
+            known = ", ".join(sorted(self._built_components)) or "none"
+            raise ComponentNotBuilt(
+                component_name,
+                f"{path!r} names component {component_name!r}, which was not "
+                f"built. Built: {known}",
+            )
+        surface = ports(component)
+        available = surface.signals if kind == "signal" else surface.slots
+        if port not in available:
+            known = ", ".join(sorted(available)) or "none"
+            raise WiringError(
+                f"{component_name!r} exposes no {kind} named {port!r}. "
+                f"Its {kind} ports: {known}"
+            )
+        return available[port]
+
+    @property
+    def connections(self) -> list[Connection]:
+        """The links established so far."""
+        return list(self._connections)
+
+    @property
+    def unconnected(self) -> Unconnected:
+        """Ports of the built components that no connection reaches.
+
+        The complement of `connections` and `subscriptions`: what a component
+        offers and nothing uses.
+
+        Raises
+        ------
+        WiringError
+            If a component exposes two signals under one port name.
+        """
+        used_signals = {(c.publisher, c.publisher_port) for c in self._connections}
+        used_slots = {(c.consumer, c.consumer_port) for c in self._connections}
+        used_slots |= {
+            (s.consumer, s.consumer_port) for s in self._subscription_records
+        }
+
+        signals: list[str] = []
+        slots: list[str] = []
+        for name, component in self._built_components.items():
+            surface = ports(component)
+            signals += [
+                f"{name}.{port}"
+                for port in surface.signals
+                if (name, port) not in used_signals
+            ]
+            slots += [
+                f"{name}.{port}"
+                for port in surface.slots
+                if (name, port) not in used_slots
+            ]
+        return Unconnected(signals=signals, slots=slots)
+
+    def satisfying(self, protocol: type) -> Satisfying:
+        """Return a live view of the built components satisfying *protocol*."""
+        return Satisfying(protocol, self._built_components, lambda: self._sealed)
+
+    def _seal(self) -> None:
+        """Mark the build complete, making the live views readable."""
+        self._sealed = True
+
+    def disconnect_all(self) -> None:
+        """Undo every connection and subscription made through this session."""
+        for signal, slot in self._links:
+            signal.disconnect(slot, missing_ok=True)
+        self._links.clear()
+        self._connections.clear()
+
+        async def release(signal: SignalR[Any], forward: Callable[[Any], None]) -> None:
+            signal.clear_sub(forward)
+
+        for device_signal, forward, relay in self._subscriptions:
+            run_coro(release(device_signal, forward))
+            relay.disconnect()
+        self._subscriptions.clear()
+        self._subscription_records.clear()
 
     def _built(self, layer: Layer) -> dict[str, Any]:
         return {
@@ -992,7 +1334,7 @@ class Session(BuildableSession):
 
     def _census(self, protocol: type) -> Callable[[], Any]:
         def read() -> Any:
-            return self._virtual.satisfying(protocol)
+            return self.satisfying(protocol)
 
         return read
 
@@ -1135,11 +1477,10 @@ class Session(BuildableSession):
         self, declaration: _declarations.Declaration, instance: NamedComponent
     ) -> None:
         declaration.instance = instance
-        self._virtual.register_signals(instance, name=declaration.name)
         self._register_teardown(instance)
 
     def _register_teardown(self, component: object) -> None:
-        """Hand the container's own teardown to the one owner of it.
+        """Hand the session's own teardown to the one owner of it.
 
         A component that declares ``shutdown`` is finalized without having to
         ask for it; one that does not needs no teardown at all.
@@ -1148,13 +1489,13 @@ class Session(BuildableSession):
         if not callable(shutdown):
             return
         if not inspect.iscoroutinefunction(shutdown):
-            self._virtual.on_release(shutdown)
+            self.on_release(shutdown)
             return
 
         def close() -> None:
             run_coro(shutdown())
 
-        self._virtual.on_release(close)
+        self.on_release(close)
 
     def _apply_wiring_config(self, config: Mapping[str, Any]) -> None:
         """Connect the port pairs the ``wiring`` section lists.
@@ -1177,7 +1518,7 @@ class Session(BuildableSession):
                     f"keys 'from' and 'to', got {rule!r}"
                 )
             try:
-                self._virtual.connect_paths(rule["from"], rule["to"])
+                self.connect_paths(rule["from"], rule["to"])
             except ComponentNotBuilt as e:
                 if e.component not in self._failed:
                     raise
@@ -1233,9 +1574,9 @@ class Session(BuildableSession):
         *wanted* is every type a constructor asks for, so a component another
         one is built from counts, by its key or by its class.
         """
-        names = {c.publisher for c in self._virtual.connections}
-        names |= {c.consumer for c in self._virtual.connections}
-        names |= {s.consumer for s in self._virtual.subscriptions}
+        names = {c.publisher for c in self.connections}
+        names |= {c.consumer for c in self.connections}
+        names |= {s.consumer for s in self.subscriptions}
         names |= {
             chosen.name for chosen in self._answers.values() if chosen is not None
         }
@@ -1407,9 +1748,9 @@ def _near_misses(declarations: list[_declarations.Declaration], protocol: type) 
 
 
 def _base_for(cls: type[Session], frontend: object) -> type[Session]:
-    """Return the container a session naming *frontend* is built on.
+    """Return the class a session naming *frontend* is built on.
 
-    A container already built against that toolkit is kept, so a subclass
+    A session class already built against that toolkit is kept, so a subclass
     carrying its own declarations stays the one instantiated.
     """
     if frontend is None:
@@ -1417,7 +1758,7 @@ def _base_for(cls: type[Session], frontend: object) -> type[Session]:
     dotted = _FRONTENDS.get(str(frontend))
     if dotted is None:
         raise ValueError(
-            f"the configuration names frontend {frontend!r}, which no container "
+            f"the configuration names frontend {frontend!r}, which no session "
             f"is built against. Known: {', '.join(sorted(_FRONTENDS))}."
         )
     module_name, _, class_name = dotted.partition(":")

@@ -43,7 +43,7 @@ __all__ = [
 class Every:
     """Marks a parameter as a question about the session rather than a value.
 
-    The container answers it with every component satisfying the annotated
+    The session answers it with every component satisfying the annotated
     protocol.
     """
 

@@ -46,10 +46,10 @@ Satisfies `redsun.experimental.AttachableComponent`, so it declares the
 
 
 AsHook: TypeAlias = Annotated[T, Hook()]
-"""A callback the container calls at one point of the toolkit's startup.
+"""A callback the session calls at one point of the toolkit's startup.
 
 The attribute name is the point, `redsun.experimental.Serves` names them
 instead, and `redsun.experimental.Declare` carries the constructor arguments.
 A hook is not a component: it is never injected, nothing may depend on it, and
-it has no say in what the container builds.
+it has no say in what the session builds.
 """

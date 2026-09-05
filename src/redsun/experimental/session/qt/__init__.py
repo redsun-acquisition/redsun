@@ -1,4 +1,4 @@
-"""Qt container, frontend and placements for the experimental layer."""
+"""Qt session, frontend and placements for the experimental layer."""
 
 from __future__ import annotations
 

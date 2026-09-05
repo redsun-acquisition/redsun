@@ -12,6 +12,7 @@ from typing import (
     Any,
     Literal,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -31,6 +32,7 @@ __all__ = [
     "Subscription",
     "Unconnected",
     "WiringError",
+    "owner_of",
     "ports",
     "slot",
 ]
@@ -233,3 +235,15 @@ class Subscription:
     def __str__(self) -> str:
         thread = f"  [thread={self.thread}]" if self.thread else ""
         return f"{self.source} ~> {self.consumer}.{self.consumer_port}{thread}"
+
+
+def owner_of(signal: SignalInstance) -> object | None:
+    """Return the component a signal belongs to.
+
+    A signal declared inside a `SignalGroup` reports the group as its
+    instance, so the owning component is one level further out.
+    """
+    instance: object | None = signal.instance
+    if isinstance(instance, SignalGroup):
+        return cast("object | None", instance.instance)
+    return instance
