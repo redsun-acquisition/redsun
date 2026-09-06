@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Annotated, TypeAlias, TypeVar
 
-from redsun.experimental.session._declarations import Hook, Layer
+from ._declarations import Hook, Layer
 
 __all__ = ["AsDevice", "AsHook", "AsPresenter", "AsView"]
 

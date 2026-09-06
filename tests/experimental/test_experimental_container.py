@@ -31,14 +31,12 @@ from redsun.experimental import (
     provides,
     slot,
 )
-from redsun.experimental.ports._wiring import WiringError
-from redsun.experimental.session._declarations import (
+from redsun.experimental.ports import WiringError
+from redsun.experimental.session import (
     Layer,
     check,
-    leads_with_name,
-)
-from redsun.experimental.session._factories import (
     injectable,
+    leads_with_name,
     optional_arg,
     synthesize,
 )

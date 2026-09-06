@@ -8,10 +8,18 @@ for one by type, and the session answers.
 
 from __future__ import annotations
 
-from ._builtins import BlueskyCallbackRegistry, DeviceMapping, SessionConfig
+from ._builtins import (
+    BlueskyCallbackRegistry,
+    CallbackType,
+    DeviceMapping,
+    SessionConfig,
+    validate_callback,
+)
 
 __all__ = [
     "BlueskyCallbackRegistry",
+    "CallbackType",
     "DeviceMapping",
     "SessionConfig",
+    "validate_callback",
 ]

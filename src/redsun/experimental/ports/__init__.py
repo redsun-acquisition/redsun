@@ -8,17 +8,37 @@ section of its configuration, binds one component's signal to another's slot.
 from __future__ import annotations
 
 from ._wiring import (
+    SLOT_ATTR,
+    SLOT_THREAD_ATTR,
     ComponentNotBuilt,
     Connection,
+    Ports,
     SessionNotBuilt,
+    Slot,
+    SlotThread,
+    Subscription,
+    Unconnected,
     WiringError,
+    owner_of,
+    port_name,
+    ports,
     slot,
 )
 
 __all__ = [
+    "SLOT_ATTR",
+    "SLOT_THREAD_ATTR",
     "ComponentNotBuilt",
     "Connection",
+    "Ports",
     "SessionNotBuilt",
+    "Slot",
+    "SlotThread",
+    "Subscription",
+    "Unconnected",
     "WiringError",
+    "owner_of",
+    "port_name",
+    "ports",
     "slot",
 ]

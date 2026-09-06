@@ -8,7 +8,7 @@ import pytest
 from psygnal import Signal, SignalGroup
 
 from redsun.experimental import AsPresenter, Session, WiringError, slot
-from redsun.experimental.ports._wiring import Unconnected, ports
+from redsun.experimental.ports import Unconnected, ports
 
 if TYPE_CHECKING:
     from .conftest import BuildSession

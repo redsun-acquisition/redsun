@@ -9,7 +9,7 @@ from event_model import DocumentRouter
 from event_model.documents import Document
 
 from redsun.experimental import BlueskyCallbackRegistry
-from redsun.experimental.registry._builtins import validate_callback
+from redsun.experimental.registry import validate_callback
 
 
 class Recorder:

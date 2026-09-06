@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from redsun.experimental.view._placement import Placement
+    from redsun.experimental.view import Placement
 
 __all__ = ["Frontend"]
 

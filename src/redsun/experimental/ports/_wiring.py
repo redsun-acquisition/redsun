@@ -26,13 +26,19 @@ if TYPE_CHECKING:
     from psygnal import SignalInstance
 
 __all__ = [
+    "SLOT_ATTR",
+    "SLOT_THREAD_ATTR",
+    "ComponentNotBuilt",
     "Connection",
     "Ports",
+    "SessionNotBuilt",
+    "Slot",
     "SlotThread",
     "Subscription",
     "Unconnected",
     "WiringError",
     "owner_of",
+    "port_name",
     "ports",
     "slot",
 ]

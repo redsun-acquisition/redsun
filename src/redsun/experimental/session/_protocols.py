@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from in_n_out import Store
 
-    from redsun.experimental.view._placement import Placement
+    from redsun.experimental.view import Placement
 
 __all__ = [
     "AttachableComponent",

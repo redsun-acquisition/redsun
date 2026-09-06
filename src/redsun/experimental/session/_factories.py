@@ -12,14 +12,16 @@ from typing import (
 
 from typing_extensions import TypeForm
 
-from redsun.experimental.injection._requires import Maybe, key_for, question_of
-from redsun.experimental.session._declarations import takes_name_by_keyword
+from redsun.experimental.injection import Maybe, key_for, question_of
+
+from ._declarations import takes_name_by_keyword
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
-    from redsun.experimental.injection._requires import Question
-    from redsun.experimental.session._declarations import Declaration, Key
+    from redsun.experimental.injection import Question
+
+    from ._declarations import Declaration, Key
 
 __all__ = [
     "constructor",

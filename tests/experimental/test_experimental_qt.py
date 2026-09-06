@@ -37,6 +37,7 @@ from redsun.experimental import (
 )
 from redsun.experimental.session.qt import (
     ASK_ON_CLOSE,
+    SAVE_MENU,
     Central,
     Dock,
     MenuItem,
@@ -45,7 +46,6 @@ from redsun.experimental.session.qt import (
     ToolBarItem,
     attach,
 )
-from redsun.experimental.session.qt._session import SAVE_MENU
 
 pytestmark = pytest.mark.qt
 

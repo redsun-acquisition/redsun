@@ -73,18 +73,16 @@ from redsun._hooks import (
     WrapsBuild,
 )
 from redsun.aio import set_async_backend
-from redsun.experimental.session._base import (
-    ConfigurationInUse,
-    Session,
-)
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._protocols import DesktopSession
-from redsun.experimental.session.qt._actions import read_actions
-from redsun.experimental.session.qt._color_scheme import (
+from redsun.experimental.view import Placement
+
+from .._base import ConfigurationInUse, Session
+from .._frontend import Frontend
+from .._protocols import DesktopSession
+from ._actions import read_actions
+from ._color_scheme import (
     ColorSchemeButton,
     ColorSchemeMode,
 )
-from redsun.experimental.view._placement import Placement
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -94,7 +92,8 @@ if TYPE_CHECKING:
     from in_n_out import Store
 
     from redsun._config import Source
-    from redsun.experimental.session._protocols import AttachableComponent
+
+    from .._protocols import AttachableComponent
 
 ASK_ON_CLOSE: Final[str] = "ask_on_close"
 """The settings key holding whether the close prompt still appears."""

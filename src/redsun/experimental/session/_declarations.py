@@ -19,9 +19,10 @@ from typing import (
 from ophyd_async.core import Device
 
 from redsun._hooks import HookError, known_points
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._plugins import META_KEYS, resolve
-from redsun.experimental.view._placement import Placement
+from redsun.experimental.view import Placement
+
+from ._frontend import Frontend
+from ._plugins import META_KEYS, resolve
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -39,6 +40,7 @@ __all__ = [
     "Layer",
     "Serves",
     "check",
+    "leads_with_name",
     "read",
     "read_hooks",
 ]

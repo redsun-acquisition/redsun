@@ -14,14 +14,14 @@ from typing import (
 )
 
 from redsun._structural import members, methods, problems, satisfies
-from redsun.experimental.ports._wiring import SessionNotBuilt
+from redsun.experimental.ports import SessionNotBuilt
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from typing_extensions import TypeForm
 
-    from redsun.experimental.session._declarations import Key
+    from redsun.experimental.session import Key
 
 __all__ = [
     "Devices",

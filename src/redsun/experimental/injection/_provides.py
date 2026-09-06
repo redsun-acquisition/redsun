@@ -7,9 +7,9 @@ if TYPE_CHECKING:
 
     from in_n_out import Store
 
-    from redsun.experimental.session._declarations import Key
+    from redsun.experimental.session import Key
 
-__all__ = ["provides", "register", "shared"]
+__all__ = ["provides", "register_shared", "shared_keys"]
 
 PROVIDES = "__redsun_provides__"
 
@@ -34,7 +34,7 @@ def provides(method: F) -> F:
     return method
 
 
-def shared(cls: type) -> dict[str, Key]:
+def shared_keys(cls: type) -> dict[str, Key]:
     """Return the ``provides``-marked members of *cls*, as name to type.
 
     Raises
@@ -58,7 +58,7 @@ def shared(cls: type) -> dict[str, Key]:
     return found
 
 
-def register(
+def register_shared(
     store: Store, instance: object, cls: type, name: str, seen: dict[Key, str]
 ) -> None:
     """Register what *instance* shares on *store*, under the annotated types.
@@ -71,7 +71,7 @@ def register(
     TypeError
         If two components share one type.
     """
-    for method_name, provided in shared(cls).items():
+    for method_name, provided in shared_keys(cls).items():
         owner = seen.get(provided)
         if owner is not None:
             raise TypeError(

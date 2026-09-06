@@ -9,7 +9,7 @@ from event_model import DocumentRouter
 from event_model.documents import Document
 from ophyd_async.core import Device
 
-from redsun.experimental.ports._wiring import (
+from redsun.experimental.ports import (
     SessionNotBuilt,
 )
 
@@ -22,6 +22,7 @@ __all__ = [
     "CallbackType",
     "DeviceMapping",
     "SessionConfig",
+    "validate_callback",
 ]
 
 # these three are dependency keys, so every name in them must resolve at runtime:

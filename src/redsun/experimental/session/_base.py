@@ -20,15 +20,16 @@ from redsun._config import Source, as_sources, load
 from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental._settings import Settings
-from redsun.experimental.injection import _provides
-from redsun.experimental.injection._requires import (
+from redsun.experimental.injection import (
     Devices,
     Maybe,
     One,
     Satisfying,
     key_for,
+    register_shared,
+    shared_keys,
 )
-from redsun.experimental.ports._wiring import (
+from redsun.experimental.ports import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
     ComponentNotBuilt,
@@ -42,20 +43,31 @@ from redsun.experimental.ports._wiring import (
     port_name,
     ports,
 )
-from redsun.experimental.registry._builtins import (
+from redsun.experimental.registry import (
     BlueskyCallbackRegistry,
     CallbackType,
     DeviceMapping,
     SessionConfig,
 )
-from redsun.experimental.session import (
-    _declarations,
-    _factories,
-    _plugins,
+
+from ._declarations import (
+    Declaration,
+    HookDeclaration,
+    Layer,
+    read,
+    read_hooks,
 )
-from redsun.experimental.session._declarations import Layer
-from redsun.experimental.session._frontend import Frontend
-from redsun.experimental.session._protocols import (
+from ._factories import (
+    constructor,
+    factory,
+    injectable,
+    optional_arg,
+    provider,
+    requirements,
+)
+from ._frontend import Frontend
+from ._plugins import load_providers
+from ._protocols import (
     AttachableComponent,
     BuildableSession,
     NamedComponent,
@@ -69,11 +81,12 @@ if TYPE_CHECKING:
     from bluesky.protocols import HasName
     from ophyd_async.core import SignalR
 
-    from redsun.experimental.injection._requires import Question
-    from redsun.experimental.ports._wiring import SlotThread
-    from redsun.experimental.session._declarations import Key
+    from redsun.experimental.injection import Question
+    from redsun.experimental.ports import SlotThread
 
-__all__ = ["ConfigurationInUse", "Session"]
+    from ._declarations import Key
+
+__all__ = ["BUILD_STEPS", "ConfigurationInUse", "Session"]
 
 
 class ConfigurationInUse(OSError):
@@ -99,7 +112,7 @@ def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     that took its default and that no source named, and that key is correct.
     A constructor taking ``**kwargs`` accepts anything, so it refuses none.
     """
-    params = _factories.constructor(cls).parameters
+    params = constructor(cls).parameters
     if any(p.kind is p.VAR_KEYWORD for p in params.values()):
         return []
     return sorted(set(entry) - {name for name in params if name != "name"})
@@ -130,8 +143,8 @@ BUILD_STEPS: Final[tuple[str, ...]] = (
 
 A `during_build` hook is told one of these names as each step starts, so a
 progress display that counts them needs the total in advance to show how far
-along it is. It is private while this layer is: a hook reaching it is reaching
-into the module, and publishing it is part of the layer graduating.
+along it is. `redsun.experimental` does not re-export it: it names the steps of
+this session class rather than the layer's surface.
 
 `Session.build` runs two steps before the first of these, reading the
 configuration and starting the toolkit's runtime, and reports neither. A hook
@@ -243,12 +256,12 @@ class Session(BuildableSession):
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
-        self._declarations: dict[str, _declarations.Declaration] = {}
+        self._declarations: dict[str, Declaration] = {}
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
-        self._answers: dict[Question, _declarations.Declaration | None] = {}
+        self._answers: dict[Question, Declaration | None] = {}
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
         self._callbacks: dict[str, CallbackType] = {}
@@ -311,7 +324,7 @@ class Session(BuildableSession):
         return self._built(Layer.VIEW)
 
     @property
-    def declarations(self) -> Mapping[str, _declarations.Declaration]:
+    def declarations(self) -> Mapping[str, Declaration]:
         """The declarations collected from the class."""
         return dict(self._declarations)
 
@@ -388,7 +401,7 @@ class Session(BuildableSession):
         owner = type(self).__name__
         built: dict[int, object] = {}
         declared: dict[str, object] = {}
-        for moment, declaration in _declarations.read_hooks(type(self), points).items():
+        for moment, declaration in read_hooks(type(self), points).items():
             provider = built.get(id(declaration))
             if provider is None:
                 provider = instantiate(declaration, owner)
@@ -457,12 +470,12 @@ class Session(BuildableSession):
         """
         shared: dict[Key, str] = {}
         classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
-        classes.update(_plugins.load_providers(config))
+        classes.update(load_providers(config))
         for name, cls in classes.items():
-            params = _factories.injectable(cls, {}, binds_name=False)
+            params = injectable(cls, {}, binds_name=False)
             refuse_unanswered(store, name, params)
-            instance = store.inject(_factories.provider(cls, name))()
-            _provides.register(store, instance, cls, name, shared)
+            instance = store.inject(provider(cls, name))()
+            register_shared(store, instance, cls, name, shared)
 
     def build(self) -> Self:
         """Run each step of `BuildableSession` in turn, announcing all but two.
@@ -530,7 +543,7 @@ class Session(BuildableSession):
         config = self._configuration()
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._set_configuration(config, self.name)
-        self._declarations = _declarations.read(type(self), config, self.frontend)
+        self._declarations = read(type(self), config, self.frontend)
 
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.
@@ -735,9 +748,7 @@ class Session(BuildableSession):
             if isinstance(declaration.instance, Serializable)
         }
 
-    def _entry_for(
-        self, declaration: _declarations.Declaration
-    ) -> dict[str, Any] | None:
+    def _entry_for(self, declaration: Declaration) -> dict[str, Any] | None:
         """Return the entry *declaration*'s component asks to be written.
 
         ``None`` where there is nothing to write, which leaves the entry the
@@ -1098,7 +1109,7 @@ class Session(BuildableSession):
             if d.kind is layer and d.instance is not None
         }
 
-    def _components(self) -> list[_declarations.Declaration]:
+    def _components(self) -> list[Declaration]:
         return [d for d in self._declarations.values() if d.kind is not Layer.DEVICE]
 
     def build_presenters(self) -> None:
@@ -1129,19 +1140,17 @@ class Session(BuildableSession):
             raise RuntimeError("The registry step has to run before a component is")
         declarations = [d for d in self._components() if d.kind is layer]
         chosen_for = self._chosen_for(declarations)
-        shared = self._shared
         for declaration in self._ordered(declarations):
             absent = chosen_for.get(declaration.name, set()) & set(self._failed)
             if absent:
                 named = listed(sorted(absent))
                 self._skip(declaration, TypeError(f"{named} was not built"))
                 continue
-            params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            params = injectable(declaration.cls, declaration.cfg_kwargs)
             if self._refuse_or_skip(store, declaration, params):
                 continue
-            factory = _factories.factory(declaration, self._on_built)
             try:
-                instance = store.inject(factory)()
+                instance = store.inject(factory(declaration, self._on_built))()
             except SessionNotBuilt:
                 # a component asking the session a question it cannot answer
                 # yet is written wrongly, which is not a part being absent
@@ -1152,13 +1161,11 @@ class Session(BuildableSession):
             store.register_provider(constant(instance), type_hint=declaration.key)
             if self._is_unique(declaration):
                 store.register_provider(constant(instance), type_hint=declaration.cls)
-            _provides.register(
-                store, instance, declaration.cls, declaration.name, shared
+            register_shared(
+                store, instance, declaration.cls, declaration.name, self._shared
             )
 
-    def _chosen_for(
-        self, declarations: list[_declarations.Declaration]
-    ) -> dict[str, set[str]]:
+    def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
         """Return, by asker, the components chosen for the questions it asks.
 
         Only a question demanding exactly one component is here. One that
@@ -1166,7 +1173,7 @@ class Session(BuildableSession):
         cannot be built, which is an answer the asker already accepts.
         """
         found: dict[str, set[str]] = {}
-        for question, askers in _factories.requirements(declarations).items():
+        for question, askers in requirements(declarations).items():
             chosen = self._answers.get(question)
             if chosen is None or not isinstance(question.marker, One):
                 continue
@@ -1177,7 +1184,7 @@ class Session(BuildableSession):
     def _refuse_or_skip(
         self,
         store: Store,
-        declaration: _declarations.Declaration,
+        declaration: Declaration,
         params: Mapping[str, Any],
     ) -> bool:
         """Return whether *declaration* is skipped for want of a collaborator.
@@ -1221,18 +1228,14 @@ class Session(BuildableSession):
             )
         }
 
-    def _skip(
-        self, declaration: _declarations.Declaration, reason: BaseException
-    ) -> None:
+    def _skip(self, declaration: Declaration, reason: BaseException) -> None:
         """Record and report a component the session is going on without."""
         self._failed[declaration.name] = reason
         logger.error(
             "Failed to build %s '%s': %s", declaration.kind, declaration.name, reason
         )
 
-    def _ordered(
-        self, declarations: list[_declarations.Declaration]
-    ) -> list[_declarations.Declaration]:
+    def _ordered(self, declarations: list[Declaration]) -> list[Declaration]:
         """Return *declarations* in the order they have to be built.
 
         Layers first, since `_check_layers` has already refused an edge
@@ -1241,16 +1244,14 @@ class Session(BuildableSession):
         written above the one it is built from.
         """
         needs = self._edges(declarations)
-        ordered: list[_declarations.Declaration] = []
+        ordered: list[Declaration] = []
         for layer in sorted({d.kind for d in declarations}, key=lambda k: ORDER[k]):
             ordered.extend(
                 sorted_by_need([d for d in declarations if d.kind is layer], needs)
             )
         return ordered
 
-    def _edges(
-        self, declarations: list[_declarations.Declaration]
-    ) -> dict[str, set[str]]:
+    def _edges(self, declarations: list[Declaration]) -> dict[str, set[str]]:
         """Return the components each component is built from, by name.
 
         A census is left out: it is a live view of the session rather than a
@@ -1260,12 +1261,12 @@ class Session(BuildableSession):
         by_type.update({d.key: d for d in declarations})
         needs: dict[str, set[str]] = {d.name: set() for d in declarations}
         for declaration in declarations:
-            params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            params = injectable(declaration.cls, declaration.cfg_kwargs)
             for hint in params.values():
-                target = by_type.get(_factories.optional_arg(hint) or hint)
+                target = by_type.get(optional_arg(hint) or hint)
                 if target is not None and target is not declaration:
                     needs[declaration.name].add(target.name)
-        for question, askers in _factories.requirements(declarations).items():
+        for question, askers in requirements(declarations).items():
             chosen = self._answers.get(question)
             if chosen is None:
                 continue
@@ -1274,7 +1275,7 @@ class Session(BuildableSession):
                     needs[asker].add(chosen.name)
         return needs
 
-    def _check_layers(self, declarations: list[_declarations.Declaration]) -> None:
+    def _check_layers(self, declarations: list[Declaration]) -> None:
         """Refuse a component whose constructor reaches into a later layer.
 
         The layers are a build order, so an edge pointing forwards along it
@@ -1288,16 +1289,14 @@ class Session(BuildableSession):
         """
         by_type = owners(declarations)
         for declaration in declarations:
-            params = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            params = injectable(declaration.cls, declaration.cfg_kwargs)
             for pname, hint in params.items():
-                target = by_type.get(_factories.optional_arg(hint) or hint)
+                target = by_type.get(optional_arg(hint) or hint)
                 if target is None:
                     continue
                 refuse_backwards(declaration, target, f"its {pname!r} parameter")
 
-    def _answer(
-        self, store: Store, declarations: list[_declarations.Declaration]
-    ) -> None:
+    def _answer(self, store: Store, declarations: list[Declaration]) -> None:
         """Answer each question a component asks about the session.
 
         One answer per question, not per component that asks. A census of the
@@ -1305,7 +1304,7 @@ class Session(BuildableSession):
         of its own answer; one of the devices is answered with the mapping
         itself, since every device exists before any component is built.
         """
-        for question, askers in _factories.requirements(declarations).items():
+        for question, askers in requirements(declarations).items():
             key = key_for(question)
             if isinstance(question.marker, Devices):
                 store.register_provider(
@@ -1338,7 +1337,7 @@ class Session(BuildableSession):
         question: Question,
         key: Key,
         askers: list[str],
-        declarations: list[_declarations.Declaration],
+        declarations: list[Declaration],
     ) -> None:
         """Bind the one component answering *question*, or refuse to build.
 
@@ -1427,7 +1426,7 @@ class Session(BuildableSession):
                     + "; ".join(reasons)
                 )
 
-    def _is_unique(self, declaration: _declarations.Declaration) -> bool:
+    def _is_unique(self, declaration: Declaration) -> bool:
         others = [d for d in self._components() if d.cls is declaration.cls]
         if len(others) == 1:
             return True
@@ -1458,9 +1457,7 @@ class Session(BuildableSession):
             setattr(self, declaration.name, device)
             self._register_teardown(device)
 
-    def _on_built(
-        self, declaration: _declarations.Declaration, instance: NamedComponent
-    ) -> None:
+    def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         declaration.instance = instance
         setattr(self, declaration.name, instance)
         self._register_teardown(instance)
@@ -1527,15 +1524,13 @@ class Session(BuildableSession):
         """
         declarations = [d for d in self._components() if d.instance is not None]
         wanted = {
-            _factories.optional_arg(hint) or hint
+            optional_arg(hint) or hint
             for declaration in declarations
-            for hint in _factories.injectable(
-                declaration.cls, declaration.cfg_kwargs
-            ).values()
+            for hint in injectable(declaration.cls, declaration.cfg_kwargs).values()
         }
         used = self._used(declarations, wanted)
         for declaration in declarations:
-            provided = _provides.shared(declaration.cls)
+            provided = shared_keys(declaration.cls)
             for method, key in provided.items():
                 if key not in wanted:
                     logger.warning(
@@ -1544,7 +1539,7 @@ class Session(BuildableSession):
                         method,
                         getattr(key, "__name__", key),
                     )
-            requires = _factories.injectable(declaration.cls, declaration.cfg_kwargs)
+            requires = injectable(declaration.cls, declaration.cfg_kwargs)
             if not provided and not requires and declaration.name not in used:
                 logger.warning(
                     "%r shares nothing, asks for nothing and is wired to nothing; "
@@ -1552,9 +1547,7 @@ class Session(BuildableSession):
                     declaration.name,
                 )
 
-    def _used(
-        self, declarations: list[_declarations.Declaration], wanted: set[Any]
-    ) -> set[str]:
+    def _used(self, declarations: list[Declaration], wanted: set[Any]) -> set[str]:
         """Check the components something in the session reaches.
 
         *wanted* is every type a constructor asks for, so a component another
@@ -1571,7 +1564,7 @@ class Session(BuildableSession):
             for declaration in declarations
             if declaration.key in wanted or declaration.cls in wanted
         }
-        for question in _factories.requirements(declarations):
+        for question in requirements(declarations):
             names |= {
                 declaration.name
                 for declaration in declarations
@@ -1589,8 +1582,7 @@ def unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, objec
     return [
         (pname, hint)
         for pname, hint in params.items()
-        if _factories.optional_arg(hint) is None
-        and next(store.iter_providers(hint), None) is None
+        if optional_arg(hint) is None and next(store.iter_providers(hint), None) is None
     ]
 
 
@@ -1629,7 +1621,7 @@ def constant(value: Any) -> Callable[[], Any]:
     return read
 
 
-def instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
+def instance_of(declaration: Declaration) -> Callable[[], Any]:
     """Return a callable answering with what *declaration* was built into.
 
     Read at call time rather than captured, the declaration having no instance
@@ -1643,8 +1635,8 @@ def instance_of(declaration: _declarations.Declaration) -> Callable[[], Any]:
 
 
 def sorted_by_need(
-    group: list[_declarations.Declaration], needs: Mapping[str, set[str]]
-) -> list[_declarations.Declaration]:
+    group: list[Declaration], needs: Mapping[str, set[str]]
+) -> list[Declaration]:
     """Return *group* with each component after the ones it is built from.
 
     Only edges inside *group* matter: anything in an earlier layer is already
@@ -1658,7 +1650,7 @@ def sorted_by_need(
     """
     names = {d.name for d in group}
     pending = {d.name: {n for n in needs[d.name] if n in names} for d in group}
-    ordered: list[_declarations.Declaration] = []
+    ordered: list[Declaration] = []
     remaining = list(group)
     while remaining:
         ready = [d for d in remaining if not pending[d.name]]
@@ -1677,8 +1669,8 @@ def sorted_by_need(
 
 
 def owners(
-    declarations: list[_declarations.Declaration],
-) -> dict[Any, _declarations.Declaration]:
+    declarations: list[Declaration],
+) -> dict[Any, Declaration]:
     """Return every type naming a component, by the declaration answering it.
 
     A class declared twice is left out: nothing can be injected by it, so no
@@ -1687,18 +1679,18 @@ def owners(
     counts: dict[type, int] = {}
     for declaration in declarations:
         counts[declaration.cls] = counts.get(declaration.cls, 0) + 1
-    found: dict[Any, _declarations.Declaration] = {}
+    found: dict[Any, Declaration] = {}
     for declaration in declarations:
         if counts[declaration.cls] == 1:
             found[declaration.cls] = declaration
-        for provided in _provides.shared(declaration.cls).values():
+        for provided in shared_keys(declaration.cls).values():
             found[provided] = declaration
     return found
 
 
 def refuse_backwards(
-    asker: _declarations.Declaration,
-    target: _declarations.Declaration,
+    asker: Declaration,
+    target: Declaration,
     where: str,
 ) -> None:
     """Refuse *asker* depending on *target*, when *target* is built later."""
@@ -1723,7 +1715,7 @@ def listed(names: Iterable[str], *, quote: bool = True) -> str:
     return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
-def near_misses(declarations: list[_declarations.Declaration], protocol: type) -> str:
+def near_misses(declarations: list[Declaration], protocol: type) -> str:
     """Report the declared classes that carry some of *protocol*, and why not all."""
     wanted = _structural.members(protocol)
     lines = [
@@ -1763,7 +1755,7 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
     return resolved
 
 
-def instantiate(declaration: _declarations.HookDeclaration, owner: str) -> object:
+def instantiate(declaration: HookDeclaration, owner: str) -> object:
     """Construct the provider *declaration* names.
 
     Raises
