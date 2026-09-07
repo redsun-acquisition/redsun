@@ -7,9 +7,11 @@ import sys
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, ClassVar, NoReturn, cast
 
+from psygnal import emit_queued
+
 # psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
-from psygnal.qt import start_emitting_from_queue
+from psygnal.qt import start_emitting_from_queue, stop_emitting_from_queue
 from qtpy.QtCore import QEvent
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -158,7 +160,11 @@ class QtAppContainer(AppContainer):
 
         A reference taken before the shutdown is left wrapping a destroyed
         widget, and using it raises ``RuntimeError``.
+
+        Emissions still queued for a slot with a thread affinity are delivered
+        first, while the widgets can still take them.
         """
+        self._drain_queued_emissions()
         for component in components:
             if isinstance(component, QWidget):
                 component.close()
@@ -174,6 +180,14 @@ class QtAppContainer(AppContainer):
             # without an event loop running would never reach the pass that
             # carries it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def _drain_queued_emissions(self) -> None:
+        """Stop emitting from the psygnal queue and emit residual signals."""
+        stop_emitting_from_queue()
+        try:
+            emit_queued()
+        except Exception as e:  # noqa: BLE001 - a failed delivery must not block teardown
+            logger.error(f"Error draining queued emissions: {e}")
 
     def _during_build(
         self, app: QApplication

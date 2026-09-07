@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Fixed
+
+- **`QtAppContainer.shutdown`** (`redsun.containers.qt`) stops the timer
+  draining psygnal's emission queue and delivers what is left in it before
+  destroying the widgets. An emission queued for a slot with a thread affinity
+  reached a destroyed widget as `RuntimeError: wrapped C/C++ object of type
+  <widget> has been deleted`, and carried into the next container built in the
+  same process.
+
 ## [0.12.1] - 03-09-2026
 
 ### Added
