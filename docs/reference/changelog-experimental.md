@@ -114,6 +114,17 @@ listed in the [changelog](changelog.md).
           self.callbacks = callbacks
   ```
 
+- `PlanEntry` and `HasPlans` - a plan a component offers, and the protocol of a
+  component offering plans by name from `plan_map`. Only `plan` is required.
+  `callbacks` are the document callbacks the plan requires, in the order they
+  run, and `extendable`, `True` when absent, is whether a user may attach more:
+
+  ```python
+  class MyPresenter:
+      def plan_map(self) -> Mapping[str, PlanEntry]:
+          return {"my_scan": {"plan": self.my_scan, "callbacks": [self]}}
+  ```
+
 - `Requires[P]` - the components of the session that satisfy a protocol, spelled
   `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
   made, so a component that failed is absent from it. A component satisfying *P*

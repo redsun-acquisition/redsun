@@ -34,6 +34,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Sharing | `provides` |
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `DeviceMapping`, `CallbackType`, `slot` |
+| Offering plans | `PlanEntry`, `HasPlans` |
 
 The Qt frontend is `redsun.experimental.session.qt`: `QtSession` to subclass,
 `Qt` as the frontend itself, the placements it attaches (`Central`, `Dock`,

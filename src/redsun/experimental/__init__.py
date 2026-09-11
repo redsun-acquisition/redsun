@@ -47,6 +47,8 @@ from redsun.experimental.ports import (
 from redsun.experimental.registry import (
     CallbackType,
     DeviceMapping,
+    HasPlans,
+    PlanEntry,
     SessionConfig,
 )
 from redsun.experimental.session import (
@@ -90,10 +92,12 @@ __all__ = [
     "DevicesOf",
     "FromConfig",
     "Frontend",
+    "HasPlans",
     "HookError",
     "Layer",
     "NamedComponent",
     "Placement",
+    "PlanEntry",
     "PluginError",
     "Requires",
     "RequiresMaybe",
