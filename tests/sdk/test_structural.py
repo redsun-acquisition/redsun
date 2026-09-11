@@ -165,3 +165,28 @@ def test_a_property_member_is_data_not_a_call(
     """A protocol property is answered by any instance holding the name."""
     assert methods(Named) == frozenset()
     assert satisfies(candidate, Named) is expected
+
+
+@runtime_checkable
+class Callback(Protocol):
+    def __call__(self, name: str, doc: object) -> None: ...
+
+
+class Calls:
+    def __call__(self, name: str, doc: object) -> None: ...
+
+
+@pytest.mark.parametrize(
+    ("candidate", "expected"),
+    [
+        (Calls(), []),
+        (Calls, []),
+        (Nameless(), ["'__call__' is missing"]),
+        (Nameless, ["'__call__' is missing"]),
+    ],
+)
+def test_a_class_is_not_taken_for_a_callable_instance(
+    candidate: object, expected: list[str]
+) -> None:
+    """Every class is callable through its metaclass, which its instances are not."""
+    assert problems(candidate, Callback) == expected

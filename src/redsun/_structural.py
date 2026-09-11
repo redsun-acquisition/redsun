@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 __all__ = ["members", "methods", "problems", "satisfies"]
 
 _PROBE = object()
+_MISSING = object()
 
 
 @cache
@@ -75,12 +76,11 @@ def _signature_problems(cls: type, protocol: type) -> tuple[str, ...]:
         wanted = _call_signature(protocol, name)
         if wanted is None:
             continue
-        if not callable(getattr(cls, name, None)):
-            found.append(
-                f"{name!r} is not callable"
-                if hasattr(cls, name)
-                else f"{name!r} is missing"
-            )
+        if _defined(cls, name) is _MISSING:
+            found.append(f"{name!r} is missing")
+            continue
+        if not callable(getattr(cls, name)):
+            found.append(f"{name!r} is not callable")
             continue
         got = _call_signature(cls, name)
         if got is None:
@@ -106,6 +106,19 @@ def _rendered(name: str, signature: inspect.Signature) -> str:
     return f"{name}{bare}"
 
 
+def _defined(owner: type, name: str) -> Any:
+    """Return *name* as *owner* or one of its bases defines it.
+
+    Unlike `inspect.getattr_static`, the metaclass is not searched: every class
+    reaches ``type.__call__`` through it, which says nothing about whether its
+    instances can be called.
+    """
+    for klass in owner.__mro__:
+        if name in vars(klass):
+            return vars(klass)[name]
+    return _MISSING
+
+
 def _call_signature(owner: type, name: str) -> inspect.Signature | None:
     """How *name* is called on an instance of *owner*, if that is knowable.
 
@@ -113,8 +126,8 @@ def _call_signature(owner: type, name: str) -> inspect.Signature | None:
     read. Binding through the descriptor protocol is what drops ``self`` from
     a method and leaves a ``staticmethod`` untouched.
     """
-    static = inspect.getattr_static(owner, name, None)
-    if isinstance(static, property):
+    static = _defined(owner, name)
+    if static is _MISSING or isinstance(static, property):
         return None
     bound = static.__get__(object()) if hasattr(static, "__get__") else static
     if not callable(bound):
