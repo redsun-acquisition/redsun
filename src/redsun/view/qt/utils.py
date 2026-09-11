@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import magicgui.widgets as mgw
 import magicgui.widgets.bases as mgw_bases
+from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action
@@ -26,9 +27,10 @@ from redsun.presenter.plan_spec import ParamKind
 from redsun.view.qt._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
 
     from redsun.presenter.plan_spec import PlanSpec
+    from redsun.virtual import CallbackType
 
 __all__ = [
     "ActionButton",
@@ -116,6 +118,13 @@ class PlanWidget:
     pause_button: QtW.QPushButton | None = None
     """The pause/resume button, or None if the plan is not pausable."""
 
+    callbacks_list: QtW.QListWidget | None = None
+    """The document callbacks to run the plan with, or None if it runs with none.
+
+    The callbacks the plan requires come first, checked and fixed in place; the
+    rest can be checked and dragged into a different order.
+    """
+
     def toggle(self, status: bool) -> None:
         """Update UI state when a togglable plan starts or stops.
 
@@ -188,6 +197,40 @@ class PlanWidget:
         and keyword args via ``collect_arguments`` / ``resolve_arguments``.
         """
         return {w.name: w.value for w in self.container}
+
+    @property
+    def callbacks(self) -> list[CallbackType]:
+        """The checked document callbacks, in the order the run uses."""
+        return [
+            item.data(QtCore.Qt.ItemDataRole.UserRole)
+            for item in _checked(self.callbacks_list)
+        ]
+
+    @property
+    def attached_callbacks(self) -> list[str]:
+        """Names of the checked callbacks the user attached, in order."""
+        return _attached(self.callbacks_list)
+
+
+def _checked(callbacks_list: QtW.QListWidget | None) -> list[QtW.QListWidgetItem]:
+    """Return the checked rows of *callbacks_list*, in order."""
+    if callbacks_list is None:
+        return []
+    items = (callbacks_list.item(row) for row in range(callbacks_list.count()))
+    return [
+        item
+        for item in items
+        if item is not None and item.checkState() == QtCore.Qt.CheckState.Checked
+    ]
+
+
+def _attached(callbacks_list: QtW.QListWidget | None) -> list[str]:
+    """Return the names of the checked rows the user may uncheck, in order."""
+    return [
+        item.text()
+        for item in _checked(callbacks_list)
+        if item.flags() & QtCore.Qt.ItemFlag.ItemIsUserCheckable
+    ]
 
 
 def _build_param_widgets(
@@ -355,6 +398,96 @@ def _build_actions_group(
     return actions_group, action_buttons
 
 
+def _label(callback: CallbackType, available: Mapping[str, CallbackType]) -> str:
+    """Return the name *callback* has in *available*, or one it carries."""
+    for name, entry in available.items():
+        if entry is callback:
+            return name
+    return str(getattr(callback, "name", type(callback).__name__))
+
+
+def _build_callbacks_group(
+    params_layout: QtW.QVBoxLayout,
+    own: Sequence[CallbackType],
+    extendable: bool,
+    available: Mapping[str, CallbackType],
+    attached: Sequence[str] | None,
+    selection_callback: Callable[[list[str]], None],
+) -> QtW.QListWidget | None:
+    """Build the *Callbacks* group box and add it to *params_layout* if needed.
+
+    Returns ``None`` when the plan carries no callback and the user may attach
+    none.
+    """
+    optional = (
+        {
+            name: entry
+            for name, entry in available.items()
+            if all(entry is not carried for carried in own)
+        }
+        if extendable
+        else {}
+    )
+    if not own and not optional:
+        return None
+    order = list(optional)
+    if attached is not None:
+        chosen = [name for name in attached if name in optional]
+        order = chosen + [name for name in optional if name not in chosen]
+
+    flags = QtCore.Qt.ItemFlag
+    role = QtCore.Qt.ItemDataRole.UserRole
+    checked, unchecked = QtCore.Qt.CheckState.Checked, QtCore.Qt.CheckState.Unchecked
+    callbacks_list = QtW.QListWidget()
+    callbacks_list.setDragDropMode(QtW.QAbstractItemView.DragDropMode.InternalMove)
+    pinned: list[QtW.QListWidgetItem] = []
+    for callback in own:
+        item = QtW.QListWidgetItem(_label(callback, available))
+        item.setData(role, callback)
+        item.setFlags(flags.ItemIsEnabled)
+        item.setCheckState(checked)
+        item.setToolTip("Required by the plan")
+        callbacks_list.addItem(item)
+        pinned.append(item)
+    for name in order:
+        item = QtW.QListWidgetItem(name)
+        item.setData(role, optional[name])
+        item.setFlags(
+            flags.ItemIsEnabled
+            | flags.ItemIsSelectable
+            | flags.ItemIsUserCheckable
+            | flags.ItemIsDragEnabled
+        )
+        item.setCheckState(
+            checked if attached is None or name in attached else unchecked
+        )
+        callbacks_list.addItem(item)
+
+    def keep_own_first() -> None:
+        # a drop may land above the plan's own callbacks, which run first
+        # whatever the list shows, so the rows are put back to match
+        for row, item in enumerate(pinned):
+            current = callbacks_list.row(item)
+            if current != row and model is not None:
+                model.moveRow(QtCore.QModelIndex(), current, QtCore.QModelIndex(), row)
+
+    def notify() -> None:
+        selection_callback(_attached(callbacks_list))
+
+    model = callbacks_list.model()
+    if model is not None:
+        model.rowsMoved.connect(keep_own_first)
+        model.rowsMoved.connect(notify)
+    callbacks_list.itemChanged.connect(notify)
+
+    group = QtW.QGroupBox("Callbacks")
+    layout = QtW.QVBoxLayout(group)
+    layout.setContentsMargins(4, 6, 4, 4)
+    layout.addWidget(callbacks_list)
+    params_layout.addWidget(group)
+    return callbacks_list
+
+
 def create_plan_widget(
     spec: PlanSpec,
     run_callback: Callable[[], None] | None = None,
@@ -362,6 +495,11 @@ def create_plan_widget(
     pause_callback: Callable[[bool], None] | None = None,
     action_clicked_callback: Callable[[str], None] | None = None,
     action_toggled_callback: Callable[[bool, str], None] | None = None,
+    plan_callbacks: Sequence[CallbackType] = (),
+    extendable: bool = True,
+    available_callbacks: Mapping[str, CallbackType] | None = None,
+    attached_callbacks: Sequence[str] | None = None,
+    selection_callback: Callable[[list[str]], None] | None = None,
 ) -> PlanWidget:
     """Build a complete ``PlanWidget`` for *spec*.
 
@@ -379,6 +517,22 @@ def create_plan_widget(
         Called with ``action_name`` when a non-togglable action fires.
     action_toggled_callback : Callable[[bool, str], None] | None, optional
         Called with ``(checked, action_name)`` when a togglable action fires.
+    plan_callbacks : Sequence[CallbackType], optional
+        The document callbacks the plan requires, in the order they run. They
+        are listed first, checked, and cannot be unchecked or moved.
+    extendable : bool, optional
+        Whether the user may attach callbacks after *plan_callbacks*.
+    available_callbacks : Mapping[str, CallbackType] | None, optional
+        The document callbacks the user may attach, by the name each row is
+        labelled with, in the order offered. Ignored when *extendable* is
+        ``False``.
+    attached_callbacks : Sequence[str] | None, optional
+        Names the user attached before, in their order. The other available
+        callbacks are listed unchecked after them, and a name not available is
+        ignored. ``None`` checks every available callback.
+    selection_callback : Callable[[list[str]], None] | None, optional
+        Called with ``PlanWidget.attached_callbacks`` when the user checks,
+        unchecks or moves a callback.
 
     Returns
     -------
@@ -407,6 +561,14 @@ def create_plan_widget(
         params_layout.addWidget(devices_group)
     if params_group is not None:
         params_layout.addWidget(params_group)
+    callbacks_list = _build_callbacks_group(
+        params_layout,
+        plan_callbacks,
+        extendable,
+        available_callbacks or {},
+        attached_callbacks,
+        selection_callback or (lambda names: None),
+    )
     page_layout.addWidget(params_widget)
 
     run_button, pause_button = _build_run_buttons(
@@ -435,6 +597,7 @@ def create_plan_widget(
         params_widget=params_widget,
         actions_group=actions_group,
         action_buttons=action_buttons,
+        callbacks_list=callbacks_list,
     )
 
 

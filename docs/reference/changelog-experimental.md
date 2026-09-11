@@ -125,6 +125,15 @@ listed in the [changelog](changelog.md).
           return {"my_scan": {"plan": self.my_scan, "callbacks": [self]}}
   ```
 
+- `create_plan_widget` (`redsun.view.qt.utils`) takes `plan_callbacks`,
+  `extendable`, `available_callbacks`, `attached_callbacks` and
+  `selection_callback`, and lists the document callbacks in a *Callbacks* group
+  for a plan that carries one or is extendable. The plan's own callbacks come
+  first, checked and fixed in place; the others can be checked and dragged into
+  a different order. `PlanWidget.callbacks` returns the checked callbacks in run
+  order, `PlanWidget.attached_callbacks` the names of the ones the user
+  attached, and `PlanWidget.callbacks_list` holds the list.
+
 - `Requires[P]` - the components of the session that satisfy a protocol, spelled
   `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
   made, so a component that failed is absent from it. A component satisfying *P*
