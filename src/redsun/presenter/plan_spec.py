@@ -154,6 +154,13 @@ class PlanSpec:
     pausable: bool = False
     """Whether a running togglable plan can be paused and resumed."""
 
+    callbacks: Sequence[str] | None = None
+    """The document callbacks the plan runs with, by the name each is registered under.
+
+    ``None`` declares nothing, leaving the choice to the user. An empty sequence
+    declares that the plan runs with no callbacks.
+    """
+
 
 class _FieldsFromAnnotation(NamedTuple):
     """Structured result returned by each annotation handler.

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Dates are specified in the format `DD-MM-YYYY`.
 
+## [Unreleased]
+
+### Added
+
+- **`PlanSpec.callbacks`** (`redsun.presenter.plan_spec`) - the document
+  callbacks a plan runs with, by the name each is registered under, in order.
+  `None`, the default, declares nothing and leaves the choice to the user; an
+  empty sequence declares that the plan runs with no callbacks.
+  `create_plan_spec` leaves it `None`, so the presenter holding the plan sets
+  it:
+
+  ```python
+  spec = replace(create_plan_spec(my_plan), callbacks=["my_callback"])
+  ```
+
 ## [0.12.2] - 07-09-2026
 
 ### Fixed
