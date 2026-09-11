@@ -492,6 +492,17 @@ Dates are specified in the format `DD-MM-YYYY`.
   re-exports all three, and is still the import a component is written
   against.
 
+## [0.12.2] - 07-09-2026
+
+### Fixed
+
+- **`QtAppContainer.shutdown`** (`redsun.containers.qt`) stops the timer
+  draining psygnal's emission queue and delivers what is left in it before
+  destroying the widgets. An emission queued for a slot with a thread affinity
+  reached a destroyed widget as `RuntimeError: wrapped C/C++ object of type
+  <widget> has been deleted`, and carried into the next container built in the
+  same process.
+
 ## [0.12.1] - 03-09-2026
 
 ### Added
@@ -1308,6 +1319,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0
 [0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
