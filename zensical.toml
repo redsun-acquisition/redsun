@@ -79,6 +79,7 @@ nav = [
         ]},
         { "Glossary" = "reference/glossary.md" },
         { "Changelog" = "reference/changelog.md" },
+        { "Experimental changelog" = "reference/changelog-experimental.md" },
     ]},
     { "Explanation" = [
         "explanation/index.md",
