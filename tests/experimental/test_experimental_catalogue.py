@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, NewType, TypeAlias
 
 import pytest
 from event_model import DocumentRouter
+from event_model.documents import Document
 
 from redsun.experimental import (
     AsPresenter,
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
 
 Gain = NewType("Gain", float)
 
+SpelledOutCallback: TypeAlias = Callable[[str, Document], None] | DocumentRouter
+
 
 @dataclass(frozen=True)
 class Panel(Placement):
@@ -35,6 +38,16 @@ class Listener:
     """Presenter asking for every router the session built."""
 
     def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+        self.name = name
+        self.callbacks = callbacks
+
+
+class SpelledOutListener:
+    """Presenter asking for the catalogue without importing `CallbackType`."""
+
+    def __init__(
+        self, name: str, /, callbacks: Mapping[str, SpelledOutCallback]
+    ) -> None:
         self.name = name
         self.callbacks = callbacks
 
@@ -91,6 +104,12 @@ class DeclaredAboveTheRouters(Session):
     second: AsPresenter[Sharing]
 
 
+class SpelledOutAboveTheRouters(Session):
+    listener: AsPresenter[SpelledOutListener]
+    first: AsPresenter[Needing]
+    second: AsPresenter[Sharing]
+
+
 class WithAPlainRouter(Session):
     listener: AsPresenter[Listener]
     plain: AsPresenter[Plain]
@@ -112,6 +131,17 @@ def test_the_catalogue_holds_every_router_in_declaration_order(
 ) -> None:
     """`second` is built before `first`, and both before the listener."""
     app = build(DeclaredAboveTheRouters)
+    assert list(app.listener.callbacks.items()) == [
+        ("first", app.first),
+        ("second", app.second),
+    ]
+
+
+def test_a_listener_writing_the_type_out_receives_the_same_catalogue(
+    build: BuildSession,
+) -> None:
+    """Without importing `CallbackType`, it is ordered and answered the same way."""
+    app = build(SpelledOutAboveTheRouters)
     assert list(app.listener.callbacks.items()) == [
         ("first", app.first),
         ("second", app.second),

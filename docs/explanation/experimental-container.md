@@ -33,7 +33,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
 | Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
-| Session | `DeviceMapping`, `BlueskyCallbackRegistry`, `slot` |
+| Session | `DeviceMapping`, `CallbackType`, `slot` |
 
 The Qt frontend is `redsun.experimental.session.qt`: `QtSession` to subclass,
 `Qt` as the frontend itself, the placements it attaches (`Central`, `Dock`,
@@ -620,56 +620,63 @@ writing the class name in a constructor. When it appears twice, you cannot,
 because the request would be ambiguous. The container tells you so in the log
 rather than picking one.
 
-## The one new idea: a registry that fills as it goes
+## Document callbacks
 
-Document callbacks are collected while the application is built. Each component
-that has one registers it as it comes up. So a component that wants to see *all*
-of them has a problem: at the moment it is constructed, the components after it
-have not registered anything yet.
-
-`BlueskyCallbackRegistry` is both halves of that registry. A component
-registers its own callbacks on it as it is built:
+A component that is a bluesky `DocumentRouter` is a document callback, and it
+registers nothing. The session collects every router it builds, under the
+component's name:
 
 ```python
-from redsun.experimental import BlueskyCallbackRegistry
+from event_model import DocumentRouter
+
+
+class MyRouter(DocumentRouter):
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
+        self.name = name
+```
+
+A component that wants all of them asks for `Mapping[str, CallbackType]`:
+
+```python
+from collections.abc import Mapping
+
+from redsun.experimental import CallbackType
 
 
 class MyPresenter:
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
         self.name = name
-        callbacks.register(self, name=name)
+        self.callbacks = callbacks
 ```
 
-and reading is the part that has to wait. The answer is that
-`BlueskyCallbackRegistry` is a **live view**, not a copy. You hold on to it and
-read it later, when the application is running:
+`CallbackType` is `Callable[[str, Document], None] | DocumentRouter`, and the
+session matches the type by what it says rather than where it was imported
+from. A component package may write it out instead of importing it from
+`redsun`, as long as `Mapping` and `Callable` come from `collections.abc`.
+Taken from `typing`, they make a different type, and the build refuses the
+component for asking for something nothing provides.
 
-```python
-class AcquisitionPresenter:
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
-        self.name = name
-        self.callbacks = callbacks  # keep the view
+The mapping is complete when it arrives, because the session builds a component
+asking for it after every router. It is an ordinary value, so reading it in
+`__init__` is safe.
 
-    def run(self) -> None:
-        for callback in self.callbacks.values():  # read it when you need it
-            ...
-```
+Its entries are in declaration order, which is the order the session lists its
+components rather than the order it built them in. The rest follows from the
+build order:
 
-Reading it too early raises, rather than quietly handing you half a registry:
+- A router in a later layer than the component asking is refused before
+  anything is built. A presenter asking for the mapping in a session where a
+  view is a router fails, naming both.
+- A router that fails to build is absent, and the component asking is built
+  with the routers that did.
+- A router asking for the mapping is absent from its own. Two routers of one
+  layer that both ask for it are built from each other, and the session refuses
+  them.
 
-```python
-def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
-    self.copy = dict(callbacks)  # LookupError
-```
-
-```text
-LookupError: the document-callback registry is not complete until every
-component exists. Hold this view and read it when the component runs, rather
-than copying it while it is built.
-```
-
-This is the only place where the new container asks you to understand something
-the old one did not, which is why it fails loudly.
+Chained callbacks are not supported. The order of the mapping does not promise
+that one callback sees a document before another, so a callback must not rely
+on another having seen it first.
 
 ## Asking the session a question
 
@@ -720,9 +727,10 @@ and you get back every component that has it, by name.
 ordinary mapping of names to components. Your editor knows it, `for name, comp
 in ...items()` works, and you need no framework API to read it.
 
-The answer is the same live view idea as the callback registry. It cannot be
-complete until every component exists, so you hold it and read it when your
-component runs.
+The answer is a **live view**, not a copy. It cannot be complete until every
+component exists, so you hold it and read it when your component runs. Reading
+it during construction raises `SessionNotBuilt` rather than handing you half an
+answer.
 
 ### Components that answer their own question
 
@@ -1082,9 +1090,8 @@ application is running: it is a component, it is a `@provides` method on a
 component, or it comes from a `Provider` registered before the build.
 
 If something genuinely fills up over time, it has to be designed as a live view,
-the way `BlueskyCallbackRegistry` is. That works, but it is a decision you make
-per
-case, not something you get for free.
+the way `Requires[P]` is. That works, but it is a decision you make per case,
+not something you get for free.
 
 ### Deciding at runtime whether to provide something
 
@@ -1225,9 +1232,6 @@ using them has to be rewritten rather than adapted.
   plugin answer a question it has never heard of, and it is also what lets one
   answer by accident. A declaration would settle intent, at the cost of the
   answering plugin having to import the protocol.
-- Whether the callback registry should become a `Requires` question rather than
-  a mechanism of its own. It nearly fits: a component can register callbacks
-  that are not itself, and a question can only find components.
 - Whether `@provides` should be able to offer a value built from another
   component's shared value.
 - What a presenter tied to a particular kind of device should look like. It is

@@ -45,7 +45,6 @@ from redsun.experimental.ports import (
     ports,
 )
 from redsun.experimental.registry import (
-    BlueskyCallbackRegistry,
     CallbackType,
     DeviceMapping,
     SessionConfig,
@@ -79,7 +78,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
 
-    from bluesky.protocols import HasName
     from ophyd_async.core import SignalR
 
     from redsun.experimental.injection import Question
@@ -206,7 +204,6 @@ class Session(BuildableSession):
         "_links",
         "_merged",
         "_names",
-        "_registry",
         "_releases",
         "_report",
         "_sealed",
@@ -280,7 +277,6 @@ class Session(BuildableSession):
             tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
         ] = []
         self._subscription_records: list[Subscription] = []
-        self._registry = BlueskyCallbackRegistry(self._callbacks, lambda: self._sealed)
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -783,29 +779,23 @@ class Session(BuildableSession):
     ) -> None:
         """Register everything the framework knows on *store*.
 
-        Every component may ask for it by type. The callback registry is a live
-        view, so it is available at construction like the rest and carries no
-        ordering constraint of its own. The callback catalogue is a copy,
-        complete because a component asking for it is built after every router.
+        Every component may ask for it by type. The callback catalogue is a
+        copy, complete because a component asking for it is built after every
+        router.
         """
         store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
         store.register_provider(devices, type_hint=DeviceMapping)
         store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
-        store.register_provider(
-            lambda: self._registry, type_hint=BlueskyCallbackRegistry
-        )
 
     def _catalogue(self) -> dict[str, CallbackType]:
-        """Return the document callbacks, routers first in declaration order.
+        """Return the document routers in declaration order.
 
         Routers are collected in build order, which follows what depends on
-        what. A callback registered by hand under a key of its own comes after
-        them, in the order it was registered.
+        what rather than how the session is written.
         """
-        declared = {
+        return {
             n: self._callbacks[n] for n in self._declarations if n in self._callbacks
         }
-        return {**declared, **self._callbacks}
 
     def _set_configuration(self, config: Mapping[str, Any], name: str) -> None:
         """Set the session configuration, for the components to read.
@@ -820,37 +810,9 @@ class Session(BuildableSession):
             metadata=dict(config.get("metadata", {})),
         )
 
-    def register_callbacks(
-        self,
-        owner: HasName,
-        name: str | None = None,
-        callback_map: dict[str, CallbackType] | None = None,
-    ) -> None:
-        """Register one or more document callbacks.
-
-        Parameters
-        ----------
-        owner : HasName
-            The component registering callbacks, and the callback itself when
-            *callback_map* is ``None``.
-        name : str | None
-            Registry key for *owner*. Defaults to ``owner.name``; ignored when
-            *callback_map* is given.
-        callback_map : dict[str, CallbackType] | None
-            Several callbacks from one owner, each registered under its own
-            key. *owner* is then not registered itself.
-
-        Raises
-        ------
-        TypeError
-            If a callback is not callable or its signature is incompatible
-            with ``(str, Document)``.
-        """
-        self._registry.register(owner, name=name, callback_map=callback_map)
-
     @property
     def callbacks(self) -> dict[str, CallbackType]:
-        """The currently registered document callbacks."""
+        """The document routers the session built, by name."""
         return dict(self._callbacks)
 
     def _set_components(self, components: Mapping[str, object]) -> None:

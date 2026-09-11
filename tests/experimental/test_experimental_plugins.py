@@ -110,7 +110,7 @@ def test_annotation_and_config_describe_one_component(
     assert set(app.declarations) == DECLARED
 
 
-def test_configured_component_reads_the_live_registry(
+def test_configured_component_receives_the_catalogue(
     mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
     class WithRegistrar(Session):

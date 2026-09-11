@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from psygnal import Signal
 
-from redsun.experimental import BlueskyCallbackRegistry, Placement, slot
+from redsun.experimental import CallbackType, Placement, slot
 
 from .keys import Absent, Readings
 
@@ -24,7 +25,7 @@ class MockMotorView:
         self,
         name: str,
         /,
-        callbacks: BlueskyCallbackRegistry,
+        callbacks: Mapping[str, CallbackType],
         readings: Readings,
         missing: Absent | None = None,
         title: str = "",

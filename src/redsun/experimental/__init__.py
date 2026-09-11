@@ -45,7 +45,6 @@ from redsun.experimental.ports import (
     slot,
 )
 from redsun.experimental.registry import (
-    BlueskyCallbackRegistry,
     CallbackType,
     DeviceMapping,
     SessionConfig,
@@ -79,7 +78,6 @@ __all__ = [
     "AsPresenter",
     "AsView",
     "AttachableComponent",
-    "BlueskyCallbackRegistry",
     "BuildableSession",
     "CallbackType",
     "ComponentNotBuilt",

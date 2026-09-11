@@ -97,25 +97,15 @@ listed in the [changelog](changelog.md).
   A component asking for something nothing in the session declares still raises
   `TypeError`.
 
-- `BlueskyCallbackRegistry` - the callback registry as a component sees it, a
-  live view rather than a snapshot. A component registers through
-  `BlueskyCallbackRegistry.register` while it is built and reads the view once
-  the session is built:
-
-  ```python
-  class MyPresenter:
-      def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
-          self.name = name
-          callbacks.register(self, name=name)
-  ```
-
 - The callback catalogue - every component that is a `DocumentRouter`, under
   its name and in declaration order, for a component asking for
   `Mapping[str, CallbackType]`. A component asking for it is built after every
   router, so the mapping is complete when it arrives. A router in a later layer
   than the component asking is refused before anything is built, and a router
   that fails to build is absent. `CallbackType` is exported from
-  `redsun.experimental`:
+  `redsun.experimental`, and a component may write it out as
+  `Callable[[str, Document], None] | DocumentRouter` instead, with `Mapping`
+  and `Callable` from `collections.abc`:
 
   ```python
   class MyPresenter:
@@ -475,7 +465,7 @@ listed in the [changelog](changelog.md).
   | `virtual_container.subscribe`, `.subscriptions` | the same names on `Session` |
   | `virtual_container.satisfying` | `Session.satisfying` |
   | `virtual_container.name`, `.schema_version`, `.frontend`, `.metadata` | ask for `SessionConfig` by type |
-  | `virtual_container.register_callbacks`, `.callbacks` | `BlueskyCallbackRegistry` |
+  | `virtual_container.register_callbacks`, `.callbacks` | subclass `DocumentRouter`; ask for `Mapping[str, CallbackType]` |
   | `virtual_container.on_release`, `.release` | `Session.on_release` and `Session.shutdown` |
   | `virtual_container.register_signals`, `.signals` | removed |
 

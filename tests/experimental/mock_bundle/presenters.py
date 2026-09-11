@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
 
+from event_model import DocumentRouter
 from psygnal import Signal
 
 from redsun.experimental import (
-    BlueskyCallbackRegistry,
+    CallbackType,
     DeviceMapping,
     provides,
     slot,
@@ -46,27 +47,16 @@ class MockMotorPresenter:
 
 
 class MockLatePresenter:
-    """Presenter reading a registry that other components fill after it.
+    """Presenter asking for the callback catalogue."""
 
-    Holds the live view rather than copying it, which is what makes the
-    component independent of the order it was built in.
-    """
-
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
         self.name = name
-        self.callbacks = callbacks
-
-    @property
-    def seen(self) -> dict[str, Any]:
-        return dict(self.callbacks)
+        self.seen = dict(callbacks)
 
 
-class MockRegistrar:
-    """Presenter registering a document callback while it is built."""
+class MockRegistrar(DocumentRouter):
+    """Presenter that is a document router, and so a callback."""
 
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
         self.name = name
-        callbacks.register(self, name=name)
-
-    def __call__(self, name: str, doc: Any) -> None:
-        self.last = name

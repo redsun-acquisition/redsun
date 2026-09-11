@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
 
 import pydantic
 import pytest
+from event_model import DocumentRouter
 from ophyd_async.core import Device
 from psygnal import Signal
 
@@ -19,8 +20,8 @@ from redsun.experimental import (
     AsDevice,
     AsPresenter,
     AsView,
-    BlueskyCallbackRegistry,
     BuildableSession,
+    CallbackType,
     Declare,
     DeviceMapping,
     FromConfig,
@@ -142,7 +143,7 @@ class Widget:
         self,
         name: str,
         /,
-        callbacks: BlueskyCallbackRegistry,
+        callbacks: Mapping[str, CallbackType],
         readings: Readings,
         missing: Missing | None = None,
         label: str = "",
@@ -159,25 +160,20 @@ class Widget:
 
 
 class Late:
-    """Presenter reading a registry that fills after it is built."""
+    """Presenter asking for the callback catalogue."""
 
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
         self.name = name
         self.callbacks = callbacks
 
-    def known(self) -> dict[str, Any]:
-        return dict(self.callbacks)
 
+class Registrar(DocumentRouter):
+    """Presenter that is a document router, and so a callback."""
 
-class Registrar:
-    """Presenter that registers a document callback while it is built."""
-
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
         self.name = name
         self.closed = False
-        callbacks.register(self, name=name)
-
-    def __call__(self, name: str, doc: Any) -> None: ...
 
     def shutdown(self) -> None:
         self.closed = True
@@ -192,14 +188,6 @@ class Tunable:
         self.name = name
         self.step = step
         self.readings = readings
-
-
-class Eager:
-    """Presenter copying the live registry while it is still filling."""
-
-    def __init__(self, name: str, /, callbacks: BlueskyCallbackRegistry) -> None:
-        self.name = name
-        self.copy = dict(callbacks)
 
 
 teardown_order: list[str] = []
@@ -224,10 +212,6 @@ class Dependent:
 
     def shutdown(self) -> None:
         teardown_order.append(self.name)
-
-
-class EagerApp(Session):
-    eager: AsPresenter[Eager]
 
 
 class OrderedApp(Session):
@@ -731,9 +715,10 @@ def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
 
 
 def test_framework_objects_are_injectable(app: App) -> None:
-    """The device map and the callback registry are ordinary dependencies."""
+    """The device map and the callback catalogue are ordinary dependencies."""
     assert dict(app.ctrl.devices) == {"motor": app.motor}
-    assert app.widget.callbacks is app.late.callbacks
+    assert app.late.callbacks == {"registrar": app.registrar}
+    assert app.widget.callbacks == {"registrar": app.registrar}
 
 
 def test_the_container_itself_is_not_injectable() -> None:
@@ -744,17 +729,6 @@ def test_the_container_itself_is_not_injectable() -> None:
     """
     with pytest.raises(Exception, match="Session"):
         LocatorApp().build()
-
-
-def test_live_registry_is_complete_after_the_build(app: App) -> None:
-    """The view a component was given reflects what every component registered."""
-    assert app.late.known() == {"registrar": app.registrar}
-
-
-def test_live_registry_refuses_to_be_read_early() -> None:
-    """Reading during construction would answer with a half-filled registry."""
-    with pytest.raises(LookupError, match="not complete until every component"):
-        EagerApp().build()
 
 
 def test_shutdown_finalizes_components_in_reverse_build_order() -> None:
