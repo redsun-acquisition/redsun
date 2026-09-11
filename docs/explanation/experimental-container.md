@@ -32,7 +32,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
 | Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
-| Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
+| Asking | `Requires`, `RequiresBuilt`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `DeviceMapping`, `CallbackType`, `slot` |
 | Offering plans | `PlanEntry`, `HasPlans` |
 
@@ -874,6 +874,30 @@ arrives complete and you may read it in `__init__`, which is exactly where the
 loop it replaces used to run.
 
 Ask for `DeviceMapping` when you want every device rather than a kind of them.
+
+### The same question, answered before you are built
+
+`Requires[P]` is a live view because a component may be part of its own answer.
+When you want every *other* component with the capability, and want it in
+`__init__`, ask `RequiresBuilt[P]`:
+
+```python
+class SessionPresenter:
+    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
+        self.names = sorted(resettable)  # complete already
+```
+
+The session builds every other component satisfying `Resettable` first, so the
+mapping arrives complete, in the order the session declares them. You are never
+in it, and a component that failed to build is absent. Building the others
+first also means:
+
+- a component in a later layer that satisfies the protocol is refused before
+  anything is built, since it cannot be built first;
+- two components that each satisfy the protocol and each ask are built from
+  each other, and the session refuses them;
+- the protocol must declare a method, since which components answer is decided
+  from their classes before any of them exists.
 
 ## Asking for one component
 

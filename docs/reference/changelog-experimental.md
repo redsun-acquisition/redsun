@@ -154,6 +154,14 @@ listed in the [changelog](changelog.md).
   a live view, so it may be read in `__init__`. Ask for `DeviceMapping` to
   receive every device unfiltered.
 
+- `RequiresBuilt[P]` - every other component that satisfies a protocol, spelled
+  `Annotated[Mapping[str, P], Built()]`. It is not a live view: the asker is
+  built after every other component satisfying *P*, so the mapping arrives
+  complete and may be read in `__init__`. The asker is absent from its own
+  answer, and so is a component that failed to build. A component satisfying
+  *P* in a later layer than the asker, two askers that each satisfy *P*, and a
+  *P* declaring no method are refused before anything is built.
+
 - `satisfies` and `Satisfying.rejected` - the membership check and why each near
   miss was left out. Membership is structural rather than `isinstance`: an
   implementation must accept every call the protocol permits, so a renamed

@@ -26,11 +26,13 @@ from redsun.experimental import (
     DevicesOf,
     Placement,
     Requires,
+    RequiresBuilt,
     RequiresMaybe,
     RequiresOne,
     Session,
 )
 from redsun.experimental.injection import (
+    Built,
     Devices,
     Every,
     Maybe,
@@ -350,6 +352,84 @@ class MisshapenDevices:
         self.name = name
 
 
+class Collector:
+    """Presenter reading, while it is built, the resettable components built first."""
+
+    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
+        self.name = name
+        self.resettable = resettable
+        self.names = list(resettable)
+
+
+class SelfCollector:
+    """Resettable itself, and asking about the resettable components built first."""
+
+    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
+        self.name = name
+        self.names = list(resettable)
+
+    def reset(self) -> None: ...
+
+
+class Unplugged:
+    """Resettable, and cannot be built."""
+
+    def __init__(self, name: str, /) -> None:
+        raise RuntimeError("unplugged")
+
+    def reset(self) -> None: ...
+
+
+class ResettableView:
+    """View that can be reset, so a presenter's census would need it first."""
+
+    placement: Placement = Somewhere()
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+    def reset(self) -> None: ...
+
+
+class AsksBuiltDataOnly:
+    """Asks for the components built first about a protocol with no method."""
+
+    def __init__(self, name: str, /, labels: RequiresBuilt[DataOnly]) -> None:
+        self.name = name
+
+
+class BuiltApp(Session):
+    collector: AsPresenter[Collector]
+    motor: AsPresenter[Motor]
+    readout: AsPresenter[Readout]
+    detector: AsPresenter[Detector]
+
+
+class BuiltSelfApp(Session):
+    collector: AsPresenter[SelfCollector]
+    motor: AsPresenter[Motor]
+
+
+class BuiltUnpluggedApp(Session):
+    collector: AsPresenter[Collector]
+    broken: AsPresenter[Unplugged]
+    motor: AsPresenter[Motor]
+
+
+class BuiltBackwardsApp(Session):
+    collector: AsPresenter[Collector]
+    panel: AsView[ResettableView]
+
+
+class BuiltCycleApp(Session):
+    first: AsPresenter[SelfCollector]
+    second: AsPresenter[SelfCollector]
+
+
+class BuiltDataOnlyApp(Session):
+    asks: AsPresenter[AsksBuiltDataOnly]
+
+
 class App(Session):
     session: AsPresenter[Resetter]
     motor: AsPresenter[Motor]
@@ -634,20 +714,109 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
     assert app.satisfying(Resettable).rejected == {}
 
 
-def test_reading_the_answer_early_is_refused() -> None:
-    """During the build the answer would be missing whatever comes next."""
-    with pytest.raises(LookupError, match="not known until every component exists"):
-        EagerApp().build()
-
-
-def test_protocol_must_be_runtime_checkable() -> None:
-    with pytest.raises(TypeError, match="runtime_checkable"):
-        UnsatisfiableApp().build()
-
-
-def test_marker_on_the_wrong_shape_is_refused() -> None:
-    with pytest.raises(TypeError, match="not a 'Mapping\\[str, P\\]'"):
-        MisshapenApp().build()
+@pytest.mark.parametrize(
+    ("session", "error", "match"),
+    [
+        pytest.param(
+            EagerApp,
+            LookupError,
+            "not known until every component exists",
+            id="census-read-while-built",
+        ),
+        pytest.param(
+            UnsatisfiableApp,
+            TypeError,
+            "runtime_checkable",
+            id="protocol-not-runtime-checkable",
+        ),
+        pytest.param(
+            MisshapenApp,
+            TypeError,
+            r"not a 'Mapping\[str, P\]'",
+            id="census-on-the-wrong-shape",
+        ),
+        pytest.param(
+            MisshapenDevicesApp,
+            TypeError,
+            r"Write 'DevicesOf\[P\]'",
+            id="device-census-on-the-wrong-shape",
+        ),
+        pytest.param(
+            NoneApp, TypeError, "the session holds none", id="one-answered-by-none"
+        ),
+        pytest.param(
+            TwoApp,
+            TypeError,
+            "but 2 do: 'camera' and 'spare'",
+            id="one-answered-by-two",
+        ),
+        pytest.param(
+            SelfApp,
+            TypeError,
+            "is the only one that does",
+            id="one-answered-by-the-asker",
+        ),
+        pytest.param(
+            MaybeTwoApp,
+            TypeError,
+            "at most one component",
+            id="maybe-answered-by-two",
+        ),
+        pytest.param(
+            RenamedApp,
+            TypeError,
+            "the session holds none",
+            id="renamed-parameter-does-not-answer",
+        ),
+        pytest.param(
+            RenamedApp,
+            TypeError,
+            r"'camera': apply_camera\(factor",
+            id="near-miss-is-named",
+        ),
+        pytest.param(
+            ForgetfulApp,
+            TypeError,
+            "but does not: 'count' is missing",
+            id="data-member-never-assigned",
+        ),
+        pytest.param(
+            DataOnlyApp,
+            TypeError,
+            "declares no method",
+            id="one-about-a-protocol-with-no-method",
+        ),
+        pytest.param(
+            BackwardsQuestionApp,
+            TypeError,
+            "is built before a view",
+            id="one-answered-by-a-later-layer",
+        ),
+        pytest.param(
+            BuiltBackwardsApp,
+            TypeError,
+            "is built before a view",
+            id="built-answered-by-a-later-layer",
+        ),
+        pytest.param(
+            BuiltCycleApp,
+            TypeError,
+            "built from each other",
+            id="built-askers-answering-each-other",
+        ),
+        pytest.param(
+            BuiltDataOnlyApp,
+            TypeError,
+            "declares no method",
+            id="built-about-a-protocol-with-no-method",
+        ),
+    ],
+)
+def test_the_session_refuses_to_build(
+    session: type[Session], error: type[Exception], match: str
+) -> None:
+    with pytest.raises(error, match=match):
+        session().build()
 
 
 def test_requires_expands_to_an_annotated_mapping() -> None:
@@ -663,6 +832,7 @@ def test_requires_expands_to_an_annotated_mapping() -> None:
         (ImageView, "peers", Question(Linkable, Every())),
         (RoiWidget, "camera", Question(Linkable, One())),
         (MaybeWidget, "camera", Question(Linkable, Maybe())),
+        (Collector, "resettable", Question(Resettable, Built())),
     ],
 )
 def test_each_spelling_carries_its_cardinality(
@@ -697,22 +867,6 @@ def test_one_arrives_built(build: BuildSession) -> None:
     assert app.camera.zoom == 3.0
 
 
-def test_one_refuses_an_empty_session() -> None:
-    with pytest.raises(TypeError, match="the session holds none"):
-        NoneApp().build()
-
-
-def test_one_refuses_an_ambiguous_session() -> None:
-    with pytest.raises(TypeError, match="but 2 do: 'camera' and 'spare'"):
-        TwoApp().build()
-
-
-def test_one_refuses_to_answer_with_the_asker() -> None:
-    """A component cannot depend on itself."""
-    with pytest.raises(TypeError, match="is the only one that does"):
-        SelfApp().build()
-
-
 def test_maybe_is_answered_when_present(build: BuildSession) -> None:
     app = build(MaybeApp)
     assert app.widget.camera is app.camera
@@ -721,23 +875,6 @@ def test_maybe_is_answered_when_present(build: BuildSession) -> None:
 def test_maybe_is_none_when_absent(build: BuildSession) -> None:
     app = build(MaybeEmptyApp)
     assert app.widget.camera is None
-
-
-def test_maybe_still_refuses_two_answers() -> None:
-    """The parameter has room for one, so several is a mistake either way."""
-    with pytest.raises(TypeError, match="at most one component"):
-        MaybeTwoApp().build()
-
-
-def test_a_renamed_parameter_does_not_answer() -> None:
-    """The keyword call the protocol permits would fail, so it is not a match."""
-    with pytest.raises(TypeError, match="the session holds none"):
-        RenamedApp().build()
-
-
-def test_a_near_miss_is_named_when_nothing_answers() -> None:
-    with pytest.raises(TypeError, match=r"'camera': apply_camera\(factor"):
-        RenamedApp().build()
 
 
 def test_an_extra_defaulted_parameter_still_answers(
@@ -756,16 +893,6 @@ def test_a_data_member_assigned_in_init_still_answers(
     """The choice ignores what only an instance can show, then confirms it."""
     app = build(CountApp)
     assert app.needs.counter is app.counter
-
-
-def test_a_data_member_never_assigned_is_caught_after_the_build() -> None:
-    with pytest.raises(TypeError, match=r"but does not: 'count' is missing"):
-        ForgetfulApp().build()
-
-
-def test_a_protocol_with_no_method_cannot_be_asked_for_one() -> None:
-    with pytest.raises(TypeError, match="declares no method"):
-        DataOnlyApp().build()
 
 
 def test_the_device_census_holds_every_matching_device(
@@ -817,15 +944,25 @@ def test_a_device_census_and_a_component_census_are_different_questions() -> Non
     )
 
 
-def test_the_device_marker_on_the_wrong_shape_names_its_own_spelling() -> None:
-    with pytest.raises(TypeError, match=r"Write 'DevicesOf\[P\]'"):
-        MisshapenDevicesApp().build()
+def test_the_built_census_is_complete_while_the_component_is_built(
+    build: BuildSession,
+) -> None:
+    """Declared above the components answering it, the asker is built after them."""
+    app = build(BuiltApp)
+    assert app.collector.names == ["motor", "detector"]
+    assert app.collector.resettable == {"motor": app.motor, "detector": app.detector}
 
 
-def test_a_question_answered_by_a_later_layer_is_refused() -> None:
-    """Choosing the one component cannot choose one built after the asker."""
-    with pytest.raises(TypeError, match="is built before a view"):
-        BackwardsQuestionApp().build()
+def test_the_asker_is_not_in_its_own_built_census(build: BuildSession) -> None:
+    app = build(BuiltSelfApp)
+    assert app.collector.names == ["motor"]
+
+
+def test_a_component_that_failed_is_absent_from_the_built_census(
+    build: BuildSession,
+) -> None:
+    app = build(BuiltUnpluggedApp)
+    assert app.collector.names == ["motor"]
 
 
 def test_a_keyword_only_component_asks_the_same_question() -> None:

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from ._provides import provides, register_shared, shared_keys
 from ._requires import (
+    Built,
     Devices,
     DevicesOf,
     Every,
@@ -17,6 +18,7 @@ from ._requires import (
     One,
     Question,
     Requires,
+    RequiresBuilt,
     RequiresMaybe,
     RequiresOne,
     Satisfying,
@@ -25,6 +27,7 @@ from ._requires import (
 )
 
 __all__ = [
+    "Built",
     "Devices",
     "DevicesOf",
     "Every",
@@ -32,6 +35,7 @@ __all__ = [
     "One",
     "Question",
     "Requires",
+    "RequiresBuilt",
     "RequiresMaybe",
     "RequiresOne",
     "Satisfying",

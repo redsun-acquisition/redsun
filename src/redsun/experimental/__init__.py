@@ -32,6 +32,7 @@ from redsun.experimental._settings import Settings
 from redsun.experimental.injection import (
     DevicesOf,
     Requires,
+    RequiresBuilt,
     RequiresMaybe,
     RequiresOne,
     Satisfying,
@@ -100,6 +101,7 @@ __all__ = [
     "PlanEntry",
     "PluginError",
     "Requires",
+    "RequiresBuilt",
     "RequiresMaybe",
     "RequiresOne",
     "Satisfying",

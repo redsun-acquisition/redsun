@@ -22,6 +22,7 @@ from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental._settings import Settings
 from redsun.experimental.injection import (
+    Built,
     Devices,
     Maybe,
     One,
@@ -1239,7 +1240,8 @@ class Session(BuildableSession):
         A census is left out: it is a live view of the session rather than a
         value one component takes from another, so it carries no order. The
         callback catalogue is not: a component asking for it is built from
-        every router but itself.
+        every router but itself. Nor is a census of the components built
+        first, whose asker is built from every other component answering it.
         """
         by_type = owners(declarations)
         by_type.update({d.key: d for d in declarations})
@@ -1255,6 +1257,15 @@ class Session(BuildableSession):
                 if target is not None and target is not declaration:
                     needs[declaration.name].add(target.name)
         for question, askers in requirements(declarations).items():
+            if isinstance(question.marker, Built):
+                answering = {
+                    d.name
+                    for d in declarations
+                    if _structural.satisfies(d.cls, question.protocol)
+                }
+                for asker in askers:
+                    needs[asker] |= answering - {asker}
+                continue
             chosen = self._answers.get(question)
             if chosen is None:
                 continue
@@ -1267,8 +1278,9 @@ class Session(BuildableSession):
         """Refuse a component whose constructor reaches into a later layer.
 
         The layers are a build order, so an edge pointing forwards along it
-        could only be satisfied by inverting that order. A census asks about
-        the session rather than depending on it, and is left alone.
+        could only be satisfied by inverting that order. A live census asks
+        about the session rather than depending on it, and is left alone; a
+        census of the components built first depends on every one of them.
 
         Raises
         ------
@@ -1289,6 +1301,20 @@ class Session(BuildableSession):
                 if target is None:
                     continue
                 refuse_backwards(declaration, target, where)
+        for question, askers in requirements(declarations).items():
+            if not isinstance(question.marker, Built):
+                continue
+            answering = [
+                d
+                for d in declarations
+                if _structural.satisfies(d.cls, question.protocol)
+            ]
+            where = f"its census of {question.protocol.__name__!r}"
+            for asker in askers:
+                origin = next(d for d in declarations if d.name == asker)
+                for target in answering:
+                    if target is not origin:
+                        refuse_backwards(origin, target, where)
 
     def _answer(self, store: Store, declarations: list[Declaration]) -> None:
         """Answer each question a component asks about the session.
@@ -1296,13 +1322,19 @@ class Session(BuildableSession):
         One answer per question, not per component that asks. A census of the
         components is answered with a live view, because a component may be part
         of its own answer; one of the devices is answered with the mapping
-        itself, since every device exists before any component is built.
+        itself, since every device exists before any component is built; and
+        one of the components built first with a copy of those built so far,
+        which the ordering has made every answering component but the asker.
         """
         for question, askers in requirements(declarations).items():
             key = key_for(question)
             if isinstance(question.marker, Devices):
                 store.register_provider(
                     self._device_census(question.protocol), type_hint=key
+                )
+            elif isinstance(question.marker, Built):
+                store.register_provider(
+                    self._built_census(question.protocol), type_hint=key
                 )
             elif isinstance(question.marker, (One, Maybe)):
                 self._select(store, question, key, askers, declarations)
@@ -1321,6 +1353,17 @@ class Session(BuildableSession):
                 name: device
                 for name, device in self._devices.items()
                 if _structural.satisfies(device, protocol)
+            }
+
+        return read
+
+    def _built_census(self, protocol: type) -> Callable[[], Any]:
+        def read() -> Any:
+            return {
+                declaration.name: declaration.instance
+                for declaration in self._components()
+                if declaration.instance is not None
+                and _structural.satisfies(declaration.instance, protocol)
             }
 
         return read

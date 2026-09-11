@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from redsun.experimental.session import Key
 
 __all__ = [
+    "Built",
     "Devices",
     "DevicesOf",
     "Every",
@@ -31,6 +32,7 @@ __all__ = [
     "One",
     "Question",
     "Requires",
+    "RequiresBuilt",
     "RequiresMaybe",
     "RequiresOne",
     "Satisfying",
@@ -61,6 +63,11 @@ class Maybe(Every):
 @dataclass(frozen=True)
 class Devices(Every):
     """Marks a question the devices answer rather than the components."""
+
+
+@dataclass(frozen=True)
+class Built(Every):
+    """Marks a question the components built before the asker answer."""
 
 
 P = TypeVar("P")
@@ -139,6 +146,24 @@ component is built.
 
 Ask for `redsun.experimental.DeviceMapping` instead to receive every device,
 unfiltered.
+"""
+
+RequiresBuilt: TypeAlias = Annotated[Mapping[str, P], Built()]
+"""Every other component of the session that satisfies *P*, by name.
+
+```python
+class SessionPresenter:
+    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
+        self.names = sorted(resettable)
+```
+
+Unlike `Requires`, this is not a live view: every other component satisfying
+*P* is built before the asker, so the mapping arrives complete and may be read
+while the component is built. The asker is never in its own answer, and a
+component that failed to build is absent.
+
+*P* must declare at least one method, since which components answer is decided
+from their classes before anything is built.
 """
 
 
@@ -266,7 +291,9 @@ def protocol_of(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
         return options[0]
     args = get_args(inner)
     if get_origin(inner) is not Mapping or len(args) != 2 or args[0] is not str:
-        alias = "DevicesOf" if isinstance(marker, Devices) else "Requires"
+        alias = {Devices: "DevicesOf", Built: "RequiresBuilt"}.get(
+            type(marker), "Requires"
+        )
         raise TypeError(
             f"{hint} is marked with {type(marker).__name__}() but is not a "
             f"'Mapping[str, P]'. Write '{alias}[P]', which expands to the right "
@@ -290,10 +317,10 @@ def validate(protocol: type, marker: Every) -> None:
             "a protocol is matched structurally, and only one decorated with "
             "'typing.runtime_checkable' declares that it is meant to be."
         )
-    if isinstance(marker, (One, Maybe)) and not methods(protocol):
+    if isinstance(marker, (One, Maybe, Built)) and not methods(protocol):
         raise TypeError(
-            f"{protocol.__name__!r} declares no method, so which component "
-            "answers cannot be decided before they are built. Ask with "
+            f"{protocol.__name__!r} declares no method, so which components "
+            "answer cannot be decided before they are built. Ask with "
             f"'Requires[{protocol.__name__}]', which is answered afterwards."
         )
 
@@ -301,6 +328,7 @@ def validate(protocol: type, marker: Every) -> None:
 SUPERTYPES: dict[str, Any] = {
     "every": Mapping[str, Any],
     "devices": Mapping[str, Any],
+    "built": Mapping[str, Any],
 }
 KEYS: dict[Question, Key] = {}
 
