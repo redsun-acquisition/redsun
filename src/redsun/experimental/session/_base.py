@@ -3,14 +3,15 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from collections.abc import Mapping, Sequence  # noqa: TC003
+from collections.abc import Mapping, Sequence
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, cast
 
 import yaml
+from event_model import DocumentRouter
 from in_n_out import Store
 from ophyd_async.core import Device  # noqa: TC002
 from psygnal import SignalInstance
@@ -87,6 +88,9 @@ if TYPE_CHECKING:
     from ._declarations import Key
 
 __all__ = ["BUILD_STEPS", "ConfigurationInUse", "Session"]
+
+CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
+"""The key a component asks for to receive every document router the session built."""
 
 
 class ConfigurationInUse(OSError):
@@ -781,13 +785,27 @@ class Session(BuildableSession):
 
         Every component may ask for it by type. The callback registry is a live
         view, so it is available at construction like the rest and carries no
-        ordering constraint of its own.
+        ordering constraint of its own. The callback catalogue is a copy,
+        complete because a component asking for it is built after every router.
         """
         store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
         store.register_provider(devices, type_hint=DeviceMapping)
+        store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
         store.register_provider(
             lambda: self._registry, type_hint=BlueskyCallbackRegistry
         )
+
+    def _catalogue(self) -> dict[str, CallbackType]:
+        """Return the document callbacks, routers first in declaration order.
+
+        Routers are collected in build order, which follows what depends on
+        what. A callback registered by hand under a key of its own comes after
+        them, in the order it was registered.
+        """
+        declared = {
+            n: self._callbacks[n] for n in self._declarations if n in self._callbacks
+        }
+        return {**declared, **self._callbacks}
 
     def _set_configuration(self, config: Mapping[str, Any], name: str) -> None:
         """Set the session configuration, for the components to read.
@@ -1164,6 +1182,8 @@ class Session(BuildableSession):
             register_shared(
                 store, instance, declaration.cls, declaration.name, self._shared
             )
+            if isinstance(instance, DocumentRouter):
+                self._callbacks[declaration.name] = instance
 
     def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
         """Return, by asker, the components chosen for the questions it asks.
@@ -1255,15 +1275,21 @@ class Session(BuildableSession):
         """Return the components each component is built from, by name.
 
         A census is left out: it is a live view of the session rather than a
-        value one component takes from another, so it carries no order.
+        value one component takes from another, so it carries no order. The
+        callback catalogue is not: a component asking for it is built from
+        every router but itself.
         """
         by_type = owners(declarations)
         by_type.update({d.key: d for d in declarations})
+        routers = {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
         needs: dict[str, set[str]] = {d.name: set() for d in declarations}
         for declaration in declarations:
             params = injectable(declaration.cls, declaration.cfg_kwargs)
             for hint in params.values():
-                target = by_type.get(optional_arg(hint) or hint)
+                wanted = optional_arg(hint) or hint
+                if wanted == CallbackCatalogue:
+                    needs[declaration.name] |= routers - {declaration.name}
+                target = by_type.get(wanted)
                 if target is not None and target is not declaration:
                     needs[declaration.name].add(target.name)
         for question, askers in requirements(declarations).items():
@@ -1288,13 +1314,19 @@ class Session(BuildableSession):
             If a component depends on one built after it.
         """
         by_type = owners(declarations)
+        routers = [d for d in declarations if issubclass(d.cls, DocumentRouter)]
         for declaration in declarations:
             params = injectable(declaration.cls, declaration.cfg_kwargs)
             for pname, hint in params.items():
-                target = by_type.get(optional_arg(hint) or hint)
+                wanted = optional_arg(hint) or hint
+                where = f"its {pname!r} parameter"
+                if wanted == CallbackCatalogue:
+                    for router in routers:
+                        refuse_backwards(declaration, router, where)
+                target = by_type.get(wanted)
                 if target is None:
                     continue
-                refuse_backwards(declaration, target, f"its {pname!r} parameter")
+                refuse_backwards(declaration, target, where)
 
     def _answer(self, store: Store, declarations: list[Declaration]) -> None:
         """Answer each question a component asks about the session.
@@ -1551,9 +1583,12 @@ class Session(BuildableSession):
         """Check the components something in the session reaches.
 
         *wanted* is every type a constructor asks for, so a component another
-        one is built from counts, by its key or by its class.
+        one is built from counts, by its key or by its class, and a router
+        counts when something asks for the callback catalogue.
         """
         names = {c.publisher for c in self.connections}
+        if CallbackCatalogue in wanted:
+            names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
         names |= {c.consumer for c in self.connections}
         names |= {s.consumer for s in self.subscriptions}
         names |= {

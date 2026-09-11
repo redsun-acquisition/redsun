@@ -109,6 +109,21 @@ listed in the [changelog](changelog.md).
           callbacks.register(self, name=name)
   ```
 
+- The callback catalogue - every component that is a `DocumentRouter`, under
+  its name and in declaration order, for a component asking for
+  `Mapping[str, CallbackType]`. A component asking for it is built after every
+  router, so the mapping is complete when it arrives. A router in a later layer
+  than the component asking is refused before anything is built, and a router
+  that fails to build is absent. `CallbackType` is exported from
+  `redsun.experimental`:
+
+  ```python
+  class MyPresenter:
+      def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+          self.name = name
+          self.callbacks = callbacks
+  ```
+
 - `Requires[P]` - the components of the session that satisfy a protocol, spelled
   `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
   made, so a component that failed is absent from it. A component satisfying *P*
