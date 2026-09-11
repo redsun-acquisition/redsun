@@ -5,9 +5,10 @@ from typing import Any
 
 import bluesky.plan_stubs as bps
 from bluesky.plans import count
-from ophyd.sim import det1
 
 from redsun.engine import RunEngine, RunEngineResult
+
+from .mocks import MockDetector
 
 
 def test_engine_wrapper_construction(RE: RunEngine) -> None:
@@ -15,9 +16,9 @@ def test_engine_wrapper_construction(RE: RunEngine) -> None:
     assert RE.pause_msg == ""
 
 
-def test_engine_wrapper_run(RE: RunEngine) -> None:
+def test_engine_wrapper_run(RE: RunEngine, detector: MockDetector) -> None:
     RE._call_returns_result = False
-    fut = RE(count([det1], num=5))
+    fut = RE(count([detector], num=5))
 
     wait([fut])
 
@@ -27,8 +28,8 @@ def test_engine_wrapper_run(RE: RunEngine) -> None:
     assert len(result) == 1
 
 
-def test_engine_wrapper_run_with_result(RE: RunEngine) -> None:
-    fut = RE(count([det1], num=5))
+def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -> None:
+    fut = RE(count([detector], num=5))
 
     wait([fut])
 
@@ -40,17 +41,17 @@ def test_engine_wrapper_run_with_result(RE: RunEngine) -> None:
     RE._call_returns_result = False
 
 
-def test_engine_with_callback(RE: RunEngine) -> None:
+def test_engine_with_callback(RE: RunEngine, detector: MockDetector) -> None:
     def callback(future: Future[Any]) -> None:
         assert len(future.result()) == 1
 
-    fut = RE(count([det1], num=5))
+    fut = RE(count([detector], num=5))
     fut.add_done_callback(callback)
 
     wait([fut])
 
 
-def test_engine_callbacks(RE: RunEngine) -> None:
+def test_engine_callbacks(RE: RunEngine, detector: MockDetector) -> None:
     def all_callback(name: str, doc: dict[str, Any]) -> None:
         assert name in ["start", "descriptor", "event", "stop"]
         assert threading.current_thread().name == "bluesky-run-engine"
@@ -77,7 +78,7 @@ def test_engine_callbacks(RE: RunEngine) -> None:
     RE.subscribe(event_callback, "event")
     RE.subscribe(stop_callback, "stop")
 
-    fut = RE(count([det1], num=5))
+    fut = RE(count([detector], num=5))
     wait([fut])
 
     counter = 0
@@ -89,19 +90,19 @@ def test_engine_callbacks(RE: RunEngine) -> None:
     token = RE.subscribe(callback)
     RE.unsubscribe(token)
 
-    fut = RE(count([det1], num=5))
+    fut = RE(count([detector], num=5))
     wait([fut])
 
     assert counter == 0
 
 
-def test_pausable_engine(RE: RunEngine) -> None:
+def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
     future_set = set()
 
     def pausable_plan() -> Any:
         yield from bps.checkpoint()
 
-        yield from count([det1], num=None)
+        yield from count([detector], num=None)
 
     fut = RE(pausable_plan())
     future_set.add(fut)

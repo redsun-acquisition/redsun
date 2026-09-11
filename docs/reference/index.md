@@ -14,4 +14,5 @@
 
 ## Other
 
+- **[Glossary](glossary.md)** - The vocabulary these pages are written in
 - **[Changelog](changelog.md)** - Version history and release notes

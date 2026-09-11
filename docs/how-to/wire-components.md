@@ -74,6 +74,11 @@ already a port.
     misspelled port is an error before the application runs; if it reaches the
     build anyway, it is an `AttributeError` on the line that names it.
 
+    A component that failed to build is the one case `connect` does not raise
+    on. It returns `None`, logs the link it did not make, and the connections
+    around it are still made, so one panel refusing to construct does not cost
+    the session its other wiring.
+
 === "Configuration file"
 
     Each end is addressed as `component.port`:
@@ -322,7 +327,14 @@ application uses; the report says what is unused, not what is wrong.
 
 ## Read a failure
 
-Every way of getting a connection wrong fails at build, naming both ends.
+Every way of getting a connection wrong fails at build, naming both ends. The
+exception is a connection whose component failed to build, in `wire` or in the
+configuration file: that one is logged at `WARNING` and skipped, and the
+connections around it are still made.
+
+```
+Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
+```
 
 === "Container class"
 
@@ -336,7 +348,7 @@ Every way of getting a connection wrong fails at build, naming both ends.
 
     | Message | Cause |
     |---|---|
-    | `'a.sig' names component 'a', which was not built. Built: ...` | the file names a component the session did not load |
+    | `'a.sig' names component 'a', which was not built. Built: ...` | the file names a component it never declared |
     | `'a' exposes no signal named 'sig'. Its signal ports: ...` | the signal name is wrong |
     | `'a' exposes no slot named 'port'. Its slot ports: ...` | the port name is wrong, or the method was never marked |
     | `'a.b.c' is not a port path; expected 'component.port'` | malformed path |

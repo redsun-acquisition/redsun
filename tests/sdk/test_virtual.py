@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from typing import Any
 
 logger = logging.getLogger("redsun")
-logger.setLevel(logging.DEBUG)
 
 
 class MockRouter(DocumentRouter):

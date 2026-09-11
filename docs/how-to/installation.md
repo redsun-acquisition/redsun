@@ -101,5 +101,14 @@ If you are contributing to `redsun` or want to run tests locally, install the de
 === "pip"
 
     ```bash
-    pip install -e .[dev]
+    pip install -e . --group dev
     ```
+
+The checks run through `tox`, which builds each environment from `uv.lock`:
+
+```bash
+uv run tox           # lint, both Qt type-checking legs, tests, docs
+uv run tox -e tests
+```
+
+See [Run tests](run-tests.md) for what each environment covers.

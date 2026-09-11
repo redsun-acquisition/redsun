@@ -42,6 +42,10 @@ class MockController(Presenter):
 
 
 class BrokenController(Presenter):
+    """Declares the ports of a working presenter and never gets to expose them."""
+
+    sig_motor_moved = Signal(str, float)
+
     def __init__(
         self,
         name: str,
@@ -53,6 +57,9 @@ class BrokenController(Presenter):
         boolean: bool = False,
     ) -> None:
         raise RuntimeError("Broken controller")
+
+    @slot
+    def on_motor_moved(self, motor: str, position: float) -> None: ...
 
 
 class AsyncMotorController(Presenter):

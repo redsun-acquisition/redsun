@@ -8,6 +8,7 @@ from redsun.containers._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
+    WrapsBuild,
 )
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ __all__ = [
     "QtConfiguresApplication",
     "QtConfiguresMainView",
     "QtCreatesApplication",
+    "QtWrapsBuild",
 ]
 
 QtCreatesApplication: TypeAlias = CreatesApplication["QApplication"]
@@ -36,6 +38,15 @@ QtConfiguresApplication: TypeAlias = ConfiguresApplication["QApplication"]
 
 Where an application-wide style, stylesheet, font or palette belongs: the
 build phase that follows constructs every view.
+"""
+
+QtWrapsBuild: TypeAlias = WrapsBuild["QApplication"]
+"""Wraps the whole build, from before the first component until the window shows.
+
+Where a splash screen belongs: the context manager it returns is entered before
+anything is built and exited once the window is on screen, and what it yields is
+called with the name of each step. Exited on a failed build too, so nothing is
+left covering an application that never got a window.
 """
 
 QtConfiguresMainView: TypeAlias = ConfiguresMainView["QMainWindow"]

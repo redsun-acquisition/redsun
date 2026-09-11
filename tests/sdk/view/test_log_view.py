@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from redsun.log import log_buffer
+from redsun.log import log_buffer, logger, set_level
 from redsun.view import ViewPosition
 from redsun.view.qt.builtins import LogView
 
@@ -22,9 +22,13 @@ pytestmark = pytest.mark.qt
 
 @pytest.fixture
 def logs() -> Iterator[logging.Logger]:
+    """Yield the ``redsun`` logger at ``DEBUG``, over an emptied buffer."""
     buffer = log_buffer()
     buffer.clear()
-    yield logging.getLogger("redsun")
+    level = logger.level
+    set_level(logging.DEBUG)
+    yield logger
+    logger.setLevel(level)
     buffer.clear()
 
 

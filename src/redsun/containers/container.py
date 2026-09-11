@@ -1,4 +1,4 @@
-"""Application container for MVP architecture.
+"""Application container for DVP architecture.
 
 Provides `AppContainer` for declarative component registration
 and dependency-ordered instantiation.
@@ -25,20 +25,19 @@ from typing import (
     TypeGuard,
     TypeVar,
     assert_never,
+    cast,
     overload,
 )
 
 import yaml
 from ophyd_async.core import Device
-from psygnal import Signal
 
 from redsun.aio import _loop_factory, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers._hooks import (
-    ConfiguresBuild,
-    ConfiguresSession,
     HookError,
     distinct,
+    known_points,
     parse_hook_specs,
     resolve_hooks,
 )
@@ -47,15 +46,18 @@ from redsun.containers.components import (
     _DeviceComponent,
     _DeviceField,
     _HookField,
+    _NotBuilt,
     _PresenterComponent,
     _PresenterField,
     _ViewComponent,
     _ViewField,
     expects_positionals,
 )
+from redsun.log import set_level
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
+    ComponentNotBuilt,
     Connection,
     HasShutdown,
     IsInjectable,
@@ -65,7 +67,7 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
     from typing import Self, TypeAlias
 
     from psygnal import SignalInstance
@@ -75,7 +77,6 @@ if TYPE_CHECKING:
     from redsun.virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
-    BuildPhase: TypeAlias = Callable[[], None]
 
 ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
@@ -167,18 +168,24 @@ _PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
     "views": "must accept exactly ('name',) as its leading positional parameter",
 }
 
-_BUILTIN_PHASES: frozenset[str] = frozenset(
-    {
-        "virtual_container",
-        "devices",
-        "presenters",
-        "views",
-        "providers",
-        "wiring",
-        "injection",
-    }
-)
-"""The phases every container runs, which no caller may remove or reorder."""
+
+def _silent(step: str) -> None:
+    """Take a build step's name and do nothing with it.
+
+    What `AppContainer` reports progress to when no hook asked for it, so the
+    build has one path whether or not anything is watching.
+    """
+
+
+_COMPONENT_SECTIONS: frozenset[str] = frozenset({"devices", "presenters", "views"})
+"""The configuration sections whose entries are a component's constructor call."""
+
+_IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
+"""Keys naming what kind of session this is, which every layered file must agree on.
+
+Everything else describes the session's content, where a later file legitimately
+overrides an earlier one.
+"""
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
@@ -186,19 +193,96 @@ _FRONTEND_CONTAINERS: dict[str, str] = {
 }
 
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    """Load a YAML file and validate required keys against AppConfig."""
+def _read_yaml(path: Path) -> dict[str, Any]:
+    """Read one YAML file into a mapping, without validating what it carries."""
     with open(path) as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
         raise TypeError(
             f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
         )
-    required_keys = AppConfig.__required_keys__
-    missing = required_keys - data.keys()
+    return data
+
+
+def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    """Return *base* with *overlay* laid over it, merging nested mappings.
+
+    A key present in both is taken from *overlay* unless both values are
+    mappings, which merge in turn. Anything that is not a mapping - a list, a
+    scalar - is replaced rather than combined.
+
+    A component entry is the exception: under ``devices``, ``presenters`` and
+    ``views`` the section merges by component name, but a component *named* in
+    *overlay* is taken from it whole. Those entries are the keyword arguments
+    of a constructor call rather than a tree of settings, so one file owns one
+    component's arguments and a reader stops at the last file naming it.
+    """
+    merged = dict(base)
+    for key, value in overlay.items():
+        current = merged.get(key)
+        if not (isinstance(current, dict) and isinstance(value, dict)):
+            merged[key] = value
+        elif key in _COMPONENT_SECTIONS:
+            for shadowed in current.keys() & value.keys():
+                logger.debug(
+                    f"Component '{shadowed}' in '{key}' is taken from a later "
+                    f"configuration file, replacing the entry under it"
+                )
+            merged[key] = {**current, **value}
+        else:
+            merged[key] = merge_config(current, value)
+    return merged
+
+
+def _refuse_identity_conflict(
+    data: dict[str, Any], overlay: dict[str, Any], path: Path
+) -> None:
+    """Refuse a file that contradicts what an earlier one said the session is.
+
+    Raises
+    ------
+    ValueError
+        If *overlay* gives a different value for a key naming the session's
+        identity rather than its content.
+    """
+    for key in _IDENTITY_KEYS:
+        if key in data and key in overlay and data[key] != overlay[key]:
+            raise ValueError(
+                f"Configuration file {path} sets {key}={overlay[key]!r}, "
+                f"which contradicts {data[key]!r} from a file layered under it. "
+                f"{key} names what kind of session this is, so every file must "
+                f"agree on it."
+            )
+
+
+def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
+    """Read *paths* in order, lay each over the last, and validate the result.
+
+    Required keys are checked against the merged mapping rather than against
+    each file, so a file layered under another may carry a fragment.
+
+    Raises
+    ------
+    ValueError
+        If two files disagree about the session's schema version or frontend.
+    KeyError
+        If the merged mapping is missing a key `AppConfig` requires.
+    """
+    if len(paths) > 1:
+        logger.debug(
+            f"Reading configuration from {len(paths)} files, in order: "
+            f"{', '.join(str(path) for path in paths)}"
+        )
+    data: dict[str, Any] = {}
+    for path in paths:
+        overlay = _read_yaml(path)
+        _refuse_identity_conflict(data, overlay, path)
+        data = merge_config(data, overlay)
+    missing = AppConfig.__required_keys__ - data.keys()
     if missing:
+        named = ", ".join(str(path) for path in paths)
         raise KeyError(
-            f"Configuration file {path} is missing required keys: "
+            f"Configuration ({named}) is missing required keys: "
             f"{', '.join(sorted(missing))}"
         )
     return data
@@ -218,49 +302,75 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
 
 
 class AppContainer:
-    """Application container for MVP architecture."""
+    """Application container for DVP architecture.
+
+    Parameters
+    ----------
+    session : str
+        Session display name.
+    frontend : str
+        Frontend toolkit identifier.
+    log_level : int or str, optional
+        Level to put on the ``redsun`` logger, as a `logging` constant or a
+        level name. Left as it is when not given.
+    """
 
     __slots__ = (
-        # psygnal holds a signal's owner weakly and drops its per-owner cache
-        # entry through weakref.finalize. Both fall back to a strong reference
-        # when the owner cannot be weakly referenced, which a slotted class
-        # cannot unless __weakref__ is one of its slots - and then no container
-        # is ever collected.
-        "__weakref__",
+        "_built",
         "_built_devices",
         "_components",
         "_config",
         "_devices_connected",
+        "_failed",
         "_hook_by_moment",
         "_hooks",
         "_is_built",
-        "_phases",
-        "_phases_before_hooks",
+        "_report",
         "_virtual_container",
     )
 
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
-    _config_path: ClassVar[Path | None] = None
+    _component_fields: ClassVar[dict[str, _ComponentField]] = {}
+    """Every ``declare_*`` field this container and its bases declared.
 
-    sig_phase_complete = Signal(str)
-    """Emitted with the name of each build phase as it finishes.
-
-    For watching the build rather than taking part in it: a splash screen
-    naming the step in progress connects to this, where adding a phase per
-    step would register seven phases to display seven labels.
+    Kept past class creation so that a subclass naming its own ``config`` file
+    resolves the fields it inherited against that file rather than the one its
+    base was written with.
     """
 
-    _hook_keys: ClassVar[Mapping[str, type]] = {
-        "configure_build": ConfiguresBuild,
-        "configure_session": ConfiguresSession,
-    }
+    _config_paths: ClassVar[tuple[Path, ...]] = ()
+    """The configuration files this container reads, in the order they layer.
+
+    A subclass naming its own ``config`` appends to what its bases named rather
+    than replacing it, so a file common to several sessions sits under the one
+    that is particular to each.
+    """
+
+    BUILD_STEPS: ClassVar[tuple[str, ...]] = (
+        "virtual container",
+        "devices",
+        "presenters",
+        "views",
+        "providers",
+        "wiring",
+        "injection",
+    )
+    """The steps `build` announces, in the order it reaches them.
+
+    Each is reported as it starts, so a progress display sizes itself from the
+    length of this rather than from a number of its own that would drift as the
+    sequence changes.
+    """
+
+    _hook_keys: ClassVar[Mapping[str, type]] = {}
     """The hook points this container calls, in the order it reaches them.
 
     A key is the method the point calls, and is what names the point in a
-    container class body and in the ``hooks`` section. A subclass adding points
-    declares its own mapping.
+    container class body and in the ``hooks`` section. Empty here: every moment
+    a hook can act at belongs to a toolkit, so it is the container for that
+    toolkit that declares one.
     """
 
     _hook_providers: ClassVar[dict[str, object]] = {}
@@ -272,20 +382,37 @@ class AppContainer:
 
     def __init_subclass__(
         cls,
-        config: str | Path | None = None,
+        config: str | Path | Sequence[str | Path] | None = None,
         **kwargs: Any,
     ) -> None:
         """Collect component wrappers from class attributes.
 
         Parameters
         ----------
-        config : str | Path | None
-            Path to a YAML configuration file for component kwargs.
+        config : str | Path | Sequence[str | Path] | None
+            YAML configuration file for component kwargs, or several to layer
+            in order. They are read after the ones this container's bases name,
+            so a later file wins a key it shares with an earlier one.
         """
         super().__init_subclass__(**kwargs)
 
-        if config is not None:
-            cls._config_path = Path(config)
+        declared = (
+            []
+            if config is None
+            else [config]
+            if isinstance(config, (str, Path))
+            else list(config)
+        )
+        inherited: list[Path] = []
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                inherited.extend(base._config_paths)
+        # a base named twice through two paths of the hierarchy contributes its
+        # files once, in the order the first path reached them
+        seen: dict[Path, None] = {}
+        for path in (*inherited, *(Path(entry) for entry in declared)):
+            seen.setdefault(path, None)
+        cls._config_paths = tuple(seen)
 
         devices: dict[str, _DeviceComponent] = {}
         presenters: dict[str, _PresenterComponent] = {}
@@ -310,16 +437,23 @@ class AppContainer:
             elif isinstance(attr_value, _ViewComponent):
                 views[attr_value.name] = attr_value
 
-        component_fields = {
-            attr_name: value
-            for attr_name, value in namespace.items()
-            if not attr_name.startswith("_") and isinstance(value, _ComponentField)
-        }
+        component_fields: dict[str, _ComponentField] = {}
+        for base in cls.__bases__:
+            if issubclass(base, AppContainer):
+                component_fields.update(base._component_fields)
+        component_fields.update(
+            {
+                attr_name: value
+                for attr_name, value in namespace.items()
+                if not attr_name.startswith("_") and isinstance(value, _ComponentField)
+            }
+        )
+        cls._component_fields = component_fields
 
         if component_fields:
             config_data: dict[str, Any] = {}
-            if cls._config_path is not None:
-                config_data = _load_yaml(cls._config_path)
+            if cls._config_paths:
+                config_data = _load_yaml(cls._config_paths)
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -329,16 +463,10 @@ class AppContainer:
 
             for attr_name, field in component_fields.items():
                 kw = field.kwargs
-                if field.from_config is not None:
-                    if not config_data:
-                        raise TypeError(
-                            f"Component field '{attr_name}' in {cls.__name__} has "
-                            f"from_config set but no config path was "
-                            f"provided to the container class"
-                        )
-
+                if field.from_config is not None and config_data:
                     section_key = _section_key[type(field)]
-                    section_data: dict[str, Any] = config_data.get(section_key, {})
+                    # a section written with nothing under it parses as None
+                    section_data: dict[str, Any] = config_data.get(section_key) or {}
                     _sentinel = object()
                     cfg_section = section_data.get(field.from_config, _sentinel)
 
@@ -394,7 +522,16 @@ class AppContainer:
                 f"{len(views)} views"
             )
 
-    def __init__(self, *, session: str = "Redsun", frontend: str = "pyqt") -> None:
+    def __init__(
+        self,
+        *,
+        session: str = "Redsun",
+        frontend: str = "pyqt",
+        log_level: int | str | None = None,
+    ) -> None:
+        self._refuse_unresolved_fields()
+        if log_level is not None:
+            set_level(log_level)
         self._config: AppConfig = {
             "schema_version": 1.0,
             "session": session,
@@ -404,67 +541,111 @@ class AppContainer:
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
+        # what this container built, keyed by the declaration it was built
+        # from. The declaration registries are class attributes shared by every
+        # container of the class; this is per container, so the objects go when
+        # it does and the next container starts from nothing.
+        self._built: dict[_ComponentBase[Any], Any] = {}
+        # what the build could not make, by component name, so that a phase
+        # after the one that failed can tell a component that is not there
+        # from a name that was never declared
+        self._failed: dict[str, BaseException] = {}
         self._built_devices: dict[str, Device] = {}
         self._devices_connected: bool = False
-        self._components: dict[str, _PresenterComponent | _ViewComponent] = {
+        self._components: dict[str, _ComponentBase[Any]] = {
             **self._presenter_components,
             **self._view_components,
         }
-        self._phases: dict[str, BuildPhase] = {
-            "virtual_container": self._create_virtual_container,
-            "devices": self._build_devices,
-            "presenters": self._build_presenters,
-            "views": self._build_views,
-            "providers": self._register_providers,
-            "wiring": self._apply_wiring,
-            "injection": self._inject_dependencies,
-        }
-        self._phases_before_hooks: dict[str, BuildPhase] = {}
+        self._report: Callable[[str], None] = _silent
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
         # populates _config with top-level sections such as 'storage', 'session',
         # or 'schema_version'.  We read those here so that build() sees the same
         # state as the from_config() path, which sets them explicitly.
-        config_path: Path | None = getattr(type(self), "_config_path", None)
-        if config_path is not None:
+        config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
+        if config_paths:
             try:
-                yaml_data = _load_yaml(config_path)
+                yaml_data = _load_yaml(config_paths)
             except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
-                logger.warning(f"Could not read config file {config_path}: {e}")
+                named = ", ".join(str(path) for path in config_paths)
+                logger.warning(f"Could not read config file(s) {named}: {e}")
                 yaml_data = {}
-            _COMPONENT_SECTIONS = frozenset({"devices", "presenters", "views"})
             for key, value in yaml_data.items():
                 if key not in _COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
+
+    @classmethod
+    def _refuse_unresolved_fields(cls) -> None:
+        """Refuse a container whose ``from_config`` fields have no file to read.
+
+        Deferred to construction rather than class creation: a base class exists
+        to be subclassed, and the subclass is where ``config`` is named.
+
+        Raises
+        ------
+        TypeError
+            Naming every field that asked for a configuration section.
+        """
+        if cls._config_paths:
+            return
+        unresolved = sorted(
+            attr_name
+            for attr_name, field in cls._component_fields.items()
+            if field.from_config is not None
+        )
+        if unresolved:
+            raise TypeError(
+                f"Component field(s) {', '.join(unresolved)} in {cls.__name__} have "
+                f"from_config set but no config path was provided to the container "
+                f"class"
+            )
 
     @property
     def config(self) -> AppConfig:
         """Return the application configuration."""
         return self._config
 
+    def _instance_of(self, comp: _ComponentBase[T]) -> T:
+        """Return what this container built from *comp*."""
+        if comp not in self._built:
+            raise RuntimeError(
+                f"Component {comp.name} has not been instantiated yet. Call 'build' first."
+            )
+        return cast("T", self._built[comp])
+
+    def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
+        """Return what this container built from *declared*, by name.
+
+        A declaration the build did not reach, or one whose build failed, is
+        absent, so the mapping can be shorter than *declared*.
+        """
+        return {
+            name: cast("T", self._built[comp])
+            for name, comp in declared.items()
+            if comp in self._built
+        }
+
     @property
     def devices(self) -> dict[str, Device]:
         """Return built device instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {name: comp.instance for name, comp in self._device_components.items()}
+        return self._built_of(self._device_components)
 
     @property
     def presenters(self) -> dict[str, PPresenter]:
         """Return built presenter instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {
-            name: comp.instance for name, comp in self._presenter_components.items()
-        }
+        return self._built_of(self._presenter_components)
 
     @property
     def views(self) -> dict[str, PView]:
         """Return built view instances."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
-        return {name: comp.instance for name, comp in self._view_components.items()}
+        return self._built_of(self._view_components)
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -503,29 +684,63 @@ class AppContainer:
         slot: Callable[..., Any],
         *,
         thread: SlotThread = None,
-    ) -> Connection:
+    ) -> Connection | None:
         """Connect a signal to a slot, recording the link for teardown.
+
+        Returns ``None``, having connected nothing, when either end belongs to
+        a component that failed to build: the link is logged at ``WARNING`` and
+        the rest of `wire` runs. Every other way of naming a port wrongly still
+        raises.
 
         See [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect].
         """
+        ends: tuple[object, object] = (signal, slot)
+        absent = {end.component for end in ends if isinstance(end, _NotBuilt)}
+        if absent:
+            named = ", ".join(repr(name) for name in sorted(absent))
+            logger.warning(
+                f"Not connecting {self._end_path(signal)} -> "
+                f"{self._end_path(slot)}: {named} not built"
+            )
+            return None
         return self.virtual_container.connect(signal, slot, thread=thread)
 
+    def _end_path(self, end: object) -> str:
+        """Return one end of a connection as ``component.port``."""
+        if isinstance(end, _NotBuilt):
+            return str(end)
+        owner = getattr(end, "__self__", None) or getattr(end, "instance", None)
+        port = getattr(end, "name", None) or getattr(end, "__name__", "<anonymous>")
+        return f"{self.virtual_container._label(owner)}.{port}"
+
     def _apply_wiring_config(self) -> None:
-        """Connect the port pairs listed in the ``wiring`` configuration section."""
+        """Connect the port pairs listed in the ``wiring`` configuration section.
+
+        A rule naming a component the build failed on is warned about and
+        skipped. Every other way of getting a rule wrong stays fatal, a name
+        that was never declared included.
+        """
         for index, rule in enumerate(self._config.get("wiring", [])):
             if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
                 raise WiringError(
                     f"wiring entry {index} must be a mapping with exactly the "
                     f"keys 'from' and 'to', got {rule!r}"
                 )
-            self.virtual_container.connect_paths(rule["from"], rule["to"])
+            try:
+                self.virtual_container.connect_paths(rule["from"], rule["to"])
+            except ComponentNotBuilt as e:
+                if e.component not in self._failed:
+                    raise
+                logger.warning(
+                    f"Not connecting {rule['from']} -> {rule['to']}: "
+                    f"component {e.component!r} was not built"
+                )
 
     def build(self) -> Self:
         """Instantiate all components in dependency order.
 
-        Hook providers are resolved first and given the chance to adjust the
-        sequence, which is why registering a phase is only legal until here.
-        The registered phases then run in order:
+        The order is fixed, and each step is announced to whatever is watching
+        the build:
 
         1. VirtualContainer
         2. Devices
@@ -545,92 +760,57 @@ class AppContainer:
 
         logger.info("Building application container...")
 
-        hooks = self._ensure_hooks()
-        # what a hook adds to the sequence is undone when it is torn down, so
-        # that a container built a second time does not accumulate phases
-        self._phases_before_hooks = dict(self._phases)
-        configures_build = hooks.get("configure_build")
-        if isinstance(configures_build, ConfiguresBuild):
-            configures_build.configure_build(self)
+        # resolved even by a container that calls no hook point of its own, so
+        # that a malformed hooks section is refused wherever it is built
+        self._ensure_hooks()
 
-        for name, phase in self._phases.items():
-            phase()
-            logger.debug(f"Build phase '{name}' complete")
-            self.sig_phase_complete.emit(name)
+        self._report("virtual container")
+        self._create_virtual_container()
+        self._report("devices")
+        self._build_devices()
+        self._report("presenters")
+        self._build_presenters()
+        self._report("views")
+        self._build_views()
+        self._report("providers")
+        self._register_providers()
+        self._report("wiring")
+        self._apply_wiring()
+        self._report("injection")
+        self._inject_dependencies()
 
-        # before the session hooks, so that a hook reading `views`,
-        # `presenters` or `devices` is not turned away by their build guard
         self._is_built = True
-        configures_session = hooks.get("configure_session")
-        if isinstance(configures_session, ConfiguresSession):
-            configures_session.configure_session(self)
-
-        logger.info(
-            f"Container built: "
-            f"{len(self._device_components)} devices, "
-            f"{len(self._presenter_components)} presenters, "
-            f"{len(self._view_components)} views"
-        )
+        summary = self._summarise_build()
+        if self._failed:
+            logger.warning(summary)
+        else:
+            logger.info(summary)
 
         return self
 
-    @property
-    def phases(self) -> list[str]:
-        """The build phases, in the order `build` runs them."""
-        return list(self._phases)
+    def _summarise_build(self) -> str:
+        """Return what the build made, counted against what was declared.
 
-    def register_phase(self, name: str, phase: BuildPhase, *, after: str) -> None:
-        """Add *phase* to the build sequence, directly after the phase *after*.
-
-        There is no default position: where a phase runs is what it means, so
-        *after* names an existing phase and is required.
-
-        Raises
-        ------
-        RuntimeError
-            If the container is already built.
-        ValueError
-            If *name* is already registered, or *after* is not a known phase.
+        A build that missed nothing is one line; one that did names what it
+        could not make on a second.
         """
-        self._refuse_after_build("register a phase")
-        if name in self._phases:
-            raise ValueError(f"build phase {name!r} is already registered")
-        if after not in self._phases:
-            raise ValueError(
-                f"cannot place phase {name!r} after unknown phase {after!r}. "
-                f"Known phases: {', '.join(self._phases)}"
-            )
-        rebuilt: dict[str, BuildPhase] = {}
-        for existing, existing_phase in self._phases.items():
-            rebuilt[existing] = existing_phase
-            if existing == after:
-                rebuilt[name] = phase
-        self._phases = rebuilt
-
-    def unregister_phase(self, name: str) -> None:
-        """Remove a previously registered phase.
-
-        Raises
-        ------
-        RuntimeError
-            If the container is already built.
-        ValueError
-            If *name* is not registered, or names one of the built-in phases:
-            the order they run in is what the container guarantees.
-        """
-        self._refuse_after_build("unregister a phase")
-        if name in _BUILTIN_PHASES:
-            raise ValueError(
-                f"build phase {name!r} is built in and cannot be removed. "
-                f"Built-in phases: {', '.join(_BUILTIN_PHASES)}"
-            )
-        if name not in self._phases:
-            raise ValueError(f"build phase {name!r} is not registered")
-        del self._phases[name]
-
-    def _refuse_after_build(self, action: str) -> None:
-        if self._is_built:
-            raise RuntimeError(f"cannot {action} after the container is built")
+        declared: tuple[tuple[str, Mapping[str, _ComponentBase[Any]]], ...] = (
+            ("device", self._device_components),
+            ("presenter", self._presenter_components),
+            ("view", self._view_components),
+        )
+        counts = ", ".join(
+            f"{len(self._built_of(components))}/{len(components)} {kind}s"
+            for kind, components in declared
+        )
+        summary = f"Container built: {counts}"
+        if not self._failed:
+            return summary
+        kind_of = {name: kind for kind, components in declared for name in components}
+        missing = ", ".join(
+            f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+        )
+        return f"{summary}\nNot built: {missing}"
 
     @classmethod
     def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
@@ -644,10 +824,9 @@ class AppContainer:
             the protocol the point calls.
         """
         if moment not in cls._hook_keys:
-            known = ", ".join(cls._hook_keys)
             raise HookError(
                 f"{cls.__name__} declares a hook at {moment!r}, which is not a "
-                f"hook point it calls; expected one of: {known}"
+                f"hook point it calls; {known_points(cls._hook_keys)}"
             )
         declared = field.provider
         if isinstance(declared, type):
@@ -727,10 +906,6 @@ class AppContainer:
                     logger.error(
                         f"Error shutting down hook '{type(hook).__name__}': {e}"
                     )
-        # a container always holds the built-in phases, so an empty snapshot
-        # means `build` never took one and there is nothing to restore
-        if self._phases_before_hooks:
-            self._phases = self._phases_before_hooks
         self._hooks = None
         self._hook_by_moment = {}
 
@@ -751,35 +926,41 @@ class AppContainer:
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
-                built_devices[name] = device_comp.build()
+                built_devices[name] = self._built[device_comp] = device_comp.build()
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
+                self._failed[name] = e
                 logger.error(f"Failed to build device '{name}': {e}")
         self._built_devices = built_devices
 
     def _build_presenters(self) -> None:
-        """Build every declared presenter against the built devices."""
+        """Build every declared presenter against the built devices.
+
+        A presenter that fails is skipped, as a device that fails is.
+        """
         for comp_name, presenter_component in self._presenter_components.items():
             try:
-                presenter_component.build(self._built_devices)
-            except Exception as e:
+                self._built[presenter_component] = presenter_component.build(
+                    self._built_devices
+                )
+            except Exception as e:  # noqa: BLE001 - a missing presenter must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
-                raise
 
     def _build_views(self) -> None:
-        """Build every declared view."""
+        """Build every declared view, skipping the ones that fail."""
         for comp_name, view_component in self._view_components.items():
             try:
-                view_component.build()
-            except Exception as e:
+                self._built[view_component] = view_component.build()
+            except Exception as e:  # noqa: BLE001 - a missing view must not abort the app
+                self._failed[comp_name] = e
                 logger.error(f"Failed to build view '{comp_name}': {e}")
-                raise
 
     def _register_providers(self) -> None:
         """Let every component providing dependencies register them."""
-        for component in self._components.values():
-            if isinstance(component.instance, IsProvider):
-                component.instance.register_providers(self.virtual_container)
+        for instance in self._built_of(self._components).values():
+            if isinstance(instance, IsProvider):
+                instance.register_providers(self.virtual_container)
 
     def _apply_wiring(self) -> None:
         """Publish the built components by name, then connect them.
@@ -787,17 +968,15 @@ class AppContainer:
         The names reach the VirtualContainer first because both `wire` and the
         ``wiring`` configuration section resolve components by name.
         """
-        self.virtual_container._set_components(
-            {name: comp.instance for name, comp in self._components.items()}
-        )
+        self.virtual_container._set_components(self._built_of(self._components))
         self.wire()
         self._apply_wiring_config()
 
     def _inject_dependencies(self) -> None:
         """Let every component taking dependencies receive them."""
-        for component in self._components.values():
-            if isinstance(component.instance, IsInjectable):
-                component.instance.inject_dependencies(self.virtual_container)
+        for instance in self._built_of(self._components).values():
+            if isinstance(instance, IsInjectable):
+                instance.inject_dependencies(self.virtual_container)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect all devices via ophyd-async's async connect lifecycle.
@@ -827,25 +1006,75 @@ class AppContainer:
         self._devices_connected = True
 
     def shutdown(self) -> None:
-        """Shutdown all presenters and hooks that implement ``HasShutdown``."""
+        """Undo the build, one phase at a time.
+
+        The phases run in the order below, each of them a method a subclass
+        may override the way the build phases are overridden:
+
+        1. ``_disconnect`` - undo the wiring.
+        2. ``_shutdown_presenters`` - shut every presenter down.
+        3. ``_shutdown_hooks`` - undo what the hook providers installed.
+        4. ``_release_components`` - drop every built component.
+        5. ``_destroy`` - end what dropping a reference does not end.
+
+        Afterwards the container holds nothing it built, so ``devices``,
+        ``presenters`` and ``views`` raise until the next ``build()``.
+        """
         if not self._is_built:
             return
 
-        if self._virtual_container is not None:
-            self._virtual_container.disconnect_all()
-
-        for name, comp in self._presenter_components.items():
-            if isinstance(comp.instance, HasShutdown):
-                try:
-                    comp.instance.shutdown()
-                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
-                    logger.error(f"Error shutting down presenter '{name}': {e}")
-
+        self._disconnect()
+        self._shutdown_presenters()
         # after the components, which may still be using what a hook installed
         self._shutdown_hooks()
+        self._destroy(self._release_components())
 
         self._is_built = False
         logger.info("Container shutdown complete")
+
+    def _disconnect(self) -> None:
+        """Undo every connection and subscription the wiring made."""
+        if self._virtual_container is not None:
+            self._virtual_container.disconnect_all()
+
+    def _shutdown_presenters(self) -> None:
+        """Shut down every presenter implementing ``HasShutdown``.
+
+        One presenter failing to shut down does not stop the others.
+        """
+        for name, presenter in self._built_of(self._presenter_components).items():
+            if isinstance(presenter, HasShutdown):
+                try:
+                    presenter.shutdown()
+                except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
+                    logger.error(f"Error shutting down presenter '{name}': {e}")
+
+    def _release_components(self) -> Sequence[object]:
+        """Drop every built component, and return what was dropped.
+
+        The virtual container forgets them too, so that what the container
+        built is reachable from nowhere the framework owns.
+        """
+        if self._virtual_container is not None:
+            self._virtual_container._clear_components()
+        released = list(self._built.values())
+        self._built.clear()
+        self._failed.clear()
+        self._built_devices = {}
+        return released
+
+    def _destroy(self, components: Sequence[object]) -> None:
+        """Destroy the components the container has just released.
+
+        Dropping the last reference is everything a toolkit-agnostic container
+        can do, and for a toolkit whose objects are owned by something other
+        than Python it is not enough. Such a toolkit overrides this to end
+        them, so that a shut-down container leaves nothing behind whatever it
+        was built on.
+
+        *components* have already been released: neither this container nor the
+        virtual container holds them any more.
+        """
 
     def run(self) -> None:
         """Build and connect devices if needed, then start the application."""
@@ -858,8 +1087,13 @@ class AppContainer:
         logger.info(f"Starting application with frontend: {frontend}")
 
     @classmethod
-    def from_config(cls, config_path: str) -> AppContainer:
-        """Build a container dynamically from a YAML configuration file."""
+    def from_config(
+        cls, config_path: str, *, log_level: int | str | None = None
+    ) -> AppContainer:
+        """Build a container dynamically from a YAML configuration file.
+
+        *log_level* is passed to the container it builds.
+        """
         config, plugin_types = cls._load_configuration(config_path)
 
         namespace: dict[str, Any] = {}
@@ -887,6 +1121,7 @@ class AppContainer:
         instance = DynamicApp(
             session=config.get("session", "Redsun"),
             frontend=frontend,
+            log_level=log_level,
         )
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]

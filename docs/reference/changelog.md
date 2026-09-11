@@ -11,6 +11,274 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- `BufferHandler` and `log_buffer()` (`redsun.log`) - the session's log records,
+  retained as they are emitted. The handler is installed on the `redsun` logger
+  alongside the stdout one and keeps the most recent 10 000 records, so a
+  consumer built later in the session can still show what happened before it
+  existed.
+- `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
+  records, colour-coded by level. Buttons choose the lowest level displayed,
+  redrawing from the buffer so raising the threshold never discards anything,
+  and `Save logs...` writes every buffered record regardless of what is on
+  screen. Available from a configuration file as `plugin_name: redsun`,
+  `plugin_id: logs` under `views`.
+
+## [0.12.2] - 07-09-2026
+
+### Fixed
+
+- **`QtAppContainer.shutdown`** (`redsun.containers.qt`) stops the timer
+  draining psygnal's emission queue and delivers what is left in it before
+  destroying the widgets. An emission queued for a slot with a thread affinity
+  reached a destroyed widget as `RuntimeError: wrapped C/C++ object of type
+  <widget> has been deleted`, and carried into the next container built in the
+  same process.
+
+## [0.12.1] - 03-09-2026
+
+### Added
+
+- **`ComponentNotBuilt`** (`redsun.virtual`) - the `WiringError`
+  `VirtualContainer.connect_paths` raises for a port path naming a component
+  that is not there. It carries the name as `component`.
+
+### Changed
+
+- **`AppContainer.build`** (`redsun.containers.container`) logs a presenter or
+  a view that fails to build and carries on, as it already did for a device.
+  The build returns, and the component is absent from `presenters` or `views`.
+
+- **`AppContainer.connect`** (`redsun.containers.container`) returns
+  `Connection | None`. Either end belonging to a component that failed to
+  build is logged at `WARNING` and connects nothing, so the rest of `wire`
+  runs. A `declare_*` attribute of such a component reads back as a stand-in
+  for the length of that build, and naming a port a *built* component does not
+  have still raises `AttributeError`.
+
+- The line closing a build counts what was built against what was declared,
+  and names what is missing. It is logged at `WARNING` rather than `INFO` when
+  anything failed to build:
+
+  ```
+  Container built: 3/4 devices, 2/2 presenters, 4/5 views
+  Not built: bad_camera (device), log_panel (view)
+  ```
+
+- A `wiring` rule naming a component that failed to build is logged at
+  `WARNING` and skipped, and the rules around it connect. A rule naming a
+  component that was never declared, one naming a port a built component does
+  not expose, a signature mismatch and a malformed rule all still raise.
+
+- **`AppContainer.shutdown`** (`redsun.containers.container`) releases every
+  device, presenter and view the container built. `devices`, `presenters` and
+  `views` raise until the next `build()`, and a `declare_*` attribute read on a
+  shut-down container gives the declaration rather than the built object. Take
+  a reference before the shutdown to keep using a component:
+
+  ```python
+  app = MyApp().build()
+  ctrl = app.ctrl
+  app.shutdown()
+  ctrl.stop()
+  ```
+
+- **`AppContainer.shutdown`** runs as named phases, each overridable by a
+  subclass: `_disconnect`, `_shutdown_presenters`, `_shutdown_hooks`,
+  `_release_components` and `_destroy`. `_destroy` takes what
+  `_release_components` returned and does nothing by default; a toolkit
+  overrides it to end objects that releasing does not end.
+
+- **`QtAppContainer`** (`redsun.qt`) closes and destroys the widgets the
+  container built and the main window, rather than only releasing them. A view
+  read before the shutdown is left wrapping a destroyed widget and raises
+  `RuntimeError` on use; presenters are unaffected.
+
+- **`AppContainer`** builds its own components even when another container of
+  the same class was built before it. The two no longer share instances.
+
+### Fixed
+
+- **`AppContainer.devices`**, **`AppContainer.presenters`** and
+  **`AppContainer.views`** (`redsun.containers.container`) return the
+  components the container built. A device whose build failed is absent from
+  `devices`, where reading the mapping raised `RuntimeError` before:
+
+  ```python
+  class App(AppContainer):
+      ok = declare_device(MyMotor, egu="mm")
+      bad = declare_device(BrokenMotor)
+
+
+  set(App().build().devices)  # {"ok"}
+  ```
+
+- A wiring report could name a component after a different, released one.
+  **`VirtualContainer`** (`redsun.virtual`) resolves component names by
+  identity rather than by `id()`, and forgets the built components at shutdown.
+
+## [0.12.0] - 29-08-2026
+
+### Added
+
+- **`WrapsBuild`** (`redsun.containers._hooks`) and **`QtWrapsBuild`**
+  (`redsun.qt`) - the `during_build` hook point, which surrounds the whole
+  build. `during_build` returns a context manager entered before the first
+  component is built and left once the window is shown; what it yields is
+  called with the name of each build step as it starts.
+
+  ```python
+  class Splash:
+      @contextmanager
+      def during_build(self, app: QApplication) -> Generator[Callable[[str], None]]:
+          screen = QSplashScreen(QPixmap("logo.png"))
+          screen.show()
+          try:
+              yield screen.showMessage
+          finally:
+              screen.close()
+  ```
+
+- **`AppContainer.BUILD_STEPS`** - the step names `build` announces, in order,
+  so a progress display sizes itself from the framework rather than from a
+  count of its own.
+
+  The steps reported are `virtual container`, `devices`, `presenters`, `views`,
+  `providers`, `wiring` and `injection`. The span opens on
+  `QtAppContainer.run`, not on `build`, and closes when the build raises.
+  `run` processes events once after showing the main window and before leaving
+  the span, so the window has painted by the time a splash is dismissed. A
+  provider serving `configure_main_view` as well holds the window and can hand
+  over with `QSplashScreen.finish` instead of `close`.
+
+- **`set_level`** (`redsun.log`) - sets the level of the `redsun` logger. Takes
+  a `logging` constant or a level name, as `logging.Logger.setLevel` does; a
+  name is matched without regard to case.
+
+- **`add_handler`** and **`remove_handler`** (`redsun.log`) - install and
+  uninstall a destination for the `redsun` logger's records. A handler carrying
+  no formatter of its own is given the one every other destination writes
+  through.
+
+  ```python
+  from redsun.log import add_handler, remove_handler
+
+  handler = MyHandler()
+  add_handler(handler)
+  ...
+  remove_handler(handler)
+  ```
+
+- **`log_level`** - a keyword on `AppContainer.__init__` and on
+  `AppContainer.from_config`, giving the level the session runs its logger at.
+  The logger is left as it is when it is not given.
+
+  ```python
+  container = AppContainer.from_config("session.yaml", log_level=logging.DEBUG)
+  ```
+
+- `config` accepts several YAML files, layered in the order given, and a
+  container class reads what its bases named before its own. A file common to
+  several sessions sits under the one particular to each.
+
+  ```python
+  class InstrumentApp(QtAppContainer, config="common.yaml"):
+      ui = declare_view(MyView, from_config="ui")
+
+
+  class Simulation(InstrumentApp, config="simulation.yaml"): ...
+
+
+  class Instrument(InstrumentApp, config="instrument.yaml"): ...
+  ```
+
+- `AppContainer._config_paths` reports those files in the order they layer, and
+  `AppContainer._component_fields` records the `declare_*` fields a container
+  and its bases declared.
+
+### Changed
+
+- The `redsun` logger starts at `INFO` rather than `DEBUG`, and is configured
+  with `logging` calls rather than a `dictConfig` mapping. `redsun.log.config`,
+  `redsun.log.InfoFilter` and `redsun.log.DebugFilter` are gone: the two stream
+  handlers they split records between wrote to one `sys.stdout` through one
+  formatter, which is now a single handler installed with `add_handler`.
+- `AppContainer` declares no hook points. Every point belongs to a toolkit, so
+  `QtAppContainer` declares all four - `create_application`,
+  `configure_application`, `during_build` and `configure_main_view` - and a
+  `hooks` section naming a point on a plain `AppContainer` is refused.
+- A hook never changes what the container builds or the order it builds it in.
+
+  See [Toolkit hook
+  points](../explanation/decisions/0010-toolkit-hook-points.md).
+
+- A `declare_*` field with `from_config` is resolved against the configuration
+  of each container class that inherits it, rather than only the one that
+  declared it. A base class can therefore carry the declarations two sessions
+  share while each subclass reads its own files.
+- A subclass naming `config` adds to the files its bases named instead of
+  replacing them.
+- Configuration files merge as mappings, recursively: a key present in two
+  files is taken from the later one unless both values are mappings, which
+  merge in turn. Lists and scalars are replaced, not combined.
+- The `devices`, `presenters` and `views` sections merge by component name, but
+  a component named in a later file is taken from that file whole. A component
+  entry is a constructor's keyword arguments, so one file owns all of them.
+- The keys `AppConfig` requires are checked against the merged configuration
+  rather than against each file, so a file layered under another may carry a
+  fragment.
+- `schema_version` and `frontend` must agree across layered files. They name
+  what kind of session this is rather than what it contains, so a later file
+  giving a different value raises `ValueError` instead of overriding. Every
+  other key, `session` included, is taken from the later file.
+- A container reading more than one configuration file logs them at debug
+  level, in the order they layer, and logs each component an upper file takes
+  from a lower one.
+- A container inheriting from more than one base reads the files every base
+  named, rather than only those of the first in the method resolution order. A
+  file reached twice through the hierarchy is read once.
+- A configuration section written with nothing under it - `presenters:` and no
+  entries - is read as an empty section rather than raising `AttributeError`.
+- Declaring a `from_config` field on a container class with no `config` file no
+  longer raises at class creation; the `TypeError` is raised when such a
+  container is constructed, and names every field that asked for a section.
+  A base class exists to be subclassed, and the subclass is where `config` is
+  named.
+
+  See [Inherited and layered component
+  configuration](../explanation/decisions/0009-inherited-component-configuration.md).
+
+- A required plan parameter annotated with a sequence of a non-device type -
+  `Sequence[int]`, `list[str]` - no longer raises `UnresolvableAnnotationError`.
+  The Qt view builds a list editor for it; the check that runs before the view
+  exists did not know that, and skipped the plan.
+
+- Bump `ophyd-async` to 0.21.2.
+- Bump `acquire-zarr` to 0.9.0.
+
+### Fixed
+
+- A plan with a required `bool` parameter no longer crashes the Qt parameter
+  form with `TypeError: setChecked(...) argument 1 has unexpected type
+  'NoneType'`. A parameter with no default is now given magicgui's `Undefined`
+  rather than `None`.
+
+### Removed
+
+- **`AppContainer.phases`**, **`AppContainer.register_phase`** and
+  **`AppContainer.unregister_phase`** - the build sequence is a straight-line
+  body again and cannot be added to.
+- **`AppContainer.sig_phase_complete`** - a `during_build` provider is given a
+  reporter instead. It was the only psygnal `Signal` on `AppContainer`, so
+  `__weakref__` leaves its `__slots__`.
+- **`ConfiguresBuild`**, **`ConfiguresSession`**, **`AppConfiguresBuild`** and
+  **`AppConfiguresSession`** (`redsun.containers`) - the `configure_build` and
+  `configure_session` hook points are gone with the registry and the
+  after-the-build moment.
+
+## [0.11.2] - 28-08-2026
+
+### Added
+
 - **Container hooks** - an object a session installs on its application
   container to adjust the application as a whole. Each hook point is named by
   the method it calls, and takes one provider.
@@ -66,9 +334,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   session runs on. Called only when no `QApplication` is running yet.
 
   ```python
-  class NapariApplication:
+  class BrandedApplication:
       def create_application(self, argv: list[str]) -> QApplication:
-          return get_qapp(app_name=..., app_version=...)
+          return QApplication(argv)
   ```
 
 - **`QtConfiguresApplication`** (`redsun.qt`) - adjusts the `QApplication`
@@ -159,7 +427,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `QtAppContainer._ensure_main_view`, so the main window is built and
   configured once whether reached through `run` or directly.
 
-## [0.11.1]
+## [0.11.1] - 25-08-2026
 
 ### Changed
 
@@ -175,20 +443,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   previously raised `NameError` from `typing`. Such a plan is still rejected:
   callers that already handle `UnresolvableAnnotationError` can skip it
   instead of failing the surrounding build.
-
-### Added
-
-- `BufferHandler` and `log_buffer()` (`redsun.log`) - the session's log records,
-  retained as they are emitted. The handler is installed on the `redsun` logger
-  alongside the stdout ones and keeps the most recent 10 000 records, so a
-  consumer built later in the session can still show what happened before it
-  existed.
-- `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
-  records, colour-coded by level. Buttons choose the lowest level displayed,
-  redrawing from the buffer so raising the threshold never discards anything,
-  and `Save logs...` writes every buffered record regardless of what is on
-  screen. Available from a configuration file as `plugin_name: redsun`,
-  `plugin_id: logs` under `views`.
 
 ## [0.11.0] 01-08-2026
 
@@ -596,6 +850,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0
+[0.11.2]: https://github.com/redsun-acquisition/redsun/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/redsun-acquisition/redsun/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/redsun-acquisition/redsun/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/redsun-acquisition/redsun/compare/v0.9.1...v0.10.0

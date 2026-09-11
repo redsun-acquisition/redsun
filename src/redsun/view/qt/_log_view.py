@@ -100,7 +100,8 @@ class LogView(QtView):
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
         log_buffer().sig_record.disconnect(self._on_record, missing_ok=True)
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
     @property
     def level(self) -> int:

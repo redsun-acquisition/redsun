@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from redsun.log import BufferHandler, log_buffer
+from redsun.log import BufferHandler, log_buffer, logger, set_level
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -15,9 +15,13 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def buffer() -> Iterator[BufferHandler]:
+    """Yield the session buffer, emptied, with the logger passing every level to it."""
     held = log_buffer()
     held.clear()
+    level = logger.level
+    set_level(logging.DEBUG)
     yield held
+    logger.setLevel(level)
     held.clear()
 
 
@@ -26,7 +30,7 @@ def _record(level: int, message: str) -> logging.LogRecord:
 
 
 def test_the_buffer_is_installed_on_the_redsun_logger() -> None:
-    """It is configured alongside the stdout handlers, not by a caller."""
+    """It is installed alongside the stdout handler, not by a caller."""
     assert log_buffer() in logging.getLogger("redsun").handlers
 
 

@@ -8,6 +8,7 @@ from ._container import (
 )
 from ._protocols import HasShutdown, IsInjectable, IsProvider
 from ._wiring import (
+    ComponentNotBuilt,
     Connection,
     Ports,
     SlotThread,
@@ -20,6 +21,7 @@ from ._wiring import (
 
 __all__ = [
     "CallbackType",
+    "ComponentNotBuilt",
     "Connection",
     "HasShutdown",
     "IsInjectable",

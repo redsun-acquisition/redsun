@@ -1,19 +1,33 @@
 from __future__ import annotations
 
 import logging
-import logging.config
+import sys
 from collections import deque
 from functools import cached_property
+from typing import TYPE_CHECKING, Final
 
 from psygnal import Signal
-
-__all__ = ["BufferHandler", "Loggable", "log_buffer"]
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from typing import Any, ClassVar
+
+__all__ = [
+    "BufferHandler",
+    "Loggable",
+    "add_handler",
+    "log_buffer",
+    "remove_handler",
+    "set_level",
+]
+
+DEFAULT_LEVEL: Final = "INFO"
+"""The level the ``redsun`` logger starts at."""
+
+DATE_FORMAT: Final = "%d-%m-%y|%H:%M:%S"
+"""How a record's timestamp is written."""
+
+logger = logging.getLogger("redsun")
 
 
 class GlobalFormatter(logging.Formatter):
@@ -76,22 +90,6 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
         return msg, kwargs
 
 
-class InfoFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno >= logging.INFO
-
-
-class DebugFilter(logging.Filter):
-    def __init__(self, name: str = "") -> None:
-        super().__init__(name)
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno < logging.INFO
-
-
 class BufferHandler(logging.Handler):
     """Retain the most recent log records, and announce each one as it arrives.
 
@@ -126,44 +124,41 @@ class BufferHandler(logging.Handler):
         self._records.clear()
 
 
-config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {"()": lambda: GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")}
-    },
-    "filters": {
-        "info_filter": {"()": InfoFilter},
-        "debug_filter": {"()": DebugFilter},
-    },
-    "handlers": {
-        "buffer": {"()": BufferHandler, "level": "DEBUG"},
-        "info": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["info_filter"],
-        },
-        "debug": {
-            "class": "logging.StreamHandler",
-            "level": "DEBUG",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-            "filters": ["debug_filter"],
-        },
-    },
-    "loggers": {
-        "redsun": {
-            "level": "DEBUG",
-            "propagate": True,
-            "handlers": ["info", "debug", "buffer"],
-        }
-    },
-}
+def set_level(level: int | str) -> None:
+    """Set the level of the ``redsun`` logger.
 
-logging.config.dictConfig(config)
-logger = logging.getLogger("redsun")
+    A named level is matched without regard to case.
+
+    Raises
+    ------
+    ValueError
+        If a name names no level.
+    """
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
+
+
+def add_handler(handler: logging.Handler) -> None:
+    """Send the ``redsun`` logger's records to *handler* as well.
+
+    A handler carrying no formatter of its own is given the one every other
+    destination writes through, so a record reads the same wherever it lands.
+    """
+    if handler.formatter is None:
+        handler.setFormatter(GlobalFormatter(datefmt=DATE_FORMAT))
+    logger.addHandler(handler)
+
+
+def remove_handler(handler: logging.Handler) -> None:
+    """Stop sending the ``redsun`` logger's records to *handler*.
+
+    A handler that is not installed is left alone.
+    """
+    logger.removeHandler(handler)
+
+
+logger.setLevel(DEFAULT_LEVEL)
+add_handler(logging.StreamHandler(sys.stdout))
+add_handler(BufferHandler())
 
 
 def log_buffer() -> BufferHandler:

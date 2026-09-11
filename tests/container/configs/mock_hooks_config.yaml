@@ -2,8 +2,7 @@ schema_version: 1.0
 frontend: pyqt
 session: mock-hooks-session
 hooks:
-  configure_build:
-    provider: "mock_pkg.hooks:RecordingHook"
+  greet:
+    provider: "mock_pkg.hooks:GreetingHook"
     kwargs:
       name: custom
-      after: views

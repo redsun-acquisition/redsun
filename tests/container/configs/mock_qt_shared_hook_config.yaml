@@ -1,0 +1,7 @@
+schema_version: 1.0
+frontend: pyqt
+session: mock-qt-shared-hook-session
+hooks:
+  configure_application: &shared
+    provider: "mock_pkg.hooks:QtStyleHook"
+  configure_main_view: *shared

@@ -1,0 +1,3 @@
+schema_version: 1.0
+frontend: pyside
+session: mock-conflicting-session
