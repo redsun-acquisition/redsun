@@ -11,11 +11,13 @@ from redsun.experimental import (
     DeviceMapping,
     HasPlans,
     Placement,
-    RequiresBuilt,
+    PlanEntry,
+    Requires,
     Settings,
     slot,
 )
 from redsun.presenter.plan_spec import (
+    PlanSpec,
     collect_arguments,
     create_plan_spec,
     resolve_arguments,
@@ -69,7 +71,6 @@ class MockAcquisitionView:
         self,
         name: str,
         /,
-        sources: RequiresBuilt[HasPlans],
         devices: DeviceMapping,
         callbacks: Mapping[str, CallbackType],
         settings: Settings,
@@ -78,13 +79,18 @@ class MockAcquisitionView:
         self.devices = devices
         self.callbacks = callbacks
         self.settings = settings
+        self.entries: dict[str, PlanEntry] = {}
+        self.specs: dict[str, PlanSpec] = {}
+
+    def setup(self, sources: Requires[HasPlans]) -> None:
+        """Take the plans every component offering them holds, and describe each."""
         self.entries = {
             plan: entry
             for source in sources.values()
             for plan, entry in source.plan_map().items()
         }
         self.specs = {
-            plan: create_plan_spec(entry["plan"], devices)
+            plan: create_plan_spec(entry["plan"], self.devices)
             for plan, entry in self.entries.items()
         }
 

@@ -8,7 +8,7 @@ import bluesky.plan_stubs as bps
 from bluesky.utils import MsgGenerator
 
 from redsun.engine import RunEngine
-from redsun.experimental import HasPlans, PlanEntry, RequiresBuilt, slot
+from redsun.experimental import HasPlans, PlanEntry, Requires, slot
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -24,19 +24,24 @@ class MockAcquisitionPresenter:
     `HasPlans`, each carrying the callbacks it requires.
     """
 
-    def __init__(self, name: str, /, sources: RequiresBuilt[HasPlans]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
         self.engine = RunEngine()
         self.entries: dict[str, PlanEntry] = {"stream": {"plan": self.stream}}
-        for source in sources.values():
-            for plan, entry in source.plan_map().items():
-                if plan in self.entries:
-                    raise ValueError(f"two components offer a plan called {plan!r}")
-                self.entries[plan] = entry
         self.subscribed: list[CallbackType] = []
         self.frames = 0
         self.run: Future[Any] | None = None
         self._tokens: list[int] = []
+
+    def setup(self, sources: Requires[HasPlans]) -> None:
+        """Collect the plans every other component offering them holds."""
+        for source in sources.values():
+            if source is self:
+                continue
+            for plan, entry in source.plan_map().items():
+                if plan in self.entries:
+                    raise ValueError(f"two components offer a plan called {plan!r}")
+                self.entries[plan] = entry
 
     def plan_map(self) -> Mapping[str, PlanEntry]:
         """Offer the plan this presenter owns, not the ones it collected."""

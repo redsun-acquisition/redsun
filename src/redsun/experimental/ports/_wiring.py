@@ -31,7 +31,6 @@ __all__ = [
     "ComponentNotBuilt",
     "Connection",
     "Ports",
-    "SessionNotBuilt",
     "Slot",
     "SlotThread",
     "Subscription",
@@ -67,16 +66,6 @@ class ComponentNotBuilt(WiringError):
     def __init__(self, component: str, message: str) -> None:
         super().__init__(message)
         self.component = component
-
-
-class SessionNotBuilt(LookupError):
-    """Raised when a view of the session is read before the session is built.
-
-    A component asking this while it is being constructed has asked a question
-    the session cannot answer yet, which is a mistake in the component rather
-    than something missing from the session. The build refuses it rather than
-    going on without the component.
-    """
 
 
 class Slot:

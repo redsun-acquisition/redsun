@@ -24,15 +24,14 @@ from redsun.experimental import (
     AsPresenter,
     AsView,
     DevicesOf,
+    HasSetup,
     Placement,
     Requires,
-    RequiresBuilt,
     RequiresMaybe,
     RequiresOne,
     Session,
 )
 from redsun.experimental.injection import (
-    Built,
     Devices,
     Every,
     Maybe,
@@ -94,8 +93,11 @@ class Readout:
 class Resetter:
     """Presenter driving every resettable component in the session."""
 
-    def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.resettable: Mapping[str, Resettable] = {}
+
+    def setup(self, resettable: Requires[Resettable]) -> None:
         self.resettable = resettable
 
     def reset_all(self) -> None:
@@ -104,11 +106,10 @@ class Resetter:
 
 
 class Eager:
-    """Presenter reading the answer while it is still being assembled."""
+    """Presenter asking the session a question in its constructor."""
 
     def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
         self.name = name
-        self.copy = dict(resettable)
 
 
 class Unsatisfiable:
@@ -141,11 +142,14 @@ class ImageView:
 
     placement: Placement = Somewhere()
 
-    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
-        self.peers = peers
+        self.peers: Mapping[str, Linkable] = {}
         self.zoom = 1.0
         self.linked_to: str | None = None
+
+    def setup(self, peers: Requires[Linkable]) -> None:
+        self.peers = peers
 
     def link_targets(self) -> list[str]:
         """Return what this widget's 'link to...' menu offers."""
@@ -164,10 +168,13 @@ class ImageView:
 class Bookkeeper:
     """Presenter with a reset of its own, which it never meant to offer."""
 
-    def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
-        self.resettable = resettable
+        self.resettable: Mapping[str, Resettable] = {}
         self.resets = 0
+
+    def setup(self, resettable: Requires[Resettable]) -> None:
+        self.resettable = resettable
 
     def reset(self) -> None:
         self.resets += 1
@@ -209,27 +216,37 @@ class Tolerant:
 class RoiWidget:
     """Asks for the one camera in the session and drives it."""
 
-    def __init__(self, name: str, /, camera: RequiresOne[Linkable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.camera: Linkable | None = None
+
+    def setup(self, camera: RequiresOne[Linkable]) -> None:
         self.camera = camera
 
     def zoom_to(self, zoom: float) -> None:
+        assert self.camera is not None
         self.camera.apply_camera(zoom)
 
 
 class MaybeWidget:
     """Asks for a camera it can do without."""
 
-    def __init__(self, name: str, /, camera: RequiresMaybe[Linkable] = None) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.camera: Linkable | None = None
+
+    def setup(self, camera: RequiresMaybe[Linkable] = None) -> None:
         self.camera = camera
 
 
 class ImageViewAsking:
     """Offers Linkable and asks for the one component offering it."""
 
-    def __init__(self, name: str, /, peer: RequiresOne[Linkable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.peer: Linkable | None = None
+
+    def setup(self, peer: RequiresOne[Linkable]) -> None:
         self.peer = peer
 
     def apply_camera(self, zoom: float) -> None: ...
@@ -285,16 +302,21 @@ class Forgetful:
 class NeedsCount:
     """Asks for the one countable component."""
 
-    def __init__(self, name: str, /, counter: RequiresOne[Countable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.counter: Countable | None = None
+
+    def setup(self, counter: RequiresOne[Countable]) -> None:
         self.counter = counter
 
 
 class AsksDataOnly:
     """Asks a single-answer question about a protocol with no method."""
 
-    def __init__(self, name: str, /, label: RequiresOne[DataOnly]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+
+    def setup(self, label: RequiresOne[DataOnly]) -> None: ...
 
 
 @runtime_checkable
@@ -331,15 +353,12 @@ class MotorPresenter:
 class AsksBoth:
     """Asks both censuses, which are answered over different populations."""
 
-    def __init__(
-        self,
-        name: str,
-        /,
-        motors: DevicesOf[Movable],
-        resettable: Requires[Resettable],
-    ) -> None:
+    def __init__(self, name: str, /, motors: DevicesOf[Movable]) -> None:
         self.name = name
         self.motors = motors
+        self.resettable: Mapping[str, Resettable] = {}
+
+    def setup(self, resettable: Requires[Resettable]) -> None:
         self.resettable = resettable
 
 
@@ -350,84 +369,6 @@ class MisshapenDevices:
         self, name: str, /, wrong: Annotated[list[Movable], Devices()]
     ) -> None:
         self.name = name
-
-
-class Collector:
-    """Presenter reading, while it is built, the resettable components built first."""
-
-    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
-        self.name = name
-        self.resettable = resettable
-        self.names = list(resettable)
-
-
-class SelfCollector:
-    """Resettable itself, and asking about the resettable components built first."""
-
-    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
-        self.name = name
-        self.names = list(resettable)
-
-    def reset(self) -> None: ...
-
-
-class Unplugged:
-    """Resettable, and cannot be built."""
-
-    def __init__(self, name: str, /) -> None:
-        raise RuntimeError("unplugged")
-
-    def reset(self) -> None: ...
-
-
-class ResettableView:
-    """View that can be reset, so a presenter's census would need it first."""
-
-    placement: Placement = Somewhere()
-
-    def __init__(self, name: str, /) -> None:
-        self.name = name
-
-    def reset(self) -> None: ...
-
-
-class AsksBuiltDataOnly:
-    """Asks for the components built first about a protocol with no method."""
-
-    def __init__(self, name: str, /, labels: RequiresBuilt[DataOnly]) -> None:
-        self.name = name
-
-
-class BuiltApp(Session):
-    collector: AsPresenter[Collector]
-    motor: AsPresenter[Motor]
-    readout: AsPresenter[Readout]
-    detector: AsPresenter[Detector]
-
-
-class BuiltSelfApp(Session):
-    collector: AsPresenter[SelfCollector]
-    motor: AsPresenter[Motor]
-
-
-class BuiltUnpluggedApp(Session):
-    collector: AsPresenter[Collector]
-    broken: AsPresenter[Unplugged]
-    motor: AsPresenter[Motor]
-
-
-class BuiltBackwardsApp(Session):
-    collector: AsPresenter[Collector]
-    panel: AsView[ResettableView]
-
-
-class BuiltCycleApp(Session):
-    first: AsPresenter[SelfCollector]
-    second: AsPresenter[SelfCollector]
-
-
-class BuiltDataOnlyApp(Session):
-    asks: AsPresenter[AsksBuiltDataOnly]
 
 
 class App(Session):
@@ -573,8 +514,11 @@ class Canvas:
 class WantsTheCanvas:
     """A presenter asking for the one displayable, which is a view."""
 
-    def __init__(self, name: str, /, canvas: RequiresOne[Displayable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.canvas: Displayable | None = None
+
+    def setup(self, canvas: RequiresOne[Displayable]) -> None:
         self.canvas = canvas
 
 
@@ -604,8 +548,11 @@ class BrokenCamera:
 class AsksAboutLinkables:
     """Holds the census of `Linkable`, so it can be read after the build."""
 
-    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.peers: Mapping[str, Linkable] = {}
+
+    def setup(self, peers: Requires[Linkable]) -> None:
         self.peers = peers
 
 
@@ -701,7 +648,7 @@ def test_a_mismatched_signature_is_not_a_match(
 def test_a_near_miss_explains_itself(build: BuildSession) -> None:
     """A component carrying some of the protocol reports why it was left out."""
     app = build(LooseApp)
-    rejected = app.satisfying(Resettable).rejected
+    rejected = app.rejected(Resettable)
     assert set(rejected) == {"loose"}
     assert "cannot be called as reset()" in rejected["loose"][0]
 
@@ -711,7 +658,7 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
 ) -> None:
     """Only components that nearly match are worth reporting."""
     app = build(App)
-    assert app.satisfying(Resettable).rejected == {}
+    assert app.rejected(Resettable) == {}
 
 
 @pytest.mark.parametrize(
@@ -719,9 +666,9 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
     [
         pytest.param(
             EagerApp,
-            LookupError,
-            "not known until every component exists",
-            id="census-read-while-built",
+            TypeError,
+            "asks the session a question in its constructor",
+            id="question-in-a-constructor",
         ),
         pytest.param(
             UnsatisfiableApp,
@@ -792,24 +739,6 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
             "is built before a view",
             id="one-answered-by-a-later-layer",
         ),
-        pytest.param(
-            BuiltBackwardsApp,
-            TypeError,
-            "is built before a view",
-            id="built-answered-by-a-later-layer",
-        ),
-        pytest.param(
-            BuiltCycleApp,
-            TypeError,
-            "built from each other",
-            id="built-askers-answering-each-other",
-        ),
-        pytest.param(
-            BuiltDataOnlyApp,
-            TypeError,
-            "declares no method",
-            id="built-about-a-protocol-with-no-method",
-        ),
     ],
 )
 def test_the_session_refuses_to_build(
@@ -832,14 +761,13 @@ def test_requires_expands_to_an_annotated_mapping() -> None:
         (ImageView, "peers", Question(Linkable, Every())),
         (RoiWidget, "camera", Question(Linkable, One())),
         (MaybeWidget, "camera", Question(Linkable, Maybe())),
-        (Collector, "resettable", Question(Resettable, Built())),
     ],
 )
 def test_each_spelling_carries_its_cardinality(
-    cls: type, param: str, expected: Question
+    cls: type[HasSetup[...]], param: str, expected: Question
 ) -> None:
     """Read from the annotation, which is where the container finds it."""
-    hint = get_type_hints(cls.__init__, include_extras=True)[param]  # type: ignore[misc]
+    hint = get_type_hints(cls.setup, include_extras=True)[param]
     assert question_of(hint) == expected
 
 
@@ -942,27 +870,6 @@ def test_a_device_census_and_a_component_census_are_different_questions() -> Non
     assert key_for(Question(Movable, Devices())) is not key_for(
         Question(Movable, Every())
     )
-
-
-def test_the_built_census_is_complete_while_the_component_is_built(
-    build: BuildSession,
-) -> None:
-    """Declared above the components answering it, the asker is built after them."""
-    app = build(BuiltApp)
-    assert app.collector.names == ["motor", "detector"]
-    assert app.collector.resettable == {"motor": app.motor, "detector": app.detector}
-
-
-def test_the_asker_is_not_in_its_own_built_census(build: BuildSession) -> None:
-    app = build(BuiltSelfApp)
-    assert app.collector.names == ["motor"]
-
-
-def test_a_component_that_failed_is_absent_from_the_built_census(
-    build: BuildSession,
-) -> None:
-    app = build(BuiltUnpluggedApp)
-    assert app.collector.names == ["motor"]
 
 
 def test_a_keyword_only_component_asks_the_same_question() -> None:

@@ -32,7 +32,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
 | Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
-| Asking | `Requires`, `RequiresBuilt`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
+| Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
 | Session | `DeviceMapping`, `CallbackType`, `slot` |
 | Offering plans | `PlanEntry`, `HasPlans` |
 
@@ -767,10 +767,11 @@ and you get back every component that has it, by name.
 ordinary mapping of names to components. Your editor knows it, `for name, comp
 in ...items()` works, and you need no framework API to read it.
 
-The answer is a **live view**, not a copy. It cannot be complete until every
-component exists, so you hold it and read it when your component runs. Reading
-it during construction raises `SessionNotBuilt` rather than handing you half an
-answer.
+A question is asked in `setup`, not in the constructor, because the answer
+depends on what the session holds and a component is constructed before its
+peers are. By `setup` every component exists, so the mapping arrives complete
+and you may read it straight away. A constructor asking one is refused, naming
+the parameter and telling you to ask in `setup`.
 
 ### Components that answer their own question
 
@@ -787,10 +788,12 @@ class Linkable(Protocol):
 
 
 class ImageView:
-    def __init__(self, name: str, /, peers: Requires[Linkable]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
-        self.peers = peers
         self.linked_to: str | None = None
+
+    def setup(self, peers: Requires[Linkable]) -> None:
+        self.peers = peers
 
     def link_targets(self) -> list[str]:
         """Return what this widget's 'link to...' menu offers."""
@@ -809,21 +812,20 @@ nobody wrote a list.
 
 ### Four things that can go wrong
 
-**You read the answer too early.** The most likely mistake, so it is the one the
+**You ask in the constructor.** The most likely mistake, so it is the one the
 container refuses outright:
 
 ```python
-def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
-    self.names = list(resettable)  # LookupError
+def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None: ...
 ```
 
 ```text
-LookupError: the components satisfying 'Resettable' are not known until every
-component exists. Hold this view and read it when the component runs, rather
-than copying it while it is built.
+TypeError: Resetter.resettable asks the session a question in its constructor:
+every 'Resettable'. Only the devices are known before the components are built;
+ask for this in 'setup'.
 ```
 
-Keep the view, read it later.
+Move the parameter to `setup`.
 
 **The answer includes you.** If your component has the capability it is asking
 about, it is in its own answer:
@@ -866,7 +868,7 @@ This is not a match, and the container will tell you why if you ask:
 ```python
 >>> "loose" in session.resettable
 False
->>> session.resettable.rejected
+>>> session.rejected(Resettable)
 {'loose': ["reset(hard) cannot be called as reset(): missing a required argument: 'hard'"]}
 ```
 
@@ -907,36 +909,11 @@ asks it:
             self.motors = motors
     ```
 
-The two censuses look alike and behave differently in one way that matters.
-Devices are built before anything else, so this one is *not* a live view: it
-arrives complete and you may read it in `__init__`, which is exactly where the
-loop it replaces used to run.
+The two censuses differ in one way that matters. Devices are built before
+anything else, so this one may be asked for in the constructor as well as in
+`setup`, which is exactly where the loop it replaces used to run.
 
 Ask for `DeviceMapping` when you want every device rather than a kind of them.
-
-### The same question, answered before you are built
-
-`Requires[P]` is a live view because a component may be part of its own answer.
-When you want every *other* component with the capability, and want it in
-`__init__`, ask `RequiresBuilt[P]`:
-
-```python
-class SessionPresenter:
-    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
-        self.names = sorted(resettable)  # complete already
-```
-
-The session builds every other component satisfying `Resettable` first, so the
-mapping arrives complete, in the order the session declares them. You are never
-in it, and a component that failed to build is absent. Building the others
-first also means:
-
-- a component in a later layer that satisfies the protocol is refused before
-  anything is built, since it cannot be built first;
-- two components that each satisfy the protocol and each ask are built from
-  each other, and the session refuses them;
-- the protocol must declare a method, since which components answer is decided
-  from their classes before any of them exists.
 
 ## Asking for one component
 

@@ -12,9 +12,10 @@ from typing import (
 
 from typing_extensions import TypeForm
 
-from redsun.experimental.injection import Maybe, key_for, question_of
+from redsun.experimental.injection import Devices, Maybe, key_for, question_of
 
 from ._declarations import takes_name_by_keyword
+from ._protocols import HasSetup
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from redsun.experimental.injection import Question
 
     from ._declarations import Declaration, Key
-    from ._protocols import HasSetup
 
 __all__ = [
     "constructor",
@@ -34,6 +34,7 @@ __all__ = [
     "provider",
     "requirements",
     "resolved",
+    "setup_call",
     "synthesize",
 ]
 
@@ -123,7 +124,9 @@ def injectable(
         If a remaining parameter carries no annotation.
     """
     bound = ("self", "name") if binds_name else ("self",)
-    return wanted_from(constructor(cls), cls.__name__, cfg_kwargs, bound)
+    return wanted_from(
+        constructor(cls), cls.__name__, cfg_kwargs, bound, refuse_questions=True
+    )
 
 
 def get_setup_params(cls: type[HasSetup[...]]) -> dict[str, TypeForm[Any]]:
@@ -144,6 +147,7 @@ def wanted_from(
     owner: str,
     cfg_kwargs: Mapping[str, Any],
     bound: tuple[str, ...],
+    refuse_questions: bool = False,
 ) -> dict[str, TypeForm[Any]]:
     """Return the parameters of *signature* the session is responsible for."""
     wanted: dict[str, TypeForm[Any]] = {}
@@ -160,6 +164,12 @@ def wanted_from(
         hint = param.annotation
         question = question_of(hint)
         if question is not None:
+            if refuse_questions and not isinstance(question.marker, Devices):
+                raise TypeError(
+                    f"{owner}.{pname} asks the session a question in its "
+                    f"constructor: {question}. Only the devices are known "
+                    "before the components are built; ask for this in 'setup'."
+                )
             key = key_for(question)
             wanted[pname] = key | None if isinstance(question.marker, Maybe) else key
             continue
@@ -172,13 +182,24 @@ def wanted_from(
 def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:
     """Return each question the declarations ask, and who asks it.
 
+    A question is asked in `setup`, where every component exists, except one
+    about the devices, which a constructor may ask because the devices are
+    built first.
+
     One entry per question, not per component: the answer is the same for every
     component that asks, and the names are what an unanswerable question is
     reported against.
     """
     found: dict[Question, list[str]] = {}
     for declaration in declarations:
-        for pname, param in constructor(declaration.cls).parameters.items():
+        asked = list(constructor(declaration.cls).parameters.items())
+        if issubclass(declaration.cls, HasSetup):
+            asked += list(
+                resolved(
+                    declaration.cls.setup, f"{declaration.cls.__qualname__}.setup"
+                ).parameters.items()
+            )
+        for pname, param in asked:
             if pname in declaration.cfg_kwargs:
                 continue
             question = question_of(param.annotation)
@@ -247,6 +268,21 @@ def factory(
         return instance
 
     return synthesize(build, params, declaration.key, f"build_{declaration.name}")
+
+
+def setup_call(instance: HasSetup[...], name: str) -> Callable[..., Any]:
+    """Return the callable the store fills and calls to set *instance* up.
+
+    The parameters are re-annotated with the keys the store answers, the way a
+    constructor's are, since a question is written as an ``Annotated`` alias
+    that the store does not key on.
+    """
+    params = get_setup_params(type(instance))
+
+    def run(**deps: Any) -> None:
+        instance.setup(**deps)
+
+    return synthesize(run, params, None, f"set_up_{name}")
 
 
 def provider(cls: type, name: str) -> Callable[..., Any]:

@@ -22,13 +22,13 @@ from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
 from redsun.experimental._settings import Settings
 from redsun.experimental.injection import (
-    Built,
     Devices,
     Maybe,
     One,
-    Satisfying,
     key_for,
     register_shared,
+    rejected,
+    satisfying,
     shared_keys,
 )
 from redsun.experimental.ports import (
@@ -36,7 +36,6 @@ from redsun.experimental.ports import (
     SLOT_THREAD_ATTR,
     ComponentNotBuilt,
     Connection,
-    SessionNotBuilt,
     Slot,
     Subscription,
     Unconnected,
@@ -66,6 +65,7 @@ from ._factories import (
     optional_arg,
     provider,
     requirements,
+    setup_call,
 )
 from ._frontend import Frontend
 from ._plugins import load_providers
@@ -213,7 +213,6 @@ class Session(BuildableSession):
         "_not_set_up",
         "_releases",
         "_report",
-        "_sealed",
         "_session_config",
         "_settings",
         "_shared",
@@ -277,7 +276,6 @@ class Session(BuildableSession):
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
-        self._sealed = False
         self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
         self._connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
@@ -591,7 +589,6 @@ class Session(BuildableSession):
                 if declaration.instance is not None
             }
         )
-        self._seal()
         self._baseline = self._serialized()
 
     def apply_wiring(self) -> None:
@@ -680,7 +677,6 @@ class Session(BuildableSession):
         nothing: a release is dropped as it runs.
         """
         self._is_built = False
-        self._sealed = False
         self.disconnect_all()
         self._releases.close()
         self._callbacks.clear()
@@ -1073,13 +1069,13 @@ class Session(BuildableSession):
             ]
         return Unconnected(signals=signals, slots=slots)
 
-    def satisfying(self, protocol: type) -> Satisfying:
-        """Return a live view of the built components satisfying *protocol*."""
-        return Satisfying(protocol, self._built_components, lambda: self._sealed)
+    def satisfying(self, protocol: type) -> dict[str, Any]:
+        """Return the built components satisfying *protocol*, by name."""
+        return satisfying(self._built_components, protocol)
 
-    def _seal(self) -> None:
-        """Mark the build complete, making the live views readable."""
-        self._sealed = True
+    def rejected(self, protocol: type) -> dict[str, list[str]]:
+        """Return why each component that nearly satisfies *protocol* does not."""
+        return rejected(self._built_components, protocol)
 
     def disconnect_all(self) -> None:
         """Undo every connection and subscription made through this session."""
@@ -1096,13 +1092,6 @@ class Session(BuildableSession):
             relay.disconnect()
         self._subscriptions.clear()
         self._subscription_records.clear()
-
-    def _built(self, layer: Layer) -> dict[str, Any]:
-        return {
-            d.name: d.instance
-            for d in self._declarations.values()
-            if d.kind is layer and d.instance is not None
-        }
 
     def _components(self) -> list[Declaration]:
         return [d for d in self._declarations.values() if d.kind is not Layer.DEVICE]
@@ -1151,7 +1140,7 @@ class Session(BuildableSession):
                 )
             else:
                 try:
-                    store.inject(instance.setup)()
+                    store.inject(setup_call(instance, declaration.name))()
                     continue
                 except Exception as e:  # noqa: BLE001 - a setup must not abort the app
                     self._not_set_up[declaration.name] = e
@@ -1193,10 +1182,6 @@ class Session(BuildableSession):
                 continue
             try:
                 instance = store.inject(factory(declaration, self._on_built))()
-            except SessionNotBuilt:
-                # a component asking the session a question it cannot answer
-                # yet is written wrongly, which is not a part being absent
-                raise
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
                 self._skip(declaration, e)
                 continue
@@ -1319,22 +1304,6 @@ class Session(BuildableSession):
                 target = by_type.get(wanted)
                 if target is not None and target is not declaration:
                     needs[declaration.name].add(target.name)
-        for question, askers in requirements(declarations).items():
-            if isinstance(question.marker, Built):
-                answering = {
-                    d.name
-                    for d in declarations
-                    if _structural.satisfies(d.cls, question.protocol)
-                }
-                for asker in askers:
-                    needs[asker] |= answering - {asker}
-                continue
-            chosen = self._answers.get(question)
-            if chosen is None:
-                continue
-            for asker in askers:
-                if asker != chosen.name:
-                    needs[asker].add(chosen.name)
         return needs
 
     def _check_layers(self, declarations: list[Declaration]) -> None:
@@ -1364,72 +1333,53 @@ class Session(BuildableSession):
                 if target is None:
                     continue
                 refuse_backwards(declaration, target, where)
-        for question, askers in requirements(declarations).items():
-            if not isinstance(question.marker, Built):
-                continue
-            answering = [
-                d
-                for d in declarations
-                if _structural.satisfies(d.cls, question.protocol)
-            ]
-            where = f"its census of {question.protocol.__name__!r}"
-            for asker in askers:
-                origin = next(d for d in declarations if d.name == asker)
-                for target in answering:
-                    if target is not origin:
-                        refuse_backwards(origin, target, where)
 
     def _answer(self, store: Store, declarations: list[Declaration]) -> None:
         """Answer each question a component asks about the session.
 
         One answer per question, not per component that asks. A census of the
-        components is answered with a live view, because a component may be part
-        of its own answer; one of the devices is answered with the mapping
-        itself, since every device exists before any component is built; and
-        one of the components built first with a copy of those built so far,
-        which the ordering has made every answering component but the asker.
+        components reads the components built so far, which by `setup` is every
+        one of them; one of the devices reads the devices, which exist before
+        any component and which a constructor may therefore ask about.
         """
         for question, askers in requirements(declarations).items():
             key = key_for(question)
-            if isinstance(question.marker, Devices):
-                store.register_provider(
-                    self._device_census(question.protocol), type_hint=key
-                )
-            elif isinstance(question.marker, Built):
-                store.register_provider(
-                    self._built_census(question.protocol), type_hint=key
-                )
-            elif isinstance(question.marker, (One, Maybe)):
+            if isinstance(question.marker, (One, Maybe)):
                 self._select(store, question, key, askers, declarations)
-            else:
-                store.register_provider(self._census(question.protocol), type_hint=key)
+                continue
+            population = (
+                (lambda: self._devices)
+                if isinstance(question.marker, Devices)
+                else self._constructed
+            )
+            store.register_provider(
+                self._census(question.protocol, population), type_hint=key
+            )
 
-    def _census(self, protocol: type) -> Callable[[], Any]:
+    def _census(
+        self, protocol: type, population: Callable[[], Mapping[str, Any]]
+    ) -> Callable[[], Any]:
+        """Return a reader answering with the members of *population* matching."""
+
         def read() -> Any:
-            return self.satisfying(protocol)
+            return satisfying(population(), protocol)
 
         return read
 
-    def _device_census(self, protocol: type) -> Callable[[], Any]:
-        def read() -> Any:
-            return {
-                name: device
-                for name, device in self._devices.items()
-                if _structural.satisfies(device, protocol)
-            }
+    def _constructed(self) -> dict[str, Any]:
+        """Return every component built so far, by name."""
+        return {
+            declaration.name: declaration.instance
+            for declaration in self._components()
+            if declaration.instance is not None
+        }
 
-        return read
-
-    def _built_census(self, protocol: type) -> Callable[[], Any]:
-        def read() -> Any:
-            return {
-                declaration.name: declaration.instance
-                for declaration in self._components()
-                if declaration.instance is not None
-                and _structural.satisfies(declaration.instance, protocol)
-            }
-
-        return read
+    def _built(self, layer: Layer) -> dict[str, Any]:
+        return {
+            d.name: d.instance
+            for d in self._declarations.values()
+            if d.kind is layer and d.instance is not None
+        }
 
     def _select(
         self,

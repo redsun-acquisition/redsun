@@ -161,9 +161,9 @@ listed in the [changelog](changelog.md).
   way, by calling it or by a signal.
 
 - `Requires[P]` - the components of the session that satisfy a protocol, spelled
-  `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
-  made, so a component that failed is absent from it. A component satisfying *P*
-  appears in its own answer.
+  `Annotated[Mapping[str, P], Every()]`. Asked for in `setup`, where every
+  component exists, so the mapping arrives complete; a component that failed to
+  build is absent, and a component satisfying *P* appears in its own answer.
 
 - `RequiresOne[P]` and `RequiresMaybe[P]` - the same question expecting a single
   answer, and ordinary dependencies rather than live views: the component
@@ -180,23 +180,13 @@ listed in the [changelog](changelog.md).
   a live view, so it may be read in `__init__`. Ask for `DeviceMapping` to
   receive every device unfiltered.
 
-- `RequiresBuilt[P]` - every other component that satisfies a protocol, spelled
-  `Annotated[Mapping[str, P], Built()]`. It is not a live view: the asker is
-  built after every other component satisfying *P*, so the mapping arrives
-  complete and may be read in `__init__`. The asker is absent from its own
-  answer, and so is a component that failed to build. A component satisfying
-  *P* in a later layer than the asker, two askers that each satisfy *P*, and a
-  *P* declaring no method are refused before anything is built.
-
-- `satisfies` and `Satisfying.rejected` - the membership check and why each near
-  miss was left out. Membership is structural rather than `isinstance`: an
+- `satisfies`, `Session.satisfying` and `Session.rejected` - the membership
+  check, the components matching a protocol, and why each near miss was left
+  out. Membership is structural rather than `isinstance`: an
   implementation must accept every call the protocol permits, so a renamed
   parameter or an extra required one is not a match, while an extra defaulted
   parameter is. Types are not compared, which a type checker does at the call
   site. *P* must be `runtime_checkable`.
-
-- `SessionNotBuilt` - the `LookupError` a live view of the session raises when a
-  component reads it during its own construction.
 
 - `Placement`, `Frontend` and `Frontend.requires` - what a view asks the
   frontend to attach it at, the toolkit a container is built against, and the
@@ -489,6 +479,14 @@ listed in the [changelog](changelog.md).
   or `RequiresMaybe` question.
 
 ### Changed
+
+- A question about the session is asked in `setup` rather than in a
+  constructor: `Requires[P]`, `RequiresOne[P]` and `RequiresMaybe[P]` in a
+  constructor are refused, naming the parameter. `DevicesOf[P]` stays allowed
+  in both, since the devices exist before any component. Nothing is a live view
+  any more, so `Satisfying`, `SessionNotBuilt` and the seal that gated them are
+  gone, and `Session.satisfying` returns a plain mapping beside the new
+  `Session.rejected`.
 
 - A component asking for a type shared by a component that failed to build is
   skipped and logged, as one asking for the failed component itself already

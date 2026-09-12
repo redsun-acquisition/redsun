@@ -14,17 +14,13 @@ from typing import (
 )
 
 from redsun._structural import members, methods, problems, satisfies
-from redsun.experimental.ports import SessionNotBuilt
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-
     from typing_extensions import TypeForm
 
     from redsun.experimental.session import Key
 
 __all__ = [
-    "Built",
     "Devices",
     "DevicesOf",
     "Every",
@@ -32,12 +28,12 @@ __all__ = [
     "One",
     "Question",
     "Requires",
-    "RequiresBuilt",
     "RequiresMaybe",
     "RequiresOne",
-    "Satisfying",
     "key_for",
     "question_of",
+    "rejected",
+    "satisfying",
 ]
 
 
@@ -63,11 +59,6 @@ class Maybe(Every):
 @dataclass(frozen=True)
 class Devices(Every):
     """Marks a question the devices answer rather than the components."""
-
-
-@dataclass(frozen=True)
-class Built(Every):
-    """Marks a question the components built before the asker answer."""
 
 
 P = TypeVar("P")
@@ -148,24 +139,6 @@ Ask for `redsun.experimental.DeviceMapping` instead to receive every device,
 unfiltered.
 """
 
-RequiresBuilt: TypeAlias = Annotated[Mapping[str, P], Built()]
-"""Every other component of the session that satisfies *P*, by name.
-
-```python
-class SessionPresenter:
-    def __init__(self, name: str, /, resettable: RequiresBuilt[Resettable]) -> None:
-        self.names = sorted(resettable)
-```
-
-Unlike `Requires`, this is not a live view: every other component satisfying
-*P* is built before the asker, so the mapping arrives complete and may be read
-while the component is built. The asker is never in its own answer, and a
-component that failed to build is absent.
-
-*P* must declare at least one method, since which components answer is decided
-from their classes before anything is built.
-"""
-
 
 @dataclass(frozen=True)
 class Question:
@@ -183,66 +156,28 @@ class Question:
         return f"{self.kind} {self.protocol.__name__!r}"
 
 
-class Satisfying(Mapping[str, Any]):
-    """Live view of the components satisfying a protocol.
+def satisfying(components: Mapping[str, Any], protocol: type) -> dict[str, Any]:
+    """Return the components of *components* that satisfy *protocol*, by name."""
+    return {
+        name: component
+        for name, component in components.items()
+        if satisfies(component, protocol)
+    }
 
-    Raises
-    ------
-    LookupError
-        If read before every component exists.
+
+def rejected(components: Mapping[str, Any], protocol: type) -> dict[str, list[str]]:
+    """Return why each component that nearly matched *protocol* was left out.
+
+    Only components carrying some of the protocol's members appear, so a
+    component missing all of them does not drown out a near miss.
     """
-
-    def __init__(
-        self,
-        protocol: type,
-        components: Mapping[str, object],
-        ready: Callable[[], bool],
-    ) -> None:
-        self._protocol = protocol
-        self._components = components
-        self._ready = ready
-
-    def _complete(self) -> dict[str, Any]:
-        if not self._ready():
-            raise SessionNotBuilt(
-                f"the components satisfying {self._protocol.__name__!r} are not "
-                "known until every component exists. Hold this view and read it "
-                "when the component runs, rather than copying it while it is "
-                "built."
-            )
-        return {
-            name: component
-            for name, component in self._components.items()
-            if satisfies(component, self._protocol)
-        }
-
-    @property
-    def rejected(self) -> dict[str, list[str]]:
-        """Why each component that nearly matched was left out.
-
-        Only components carrying some of the protocol's members appear, so a
-        component missing all of them does not drown out a near miss.
-        """
-        wanted = members(self._protocol)
-        near: dict[str, list[str]] = {}
-        for name, component in self._components.items():
-            reasons = problems(component, self._protocol)
-            if reasons and any(hasattr(component, member) for member in wanted):
-                near[name] = reasons
-        return near
-
-    def __getitem__(self, key: str) -> Any:
-        return self._complete()[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._complete())
-
-    def __len__(self) -> int:
-        return len(self._complete())
-
-    def __repr__(self) -> str:
-        state = "live" if self._ready() else "pending"
-        return f"Satisfying({self._protocol.__name__}, {state})"
+    wanted = members(protocol)
+    near: dict[str, list[str]] = {}
+    for name, component in components.items():
+        reasons = problems(component, protocol)
+        if reasons and any(hasattr(component, member) for member in wanted):
+            near[name] = reasons
+    return near
 
 
 def question_of(hint: TypeForm[Any]) -> Question | None:
@@ -291,9 +226,7 @@ def protocol_of(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
         return options[0]
     args = get_args(inner)
     if get_origin(inner) is not Mapping or len(args) != 2 or args[0] is not str:
-        alias = {Devices: "DevicesOf", Built: "RequiresBuilt"}.get(
-            type(marker), "Requires"
-        )
+        alias = "DevicesOf" if isinstance(marker, Devices) else "Requires"
         raise TypeError(
             f"{hint} is marked with {type(marker).__name__}() but is not a "
             f"'Mapping[str, P]'. Write '{alias}[P]', which expands to the right "
@@ -317,7 +250,7 @@ def validate(protocol: type, marker: Every) -> None:
             "a protocol is matched structurally, and only one decorated with "
             "'typing.runtime_checkable' declares that it is meant to be."
         )
-    if isinstance(marker, (One, Maybe, Built)) and not methods(protocol):
+    if isinstance(marker, (One, Maybe)) and not methods(protocol):
         raise TypeError(
             f"{protocol.__name__!r} declares no method, so which components "
             "answer cannot be decided before they are built. Ask with "
@@ -328,7 +261,6 @@ def validate(protocol: type, marker: Every) -> None:
 SUPERTYPES: dict[str, Any] = {
     "every": Mapping[str, Any],
     "devices": Mapping[str, Any],
-    "built": Mapping[str, Any],
 }
 KEYS: dict[Question, Key] = {}
 
