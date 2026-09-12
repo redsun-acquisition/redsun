@@ -4,7 +4,7 @@ import html
 import logging
 from typing import TYPE_CHECKING
 
-from qtpy import QtGui
+from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
 from redsun.log import GlobalFormatter, log_buffer
@@ -25,13 +25,32 @@ _LEVELS: tuple[tuple[str, int], ...] = (
     ("CRITICAL", logging.CRITICAL),
 )
 
-_COLORS: dict[int, str] = {
-    logging.DEBUG: "gray",
-    logging.INFO: "blue",
-    logging.WARNING: "orange",
-    logging.ERROR: "red",
-    logging.CRITICAL: "purple",
+# TODO: these hardcoded color encodings
+# are not really great. at some point
+# a smarter solution would be preferred.
+# especially because when writing logs to file,
+# these colors seem to be part of the written file as well
+# (although maybe this is not such a bad thing after all)
+_ON_LIGHT: dict[int, str] = {
+    logging.DEBUG: "#5c5c5c",
+    logging.INFO: "#0b3d91",
+    logging.WARNING: "#8a4b00",
+    logging.ERROR: "#b3261e",
+    logging.CRITICAL: "#7b1fa2",
 }
+"""Level colours for a light console, each at least 6:1 against white."""
+
+_ON_DARK: dict[int, str] = {
+    logging.DEBUG: "#b0b0b0",
+    logging.INFO: "#9ecbff",
+    logging.WARNING: "#ffb95c",
+    logging.ERROR: "#ff8a80",
+    logging.CRITICAL: "#e0a3ff",
+}
+"""Level colours for a dark console, each at least 6:1 against near-black."""
+
+_MID_LIGHTNESS = 128
+"""Above this the console background counts as light."""
 
 
 class LogView(QtView):
@@ -42,6 +61,11 @@ class LogView(QtView):
     chooses the lowest level displayed, and re-reading the buffer rather than
     the text edit means raising the threshold and lowering it again brings
     records back.
+
+    A record is coloured by its level, in one of two sets chosen from the
+    console's own background, so the text stays legible under a light and a
+    dark palette alike. Changing the palette while the view is open redraws
+    it.
 
     Parameters
     ----------
@@ -97,6 +121,13 @@ class LogView(QtView):
         # of the buffer on its own: a view is never asked to shut down
         buffer.sig_record.connect(self._on_record, thread="main")
 
+    def changeEvent(self, event: QtCore.QEvent | None) -> None:
+        """Redraw in the colours of the palette the console now carries."""
+        if event is not None:
+            super().changeEvent(event)
+            if event.type() == QtCore.QEvent.Type.PaletteChange:
+                self._render(log_buffer().records)
+
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
         log_buffer().sig_record.disconnect(self._on_record, missing_ok=True)
@@ -147,8 +178,15 @@ class LogView(QtView):
             if record.levelno >= self._level:
                 self._append(record)
 
+    @property
+    def colors(self) -> dict[int, str]:
+        """The level colours in use, chosen from the console's background."""
+        base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
+        return _ON_LIGHT if base.lightness() >= _MID_LIGHTNESS else _ON_DARK
+
     def _append(self, record: logging.LogRecord) -> None:
-        color = _COLORS.get(record.levelno, "black")
+        colors = self.colors
+        color = colors.get(record.levelno, colors[logging.INFO])
         text = html.escape(self._formatter.format(record))
         self._console.appendHtml(f'<pre><font color="{color}">{text}</font></pre>')
 

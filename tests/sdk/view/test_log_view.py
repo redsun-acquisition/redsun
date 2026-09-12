@@ -6,9 +6,11 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
+from qtpy import QtCore, QtGui
 
 from redsun.log import log_buffer, logger, set_level
 from redsun.view import ViewPosition
+from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
 from redsun.view.qt.builtins import LogView
 
 if TYPE_CHECKING:
@@ -172,3 +174,51 @@ def test_choosing_a_level_in_the_selector_filters_the_console(
     assert view.level == logging.CRITICAL
     assert "a critical line" in text
     assert "an info line" not in text
+
+
+def _repaint(view: LogView, background: str) -> None:
+    """Give the console a *background* and let it react to the new palette."""
+    palette = view._console.palette()
+    palette.setColor(QtGui.QPalette.ColorRole.Base, QtGui.QColor(background))
+    view._console.setPalette(palette)
+    view.changeEvent(QtCore.QEvent(QtCore.QEvent.Type.PaletteChange))
+
+
+@pytest.mark.parametrize(
+    ("background", "expected"),
+    [("#ffffff", _ON_LIGHT), ("#1e1e1e", _ON_DARK)],
+)
+def test_the_colours_follow_the_console_background(
+    background: str,
+    expected: dict[int, str],
+    make_view: Callable[[], LogView],
+) -> None:
+    """A light console and a dark one need different colours to stay legible."""
+    view = make_view()
+
+    _repaint(view, background)
+
+    assert view.colors == expected
+
+
+def _rendered(view: LogView) -> str:
+    """Return the console's rich text, which carries the colour of each record."""
+    document = view._console.document()
+    assert document is not None
+    return document.toHtml()
+
+
+def test_a_palette_change_redraws_what_is_on_screen(
+    make_view: Callable[[], LogView], logs: logging.Logger
+) -> None:
+    """A record drawn for a light console is repainted for a dark one."""
+    view = make_view()
+    _repaint(view, "#ffffff")
+    logs.error("the detector answered nothing")
+    assert _ON_LIGHT[logging.ERROR] in _rendered(view)
+
+    _repaint(view, "#1e1e1e")
+
+    html = _rendered(view)
+    assert _ON_DARK[logging.ERROR] in html
+    assert _ON_LIGHT[logging.ERROR] not in html

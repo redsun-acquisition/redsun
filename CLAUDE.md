@@ -14,8 +14,11 @@ Things the tree does not show:
 ## Build & validate
 
 `tox` is the entry point, configured under `[tool.tox]` in `pyproject.toml`.
-Every environment installs from `uv.lock` through `tox-uv`, so a local run uses
-the versions CI resolves rather than whatever the project `.venv` accumulated:
+Every environment installs from `uv.lock` through `tox-uv-bare`, so a local run
+uses the versions CI resolves rather than whatever the project `.venv`
+accumulated. The plugin is `tox-uv-bare` rather than `tox-uv` so that the `uv`
+it drives is the one on `PATH`: `tox-uv` depends on the `uv` package, which puts
+a second `uv.exe` in the project `.venv` and shadows the installed one:
 
 ```bash
 uv run tox                       # lint, both mypy legs, tests, docs

@@ -251,3 +251,26 @@ def test_set_level_refuses_what_names_no_level(
 ) -> None:
     with pytest.raises(error):
         set_level(level)  # type: ignore[arg-type]
+
+
+def test_an_exception_carries_its_traceback(caplog: LogCaptureFixture) -> None:
+    """A record logged from an except block is formatted with the traceback."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        try:
+            raise RuntimeError("the detector answered nothing")
+        except RuntimeError:
+            logger.exception("acquisition failed")
+
+    formatted = GlobalFormatter(datefmt=DATE_FORMAT).format(caplog.records[-1])
+    assert "acquisition failed" in formatted
+    assert "Traceback (most recent call last):" in formatted
+    assert "RuntimeError: the detector answered nothing" in formatted
+
+
+def test_a_record_carrying_a_stack_shows_it(caplog: LogCaptureFixture) -> None:
+    """``stack_info=True`` reaches the reader rather than being dropped."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        logger.warning("where did this come from", stack_info=True)
+
+    formatted = GlobalFormatter(datefmt=DATE_FORMAT).format(caplog.records[-1])
+    assert "Stack (most recent call last):" in formatted

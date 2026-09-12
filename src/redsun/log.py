@@ -56,7 +56,18 @@ class GlobalFormatter(logging.Formatter):
         if record.levelno != logging.INFO:
             fmt += " (%(filename)s:%(lineno)d)"
         formatted = fmt % record.__dict__
-        return formatted
+        return "\n".join([formatted, *self.context(record)])
+
+    def context(self, record: logging.LogRecord) -> list[str]:
+        """Return the traceback and stack lines *record* carries, if any."""
+        lines: list[str] = []
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            lines.append(record.exc_text)
+        if record.stack_info:
+            lines.append(self.formatStack(record.stack_info))
+        return lines
 
 
 class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):

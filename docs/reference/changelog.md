@@ -17,11 +17,19 @@ Dates are specified in the format `DD-MM-YYYY`.
   consumer built later in the session can still show what happened before it
   existed.
 - `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
-  records, colour-coded by level. Buttons choose the lowest level displayed,
+  records, colour-coded by level in one of two sets chosen from the console's
+  own background, so the text keeps its contrast under a light and a dark
+  palette alike, and redrawn when the palette changes. Buttons choose the lowest level displayed,
   redrawing from the buffer so raising the threshold never discards anything,
   and `Save logs...` writes every buffered record regardless of what is on
   screen. Available from a configuration file as `plugin_name: redsun`,
   `plugin_id: logs` under `views`.
+
+### Fixed
+
+- **`GlobalFormatter.format`** (`redsun.log`) appends the traceback of a record
+  carrying one, and the stack of a record logged with `stack_info=True`, so a
+  `logger.exception(...)` call reaches stdout and `LogView` with both.
 
 ## [0.12.2] - 07-09-2026
 
