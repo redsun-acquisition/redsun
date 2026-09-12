@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, NewType
 
+import pydantic
 import pytest
 from psygnal import Signal
 
@@ -50,6 +51,49 @@ class Taking:
 
     def setup(self, readings: Readings) -> None:
         self.readings = readings
+
+
+class TakingModel(pydantic.BaseModel):
+    """Presenter holding what `setup` gives it in a private attribute."""
+
+    name: str
+    _readings: Readings | None = pydantic.PrivateAttr(default=None)
+
+    @property
+    def readings(self) -> Readings | None:
+        return self._readings
+
+    def setup(self, readings: Readings) -> None:
+        self._readings = readings
+
+
+class FieldModel(pydantic.BaseModel):
+    """Presenter declaring the shared type as a field, which is a constructor."""
+
+    name: str
+    readings: Readings | None = None
+
+
+@dataclass
+class TakingDataclass:
+    """Presenter keeping the field out of its generated `__init__`."""
+
+    name: str
+    readings: Readings | None = field(default=None, init=False)
+
+    def setup(self, readings: Readings) -> None:
+        self.readings = readings
+
+
+@dataclass(frozen=True, slots=True)
+class FrozenTaking:
+    """Frozen and slotted, so `setup` assigns around the frozen instance."""
+
+    name: str
+    readings: Readings | None = field(default=None, init=False)
+
+    def setup(self, readings: Readings) -> None:
+        object.__setattr__(self, "readings", readings)
 
 
 class Failing:
@@ -114,13 +158,36 @@ class Calling:
     sig_moved = Signal(float)
     placement: Placement = Somewhere()
 
-    def __init__(self, name: str, /, presenter: Listening) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.presenter: Listening | None = None
+
+    def setup(self, presenter: Listening) -> None:
         self.presenter = presenter
 
 
 class SetUpApp(Session):
     taking: AsPresenter[Taking]
+    sharing: AsPresenter[Sharing]
+
+
+class ModelApp(Session):
+    taking: AsPresenter[TakingModel]
+    sharing: AsPresenter[Sharing]
+
+
+class DataclassApp(Session):
+    taking: AsPresenter[TakingDataclass]
+    sharing: AsPresenter[Sharing]
+
+
+class FrozenApp(Session):
+    taking: AsPresenter[FrozenTaking]
+    sharing: AsPresenter[Sharing]
+
+
+class FieldModelApp(Session):
+    taking: AsPresenter[FieldModel]
     sharing: AsPresenter[Sharing]
 
 
@@ -156,6 +223,21 @@ def test_setup_takes_a_value_shared_by_a_component_declared_below_it(
     """Every component exists by then, so declaration order does not matter."""
     app = build(SetUpApp)
     assert app.taking.readings == {"stage": 1.0}
+
+
+def test_a_model_or_dataclass_is_set_up_like_any_component(
+    build: BuildSession,
+) -> None:
+    """Where the annotations live does not change how `setup` is filled."""
+    assert build(ModelApp).taking.readings == {"stage": 1.0}
+    assert build(DataclassApp).taking.readings == {"stage": 1.0}
+    assert build(FrozenApp).taking.readings == {"stage": 1.0}
+
+
+def test_a_generated_constructor_taking_a_shared_type_is_refused() -> None:
+    """A model field is a constructor parameter, wherever it is written."""
+    with pytest.raises(TypeError, match="ask for it in 'setup'"):
+        FieldModelApp().build()
 
 
 def test_a_setup_that_raises_leaves_the_component_in_place(

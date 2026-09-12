@@ -50,8 +50,11 @@ class MockMotorPresenter:
 class MockLatePresenter:
     """Presenter asking for the callback catalogue."""
 
-    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.seen: dict[str, CallbackType] = {}
+
+    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
         self.seen = dict(callbacks)
 
 

@@ -37,18 +37,22 @@ class Panel(Placement):
 class Listener:
     """Presenter asking for every router the session built."""
 
-    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.callbacks: Mapping[str, CallbackType] = {}
+
+    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
         self.callbacks = callbacks
 
 
 class SpelledOutListener:
     """Presenter asking for the catalogue without importing `CallbackType`."""
 
-    def __init__(
-        self, name: str, /, callbacks: Mapping[str, SpelledOutCallback]
-    ) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.callbacks: Mapping[str, SpelledOutCallback] = {}
+
+    def setup(self, callbacks: Mapping[str, SpelledOutCallback]) -> None:
         self.callbacks = callbacks
 
 
@@ -75,10 +79,25 @@ class Sharing(DocumentRouter):
 class Needing(DocumentRouter):
     """Router built from what `Sharing` shares."""
 
-    def __init__(self, name: str, /, gain: Gain) -> None:
+    def __init__(self, name: str, /) -> None:
         super().__init__()
         self.name = name
+        self.gain = Gain(0.0)
+
+    def setup(self, gain: Gain) -> None:
         self.gain = gain
+
+
+class Curious(DocumentRouter):
+    """Router asking for the catalogue it is itself part of."""
+
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
+        self.name = name
+        self.callbacks: Mapping[str, CallbackType] = {}
+
+    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
+        self.callbacks = callbacks
 
 
 class Broken(DocumentRouter):
@@ -121,6 +140,11 @@ class WithABrokenRouter(Session):
     plain: AsPresenter[Plain]
 
 
+class WithACuriousRouter(Session):
+    curious: AsPresenter[Curious]
+    plain: AsPresenter[Plain]
+
+
 class ListeningToAView(Session):
     listener: AsPresenter[Listener]
     display: AsView[RoutingView]
@@ -152,6 +176,12 @@ def test_a_router_that_fails_to_build_is_absent(build: BuildSession) -> None:
     """The listener still builds, with the routers that did."""
     app = build(WithABrokenRouter)
     assert list(app.listener.callbacks) == ["plain"]
+
+
+def test_a_router_asking_for_the_catalogue_is_in_it(build: BuildSession) -> None:
+    """Every router exists before any setup runs, the asker included."""
+    app = build(WithACuriousRouter)
+    assert dict(app.curious.callbacks) == {"curious": app.curious, "plain": app.plain}
 
 
 def test_a_router_in_the_catalogue_is_not_reported_unused(

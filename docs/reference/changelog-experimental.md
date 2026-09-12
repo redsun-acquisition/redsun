@@ -75,14 +75,12 @@ listed in the [changelog](changelog.md).
   a pydantic model. It is given no name, so a parameter called `name` is one the
   session must answer like any other.
 
-- Components are built in layer order, and within a layer in the order they are
-  built from one another, so a component may be written above the one it depends
-  on. Two components of one layer built from each other raise `TypeError`. A
-  component may depend on its own layer or an earlier one and never on a later
-  one, so a presenter naming a view, or a type only a view shares, is refused
-  before anything is constructed, naming both components and both layers. Two
-  views sharing a value needs no publish-then-resolve pass: one shares it with
-  `provides`, the other asks for it in `__init__`. `Requires[P]` is exempt.
+- Components are built in layer order, and within a layer in the order they
+  are declared. A `setup` may take what its own layer or an earlier one owns and
+  never what a later one owns, so a presenter naming a view, or a type only a
+  view shares, is refused before anything is constructed, naming both components
+  and both layers. Two views sharing a value needs no publish-then-resolve pass:
+  one shares it with `provides`, the other takes it in `setup`.
 
 - `Session.build` logs a component that fails to build and carries on, in
   every layer. The component is absent from `presenters` or `views`, and so is
@@ -99,18 +97,16 @@ listed in the [changelog](changelog.md).
 
 - The callback catalogue - every component that is a `DocumentRouter`, under
   its name and in declaration order, for a component asking for
-  `Mapping[str, CallbackType]`. A component asking for it is built after every
-  router, so the mapping is complete when it arrives. A router in a later layer
-  than the component asking is refused before anything is built, and a router
-  that fails to build is absent. `CallbackType` is exported from
+  `Mapping[str, CallbackType]` in `setup`. A router in a later layer than the
+  component asking is refused before anything is built, and a router that fails
+  to build is absent. `CallbackType` is exported from
   `redsun.experimental`, and a component may write it out as
   `Callable[[str, Document], None] | DocumentRouter` instead, with `Mapping`
   and `Callable` from `collections.abc`:
 
   ```python
   class MyPresenter:
-      def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
-          self.name = name
+      def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
           self.callbacks = callbacks
   ```
 
@@ -479,6 +475,12 @@ listed in the [changelog](changelog.md).
   or `RequiresMaybe` question.
 
 ### Changed
+
+- What another component owns arrives in `setup` rather than in a constructor:
+  a constructor naming a component, its class, a type a component shares with
+  `provides`, or the callback catalogue is refused, naming the parameter. A
+  shared value is read once, right after its owner is constructed, so a
+  `@provides` method answers from what the constructor made.
 
 - A question about the session is asked in `setup` rather than in a
   constructor: `Requires[P]`, `RequiresOne[P]` and `RequiresMaybe[P]` in a

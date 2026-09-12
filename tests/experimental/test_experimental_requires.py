@@ -736,7 +736,7 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
         pytest.param(
             BackwardsQuestionApp,
             TypeError,
-            "is built before a view",
+            "knows nothing about a view",
             id="one-answered-by-a-later-layer",
         ),
     ],
@@ -891,16 +891,17 @@ def test_the_census_leaves_out_a_component_that_failed(
     assert set(app.reader.peers) == {"camera"}
 
 
-def test_the_one_answer_failing_skips_whoever_asked(
+def test_the_one_answer_failing_leaves_the_asker_unset(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Exactly one was demanded, so `None` is not an answer the asker can take."""
-    with caplog.at_level(logging.ERROR, logger="redsun"):
+    """Exactly one was demanded, and the session holds none once it failed."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
         app = BrokenOneApp().build()
     try:
         assert app.is_built
-        assert set(app.presenters) == set()
-        assert "Failed to build presenter 'roi': 'broken' was not built" in caplog.text
+        assert set(app.presenters) == {"roi"}
+        assert app.roi.camera is None
+        assert "Failed to set up presenter 'roi': 'broken' was not built" in caplog.text
     finally:
         app.shutdown()
 

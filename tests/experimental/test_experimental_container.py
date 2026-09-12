@@ -143,16 +143,23 @@ class Widget:
         self,
         name: str,
         /,
-        callbacks: Mapping[str, CallbackType],
-        readings: Readings,
-        missing: Missing | None = None,
         label: str = "",
     ) -> None:
         self.name = name
+        self.callbacks: Mapping[str, CallbackType] = {}
+        self.readings: Readings | None = None
+        self.missing: Missing | None = None
+        self.label = label
+
+    def setup(
+        self,
+        callbacks: Mapping[str, CallbackType],
+        readings: Readings,
+        missing: Missing | None = None,
+    ) -> None:
         self.callbacks = callbacks
         self.readings = readings
         self.missing = missing
-        self.label = label
 
     @slot
     def refresh(self, where: str) -> None:
@@ -162,8 +169,11 @@ class Widget:
 class Late:
     """Presenter asking for the callback catalogue."""
 
-    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.callbacks: Mapping[str, CallbackType] = {}
+
+    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
         self.callbacks = callbacks
 
 
@@ -180,13 +190,14 @@ class Registrar(DocumentRouter):
 
 
 class Tunable:
-    """Presenter with two defaulted parameters, one of which is provided."""
+    """Presenter with a defaulted parameter and a defaulted `setup` value."""
 
-    def __init__(
-        self, name: str, /, step: float = 1.5, readings: Readings | None = None
-    ) -> None:
+    def __init__(self, name: str, /, step: float = 1.5) -> None:
         self.name = name
         self.step = step
+        self.readings: Readings | None = None
+
+    def setup(self, readings: Readings | None = None) -> None:
         self.readings = readings
 
 
@@ -204,10 +215,13 @@ class Recorder:
 
 
 class Dependent:
-    """Presenter built from `Recorder`, so it exists only after one does."""
+    """Presenter taking `Recorder` once every component exists."""
 
-    def __init__(self, name: str, /, other: Recorder) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.other: Recorder | None = None
+
+    def setup(self, other: Recorder) -> None:
         self.other = other
 
     def shutdown(self) -> None:
@@ -335,24 +349,31 @@ class Controlling:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /, viewer: ViewerModel) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.viewer: ViewerModel | None = None
+
+    def setup(self, viewer: ViewerModel) -> None:
         self.viewer = viewer
 
 
 class WatchingAView:
     """A presenter naming the class of a view."""
 
-    def __init__(self, name: str, /, display: Displaying) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+
+    def setup(self, display: Displaying) -> None:
         self.display = display
 
 
 class WantingWhatAViewOwns:
     """A presenter asking for a type only a view shares."""
 
-    def __init__(self, name: str, /, viewer: ViewerModel) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+
+    def setup(self, viewer: ViewerModel) -> None: ...
 
 
 class HoldingAPresenter:
@@ -360,8 +381,11 @@ class HoldingAPresenter:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /, ctrl: Recorder) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.ctrl: Recorder | None = None
+
+    def setup(self, ctrl: Recorder) -> None:
         self.ctrl = ctrl
 
 
@@ -383,6 +407,77 @@ class PresenterOnAViewValue(Session):
 class ViewOnAPresenter(Session):
     recorder: AsPresenter[Recorder]
     holder: AsView[HoldingAPresenter]
+
+
+class TakingAComponent:
+    """A presenter naming another component's class in its constructor."""
+
+    def __init__(self, name: str, /, other: Recorder) -> None:
+        self.name = name
+        self.other = other
+
+
+class TakingASharedValue:
+    """A presenter asking for what another component shares, too early."""
+
+    def __init__(self, name: str, /, viewer: ViewerModel) -> None:
+        self.name = name
+        self.viewer = viewer
+
+
+class TakingTheCatalogue:
+    """A presenter asking for the callback catalogue in its constructor."""
+
+    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+        self.name = name
+        self.callbacks = callbacks
+
+
+class ComponentInAConstructor(Session):
+    recorder: AsPresenter[Recorder]
+    taker: AsPresenter[TakingAComponent]
+
+
+class SharedValueInAConstructor(Session):
+    taker: AsPresenter[TakingASharedValue]
+    display: AsView[Displaying]
+
+
+class CatalogueInAConstructor(Session):
+    taker: AsPresenter[TakingTheCatalogue]
+
+
+Counted = NewType("Counted", int)
+
+
+class CountingCalls:
+    """A presenter counting how often the session reads what it shares."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.calls = 0
+
+    @provides
+    def counted(self) -> Counted:
+        self.calls += 1
+        return Counted(self.calls)
+
+
+class Counting:
+    """A presenter holding the shared count it was set up with."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.counted: Counted | None = None
+
+    def setup(self, counted: Counted) -> None:
+        self.counted = counted
+
+
+class CountingApp(Session):
+    owner: AsPresenter[CountingCalls]
+    first: AsPresenter[Counting]
+    second: AsPresenter[Counting]
 
 
 class Unannotated:
@@ -508,18 +603,24 @@ class Diamond(Layered, Sideways):
 
 
 class Ping:
-    """Presenter built from `Pong`, which is built from this one."""
+    """Presenter taking `Pong`, which takes this one."""
 
-    def __init__(self, name: str, /, other: Pong) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.other: Pong | None = None
+
+    def setup(self, other: Pong) -> None:
         self.other = other
 
 
 class Pong:
-    """The other half of the cycle."""
+    """The other half of what used to be a cycle."""
 
-    def __init__(self, name: str, /, other: Ping) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.other: Ping | None = None
+
+    def setup(self, other: Ping) -> None:
         self.other = other
 
 
@@ -625,10 +726,13 @@ class BrokenView(Attachable):
 
 
 class NeedsBroken:
-    """Presenter built from one that cannot be constructed."""
+    """Presenter taking one that cannot be constructed."""
 
-    def __init__(self, name: str, /, other: BrokenPresenter) -> None:
+    def __init__(self, name: str, /) -> None:
         self.name = name
+        self.other: BrokenPresenter | None = None
+
+    def setup(self, other: BrokenPresenter) -> None:
         self.other = other
 
 
@@ -731,12 +835,12 @@ def test_the_container_itself_is_not_injectable() -> None:
         LocatorApp().build()
 
 
-def test_shutdown_finalizes_components_in_reverse_build_order() -> None:
-    """One owner runs every teardown, and the graph decides the order."""
+def test_shutdown_finalizes_components_in_reverse_declaration_order() -> None:
+    """Construction is declaration order, and teardown is its reverse."""
     teardown_order.clear()
     container = OrderedApp().build()
     container.shutdown()
-    assert teardown_order == ["second", "first"]
+    assert teardown_order == ["first", "second"]
 
 
 def test_component_shutdown_runs_without_being_asked(app: App) -> None:
@@ -771,7 +875,7 @@ def test_two_components_sharing_one_type_is_refused() -> None:
 
 
 def test_two_views_of_one_layer_may_share(build: BuildSession) -> None:
-    """The owner is built first because the graph says so, not by hand."""
+    """Both exist by the time either is set up, whatever the order."""
     app = build(SameLayerApp)
     assert app.control.viewer is app.display.viewer()
 
@@ -793,10 +897,36 @@ def test_a_presenter_depending_on_a_view_is_refused(
     app: type[Session], match: str
 ) -> None:
     """Naming the class or a type it shares is the same backwards edge."""
-    with pytest.raises(TypeError, match="is built before a view"):
+    with pytest.raises(TypeError, match="knows nothing about a view"):
         app().build()
     with pytest.raises(TypeError, match=match):
         app().build()
+
+
+@pytest.mark.parametrize(
+    ("app", "match"),
+    [
+        (ComponentInAConstructor, "takes 'recorder' in its 'other' parameter"),
+        (SharedValueInAConstructor, "takes 'display' in its 'viewer' parameter"),
+        (CatalogueInAConstructor, "takes the callback catalogue"),
+    ],
+)
+def test_a_constructor_taking_what_another_component_owns_is_refused(
+    app: type[Session], match: str
+) -> None:
+    """A component is constructed before its peers, so it cannot hold one yet."""
+    with pytest.raises(TypeError, match=match):
+        app().build()
+    with pytest.raises(TypeError, match="ask for it in 'setup'"):
+        app().build()
+
+
+def test_a_shared_value_is_read_once_at_construction(build: BuildSession) -> None:
+    """Every component asking for it receives the value the owner made."""
+    app = build(CountingApp)
+    assert app.owner.calls == 1
+    assert app.first.counted == 1
+    assert app.second.counted == 1
 
 
 def test_unannotated_parameter_is_refused() -> None:
@@ -1139,10 +1269,13 @@ def test_a_later_source_may_rename_the_session() -> None:
     assert app.name == "second"
 
 
-def test_two_components_built_from_each_other_are_refused() -> None:
-    """One of them would have to exist before it could be constructed."""
-    with pytest.raises(TypeError, match="built from each other"):
-        CircularApp().build()
+def test_two_components_taking_each_others_values_both_build(
+    build: BuildSession,
+) -> None:
+    """Neither needs the other to exist before it is constructed."""
+    app = build(CircularApp)
+    assert app.ping.other is app.pong
+    assert app.pong.other is app.ping
 
 
 def test_a_session_knows_what_it_is_called() -> None:
@@ -1204,13 +1337,14 @@ def test_a_failure_is_logged_against_the_component_name(
     assert "Failed to build view 'broken_panel': no widget" in caplog.text
 
 
-def test_a_component_whose_collaborator_failed_is_skipped_too(
+def test_a_component_whose_collaborator_failed_is_not_set_up(
     build: BuildSession,
 ) -> None:
-    """One that cannot be built does not take its dependents down with it."""
+    """One that cannot be built leaves what wanted it built but not set up."""
     app = build(DependsOnBrokenApp)
     assert app.is_built
-    assert set(app.presenters) == {"ok"}
+    assert set(app.presenters) == {"ok", "dependent"}
+    assert app.dependent.other is None
 
 
 def test_asking_for_something_nothing_ever_declared_still_raises() -> None:

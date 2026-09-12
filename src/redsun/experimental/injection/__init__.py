@@ -8,7 +8,7 @@ the rest of the layer, and is the import a component is written against.
 
 from __future__ import annotations
 
-from ._provides import provides, register_shared, shared_keys
+from ._provides import constant, provides, register_shared, shared_keys
 from ._requires import (
     Devices,
     DevicesOf,
@@ -35,6 +35,7 @@ __all__ = [
     "Requires",
     "RequiresMaybe",
     "RequiresOne",
+    "constant",
     "key_for",
     "provides",
     "question_of",

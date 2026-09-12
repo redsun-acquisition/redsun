@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
     from redsun.experimental.session import Key
 
-__all__ = ["provides", "register_shared", "shared_keys"]
+__all__ = ["constant", "provides", "register_shared", "shared_keys"]
 
 PROVIDES = "__redsun_provides__"
 
@@ -26,9 +26,9 @@ def provides(method: F) -> F:
             return MotorReadings(...)
     ```
 
-    Anything asking for ``MotorReadings`` receives the result of calling this
-    method on the built component, and is built after it. The return
-    annotation is the key, so it must be distinct across the application.
+    Anything asking for ``MotorReadings`` in its `setup` receives the result
+    of calling this method on the built component. The return annotation is
+    the key, so it must be distinct across the application.
     """
     setattr(method, PROVIDES, True)
     return method
@@ -64,7 +64,8 @@ def register_shared(
     """Register what *instance* shares on *store*, under the annotated types.
 
     *seen* accumulates the types already claimed, so a clash names both
-    components.
+    components. The value is read once, here, so what a component shares comes
+    from what its constructor made and cannot depend on its own `setup`.
 
     Raises
     ------
@@ -80,14 +81,15 @@ def register_shared(
                 "identifies one value; give them distinct types."
             )
         seen[provided] = name
-        store.register_provider(value(instance, method_name), type_hint=provided)
+        member = getattr(instance, method_name)
+        shared = member() if callable(member) else member
+        store.register_provider(constant(shared), type_hint=provided)
 
 
-def value(instance: object, method_name: str) -> Callable[[], Any]:
-    """Return a callable giving what *instance* shares through *method_name*."""
+def constant(value: Any) -> Callable[[], Any]:
+    """Return a callable answering with *value*."""
 
     def read() -> Any:
-        member = getattr(instance, method_name)
-        return member() if callable(member) else member
+        return value
 
     return read

@@ -25,6 +25,7 @@ from redsun.experimental.injection import (
     Devices,
     Maybe,
     One,
+    constant,
     key_for,
     register_shared,
     rejected,
@@ -575,6 +576,7 @@ class Session(BuildableSession):
         self._register_framework_values(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
         declarations = self._components()
+        self._refuse_component_values(declarations)
         self._check_layers(declarations)
         self._answer(store, declarations)
 
@@ -791,19 +793,14 @@ class Session(BuildableSession):
         """Register everything the framework knows on *store*.
 
         Every component may ask for it by type. The callback catalogue is a
-        copy, complete because a component asking for it is built after every
-        router.
+        copy, complete because it is read in `setup`, once every router exists.
         """
         store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
         store.register_provider(devices, type_hint=DeviceMapping)
         store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
 
     def _catalogue(self) -> dict[str, CallbackType]:
-        """Return the document routers in declaration order.
-
-        Routers are collected in build order, which follows what depends on
-        what rather than how the session is written.
-        """
+        """Return the document routers in declaration order."""
         return {
             n: self._callbacks[n] for n in self._declarations if n in self._callbacks
         }
@@ -1123,13 +1120,20 @@ class Session(BuildableSession):
         store = self._store
         if store is None:
             raise RuntimeError("The registry step has to run before a component is")
-        for declaration in self._components():
+        components = self._components()
+        chosen_for = self._chosen_for(components)
+        for declaration in components:
             instance = declaration.instance
             if instance is None or not issubclass(declaration.cls, HasSetup):
                 continue
             params = get_setup_params(declaration.cls)
             missing = unanswered(store, params)
-            if missing:
+            absent = chosen_for.get(declaration.name, set()) & set(self._failed)
+            if absent:
+                self._not_set_up[declaration.name] = TypeError(
+                    f"{listed(sorted(absent))} was not built"
+                )
+            elif missing:
                 absent = self._blamed(hint for _, hint in missing)
                 if not absent:
                     raise TypeError(
@@ -1151,6 +1155,22 @@ class Session(BuildableSession):
                 self._not_set_up[declaration.name],
             )
 
+    def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
+        """Return, by asker, the components chosen for the questions it asks.
+
+        Only a question demanding exactly one component is here. One that
+        allows none is answered with nothing when the component chosen for it
+        cannot be built, which is an answer the asker already accepts.
+        """
+        found: dict[str, set[str]] = {}
+        for question, askers in requirements(declarations).items():
+            chosen = self._answers.get(question)
+            if chosen is None or not isinstance(question.marker, One):
+                continue
+            for asker in askers:
+                found.setdefault(asker, set()).add(chosen.name)
+        return found
+
     def _construct(self, layer: Layer) -> None:
         """Build every component of *layer* and register what it shares.
 
@@ -1158,8 +1178,10 @@ class Session(BuildableSession):
         no other declaration names that class, so a collaborator may ask for it
         either way.
 
-        One that cannot be built is logged and skipped, and so is one built
-        from it, so that a session missing a part of itself still comes up.
+        The order is the order the layer declares them in: a component takes
+        nothing another component owns, so nothing has to be built first. One
+        that cannot be built is logged and skipped, so that a session missing a
+        part of itself still comes up.
 
         Raises
         ------
@@ -1170,13 +1192,7 @@ class Session(BuildableSession):
         if store is None:
             raise RuntimeError("The registry step has to run before a component is")
         declarations = [d for d in self._components() if d.kind is layer]
-        chosen_for = self._chosen_for(declarations)
-        for declaration in self._ordered(declarations):
-            absent = chosen_for.get(declaration.name, set()) & set(self._failed)
-            if absent:
-                named = listed(sorted(absent))
-                self._skip(declaration, TypeError(f"{named} was not built"))
-                continue
+        for declaration in declarations:
             params = injectable(declaration.cls, declaration.cfg_kwargs)
             if self._refuse_or_skip(store, declaration, params):
                 continue
@@ -1193,22 +1209,6 @@ class Session(BuildableSession):
             )
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
-
-    def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
-        """Return, by asker, the components chosen for the questions it asks.
-
-        Only a question demanding exactly one component is here. One that
-        allows none is answered with nothing when the component chosen for it
-        cannot be built, which is an answer the asker already accepts.
-        """
-        found: dict[str, set[str]] = {}
-        for question, askers in requirements(declarations).items():
-            chosen = self._answers.get(question)
-            if chosen is None or not isinstance(question.marker, One):
-                continue
-            for asker in askers:
-                found.setdefault(asker, set()).add(chosen.name)
-        return found
 
     def _refuse_or_skip(
         self,
@@ -1266,64 +1266,24 @@ class Session(BuildableSession):
             "Failed to build %s '%s': %s", declaration.kind, declaration.name, reason
         )
 
-    def _ordered(self, declarations: list[Declaration]) -> list[Declaration]:
-        """Return *declarations* in the order they have to be built.
-
-        Layers first, since `_check_layers` has already refused an edge
-        pointing the other way. Within a layer the order is what depends on
-        what, which declaration order does not give: a component may be
-        written above the one it is built from.
-        """
-        needs = self._edges(declarations)
-        ordered: list[Declaration] = []
-        for layer in sorted({d.kind for d in declarations}, key=lambda k: ORDER[k]):
-            ordered.extend(
-                sorted_by_need([d for d in declarations if d.kind is layer], needs)
-            )
-        return ordered
-
-    def _edges(self, declarations: list[Declaration]) -> dict[str, set[str]]:
-        """Return the components each component is built from, by name.
-
-        A census is left out: it is a live view of the session rather than a
-        value one component takes from another, so it carries no order. The
-        callback catalogue is not: a component asking for it is built from
-        every router but itself. Nor is a census of the components built
-        first, whose asker is built from every other component answering it.
-        """
-        by_type = owners(declarations)
-        by_type.update({d.key: d for d in declarations})
-        routers = {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
-        needs: dict[str, set[str]] = {d.name: set() for d in declarations}
-        for declaration in declarations:
-            params = injectable(declaration.cls, declaration.cfg_kwargs)
-            for hint in params.values():
-                wanted = optional_arg(hint) or hint
-                if wanted == CallbackCatalogue:
-                    needs[declaration.name] |= routers - {declaration.name}
-                target = by_type.get(wanted)
-                if target is not None and target is not declaration:
-                    needs[declaration.name].add(target.name)
-        return needs
-
     def _check_layers(self, declarations: list[Declaration]) -> None:
-        """Refuse a component whose constructor reaches into a later layer.
+        """Refuse a component whose `setup` reaches into a later layer.
 
-        The layers are a build order, so an edge pointing forwards along it
-        could only be satisfied by inverting that order. A live census asks
-        about the session rather than depending on it, and is left alone; a
-        census of the components built first depends on every one of them.
+        Every component exists when `setup` runs, so this is a rule about
+        direction rather than a consequence of the build order: a presenter
+        does not know about views.
 
         Raises
         ------
         TypeError
-            If a component depends on one built after it.
+            If a component takes a value a later layer owns.
         """
         by_type = owners(declarations)
         routers = [d for d in declarations if issubclass(d.cls, DocumentRouter)]
         for declaration in declarations:
-            params = injectable(declaration.cls, declaration.cfg_kwargs)
-            for pname, hint in params.items():
+            if not issubclass(declaration.cls, HasSetup):
+                continue
+            for pname, hint in get_setup_params(declaration.cls).items():
                 wanted = optional_arg(hint) or hint
                 where = f"its {pname!r} parameter"
                 if wanted == CallbackCatalogue:
@@ -1333,6 +1293,38 @@ class Session(BuildableSession):
                 if target is None:
                     continue
                 refuse_backwards(declaration, target, where)
+
+    def _refuse_component_values(self, declarations: list[Declaration]) -> None:
+        """Refuse a constructor taking something another component owns.
+
+        A component is constructed before its peers, so only `setup` can be
+        given a component, its class, or a type another component shares.
+
+        Raises
+        ------
+        TypeError
+            Naming the parameter and the component that owns what it asks for.
+        """
+        by_type = owners(declarations)
+        by_type.update({d.key: d for d in declarations})
+        for declaration in declarations:
+            for pname, hint in injectable(
+                declaration.cls, declaration.cfg_kwargs
+            ).items():
+                wanted = optional_arg(hint) or hint
+                target = by_type.get(wanted)
+                if wanted == CallbackCatalogue:
+                    raise TypeError(
+                        f"{declaration.name!r} takes the callback catalogue in "
+                        f"its {pname!r} parameter, which no component exists to "
+                        "fill yet; ask for it in 'setup'."
+                    )
+                if target is not None:
+                    raise TypeError(
+                        f"{declaration.name!r} takes {target.name!r} in its "
+                        f"{pname!r} parameter, and a component is constructed "
+                        "before its peers; ask for it in 'setup'."
+                    )
 
     def _answer(self, store: Store, declarations: list[Declaration]) -> None:
         """Answer each question a component asks about the session.
@@ -1707,15 +1699,6 @@ def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> Non
         raise TypeError(unanswered_message(name, missing))
 
 
-def constant(value: Any) -> Callable[[], Any]:
-    """Return a callable answering with *value*."""
-
-    def read() -> Any:
-        return value
-
-    return read
-
-
 def instance_of(declaration: Declaration) -> Callable[[], Any]:
     """Return a callable answering with what *declaration* was built into.
 
@@ -1727,40 +1710,6 @@ def instance_of(declaration: Declaration) -> Callable[[], Any]:
         return declaration.instance
 
     return read
-
-
-def sorted_by_need(
-    group: list[Declaration], needs: Mapping[str, set[str]]
-) -> list[Declaration]:
-    """Return *group* with each component after the ones it is built from.
-
-    Only edges inside *group* matter: anything in an earlier layer is already
-    built. Ties keep declaration order, so a session that states no dependency
-    builds in the order it is written.
-
-    Raises
-    ------
-    TypeError
-        If two components of one layer are built from each other.
-    """
-    names = {d.name for d in group}
-    pending = {d.name: {n for n in needs[d.name] if n in names} for d in group}
-    ordered: list[Declaration] = []
-    remaining = list(group)
-    while remaining:
-        ready = [d for d in remaining if not pending[d.name]]
-        if not ready:
-            named = listed(sorted(d.name for d in remaining))
-            raise TypeError(
-                f"{named} are built from each other, so none of them can be "
-                "built first. Break the cycle, or share the value one way only."
-            )
-        for declaration in ready:
-            ordered.append(declaration)
-            for other in pending.values():
-                other.discard(declaration.name)
-        remaining = [d for d in remaining if d not in ready]
-    return ordered
 
 
 def owners(
@@ -1788,14 +1737,14 @@ def refuse_backwards(
     target: Declaration,
     where: str,
 ) -> None:
-    """Refuse *asker* depending on *target*, when *target* is built later."""
+    """Refuse *asker* taking *target*, when *target* is in a later layer."""
     if ORDER[target.kind] <= ORDER[asker.kind]:
         return
     raise TypeError(
         f"{asker.name!r} is a {asker.kind} and {where} asks for "
-        f"{target.name!r}, which is a {target.kind}. A {asker.kind} is built "
-        f"before a {target.kind}, so it cannot depend on one; share the value "
-        "the other way, or move what they both need into an earlier layer."
+        f"{target.name!r}, which is a {target.kind}. A {asker.kind} knows "
+        f"nothing about a {target.kind}; share the value the other way, or "
+        "move what they both need into an earlier layer."
     )
 
 

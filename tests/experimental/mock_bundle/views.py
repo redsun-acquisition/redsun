@@ -41,16 +41,18 @@ class MockMotorView:
         self,
         name: str,
         /,
-        callbacks: Mapping[str, CallbackType],
-        readings: Readings,
         missing: Absent | None = None,
         title: str = "",
     ) -> None:
         self.name = name
-        self.callbacks = callbacks
-        self.readings = readings
+        self.callbacks: Mapping[str, CallbackType] = {}
+        self.readings: Readings = Readings({})
         self.missing = missing
         self.title = title
+
+    def setup(self, callbacks: Mapping[str, CallbackType], readings: Readings) -> None:
+        self.callbacks = callbacks
+        self.readings = readings
 
     @slot
     def refresh(self, axis: str, amount: float) -> None:
@@ -72,18 +74,20 @@ class MockAcquisitionView:
         name: str,
         /,
         devices: DeviceMapping,
-        callbacks: Mapping[str, CallbackType],
         settings: Settings,
     ) -> None:
         self.name = name
         self.devices = devices
-        self.callbacks = callbacks
+        self.callbacks: Mapping[str, CallbackType] = {}
         self.settings = settings
         self.entries: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
 
-    def setup(self, sources: Requires[HasPlans]) -> None:
-        """Take the plans every component offering them holds, and describe each."""
+    def setup(
+        self, sources: Requires[HasPlans], callbacks: Mapping[str, CallbackType]
+    ) -> None:
+        """Take the plans and the callbacks, and describe each plan."""
+        self.callbacks = callbacks
         self.entries = {
             plan: entry
             for source in sources.values()

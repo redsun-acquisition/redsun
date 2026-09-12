@@ -47,7 +47,7 @@ earlier:
 | Moment | What is confirmed |
 | --- | --- |
 | Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands |
-| Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no component depends on a layer built after its own |
+| Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no constructor takes something another component owns; that no `setup` takes something a later layer owns |
 | After the build | Every component against `NamedComponent`, and a view against `AttachableComponent`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
 | Applying the wiring | A rule naming a component the build skipped is warned about and skipped; a malformed rule, or one naming a component that was never declared, is refused |
 | After the wiring | Nothing new is refused, and two things are reported: a component that shares nothing, asks for nothing and is wired to nothing, and a shared value no component asks for |
@@ -103,27 +103,22 @@ the readings it computes.
 
     ```python
     class MotorPresenter:
-        def __init__(
-            self,
-            name: str,
-            /,
-            devices: DeviceMapping,
-            calibration: Calibration,
-            step: float = 1.0,
-        ) -> None:
+        def __init__(self, name: str, /, devices: DeviceMapping, step: float = 1.0) -> None:
             self.name = name
             self.devices = devices
-            self.calibration = calibration
             self.step = step
+
+        def setup(self, calibration: Calibration) -> None:
+            self.calibration = calibration
 
         @provides
         def readings(self) -> MotorReadings:
             return MotorReadings(...)
     ```
 
-    Everything the presenter needs is a parameter, and it is complete the moment
-    it is constructed. `@provides` marks what it offers to others, named by the
-    return type.
+    Everything the presenter needs is a parameter, either of the constructor or
+    of `setup`, which the session calls once every component exists. `@provides`
+    marks what it offers to others, named by the return type.
 
 `register_providers` and `inject_dependencies` are gone, and so are the
 `IsProvider` and `IsInjectable` protocols behind them.
@@ -135,13 +130,22 @@ The container looks at your `__init__` and sorts the parameters out for you:
 - `name` is always the component's name. The framework fills it in.
 - Anything the **session file** or an inline `Declare(...)` mentions is taken
   from there. That is where `step` comes from.
-- Everything else is looked up **by type**. `DeviceMapping` and `Calibration`
-  are found because something in the session provides them.
+- Everything else is looked up **by type**, among the things the session holds
+  before any component exists. That is where `DeviceMapping` comes from.
 - A parameter with a **default** is optional. If nothing provides it and no
   configuration mentions it, your default is used.
 
 So `step: float = 1.0` works whether or not it appears in the YAML file, and you
 never write code to reconcile the two.
+
+A constructor naming another component, its class, or a type another component
+shares is refused before anything is built, and the message says where it
+belongs instead:
+
+```text
+TypeError: 'roi' takes 'camera' in its 'camera' parameter, and a component is
+constructed before its peers; ask for it in 'setup'.
+```
 
 ### What arrives in `setup`
 
@@ -340,9 +344,11 @@ quietly ignored.
 
 ### Layers are the one direction a dependency may not cross
 
-Devices are built, then presenters, then views. A component may ask for
-anything from its own layer or an earlier one, and nothing from a later one,
-because satisfying that would mean building the later one first.
+Devices are built, then presenters, then views. Every component exists by the
+time `setup` runs, so this is a rule about direction rather than about what can
+be built first: a `setup` may take anything from its own layer or an earlier
+one, and nothing from a later one. A presenter knows nothing about views, which
+is what keeps it usable without a frontend.
 
 Two views sharing is the interesting case, and it is allowed. One owns the
 value and shares it; the other asks for it by type:
@@ -363,29 +369,30 @@ class ImageView(QWidget):
 class ROIView(QWidget):
     placement = Dock("right")
 
-    def __init__(self, name: str, /, viewer: ViewerModel) -> None:
+    def __init__(self, name: str, /) -> None:
         super().__init__()
+        self._viewer: ViewerModel | None = None
+
+    def setup(self, viewer: ViewerModel) -> None:
         self._viewer = viewer
 ```
 
-`ImageView` is built first because `ROIView` asks for what it shares, not
-because of anything written down. Nothing has to be published in one pass and
-resolved in another, and if no component shares a `ViewerModel` the build fails
-naming `ROIView` and the type before either widget is constructed.
+Which of the two is written first makes no difference: both are constructed
+before either is set up. If no component shares a `ViewerModel`, the build
+fails naming `ROIView` and the type.
 
 The other direction is refused, whether the presenter names the view's class or
 a type only the view shares:
 
 ```text
 TypeError: 'watcher' is a presenter and its 'display' parameter asks for
-'display', which is a view. A presenter is built before a view, so it cannot
-depend on one; share the value the other way, or move what they both need into
-an earlier layer.
+'display', which is a view. A presenter knows nothing about a view; share the
+value the other way, or move what they both need into an earlier layer.
 ```
 
-A view asking for a presenter is the allowed direction and needs nothing
-special. `Requires[P]` is not a dependency at all: it is a live view of the
-session, read after everything exists, so it crosses layers freely.
+A view taking a presenter is the allowed direction and needs nothing special.
+`Requires[P]` is not a dependency at all: it is every component satisfying a
+protocol, read after everything exists, so it crosses layers freely.
 
 ### A view says where it attaches
 
@@ -568,13 +575,17 @@ to one is not a mistake a user should be stopped for.
 
 
     # consumer
-    def __init__(self, name: str, /, readings: MotorReadings) -> None:
+    def setup(self, readings: MotorReadings) -> None:
         self.readings = readings
     ```
 
 The type is the key, so there is no separate key object to define, export and
-import on both sides. The container builds the producer before the consumer
-because it can see that the consumer needs what the producer offers.
+import on both sides.
+
+A shared value is read once, right after its owner is constructed, and every
+component asking for it receives that same value. A `@provides` method
+therefore answers from what the constructor made: a value the owner's own
+`setup` assigns is not there yet when the session reads it.
 
 ## Optional collaborators
 
@@ -591,7 +602,7 @@ should carry on if it does not.
 === "Experimental"
 
     ```python
-    def __init__(self, name: str, /, overlay: Overlay | None = None) -> None:
+    def setup(self, overlay: Overlay | None = None) -> None:
         self.overlay = overlay
     ```
 
@@ -697,22 +708,17 @@ from. A component package may write it out instead of importing it from
 Taken from `typing`, they make a different type, and the build refuses the
 component for asking for something nothing provides.
 
-The mapping is complete when it arrives, because the session builds a component
-asking for it after every router. It is an ordinary value, so reading it in
-`__init__` is safe.
-
-Its entries are in declaration order, which is the order the session lists its
-components rather than the order it built them in. The rest follows from the
-build order:
+The mapping is asked for in `setup`, so it is complete when it arrives: every
+router exists by then. Its entries are in declaration order, which is the order
+the session lists its components in.
 
 - A router in a later layer than the component asking is refused before
   anything is built. A presenter asking for the mapping in a session where a
   view is a router fails, naming both.
-- A router that fails to build is absent, and the component asking is built
+- A router that fails to build is absent, and the component asking is set up
   with the routers that did.
-- A router asking for the mapping is absent from its own. Two routers of one
-  layer that both ask for it are built from each other, and the session refuses
-  them.
+- A router asking for the mapping finds itself in it, and skips its own name if
+  it does not want to route to itself.
 
 Chained callbacks are not supported. The order of the mapping does not promise
 that one callback sees a document before another, so a callback must not rely
@@ -751,7 +757,7 @@ and you get back every component that has it, by name.
 
 
     class SessionPresenter:
-        def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+        def setup(self, resettable: Requires[Resettable]) -> None:
             self._resettable = resettable
 
         @slot
@@ -925,7 +931,7 @@ component itself, not a mapping you have to pick through.
 
     ```python
     class RoiWidget:
-        def __init__(self, name: str, /, cameras: Requires[HasCamera]) -> None:
+        def setup(self, cameras: Requires[HasCamera]) -> None:
             self._cameras = cameras
             # and now what? there should be one, but nothing says so
     ```
@@ -934,13 +940,13 @@ component itself, not a mapping you have to pick through.
 
     ```python
     class RoiWidget:
-        def __init__(self, name: str, /, camera: RequiresOne[HasCamera]) -> None:
+        def setup(self, camera: RequiresOne[HasCamera]) -> None:
             self._camera = camera  # the component itself, already built
     ```
 
-`RequiresOne` is not a live view. It is an ordinary dependency: whoever answers
-is built first, and your component receives it. Everything the container does
-for a normal parameter, it does for this one.
+`RequiresOne` hands you the component rather than a mapping to pick through.
+Everything the container does for a normal `setup` parameter, it does for this
+one.
 
 That works because the container settles who answers *before* it builds
 anything, by reading the declared classes. Two consequences follow, and both are
@@ -975,7 +981,7 @@ with an explanation rather than reported as a dependency cycle.
 Use `RequiresMaybe` when doing without is a real option:
 
 ```python
-def __init__(self, name: str, /, roi: RequiresMaybe[HasRoi] = None) -> None:
+def setup(self, roi: RequiresMaybe[HasRoi] = None) -> None:
     self._roi = roi  # None if the session has no ROI component
 ```
 
