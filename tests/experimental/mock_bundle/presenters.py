@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Any
 
 from event_model import DocumentRouter
 from psygnal import Signal
@@ -60,3 +61,10 @@ class MockRegistrar(DocumentRouter):
     def __init__(self, name: str, /) -> None:
         super().__init__()
         self.name = name
+        self.documents: list[str] = []
+
+    def __call__(
+        self, name: str, doc: dict[Any, Any], validate: bool = False
+    ) -> tuple[str, dict[Any, Any]]:
+        self.documents.append(name)
+        return super().__call__(name, doc, validate)
