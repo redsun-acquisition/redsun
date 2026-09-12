@@ -3,3 +3,4 @@ presenters:
 
 views:
   storage: "redsun.view.qt.builtins:StorageView"
+  logs: "redsun.view.qt.builtins:LogView"

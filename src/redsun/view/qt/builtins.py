@@ -12,6 +12,7 @@ from redsun.log import Loggable
 from redsun.storage import PATH_PROVIDER
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
+from redsun.view.qt._log_view import LogView
 from redsun.virtual import slot
 
 if TYPE_CHECKING:
@@ -116,4 +117,4 @@ class StorageView(QtView, Loggable):
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
-__all__ = ["StorageView"]
+__all__ = ["LogView", "StorageView"]
