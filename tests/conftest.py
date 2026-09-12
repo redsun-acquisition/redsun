@@ -10,15 +10,15 @@ import os
 import sys
 
 import pytest
+from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
 
 @pytest.fixture(scope="session")
 def qapp() -> QApplication:
-    app = QApplication.instance() or QApplication([])
+    app = QApplication([])
 
-    # make mypy happy
-    assert isinstance(app, QApplication)
+    start_emitting_from_queue()
     return app
 
 

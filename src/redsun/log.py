@@ -2,14 +2,24 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections import deque
 from functools import cached_property
 from typing import TYPE_CHECKING, Final
+
+from psygnal import Signal
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from typing import Any, ClassVar
 
-__all__ = ["Loggable", "add_handler", "remove_handler", "set_level"]
+__all__ = [
+    "BufferHandler",
+    "Loggable",
+    "add_handler",
+    "log_buffer",
+    "remove_handler",
+    "set_level",
+]
 
 DEFAULT_LEVEL: Final = "INFO"
 """The level the ``redsun`` logger starts at."""
@@ -46,7 +56,18 @@ class GlobalFormatter(logging.Formatter):
         if record.levelno != logging.INFO:
             fmt += " (%(filename)s:%(lineno)d)"
         formatted = fmt % record.__dict__
-        return formatted
+        return "\n".join([formatted, *self.context(record)])
+
+    def context(self, record: logging.LogRecord) -> list[str]:
+        """Return the traceback and stack lines *record* carries, if any."""
+        lines: list[str] = []
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            lines.append(record.exc_text)
+        if record.stack_info:
+            lines.append(self.formatStack(record.stack_info))
+        return lines
 
 
 class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
@@ -78,6 +99,40 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
         extra["uid"] = getattr(self.obj, "name", None)
         kwargs["extra"] = extra
         return msg, kwargs
+
+
+class BufferHandler(logging.Handler):
+    """Retain the most recent log records, and announce each one as it arrives.
+
+    The records outlive the moment they were emitted, so a consumer built later
+    in the session can still show what happened before it existed. The oldest
+    are dropped once *capacity* is reached.
+
+    Parameters
+    ----------
+    capacity : int
+        How many records to retain.
+    """
+
+    sig_record = Signal(logging.LogRecord)
+
+    def __init__(self, capacity: int = 10_000) -> None:
+        super().__init__()
+        self._records: deque[logging.LogRecord] = deque(maxlen=capacity)
+
+    @property
+    def records(self) -> tuple[logging.LogRecord, ...]:
+        """The retained records, oldest first."""
+        return tuple(self._records)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Retain *record* and announce it."""
+        self._records.append(record)
+        self.sig_record.emit(record)
+
+    def clear(self) -> None:
+        """Drop every retained record."""
+        self._records.clear()
 
 
 def set_level(level: int | str) -> None:
@@ -114,6 +169,21 @@ def remove_handler(handler: logging.Handler) -> None:
 
 logger.setLevel(DEFAULT_LEVEL)
 add_handler(logging.StreamHandler(sys.stdout))
+add_handler(BufferHandler())
+
+
+def log_buffer() -> BufferHandler:
+    """Return the buffer holding this session's log records.
+
+    Raises
+    ------
+    RuntimeError
+        If the logging configuration no longer carries a buffer.
+    """
+    for handler in logger.handlers:
+        if isinstance(handler, BufferHandler):
+            return handler
+    raise RuntimeError("no BufferHandler is installed on the 'redsun' logger")
 
 
 class Loggable:
