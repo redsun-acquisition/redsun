@@ -172,6 +172,13 @@ first. `setup` is optional, found by name, and must be synchronous: an
 `async def setup` is refused when the declarations are read, since the session
 calls it without awaiting.
 
+A component whose constructor is generated, such as a pydantic model or a
+dataclass, keeps what `setup` assigns out of its fields: a field is a
+constructor parameter, and one naming what another component owns is refused.
+Use a `PrivateAttr` and a property on a model, and `field(init=False)` on a
+dataclass. A frozen dataclass writes through `object.__setattr__`, the declared
+field giving the slot to write to.
+
 A `setup` that raises, or that asks for a value belonging to a component which
 failed to build, is logged and changes nothing else. The component keeps its
 place in `presenters` and `views`, keeps its wiring, and keeps whatever its
