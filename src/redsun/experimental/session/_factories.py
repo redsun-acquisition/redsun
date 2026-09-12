@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+import inspect
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Union,
+    get_args,
+    get_origin,
+)
+
+from typing_extensions import TypeForm
+
+from redsun.experimental.injection import Devices, Maybe, key_for, question_of
+
+from ._declarations import takes_name_by_keyword
+from ._protocols import HasSetup
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping
+
+    from redsun.experimental.injection import Question
+
+    from ._declarations import Declaration, Key
+
+__all__ = [
+    "constructor",
+    "defaulted",
+    "factory",
+    "get_setup_params",
+    "injectable",
+    "optional_arg",
+    "provider",
+    "requirements",
+    "resolved",
+    "setup_call",
+    "synthesize",
+]
+
+
+def synthesize(
+    fn: Callable[..., Any],
+    params: Mapping[str, Key],
+    returns: Key,
+    name: str,
+) -> Callable[..., Any]:
+    """Give *fn* the public signature ``(**params) -> returns``.
+
+    Both ``__annotations__`` and ``__signature__`` are set: the graph reads the
+    signature to learn each parameter's kind and the annotations to learn its
+    type, so a closure taking ``**kwargs`` would otherwise present no
+    dependencies at all.
+
+    Every name appearing in *params* or *returns* must resolve at runtime; the
+    graph evaluates them, and an import made only for type checking fails there.
+    """
+    fn.__name__ = name
+    fn.__qualname__ = name
+    fn.__annotations__ = {**params, "return": returns}
+    fn.__signature__ = inspect.Signature(  # type: ignore[attr-defined]
+        parameters=[
+            inspect.Parameter(
+                pname, inspect.Parameter.KEYWORD_ONLY, annotation=annotation
+            )
+            for pname, annotation in params.items()
+        ],
+        return_annotation=returns,
+    )
+    return fn
+
+
+def constructor(cls: type) -> inspect.Signature:
+    """Return the signature of *cls*, with its annotations resolved.
+
+    Raises
+    ------
+    TypeError
+        If an annotation names something that does not exist at runtime.
+    """
+    return resolved(cls, f"the constructor of {cls.__qualname__}")
+
+
+def resolved(target: Any, label: str) -> inspect.Signature:
+    """Return the signature of *target*, with its annotations resolved.
+
+    Raises
+    ------
+    TypeError
+        If an annotation names something that does not exist at runtime.
+    """
+    try:
+        return inspect.signature(target, eval_str=True)
+    except NameError as e:
+        raise TypeError(
+            f"cannot read {label}: {e.name!r} is "
+            "not available at runtime. A type a component is injected by must "
+            "be imported outside 'if TYPE_CHECKING', because the graph "
+            "evaluates the annotation."
+        ) from e
+
+
+def injectable(
+    cls: type, cfg_kwargs: Mapping[str, Any], binds_name: bool = True
+) -> dict[str, TypeForm[Any]]:
+    """Return the constructor parameters the session is responsible for.
+
+    Excludes anything the configuration supplied and variadics, and ``name``
+    when the session binds it. A shared service is given no name, so every
+    parameter of one is the session's to answer.
+
+    A parameter carrying a default is widened to ``X | None``, so the session
+    fills it when something provides ``X`` and leaves the default alone when
+    nothing does. A question at most one component may answer is widened the
+    same way, since nothing may answer it.
+
+    Annotations are read from the signature rather than from ``__init__``,
+    because a class may synthesize one: a pydantic model's real ``__init__``
+    takes ``**data``, and its fields appear only in the signature.
+
+    Raises
+    ------
+    TypeError
+        If a remaining parameter carries no annotation.
+    """
+    bound = ("self", "name") if binds_name else ("self",)
+    return wanted_from(
+        constructor(cls), cls.__name__, cfg_kwargs, bound, refuse_questions=True
+    )
+
+
+def get_setup_params(cls: type[HasSetup[...]]) -> dict[str, TypeForm[Any]]:
+    """Return the parameters of ``cls.setup`` the session is responsible for.
+
+    Raises
+    ------
+    TypeError
+        If a parameter carries no annotation, or names a type that does not
+        exist at runtime.
+    """
+    signature = resolved(cls.setup, f"{cls.__qualname__}.setup")
+    return wanted_from(signature, f"{cls.__name__}.setup", {}, ("self",))
+
+
+def wanted_from(
+    signature: inspect.Signature,
+    owner: str,
+    cfg_kwargs: Mapping[str, Any],
+    bound: tuple[str, ...],
+    refuse_questions: bool = False,
+) -> dict[str, TypeForm[Any]]:
+    """Return the parameters of *signature* the session is responsible for."""
+    wanted: dict[str, TypeForm[Any]] = {}
+    for pname, param in signature.parameters.items():
+        if pname in bound or pname in cfg_kwargs:
+            continue
+        if param.kind in (param.VAR_KEYWORD, param.VAR_POSITIONAL):
+            continue
+        if param.annotation is param.empty:
+            raise TypeError(
+                f"{owner}.{pname} has no annotation; the session "
+                "cannot tell what to inject"
+            )
+        hint = param.annotation
+        question = question_of(hint)
+        if question is not None:
+            if refuse_questions and not isinstance(question.marker, Devices):
+                raise TypeError(
+                    f"{owner}.{pname} asks the session a question in its "
+                    f"constructor: {question}. Only the devices are known "
+                    "before the components are built; ask for this in 'setup'."
+                )
+            key = key_for(question)
+            wanted[pname] = key | None if isinstance(question.marker, Maybe) else key
+            continue
+        if param.default is not param.empty and not is_union(hint):
+            hint = hint | None
+        wanted[pname] = hint
+    return wanted
+
+
+def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:
+    """Return each question the declarations ask, and who asks it.
+
+    A question is asked in `setup`, where every component exists, except one
+    about the devices, which a constructor may ask because the devices are
+    built first.
+
+    One entry per question, not per component: the answer is the same for every
+    component that asks, and the names are what an unanswerable question is
+    reported against.
+    """
+    found: dict[Question, list[str]] = {}
+    for declaration in declarations:
+        asked = list(constructor(declaration.cls).parameters.items())
+        if issubclass(declaration.cls, HasSetup):
+            asked += list(
+                resolved(
+                    declaration.cls.setup, f"{declaration.cls.__qualname__}.setup"
+                ).parameters.items()
+            )
+        for pname, param in asked:
+            if pname in declaration.cfg_kwargs:
+                continue
+            question = question_of(param.annotation)
+            if question is None:
+                continue
+            askers = found.setdefault(question, [])
+            if declaration.name not in askers:
+                askers.append(declaration.name)
+    return found
+
+
+def defaulted(cls: type, names: Iterable[str]) -> set[str]:
+    """Return those of *names* the constructor of *cls* gives a default."""
+    params = inspect.signature(cls).parameters
+    return {
+        name
+        for name in names
+        if name in params and params[name].default is not inspect.Parameter.empty
+    }
+
+
+def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
+    """Return ``X`` for ``X | None``, or ``None`` for anything else."""
+    if not is_union(hint):
+        return None
+    args = [arg for arg in get_args(hint) if arg is not type(None)]
+    return args[0] if len(args) == 1 else None
+
+
+def is_union(hint: TypeForm[Any]) -> bool:
+    """Return whether *hint* is a union, written as ``X | Y`` or ``Union[X, Y]``."""
+    return get_origin(hint) in (Union, UnionType)
+
+
+def factory(
+    declaration: Declaration, on_built: Callable[[Declaration, Any], None]
+) -> Callable[..., Any]:
+    """Return the callable the store fills and calls for *declaration*.
+
+    *on_built* runs the moment the instance exists, which is what makes the
+    order components are created in observable: the graph, not the caller,
+    decides it.
+
+    Optional parameters stay in the signature: the store fills ``X | None``
+    with ``None`` when nothing provides ``X``. A parameter answered that way is
+    left out of the call, so its own default applies.
+    """
+    params = injectable(declaration.cls, declaration.cfg_kwargs)
+    optional = defaulted(declaration.cls, params)
+    # a pydantic model exposes its fields as keyword-only, so the name cannot
+    # travel positionally to every component
+    by_keyword = takes_name_by_keyword(declaration.cls)
+
+    def build(**deps: Any) -> Any:
+        supplied = {
+            pname: value
+            for pname, value in deps.items()
+            if value is not None or pname not in optional
+        }
+        named = {"name": declaration.name} if by_keyword else {}
+        positional = () if by_keyword else (declaration.name,)
+        instance = declaration.cls(
+            *positional, **named, **declaration.cfg_kwargs, **supplied
+        )
+        on_built(declaration, instance)
+        return instance
+
+    return synthesize(build, params, declaration.key, f"build_{declaration.name}")
+
+
+def setup_call(instance: HasSetup[...], name: str) -> Callable[..., Any]:
+    """Return the callable the store fills and calls to set *instance* up.
+
+    The parameters are re-annotated with the keys the store answers, the way a
+    constructor's are, since a question is written as an ``Annotated`` alias
+    that the store does not key on.
+    """
+    params = get_setup_params(type(instance))
+
+    def run(**deps: Any) -> None:
+        instance.setup(**deps)
+
+    return synthesize(run, params, None, f"set_up_{name}")
+
+
+def provider(cls: type, name: str) -> Callable[..., Any]:
+    """Return the callable the store fills to build the shared service *cls*.
+
+    A provider takes no name of its own, so every annotated parameter of its
+    constructor is the store's to answer, ``name`` included.
+    """
+    params = injectable(cls, {}, binds_name=False)
+
+    def build(**deps: Any) -> Any:
+        return cls(**deps)
+
+    return synthesize(build, params, cls, f"build_{name}")

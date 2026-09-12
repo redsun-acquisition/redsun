@@ -32,6 +32,7 @@ The returned `PlanWidget` is a frozen dataclass that owns the full widget tree:
 | `pause_button` | `QPushButton \| None` | pause / resume (pausable plans only) |
 | `actions_group` | `QGroupBox \| None` | action buttons (if any) |
 | `action_buttons` | `dict[str, ActionButton]` | per-action button access |
+| `callbacks_list` | `QListWidget \| None` | document callbacks to run the plan with (if any) |
 
 ### Runtime control
 
@@ -53,6 +54,37 @@ args, kwargs = collect_arguments(spec, widget.parameters)
 ```
 
 `widget.parameters` returns `{name: value}` for every widget in the container.
+
+### Document callbacks
+
+A plan may require document callbacks of its own, and may let the user attach
+more. Given both, and the callbacks the user may attach by name,
+`create_plan_widget` lists them in a *Callbacks* group:
+
+```python
+widget = create_plan_widget(
+    spec,
+    plan_callbacks=[median_filter],
+    extendable=True,
+    available_callbacks={"live_plot": live_plot, "table": table},
+    attached_callbacks=["table"],
+    selection_callback=on_selection,
+)
+widget.callbacks  # [median_filter, table]
+widget.attached_callbacks  # ["table"]
+```
+
+The plan's own callbacks come first, checked and fixed in place. Each is
+labelled with the name it has in `available_callbacks`, and listed once, or
+with its `name` attribute or class name when it is not there. The others can be
+checked and dragged into a different order. `callbacks` returns the checked
+callbacks in that order, and `attached_callbacks` the names of the ones the
+user attached. `attached_callbacks=None` checks every available callback, and a
+name that is no longer available is ignored. A plan that carries no callback
+and is not extendable gets no group.
+
+The widget only reports the selection. Subscribing the callbacks to the run
+engine is left to the presenter.
 
 ---
 

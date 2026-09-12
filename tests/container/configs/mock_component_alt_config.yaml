@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-alt-session
+name: mock-alt-session
 presenters:
   ctrl:
     string: "alt ctrl"

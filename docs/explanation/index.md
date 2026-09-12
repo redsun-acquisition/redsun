@@ -7,6 +7,7 @@
 - **[Container architecture](container-architecture.md)**
 - **[Component system](component-system.md)**
 - **[Session storage](storage.md)**
+- **[The experimental container](experimental-container.md)**
 
 ## SDK
 

@@ -7,10 +7,9 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from ophyd_async.core import Device
 
+from redsun._structural import problems
 from redsun.presenter import PPresenter
 from redsun.view import PView
-
-from ._structural import problems
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: test-session
+name: test-session
 
 storage:
   backend: zarr

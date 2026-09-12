@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: broken-model-session
+name: broken-model-session
 devices:
   iSCAT channel:
     plugin_name: mock-pkg

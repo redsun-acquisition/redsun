@@ -1,0 +1,122 @@
+"""Experimental session layer.
+
+Not covered by any stability guarantee: names and behaviour here may change or
+be withdrawn in any release. The supported container layer is
+[`redsun.containers`][redsun.containers].
+
+Components are declared as annotations on a session class, each naming the
+layer it belongs to, and their dependencies are constructor parameters resolved
+by type:
+
+```python
+from typing import Annotated
+
+from redsun.experimental import AsDevice, AsPresenter, AsView, Declare
+from redsun.experimental.session.qt import QtSession
+
+
+class MyApp(QtSession):
+    config = "session.yaml"
+
+    stage: AsDevice[MyStage]
+    motor_ctrl: AsPresenter[MotorPresenter]
+    motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
+```
+
+Requires the ``experimental`` extra (``pip install redsun[experimental]``).
+"""
+
+from redsun._hooks import ConfirmsClose, HookError
+from redsun._structural import satisfies
+from redsun.experimental._settings import Settings
+from redsun.experimental.injection import (
+    DevicesOf,
+    Requires,
+    RequiresMaybe,
+    RequiresOne,
+    provides,
+    rejected,
+    satisfying,
+)
+from redsun.experimental.ports import (
+    ComponentNotBuilt,
+    Connection,
+    WiringError,
+    slot,
+)
+from redsun.experimental.registry import (
+    CallbackType,
+    DeviceMapping,
+    HasPlans,
+    PlanEntry,
+    SessionConfig,
+)
+from redsun.experimental.session import (
+    Alias,
+    AsDevice,
+    AsHook,
+    AsPresenter,
+    AsView,
+    AttachableComponent,
+    BuildableSession,
+    ConfigurationInUse,
+    Declare,
+    DesktopSession,
+    FromConfig,
+    Frontend,
+    HasAsyncShutdown,
+    HasSetup,
+    HasShutdown,
+    Layer,
+    NamedComponent,
+    PluginError,
+    Serializable,
+    Serves,
+    Session,
+)
+from redsun.experimental.view import Placement
+
+__all__ = [
+    "Alias",
+    "AsDevice",
+    "AsHook",
+    "AsPresenter",
+    "AsView",
+    "AttachableComponent",
+    "BuildableSession",
+    "CallbackType",
+    "ComponentNotBuilt",
+    "ConfigurationInUse",
+    "ConfirmsClose",
+    "Connection",
+    "Declare",
+    "DesktopSession",
+    "DeviceMapping",
+    "DevicesOf",
+    "FromConfig",
+    "Frontend",
+    "HasAsyncShutdown",
+    "HasPlans",
+    "HasSetup",
+    "HasShutdown",
+    "HookError",
+    "Layer",
+    "NamedComponent",
+    "Placement",
+    "PlanEntry",
+    "PluginError",
+    "Requires",
+    "RequiresMaybe",
+    "RequiresOne",
+    "Serializable",
+    "Serves",
+    "Session",
+    "SessionConfig",
+    "Settings",
+    "WiringError",
+    "provides",
+    "rejected",
+    "satisfies",
+    "satisfying",
+    "slot",
+]

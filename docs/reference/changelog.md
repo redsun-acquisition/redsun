@@ -1,6 +1,8 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+Changes to `redsun.experimental` that are not yet released are listed in the
+[experimental changelog](changelog-experimental.md).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -237,7 +239,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `schema_version` and `frontend` must agree across layered files. They name
   what kind of session this is rather than what it contains, so a later file
   giving a different value raises `ValueError` instead of overriding. Every
-  other key, `session` included, is taken from the later file.
+  other key, `name` included, is taken from the later file.
 - A container reading more than one configuration file logs them at debug
   level, in the order they layer, and logs each component an upper file takes
   from a lower one.

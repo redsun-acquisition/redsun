@@ -1,4 +1,4 @@
-session: mock-overlay-session
+name: mock-overlay-session
 devices:
   motor:
     egu: "um"
