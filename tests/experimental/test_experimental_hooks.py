@@ -263,6 +263,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
         "registry",
         "presenters",
         "views",
+        "setup",
         "seal",
         "wiring",
         "presentation",

@@ -61,6 +61,7 @@ from ._declarations import (
 from ._factories import (
     constructor,
     factory,
+    get_setup_params,
     injectable,
     optional_arg,
     provider,
@@ -71,6 +72,9 @@ from ._plugins import load_providers
 from ._protocols import (
     AttachableComponent,
     BuildableSession,
+    HasAsyncShutdown,
+    HasSetup,
+    HasShutdown,
     NamedComponent,
     Serializable,
 )
@@ -137,6 +141,7 @@ BUILD_STEPS: Final[tuple[str, ...]] = (
     "registry",
     "presenters",
     "views",
+    "setup",
     "seal",
     "wiring",
     "presentation",
@@ -205,6 +210,7 @@ class Session(BuildableSession):
         "_links",
         "_merged",
         "_names",
+        "_not_set_up",
         "_releases",
         "_report",
         "_sealed",
@@ -268,6 +274,8 @@ class Session(BuildableSession):
         self._session_config = SessionConfig()
         self._callbacks: dict[str, CallbackType] = {}
         self._built_components: dict[str, object] = {}
+        # a component whose setup could not run: kept, and named in the report
+        self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
         self._sealed = False
         self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
@@ -509,6 +517,7 @@ class Session(BuildableSession):
                     ("registry", self.open_registry),
                     ("presenters", self.build_presenters),
                     ("views", self.build_views),
+                    ("setup", self.setup_components),
                     ("seal", self.seal),
                     ("wiring", self.apply_wiring),
                     ("presentation", self.present),
@@ -602,7 +611,7 @@ class Session(BuildableSession):
     def log_summary(self) -> None:
         """Log what the build made, counted against what was declared."""
         summary = self._summarise_build()
-        if self._failed:
+        if self._failed or self._not_set_up:
             logger.warning(summary)
         else:
             logger.info(summary)
@@ -619,12 +628,16 @@ class Session(BuildableSession):
             built = sum(1 for d in declared if d.instance is not None)
             counted.append(f"{built}/{len(declared)} {layer}s")
         summary = f"Container built: {', '.join(counted)}"
-        if not self._failed:
-            return summary
-        missing = ", ".join(
-            f"{name} ({self._declarations[name].kind})" for name in self._failed
-        )
-        return summary + "\nNot built: " + missing
+        for label, names in (
+            ("Not built", self._failed),
+            ("Not set up", self._not_set_up),
+        ):
+            if names:
+                named = ", ".join(
+                    f"{name} ({self._declarations[name].kind})" for name in names
+                )
+                summary += f"\n{label}: {named}"
+        return summary
 
     def wire(self) -> None:
         """Connect the signals and slots of built components.
@@ -671,6 +684,7 @@ class Session(BuildableSession):
         self.disconnect_all()
         self._releases.close()
         self._callbacks.clear()
+        self._not_set_up.clear()
         self._built_components.clear()
         self._names.clear()
         logger.info("Container shutdown complete")
@@ -1101,6 +1115,53 @@ class Session(BuildableSession):
         """Construct the view layer, in the order it depends in."""
         self._construct(Layer.VIEW)
 
+    def setup_components(self) -> None:
+        """Hand every component what another component owns.
+
+        Every presenter and view exists by now, so a `setup` may take a value
+        another component shares, a census of the session, or a component
+        itself. One that cannot run is reported and changes nothing else: the
+        component keeps its place, its wiring and what its constructor made,
+        and what its `setup` was going to assign is missing where it is used.
+
+        Raises
+        ------
+        RuntimeError
+            If the registry step has not opened the store yet.
+        TypeError
+            If a `setup` asks for something nothing in the session declares.
+        """
+        store = self._store
+        if store is None:
+            raise RuntimeError("The registry step has to run before a component is")
+        for declaration in self._components():
+            instance = declaration.instance
+            if instance is None or not issubclass(declaration.cls, HasSetup):
+                continue
+            params = get_setup_params(declaration.cls)
+            missing = unanswered(store, params)
+            if missing:
+                absent = self._blamed(hint for _, hint in missing)
+                if not absent:
+                    raise TypeError(
+                        unanswered_message(f"{declaration.name}.setup", missing)
+                    )
+                self._not_set_up[declaration.name] = TypeError(
+                    f"{listed(sorted(absent))} was not built"
+                )
+            else:
+                try:
+                    store.inject(instance.setup)()
+                    continue
+                except Exception as e:  # noqa: BLE001 - a setup must not abort the app
+                    self._not_set_up[declaration.name] = e
+            logger.warning(
+                "Failed to set up %s '%s': %s",
+                declaration.kind,
+                declaration.name,
+                self._not_set_up[declaration.name],
+            )
+
     def _construct(self, layer: Layer) -> None:
         """Build every component of *layer* and register what it shares.
 
@@ -1197,8 +1258,9 @@ class Session(BuildableSession):
         """Return the names of failed components that would have answered *hints*.
 
         A component registers itself under its key and, when it is the only
-        declaration naming its class, under that class too, so those are the
-        two ways a collaborator can have asked for it.
+        declaration naming its class, under that class too, and it registers
+        every type it shares, so those are the ways a collaborator can have
+        asked for it.
         """
         wanted = set(hints)
         return {
@@ -1208,6 +1270,7 @@ class Session(BuildableSession):
             and (
                 declaration.key in wanted
                 or (declaration.cls in wanted and self._is_unique(declaration))
+                or wanted & set(shared_keys(declaration.cls).values())
             )
         }
 
@@ -1505,15 +1568,18 @@ class Session(BuildableSession):
         A component that declares ``shutdown`` is finalized without having to
         ask for it; one that does not needs no teardown at all.
         """
-        shutdown = getattr(component, "shutdown", None)
-        if not callable(shutdown):
+        if not isinstance(component, HasShutdown):
             return
+        shutdown = component.shutdown
+        # both protocols name one method, so only the function says which it is
         if not inspect.iscoroutinefunction(shutdown):
             self.on_release(shutdown)
             return
 
+        async_shutdown = cast("HasAsyncShutdown", component).shutdown
+
         def close() -> None:
-            run_coro(shutdown())
+            run_coro(async_shutdown())
 
         self.on_release(close)
 
@@ -1563,7 +1629,7 @@ class Session(BuildableSession):
         wanted = {
             optional_arg(hint) or hint
             for declaration in declarations
-            for hint in injectable(declaration.cls, declaration.cfg_kwargs).values()
+            for hint in self._asked_for(declaration)
         }
         used = self._used(declarations, wanted)
         for declaration in declarations:
@@ -1576,12 +1642,51 @@ class Session(BuildableSession):
                         method,
                         getattr(key, "__name__", key),
                     )
-            requires = injectable(declaration.cls, declaration.cfg_kwargs)
+            self._warn_double_route(declaration, declarations)
+            requires = list(self._asked_for(declaration))
             if not provided and not requires and declaration.name not in used:
                 logger.warning(
                     "%r shares nothing, asks for nothing and is wired to nothing; "
                     "it is built and reachable, and does nothing",
                     declaration.name,
+                )
+
+    def _asked_for(self, declaration: Declaration) -> list[Any]:
+        """Return every type *declaration* asks for, constructor and `setup`."""
+        return [
+            *injectable(declaration.cls, declaration.cfg_kwargs).values(),
+            *(
+                get_setup_params(declaration.cls).values()
+                if issubclass(declaration.cls, HasSetup)
+                else ()
+            ),
+        ]
+
+    def _warn_double_route(
+        self, declaration: Declaration, declarations: list[Declaration]
+    ) -> None:
+        """Report a component that both holds another and publishes to it.
+
+        Two routes to one component means an action written both ways runs
+        twice. Which method a component calls is not knowable here, so a pair
+        using each route for something different is named once and legally.
+        """
+        by_type = owners(declarations)
+        by_type.update({d.key: d for d in declarations})
+        held = {
+            by_type[asked].name
+            for asked in (
+                optional_arg(hint) or hint for hint in self._asked_for(declaration)
+            )
+            if asked in by_type
+        }
+        for connection in self.connections:
+            if connection.publisher == declaration.name and connection.consumer in held:
+                logger.warning(
+                    "%r holds %r and is also connected to it; a bundle reaches a "
+                    "component one way, by calling it or by a signal",
+                    declaration.name,
+                    connection.consumer,
                 )
 
     def _used(self, declarations: list[Declaration], wanted: set[Any]) -> set[str]:

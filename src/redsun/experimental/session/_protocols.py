@@ -5,6 +5,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     NoReturn,
+    ParamSpec,
     Protocol,
     Self,
     TypeVar,
@@ -23,11 +24,45 @@ __all__ = [
     "AttachableComponent",
     "BuildableSession",
     "DesktopSession",
+    "HasAsyncShutdown",
+    "HasSetup",
+    "HasShutdown",
     "NamedComponent",
     "Serializable",
 ]
 
 WindowT_co = TypeVar("WindowT_co", covariant=True)
+SetupP = ParamSpec("SetupP")
+
+
+@runtime_checkable
+class HasSetup(Protocol[SetupP]):
+    """A component taking what another component owns, once every one exists.
+
+    The session fills the parameters by type, the way it fills a constructor's,
+    and calls it in a step of its own. It answers nothing: what it is given is
+    the component's to keep.
+    """
+
+    def setup(self, *args: SetupP.args, **kwargs: SetupP.kwargs) -> None: ...
+
+
+@runtime_checkable
+class HasShutdown(Protocol):
+    """A component finalizing itself when the session shuts down.
+
+    The session registers the method as a release when the component is built,
+    so a component that has one is finalized without asking for it.
+    """
+
+    def shutdown(self) -> None: ...
+
+
+@runtime_checkable
+class HasAsyncShutdown(Protocol):
+    """A component whose teardown is a coroutine, run on the session's loop."""
+
+    async def shutdown(self) -> None: ...
 
 
 @runtime_checkable
@@ -129,6 +164,11 @@ class BuildableSession(Protocol):
     @abstractmethod
     def build_views(self) -> None:
         """Construct the view layer, in the order it depends in."""
+        ...
+
+    @abstractmethod
+    def setup_components(self) -> None:
+        """Hand every component what another component owns."""
         ...
 
     @abstractmethod

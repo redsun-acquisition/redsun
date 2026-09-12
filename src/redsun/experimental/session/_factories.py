@@ -22,15 +22,18 @@ if TYPE_CHECKING:
     from redsun.experimental.injection import Question
 
     from ._declarations import Declaration, Key
+    from ._protocols import HasSetup
 
 __all__ = [
     "constructor",
     "defaulted",
     "factory",
+    "get_setup_params",
     "injectable",
     "optional_arg",
     "provider",
     "requirements",
+    "resolved",
     "synthesize",
 ]
 
@@ -74,11 +77,22 @@ def constructor(cls: type) -> inspect.Signature:
     TypeError
         If an annotation names something that does not exist at runtime.
     """
+    return resolved(cls, f"the constructor of {cls.__qualname__}")
+
+
+def resolved(target: Any, label: str) -> inspect.Signature:
+    """Return the signature of *target*, with its annotations resolved.
+
+    Raises
+    ------
+    TypeError
+        If an annotation names something that does not exist at runtime.
+    """
     try:
-        return inspect.signature(cls, eval_str=True)
+        return inspect.signature(target, eval_str=True)
     except NameError as e:
         raise TypeError(
-            f"cannot read the constructor of {cls.__qualname__}: {e.name!r} is "
+            f"cannot read {label}: {e.name!r} is "
             "not available at runtime. A type a component is injected by must "
             "be imported outside 'if TYPE_CHECKING', because the graph "
             "evaluates the annotation."
@@ -108,16 +122,39 @@ def injectable(
     TypeError
         If a remaining parameter carries no annotation.
     """
-    wanted: dict[str, TypeForm[Any]] = {}
     bound = ("self", "name") if binds_name else ("self",)
-    for pname, param in constructor(cls).parameters.items():
+    return wanted_from(constructor(cls), cls.__name__, cfg_kwargs, bound)
+
+
+def get_setup_params(cls: type[HasSetup[...]]) -> dict[str, TypeForm[Any]]:
+    """Return the parameters of ``cls.setup`` the session is responsible for.
+
+    Raises
+    ------
+    TypeError
+        If a parameter carries no annotation, or names a type that does not
+        exist at runtime.
+    """
+    signature = resolved(cls.setup, f"{cls.__qualname__}.setup")
+    return wanted_from(signature, f"{cls.__name__}.setup", {}, ("self",))
+
+
+def wanted_from(
+    signature: inspect.Signature,
+    owner: str,
+    cfg_kwargs: Mapping[str, Any],
+    bound: tuple[str, ...],
+) -> dict[str, TypeForm[Any]]:
+    """Return the parameters of *signature* the session is responsible for."""
+    wanted: dict[str, TypeForm[Any]] = {}
+    for pname, param in signature.parameters.items():
         if pname in bound or pname in cfg_kwargs:
             continue
         if param.kind in (param.VAR_KEYWORD, param.VAR_POSITIONAL):
             continue
         if param.annotation is param.empty:
             raise TypeError(
-                f"{cls.__name__}.{pname} has no annotation; the session "
+                f"{owner}.{pname} has no annotation; the session "
                 "cannot tell what to inject"
             )
         hint = param.annotation

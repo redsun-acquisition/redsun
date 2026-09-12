@@ -210,6 +210,11 @@ def check(
             f"{where} is declared as a {layer}, but {target.__name__} does "
             "not take 'name' as its first parameter"
         )
+    if inspect.iscoroutinefunction(inspect.getattr_static(target, "setup", None)):
+        raise TypeError(
+            f"{where} defines 'async def setup'; the session calls it without "
+            "awaiting, so it must be synchronous"
+        )
     declared = inspect.getattr_static(target, "placement", None)
     if layer is not Layer.VIEW:
         if declared is not None:

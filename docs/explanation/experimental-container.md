@@ -143,6 +143,45 @@ The container looks at your `__init__` and sorts the parameters out for you:
 So `step: float = 1.0` works whether or not it appears in the YAML file, and you
 never write code to reconcile the two.
 
+### What arrives in `setup`
+
+A constructor takes the component's name, its configuration, and what the
+session holds before any component exists: `SessionConfig`, `Settings`,
+`DeviceMapping`, `DevicesOf[P]`, and anything a `providers:` service shares.
+
+Anything owned by another component can also be taken in `setup`, a method the
+session calls once every presenter and view has been constructed:
+
+```python
+class MotorPresenter:
+    def __init__(self, name: str, /, step: float = 1.0) -> None:
+        self.name = name
+        self.step = step
+
+    def setup(self, readings: MotorReadings) -> None:
+        self.readings = readings
+```
+
+Its parameters are filled by type, exactly as a constructor's are, and every
+component exists by then, so it does not matter which component is declared
+first. `setup` is optional, found by name, and must be synchronous: an
+`async def setup` is refused when the declarations are read, since the session
+calls it without awaiting.
+
+A `setup` that raises, or that asks for a value belonging to a component which
+failed to build, is logged and changes nothing else. The component keeps its
+place in `presenters` and `views`, keeps its wiring, and keeps whatever its
+constructor made; what `setup` was going to assign is missing where it is used.
+The closing summary names it:
+
+```text
+Container built: 0/0 devices, 2/2 presenters, 1/1 views
+Not set up: overlay (presenter)
+```
+
+A `setup` asking for something nothing in the session declares is a mistake in
+the session, and still raises `TypeError`.
+
 ## Assembling an application
 
 === "Today"

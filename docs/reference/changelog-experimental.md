@@ -134,6 +134,32 @@ listed in the [changelog](changelog.md).
   order, `PlanWidget.attached_callbacks` the names of the ones the user
   attached, and `PlanWidget.callbacks_list` holds the list.
 
+- `setup` and `HasSetup` - an optional method a component defines to take what
+  another component owns, and the protocol naming it. `HasShutdown` and
+  `HasAsyncShutdown` name the teardown the session already registered by
+  looking for a `shutdown` method. The session calls it once every presenter and view has been
+  constructed, in a build step of its own, announced as `"setup"` between
+  `"views"` and `"seal"`. Its parameters are filled by type, the way a
+  constructor's are, so declaration order does not matter:
+
+  ```python
+  class MyPresenter:
+      def setup(self, readings: MotorReadings) -> None:
+          self.readings = readings
+  ```
+
+  An `async def setup` is refused when the declarations are read. A `setup`
+  that raises, or that asks for a value of a component that failed to build, is
+  logged at `WARNING` and changes nothing else: the component keeps its place
+  in `presenters` and `views`, its wiring and what its constructor made, and
+  the closing summary names it under `Not set up`. A `setup` asking for
+  something nothing in the session declares raises `TypeError`.
+
+- A component that both takes another component and publishes a signal to it is
+  named once the wiring is applied, beside the other reports of this kind. An
+  action written both ways runs twice, and a bundle reaches a component one
+  way, by calling it or by a signal.
+
 - `Requires[P]` - the components of the session that satisfy a protocol, spelled
   `Annotated[Mapping[str, P], Every()]`. A live view, holding what the build
   made, so a component that failed is absent from it. A component satisfying *P*
@@ -463,6 +489,10 @@ listed in the [changelog](changelog.md).
   or `RequiresMaybe` question.
 
 ### Changed
+
+- A component asking for a type shared by a component that failed to build is
+  skipped and logged, as one asking for the failed component itself already
+  was, rather than raising `TypeError` and ending the build.
 
 - The session configuration key `session` is now `name`, in both container
   layers, and identifies the session rather than titling its window. It names
