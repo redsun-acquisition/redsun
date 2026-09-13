@@ -181,24 +181,20 @@ class Service:
         )
         self._drain.start()
 
-        if self._is_ready or self._settled.wait(STARTUP_TIMEOUT) and self._is_ready:
+        if not self._is_ready:
+            self._settled.wait(STARTUP_TIMEOUT)
+        if self._is_ready:
             logger.info("Service '%s' started", self.name)
             return
-        if self._settled.is_set():
-            code = self._process.wait()
-            self._join_drain()
-            self._process = None
-            logger.error(
-                self._with_tail(f"Service '{self.name}' exited with code {code}")
-            )
-            raise RuntimeError(f"exited with code {code} before it was ready")
+        code = self._process.wait() if self._settled.is_set() else None
         self.stop()
-        logger.error(
-            self._with_tail(
-                f"Service '{self.name}' not ready after {STARTUP_TIMEOUT:g} s"
-            )
+        reason = (
+            f"not ready after {STARTUP_TIMEOUT:g} s"
+            if code is None
+            else f"exited with code {code} before it was ready"
         )
-        raise TimeoutError(f"not ready after {STARTUP_TIMEOUT:g} s")
+        logger.error(self._with_tail(f"Service '{self.name}' {reason}"))
+        raise (TimeoutError if code is None else RuntimeError)(reason)
 
     def stop(self) -> None:
         """Stop the launched process, escalating until it exits.

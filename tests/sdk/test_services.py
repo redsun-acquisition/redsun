@@ -134,7 +134,9 @@ def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
 
 
 def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
-    launch: Callable[..., Service], monkeypatch: pytest.MonkeyPatch
+    launch: Callable[..., Service],
+    service_log: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The exit ends the wait rather than the startup timeout."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 10.0)
@@ -146,6 +148,11 @@ def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
 
     assert time.monotonic() - started < 5
     assert not stand_in.running
+    (error,) = messages(service_log, logging.ERROR)
+    assert error.startswith(
+        "Service 'stand-in' exited with code 3 before it was ready; last output:"
+    )
+    assert error.endswith("exiting on request")
 
 
 @pytest.mark.parametrize(
