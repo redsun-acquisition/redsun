@@ -29,7 +29,6 @@ from ophyd_async.core import (
 )
 
 from redsun.aio import run_coro
-from redsun.engine import RunEngine
 from redsun.storage import BaseStorage, FrameSink, SessionPathProvider, StreamSpec
 from redsun.storage.backends._memory import MemoryIO
 
@@ -43,6 +42,7 @@ if TYPE_CHECKING:
     from event_model.documents import Event, EventDescriptor, RunStop
     from ophyd_async.core import PathInfo, StreamableDataProvider
 
+    from redsun.engine import RunEngine
     from redsun.storage._base import OpenStore
 
 SHAPE = (4, 4)
@@ -302,9 +302,8 @@ def storage(io: MemoryIO, tmp_path: Path) -> BaseStorage:
 
 
 def test_plan_with_device_and_callback_writers(
-    storage: BaseStorage, io: MemoryIO
+    RE: RunEngine, storage: BaseStorage, io: MemoryIO
 ) -> None:
-    engine = RunEngine()
     det = make_detector("det", storage)
 
     async def _make_signal() -> Any:
@@ -314,7 +313,7 @@ def test_plan_with_device_and_callback_writers(
 
     buf = run_coro(_make_signal())
     callback = MedianWriter(storage, source_key="buf")
-    engine.subscribe(callback)
+    RE.subscribe(callback)
 
     def plan() -> MsgGenerator[None]:
         yield from bps.open_run()
@@ -336,7 +335,7 @@ def test_plan_with_device_and_callback_writers(
         yield from bps.unstage_all(det)
         yield from bps.close_run()
 
-    engine(plan()).result(timeout=30)
+    RE(plan()).result(timeout=30)
     # deterministic settle: close() awaits any drain still flushing
     run_coro(storage.close())
 
@@ -352,13 +351,14 @@ def test_plan_with_device_and_callback_writers(
     np.testing.assert_array_equal(store.arrays["buf_median"][0], expected)
 
 
-def test_two_devices_share_one_storage(storage: BaseStorage, io: MemoryIO) -> None:
+def test_two_devices_share_one_storage(
+    RE: RunEngine, storage: BaseStorage, io: MemoryIO
+) -> None:
     """Two detectors share one BaseStorage: one store, one path, both keys.
 
     Shared-storage detectors must rely on lazy open (``eager_open=False``):
     an eager open at prepare would race the sibling's registration.
     """
-    engine = RunEngine()
     det_a = make_detector("det_a", storage, eager_open=False)
     det_b = make_detector("det_b", storage, eager_open=False)
 
@@ -380,7 +380,7 @@ def test_two_devices_share_one_storage(storage: BaseStorage, io: MemoryIO) -> No
         yield from bps.unstage_all(det_a, det_b)
         yield from bps.close_run()
 
-    engine(plan()).result(timeout=30)
+    RE(plan()).result(timeout=30)
     run_coro(storage.close())
 
     # exactly one backend store opened for the shared burst, closed once
@@ -394,7 +394,9 @@ def test_two_devices_share_one_storage(storage: BaseStorage, io: MemoryIO) -> No
     assert set(store.specs.keys()) == {"det_a", "det_b"}
 
 
-def test_live_view_writes_only_during_write_window(tmp_path: Path) -> None:
+def test_live_view_writes_only_during_write_window(
+    RE: RunEngine, tmp_path: Path
+) -> None:
     """Live view streams to the buffer signal; storage sees only the window.
 
     Frames flow to viewers from stage time with no store; a write-intent
@@ -421,7 +423,6 @@ def test_live_view_writes_only_during_write_window(tmp_path: Path) -> None:
     provider = SessionPathProvider(base_dir=tmp_path, session="live")
     live_storage = BaseStorage(io=io, path_provider=provider)
 
-    engine = RunEngine()
     buffer_updates: list[npt.NDArray[Any]] = []
     det, acquire = make_live_detector("cam", live_storage, buffer_updates.append)
 
@@ -441,7 +442,7 @@ def test_live_view_writes_only_during_write_window(tmp_path: Path) -> None:
         yield from bps.unstage_all(det)  # live streaming stops here
         yield from bps.close_run()
 
-    engine(plan()).result(timeout=30)
+    RE(plan()).result(timeout=30)
     run_coro(live_storage.close())
 
     # exactly one store, created lazily by the first written frame - after
