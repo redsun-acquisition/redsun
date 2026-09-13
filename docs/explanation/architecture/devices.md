@@ -86,6 +86,15 @@ Such a presenter must not read the device before connecting it. Calling
 [`connect_devices`][redsun.containers.container.AppContainer.connect_devices]
 connects every device, whatever its `autoconnect` says.
 
+!!! note
+
+    libca, which Channel Access goes through, reads the list of addresses it
+    searches once per process, the first time the process uses Channel
+    Access. A container launching its services before that is fine, and one
+    built again keeps each service on the port it had. A second container
+    launching services under *other* names in the same process gives them
+    ports that list does not hold, and on Windows their devices do not connect.
+
 ## Signals
 
 Signals are the typed, named attributes of a device. ophyd-async provides four signal types:
