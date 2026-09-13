@@ -57,6 +57,7 @@ from redsun.containers.components import (
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.presenter import PPresenter
+from redsun.services._service import close_channel_access
 from redsun.view import PView
 from redsun.virtual import (
     ComponentNotBuilt,
@@ -70,7 +71,7 @@ from redsun.virtual import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
-    from typing import Self, TypeAlias
+    from typing import Final, Self, TypeAlias
 
     from psygnal import SignalInstance
 
@@ -160,6 +161,9 @@ def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
 T = TypeVar("T")
 
 logger = logging.getLogger("redsun")
+
+CONNECT_TIMEOUT: Final = 10.0
+"""Seconds the build waits for each device it connects."""
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
@@ -325,7 +329,6 @@ class AppContainer:
         "_built_devices",
         "_components",
         "_config",
-        "_devices_connected",
         "_failed",
         "_failed_services",
         "_hook_by_moment",
@@ -363,6 +366,7 @@ class AppContainer:
         "services",
         "virtual container",
         "devices",
+        "connect",
         "presenters",
         "views",
         "providers",
@@ -574,7 +578,6 @@ class AppContainer:
         # from a name that was never declared
         self._failed: dict[str, BaseException] = {}
         self._built_devices: dict[str, Device] = {}
-        self._devices_connected: bool = False
         self._components: dict[str, _ComponentBase[Any]] = {
             **self._presenter_components,
             **self._view_components,
@@ -785,11 +788,12 @@ class AppContainer:
         1. Services, started unless `start_services` already ran
         2. VirtualContainer
         3. Devices
-        4. Presenters
-        5. Views
-        6. Providers, registered into the VirtualContainer
-        7. Wiring, connecting the signals and slots of built components
-        8. Remaining dependency injection
+        4. Connect, every device declared with ``autoconnect`` true
+        5. Presenters
+        6. Views
+        7. Providers, registered into the VirtualContainer
+        8. Wiring, connecting the signals and slots of built components
+        9. Remaining dependency injection
 
         A build that raises stops the services before the exception leaves it,
         so no process it launched outlives it.
@@ -815,6 +819,8 @@ class AppContainer:
             self._create_virtual_container()
             self._report("devices")
             self._build_devices()
+            self._report("connect")
+            self._connect_devices()
             self._report("presenters")
             self._build_presenters()
             self._report("views")
@@ -859,7 +865,9 @@ class AppContainer:
                 name: kind for kind, components in declared for name in components
             }
             missing = ", ".join(
-                f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+                f"{name} ({kind_of.get(name, 'component')}"
+                f"{', not connected' if isinstance(error, ConnectionError) else ''})"
+                for name, error in self._failed.items()
             )
             summary = f"{summary}\nNot built: {missing}"
         unused = self._unused_services()
@@ -1037,6 +1045,55 @@ class AppContainer:
                 logger.error(f"Failed to build device '{name}': {e}")
         self._built_devices = built_devices
 
+    def _connect_devices(self) -> None:
+        """Connect every built device declared with autoconnect, all at once.
+
+        A device that does not connect within `CONNECT_TIMEOUT` is recorded as
+        failed and dropped, as a device that fails to build is, so no presenter
+        receives a device that raises on its first read.
+        """
+        targets = {
+            name: device
+            for name, device in self._built_devices.items()
+            if self._device_components[name].autoconnect
+        }
+        if not targets:
+            return
+
+        async def connect_all() -> list[BaseException | None]:
+            return await asyncio.gather(
+                *(
+                    device.connect(timeout=CONNECT_TIMEOUT)
+                    for device in targets.values()
+                ),
+                return_exceptions=True,
+            )
+
+        for name, result in zip(targets, run_coro(connect_all()), strict=True):
+            if result is None:
+                continue
+            component = self._device_components[name]
+            reason = self._connection_failure(component, result)
+            self._failed[name] = ConnectionError(reason)
+            del self._built[component]
+            del self._built_devices[name]
+            logger.error(f"Failed to connect device '{name}': {reason}")
+
+    def _connection_failure(
+        self, device: _DeviceComponent, error: BaseException
+    ) -> str:
+        """Return why *device* did not connect, naming the service it talks to."""
+        # ophyd-async pads a NotConnectedError's message with whitespace
+        detail = str(error).strip()
+        service = self._services.get(device.service or "")
+        if service is None:
+            return detail
+        how = "launched" if service.launched else "attached"
+        return (
+            f"service {service.name!r} ({how}) did not answer within "
+            f"{CONNECT_TIMEOUT:g} s: {detail}"
+        )
+
     def _prefix_for(self, device: _DeviceComponent) -> str | None:
         """Return the prefix *device*'s service gives it, or ``None`` if it names none.
 
@@ -1103,8 +1160,11 @@ class AppContainer:
     def connect_devices(self, mock: bool = False) -> None:
         """Connect all devices via ophyd-async's async connect lifecycle.
 
-        Call after [`build`][redsun.containers.container.AppContainer.build].
-        Use ``mock=True`` in tests to skip hardware communication.
+        Call after [`build`][redsun.containers.container.AppContainer.build],
+        which has already connected every device declared with ``autoconnect``
+        true. This connects every device whatever its ``autoconnect`` says, and
+        a device already connected returns at once. Use ``mock=True`` in tests
+        to skip hardware communication.
 
         Parameters
         ----------
@@ -1125,7 +1185,6 @@ class AppContainer:
             )
 
         run_coro(_connect_all(mock))
-        self._devices_connected = True
 
     def shutdown(self) -> None:
         """Undo the build, one phase at a time.
@@ -1163,15 +1222,21 @@ class AppContainer:
     def _stop_services(self) -> None:
         """Stop every service the container launched, the last declared first.
 
-        One service failing to stop does not stop the others.
+        One service failing to stop does not stop the others. Once one has
+        stopped, the Channel Access channels of this process are closed, so
+        that a container built again connects afresh.
         """
+        stopped = False
         for name, service in reversed(self._services.items()):
+            stopped = stopped or service.running
             try:
                 service.stop()
             except Exception as e:  # noqa: BLE001 - one failed stop must not block the rest
                 logger.error(f"Error stopping service '{name}': {e}")
         self._failed_services.clear()
         self._services_started = False
+        if stopped:
+            run_coro(close_channel_access())
 
     def _open_session_log(self) -> None:
         """Start writing this run's records to the session's log files.
@@ -1246,11 +1311,9 @@ class AppContainer:
         """
 
     def run(self) -> None:
-        """Build and connect devices if needed, then start the application."""
+        """Build the container if needed, then start the application."""
         if not self._is_built:
             self.build()
-        if not self._devices_connected:
-            self.connect_devices()
 
         frontend = self._config.get("frontend", "pyqt")
         logger.info(f"Starting application with frontend: {frontend}")

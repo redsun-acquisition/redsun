@@ -49,6 +49,43 @@ class MyApp(AppContainer):
 A constructor taking `name` positional-only (`def __init__(self, name: str, /)`)
 fails to build, and the container logs it and skips the device.
 
+## Connecting
+
+The build connects every device between building the devices and building the
+presenters, all at once, so a presenter that reads a device while it is built
+reads a connected one. A device that does not connect within ten seconds is
+logged and skipped like one that fails to build: no presenter receives it, and
+the build summary lists it as `camera (device, not connected)`. When the device
+talks to a service, the message names the service.
+
+Declaring a device with `autoconnect=False` (`autoconnect: false` in a
+configuration file) leaves it unconnected. Connecting it is then the
+application's choice, usually from a presenter a view reaches through the
+wiring:
+
+```python
+from psygnal import Signal
+
+from redsun.presenter import Presenter
+from redsun.virtual import slot
+
+
+class StagePresenter(Presenter):
+    sig_connected = Signal(str)
+
+    @slot
+    async def connect_stage(self) -> None:
+        stage = self.devices["stage"]
+        await stage.connect()
+        self.sig_connected.emit(stage.name)
+```
+
+Such a presenter must not read the device before connecting it. Calling
+`connect()` on a device that is already connected returns at once, and
+`force_reconnect=True` is what connects it again.
+[`connect_devices`][redsun.containers.container.AppContainer.connect_devices]
+connects every device, whatever its `autoconnect` says.
+
 ## Signals
 
 Signals are the typed, named attributes of a device. ophyd-async provides four signal types:

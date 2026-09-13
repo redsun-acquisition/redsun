@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
 from mock_pkg.device import BrokenDevice, MyMotor
@@ -13,11 +13,19 @@ from ophyd_async.core import Device, SignalRW
 from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
 from redsun.aio import run_coro
-from redsun.containers import AppContainer, declare_device, declare_service
+from redsun.containers import (
+    AppContainer,
+    declare_device,
+    declare_presenter,
+    declare_service,
+)
+from redsun.containers import container as container_module
 from redsun.log import SessionFileHandler, session_log
+from redsun.presenter import Presenter
+from redsun.services import _service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
 
 STAND_IN = "mock_pkg.service.stand_in"
 
@@ -37,6 +45,20 @@ class Camera(EpicsDevice):
     exposure: Annotated[SignalRW[float], PvSuffix("Exposure")]
 
 
+class ExposureReader(Presenter):
+    """Reads every camera's exposure while it is built, as a presenter may."""
+
+    def __init__(
+        self, name: str, devices: Mapping[str, Device], /, **kwargs: Any
+    ) -> None:
+        super().__init__(name, devices)
+        self.exposures = {
+            device_name: run_coro(device.exposure.get_value())
+            for device_name, device in devices.items()
+            if isinstance(device, Camera)
+        }
+
+
 class TwoCameras(AppContainer):
     ioc_a = declare_service(
         module="mock_pkg.service.camera_ioc",
@@ -52,6 +74,7 @@ class TwoCameras(AppContainer):
     )
     cam_a = declare_device(Camera, service="ioc_a")
     cam_b = declare_device(Camera, service="ioc_b")
+    reader = declare_presenter(ExposureReader)
 
 
 @pytest.fixture
@@ -59,6 +82,7 @@ def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a launched service import ``mock_pkg``, and restore the CA address list."""
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
+    monkeypatch.setattr(_service, "ports", {})
 
 
 @pytest.fixture
@@ -266,17 +290,23 @@ def test_from_config_launches_a_plugin_service_and_attaches_to_the_rest(
     assert beamline.prefix == "BL01:"
 
 
-def test_devices_read_from_two_caproto_iocs_launched_together(
-    containers: list[AppContainer],
+def test_a_presenter_reads_two_caproto_iocs_while_it_is_built(
+    containers: list[AppContainer], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Each IOC gets a CA port of its own, so both answer on every platform."""
-    app = TwoCameras()
-    containers.append(app)
+    """The build connects the cameras first, and a rebuilt container reaches them again.
 
-    app.build()
-    app.connect_devices()
+    Each IOC answers on a CA port of its own, which it keeps when it starts again,
+    since libca reads the address list once per process. A channel left from the
+    first build would take close to ten seconds to reconnect, past the timeout.
+    """
+    monkeypatch.setattr(container_module, "CONNECT_TIMEOUT", 3.0)
+    for _ in range(2):
+        app = TwoCameras()
+        containers.append(app)
 
-    for name in ("cam_a", "cam_b"):
-        camera = app.devices[name]
-        assert isinstance(camera, Camera)
-        assert run_coro(camera.exposure.get_value()) == 0.25
+        app.build()
+
+        reader = app.presenters["reader"]
+        assert isinstance(reader, ExposureReader)
+        assert reader.exposures == {"cam_a": 0.25, "cam_b": 0.25}
+        app.shutdown()

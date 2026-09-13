@@ -54,12 +54,15 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
+    monkeypatch.setattr(_service, "ports", {})
     made: list[Service] = []
 
-    def make(*options: str, stop_timeout: float = 0.5) -> Service:
+    def make(
+        *options: str, stop_timeout: float = 0.5, name: str = "stand-in"
+    ) -> Service:
         made.append(
             Service(
-                "stand-in",
+                name,
                 module=STAND_IN,
                 args=options,
                 ready=READY,
@@ -82,6 +85,13 @@ def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
 
 def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
     return [r.getMessage() for r in caplog.records if r.levelno == level]
+
+
+def logged_ports(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Return the CA ports the stand-ins printed, in the order they printed them."""
+    output = "\n".join(messages(caplog, logging.DEBUG))
+    ports: list[str] = re.findall(r"^port (\d+)$", output, re.MULTILINE)
+    return ports
 
 
 def test_a_service_logs_its_output_and_cleans_up_when_stopped(
@@ -200,14 +210,12 @@ def test_a_stopped_service_emits_no_exit(launch: Callable[..., Service]) -> None
 def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    first, second = launch(), launch()
+    first, second = launch(name="first"), launch(name="second")
 
     first.start()
     second.start()
 
-    ports = re.findall(
-        r"^port (\d+)$", "\n".join(messages(service_log, logging.DEBUG)), re.MULTILINE
-    )
+    ports = logged_ports(service_log)
     assert len(set(ports)) == 2
     assert os.environ["EPICS_CA_ADDR_LIST"].split() == [
         f"127.0.0.1:{port}" for port in ports
@@ -290,6 +298,22 @@ def test_non_ascii_output_arrives_intact(
     stand_in.start()
 
     assert message in messages(service_log, logging.WARNING)
+
+
+def test_a_service_started_again_keeps_its_port(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """The address list the process read first still reaches it."""
+    stand_in = launch()
+
+    stand_in.start()
+    stand_in.stop()
+    stand_in.start()
+
+    ports = logged_ports(service_log)
+    assert len(ports) == 2
+    assert len(set(ports)) == 1
+    assert os.environ["EPICS_CA_ADDR_LIST"].split() == [f"127.0.0.1:{ports[0]}"]
 
 
 def test_an_attached_service_has_nothing_to_start_or_stop() -> None:

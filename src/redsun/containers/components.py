@@ -377,28 +377,35 @@ class _ComponentBase(Generic[T]):
 class _DeviceComponent(_ComponentBase[Device]):
     """Device component wrapper.
 
-    A ``service`` keyword is taken by the container rather than passed to the
-    constructor: it names the service whose prefix the device is built with.
+    Two keywords are taken by the container rather than passed to the
+    constructor: ``service`` names the service whose prefix the device is built
+    with, and ``autoconnect``, true unless given, whether the build connects it.
     """
 
-    __slots__ = ("service",)
+    __slots__ = ("autoconnect", "service")
 
     def __init__(self, cls: Callable[..., Device], name: str, /, **kwargs: Any) -> None:
+        for reserved in ("service", "autoconnect"):
+            if reserved in kwargs and _takes_keyword(cls, reserved):
+                raise TypeError(
+                    f"{cls!r} (device {name!r}) takes a {reserved!r} keyword of "
+                    "its own, which a device declaration reserves for the container"
+                )
         service: str | None = kwargs.pop("service", None)
-        if service is not None:
-            if "prefix" in kwargs:
-                raise TypeError(
-                    f"device {name!r} names service {service!r} and a prefix; "
-                    "give one, the service's prefix is the device's"
-                )
-            if _takes_keyword(cls, "service"):
-                raise TypeError(
-                    f"{cls!r} (device {name!r}) takes a 'service' keyword of its "
-                    "own, which a device declaration reserves for the service "
-                    "the device talks to"
-                )
+        if service is not None and "prefix" in kwargs:
+            raise TypeError(
+                f"device {name!r} names service {service!r} and a prefix; "
+                "give one, the service's prefix is the device's"
+            )
+        autoconnect = kwargs.pop("autoconnect", True)
+        if not isinstance(autoconnect, bool):
+            raise TypeError(
+                f"device {name!r} gives autoconnect={autoconnect!r}; "
+                "it takes true or false"
+            )
         super().__init__(cls, name, **kwargs)
         self.service = service
+        self.autoconnect = autoconnect
 
     def build(self, prefix: str | None = None) -> Device:
         """Build the device instance, validating it is an ophyd-async Device.

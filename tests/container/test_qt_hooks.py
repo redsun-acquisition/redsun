@@ -140,6 +140,7 @@ class TestQtBuildSpan:
             "services",
             "virtual container",
             "devices",
+            "connect",
             "presenters",
             "views",
             "providers",

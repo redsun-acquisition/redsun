@@ -27,6 +27,14 @@ STARTUP_TIMEOUT: Final = 15.0
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
+ports: dict[str, int] = {}
+"""The Channel Access server port given to each service, by name, for the process.
+
+libca reads ``EPICS_CA_ADDR_LIST`` once, when this process first uses Channel
+Access, so a service started again, by a container built again, has to answer
+on the port the list already names.
+"""
+
 
 class Service:
     """A server some devices talk to, and the process behind it if the session owns one.
@@ -124,6 +132,7 @@ class Service:
         The process runs without a console window on Windows, with its own
         Channel Access server port, which is added to ``EPICS_CA_ADDR_LIST`` in
         this process so that a device reaches it among several local services.
+        A service keeps its port each time it starts in this process.
         The process writes UTF-8, and each line of its output is logged as
         `service_record` rebuilds it.
 
@@ -137,11 +146,15 @@ class Service:
         """
         if self.module is None or self.running:
             return
-        port = free_udp_port()
+        port = ports.get(self.name)
+        if port is None:
+            port = ports[self.name] = free_udp_port()
+            os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
+                filter(
+                    None, [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"]
+                )
+            )
         env = {**os.environ, "EPICS_CA_SERVER_PORT": str(port), "PYTHONUTF8": "1"}
-        os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
-            filter(None, [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"])
-        )
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
@@ -302,6 +315,22 @@ def service_record(service: str, line: str) -> logging.LogRecord:
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
         pass
     return logging.makeLogRecord(fields)
+
+
+async def close_channel_access() -> None:
+    """Close every Channel Access channel this process holds, if it holds any.
+
+    A channel to a service that stopped otherwise waits out libca's reconnect
+    back-off, close to ten seconds, before a device built again reaches the
+    service started again. Every channel in the process is closed, not only
+    the stopped service's: libca offers nothing narrower.
+    """
+    try:
+        # the epics extra is optional, and a process without it holds no channel
+        from aioca import purge_channel_caches
+    except ImportError:
+        return
+    purge_channel_caches()
 
 
 def exited(process: subprocess.Popen[str], timeout: float) -> bool:

@@ -76,7 +76,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   through the `schema_version` / `frontend` / `session` / `metadata`
   properties.
 - **`AppContainer.build()` phase order cannot change**, and its docstring
-  records it: services -> VirtualContainer -> devices -> presenters -> views ->
+  records it: services -> VirtualContainer -> devices -> connect -> presenters -> views ->
   `register_providers` -> `wire` -> `inject_dependencies`. Every provider is
   registered before any injection runs; never interleave the last two phases,
   and never move work into `__init__` that belongs in a phase.

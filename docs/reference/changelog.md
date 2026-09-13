@@ -62,6 +62,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 - The build summary names a service whose every device failed to build:
   `Unused: camera_ioc (no device built)`.
 - An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+- **`autoconnect`** keyword of a device declaration, true unless given - whether
+  the build connects the device. The build connects every such device at once,
+  in a `"connect"` step between devices and presenters, waiting up to
+  `CONNECT_TIMEOUT` (`redsun.containers.container`, 10 s) for each. A device
+  that does not connect is logged and skipped, listed as
+  `<name> (device, not connected)` in the build summary, with the service it
+  talks to named in the message.
 - **`service_of`** (`redsun.log`) - the name of the service a record came from,
   `None` for the application.
 - **`BufferHandler.service_records`**, **`BufferHandler.services`** and
@@ -82,8 +89,16 @@ Dates are specified in the format `DD-MM-YYYY`.
 ### Changed
 
 - **`AppContainer.BUILD_STEPS`** (`redsun.containers.container`) starts with
-  `"services"`, so a `during_build` hook reports services starting. A build
-  that raises stops the services before the exception propagates.
+  `"services"`, so a `during_build` hook reports services starting, and has
+  `"connect"` after `"devices"`. A build that raises stops the services before
+  the exception propagates.
+- **`AppContainer.run`** no longer calls `connect_devices`; the build connects
+  the devices declared with `autoconnect`. `connect_devices` connects every
+  device, whatever its `autoconnect` says.
+- A service keeps its Channel Access server port for as long as the process
+  runs, and a container stopping the services it launched closes the process's
+  Channel Access channels, so a container built again in the same process
+  reaches its services at once.
 - **`AppContainer.shutdown`** stops the container's services, the last declared
   first, whether or not the container was built, and before it closes the
   session log file.
