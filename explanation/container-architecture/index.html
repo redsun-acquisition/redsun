@@ -2577,7 +2577,7 @@ Each accepts the component class as its first positional argument, followed by o
 runtime. That is what makes <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;wire&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.wire"><code>wire</code></a>
 ordinary checked code rather than a script whose mistakes only surface at build.</p>
 <h2 id="component-naming">Component naming<a class="headerlink" href="#component-naming" title="Permanent link">&para;</a></h2>
-<p>Every component receives a <code>name</code> that is used as its key in the container's <code>devices</code>, <code>presenters</code>, or <code>views</code> dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:</p>
+<p>Every component receives a <code>name</code> that is used as its key in the container's <code>devices</code>, <code>presenters</code>, or <code>views</code> dictionaries. A device receives it as the <code>name</code> keyword argument, and a presenter or a view as the first positional argument of its constructor. The name is resolved with the following priority:</p>
 <ol>
 <li><code>alias</code> - if an explicit <code>alias</code> is passed to <code>declare_device()</code>, <code>declare_presenter()</code>, or <code>declare_view()</code>, that value is used regardless of everything else.</li>
 <li>attribute name - in the declarative flow, the Python attribute name becomes the component name when no <code>alias</code> is provided.</li>
@@ -2676,7 +2676,7 @@ to run ophyd-async's connect lifecycle on every registered device.</p>
 <p><strong>Construction</strong> - the steps <code>virtual container</code>, <code>devices</code>, <code>presenters</code> and <code>views</code>:</p>
 <ol>
 <li><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a> - created and seeded with the application configuration.</li>
-<li><strong>Devices</strong> - each receives its resolved name and keyword arguments.</li>
+<li><strong>Devices</strong> - each is constructed as <code>cls(name=&lt;resolved name&gt;, **kwargs)</code>.</li>
 <li><strong>Presenters</strong> - each receives its resolved name and the full device dictionary.</li>
 <li><strong>Views</strong> - each receives its resolved name.</li>
 </ol>

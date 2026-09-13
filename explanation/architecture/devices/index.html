@@ -776,6 +776,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#constructing-a-device-in-a-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Constructing a device in a container
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#signals" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2259,6 +2270,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#constructing-a-device-in-a-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Constructing a device in a container
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#signals" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2407,6 +2429,24 @@ hosts redsun-specific device protocols (currently
 </tbody>
 </table>
 <p>For most simple devices, <code>StandardReadable</code> is the right starting point.</p>
+<h2 id="constructing-a-device-in-a-container">Constructing a device in a container<a class="headerlink" href="#constructing-a-device-in-a-container" title="Permanent link">&para;</a></h2>
+<p>A container builds a device as <code>cls(name=&lt;component name&gt;, **kwargs)</code>, the
+keyword arguments coming from the declaration and the configuration file. The
+constructor has to accept <code>name</code> by keyword, as every ophyd-async base class
+does, so a device whose first parameter is something else builds too:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.epics.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">EpicsDevice</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">declare_device</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyCamera</span><span class="p">(</span><span class="n">EpicsDevice</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">):</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">camera</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>A constructor taking <code>name</code> positional-only (<code>def __init__(self, name: str, /)</code>)
+fails to build, and the container logs it and skips the device.</p>
 <h2 id="signals">Signals<a class="headerlink" href="#signals" title="Permanent link">&para;</a></h2>
 <p>Signals are the typed, named attributes of a device. ophyd-async provides four signal types:</p>
 <table>
@@ -2445,25 +2485,25 @@ hosts redsun-specific device protocols (currently
 Use <code>soft_signal_rw</code> to create a read-write soft signal and
 <code>soft_signal_r_and_setter</code> to create a read-only signal paired with a
 programmatic setter:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardReadable</span><span class="p">,</span> <span class="n">soft_signal_rw</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStage</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">initial_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mm"</span><span class="p">)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">initial_value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mm/s"</span><span class="p">)</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardReadable</span><span class="p">,</span> <span class="n">soft_signal_rw</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyStage</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">initial_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mm"</span><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">initial_value</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mm/s"</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Signals added before the <code>super().__init__()</code> call are automatically picked up by
 <code>StandardReadable</code> and included in <code>read()</code> / <code>describe()</code>.</p>
 <h3 id="standalone-signals">Standalone signals<a class="headerlink" href="#standalone-signals" title="Permanent link">&para;</a></h3>
 <p>Each signal is itself a bluesky-readable object and can be passed directly to a plan
 without going through its parent device:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">bluesky.plans</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bp</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">stage</span> <span class="o">=</span> <span class="n">MyStage</span><span class="p">(</span><span class="s2">"stage"</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">RE</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">count</span><span class="p">([</span><span class="n">stage</span><span class="o">.</span><span class="n">position</span><span class="p">]))</span>  <span class="c1"># read only the position signal</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">RE</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">count</span><span class="p">([</span><span class="n">stage</span><span class="p">]))</span>  <span class="c1"># read all signals registered by StandardReadable</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">bluesky.plans</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bp</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">stage</span> <span class="o">=</span> <span class="n">MyStage</span><span class="p">(</span><span class="s2">"stage"</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">RE</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">count</span><span class="p">([</span><span class="n">stage</span><span class="o">.</span><span class="n">position</span><span class="p">]))</span>  <span class="c1"># read only the position signal</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">RE</span><span class="p">(</span><span class="n">bp</span><span class="o">.</span><span class="n">count</span><span class="p">([</span><span class="n">stage</span><span class="p">]))</span>  <span class="c1"># read all signals registered by StandardReadable</span>
 </span></code></pre></div>
 <h2 id="detectors">Detectors<a class="headerlink" href="#detectors" title="Permanent link">&para;</a></h2>
 <p><code>StandardDetector</code> is assembled by <strong>composition</strong> from three logic classes,
@@ -2490,11 +2530,11 @@ each owning one concern:</p>
 </tr>
 </tbody>
 </table>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardDetector</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">det</span> <span class="o">=</span> <span class="n">StandardDetector</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">StandardDetector</span><span class="p">)</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">det</span><span class="o">.</span><span class="n">add_detector_logics</span><span class="p">(</span><span class="n">trigger_logic</span><span class="p">,</span> <span class="n">acquire_logic</span><span class="p">,</span> <span class="n">data_logic</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">StandardDetector</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"det"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardDetector</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">det</span> <span class="o">=</span> <span class="n">StandardDetector</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="n">StandardDetector</span><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">det</span><span class="o">.</span><span class="n">add_detector_logics</span><span class="p">(</span><span class="n">trigger_logic</span><span class="p">,</span> <span class="n">acquire_logic</span><span class="p">,</span> <span class="n">data_logic</span><span class="p">)</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">StandardDetector</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"det"</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="writing-acquired-data">Writing acquired data<a class="headerlink" href="#writing-acquired-data" title="Permanent link">&para;</a></h3>
 <p>Detector data logics meet redsun's storage layer through
@@ -2517,13 +2557,13 @@ reference implementation of both patterns lives in
 and verifies hardware communication. Use
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;connect_devices&lt;/span&gt;" href="../../../reference/api/container/#redsun.containers.container.AppContainer.connect_devices"><code>AppContainer.connect_devices()</code></a>
 after calling <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;build&lt;/span&gt;" href="../../../reference/api/container/#redsun.containers.container.AppContainer.build"><code>build()</code></a>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">app</span><span class="o">.</span><span class="n">connect_devices</span><span class="p">()</span>  <span class="c1"># connects all registered devices</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">app</span> <span class="o">=</span> <span class="n">MyApp</span><span class="p">()</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">app</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">app</span><span class="o">.</span><span class="n">connect_devices</span><span class="p">()</span>  <span class="c1"># connects all registered devices</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Pass <code>mock=True</code> to skip hardware communication in tests:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">app</span><span class="o">.</span><span class="n">connect_devices</span><span class="p">(</span><span class="n">mock</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">app</span><span class="o">.</span><span class="n">connect_devices</span><span class="p">(</span><span class="n">mock</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="redsun-specific-protocols">redsun-specific protocols<a class="headerlink" href="#redsun-specific-protocols" title="Permanent link">&para;</a></h2>
 <p>The only redsun-specific protocol in the device layer is
