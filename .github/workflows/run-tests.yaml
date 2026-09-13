@@ -6,9 +6,6 @@ on:
       codecov_token:
         required: false
 
-env:
-  PROJECT_NAME: redsun
-
 jobs:
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
