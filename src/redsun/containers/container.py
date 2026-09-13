@@ -1356,6 +1356,14 @@ class AppContainer:
                     available_manifests,
                 )
                 if not isinstance(launched, dict):
+                    # _manifest_item already logged why it returned None
+                    if launched is not None:
+                        logger.error(
+                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
+                            entry["plugin_name"],
+                            entry["plugin_id"],
+                            launched,
+                        )
                     continue
                 kwargs = {**launched, **kwargs}
             services[name] = kwargs

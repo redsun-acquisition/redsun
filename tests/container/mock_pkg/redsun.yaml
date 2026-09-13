@@ -2,6 +2,7 @@ services:
   stand_in:
     module: mock_pkg.service.stand_in
     ready: stand-in ready
+  not_a_mapping: mock_pkg.service.stand_in
 devices:
   my_motor: mock_pkg.device:MyMotor
   my_other_motor: mock_pkg.device:MyMotor
