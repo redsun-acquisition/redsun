@@ -8,6 +8,6 @@ attached one already runs elsewhere and only lends its devices their prefix.
 
 from __future__ import annotations
 
-from ._service import STARTUP_TIMEOUT, Service
+from ._service import STARTUP_TIMEOUT, STOP_TIMEOUT, Service
 
-__all__ = ["STARTUP_TIMEOUT", "Service"]
+__all__ = ["STARTUP_TIMEOUT", "STOP_TIMEOUT", "Service"]

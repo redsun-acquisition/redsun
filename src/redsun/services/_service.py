@@ -24,6 +24,9 @@ logger = logging.getLogger("redsun")
 STARTUP_TIMEOUT: Final = 15.0
 """Seconds a launched service has to print its readiness line."""
 
+STOP_TIMEOUT: Final = 10.0
+"""Seconds each step of `Service.stop` waits, unless the service gives its own."""
+
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
@@ -93,7 +96,7 @@ class Service:
         module: str | None = None,
         args: Sequence[str] = (),
         ready: str | None = None,
-        stop_timeout: float = 10.0,
+        stop_timeout: float = STOP_TIMEOUT,
     ) -> None:
         if args and module is None:
             raise TypeError(

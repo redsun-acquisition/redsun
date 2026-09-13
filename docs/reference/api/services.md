@@ -5,3 +5,4 @@
       members:
         - Service
         - STARTUP_TIMEOUT
+        - STOP_TIMEOUT

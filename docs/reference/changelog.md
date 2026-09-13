@@ -11,14 +11,14 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
-- **`Service`** and **`STARTUP_TIMEOUT`** (`redsun.services`) - the handle a
+- **`Service`**, **`STARTUP_TIMEOUT`** and **`STOP_TIMEOUT`** (`redsun.services`) - the handle a
   container makes for each service it declares. A service with a module runs
   as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds
   for its readiness line, logs its output at `DEBUG` on
   `redsun.service.<name>`, and gives it a Channel Access server port of its
   own, appended to `EPICS_CA_ADDR_LIST`. `stop` closes the process's standard
   input, then sends `SIGINT` on POSIX, then kills it, each step waiting
-  `stop_timeout` seconds. A ready service exiting unasked logs its exit code
+  `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
   service without a module is attached to and has nothing to start or stop.
 - **`declare_service`** (`redsun.containers`, `redsun`) - declares a service on

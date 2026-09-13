@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 from ophyd_async.core import Device
 
 from redsun.presenter import PPresenter
-from redsun.services import Service
+from redsun.services import STOP_TIMEOUT, Service
 from redsun.view import PView
 
 from ._structural import problems
@@ -213,7 +213,7 @@ def declare_service(
     ready: str | None = None,
     prefix: str = "",
     args: Sequence[str] = (),
-    stop_timeout: float = 10.0,
+    stop_timeout: float = STOP_TIMEOUT,
     alias: str | None = None,
 ) -> Service:
     """Declare a service the container's devices talk to.
