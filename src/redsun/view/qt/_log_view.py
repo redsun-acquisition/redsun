@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import html
 import logging
+from collections import deque
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
-from redsun.log import GlobalFormatter, log_buffer
+from redsun.log import GlobalFormatter, log_buffer, session_log
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
 
@@ -25,12 +26,8 @@ _LEVELS: tuple[tuple[str, int], ...] = (
     ("CRITICAL", logging.CRITICAL),
 )
 
-# TODO: these hardcoded color encodings
-# are not really great. at some point
-# a smarter solution would be preferred.
-# especially because when writing logs to file,
-# these colors seem to be part of the written file as well
-# (although maybe this is not such a bad thing after all)
+# TODO: the level colours are fixed, two sets picked by background lightness;
+# a palette with its own colours for log levels could supply them instead
 _ON_LIGHT: dict[int, str] = {
     logging.DEBUG: "#5c5c5c",
     logging.INFO: "#0b3d91",
@@ -52,6 +49,12 @@ _ON_DARK: dict[int, str] = {
 _MID_LIGHTNESS = 128
 """Above this the console background counts as light."""
 
+_BATCH_INTERVAL_MS = 100
+"""How often records that arrived since the last batch are drawn."""
+
+_BATCH_SIZE = 2_000
+"""The most records one batch draws; the rest wait for the next."""
+
 
 class LogView(QtView):
     """Read-only console showing the log records of the running session.
@@ -66,6 +69,14 @@ class LogView(QtView):
     console's own background, so the text stays legible under a light and a
     dark palette alike. Changing the palette while the view is open redraws
     it.
+
+    Records arriving while the view is open are drawn in batches rather than
+    one by one, so a burst of logging does not stall the window, and the
+    console keeps no more lines than the session buffer holds records.
+
+    When the session has a log file open, ``Save logs...`` copies it and
+    ``Open log folder`` shows the folder holding it in the system's file
+    browser; without one the folder button is disabled.
 
     Parameters
     ----------
@@ -86,8 +97,11 @@ class LogView(QtView):
         self._formatter = GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")
         self._level = logging.INFO
 
+        buffer = log_buffer()
+
         self._console = QtW.QPlainTextEdit(self)
         self._console.setReadOnly(True)
+        self._console.setMaximumBlockCount(buffer.capacity)
         font = QtGui.QFont("nosuchfont")
         font.setStyleHint(QtGui.QFont.StyleHint.Monospace)
         self._console.setFont(font)
@@ -102,20 +116,33 @@ class LogView(QtView):
         self._save_button.clicked.connect(self._on_save_clicked)
         self._clear_button = QtW.QPushButton("Clear log window", self)
         self._clear_button.clicked.connect(self.clear)
+        self._folder_button = QtW.QPushButton("Open log folder", self)
+        self._folder_button.clicked.connect(self._on_folder_clicked)
+        handler = session_log()
+        self._folder_button.setEnabled(handler is not None)
+        if handler is not None:
+            self._folder_button.setToolTip(str(Path(handler.baseFilename).parent))
 
         root = QtW.QGridLayout(self)
-        root.addWidget(self._console, 0, 0, 1, 3)
+        root.addWidget(self._console, 0, 0, 1, 4)
         root.addWidget(QtW.QLabel("Level:", self), 1, 0)
-        root.addWidget(self._level_combo, 1, 1, 1, 2)
+        root.addWidget(self._level_combo, 1, 1, 1, 3)
         root.addWidget(self._save_button, 2, 1)
         root.addWidget(self._clear_button, 2, 2)
-        # the label column keeps its own width; the two that carry the buttons
-        # share the rest evenly, so the combo box spans exactly both of them
-        root.setColumnStretch(1, 1)
-        root.setColumnStretch(2, 1)
+        root.addWidget(self._folder_button, 2, 3)
+        # the label column keeps its own width; the three that carry the
+        # buttons share the rest evenly, so the combo box spans exactly them
+        for column in (1, 2, 3):
+            root.setColumnStretch(column, 1)
         self.setLayout(root)
 
-        buffer = log_buffer()
+        # only the newest records can end up on screen, so a burst larger
+        # than the buffer never queues more than the console would keep
+        self._pending: deque[logging.LogRecord] = deque(maxlen=buffer.capacity)
+        self._batch_timer = QtCore.QTimer(self)
+        self._batch_timer.setInterval(_BATCH_INTERVAL_MS)
+        self._batch_timer.timeout.connect(self._draw_batch)
+
         self._render(buffer.records)
         # psygnal holds the bound method weakly, so a destroyed view drops out
         # of the buffer on its own: a view is never asked to shut down
@@ -131,6 +158,8 @@ class LogView(QtView):
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
         log_buffer().sig_record.disconnect(self._on_record, missing_ok=True)
+        self._batch_timer.stop()
+        self._pending.clear()
         if event is not None:
             super().closeEvent(event)
 
@@ -159,24 +188,47 @@ class LogView(QtView):
         The session buffer is untouched, so a later ``Save logs...`` still
         writes everything and changing level brings the records back.
         """
+        self._pending.clear()
         self._console.clear()
 
     def save(self, path: str) -> None:
-        """Write every buffered record to *path*, whatever the displayed level."""
+        """Write this run's records to *path*, whatever the displayed level.
+
+        The records come from the session's log file when a session opened
+        one, so nothing the buffer has already dropped is missing, and from the
+        buffer otherwise.
+        """
+        handler = session_log()
         with open(path, "w", encoding="utf-8") as fh:
+            if handler is None:
+                fh.writelines(
+                    f"{self._formatter.format(record)}\n"
+                    for record in log_buffer().records
+                )
+                return
+            handler.flush()
             fh.writelines(
-                f"{self._formatter.format(record)}\n" for record in log_buffer().records
+                source.read_text(encoding="utf-8") for source in handler.files
             )
 
     def _on_record(self, record: logging.LogRecord) -> None:
-        if record.levelno >= self._level:
-            self._append(record)
+        if record.levelno < self._level:
+            return
+        self._pending.append(record)
+        if not self._batch_timer.isActive():
+            self._batch_timer.start()
+
+    def _draw_batch(self) -> None:
+        count = min(_BATCH_SIZE, len(self._pending))
+        self._write([self._pending.popleft() for _ in range(count)])
+        if not self._pending:
+            self._batch_timer.stop()
 
     def _render(self, records: Iterable[logging.LogRecord]) -> None:
+        self._batch_timer.stop()
+        self._pending.clear()
         self._console.clear()
-        for record in records:
-            if record.levelno >= self._level:
-                self._append(record)
+        self._write([record for record in records if record.levelno >= self._level])
 
     @property
     def colors(self) -> dict[int, str]:
@@ -184,11 +236,31 @@ class LogView(QtView):
         base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
         return _ON_LIGHT if base.lightness() >= _MID_LIGHTNESS else _ON_DARK
 
-    def _append(self, record: logging.LogRecord) -> None:
+    def _write(self, records: Iterable[logging.LogRecord]) -> None:
+        # pyqt6 annotates both as optional and pyside6 does not
+        document: QtGui.QTextDocument | None = self._console.document()
+        bar: QtW.QScrollBar | None = self._console.verticalScrollBar()
+        if document is None or bar is None:
+            return
+        # follow the newest line only when the reader is already at the bottom
+        following = bar.value() == bar.maximum()
         colors = self.colors
-        color = colors.get(record.levelno, colors[logging.INFO])
-        text = html.escape(self._formatter.format(record))
-        self._console.appendHtml(f'<pre><font color="{color}">{text}</font></pre>')
+        formats: dict[int, QtGui.QTextCharFormat] = {}
+        cursor = QtGui.QTextCursor(document)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+        cursor.beginEditBlock()
+        for record in records:
+            if record.levelno not in formats:
+                char_format = QtGui.QTextCharFormat()
+                color = colors.get(record.levelno, colors[logging.INFO])
+                char_format.setForeground(QtGui.QBrush(QtGui.QColor(color)))
+                formats[record.levelno] = char_format
+            if not document.isEmpty():
+                cursor.insertBlock()
+            cursor.insertText(self._formatter.format(record), formats[record.levelno])
+        cursor.endEditBlock()
+        if following:
+            bar.setValue(bar.maximum())
 
     def _on_save_clicked(self) -> None:
         chosen, _ = QtW.QFileDialog.getSaveFileName(
@@ -200,3 +272,11 @@ class LogView(QtView):
             self.save(chosen)
         except OSError as e:
             QtW.QMessageBox.warning(self, "Could not save logs", str(e))
+
+    def _on_folder_clicked(self) -> None:
+        handler = session_log()
+        if handler is None:
+            return
+        folder = Path(handler.baseFilename).parent
+        if not QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(folder))):
+            QtW.QMessageBox.warning(self, "Could not open the log folder", str(folder))

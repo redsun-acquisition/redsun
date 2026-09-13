@@ -1,9 +1,39 @@
 # Logging
 
+Everything redsun logs goes to the `redsun` logger. How to use these functions
+is shown in [Configure logging](../../how-to/configure-logging.md).
+
+| Symbol | What it does |
+| --- | --- |
+| [`set_level`][redsun.log.set_level] | sets the level of the `redsun` logger |
+| [`add_handler`][redsun.log.add_handler] | sends the logger's records to one more handler |
+| [`remove_handler`][redsun.log.remove_handler] | stops sending records to a handler |
+| [`Loggable`][redsun.log.Loggable] | gives a component a `logger` that names the component in each record |
+| [`BufferHandler`][redsun.log.BufferHandler] | keeps the most recent records of the session in memory |
+| [`log_buffer`][redsun.log.log_buffer] | returns the `BufferHandler` installed on the logger |
+| [`SessionFileHandler`][redsun.log.SessionFileHandler] | writes the records of one run of a session to a rotated file |
+| [`session_log`][redsun.log.session_log] | returns the `SessionFileHandler` installed on the logger, if any |
+
+The built-in [`LogView`][redsun.view.qt.builtins.LogView] shows these records in
+the application.
+
+## Functions
+
 ::: redsun.log
     options:
       members:
-        - Loggable
+        - set_level
         - add_handler
         - remove_handler
-        - set_level
+        - log_buffer
+        - session_log
+
+## Logging from a component
+
+::: redsun.log.Loggable
+
+## Session records
+
+::: redsun.log.BufferHandler
+
+::: redsun.log.SessionFileHandler

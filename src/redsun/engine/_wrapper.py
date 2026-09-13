@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from threading import Thread
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
@@ -37,6 +38,8 @@ __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 REResultType = RunEngineResult | tuple[str, ...]
 
+R = TypeVar("R")
+
 
 class RunEngine(BlueskyRunEngine):
     """The Run Engine execute messages and emits Documents.
@@ -59,9 +62,8 @@ class RunEngine(BlueskyRunEngine):
         `__getitem__`, `__setitem__`, and `clear` will work.
 
     loop: asyncio.AbstractEventLoop, optional
-        An asyncio event loop to be used for executing plans. If not provided,
-        the RunEngine will create a new event loop using ``asyncio.new_event_loop()``;
-        e.g., ``asyncio.get_event_loop()`` or ``asyncio.new_event_loop()``
+        The event loop plans run on. Defaults to redsun's shared background
+        loop, created the first time an engine or another caller needs it.
 
     preprocessors : list, optional
         Generator functions that take in a plan (generator instance) and
@@ -171,35 +173,27 @@ class RunEngine(BlueskyRunEngine):
 
     """
 
-    # TODO: using get_shared_loop() like this is a bit
-    # fragile; there should be a private function that ensures
-    # the shared loop is created only once at application startup
-    # and properly cleaned up at shutdown; this is just a quick solution to
-    # get the shared loop working for now
     def __init__(
         self,
         md: dict[str, Any] | None = None,
         *,
-        loop: asyncio.AbstractEventLoop = get_shared_loop(),  # noqa: B008 - returns the import-time singleton loop
+        loop: asyncio.AbstractEventLoop | None = None,
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,
         scan_id_source: MDScanIDSource | None = default_scan_id_source,
         call_returns_result: bool = True,
     ):
-        # force the context_managers to be empty,
-        # otherwise the RunEngine will try to use the
-        # SignalHandler context manager
-        self._executor = ThreadPoolExecutor(max_workers=1)
-
         super().__init__(
             md=md,
-            loop=loop,
+            loop=loop or get_shared_loop(),
             preprocessors=preprocessors,
             md_validator=md_validator,
             md_normalizer=md_normalizer,
             scan_id_source=scan_id_source,  # type: ignore[arg-type]
             call_returns_result=call_returns_result,
+            # bluesky's default installs a SIGINT handler, which only the main
+            # thread may do, and plans run on a thread of their own
             context_managers=[],
         )
 
@@ -254,12 +248,7 @@ class RunEngine(BlueskyRunEngine):
         result : :class:`RunEngineResult`
             if :attr:`RunEngine._call_returns_result` is ``True``
         """
-        return self._executor.submit(
-            super().__call__,
-            plan,
-            subs,
-            **metadata_kw,
-        )
+        return self._run_in_thread(partial(super().__call__, plan, subs, **metadata_kw))
 
     def resume(self) -> Future[RunEngineResult | tuple[str, ...]]:
         """Resume the paused plan in a separate thread.
@@ -275,7 +264,22 @@ class RunEngine(BlueskyRunEngine):
         ``Future[RunEngineResult | tuple[str, ...]]``
             Future object representing the result of the resumed plan.
         """
-        return self._executor.submit(super().resume)
+        return self._run_in_thread(super().resume)
+
+    def _run_in_thread(self, call: Callable[[], R]) -> Future[R]:
+        """Run *call* on a thread of its own, which ends with it, and return its future."""
+        future: Future[R] = Future()
+
+        def run() -> None:
+            if not future.set_running_or_notify_cancel():
+                return
+            try:
+                future.set_result(call())
+            except BaseException as e:  # noqa: BLE001 - the future carries whatever the plan raised
+                future.set_exception(e)
+
+        Thread(target=run, name="RunEngine", daemon=True).start()
+        return future
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
         """Instruct the run engine to wait for any of the given latches to be set or reset.

@@ -23,7 +23,6 @@ from redsun import aio
 from redsun.aio import (
     AwaitableEvent,
     CulsansAsyncioBackend,
-    _loop_factory,
     get_shared_loop,
     run_coro,
     set_async_backend,
@@ -429,14 +428,14 @@ async def test_awaitable_event_wait_wakes_on_a_cross_thread_set() -> None:
 def test_shared_loop_is_a_running_singleton() -> None:
     loop = get_shared_loop()
     assert get_shared_loop() is loop
-    assert _loop_factory.loop is loop
     assert loop.is_running()
-    assert _loop_factory._thread is not threading.current_thread()
 
 
-def test_shared_loop_is_known_to_the_bluesky_loop_cache() -> None:
-    loop = get_shared_loop()
-    assert _ensure_event_loop_running.loop_to_thread[loop] is _loop_factory._thread  # type: ignore[attr-defined]
+def test_shared_loop_runs_on_a_thread_bluesky_knows() -> None:
+    """A RunEngine given the loop finds the thread it runs on."""
+    thread = _ensure_event_loop_running.loop_to_thread[get_shared_loop()]  # type: ignore[attr-defined]
+    assert thread.is_alive()
+    assert thread is not threading.current_thread()
 
 
 def test_run_coro_returns_the_result() -> None:

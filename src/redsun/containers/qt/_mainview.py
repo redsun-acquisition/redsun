@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from platformdirs import user_documents_dir
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 
@@ -52,15 +51,6 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
         self._widgets: dict[str, QtView] = {}
         self._dock_views(views)
 
-        self._menu_bar = self.menuBar()
-        assert self._menu_bar is not None
-        self._file = self._menu_bar.addMenu("&File")
-        assert self._file is not None
-
-        self._save_action = QtWidgets.QAction("Save configuration as...", self)  # type: ignore[attr-defined]
-        self._save_action.triggered.connect(self._save_configuration)
-        self._file.addAction(self._save_action)
-
     def _dock_views(self, views: dict[str, QtView]) -> None:
         """Dock pre-built view instances into the main window.
 
@@ -104,16 +94,3 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
 
         # TODO: this should be customizable by the user
         self.setWindowState(Qt.WindowState.WindowMaximized)
-
-    def _save_configuration(self) -> None:
-        """Save the current configuration."""
-        from redsun.common.qt import ask_file_path
-
-        path = ask_file_path(
-            self,
-            "Save configuration",
-            "YAML (*.yaml *.yml)",
-            folder=user_documents_dir(),
-        )
-        if path:
-            self.logger.info(f"Configuration saved to {path}")
