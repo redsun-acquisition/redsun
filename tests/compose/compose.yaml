@@ -3,6 +3,9 @@
 #   docker compose -f tests/compose/compose.yaml up --detach --wait
 #   REDSUN_COMPOSE=1 uv run pytest -m compose
 #   docker compose -f tests/compose/compose.yaml down
+#
+# caproto is pinned to the version in uv.lock by hand: Dependabot does not read
+# this file, so bump the pin when the lock file moves.
 
 services:
   ioc:
@@ -11,7 +14,7 @@ services:
       - sh
       - -c
       - >
-        pip install --quiet --disable-pip-version-check caproto &&
+        pip install --quiet --disable-pip-version-check caproto==1.3.0 &&
         python -m caproto.ioc_examples.simple --prefix REDSUN:ATTACHED: --interfaces 0.0.0.0
     ports:
       - "127.0.0.1:5064:5064/udp"
