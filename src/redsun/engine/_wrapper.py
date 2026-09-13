@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from threading import Thread
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
@@ -36,6 +37,8 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 REResultType = RunEngineResult | tuple[str, ...]
+
+R = TypeVar("R")
 
 
 class RunEngine(BlueskyRunEngine):
@@ -181,11 +184,6 @@ class RunEngine(BlueskyRunEngine):
         scan_id_source: MDScanIDSource | None = default_scan_id_source,
         call_returns_result: bool = True,
     ):
-        # force the context_managers to be empty,
-        # otherwise the RunEngine will try to use the
-        # SignalHandler context manager
-        self._executor = ThreadPoolExecutor(max_workers=1)
-
         super().__init__(
             md=md,
             loop=loop or get_shared_loop(),
@@ -194,6 +192,8 @@ class RunEngine(BlueskyRunEngine):
             md_normalizer=md_normalizer,
             scan_id_source=scan_id_source,  # type: ignore[arg-type]
             call_returns_result=call_returns_result,
+            # bluesky's default installs a SIGINT handler, which only the main
+            # thread may do, and plans run on a thread of their own
             context_managers=[],
         )
 
@@ -248,12 +248,7 @@ class RunEngine(BlueskyRunEngine):
         result : :class:`RunEngineResult`
             if :attr:`RunEngine._call_returns_result` is ``True``
         """
-        return self._executor.submit(
-            super().__call__,
-            plan,
-            subs,
-            **metadata_kw,
-        )
+        return self._run_in_thread(partial(super().__call__, plan, subs, **metadata_kw))
 
     def resume(self) -> Future[RunEngineResult | tuple[str, ...]]:
         """Resume the paused plan in a separate thread.
@@ -269,7 +264,22 @@ class RunEngine(BlueskyRunEngine):
         ``Future[RunEngineResult | tuple[str, ...]]``
             Future object representing the result of the resumed plan.
         """
-        return self._executor.submit(super().resume)
+        return self._run_in_thread(super().resume)
+
+    def _run_in_thread(self, call: Callable[[], R]) -> Future[R]:
+        """Run *call* on a thread of its own, which ends with it, and return its future."""
+        future: Future[R] = Future()
+
+        def run() -> None:
+            if not future.set_running_or_notify_cancel():
+                return
+            try:
+                future.set_result(call())
+            except BaseException as e:  # noqa: BLE001 - the future carries whatever the plan raised
+                future.set_exception(e)
+
+        Thread(target=run, name="RunEngine", daemon=True).start()
+        return future
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
         """Instruct the run engine to wait for any of the given latches to be set or reset.

@@ -17,9 +17,13 @@ def config_path() -> Path:
     return Path(__file__).parent / "data"
 
 
-@pytest.fixture(scope="function")
-def RE() -> RunEngine:
-    return RunEngine()
+@pytest.fixture
+def RE() -> Iterator[RunEngine]:
+    """Yield an engine, and abort whatever plan the test left running or paused."""
+    engine = RunEngine()
+    yield engine
+    if engine.state != "idle":
+        engine.abort()
 
 
 @pytest.fixture(scope="function")

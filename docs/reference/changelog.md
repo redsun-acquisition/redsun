@@ -27,6 +27,13 @@ Dates are specified in the format `DD-MM-YYYY`.
   holds records. Available from a configuration file as `plugin_name: redsun`,
   `plugin_id: logs` under `views`.
 
+### Changed
+
+- **`RunEngine`** (`redsun.engine`) runs each plan, and each `resume`, on a
+  thread of its own named `RunEngine`, which ends with the plan, instead of on
+  a thread pool kept for the engine's lifetime. A plan submitted while another
+  is running fails with bluesky's error instead of waiting its turn.
+
 ### Fixed
 
 - **`RunEngine`** (`redsun.engine`) takes `loop=None` and falls back to the

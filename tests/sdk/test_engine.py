@@ -2,11 +2,13 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import Future, wait
-from time import sleep
+from time import monotonic, sleep
 from typing import Any
 
 import bluesky.plan_stubs as bps
+import pytest
 from bluesky.plans import count
+from bluesky.utils import RunEngineInterrupted
 
 from redsun.aio import get_shared_loop
 from redsun.engine import RunEngine, RunEngineResult
@@ -17,6 +19,44 @@ from .mocks import MockDetector
 def test_engine_wrapper_construction(RE: RunEngine) -> None:
     assert RE.context_managers == []
     assert RE.pause_msg == ""
+
+
+def _engine_threads() -> set[threading.Thread]:
+    return {t for t in threading.enumerate() if t.name == "RunEngine"}
+
+
+def _wait_until_running(engine: RunEngine) -> None:
+    deadline = monotonic() + 5.0
+    while engine.state != "running" and monotonic() < deadline:
+        sleep(0.01)
+
+
+def test_each_plan_runs_on_a_thread_that_ends_with_it(
+    RE: RunEngine, detector: MockDetector
+) -> None:
+    before = _engine_threads()
+
+    fut = RE(count([detector], num=1))
+    (worker,) = _engine_threads() - before
+    wait([fut])
+    worker.join(timeout=5)
+
+    assert not worker.is_alive()
+
+
+def test_abort_ends_the_running_plan_and_its_thread(RE: RunEngine) -> None:
+    """Bluesky's abort reaches a plan running on the engine's own thread."""
+    before = _engine_threads()
+    fut = RE(bps.sleep(10.0))
+    (worker,) = _engine_threads() - before
+    _wait_until_running(RE)
+
+    RE.abort()
+    worker.join(timeout=5)
+
+    with pytest.raises(RunEngineInterrupted):
+        fut.result(timeout=5)
+    assert not worker.is_alive()
 
 
 def test_an_engine_runs_on_the_shared_loop_by_default(RE: RunEngine) -> None:
