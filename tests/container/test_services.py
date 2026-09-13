@@ -167,6 +167,23 @@ def test_shutdown_of_a_container_never_built_stops_its_started_services(
     assert "Service 'stand_in' stopped with exit code 0" in logged(handler)
 
 
+def test_services_start_once_until_shutdown(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class App(AppContainer):
+        beamline = declare_service(prefix="BL01:")
+
+    app = App()
+    app.start_services()
+    app.build()
+    app.shutdown()
+    app.start_services()
+    app.shutdown()
+
+    started = [r for r in caplog.records if r.getMessage() == "Services started: 1/1"]
+    assert len(started) == 2
+
+
 def test_a_launched_service_logs_to_a_file_of_its_own(
     containers: list[AppContainer],
 ) -> None:

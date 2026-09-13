@@ -766,7 +766,7 @@ class AppContainer:
 
         The order is fixed, and each step is announced as it starts:
 
-        1. Services, started unless `start_services` already ran
+        1. Services, through `start_services`
         2. VirtualContainer
         3. Devices
         4. Connect, every device declared with ``autoconnect`` true
@@ -794,8 +794,7 @@ class AppContainer:
 
         try:
             self._report("services")
-            if not self._services_started:
-                self.start_services()
+            self.start_services()
             self._report("virtual container")
             self._create_virtual_container()
             self._report("devices")
@@ -878,10 +877,12 @@ class AppContainer:
     def start_services(self) -> None:
         """Start every service the container launches, and attach to the rest.
 
-        `build` calls this unless it already ran. A service that fails to start
-        is logged, and the build skips every device naming it; the rest of the
-        session runs.
+        `build` calls this too. Only the first call until `shutdown` does
+        anything. A service that fails to start is logged, and the build skips
+        every device naming it; the rest of the session runs.
         """
+        if self._services_started:
+            return
         self._services_started = True
         if not self._services:
             return

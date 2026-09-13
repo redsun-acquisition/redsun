@@ -41,8 +41,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`AppContainer.start_services`** and **`AppContainer.services`**
   (`redsun.containers.container`) - start every launched service, logging
   `Services started: <n>/<m>` and the ones that did not start; and the
-  container's services by name. `build` calls `start_services` unless it has
-  already run.
+  container's services by name. `build` calls `start_services` as well; only the
+  first call before `shutdown` starts anything.
 - A `services` section in a session file, and a `services` group in a plugin
   manifest giving a service's `module` and `ready` line. A session entry with
   `plugin_name` and `plugin_id` takes both from the manifest; one without is
