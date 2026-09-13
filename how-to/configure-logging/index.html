@@ -1415,6 +1415,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#find-a-sessions-log-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Find a session's log file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#show-the-logs-in-the-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Show the logs in the application
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#send-records-somewhere-else-as-well" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2217,6 +2239,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#find-a-sessions-log-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Find a session's log file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#show-the-logs-in-the-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Show the logs in the application
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#send-records-somewhere-else-as-well" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2285,7 +2329,7 @@ what wrote it:</p>
 </thead>
 <tbody>
 <tr>
-<td>A <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Loggable&lt;/span&gt;" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> declaring a <code>name</code></td>
+<td>A <a class="autorefs autorefs-internal" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> declaring a <code>name</code></td>
 <td><code>[Class -&gt; name]</code></td>
 </tr>
 <tr>
@@ -2335,58 +2379,133 @@ a notebook that never builds a container:</p>
 </span></code></pre></div>
 <p>A name is matched without regard to case, so a value taken straight from a
 command-line flag works. One that names no level raises <code>ValueError</code>.</p>
+<h2 id="find-a-sessions-log-file">Find a session's log file<a class="headerlink" href="#find-a-sessions-log-file" title="Permanent link">&para;</a></h2>
+<p>A container writes the records of a run to a file as well as to the console.
+The file is opened when the container is constructed and closed by
+<code>shutdown()</code>. It lives in the user's log directory as <code>platformdirs</code> reports it,
+in a folder named after the session:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Folder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%LOCALAPPDATA%\redsun\Logs\&lt;session&gt;\</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Logs/redsun/&lt;session&gt;/</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.local/state/redsun/log/&lt;session&gt;/</code></td>
+</tr>
+</tbody>
+</table>
+<p>Each run gets its own file, named after the moment it started and its process
+id, such as <code>2026-09-13T14-02-46_8120.log</code>. A file reaching 10 MB is rotated to
+<code>.log.1</code>, <code>.log.2</code> and so on, up to 5 older files. Starting a run deletes the
+files of all but the 20 most recent runs of the same session.</p>
+<p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;session_log&lt;/span&gt;" href="../../reference/api/log/#redsun.log.session_log"><code>session_log</code></a> returns the handler writing the current
+run, and its <code>files</code> property lists the run's files with the oldest records
+first.</p>
+<h2 id="show-the-logs-in-the-application">Show the logs in the application<a class="headerlink" href="#show-the-logs-in-the-application" title="Permanent link">&para;</a></h2>
+<p>redsun ships a Qt view for the session's records,
+<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.qt.builtins.LogView"><code>LogView</code></a>. Declare it under <code>views</code> like any
+other component:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">views</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">logs</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">logs</span>
+</span></code></pre></div>
+<p>It sits at the bottom of the main window and shows every record of the session,
+including those logged while the container was building, coloured by level.
+Its controls:</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Level</code></td>
+<td>shows only records at or above the chosen level; lowering it again brings hidden records back</td>
+</tr>
+<tr>
+<td><code>Save logs...</code></td>
+<td>writes the run's records to a file you choose, whatever level is shown. It copies the session's log file, so records the view no longer holds are saved too</td>
+</tr>
+<tr>
+<td><code>Clear log window</code></td>
+<td>empties the console; the records stay available to <code>Level</code> and <code>Save logs...</code></td>
+</tr>
+<tr>
+<td><code>Open log folder</code></td>
+<td>opens the folder holding the session's log files in the system's file browser</td>
+</tr>
+</tbody>
+</table>
+<p>Without a session log file, as when the view is used outside a container,
+<code>Save logs...</code> writes the records kept in memory and <code>Open log folder</code> is
+disabled.</p>
 <h2 id="send-records-somewhere-else-as-well">Send records somewhere else as well<a class="headerlink" href="#send-records-somewhere-else-as-well" title="Permanent link">&para;</a></h2>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;add_handler&lt;/span&gt;" href="../../reference/api/log/#redsun.log.add_handler"><code>add_handler</code></a> adds a destination without disturbing
 the one already there, and <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;remove_handler&lt;/span&gt;" href="../../reference/api/log/#redsun.log.remove_handler"><code>remove_handler</code></a> takes
 it away again:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_handler</span><span class="p">,</span> <span class="n">remove_handler</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">to_file</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">"session.log"</span><span class="p">)</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="o">...</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">remove_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_handler</span><span class="p">,</span> <span class="n">remove_handler</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">to_file</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">"session.log"</span><span class="p">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="o">...</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">remove_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
 </span></code></pre></div>
 <p>A handler carrying no formatter of its own is given the one stdout writes
 through, so a record reads the same wherever it lands. Set a formatter on the
 handler first to keep your own:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">to_file</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2"> </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">))</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">to_file</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2"> </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">))</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">add_handler</span><span class="p">(</span><span class="n">to_file</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Handlers have levels of their own, so a destination can be quieter than the
 logger but never louder: the logger's level decides which records exist at all.
 To write everything to a file while keeping the console at <code>INFO</code>, lower the
 logger and raise the console handler.</p>
 <h2 id="log-from-your-own-component">Log from your own component<a class="headerlink" href="#log-from-your-own-component" title="Permanent link">&para;</a></h2>
-<p>Inherit <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Loggable&lt;/span&gt;" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> and use <code>self.logger</code>. It is an
+<p>Inherit <a class="autorefs autorefs-internal" href="../../reference/api/log/#redsun.log.Loggable"><code>Loggable</code></a> and use <code>self.logger</code>. It is an
 adapter over the same <code>redsun</code> logger, and it fills in the class and name shown
 in the output:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Loggable</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presenter</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">(</span><span class="n">Presenter</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">):</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Device</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Initialized"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Loggable</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presenter</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyController</span><span class="p">(</span><span class="n">Presenter</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">):</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Device</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Initialized"</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The name in the output is the component's own <code>name</code> attribute, so a message
 says which of several instances wrote it without you passing the name in:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[29-08-26|14:02:46][INFO][MyController -&gt; motor_ctrl]: Initialized
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[29-08-26|14:02:46][INFO][MyController -&gt; motor_ctrl]: Initialized
 </span></code></pre></div>
 <p>A class that declares no <code>name</code> still logs, with the class alone in the
 brackets. So does one whose <code>name</code> is empty or <code>None</code>, since the field is
 dropped when there is nothing to show:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>[29-08-26|14:02:46][INFO][MyController]: Initialized
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>[29-08-26|14:02:46][INFO][MyController]: Initialized
 </span></code></pre></div>
 <h2 id="keep-redsun-out-of-your-own-logging">Keep redsun out of your own logging<a class="headerlink" href="#keep-redsun-out-of-your-own-logging" title="Permanent link">&para;</a></h2>
 <p>The <code>redsun</code> logger propagates, so a handler on the root logger sees redsun's
 records alongside your application's. If you configure the root logger yourself
 and do not want them there, either raise redsun's level or stop the propagation:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"redsun"</span><span class="p">)</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"redsun"</span><span class="p">)</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
 </span></code></pre></div>
 <p>Nothing redsun does touches the root logger or any logger outside <code>redsun</code>, so
 configuring your own logging does not have to work around it.</p>
