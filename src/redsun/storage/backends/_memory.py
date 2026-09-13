@@ -22,10 +22,7 @@ __all__ = ["MemoryIO", "MemoryStore"]
 
 
 class MemoryIO(StorageIO):
-    """In-memory storage backend.
-
-    For testing and debugging.
-    """
+    """In-memory storage backend, for tests and debugging."""
 
     mimetype = "application/x-memory"
     extension = ""
@@ -41,7 +38,7 @@ class MemoryIO(StorageIO):
         return store
 
     def uri(self, path: PathInfo, data_key: str) -> str:
-        """Compute a synthetic per-burst URI, disambiguated by fragment."""
+        """Return a made-up URI per burst, with the key as fragment."""
         return f"memory://{path.directory_path.as_posix()}/{path.filename}#{data_key}"
 
     def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
@@ -55,13 +52,11 @@ class MemoryIO(StorageIO):
 
 
 class MemoryStore(OpenStore):
-    """In-memory open storage.
+    """In-memory open store.
 
-    Keeps every written frame in a per-key list and records every call
-    it receives in an ordered log, so tests can assert both *what* was
-    stored and *in which order* the orchestrator drove the store.
-
-    Contents survive `close`: tests read `arrays` after the burst ends.
+    Keeps each key's written frames in a list and logs every call in order,
+    so tests can assert *what* was stored and *in which order* the store was
+    driven. Contents survive `close`, so tests read `arrays` after the burst.
 
     Parameters
     ----------
@@ -80,14 +75,14 @@ class MemoryStore(OpenStore):
         self.calls: list[tuple[str, str]] = []
 
     async def write(self, data_key: str, frame: npt.NDArray[Any]) -> None:
-        """Append a copy of the frame to the list for `data_key` and record the call."""
+        """Store a copy of the frame under `data_key` and log the call."""
         self.calls.append(("write", data_key))
         self.arrays[data_key].append(np.copy(frame))
 
     async def release(self, data_key: str) -> None:
-        """Record the release call for `data_key`."""
+        """Log the release of `data_key`."""
         self.calls.append(("release", data_key))
 
     async def close(self) -> None:
-        """Record the close call."""
+        """Log the close."""
         self.calls.append(("close", ""))

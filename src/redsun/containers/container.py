@@ -1,8 +1,4 @@
-"""Application container for DVP architecture.
-
-Provides `AppContainer` for declarative component registration
-and dependency-ordered instantiation.
-"""
+"""`AppContainer`, which declares a session's components and builds them in order."""
 
 from __future__ import annotations
 
@@ -96,7 +92,7 @@ class Frontend(str, Enum):
 
 
 class _PluginTypeDict(TypedDict):
-    """Typed dictionary for discovered plugin classes, organized by group."""
+    """Discovered plugin classes, by group."""
 
     devices: dict[str, type[Device]]
     presenters: dict[str, type[PPresenter]]
@@ -104,7 +100,7 @@ class _PluginTypeDict(TypedDict):
 
 
 def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
-    """Check if a class is an ophyd-async Device subclass."""
+    """Return whether a class subclasses the ``ophyd-async`` Device."""
     try:
         return issubclass(cls, Device)
     except TypeError:
@@ -112,24 +108,22 @@ def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
 
 
 def _check_presenter_protocol(cls: type) -> TypeGuard[type[PPresenter]]:
-    """Class-level gate of the dual presenter validation.
+    """Check a presenter class before it is built.
 
-    The constructor must accept exactly ``(name, devices)`` as its leading
-    positional parameters - the only part of the contract knowable before
-    instantiation (keyword arguments are uncontrolled; instance attributes
-    are invisible). PPresenter compliance is then validated on the built
-    instance by ``_PresenterComponent.build``.
+    The constructor's leading positional parameters must be exactly
+    ``(name, devices)``, the only part of the contract knowable before
+    instantiation. ``_PresenterComponent.build`` checks PPresenter on the
+    instance.
     """
     return isinstance(cls, type) and expects_positionals(cls, ("name", "devices"))
 
 
 def _check_view_protocol(cls: type) -> TypeGuard[type[PView]]:
-    """Class-level gate of the dual view validation.
+    """Check a view class before it is built.
 
-    The constructor must accept exactly ``(name,)`` as its leading
-    positional parameter - the only part of the contract knowable before
-    instantiation. PView compliance is then validated on the built
-    instance by ``_ViewComponent.build``.
+    The constructor's leading positional parameter must be exactly ``(name,)``,
+    the only part of the contract knowable before instantiation.
+    ``_ViewComponent.build`` checks PView on the instance.
     """
     return isinstance(cls, type) and expects_positionals(cls, ("name",))
 
@@ -177,10 +171,10 @@ _PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
 
 
 def _silent(step: str) -> None:
-    """Take a build step's name and do nothing with it.
+    """Ignore a build step's name.
 
-    What `AppContainer` reports progress to when no hook asked for it, so the
-    build has one path whether or not anything is watching.
+    `AppContainer` reports progress here when no hook asked for it, so the
+    build has one path either way.
     """
 
 
@@ -190,10 +184,10 @@ _COMPONENT_SECTIONS: frozenset[str] = frozenset(
 """The configuration sections whose entries are a component's constructor call."""
 
 _IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
-"""Keys naming what kind of session this is, which every layered file must agree on.
+"""Keys saying what kind of session this is, on which layered files must agree.
 
-Everything else describes the session's content, where a later file legitimately
-overrides an earlier one.
+Every other key describes the session's content, which a later file may
+override.
 """
 
 _FRONTEND_CONTAINERS: dict[str, str] = {
@@ -203,7 +197,7 @@ _FRONTEND_CONTAINERS: dict[str, str] = {
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
-    """Read one YAML file into a mapping, without validating what it carries."""
+    """Read one YAML file into a mapping, unvalidated."""
     with open(path) as fh:
         data = yaml.safe_load(fh)
     if not isinstance(data, dict):
@@ -216,15 +210,14 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
     """Return *base* with *overlay* laid over it, merging nested mappings.
 
-    A key present in both is taken from *overlay* unless both values are
-    mappings, which merge in turn. Anything that is not a mapping - a list, a
-    scalar - is replaced rather than combined.
+    A key in both is taken from *overlay* unless both values are mappings,
+    which merge in turn. Lists and scalars are replaced, not combined.
 
-    A component entry is the exception: under ``services``, ``devices``,
-    ``presenters`` and ``views`` the section merges by component name, but a component *named* in
-    *overlay* is taken from it whole. Those entries are the keyword arguments
-    of a constructor call rather than a tree of settings, so one file owns one
-    component's arguments and a reader stops at the last file naming it.
+    Component entries are the exception: ``services``, ``devices``,
+    ``presenters`` and ``views`` merge by component name, but a component
+    *named* in *overlay* is taken from it whole. Its entry is a constructor
+    call's keyword arguments, so one file owns them all and a reader stops at
+    the last file naming it.
     """
     merged = dict(base)
     for key, value in overlay.items():
@@ -246,13 +239,12 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
 def _refuse_identity_conflict(
     data: dict[str, Any], overlay: dict[str, Any], path: Path
 ) -> None:
-    """Refuse a file that contradicts what an earlier one said the session is.
+    """Refuse a file contradicting what kind of session an earlier one declared.
 
     Raises
     ------
     ValueError
-        If *overlay* gives a different value for a key naming the session's
-        identity rather than its content.
+        If *overlay* changes a key naming the session's kind.
     """
     for key in _IDENTITY_KEYS:
         if key in data and key in overlay and data[key] != overlay[key]:
@@ -265,10 +257,10 @@ def _refuse_identity_conflict(
 
 
 def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
-    """Read *paths* in order, lay each over the last, and validate the result.
+    """Read *paths* in order, merge each over the previous, and validate the result.
 
-    Required keys are checked against the merged mapping rather than against
-    each file, so a file layered under another may carry a fragment.
+    Required keys are checked on the merged mapping, not per file, so a layered
+    file may hold a fragment.
 
     Raises
     ------
@@ -298,7 +290,7 @@ def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
 
 
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
-    """Resolve a frontend string to the appropriate container class."""
+    """Return the container class of a frontend name."""
     dotted_path = _FRONTEND_CONTAINERS.get(frontend)
     if dotted_path is None:
         raise ValueError(
@@ -311,7 +303,7 @@ def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
 
 
 class AppContainer:
-    """Application container for DVP architecture.
+    """Application container of a DVP session.
 
     Parameters
     ----------
@@ -320,8 +312,8 @@ class AppContainer:
     frontend : str
         Frontend toolkit identifier.
     log_level : int or str, optional
-        Level to put on the ``redsun`` logger, as a `logging` constant or a
-        level name. Left as it is when not given.
+        Level of the ``redsun`` logger, as a `logging` constant or a level
+        name. Unchanged when not given.
     """
 
     __slots__ = (
@@ -347,19 +339,17 @@ class AppContainer:
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
     _component_fields: ClassVar[dict[str, _ComponentField]] = {}
-    """Every ``declare_*`` field this container and its bases declared.
+    """Every ``declare_*`` field of this container and its bases.
 
-    Kept past class creation so that a subclass naming its own ``config`` file
-    resolves the fields it inherited against that file rather than the one its
-    base was written with.
+    Kept after class creation, so a subclass with its own ``config`` resolves
+    inherited fields against its own file.
     """
 
     _config_paths: ClassVar[tuple[Path, ...]] = ()
-    """The configuration files this container reads, in the order they layer.
+    """The configuration files this container reads, in layering order.
 
-    A subclass naming its own ``config`` appends to what its bases named rather
-    than replacing it, so a file common to several sessions sits under the one
-    that is particular to each.
+    A subclass's ``config`` is appended to its bases' files, so a file shared
+    by several sessions sits under each session's own.
     """
 
     BUILD_STEPS: ClassVar[tuple[str, ...]] = (
@@ -373,27 +363,25 @@ class AppContainer:
         "wiring",
         "injection",
     )
-    """The steps `build` announces, in the order it reaches them.
+    """The steps `build` announces, in order.
 
-    Each is reported as it starts, so a progress display sizes itself from the
-    length of this rather than from a number of its own that would drift as the
-    sequence changes.
+    Each is reported when it starts, so a progress display can size itself from
+    this tuple.
     """
 
     _hook_keys: ClassVar[Mapping[str, type]] = {}
-    """The hook points this container calls, in the order it reaches them.
+    """The hook points this container calls, in order.
 
-    A key is the method the point calls, and is what names the point in a
-    container class body and in the ``hooks`` section. Empty here: every moment
-    a hook can act at belongs to a toolkit, so it is the container for that
-    toolkit that declares one.
+    A key is the method the point calls, which names the point in a container
+    class body and in the ``hooks`` section. Empty here: every hook point
+    belongs to a toolkit, whose container declares it.
     """
 
     _hook_providers: ClassVar[dict[str, object]] = {}
     """The providers declared on this container class, by hook point.
 
-    Built as the class is created, so that an instance declared at two points
-    is one provider serving both. A subclass inherits what its bases declare.
+    Built when the class is created, so an instance declared at two points
+    serves both. A subclass inherits its bases' providers.
     """
 
     def __init_subclass__(
@@ -401,14 +389,14 @@ class AppContainer:
         config: str | Path | Sequence[str | Path] | None = None,
         **kwargs: Any,
     ) -> None:
-        """Collect component wrappers from class attributes.
+        """Collect the component declarations of the class body.
 
         Parameters
         ----------
         config : str | Path | Sequence[str | Path] | None
-            YAML configuration file for component kwargs, or several to layer
-            in order. They are read after the ones this container's bases name,
-            so a later file wins a key it shares with an earlier one.
+            YAML file of component keyword arguments, or several layered in
+            order. They are read after the bases' files, and a later file wins
+            a shared key.
         """
         super().__init_subclass__(**kwargs)
 
@@ -615,15 +603,15 @@ class AppContainer:
 
     @classmethod
     def _refuse_unresolved_fields(cls) -> None:
-        """Refuse a container whose ``from_config`` fields have no file to read.
+        """Refuse a container whose ``from_config`` fields have no file.
 
-        Deferred to construction rather than class creation: a base class exists
-        to be subclassed, and the subclass is where ``config`` is named.
+        Checked at construction, not class creation, since a base class leaves
+        ``config`` to its subclasses.
 
         Raises
         ------
         TypeError
-            Naming every field that asked for a configuration section.
+            Naming every field wanting a configuration section.
         """
         if cls._config_paths:
             return
@@ -655,8 +643,8 @@ class AppContainer:
     def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
         """Return what this container built from *declared*, by name.
 
-        A declaration the build did not reach, or one whose build failed, is
-        absent, so the mapping can be shorter than *declared*.
+        A declaration not reached or failed is absent, so the mapping can be
+        shorter than *declared*.
         """
         return {
             name: cast("T", self._built[comp])
@@ -666,21 +654,21 @@ class AppContainer:
 
     @property
     def devices(self) -> dict[str, Device]:
-        """Return built device instances."""
+        """Return the built devices."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return self._built_of(self._device_components)
 
     @property
     def presenters(self) -> dict[str, PPresenter]:
-        """Return built presenter instances."""
+        """Return the built presenters."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return self._built_of(self._presenter_components)
 
     @property
     def views(self) -> dict[str, PView]:
-        """Return built view instances."""
+        """Return the built views."""
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return self._built_of(self._view_components)
@@ -692,7 +680,7 @@ class AppContainer:
 
     @property
     def virtual_container(self) -> VirtualContainer:
-        """Return the virtual container instance."""
+        """Return the virtual container."""
         if self._virtual_container is None:
             raise RuntimeError("Container not built. Call build() first.")
         return self._virtual_container
@@ -705,9 +693,8 @@ class AppContainer:
     def wire(self) -> None:
         """Connect the signals and slots of built components.
 
-        Override in a container subclass to declare the connections of an
-        application. Every component is built by the time this runs and is
-        reachable as the attribute it was declared under:
+        Override it to declare an application's connections. Every component is
+        built when this runs, available as the attribute it was declared under:
 
         ```python
         class MyApp(AppContainer):
@@ -718,7 +705,7 @@ class AppContainer:
                 self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)
         ```
 
-        The default implementation connects nothing.
+        Connects nothing by default.
         """
 
     def connect(
@@ -730,10 +717,9 @@ class AppContainer:
     ) -> Connection | None:
         """Connect a signal to a slot, recording the link for teardown.
 
-        Returns ``None``, having connected nothing, when either end belongs to
-        a component that failed to build: the link is logged at ``WARNING`` and
-        the rest of `wire` runs. Every other way of naming a port wrongly still
-        raises.
+        Returns ``None`` without connecting when an end belongs to a component
+        that failed to build: the link is logged at ``WARNING`` and `wire`
+        continues. Any other wrong port raises.
 
         See [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect].
         """
@@ -759,9 +745,8 @@ class AppContainer:
     def _apply_wiring_config(self) -> None:
         """Connect the port pairs listed in the ``wiring`` configuration section.
 
-        A rule naming a component the build failed on is warned about and
-        skipped. Every other way of getting a rule wrong stays fatal, a name
-        that was never declared included.
+        A rule naming a component that failed to build is logged and skipped.
+        Any other wrong rule raises, including an undeclared name.
         """
         for index, rule in enumerate(self._config.get("wiring", [])):
             if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
@@ -780,10 +765,9 @@ class AppContainer:
                 )
 
     def build(self) -> Self:
-        """Instantiate all components in dependency order.
+        """Build every component in dependency order.
 
-        The order is fixed, and each step is announced to whatever is watching
-        the build:
+        The order is fixed, and each step is announced as it starts:
 
         1. Services, started unless `start_services` already ran
         2. VirtualContainer
@@ -795,8 +779,8 @@ class AppContainer:
         8. Wiring, connecting the signals and slots of built components
         9. Remaining dependency injection
 
-        A build that raises stops the services before the exception leaves it,
-        so no process it launched outlives it.
+        A build that raises stops the services first, so no process it launched
+        outlives it.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -847,8 +831,8 @@ class AppContainer:
     def _summarise_build(self) -> str:
         """Return what the build made, counted against what was declared.
 
-        A build that missed nothing is one line; one that did names what it
-        could not make on a second.
+        One line if nothing was missed; otherwise further lines name what was
+        not made.
         """
         declared: tuple[tuple[str, Mapping[str, _ComponentBase[Any]]], ...] = (
             ("device", self._device_components),
@@ -897,9 +881,9 @@ class AppContainer:
     def start_services(self) -> None:
         """Start every service the container launches, and attach to the rest.
 
-        `build` calls this unless it has already run. A service that fails to
-        start is logged and recorded, and every device naming it is skipped by
-        the build; the rest of the session runs.
+        `build` calls this unless it already ran. A service that fails to start
+        is logged, and the build skips every device naming it; the rest of the
+        session runs.
         """
         self._services_started = True
         if not self._services:
@@ -930,8 +914,8 @@ class AppContainer:
         ------
         HookError
             If *moment* is not a hook point this container calls, the provider
-            class rejects the keys given, or the provider does not implement
-            the protocol the point calls.
+            rejects the keys given, or it does not implement the point's
+            protocol.
         """
         if moment not in cls._hook_keys:
             raise HookError(
@@ -958,11 +942,10 @@ class AppContainer:
         return provider
 
     def _ensure_hooks(self) -> dict[str, object]:
-        """Return the hook providers by hook point, resolving once per build.
+        """Return the hook providers by hook point, resolved once per build.
 
-        A subclass firing its own hook points calls this rather than resolving
-        again, so that every hook point of one build acts on one set of
-        providers.
+        A subclass calling its own hook points uses this, so every hook point
+        of a build uses one set of providers.
         """
         if self._hooks is None:
             self._hook_by_moment = self._resolve_hook_providers()
@@ -979,9 +962,9 @@ class AppContainer:
         Raises
         ------
         HookError
-            If an entry does not resolve, a hook point is named on the class
-            and in the configuration, or a configured provider does not
-            implement the protocol its hook point calls.
+            If an entry does not resolve, a hook point is named on both the
+            class and the configuration, or a configured provider does not
+            implement its point's protocol.
         """
         declared = dict(type(self)._hook_providers)
         configured = resolve_hooks(
@@ -1007,7 +990,7 @@ class AppContainer:
         return {**declared, **configured}
 
     def _shutdown_hooks(self) -> None:
-        """Undo what the hook providers did, in reverse order of installation."""
+        """Undo what the hook providers did, in reverse installation order."""
         for hook in reversed(self._hooks or ()):
             if isinstance(hook, HasShutdown):
                 try:
@@ -1020,7 +1003,7 @@ class AppContainer:
         self._hook_by_moment = {}
 
     def _create_virtual_container(self) -> None:
-        """Create the VirtualContainer and hand it the session configuration."""
+        """Create the VirtualContainer with the session configuration."""
         self._virtual_container = VirtualContainer()
 
         base_cfg: RedSunConfig = {
@@ -1032,7 +1015,7 @@ class AppContainer:
         logger.debug("VirtualContainer created")
 
     def _build_devices(self) -> None:
-        """Build every declared device, skipping the ones that fail."""
+        """Build every declared device, skipping those that fail."""
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
@@ -1048,9 +1031,9 @@ class AppContainer:
     def _connect_devices(self) -> None:
         """Connect every built device declared with autoconnect, all at once.
 
-        A device that does not connect within `CONNECT_TIMEOUT` is recorded as
-        failed and dropped, as a device that fails to build is, so no presenter
-        receives a device that raises on its first read.
+        A device not connected within `CONNECT_TIMEOUT` is recorded as failed
+        and dropped, like one failing to build, so no presenter gets a device
+        that raises on its first read.
         """
         targets = {
             name: device
@@ -1082,7 +1065,7 @@ class AppContainer:
     def _connection_failure(
         self, device: _DeviceComponent, error: BaseException
     ) -> str:
-        """Return why *device* did not connect, naming the service it talks to."""
+        """Return why *device* did not connect, naming its service."""
         # ophyd-async pads a NotConnectedError's message with whitespace
         detail = str(error).strip()
         service = self._services.get(device.service or "")
@@ -1115,7 +1098,7 @@ class AppContainer:
     def _build_presenters(self) -> None:
         """Build every declared presenter against the built devices.
 
-        A presenter that fails is skipped, as a device that fails is.
+        A presenter that fails is skipped, like a failed device.
         """
         for comp_name, presenter_component in self._presenter_components.items():
             try:
@@ -1127,7 +1110,7 @@ class AppContainer:
                 logger.error(f"Failed to build presenter '{comp_name}': {e}")
 
     def _build_views(self) -> None:
-        """Build every declared view, skipping the ones that fail."""
+        """Build every declared view, skipping those that fail."""
         for comp_name, view_component in self._view_components.items():
             try:
                 self._built[view_component] = view_component.build()
@@ -1136,7 +1119,7 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
 
     def _register_providers(self) -> None:
-        """Let every component providing dependencies register them."""
+        """Let each component providing dependencies register them."""
         for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
@@ -1144,32 +1127,31 @@ class AppContainer:
     def _apply_wiring(self) -> None:
         """Publish the built components by name, then connect them.
 
-        The names reach the VirtualContainer first because both `wire` and the
-        ``wiring`` configuration section resolve components by name.
+        Names come first, since `wire` and the ``wiring`` section resolve
+        components by name.
         """
         self.virtual_container._set_components(self._built_of(self._components))
         self.wire()
         self._apply_wiring_config()
 
     def _inject_dependencies(self) -> None:
-        """Let every component taking dependencies receive them."""
+        """Let each component taking dependencies receive them."""
         for instance in self._built_of(self._components).values():
             if isinstance(instance, IsInjectable):
                 instance.inject_dependencies(self.virtual_container)
 
     def connect_devices(self, mock: bool = False) -> None:
-        """Connect all devices via ophyd-async's async connect lifecycle.
+        """Connect every device through ``ophyd-async``.
 
         Call after [`build`][redsun.containers.container.AppContainer.build],
-        which has already connected every device declared with ``autoconnect``
-        true. This connects every device whatever its ``autoconnect`` says, and
-        a device already connected returns at once. Use ``mock=True`` in tests
-        to skip hardware communication.
+        which already connected the devices declared with ``autoconnect``. This
+        connects every device regardless, and a connected device returns at
+        once. ``mock=True`` skips the hardware, for tests.
 
         Parameters
         ----------
         mock : bool
-            If ``True``, connect using mock backends (no hardware required).
+            Connect to mock backends, needing no hardware.
 
         Raises
         ------
@@ -1189,8 +1171,7 @@ class AppContainer:
     def shutdown(self) -> None:
         """Undo the build, one phase at a time.
 
-        The phases run in the order below, each of them a method a subclass
-        may override the way the build phases are overridden:
+        The phases run in this order, each a method a subclass may override:
 
         1. ``_disconnect`` - undo the wiring.
         2. ``_shutdown_presenters`` - shut every presenter down.
@@ -1201,9 +1182,9 @@ class AppContainer:
         Afterwards the container holds nothing it built, so ``devices``,
         ``presenters`` and ``views`` raise until the next ``build()``.
 
-        Whether or not the container was built, the services it launched are
-        stopped, the last declared first, and then the session's log file is
-        closed; the next ``build()`` starts both again.
+        Built or not, the container then stops its launched services, the last
+        declared first, and closes the session's log file; the next ``build()``
+        starts both again.
         """
         if self._is_built:
             self._disconnect()
@@ -1222,9 +1203,9 @@ class AppContainer:
     def _stop_services(self) -> None:
         """Stop every service the container launched, the last declared first.
 
-        One service failing to stop does not stop the others. Once one has
-        stopped, the Channel Access channels of this process are closed, so
-        that a container built again connects afresh.
+        A service failing to stop does not keep the others running. If any
+        stopped, the process's Channel Access channels are closed, so a rebuilt
+        container connects afresh.
         """
         stopped = False
         for name, service in reversed(self._services.items()):
@@ -1241,8 +1222,8 @@ class AppContainer:
     def _open_session_log(self) -> None:
         """Start writing this run's records to the session's log files.
 
-        The application's records go to one file and each launched service's
-        to a file of its own, so a service logging heavily rotates only its own.
+        Application records go to one file and each launched service's to its
+        own, so a noisy service rotates only its own file.
         """
         if self._session_log is not None:
             return
@@ -1274,7 +1255,7 @@ class AppContainer:
     def _shutdown_presenters(self) -> None:
         """Shut down every presenter implementing ``HasShutdown``.
 
-        One presenter failing to shut down does not stop the others.
+        A presenter failing to shut down does not stop the others.
         """
         for name, presenter in self._built_of(self._presenter_components).items():
             if isinstance(presenter, HasShutdown):
@@ -1286,8 +1267,8 @@ class AppContainer:
     def _release_components(self) -> Sequence[object]:
         """Drop every built component, and return what was dropped.
 
-        The virtual container forgets them too, so that what the container
-        built is reachable from nowhere the framework owns.
+        The virtual container forgets them too, so nothing the framework owns
+        still references them.
         """
         if self._virtual_container is not None:
             self._virtual_container._clear_components()
@@ -1300,14 +1281,12 @@ class AppContainer:
     def _destroy(self, components: Sequence[object]) -> None:
         """Destroy the components the container has just released.
 
-        Dropping the last reference is everything a toolkit-agnostic container
-        can do, and for a toolkit whose objects are owned by something other
-        than Python it is not enough. Such a toolkit overrides this to end
-        them, so that a shut-down container leaves nothing behind whatever it
-        was built on.
+        A container bound to no toolkit can only drop the last reference, which
+        does not end objects a toolkit owns outside Python. Such a toolkit
+        overrides this to end them.
 
-        *components* have already been released: neither this container nor the
-        virtual container holds them any more.
+        *components* are already released: neither this container nor the
+        virtual container holds them.
         """
 
     def run(self) -> None:
@@ -1322,7 +1301,7 @@ class AppContainer:
     def from_config(
         cls, config_path: str, *, log_level: int | str | None = None
     ) -> AppContainer:
-        """Build a container dynamically from a YAML configuration file.
+        """Build a container from a YAML configuration file.
 
         *log_level* is passed to the container it builds.
         """
@@ -1370,9 +1349,9 @@ class AppContainer:
     ) -> tuple[dict[str, Any], _PluginTypeDict, dict[str, dict[str, Any]]]:
         """Load configuration, discover plugin classes and resolve services.
 
-        The services come back as the keyword arguments of each declaration: a
-        service naming a plugin takes its module and readiness line from that
-        plugin's manifest, under what the session file gives it.
+        Services are returned as each declaration's keyword arguments. A
+        service naming a plugin takes its module and readiness line from the
+        plugin's manifest, overridden by the session file.
         """
         with open(config_path, "r") as f:
             config: dict[str, Any] = yaml.safe_load(f)
@@ -1423,8 +1402,8 @@ class AppContainer:
     ) -> Any:
         """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
 
-        ``None``, with the reason logged, when the plugin is not installed or
-        its manifest has no such entry.
+        ``None``, with the reason logged, if the plugin is not installed or
+        lacks the entry.
         """
         plugin = next(
             (entry for entry in available_manifests if entry.name == plugin_name), None
@@ -1458,7 +1437,7 @@ class AppContainer:
         group: PLUGIN_GROUPS,
         available_manifests: EntryPoints,
     ) -> list[tuple[str, PluginType]]:
-        """Load plugin classes for a given group from manifests."""
+        """Load a group's plugin classes from their manifests."""
         plugins: list[tuple[str, PluginType]] = []
 
         for name, info in group_cfg.items():

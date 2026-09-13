@@ -24,7 +24,7 @@ only the first.
 
 **A rename breaks the connection silently.** The emitter and the consumer agree
 on a string, checked by nobody. ADR 0004 records this happening across the
-redsun and redsun-mimir boundary during the `sigCamelCase` rename.
+`redsun` and redsun-mimir boundary during the `sigCamelCase` rename.
 
 **Optionality is expressed by silence.** The `if name in sigs` guard makes a
 typo, a rename, an uninstalled plugin, and a deliberately absent optional
@@ -37,7 +37,7 @@ across every `inject_dependencies` in every installed plugin.
 **Nothing is recorded.** A pull-based connection leaves no trace, so the graph
 cannot be reported, and `shutdown` cannot release what was connected.
 
-psygnal supplies the machinery underneath (class-scoped declaration, signature
+`psygnal` supplies the machinery underneath (class-scoped declaration, signature
 validation at connect, grouping, cross-thread delivery) but has no cross-object
 concept: nothing in it says which component's signal reaches which component's
 method. That is the gap.
@@ -67,8 +67,8 @@ session built from a configuration file uses the `wiring` section, addressing
 each end as `component.port`. Both forms end in the same
 `VirtualContainer.connect`.
 
-**Validation is psygnal's, at connection time.** The argument count is always
-checked; argument types are checked as well when the signal names them. redsun
+**Validation is `psygnal`'s, at connection time.** The argument count is always
+checked; argument types are checked as well when the signal names them. `redsun`
 adds only the port names to the failure, so the error identifies both ends.
 
 **Thread affinity belongs to the component**, declared once on the class
@@ -86,7 +86,7 @@ demoted to an escape hatch for dynamic lookup, not the way components are wired.
 
 - The wiring of an application is readable in one place, in the container class
   or in its configuration file. Adding a producer to an existing consumer is one
-  line there, and it is the same line whether the producer ships with redsun or
+  line there, and it is the same line whether the producer ships with `redsun` or
   with a third-party plugin.
 - A connection that cannot be made fails the build with both port paths in the
   message, rather than not happening.

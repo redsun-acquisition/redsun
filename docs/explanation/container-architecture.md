@@ -1,6 +1,6 @@
 # Container architecture
 
-`redsun` is built on the **Device-View-Presenter** (DVP) architecture, a variation of [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (MVP).
+`redsun` uses the **Device-View-Presenter** (DVP) architecture, a variant of [Model-View-Presenter](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93presenter) (MVP).
 
 === "Architecture block diagram"
 
@@ -31,14 +31,14 @@ block-beta
 
 It differs from MVP in two ways:
 
-- **The Model layer becomes a Device layer.** In MVP the Model holds the data the application works on, the way a text editor's model holds its text. Here the layer holds the objects that talk to hardware instead. The rename makes that difference explicit rather than leaving it to be inferred.
-- **Presenters and views are decoupled.** In MVP the two are tightly bound, and one is hard to have without the other. In DVP they reach each other through a **virtual container**, using [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection), so a session takes only the components it needs.
+- **A Device layer replaces the Model layer.** In MVP the Model holds the data the application works on, as a text editor's model holds its text. Here the layer holds the objects that talk to hardware, and the name says so.
+- **Presenters and views are decoupled.** In MVP the two are tightly bound. In DVP they reach each other through a **virtual container**, by [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection), so a session takes only the components it needs.
 
 ## Overview
 
-At the core of Redsun is the [`AppContainer`][redsun.AppContainer], which acts as the central registry and build system for all application components. Components are declared as class attributes and instantiated in a well-defined dependency order.
+[`AppContainer`][redsun.AppContainer] is the registry and build system for every component of an application. Components are declared as class attributes and built in dependency order.
 
-**Build order** - components are constructed in strict dependency sequence:
+**Build order**:
 
 ```mermaid
 graph LR
@@ -52,7 +52,7 @@ graph LR
     Presenters --> Views
 ```
 
-**Provider registration and dependency injection** - once all components are built, any presenter or view implementing the relevant protocol participates in registration and injection:
+**Provider registration and dependency injection**: once everything is built, each presenter or view implementing the matching protocol registers providers or receives dependencies:
 
 ```mermaid
 graph LR
@@ -76,25 +76,25 @@ graph LR
 
 ## The DVP pattern
 
-`redsun` builds three types of components:
+`redsun` builds three kinds of component:
 
-- **Devices**: objects interfacing with real hardware components that subclass `ophyd_async.core.Device` (or one of the higher-level ophyd-async base classes such as `StandardReadable` or `StandardDetector`).
-- **View**: UI components satisfying the [`PView`][redsun.view.PView] protocol to display data and capture user interactions.
-- **Presenter**: business logic components satisfying the [`PPresenter`][redsun.presenter.PPresenter] protocol, sitting between devices and views, coordinating device operations and updating the UI through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
+- **Devices** talk to hardware and subclass `ophyd_async.core.Device`, or a higher-level `ophyd-async` base such as `StandardReadable` or `StandardDetector`.
+- **Views** satisfy the [`PView`][redsun.view.PView] protocol; they show data and take user input.
+- **Presenters** satisfy the [`PPresenter`][redsun.presenter.PPresenter] protocol. They hold the logic between devices and views, driving devices and updating the interface through [`psygnal`](https://psygnal.readthedocs.io/en/latest/).
 
-This separation ensures that hardware drivers, UI components, and business logic can be developed and tested independently.
+Hardware drivers, interface and logic can then be developed and tested separately.
 
 ## Declarative containers
 
-`redsun` operates on a __bring-your-own components__ approach. Each component is intended to be developed separately and in isolation or as part of bundles of multiple components that can be dynamically assembled. In a declarative manner, this means importing the components explicitly and assigning them to a container.
+You bring your own components. Each is developed on its own, or in a bundle of components, and assembled later. Declaratively, that means importing the components and assigning them to a container.
 
-Components are declared as class attributes using the layer-specific field specifiers:
+Declare components as class attributes with
 [`declare_device()`][redsun.containers.components.declare_device],
-[`declare_presenter()`][redsun.containers.components.declare_presenter], and
+[`declare_presenter()`][redsun.containers.components.declare_presenter] and
 [`declare_view()`][redsun.containers.components.declare_view].
-Each accepts the component class as its first positional argument, followed by optional keyword arguments forwarded to the constructor.
+Each takes the component class first, then keyword arguments passed to its constructor.
 
-When writing a container explicitly, you inherit from the frontend-specific subclass rather than the base `AppContainer` - for Qt applications that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
+A container written by hand inherits from its frontend's subclass, not the base `AppContainer`; for Qt that is [`QtAppContainer`][redsun.qt.QtAppContainer]:
 
 ```python
 from redsun.containers import declare_device, declare_presenter, declare_view
@@ -110,28 +110,28 @@ def my_app() -> None:
     MyApp().run()
 ```
 
-The class is defined inside a function so that the Qt imports and any heavy device imports are deferred until the application is actually launched.
+Defining the class inside a function defers the Qt imports and any heavy device imports until the application launches.
 
-`AppContainer.__init_subclass__` collects these declarations at class creation time. Because the class is passed directly to the field specifier, no annotation inspection is needed. This declarative approach allows the container to:
+`AppContainer.__init_subclass__` collects the declarations when the class is created. The class is passed to the function directly, so no annotations need reading. The container can then:
 
-- validate component types at class creation time;
+- validate component types when the class is created;
 - inherit and override components from base classes;
 - merge configuration from YAML files with inline keyword arguments.
 
-Each specifier is typed as the class it is given, so `self.ctrl` is a
-`MyController` to a type checker while resolving to the built instance at
-runtime. That is what makes [`wire`][redsun.containers.container.AppContainer.wire]
-ordinary checked code rather than a script whose mistakes only surface at build.
+Each function's return type is the class it was given, so `self.ctrl` is a
+`MyController` to a type checker and the built instance at runtime. That makes
+[`wire`][redsun.containers.container.AppContainer.wire] ordinary type-checked
+code, not a script whose mistakes appear only at build.
 
 ## Component naming
 
-Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries. A device receives it as the `name` keyword argument, and a presenter or a view as the first positional argument of its constructor. The name is resolved with the following priority:
+Every component gets a `name`, its key in the container's `devices`, `presenters` or `views` mapping. A device receives it as the `name` keyword, a presenter or view as its first positional argument. The name comes from, in order:
 
-1. `alias` - if an explicit `alias` is passed to `declare_device()`, `declare_presenter()`, or `declare_view()`, that value is used regardless of everything else.
-2. attribute name - in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
-3. YAML key - in the dynamic flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]), the top-level key in the `devices`/`presenters`/`views` section of the configuration file becomes the component name.
+1. `alias`, if passed to `declare_device()`, `declare_presenter()` or `declare_view()`;
+2. the attribute name, in the declarative flow;
+3. the YAML key under `devices`/`presenters`/`views`, in the configuration file flow ([`from_config()`][redsun.containers.container.AppContainer.from_config]).
 
-Examples in the declarative flow:
+Declarative flow:
 
 ```python
 class MyApp(QtAppContainer):
@@ -139,7 +139,7 @@ class MyApp(QtAppContainer):
     cam = declare_device(MyCamera, alias="detector")  # name -> "detector"
 ```
 
-In the dynamic flow:
+Configuration file flow:
 
 ```yaml
 devices:
@@ -150,7 +150,7 @@ devices:
 
 ## Configuration file support
 
-Components can pull their keyword arguments from a YAML configuration file by passing `config=` to the class definition and `from_config=` to each field specifier call:
+A component can take its keyword arguments from a YAML file: pass `config=` to the class definition and `from_config=` to each declaration:
 
 ```python
 from redsun.containers import declare_device, declare_presenter, declare_view
@@ -168,17 +168,15 @@ def my_app() -> None:
     # alternatively, you can first build and then run the app
     app = MyApp()
     app.build()
-    app.connect_devices()
     app.run()
 ```
 
-The configuration file provides base keyword arguments for each component. These can be selectively overridden by inline keyword arguments in the field specifier call, allowing the same container class to be reused across different hardware setups by swapping configuration files.
+The file gives each component's base keyword arguments, and inline keyword arguments override them, so one container class serves several hardware setups by swapping files.
 
 ### Sharing declarations between sessions
 
-Two sessions of the same instrument usually differ in their devices and in
-little else. A base class carries what they share, and each subclass names the
-file it reads:
+Two sessions of one instrument usually differ only in their devices. A base
+class holds what they share, and each subclass names its file:
 
 ```python
 class InstrumentApp(QtAppContainer):
@@ -194,16 +192,15 @@ class Instrument(InstrumentApp, config="instrument.yaml"):
     motor = declare_device(MyMotor, from_config="motor")
 ```
 
-An inherited field is resolved against the file of the class that inherits it,
-so `Simulation` and `Instrument` read the same declarations from two different
-files. A base declaring `from_config` needs no file of its own; a container
-constructed without one raises `TypeError` naming the fields that wanted a
-section.
+An inherited declaration reads the file of the class inheriting it, so
+`Simulation` and `Instrument` read the same declarations from different files.
+A base using `from_config` needs no file of its own; constructing a container
+without one raises `TypeError` naming the declarations that wanted a section.
 
 ### Layering configuration files
 
-`config` also accepts several files, and a subclass adds to what its bases
-named rather than replacing it, so what two sessions share can be stated once:
+`config` also takes several files, and a subclass adds to its bases' files
+instead of replacing them, so shared settings are written once:
 
 ```python
 class InstrumentApp(QtAppContainer, config="common.yaml"):
@@ -214,78 +211,77 @@ class Simulation(InstrumentApp, config="simulation.yaml"):  # common, then simul
     ...
 ```
 
-Files are read in that order and merged as mappings: a later file wins a key it
-shares with an earlier one, and nested mappings merge in turn. Two rules qualify
-that:
+Files are read in that order and merged as mappings: a later file wins a shared
+key, and nested mappings merge in turn, with two exceptions:
 
-- **A component entry is replaced whole.** The `devices`, `presenters` and
-  `views` sections merge by component name, but a component a later file names
-  is taken from that file entirely. Those entries are the keyword arguments of a
-  constructor call, so one file owns all of a component's arguments.
-- **`schema_version` and `frontend` must agree.** They name what kind of session
-  this is rather than what it contains, so a later file giving a different value
-  raises rather than overriding. `session` overrides normally.
+- **A component entry is replaced whole.** The `services`, `devices`,
+  `presenters` and `views` sections merge by component name, but a component
+  named in a later file is taken entirely from that file. Its entry is a
+  constructor call's keyword arguments, so one file owns all of them.
+- **`schema_version` and `frontend` must agree.** They say what kind of session
+  this is, so a later file with a different value raises instead of
+  overriding. `session` overrides normally.
 
-Only the merged result has to satisfy [`AppConfig`][redsun.containers.AppConfig],
-so a file layered under another may carry a fragment - a `presenters` section
-and nothing else. The files a container read, and any component one file took
-from another, are logged at debug level.
+Only the merged result must satisfy [`AppConfig`][redsun.containers.AppConfig],
+so a layered file may hold a fragment, such as a `presenters` section alone.
+The files read, and any component one file took from another, are logged at
+debug level.
 
 ## Build order
 
-[`build()`][redsun.containers.container.AppContainer.build] walks the steps named
-by `AppContainer.BUILD_STEPS`, announcing each one as it starts. They group into
-four stages. Once the build is done, call
-[`connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
-to run ophyd-async's connect lifecycle on every registered device.
+[`build()`][redsun.containers.container.AppContainer.build] runs the steps in
+`AppContainer.BUILD_STEPS`, announcing each as it starts, in five stages.
 
-**Construction** - the steps `virtual container`, `devices`, `presenters` and `views`:
+**Services**, the step `services`: every declared service is started or
+attached to before anything is built; see [Services](services.md).
 
-1. [`VirtualContainer`][redsun.virtual.VirtualContainer] - created and seeded with the application configuration.
-2. **Devices** - each is constructed as `cls(name=<resolved name>, **kwargs)`.
-3. **Presenters** - each receives its resolved name and the full device dictionary.
-4. **Views** - each receives its resolved name.
+**Construction and connection**, the steps `virtual container`, `devices`,
+`connect`, `presenters` and `views`:
 
-Presenter and view constructors are signature-checked when their
-components are declared or discovered (leading positionals must be
-`(name, devices)` / `(name,)`), and every built instance is validated
-against its layer contract (`ophyd_async.core.Device`,
-[`PPresenter`][redsun.presenter.PPresenter],
-[`PView`][redsun.view.PView]). A component that fails either check, or
-whose constructor raises, is logged at `ERROR` and skipped: the build
-returns and the session runs with the components it has. `devices`,
-`presenters` and `views` hold what was built, so a mapping can be shorter
-than the declarations it came from. See
+1. [`VirtualContainer`][redsun.virtual.VirtualContainer]: created with the application configuration.
+2. **Devices**: each built as `cls(name=<resolved name>, **kwargs)`, given its service's prefix if it names one.
+3. **Connect**: every device declared with `autoconnect` connects, all at once; see [Connecting](architecture/devices.md#connecting).
+4. **Presenters**: each receives its name and the device mapping.
+5. **Views**: each receives its name.
+
+Presenter and view constructors are checked when declared or discovered
+(leading positionals `(name, devices)` / `(name,)`), and every built instance
+is checked against its layer's contract (`ophyd_async.core.Device`,
+[`PPresenter`][redsun.presenter.PPresenter], [`PView`][redsun.view.PView]). A
+component failing either check, or whose constructor raises, is logged at
+`ERROR` and skipped: the build completes and the session runs with what it
+has. `devices`, `presenters` and `views` hold what was built, so a mapping can
+be shorter than its declarations. See
 [ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md).
 
-**Provider registration** - the step `providers`:
+**Provider registration**, the step `providers`:
 
-Any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. This is safe to run across both layers simultaneously because no injection occurs here.
+Each presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] calls `register_providers()` on the `VirtualContainer`. Both layers can do this in any order, since no injection happens here.
 
-**Wiring** - the step `wiring`:
+**Wiring**, the step `wiring`:
 
-[`wire()`][redsun.containers.container.AppContainer.wire] runs, followed by the `wiring` section of the configuration file. Every component is built by now, so a connection can name both of its ends. See [wire components together](../how-to/wire-components.md).
+[`wire()`][redsun.containers.container.AppContainer.wire] runs, then the `wiring` section of the configuration file. Every component exists now, so a connection can name both ends. See [wire components together](../how-to/wire-components.md).
 
-**Dependency injection** - the step `injection`:
+**Dependency injection**, the step `injection`:
 
-Any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, consuming the providers registered earlier.
+Each presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] calls `inject_dependencies()` on the `VirtualContainer`, using the providers registered earlier.
 
 ## Communication
 
-Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualContainer], which serves as the single shared data exchange layer for the application. It combines two roles:
+Components communicate through the [`VirtualContainer`][redsun.virtual.VirtualContainer], the application's one shared exchange. It has two roles:
 
-- **Signal bus**: a component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods it accepts connections on with [`slot`][redsun.virtual.slot]; the application connects the two during the wiring step, and the container records every link. The older `register_signals()` registry, discovered by name through `find_signals()`, still works and is kept as an escape hatch for dynamic lookup.
-- **Dependency injection**: built on top of [`dependency_injector`](https://python-dependency-injector.readthedocs.io/)'s `DynamicContainer`, it allows any presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] to register typed providers, and any presenter or view implementing [`IsInjectable`][redsun.virtual.IsInjectable] to consume them. This enables components across both layers to share information without direct coupling.
+- **Signal bus.** A component declares [`psygnal`](https://psygnal.readthedocs.io/) signals and marks the methods that accept connections with [`slot`][redsun.virtual.slot]; the application connects them in the wiring step, and the container records every link. The older `register_signals()` registry, searched by name with `find_signals()`, still works for dynamic lookup.
+- **Dependency injection.** Built on `dependency_injector`'s `DynamicContainer`, it lets a presenter or view implementing [`IsProvider`][redsun.virtual.IsProvider] register typed providers, and one implementing [`IsInjectable`][redsun.virtual.IsInjectable] consume them, without either referencing the other.
 
-The `VirtualContainer` is created during [`build()`][redsun.containers.container.AppContainer.build] and is accessible via the [`virtual_container`][redsun.containers.container.AppContainer.virtual_container] property after the container is built.
+[`build()`][redsun.containers.container.AppContainer.build] creates the `VirtualContainer`; afterwards it is available as [`virtual_container`][redsun.containers.container.AppContainer.virtual_container].
 
 ## Two usage flows
 
-`redsun` supports two distinct approaches for assembling an application, both producing the same result at runtime. Picking a tab below switches every other tab in this documentation to the same form.
+There are two ways to assemble an application, with the same result at runtime. Picking a tab switches every tab on the site to the same form.
 
 === "Container class"
 
-    For plugin bundle authors who know exactly which components they need and which frontend they target. The container subclass, component classes, and frontend are all fixed at write time:
+    For bundle authors who know which components and which frontend they need. The container, component classes and frontend are fixed in code:
 
     ```python
     from redsun.containers import declare_device, declare_presenter, declare_view
@@ -311,11 +307,11 @@ The `VirtualContainer` is created during [`build()`][redsun.containers.container
     MyApp().run()
     ```
 
-    Keyword arguments still come from `config.yaml`; what is fixed in Python is the set of components, the frontend, and the connections.
+    Keyword arguments still come from `config.yaml`; Python fixes the components, the frontend and the connections.
 
 === "Configuration file"
 
-    For end users who point Redsun at a YAML file. Plugins are discovered via entry points and the frontend is resolved from the `frontend:` key - no Python code needs to be written:
+    For users who point `redsun` at a YAML file. Plugins are discovered through entry points and the frontend comes from the `frontend:` key, with no Python to write:
 
     ```python
     from redsun import AppContainer
@@ -351,32 +347,32 @@ The `VirtualContainer` is created during [`build()`][redsun.containers.container
         to: ui.update_setpoint
     ```
 
-    See the [component system](component-system.md) documentation for a full description of this flow.
+    The [component system](component-system.md) page describes this flow in full.
 
 ## Frontend support
 
-Frontend is intended as the toolkit that deploys the functionalities to implement the Graphical User Interface (GUI).
+The frontend is the toolkit the graphical interface is built with.
 
 ### Qt
 
-[`QtAppContainer`][redsun.qt.QtAppContainer] extends [`AppContainer`][redsun.containers.container.AppContainer] with the full Qt lifecycle:
+[`QtAppContainer`][redsun.qt.QtAppContainer] adds the Qt lifecycle to [`AppContainer`][redsun.containers.container.AppContainer]:
 
-1. Creates the `QApplication` instance.
-2. Calls [`build()`][redsun.containers.container.AppContainer.build] to instantiate all components.
-3. Constructs the `QtMainView` main window and docks all views.
-4. Starts the `psygnal` signal queue bridge for thread-safe signal delivery.
+1. Creates the `QApplication`.
+2. Calls [`build()`][redsun.containers.container.AppContainer.build].
+3. Builds the `QtMainView` main window and docks every view.
+4. Starts the `psygnal` queue bridge, which delivers signals across threads.
 5. Shows the main window and enters the Qt event loop.
 
-It is imported from the public `redsun.qt` namespace:
+Import it from `redsun.qt`:
 
 ```python
 from redsun.qt import QtAppContainer
 ```
 
-Both [`PyQt6`](https://pypi.org/project/PyQt6/) or [`PySide6`](https://pypi.org/project/PySide6/) wrapped via [`qtpy`](https://github.com/spyder-ide/qtpy) are supported.
+[`PyQt6`](https://pypi.org/project/PyQt6/) and [`PySide6`](https://pypi.org/project/PySide6/) are both supported, through [`qtpy`](https://github.com/spyder-ide/qtpy).
 
 ### Other frontends
 
-The future expectation is to provide support for other frontends (either desktop or web-based).
+Other frontends, desktop or web, are planned.
 
-While the presenter and device layer are decoupled via the `VirtualContainer`, the `View` layer is tied to the frontend selection and plugins will have to implement each `View` according to the toolkit that the frontend provides. The hope is to find a way to minimize the code required to implement the UI and to simplify this approach across the board, regardless of the specified frontend.
+Presenters and devices are independent of the frontend through the `VirtualContainer`, but views are not: a plugin writes each view for its frontend's toolkit. Reducing the code a view needs across frontends is an open goal.

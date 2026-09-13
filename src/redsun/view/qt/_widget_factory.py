@@ -1,27 +1,20 @@
-"""Widget factory for plan parameter forms.
+"""Widgets for plan parameter forms.
 
-Maps a `ParamDescription` to an appropriate magicgui widget via a
-table-driven factory registry (`_WIDGET_FACTORY_MAP`).
-
-`create_param_widget` is the public entry point.  It walks
-`_WIDGET_FACTORY_MAP` - an ordered list of ``(predicate, factory)``
-pairs - and calls the first factory whose predicate matches the given
-`ParamDescription`.
+`create_param_widget` maps a `ParamDescription` to a ``magicgui`` widget. It
+walks `_WIDGET_FACTORY_MAP`, an ordered list of ``(predicate, factory)`` pairs,
+and calls the first factory whose predicate matches.
 
 Extending the system
 --------------------
-To add support for a new annotation shape, define a predicate and a
-factory function and insert a ``(predicate, factory)`` tuple at the
-right priority position in `_WIDGET_FACTORY_MAP`.  Nothing else needs
-to change.
+For a new annotation shape, write a predicate and a factory and insert the pair
+at the right priority in `_WIDGET_FACTORY_MAP`.
 
 Unresolvable annotations
 ------------------------
-`create_plan_spec` pre-validates that every required parameter can be
-mapped to a widget.  Plans with unresolvable required parameters raise
-`UnresolvableAnnotationError` and are skipped by the presenter.
-`create_param_widget` therefore raises `RuntimeError` (not a silent
-fallback) if all factory entries fail.
+`create_plan_spec` already checks that every required parameter maps to a
+widget: a plan failing that raises `UnresolvableAnnotationError` and is skipped.
+`create_param_widget` therefore raises `RuntimeError` if every entry fails,
+instead of falling back silently.
 """
 
 from __future__ import annotations
@@ -76,7 +69,7 @@ def _is_non_device_sequence(p: ParamDescription) -> bool:
 
 
 def _always(p: ParamDescription) -> bool:
-    """Catch-all predicate - always matches."""
+    """Match anything."""
     return True
 
 
@@ -86,7 +79,7 @@ def _make_dummy(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
-    """DeviceSequenceEdit checkbox-list for Sequence[PDevice] / Set[PDevice] parameters."""
+    """Return a DeviceSequenceEdit for Sequence[PDevice] / Set[PDevice] parameters."""
     choices = p.choices or []
     initial: list[str] = []
     if p.has_default:
@@ -99,7 +92,7 @@ def _make_device_sequence_edit(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_singleselect_device(p: ParamDescription) -> mgw.Widget:
-    """ComboBox widget for single PDevice selection."""
+    """Return a ComboBox selecting one PDevice."""
     choices = p.choices or []
     return mgw.ComboBox(
         name=p.name,
@@ -111,7 +104,7 @@ def _make_singleselect_device(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_literal_combobox(p: ParamDescription) -> mgw.Widget:
-    """ComboBox widget for Literal[...] choices."""
+    """Return a ComboBox of Literal[...] choices."""
     assert p.choices is not None
     return mgw.ComboBox(
         name=p.name,
@@ -121,7 +114,7 @@ def _make_literal_combobox(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_list_edit(p: ParamDescription) -> mgw.Widget:
-    """ListEdit widget for non-device Sequence[T] parameters."""
+    """Return a ListEdit for non-device Sequence[T] parameters."""
     actual_annotation: type[Any] = Any
     args: tuple[type[Any], ...] = get_args(p.annotation)
     arg = args[0] if args else None
@@ -137,9 +130,9 @@ def _make_list_edit(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_generic(p: ParamDescription) -> mgw.Widget:
-    """Delegate to magicgui.create_widget for all other annotation types.
+    """Return ``magicgui.create_widget``'s widget for any other annotation.
 
-    Raises TypeError or ValueError if magicgui does not support the annotation.
+    Raises TypeError or ValueError if ``magicgui`` does not support it.
     """
     options: dict[str, Any] = {}
     # a parameter with no default gets magicgui's sentinel rather than None:
@@ -172,10 +165,9 @@ def _try_factory_entry(
     factory: _WidgetFactory,
     param: ParamDescription,
 ) -> mgw.Widget | None:
-    """Evaluate predicate; if it matches, call factory (errors propagate).
+    """Call the factory if the predicate matches.
 
-    Only predicate evaluation is guarded - a factory crash is a real bug
-    and must not be silently swallowed.
+    Only the predicate is guarded: a factory raising is a bug and propagates.
     """
     try:
         matched = predicate(param)
@@ -187,7 +179,7 @@ def _try_factory_entry(
 
 
 def create_param_widget(param: ParamDescription) -> mgw.Widget:
-    """Create a magicgui widget for *param* via the factory registry.
+    """Create a ``magicgui`` widget for *param*.
 
     Parameters
     ----------

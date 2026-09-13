@@ -60,7 +60,7 @@ logger = logging.getLogger("redsun")
 
 
 class GlobalFormatter(logging.Formatter):
-    """Custom formatter for log messages."""
+    """Formatter of ``redsun`` log records."""
 
     _format: ClassVar[str] = "[%(asctime)s][%(levelname)s]"
 
@@ -101,9 +101,7 @@ class GlobalFormatter(logging.Formatter):
 
 
 class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
-    """Adapter that adds class and object context to log messages.
-
-    It expands the ``kwargs`` to inject the object's class name and name into the log record.
+    """Adapter adding an object's class name and name to each record.
 
     Parameters
     ----------
@@ -142,10 +140,9 @@ def service_of(record: logging.LogRecord) -> str | None:
 class BufferHandler(logging.Handler):
     """Retain the most recent log records, and announce each one as it arrives.
 
-    The records outlive the moment they were emitted, so a consumer built later
-    in the session can still show what happened before it existed. Application
-    records and each service's records are retained apart, each dropping its
-    oldest once full, so a service logging heavily drops only its own records.
+    A consumer built later in the session can still show earlier records.
+    Application records and each service's records are kept apart, each
+    dropping its oldest when full, so a noisy service drops only its own.
 
     Parameters
     ----------
@@ -218,16 +215,15 @@ class BufferHandler(logging.Handler):
 class SessionFileHandler(RotatingFileHandler):
     """Write the records of one run of a session to a file of its own.
 
-    The file sits in the user's log directory, in a folder named after the
-    session, and is named after the run: the moment it started and its
-    process. It is rotated at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older
-    files.
+    The file is in the user's log directory, in a folder named after the
+    session, and named after the run: its start time and process. It rotates at
+    `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files.
 
-    The application's file, ``<run>.log``, takes no service's records, and
-    opening it deletes the files of all but the `LOG_RUNS_KEPT` most recent
-    runs of the session. A service's file, ``<run>.<service>.log``, belongs to
-    the run named by *run*, is installed with ``add_handler(handler, service)``,
-    and is only created once the service logs something.
+    The application's file, ``<run>.log``, takes no service records, and
+    opening it deletes the files of all but the session's `LOG_RUNS_KEPT` most
+    recent runs. A service's file, ``<run>.<service>.log``, belongs to *run*,
+    is installed with ``add_handler(handler, service)``, and is created when
+    the service first logs.
 
     Parameters
     ----------
@@ -236,8 +232,8 @@ class SessionFileHandler(RotatingFileHandler):
     service : str | None
         The service whose records the file holds, ``None`` for the application.
     run : str | None
-        The run the file belongs to, as `run` of the application's handler.
-        ``None`` starts a new run.
+        The run, as the application handler's `run`. ``None`` starts a new
+        run.
     """
 
     def __init__(
@@ -287,7 +283,7 @@ def _delete_old_runs(folder: Path, keep: int) -> None:
 def set_level(level: int | str) -> None:
     """Set the level of the ``redsun`` logger.
 
-    A named level is matched without regard to case.
+    Level names are case-insensitive.
 
     Raises
     ------
@@ -301,8 +297,8 @@ def add_handler(handler: logging.Handler, service: str | None = None) -> None:
     """Send the ``redsun`` logger's records to *handler* as well.
 
     With a *service*, only that service's records reach *handler*. A handler
-    carrying no formatter of its own is given the one every other destination
-    writes through, so a record reads the same wherever it lands.
+    without a formatter gets the shared one, so records read the same
+    everywhere.
     """
     if handler.formatter is None:
         handler.setFormatter(GlobalFormatter(datefmt=DATE_FORMAT))
@@ -355,9 +351,9 @@ def session_log(service: str | None = None) -> SessionFileHandler | None:
 
 
 class Loggable:
-    """Mixin class that adds a logger to a class instance with extra contextual information."""
+    """Mixin giving instances a logger that names them in each record."""
 
     @cached_property
     def logger(self) -> logging.LoggerAdapter[logging.Logger]:
-        """Logger instance with contextual information."""
+        """Logger naming this instance in each record."""
         return ContextualAdapter(logging.getLogger("redsun"), self)

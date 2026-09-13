@@ -1,7 +1,7 @@
 # Logging
 
-Everything redsun logs goes to the `redsun` logger. How to use these functions
-is shown in [Configure logging](../../how-to/configure-logging.md).
+`redsun` logs everything to the `redsun` logger. Usage is in
+[Configure logging](../../how-to/configure-logging.md).
 
 | Symbol | What it does |
 | --- | --- |

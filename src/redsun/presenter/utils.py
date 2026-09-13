@@ -1,8 +1,7 @@
-"""Utility predicates and helpers for plan parameter inspection.
+"""Predicates and helpers inspecting plan parameters.
 
-These functions are used by `create_plan_spec` to classify parameter
-annotations and by `resolve_arguments` to resolve string device names
-into live [`Device`][ophyd_async.core.Device] instances.
+`create_plan_spec` uses them to classify annotations, and `resolve_arguments`
+to turn device names into [`Device`][ophyd_async.core.Device] instances.
 """
 
 from __future__ import annotations
@@ -27,21 +26,21 @@ D = TypeVar("D", bound=OADevice)
 def get_choice_list(
     devices: Mapping[str, OADevice], proto: type[D], choices: Sequence[str]
 ) -> list[D]:
-    """Filter a device registry to those that match a protocol and are in *choices*.
+    """Return the devices named in *choices* that are instances of *proto*.
 
     Parameters
     ----------
     devices : Mapping[str, OADevice]
-        Mapping of device names to device instances.
+        Devices by name.
     proto : type[D]
-        Class to match against via ``isinstance``.
+        Class checked with ``isinstance``.
     choices : Sequence[str]
-        Subset of device names to consider.
+        Names of the devices to consider.
 
     Returns
     -------
     list[D]
-        Device instances whose name is in *choices* and that satisfy *proto*.
+        The matching devices.
     """
     return [
         model
@@ -53,11 +52,10 @@ def get_choice_list(
 def _is_device_annotation(ann: Any) -> bool:
     """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a ``@runtime_checkable Protocol``.
 
-    Python 3.11 forbids Protocols from inheriting non-Protocol concrete classes,
-    so device-protocol annotations (e.g. ``_MotorProtocol``) cannot inherit from
-    ``Device`` directly.  As a pragmatic extension, any ``@runtime_checkable``
-    Protocol is accepted here - the actual per-device structural check is
-    performed later via ``isinstance(device, proto)``.
+    A Protocol cannot inherit a concrete class, so a device protocol such as
+    ``_MotorProtocol`` cannot inherit ``Device``. Any ``@runtime_checkable``
+    Protocol is therefore accepted here; each device is checked later with
+    ``isinstance(device, proto)``.
     """
     try:
         if issubclass(ann, OADevice):
@@ -89,9 +87,8 @@ def issequence(ann: Any) -> bool:
 
     Notes
     -----
-    ``str`` and ``bytes`` are sequences in the stdlib sense, but their
-    annotations are not generic aliases (``get_origin(str)`` is ``None``),
-    so they are naturally excluded.
+    ``str`` and ``bytes`` are sequences, but not generic aliases
+    (``get_origin(str)`` is ``None``), so they are excluded.
     """
     return _origin_subclasses(ann, Sequence)
 
@@ -107,8 +104,5 @@ def isdeviceset(ann: Any) -> bool:
 
 
 def isdevice(ann: Any) -> bool:
-    """Return True if *ann* is a class that subclasses [`Device`][ophyd_async.core.Device].
-
-    Operates on type annotations (the class itself), not on instances.
-    """
+    """Return True if the annotation *ann* is a [`Device`][ophyd_async.core.Device] subclass."""
     return _is_device_annotation(ann)

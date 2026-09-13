@@ -1,8 +1,8 @@
-"""Helpers for parsing bluesky descriptor and reading keys.
+"""Helpers parsing ``bluesky`` descriptor and reading keys.
 
 ### Key format
 
-Keys follow the ophyd-async child-naming convention:
+Keys follow the ``ophyd-async`` child naming convention:
 
 ```
     {name}-{property}
@@ -51,7 +51,7 @@ def parse_key(key: str) -> tuple[str, str]:
 
 
 def parse_map_key(input: str, map_prefix: str) -> tuple[str, str, str]:
-    """Split a descriptor or reading key coming from a [`DeviceMap`][ophyd_async.core.DeviceMap] into its components.
+    """Split a descriptor or reading key of a [`DeviceMap`][ophyd_async.core.DeviceMap] into its parts.
 
     Parameters
     ----------
@@ -63,10 +63,9 @@ def parse_map_key(input: str, map_prefix: str) -> tuple[str, str, str]:
     Returns
     -------
     tuple[str, str, str]
-        A tuple of the form ``(name, map_key, key)``, where:
-        - `name` is the device name (the part before the first hyphen).
-        - `map_key` is the key identifying the map (the part between the first and second hyphens).
-        - `key` is the specific property key (the part after the second hyphen).
+        ``(name, map_key, key)``: the device name (before the first hyphen),
+        the map key (between the first and second hyphens) and the property
+        key (after the second hyphen).
     """
     ret = input.split("-", 2)
     if len(ret) != 3 or ret[1] != map_prefix:

@@ -14,7 +14,7 @@ discovery, protocol compliance on the built instance.
 
 ## Context
 
-Redsun's wiring is protocol-based: components are recognized by what they
+`redsun`'s wiring is protocol-based: components are recognized by what they
 expose, not by what they inherit. Two defects undermined that promise for
 the presenter and view layers.
 
@@ -22,11 +22,11 @@ the presenter and view layers.
 `PPresenter` declared `name: str` and `devices: Mapping[str, Device]` as
 plain attributes; `PView` declared `name: str`. A plain protocol attribute
 demands a *settable, invariantly typed* member from implementers, so (as
-verified with mypy):
+verified with `mypy`):
 
 - a class exposing `name` as a read-only property failed the protocol
   ("expected settable variable, got read-only attribute") - even though
-  ophyd-async's own `Device.name` is a read-only property;
+  `ophyd-async`'s own `Device.name` is a read-only property;
 - a class annotating `self.devices: dict[str, Device]` failed too, because
   read-write members are invariant and `dict` is not `Mapping`.
 

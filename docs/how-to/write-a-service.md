@@ -1,13 +1,12 @@
 # Write a service
 
-This guide writes a caproto IOC a session launches, declares it, and points a
-device at it. For what a service is and how the container handles one, see
-[Services](../explanation/services.md).
+Write a `caproto` IOC for a session to launch, declare it, and point a device
+at it. [Services](../explanation/services.md) explains what a service is and
+how the container handles it.
 
 ## Prerequisites
 
-The `epics` extra, which brings caproto and ophyd-async's Channel Access
-support:
+The `epics` extra, with `caproto` and `ophyd-async`'s Channel Access support:
 
 ```bash
 uv add "redsun[epics]"
@@ -15,9 +14,9 @@ uv add "redsun[epics]"
 
 ## Write the IOC
 
-A service redsun launches does three things beyond serving its process
-variables: it prints a line once it is ready, stops when its standard input
-closes, and binds to the loopback interface.
+Besides serving its process variables, a service `redsun` launches prints a
+line when ready, stops when its standard input closes, and binds to the
+loopback interface.
 
 ```python
 # mylab/iocs/camera.py
@@ -43,24 +42,22 @@ if __name__ == "__main__":
     run(Camera(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 ```
 
-- **The readiness line.** caproto prints `Server startup complete.` once it
-  serves its process variables, and that is the line to wait for.
-- **Standard input.** Closing it is how the container asks the service to stop
-  on every platform. The watcher raises `SIGINT` so the service takes the path
-  Ctrl+C takes, running caproto's shutdown hooks. It must be a daemon thread: a
-  watcher run through `loop.run_in_executor` leaves the process waiting for a
-  thread still blocked on the read.
-- **Cleanup before output.** When the session that launched the service dies,
-  the service sees its input close with nobody reading its output. Writing to
-  standard output then raises, so do the cleanup first and print after it, or
-  not at all.
+- **The readiness line.** `caproto` prints `Server startup complete.` once it
+  serves its process variables; wait for that line.
+- **Standard input.** Closing it is how the container asks a service to stop on
+  every platform. The watcher raises `SIGINT`, so the service shuts down as on
+  Ctrl+C and runs `caproto`'s shutdown hooks. Use a daemon thread: a watcher run
+  through `loop.run_in_executor` leaves the process waiting on a thread still
+  blocked on the read.
+- **Cleanup before output.** If the launching session dies, the service's input
+  closes and nobody reads its output, so writing to standard output raises.
+  Clean up first, then print, or do not print.
 - **Loopback.** Binding to `127.0.0.1` keeps a local service off the network. A
-  service meant to be attached to from another machine leaves `interfaces`
-  alone.
+  service other machines attach to leaves `interfaces` alone.
 
 ## Declare it
 
-In Python, on the container, with the device that talks to it:
+In Python, on the container, beside the device that talks to it:
 
 ```python
 from redsun.containers import AppContainer, declare_device, declare_service
@@ -77,12 +74,12 @@ class MyApp(AppContainer):
     camera = declare_device(MyCamera, service="camera_ioc")
 ```
 
-The device receives the service's prefix as its `prefix` keyword, so giving
-`prefix` on the device as well is refused. A device naming a service that did
-not start is skipped by the build.
+The device receives the service's prefix as its `prefix` keyword, so a device
+also given `prefix` is refused. The build skips a device whose service did not
+start.
 
-In a plugin, the manifest names the module and the readiness line, and the
-session file names the plugin entry:
+In a plugin, the manifest gives the module and readiness line, and the session
+file names the plugin entry:
 
 ```yaml
 # mylab/redsun.yaml
@@ -110,12 +107,12 @@ devices:
     service: camera_ioc
 ```
 
-`beamline` names no module, so it is attached to: nothing is started or
-stopped, and its devices only receive its prefix.
+`beamline` has no module, so it is attached to: nothing starts or stops, and
+its devices only receive its prefix.
 
 ## React when it exits
 
-A launched service that exits unasked emits `sig_exited` with its name and exit
+A launched service exiting unasked emits `sig_exited` with its name and exit
 code. Connect it in `wire`:
 
 ```python
@@ -146,6 +143,6 @@ service's output.
 
 ## Log from it
 
-The service's output is logged under `redsun.service.<name>`. To keep its
-records' levels rather than seeing every line at `DEBUG`, write them as JSON;
-see [Log from a service](configure-logging.md#log-from-a-service).
+The service's output is logged under `redsun.service.<name>`. To keep record
+levels instead of every line at `DEBUG`, write JSON; see
+[Log from a service](configure-logging.md#log-from-a-service).

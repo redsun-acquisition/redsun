@@ -1,17 +1,16 @@
-"""Checkbox-list widget for ``Sequence[PDevice]`` and ``Set[PDevice]`` parameters.
+"""Checkbox list widget for ``Sequence[PDevice]`` and ``Set[PDevice]`` parameters.
 
-``DeviceSequenceEdit`` is a proper ``magicgui.widgets.bases.ValueWidget`` subclass,
-backed by a Qt ``_CheckboxListWidget``.  The backend class (``_QCheckboxBackend``)
-implements ``ValueWidgetProtocol`` so that the widget passes through the magicgui
-container machinery unchanged - no ``_explicitly_hidden`` or ``_LabeledWidget``
-errors.
+``DeviceSequenceEdit`` subclasses ``magicgui.widgets.bases.ValueWidget`` and is
+backed by a Qt ``_CheckboxListWidget``. Its backend, ``_QCheckboxBackend``,
+implements ``ValueWidgetProtocol``, so ``magicgui`` containers accept the widget
+as is, without ``_explicitly_hidden`` or ``_LabeledWidget`` errors.
 
-The full device pool is always visible as a vertical list of ``QCheckBox`` widgets.
-Checked = selected, unchecked = not.
+Every device is shown as a ``QCheckBox`` in a vertical list; a checked box is a
+selected device.
 
-``value`` returns ``list[str]`` (names of checked devices, in registry order).
-``resolve_arguments`` is responsible for the final coercion to ``set`` when the
-annotation is ``Set[PDevice]``.
+``value`` is a ``list[str]`` of checked device names, in registry order;
+``resolve_arguments`` turns it into a ``set`` for a ``Set[PDevice]``
+annotation.
 """
 
 from __future__ import annotations
@@ -31,8 +30,8 @@ if TYPE_CHECKING:
 class _QCheckboxBackend(QBaseValueWidget):
     """Qt backend for ``DeviceSequenceEdit``.
 
-    Wraps ``_CheckboxListWidget`` and satisfies ``ValueWidgetProtocol`` so
-    magicgui's container machinery accepts it as a first-class widget.
+    Wraps ``_CheckboxListWidget`` and satisfies ``ValueWidgetProtocol``, so
+    ``magicgui`` containers accept it like any widget.
     """
 
     _qwidget: _CheckboxListWidget
@@ -52,9 +51,9 @@ class _QCheckboxBackend(QBaseValueWidget):
     def _mgui_bind_change_callback(self, callback: Callable[[Any], Any]) -> None:
         """Connect unconditionally.
 
-        The inherited version tests the signal for truthiness first, which
-        holds for a Qt signal but not for a psygnal one: with no connections
-        yet it is falsy, and the callback would be dropped.
+        The inherited version first tests the signal's truth value, which works
+        for a Qt signal but not a ``psygnal`` one: without connections it is
+        falsy, and the callback would be dropped.
         """
         self._qwidget.selection_changed.connect(callback)
 
@@ -77,19 +76,19 @@ class _QCheckboxBackend(QBaseValueWidget):
 class DeviceSequenceEdit(ValueWidget[list[str]]):
     """Checkbox-list ``ValueWidget`` for ``Sequence[PDevice]`` / ``Set[PDevice]``.
 
-    Inherits from ``magicgui.widgets.bases.ValueWidget`` so it is accepted
-    transparently by ``mgw.Container`` and the rest of the magicgui machinery.
+    Subclasses ``magicgui.widgets.bases.ValueWidget``, so ``mgw.Container``
+    accepts it like any ``magicgui`` widget.
 
     Parameters
     ----------
     name : str
         Widget / parameter name.
     choices : list[str]
-        Full pool of device names (registry order).
+        Every device name, in registry order.
     value : list[str], optional
-        Names to pre-check.  Defaults to all unchecked.
+        Names checked initially. None by default.
     label : str | None, optional
-        Human-readable label shown in the parent container.  Defaults to *name*.
+        Label shown in the parent container. Defaults to *name*.
     """
 
     def __init__(
@@ -109,11 +108,11 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
             self.value = value
 
     def get_value(self) -> list[str]:
-        """Return names of currently checked devices in registry order."""
+        """Return the checked device names in registry order."""
         return self._widget._mgui_get_value()  # type: ignore[no-any-return]
 
     def set_value(self, value: list[str]) -> None:
-        """Set checked devices from a list (or set/frozenset) of names."""
+        """Check the devices named in a list, set or frozenset."""
         self._widget._mgui_set_value(value)
 
 
@@ -121,7 +120,7 @@ class _CheckboxListWidget(QtW.QWidget):
     """Vertical stack of ``QCheckBox`` widgets plus a count label.
 
     Choices are supplied after construction through ``set_choices``, since
-    magicgui's backend base instantiates the Qt widget itself.
+    ``magicgui``'s backend base instantiates the Qt widget itself.
     """
 
     selection_changed = Signal(list)
@@ -144,9 +143,8 @@ class _CheckboxListWidget(QtW.QWidget):
     def set_choices(self, choices: list[str]) -> None:
         """Replace the device pool, above the count label.
 
-        An outgoing checkbox is disconnected before it is dropped: left
-        connected it would keep emitting selections that ``get_value`` no
-        longer reports.
+        A removed checkbox is disconnected first; otherwise it would keep
+        emitting selections ``get_value`` no longer reports.
         """
         for stale in self._checkboxes.values():
             stale.toggled.disconnect(self._emit)

@@ -264,6 +264,12 @@ mkdocstrings mistakes a green `zensical build` will not catch.
   names in is the easiest mistake to make: it reads correctly to whoever wrote
   it and names nothing the reader can look up. An ADR recording a decision that
   spanned two repositories is the exception, and says so.
+- **Library and package names are code spans.** In docs pages write
+  `` `redsun` ``, `` `ophyd-async` ``, `` `bluesky` ``, `` `psygnal` ``,
+  `` `caproto` ``, `` `pyqt6` ``, at every mention, `redsun` included.
+  Docstrings do the same with double backticks (``` ``ophyd-async`` ```), the
+  form they use for literals. Headings, link text and a name inside a code
+  block stay as they are.
 
 ## Response style (agents)
 

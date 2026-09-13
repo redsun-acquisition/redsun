@@ -1,14 +1,13 @@
-"""Shared background event loop and dispatch of coroutines connected to signals.
+"""Shared background event loop, and dispatch of coroutines connected to signals.
 
-Redsun runs one background `asyncio` event loop for the whole process. Device
-I/O and any coroutine connected to a psygnal signal execute there, off the GUI
-thread that emits.
+``redsun`` runs one background `asyncio` event loop per process. Device I/O and
+coroutines connected to ``psygnal`` signals run there, off the emitting GUI
+thread.
 
-Only `run_coro` is meant for general use: it is how synchronous code - a
-presenter method, a Qt slot - runs a coroutine on that loop and gets its
-result. Everything else in this module is application plumbing, set up by the
-application container during startup and torn down on shutdown. Components
-should not build a loop or install a backend of their own.
+`run_coro` is for general use: synchronous code, such as a presenter method or
+a Qt slot, runs a coroutine on the loop with it and gets the result. The rest
+of the module is set up by the container at startup and torn down at shutdown.
+Components must not build their own loop or install a backend.
 """
 
 from __future__ import annotations
@@ -38,8 +37,8 @@ if TYPE_CHECKING:
 class AwaitableEvent:
     """Resettable event whose ``wait`` is a coroutine.
 
-    Wraps `aiologic.REvent` so that the event can be set and cleared from any
-    thread while still being awaited from a coroutine.
+    Wraps `aiologic.REvent`, so the event can be set and cleared from any thread
+    and awaited from a coroutine.
     """
 
     def __init__(self) -> None:
@@ -78,10 +77,10 @@ def get_shared_loop() -> asyncio.AbstractEventLoop:
 
 
 class CulsansAsyncioBackend(_AsyncBackend, Loggable):
-    """Psygnal async backend draining a culsans queue on the shared loop.
+    """``psygnal`` async backend draining a ``culsans`` queue on the shared loop.
 
-    Queued callbacks are dispatched as tasks on the loop returned by
-    `get_shared_loop`, so signals emitted from any thread are delivered.
+    Queued callbacks run as tasks on the loop from `get_shared_loop`, so signals
+    emitted on any thread are delivered.
     """
 
     def __init__(self) -> None:
@@ -100,7 +99,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
 
     @property
     def running(self) -> AwaitableEvent:
-        """Return the event indicating whether the backend accepts callbacks."""
+        """Return the event set while the backend accepts callbacks."""
         return self._running
 
     def put(self, item: QueueItem) -> None:
@@ -108,7 +107,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
         self._queue.put_nowait(item)
 
     def close(self) -> None:
-        """Shut the queue down; the drain cancels outstanding callbacks."""
+        """Shut the queue down; the drain cancels pending callbacks."""
         self._queue.shutdown()
 
     async def run(self) -> None:
@@ -145,7 +144,7 @@ class CulsansAsyncioBackend(_AsyncBackend, Loggable):
 
     @property
     def name(self) -> str:
-        """Name of the backend, for logging and debugging purposes."""
+        """Name of the backend, for logging and debugging."""
         return f"psygnal-{self._backend}"
 
 
@@ -156,11 +155,10 @@ AsyncioBackend.register(CulsansAsyncioBackend)
 
 
 def set_async_backend() -> CulsansAsyncioBackend:
-    """Install the culsans backend as psygnal's active async backend.
+    """Install the ``culsans`` backend as ``psygnal``'s async backend.
 
-    Must be called before connecting a coroutine to a signal. Calling it
-    again returns the backend installed by the first call; tear it down with
-    psygnal's own ``clear_async_backend``.
+    Call it before connecting a coroutine to a signal. A second call returns the
+    installed backend; tear it down with ``psygnal``'s ``clear_async_backend``.
 
     Returns
     -------
@@ -204,7 +202,7 @@ def run_coro(
     coro : collections.abc.Coroutine
         The coroutine to run.
     return_future : bool, optional
-        If ``True``, return the `Future` object instead of waiting for the result.
+        Return the `Future` instead of waiting for the result.
 
     Returns
     -------

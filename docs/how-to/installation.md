@@ -1,15 +1,13 @@
 # Installation
 
-This guide covers how to install `redsun` in different environments.
-
 ## Create a virtual environment
 
-It is recommended to install the package in a virtual environment.
+Install `redsun` in a virtual environment.
 
 === "uv (recommended)"
 
     ```bash
-    uv venv --python 3.10
+    uv venv --python 3.11
 
     # For Linux/macOS
     source .venv/bin/activate
@@ -40,20 +38,20 @@ It is recommended to install the package in a virtual environment.
 === "conda"
 
     ```bash
-    conda create -n redsun-env python=3.10
+    conda create -n redsun-env python=3.11
     conda activate redsun-env
     ```
 
 === "mamba"
 
     ```bash
-    mamba create -n redsun-env python=3.10
+    mamba create -n redsun-env python=3.11
     mamba activate redsun-env
     ```
 
 ## Install Redsun
 
-The package is available on [PyPI](https://pypi.org/project/redsun/) or directly from the GitHub [repository](https://github.com/redsun-acquisition/redsun).
+Install from [PyPI](https://pypi.org/project/redsun/) or from the GitHub [repository](https://github.com/redsun-acquisition/redsun).
 
 === "PyPI"
 
@@ -74,15 +72,15 @@ The package is available on [PyPI](https://pypi.org/project/redsun/) or directly
 
 ### Qt backend
 
-`redsun` requires a Qt backend. Install with your preferred binding:
+`redsun` needs a Qt binding. Install the one you prefer:
 
-=== "PyQt6"
+=== "`pyqt6`"
 
     ```bash
     pip install redsun[pyqt]
     ```
 
-=== "PySide6"
+=== "`pyside6`"
 
     ```bash
     pip install redsun[pyside]
@@ -90,7 +88,7 @@ The package is available on [PyPI](https://pypi.org/project/redsun/) or directly
 
 ## Install development dependencies
 
-If you are contributing to `redsun` or want to run tests locally, install the development dependencies via [PEP-735](https://peps.python.org/pep-0735/) dependency groups.
+To contribute or run the tests, install the development dependencies from the [PEP-735](https://peps.python.org/pep-0735/) dependency groups.
 
 === "uv (recommended)"
 
@@ -111,4 +109,4 @@ uv run tox           # lint, both Qt type-checking legs, tests, docs
 uv run tox -e tests
 ```
 
-See [Run tests](run-tests.md) for what each environment covers.
+[Run tests](run-tests.md) lists what each environment covers.

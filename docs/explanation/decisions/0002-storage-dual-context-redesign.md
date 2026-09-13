@@ -12,7 +12,7 @@ Accepted
 async generator (`FrameSender`), so frames can only be pushed from the device
 layer. Two producer contexts need the same store:
 
-- **Device layer (async):** ophyd-async `StandardDetector` logic
+- **Device layer (async):** `ophyd-async` `StandardDetector` logic
   decomposition (`TriggerLogic` / `AcquireLogic` / `DataLogic`) pushing
   frames during the prepare -> kickoff -> complete -> collect cycle.
 - **Callback layer (sync):** `DocumentRouter` presenters running inside the
@@ -38,9 +38,9 @@ would create empty stores on every idle iteration.
 
 Guiding principles agreed for the redesign:
 
-- Plans stay generic: only stock bluesky verbs; documents are the interface;
+- Plans stay generic: only stock `bluesky` verbs; documents are the interface;
   callbacks decide what to consume. No storage-aware plan stubs.
-- Stick close to the ophyd-async `data_logic` design for data producers.
+- Stick close to the `ophyd-async` `data_logic` design for data producers.
 - Backwards compatibility is explicitly not required.
 
 ## Decision
@@ -51,7 +51,7 @@ Replace the `FrameSender` generator machinery (`_pusher`, `asend`, priming)
 with one bounded [culsans](https://github.com/redsun-acquisition/culsans)
 queue per registered key (`maxsize` default 100, overridable per
 `BaseStorage`). Device producers keep generator-era backpressure via
-`await put`; the bound caps RAM if the backend falls behind. culsans is
+`await put`; the bound caps RAM if the backend falls behind. `culsans` is
 thread-safe and same-thread-safe: `green_put(blocking=False)` never blocks,
 so it is safe inside `emit_sync` on the loop thread.
 
@@ -77,7 +77,7 @@ sync code because every caller (async device prepare, `emit_sync` callback)
 runs on the loop thread. The drain loop is the old `_pusher` inverted:
 `await queue.async_get()` -> ensure open -> `await store.write(key, frame)` ->
 `router.mark_written(key)` -> count. `FrameRouter.mark_written` remains the
-single counter-advance point; ophyd-async `complete()` machinery is untouched
+single counter-advance point; `ophyd-async` `complete()` machinery is untouched
 (it waits on `collections_written_signal` = `signal_for(key)`).
 
 All per-key teardown flows through the drain's exit path: whether the queue
@@ -91,7 +91,7 @@ open lock. No separate release API, no double-release ambiguity.
 backend; concurrent and later callers await/return on the same open. Entry
 points:
 
-- **Eager (optional):** `DataLogic.prepare` calls it - stock ophyd-async
+- **Eager (optional):** `DataLogic.prepare` calls it - stock `ophyd-async`
   writer behaviour ("prepare means writing is imminent"). Snap-style
   acquisition detectors opt in.
 - **Lazy (always on):** the drain calls it before its first write. Live-view
@@ -210,7 +210,7 @@ opens and writes -> stop doc -> `sink.close()` -> drain flushes and exits.
   test (several keys putting concurrently - single backend open, all frames
   written). In addition, **integration tests execute real plans through the
   `RunEngine`** combining a disk-writing device (mock detector built on the
-  ophyd-async logic decomposition, backed by `MemoryIO`) with a
+  `ophyd-async` logic decomposition, backed by `MemoryIO`) with a
   `DocumentRouter` callback that consumes the emitted documents and writes a
   derived key through the sync API - pinning the dual-producer behaviour
   `live_median_scan` will rely on after the mimir rework.
@@ -221,5 +221,5 @@ opens and writes -> stop doc -> `sink.close()` -> drain flushes and exits.
   complete as a plain bounded fly segment), `write_sig` is deleted too. Until
   then, today's plan shapes keep working unchanged against the new storage
   layer.
-- **New dependency:** culsans (redsun-acquisition fork) becomes a hard
-  runtime dependency of redsun.
+- **New dependency:** `culsans` (redsun-acquisition fork) becomes a hard
+  runtime dependency of `redsun`.

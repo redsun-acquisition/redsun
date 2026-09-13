@@ -1,4 +1,4 @@
-"""Redsun main view window."""
+"""The main window of a Qt session."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
     session_name : str
         Display name for the window title.
     views : dict[str, QtView]
-        Dictionary of view name to pre-built view instance.
+        Built views by name.
     """
 
     _DOCK_MAP: Final[dict[ViewPosition, Qt.DockWidgetArea]] = {
@@ -52,16 +52,15 @@ class QtMainView(QtWidgets.QMainWindow, Loggable):
         self._dock_views(views)
 
     def _dock_views(self, views: dict[str, QtView]) -> None:
-        """Dock pre-built view instances into the main window.
+        """Dock the built views into the main window.
 
-        Views are docked according to a ``position`` attribute if
-        available; otherwise the first unpositioned widget becomes the
-        central widget.
+        A view is docked at its ``position`` if it has one; the first view
+        without one becomes the central widget.
 
         Parameters
         ----------
         views : dict[str, QtView]
-            Dictionary of view name to pre-built view instance.
+            Built views by name.
         """
         centers: set[QtView] = set()
 

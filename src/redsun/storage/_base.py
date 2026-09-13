@@ -22,19 +22,19 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class StreamSpec:
-    """Specification of a frame stream for a data sink channel."""
+    """Specification of one channel's frame stream."""
 
     data_key: str
-    """Channel identity, e.g. the detector's datakey name."""
+    """Channel name, such as the detector's data key."""
 
     shape: tuple[int, int]
     """Shape of a single frame, e.g. ``(height, width)``."""
 
     dtype: str
-    """NumPy dtype of the frames (e.g. ``"uint8"``)."""
+    """``numpy`` dtype of the frames, such as ``"uint8"``."""
 
     capacity: int | None
-    """Maximum number of frames. `None` means unbounded."""
+    """Maximum number of frames; `None` for unbounded."""
 
     def __post_init__(self) -> None:
         if self.capacity is not None and self.capacity <= 0:
@@ -45,42 +45,42 @@ class StreamSpec:
 
     @property
     def is_unbounded(self) -> bool:
-        """True if the stream grows indefinitely."""
+        """True if the stream has no frame limit."""
         return self.capacity is None
 
 
 class OpenStore(Protocol):
-    """Hot write path of a multi-stream storage backend."""
+    """Write path of an open multi-stream storage backend."""
 
     @abc.abstractmethod
     async def write(self, data_key: str, frame: npt.NDArray[Any]) -> None:
-        """Write a single frame to the storage backend for the given data key."""
+        """Write one frame for *data_key*."""
 
     @abc.abstractmethod
     async def release(self, data_key: str) -> None:
-        """Release the stream for the given data key."""
+        """Release the stream of *data_key*."""
 
     @abc.abstractmethod
     async def close(self) -> None:
-        """Close the storage backend, finalizing all resources."""
+        """Close the store, finalizing every resource."""
 
 
 class StorageIO(Protocol):
-    """Unopened store factory. Implements the API for creating a new storage backend instance."""
+    """Factory opening stores of one storage format."""
 
     mimetype: ClassVar[str]
     """Storage MIME type, e.g. ``"application/x-hdf5"``."""
 
     extension: ClassVar[str]
-    """File extension for the storage backend, e.g. ``"h5"``."""
+    """File extension of the format, such as ``"h5"``."""
 
     @abc.abstractmethod
     async def open(self, path: PathInfo, specs: Mapping[str, StreamSpec]) -> OpenStore:
-        """Open a new storage backend instance at the given path with the given stream specifications."""
+        """Open a store at *path* for the given streams."""
 
     @abc.abstractmethod
     def uri(self, path: PathInfo, data_key: str) -> str:
-        """Compute the resource URI for `data_key`."""
+        """Return the resource URI of `data_key`."""
 
     @abc.abstractmethod
     def resource_info(self, spec: StreamSpec) -> StreamResourceInfo:
@@ -105,7 +105,7 @@ class StoreStateError(RuntimeError):
 
 
 class SinkFactory(Protocol):
-    """Consumer API for ophyd-async data logics and document callbacks."""
+    """Storage API used by ``ophyd-async`` data logic and document callbacks."""
 
     @property
     def mimetype(self) -> str:
@@ -113,36 +113,36 @@ class SinkFactory(Protocol):
 
     @property
     def extension(self) -> str:
-        """File extension for the storage backend, e.g. ``"h5"``."""
+        """File extension of the format, such as ``"h5"``."""
 
     def register(self, spec: StreamSpec) -> None:
-        """Register a new stream. Only legal while the store is not open."""
+        """Register a stream; only allowed while the store is not open."""
 
     def sink(self, data_key: str) -> FrameSink:
-        """Return the producer handle for `data_key`, spawning its drain."""
+        """Return the producer handle of `data_key`, starting its drain."""
 
     async def open(self) -> None:
-        """Idempotently open the backend store."""
+        """Open the store, if not open yet."""
 
     async def close(self, *, flush: bool = True) -> None:
         """Tear the store down, flushing or dropping queued frames."""
 
     def uri_for(self, data_key: str) -> str:
-        """Return the URI for the given `data_key`."""
+        """Return the URI of `data_key`."""
 
     def resource_info_for(self, spec: StreamSpec) -> StreamResourceInfo:
         """Convert a `StreamSpec` to a `StreamResourceInfo` object."""
 
     def signal_for(self, data_key: str) -> SignalR[int]:
-        """Return the frame counter signal for the given `data_key`."""
+        """Return the frame counter signal of `data_key`."""
 
 
 class BaseStorage(SinkFactory):
-    """Manages the lifecycle of a storage backend for dual-context producers.
+    """Manages a storage backend fed by both async and sync producers.
 
-    Async device logics use ``await sink(key).put(frame)``; sync document
-    callbacks use ``sink(key).put_nowait(frame)``. One drain task per key
-    (spawned by `sink`) writes frames to the backend; the last drain out
+    Async device logic calls ``await sink(key).put(frame)``; sync document
+    callbacks call ``sink(key).put_nowait(frame)``. One drain task per key,
+    started by `sink`, writes frames to the backend; the last drain to end
     closes the store.
 
     Parameters
@@ -150,9 +150,9 @@ class BaseStorage(SinkFactory):
     io : StorageIO
         Backend mechanics (open / uri / resource_info).
     path_provider : PathProvider
-        Resolves where each burst lands. Consulted at first `register`.
+        Decides where each burst is written; asked at the first `register`.
     maxsize : int, optional
-        Per-key frame queue bound. Defaults to 100.
+        Size of each key's frame queue.
     """
 
     __slots__ = (
@@ -192,23 +192,21 @@ class BaseStorage(SinkFactory):
 
     @property
     def path_provider(self) -> PathProvider:
-        """The provider consulted at first `register` for burst paths."""
+        """The provider asked for burst paths at the first `register`."""
         return self._path_provider
 
     def register(self, spec: StreamSpec) -> None:
-        """Register a new stream with the backend.
+        """Register a stream.
 
         Raises
         ------
         StoreStateError
-            If the store is open, opening, or closing. `open()`, the
-            close-time orphan sweep, and `_retire`'s closing section all
-            hold `_open_lock` across their critical window, so checking
-            the lock alongside `_store` closes the register-during-open
-            race window. `close()` additionally sets `_closing` for its
-            entire body - including while it is suspended in the drain
-            `gather`, when neither `_store` nor the lock is held - to
-            close the register-during-close race window too.
+            If the store is open, opening or closing. `open()`, the sweep for
+            orphans at close, and `_retire`'s closing section hold `_open_lock`
+            throughout, so checking the lock with `_store` rules out a register
+            during an open. `close()` also sets `_closing` for its whole body,
+            including while suspended in the drain `gather` without `_store`
+            or the lock, which rules out a register during a close.
         KeyError
             If `spec.data_key` is already registered.
         """
@@ -222,17 +220,17 @@ class BaseStorage(SinkFactory):
     def sink(self, data_key: str) -> FrameSink:
         """Create the producer handle for `data_key` and spawn its drain.
 
-        Must be called on the event-loop thread (device prepare or a
-        document callback), which is where all producers live.
+        Call it on the event loop thread, where every producer runs (device
+        prepare or a document callback).
 
         Raises
         ------
         KeyError
             If `data_key` is not registered.
         StoreStateError
-            If a live sink already exists for `data_key`, or the storage
-            is currently closing - a sink spawned mid-close would create
-            a drain that `close()`'s `gather` never awaits.
+            If `data_key` already has a live sink, or the storage is closing,
+            since a drain started during `close()` is never awaited by its
+            `gather`.
         """
         if self._closing:
             raise StoreStateError("sink", "storage is closing")
@@ -249,11 +247,11 @@ class BaseStorage(SinkFactory):
         return FrameSink(queue)
 
     async def open(self) -> None:
-        """Idempotently open the backend store.
+        """Open the store, if not open yet.
 
-        The first caller opens; concurrent callers await the same open on
-        the lock. Called eagerly from device data logics at prepare time,
-        and lazily by every drain before its first write.
+        The first caller opens; concurrent callers wait on the lock for the
+        same open. Called eagerly by device data logic when preparing, and
+        lazily by each drain before its first write.
 
         Raises
         ------
@@ -274,15 +272,14 @@ class BaseStorage(SinkFactory):
         Parameters
         ----------
         flush : bool, optional
-            If True (default) queued frames are written before closing;
-            if False they are dropped (abort semantics).
+            Write queued frames before closing; if False they are dropped, to
+            abort.
 
         Notes
         -----
-        Drain write failures don't raise at the producer: `gather` is
-        called with ``return_exceptions=True``, so a drain that dies mid-burst
-        surfaces nowhere until its exception is collected here - `close()`
-        is the error observation point for the whole burst.
+        A failed drain write does not raise at the producer: `gather` runs
+        with ``return_exceptions=True``, so a drain failing mid-burst is only
+        reported here. `close()` is where a burst's errors surface.
         """
         self._closing = True
         try:
@@ -353,7 +350,7 @@ class BaseStorage(SinkFactory):
         queue: culsans.Queue[npt.NDArray[Any]],
         capacity: int | None,
     ) -> None:
-        """Consume frames for one key; all per-key teardown happens here."""
+        """Consume one key's frames; the key's teardown happens here."""
         written = 0
         try:
             while capacity is None or written < capacity:
@@ -375,15 +372,13 @@ class BaseStorage(SinkFactory):
             await self._retire(data_key)
 
     async def _retire(self, data_key: str) -> None:
-        """Retire one stream; the last drain out closes the store.
+        """End one stream; the last drain to end closes the store.
 
-        `self._drains.pop` happens last, in the outer `finally`, not first.
-        While this coroutine is still running - in particular while
-        `store.release()` is in flight - the key must stay visible in
-        `self._drains`, so a concurrent `close()`'s `list(self._drains.values())`
-        snapshot still captures this drain and awaits it through `gather`
-        instead of racing ahead to close the backend underneath the
-        in-flight release.
+        `self._drains.pop` runs last, in the outer `finally`. While this
+        coroutine runs, `store.release()` included, the key must stay in
+        `self._drains`, so a concurrent `close()` still sees this drain in its
+        snapshot and awaits it through `gather` instead of closing the backend
+        during the release.
         """
         try:
             self._queues.pop(data_key, None)

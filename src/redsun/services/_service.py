@@ -28,37 +28,36 @@ TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
 ports: dict[str, int] = {}
-"""The Channel Access server port given to each service, by name, for the process.
+"""Channel Access server port of each service, by name, for the whole process.
 
-libca reads ``EPICS_CA_ADDR_LIST`` once, when this process first uses Channel
-Access, so a service started again, by a container built again, has to answer
-on the port the list already names.
+libca reads ``EPICS_CA_ADDR_LIST`` once, when the process first uses Channel
+Access, so a service restarted by a rebuilt container must answer on the port
+the list already holds.
 """
 
 
 class Service:
-    """A server some devices talk to, and the process behind it if the session owns one.
+    """A server devices talk to, and its process if the session owns it.
 
-    A container makes one for each service it declares. A service with a
-    *module* is launched as ``python -m <module> <args>``; one without is
-    attached to, already running elsewhere, and `start` and `stop` do nothing.
-    Each line of its output is logged under ``redsun.service.<name>``, as the
-    record the line describes when it is a JSON log record and at ``DEBUG``
-    otherwise; see `service_record`.
+    A container makes one per declared service. A service with a *module* is
+    launched as ``python -m <module> <args>``; one without is attached to, runs
+    elsewhere, and `start` and `stop` do nothing. Each output line is logged
+    under ``redsun.service.<name>``: as the record it describes if it is a JSON
+    log record, at ``DEBUG`` otherwise; see `service_record`.
 
     Parameters
     ----------
     name : str
         Name of the service.
     prefix : str
-        Prefix given to every device naming the service.
+        Prefix given to each device naming the service.
     module : str | None
         Module to run. ``None`` attaches to a service that is already running.
     args : Sequence[str]
         Command-line arguments following the module.
     ready : str | None
-        Text of the output line that marks the service ready. ``None`` counts
-        it ready as soon as its process starts.
+        Text of the output line marking the service ready. ``None`` counts it
+        ready once its process starts.
     stop_timeout : float
         Seconds each step of `stop` waits for the process to exit.
 
@@ -129,18 +128,17 @@ class Service:
     def start(self) -> None:
         """Launch the service and wait until it prints its readiness line.
 
-        The process runs without a console window on Windows, with its own
-        Channel Access server port, which is added to ``EPICS_CA_ADDR_LIST`` in
-        this process so that a device reaches it among several local services.
-        A service keeps its port each time it starts in this process.
-        The process writes UTF-8, and each line of its output is logged as
-        `service_record` rebuilds it.
+        The process runs without a console window on Windows and gets its own
+        Channel Access server port, added to ``EPICS_CA_ADDR_LIST`` here so
+        devices find it among several local services. The service keeps that
+        port for every start in this process. The process writes UTF-8, and
+        each output line is logged as `service_record` rebuilds it.
 
         Raises
         ------
         TimeoutError
-            If the readiness line does not appear within `STARTUP_TIMEOUT`. The
-            process is stopped and its latest output logged.
+            If the readiness line does not appear within `STARTUP_TIMEOUT`; the
+            process is stopped and its last output logged.
         RuntimeError
             If the process exits before it is ready.
         """
@@ -203,12 +201,12 @@ class Service:
         raise TimeoutError(f"not ready after {STARTUP_TIMEOUT:g} s")
 
     def stop(self) -> None:
-        """Stop the process this service launched, escalating until it exits.
+        """Stop the launched process, escalating until it exits.
 
-        Closing the process's standard input is asked first, the one request
-        that lets a service clean up on every platform. On POSIX a service
-        still running after `stop_timeout` is sent ``SIGINT``; one still
-        running after that, or after the first step on Windows, is killed.
+        First its standard input is closed, the one request that lets a service
+        clean up on every platform. On POSIX a service still running after
+        `stop_timeout` gets ``SIGINT``; one still running after that, or after
+        the first step on Windows, is killed.
         """
         process = self._process
         if process is None:
@@ -269,12 +267,11 @@ class Service:
 def service_record(service: str, line: str) -> logging.LogRecord:
     """Rebuild the log record one line of *service*'s output describes.
 
-    Two JSON layouts are read: the one loguru writes with ``serialize=True``,
-    and an object carrying the standard ``name``, ``levelno``, ``created``,
-    ``msg`` and ``exc_text`` of a `logging.LogRecord`. The record keeps its
-    level, time and traceback, under ``redsun.service.<service>.<its logger>``.
-    Any other line, a plain ``print`` included, becomes a ``DEBUG`` record
-    under ``redsun.service.<service>``.
+    Two JSON layouts are read: ``loguru``'s with ``serialize=True``, and an
+    object with a `logging.LogRecord`'s ``name``, ``levelno``, ``created``,
+    ``msg`` and ``exc_text``. Such a record keeps its level, time and traceback,
+    under ``redsun.service.<service>.<its logger>``. Any other line, such as a
+    ``print``, becomes a ``DEBUG`` record under ``redsun.service.<service>``.
     """
     base = f"{SERVICE_LOGGER}.{service}"
     fields: dict[str, Any] = {
@@ -320,10 +317,10 @@ def service_record(service: str, line: str) -> logging.LogRecord:
 async def close_channel_access() -> None:
     """Close every Channel Access channel this process holds, if it holds any.
 
-    A channel to a service that stopped otherwise waits out libca's reconnect
-    back-off, close to ten seconds, before a device built again reaches the
-    service started again. Every channel in the process is closed, not only
-    the stopped service's: libca offers nothing narrower.
+    Otherwise a channel to a stopped service waits out libca's reconnect delay,
+    about ten seconds, before a rebuilt device reaches the restarted service.
+    Every channel in the process is closed, since libca offers nothing
+    narrower.
     """
     try:
         # the epics extra is optional, and a process without it holds no channel

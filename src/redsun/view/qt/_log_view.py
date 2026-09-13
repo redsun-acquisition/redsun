@@ -63,43 +63,38 @@ _ALL_SERVICES = "All services"
 
 
 class LogView(QtView):
-    """Read-only console showing the log records of the running session.
+    """Read-only console of the running session's log records.
 
-    Records emitted before this view existed are shown too: the session buffer
-    outlives them, and the view drains it on construction. The level selector
-    chooses the lowest level displayed, and re-reading the buffer rather than
-    the text edit means raising the threshold and lowering it again brings
-    records back.
+    Records logged before the view existed are shown too, read from the session
+    buffer. The level selector sets the lowest level shown; since the view
+    redraws from the buffer, lowering the level again brings records back.
 
-    The application's records and the services' records are shown on tabs of
-    their own. The Services tab appears once a service has logged something,
-    and its selector narrows it to one service. ``Clear log window`` and
-    ``Save logs...`` act on the tab shown and the service selected.
+    Application and service records have their own tabs. The Services tab
+    appears once a service logs, and its selector narrows it to one service.
+    ``Clear log window`` and ``Save logs...`` act on the tab and service shown.
 
-    A record is coloured by its level, in one of two sets chosen from the
-    console's own background, so the text stays legible under a light and a
-    dark palette alike. Changing the palette while the view is open redraws
-    it.
+    Records are coloured by level, with one palette for light and one for dark
+    backgrounds, chosen from the console's background and redrawn when the
+    palette changes.
 
-    Records arriving while the view is open are drawn in batches rather than
-    one by one, so a burst of logging does not stall the window, and each
-    console keeps no more lines than the session buffer holds records for it.
+    New records are drawn in batches, so a burst does not stall the window, and
+    each console keeps no more lines than the buffer holds for it.
 
-    When the session has log files open, ``Save logs...`` copies the ones the
-    tab shows and ``Open log folder`` shows the folder holding them in the
-    system's file browser; without them the folder button is disabled.
+    With session log files open, ``Save logs...`` copies the files of the tab
+    shown and ``Open log folder`` opens their folder in the file browser;
+    without them the folder button is disabled.
 
     Parameters
     ----------
     name : str
-        Identity key of the view. Passed as positional-only argument.
+        Identity key of the view, positional-only.
     kwargs : Any, optional
         Additional keyword arguments (unused).
     """
 
     @property
     def view_position(self) -> ViewPosition:
-        """The position in the main view."""
+        """Position in the main window."""
         return ViewPosition.BOTTOM
 
     def __init__(self, name: str, /, **kwargs: Any) -> None:
@@ -226,8 +221,8 @@ class LogView(QtView):
     def clear(self) -> None:
         """Empty the console of the tab shown.
 
-        The session buffer is untouched, so a later ``Save logs...`` still
-        writes everything and changing level brings the records back.
+        The buffer is untouched, so ``Save logs...`` still writes everything and
+        changing the level brings records back.
         """
         showing_services = self._tabs.currentIndex() == _SERVICES_TAB
         self._pending = deque(
@@ -239,11 +234,10 @@ class LogView(QtView):
     def save(self, path: str) -> None:
         """Write the records of the tab shown to *path*, whatever the displayed level.
 
-        The Application tab writes the application's records; the Services tab
-        those of the service selected, or of every service one after another.
-        They come from the session's log files when a session opened them, so
-        nothing the buffer has already dropped is missing, and from the buffer
-        otherwise.
+        The Application tab writes application records; the Services tab the
+        selected service's, or every service's in turn. They come from the
+        session's log files if open, so records the buffer dropped are
+        included, and from the buffer otherwise.
         """
         buffer = log_buffer()
         if self._tabs.currentIndex() != _SERVICES_TAB:
