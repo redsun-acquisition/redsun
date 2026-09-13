@@ -15,14 +15,16 @@ Dates are specified in the format `DD-MM-YYYY`.
   retained as they are emitted. The handler is installed on the `redsun` logger
   alongside the stdout one and keeps the most recent 10 000 records, so a
   consumer built later in the session can still show what happened before it
-  existed.
+  existed. `BufferHandler.capacity` is how many records it keeps.
 - `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
   records, colour-coded by level in one of two sets chosen from the console's
   own background, so the text keeps its contrast under a light and a dark
   palette alike, and redrawn when the palette changes. Buttons choose the lowest level displayed,
   redrawing from the buffer so raising the threshold never discards anything,
   and `Save logs...` writes every buffered record regardless of what is on
-  screen. Available from a configuration file as `plugin_name: redsun`,
+  screen. Records arriving while it is open are drawn in batches every 100 ms,
+  at most 2 000 per batch, and the console keeps no more lines than the buffer
+  holds records. Available from a configuration file as `plugin_name: redsun`,
   `plugin_id: logs` under `views`.
 
 ### Fixed

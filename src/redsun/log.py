@@ -118,7 +118,13 @@ class BufferHandler(logging.Handler):
 
     def __init__(self, capacity: int = 10_000) -> None:
         super().__init__()
+        self._capacity = capacity
         self._records: deque[logging.LogRecord] = deque(maxlen=capacity)
+
+    @property
+    def capacity(self) -> int:
+        """How many records the buffer retains before dropping the oldest."""
+        return self._capacity
 
     @property
     def records(self) -> tuple[logging.LogRecord, ...]:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import html
 import logging
+from collections import deque
 from typing import TYPE_CHECKING
 
 from qtpy import QtCore, QtGui
@@ -52,6 +52,12 @@ _ON_DARK: dict[int, str] = {
 _MID_LIGHTNESS = 128
 """Above this the console background counts as light."""
 
+_BATCH_INTERVAL_MS = 100
+"""How often records that arrived since the last batch are drawn."""
+
+_BATCH_SIZE = 2_000
+"""The most records one batch draws; the rest wait for the next."""
+
 
 class LogView(QtView):
     """Read-only console showing the log records of the running session.
@@ -66,6 +72,10 @@ class LogView(QtView):
     console's own background, so the text stays legible under a light and a
     dark palette alike. Changing the palette while the view is open redraws
     it.
+
+    Records arriving while the view is open are drawn in batches rather than
+    one by one, so a burst of logging does not stall the window, and the
+    console keeps no more lines than the session buffer holds records.
 
     Parameters
     ----------
@@ -86,8 +96,11 @@ class LogView(QtView):
         self._formatter = GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")
         self._level = logging.INFO
 
+        buffer = log_buffer()
+
         self._console = QtW.QPlainTextEdit(self)
         self._console.setReadOnly(True)
+        self._console.setMaximumBlockCount(buffer.capacity)
         font = QtGui.QFont("nosuchfont")
         font.setStyleHint(QtGui.QFont.StyleHint.Monospace)
         self._console.setFont(font)
@@ -115,7 +128,13 @@ class LogView(QtView):
         root.setColumnStretch(2, 1)
         self.setLayout(root)
 
-        buffer = log_buffer()
+        # only the newest records can end up on screen, so a burst larger
+        # than the buffer never queues more than the console would keep
+        self._pending: deque[logging.LogRecord] = deque(maxlen=buffer.capacity)
+        self._batch_timer = QtCore.QTimer(self)
+        self._batch_timer.setInterval(_BATCH_INTERVAL_MS)
+        self._batch_timer.timeout.connect(self._draw_batch)
+
         self._render(buffer.records)
         # psygnal holds the bound method weakly, so a destroyed view drops out
         # of the buffer on its own: a view is never asked to shut down
@@ -131,6 +150,8 @@ class LogView(QtView):
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
         log_buffer().sig_record.disconnect(self._on_record, missing_ok=True)
+        self._batch_timer.stop()
+        self._pending.clear()
         if event is not None:
             super().closeEvent(event)
 
@@ -159,6 +180,7 @@ class LogView(QtView):
         The session buffer is untouched, so a later ``Save logs...`` still
         writes everything and changing level brings the records back.
         """
+        self._pending.clear()
         self._console.clear()
 
     def save(self, path: str) -> None:
@@ -169,14 +191,23 @@ class LogView(QtView):
             )
 
     def _on_record(self, record: logging.LogRecord) -> None:
-        if record.levelno >= self._level:
-            self._append(record)
+        if record.levelno < self._level:
+            return
+        self._pending.append(record)
+        if not self._batch_timer.isActive():
+            self._batch_timer.start()
+
+    def _draw_batch(self) -> None:
+        count = min(_BATCH_SIZE, len(self._pending))
+        self._write([self._pending.popleft() for _ in range(count)])
+        if not self._pending:
+            self._batch_timer.stop()
 
     def _render(self, records: Iterable[logging.LogRecord]) -> None:
+        self._batch_timer.stop()
+        self._pending.clear()
         self._console.clear()
-        for record in records:
-            if record.levelno >= self._level:
-                self._append(record)
+        self._write([record for record in records if record.levelno >= self._level])
 
     @property
     def colors(self) -> dict[int, str]:
@@ -184,11 +215,31 @@ class LogView(QtView):
         base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
         return _ON_LIGHT if base.lightness() >= _MID_LIGHTNESS else _ON_DARK
 
-    def _append(self, record: logging.LogRecord) -> None:
+    def _write(self, records: Iterable[logging.LogRecord]) -> None:
+        # pyqt6 annotates both as optional and pyside6 does not
+        document: QtGui.QTextDocument | None = self._console.document()
+        bar: QtW.QScrollBar | None = self._console.verticalScrollBar()
+        if document is None or bar is None:
+            return
+        # follow the newest line only when the reader is already at the bottom
+        following = bar.value() == bar.maximum()
         colors = self.colors
-        color = colors.get(record.levelno, colors[logging.INFO])
-        text = html.escape(self._formatter.format(record))
-        self._console.appendHtml(f'<pre><font color="{color}">{text}</font></pre>')
+        formats: dict[int, QtGui.QTextCharFormat] = {}
+        cursor = QtGui.QTextCursor(document)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+        cursor.beginEditBlock()
+        for record in records:
+            if record.levelno not in formats:
+                char_format = QtGui.QTextCharFormat()
+                color = colors.get(record.levelno, colors[logging.INFO])
+                char_format.setForeground(QtGui.QBrush(QtGui.QColor(color)))
+                formats[record.levelno] = char_format
+            if not document.isEmpty():
+                cursor.insertBlock()
+            cursor.insertText(self._formatter.format(record), formats[record.levelno])
+        cursor.endEditBlock()
+        if following:
+            bar.setValue(bar.maximum())
 
     def _on_save_clicked(self) -> None:
         chosen, _ = QtW.QFileDialog.getSaveFileName(

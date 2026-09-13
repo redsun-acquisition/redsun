@@ -8,8 +8,15 @@ from typing import TYPE_CHECKING
 import pytest
 from qtpy import QtCore, QtGui
 
-from redsun.log import log_buffer, logger, set_level
+from redsun.log import (
+    BufferHandler,
+    add_handler,
+    log_buffer,
+    remove_handler,
+    set_level,
+)
 from redsun.view import ViewPosition
+from redsun.view.qt import _log_view
 from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
 from redsun.view.qt.builtins import LogView
 
@@ -25,6 +32,7 @@ pytestmark = pytest.mark.qt
 @pytest.fixture
 def logs() -> Iterator[logging.Logger]:
     """Yield the ``redsun`` logger at ``DEBUG``, over an emptied buffer."""
+    logger = logging.getLogger("redsun")
     buffer = log_buffer()
     buffer.clear()
     level = logger.level
@@ -49,6 +57,28 @@ def make_view(qapp: QApplication) -> Iterator[Callable[[], LogView]]:
         view.close()
 
 
+@pytest.fixture
+def small_buffer(logs: logging.Logger) -> Iterator[BufferHandler]:
+    """Swap the session buffer for one holding 50 records."""
+    installed = log_buffer()
+    small = BufferHandler(capacity=50)
+    remove_handler(installed)
+    add_handler(small)
+    yield small
+    remove_handler(small)
+    add_handler(installed)
+
+
+def _draw_pending(view: LogView) -> None:
+    """Draw every waiting batch, one timer tick at a time.
+
+    Ticks are driven directly rather than by running the event loop, which
+    would also deliver whatever earlier tests left in psygnal's queue.
+    """
+    while view._batch_timer.isActive():
+        view._draw_batch()
+
+
 def test_records_logged_before_the_view_existed_are_shown(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
@@ -66,14 +96,55 @@ def test_the_view_sits_at_the_bottom(
     assert make_view().view_position is ViewPosition.BOTTOM
 
 
-def test_a_later_record_is_appended(
+def test_a_later_record_is_drawn_after_the_logging_call(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
+    """Logging never waits for the console, which catches up on its next batch."""
     view = make_view()
 
     logs.error("after the view")
 
+    assert "after the view" not in view._console.toPlainText()
+    _draw_pending(view)
     assert "after the view" in view._console.toPlainText()
+
+
+def test_a_burst_is_drawn_a_batch_at_a_time(
+    make_view: Callable[[], LogView],
+    small_buffer: BufferHandler,
+    logs: logging.Logger,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each tick draws at most a batch, so a burst cannot hold the window."""
+    monkeypatch.setattr(_log_view, "_BATCH_SIZE", 10)
+    view = make_view()
+
+    for i in range(25):
+        logs.info("record %02d", i)
+    view._draw_batch()
+
+    text = view._console.toPlainText()
+    assert "record 09" in text
+    assert "record 10" not in text
+    _draw_pending(view)
+    assert "record 24" in view._console.toPlainText()
+
+
+def test_the_console_keeps_no_more_lines_than_the_buffer(
+    make_view: Callable[[], LogView],
+    small_buffer: BufferHandler,
+    logs: logging.Logger,
+) -> None:
+    """Lines past the buffer's capacity are dropped from the top."""
+    view = make_view()
+
+    for burst in range(2):
+        for i in range(40):
+            logs.info("burst %d record %02d", burst, i)
+        _draw_pending(view)
+
+    assert view._console.blockCount() == small_buffer.capacity
+    assert "burst 0 record 00" not in view._console.toPlainText()
 
 
 @pytest.mark.parametrize(
@@ -215,6 +286,7 @@ def test_a_palette_change_redraws_what_is_on_screen(
     view = make_view()
     _repaint(view, "#ffffff")
     logs.error("the detector answered nothing")
+    _draw_pending(view)
     assert _ON_LIGHT[logging.ERROR] in _rendered(view)
 
     _repaint(view, "#1e1e1e")
