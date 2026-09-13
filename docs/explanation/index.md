@@ -7,6 +7,7 @@
 - **[Container architecture](container-architecture.md)**
 - **[Component system](component-system.md)**
 - **[Session storage](storage.md)**
+- **[Services](services.md)**
 
 ## SDK
 
@@ -33,3 +34,4 @@ Status, Context, Decision, Consequences.
 - **[9. Inherited and layered component configuration](decisions/0009-inherited-component-configuration.md)**
 - **[10. Toolkit hook points](decisions/0010-toolkit-hook-points.md)**
 - **[11. Tolerating a component that fails to build](decisions/0011-tolerating-a-component-that-fails-to-build.md)**
+- **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
