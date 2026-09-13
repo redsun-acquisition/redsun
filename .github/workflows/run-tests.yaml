@@ -39,8 +39,6 @@ jobs:
             uv sync --group dev
         shell: bash
       
-      # if we're running on linux make sure to
-      # create a virtual display otherwise it goes crazy
       - name: Run tests with coverage
         run: |
             uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
