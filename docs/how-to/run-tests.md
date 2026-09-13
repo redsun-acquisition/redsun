@@ -55,6 +55,23 @@ uv run pytest tests/sdk/ -x
 Qt-dependent tests are marked with `@pytest.mark.qt` and are skipped
 automatically when no display environment is available.
 
+## Run the tests against a service outside the process
+
+Tests marked `@pytest.mark.compose` talk to an IOC running in a container,
+started from `tests/compose/compose.yaml`. They are skipped unless
+`REDSUN_COMPOSE` is set, so the rest of the suite needs no container runtime.
+With Docker running:
+
+```bash
+docker compose -f tests/compose/compose.yaml up --detach --wait
+REDSUN_COMPOSE=1 uv run pytest -m compose
+docker compose -f tests/compose/compose.yaml down
+```
+
+The IOC listens on port 5064 of `127.0.0.1`, the default Channel Access port,
+so stop any other IOC using it first. CI runs these tests in a job of their own
+on Ubuntu.
+
 ## Type-check against both Qt bindings
 
 Tests are covered by mypy strict mode alongside the sources. `redsun` supports

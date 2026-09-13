@@ -84,11 +84,17 @@ _SKIP_QT = pytest.mark.skip(
     reason="requires a Qt display; set QT_QPA_PLATFORM=offscreen or run with pytest-env"
 )
 
+_SKIP_COMPOSE = pytest.mark.skip(
+    reason="requires tests/compose/compose.yaml up and REDSUN_COMPOSE set"
+)
+
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-skip @pytest.mark.qt tests in headless environments."""
-    if _has_display():
-        return
+    """Auto-skip Qt tests in headless environments, and compose tests unless asked for."""
+    display = _has_display()
+    compose = bool(os.environ.get("REDSUN_COMPOSE"))
     for item in items:
-        if item.get_closest_marker("qt"):
+        if not display and item.get_closest_marker("qt"):
             item.add_marker(_SKIP_QT)
+        if not compose and item.get_closest_marker("compose"):
+            item.add_marker(_SKIP_COMPOSE)

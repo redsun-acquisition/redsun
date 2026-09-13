@@ -237,6 +237,7 @@ addopts = "-p no:warnings"
 asyncio_mode = "auto"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",
+    "compose: marks tests that need tests/compose/compose.yaml up (skipped unless REDSUN_COMPOSE is set)",
 ]
 env = [
     "QT_QPA_PLATFORM=offscreen",

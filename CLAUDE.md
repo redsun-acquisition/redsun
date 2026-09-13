@@ -30,6 +30,7 @@ redsun/
 |   |-- container/             container, plugin discovery, services, hooks
 |   |   |-- mock_pkg/          fake plugin package: devices, presenters, views, services
 |   |   `-- configs/           session YAML files the tests load
+|   |-- compose/               an IOC in a container, for the tests marked compose
 |   `-- typing/                assert_type modules, checked by mypy, never run
 |-- docs/                      Diataxis site built by zensical
 |   |-- tutorials/

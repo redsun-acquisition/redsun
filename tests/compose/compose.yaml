@@ -1,0 +1,22 @@
+# An IOC running outside the test process, for the tests marked `compose`:
+#
+#   docker compose -f tests/compose/compose.yaml up --detach --wait
+#   REDSUN_COMPOSE=1 uv run pytest -m compose
+#   docker compose -f tests/compose/compose.yaml down
+
+services:
+  ioc:
+    image: python:3.12-slim
+    command:
+      - sh
+      - -c
+      - >
+        pip install --quiet --disable-pip-version-check caproto &&
+        python -m caproto.ioc_examples.simple --prefix REDSUN:ATTACHED: --interfaces 0.0.0.0
+    ports:
+      - "127.0.0.1:5064:5064/udp"
+      - "127.0.0.1:5064:5064/tcp"
+    healthcheck:
+      test: ["CMD", "caproto-get", "REDSUN:ATTACHED:A"]
+      interval: 2s
+      retries: 60

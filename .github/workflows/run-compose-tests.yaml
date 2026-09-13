@@ -1,0 +1,35 @@
+name: Run compose tests
+
+on:
+  workflow_call:
+
+jobs:
+  compose:
+    name: attached service
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+
+      - name: Start the IOC
+        run: docker compose -f tests/compose/compose.yaml up --detach --wait
+
+      - name: Run the tests marked compose
+        run: uv run --locked pytest -m compose --color=yes
+        env:
+          REDSUN_COMPOSE: "1"
+
+      - name: Show the IOC's output
+        if: ${{ !cancelled() }}
+        run: docker compose -f tests/compose/compose.yaml logs
+
+      - name: Stop the IOC
+        if: ${{ !cancelled() }}
+        run: docker compose -f tests/compose/compose.yaml down
