@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import threading
 from concurrent.futures import Future, wait
 from time import sleep
@@ -6,6 +8,7 @@ from typing import Any
 import bluesky.plan_stubs as bps
 from bluesky.plans import count
 
+from redsun.aio import get_shared_loop
 from redsun.engine import RunEngine, RunEngineResult
 
 from .mocks import MockDetector
@@ -14,6 +17,23 @@ from .mocks import MockDetector
 def test_engine_wrapper_construction(RE: RunEngine) -> None:
     assert RE.context_managers == []
     assert RE.pause_msg == ""
+
+
+def test_an_engine_runs_on_the_shared_loop_by_default(RE: RunEngine) -> None:
+    assert RE.loop is get_shared_loop()
+
+
+def test_importing_the_engine_starts_no_thread() -> None:
+    """The shared loop and its thread wait for the first engine that needs them."""
+    probe = (
+        "import threading, redsun.engine; "
+        "print(sorted(t.name for t in threading.enumerate()))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=True
+    )
+
+    assert result.stdout.strip() == "['MainThread']"
 
 
 def test_engine_wrapper_run(RE: RunEngine, detector: MockDetector) -> None:

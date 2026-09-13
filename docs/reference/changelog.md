@@ -29,6 +29,9 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`RunEngine`** (`redsun.engine`) takes `loop=None` and falls back to the
+  shared background loop when an engine is built, so importing `redsun.engine`
+  no longer starts the loop and its thread.
 - **`GlobalFormatter.format`** (`redsun.log`) appends the traceback of a record
   carrying one, and the stack of a record logged with `stack_info=True`, so a
   `logger.exception(...)` call reaches stdout and `LogView` with both.

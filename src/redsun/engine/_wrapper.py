@@ -59,9 +59,8 @@ class RunEngine(BlueskyRunEngine):
         `__getitem__`, `__setitem__`, and `clear` will work.
 
     loop: asyncio.AbstractEventLoop, optional
-        An asyncio event loop to be used for executing plans. If not provided,
-        the RunEngine will create a new event loop using ``asyncio.new_event_loop()``;
-        e.g., ``asyncio.get_event_loop()`` or ``asyncio.new_event_loop()``
+        The event loop plans run on. Defaults to redsun's shared background
+        loop, created the first time an engine or another caller needs it.
 
     preprocessors : list, optional
         Generator functions that take in a plan (generator instance) and
@@ -171,16 +170,11 @@ class RunEngine(BlueskyRunEngine):
 
     """
 
-    # TODO: using get_shared_loop() like this is a bit
-    # fragile; there should be a private function that ensures
-    # the shared loop is created only once at application startup
-    # and properly cleaned up at shutdown; this is just a quick solution to
-    # get the shared loop working for now
     def __init__(
         self,
         md: dict[str, Any] | None = None,
         *,
-        loop: asyncio.AbstractEventLoop = get_shared_loop(),  # noqa: B008 - returns the import-time singleton loop
+        loop: asyncio.AbstractEventLoop | None = None,
         preprocessors: list[Preprocessor] | None = None,
         md_validator: MDValidator | None = None,
         md_normalizer: MDNormalizer | None = None,
@@ -194,7 +188,7 @@ class RunEngine(BlueskyRunEngine):
 
         super().__init__(
             md=md,
-            loop=loop,
+            loop=loop or get_shared_loop(),
             preprocessors=preprocessors,
             md_validator=md_validator,
             md_normalizer=md_normalizer,
