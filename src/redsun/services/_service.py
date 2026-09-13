@@ -135,7 +135,11 @@ class Service:
         os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
             filter(None, [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"])
         )
-        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        flags = 0
+        # an if statement, not an expression: only the statement narrows the
+        # platform for a type checker running on another one
+        if sys.platform == "win32":
+            flags = subprocess.CREATE_NO_WINDOW
         self._tail.clear()
         self._settled.clear()
         self._is_ready = self.ready is None
