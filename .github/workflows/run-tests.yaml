@@ -2,13 +2,6 @@ name: Run tests
 
 on:
   workflow_call:
-    inputs:
-      ref:
-        required: true
-        type: string
-      event_name:
-        required: true
-        type: string
     secrets:
       codecov_token:
         required: false
@@ -28,8 +21,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
