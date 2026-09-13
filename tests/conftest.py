@@ -6,6 +6,7 @@ when no display is available (headless CI without ``QT_QPA_PLATFORM=offscreen``)
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from typing import TYPE_CHECKING
@@ -15,7 +16,7 @@ from psygnal._queue import QueuedCallback
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
-from redsun.log import SessionFileHandler, logger
+from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -39,9 +40,15 @@ def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[P
     """
     monkeypatch.setattr("redsun.log.user_log_dir", lambda *a, **k: str(tmp_path))
     yield tmp_path
-    for handler in [h for h in logger.handlers if isinstance(h, SessionFileHandler)]:
-        logger.removeHandler(handler)
-        handler.close()
+    loggers = [
+        logging.getLogger(name)
+        for name in list(logging.Logger.manager.loggerDict)
+        if name.startswith(SERVICE_LOGGER)
+    ]
+    for owner in (logger, *loggers):
+        for handler in [h for h in owner.handlers if isinstance(h, SessionFileHandler)]:
+            owner.removeHandler(handler)
+            handler.close()
 
 
 @pytest.fixture(autouse=True)

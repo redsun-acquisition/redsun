@@ -332,6 +332,7 @@ class AppContainer:
         "_hooks",
         "_is_built",
         "_report",
+        "_service_logs",
         "_services",
         "_services_started",
         "_session_log",
@@ -606,6 +607,7 @@ class AppContainer:
                     self._config[key] = value  # type: ignore[literal-required]
 
         self._session_log: SessionFileHandler | None = None
+        self._service_logs: dict[str, SessionFileHandler] = {}
         self._open_session_log()
 
     @classmethod
@@ -1172,13 +1174,28 @@ class AppContainer:
         self._services_started = False
 
     def _open_session_log(self) -> None:
-        """Start writing this run's records to the session's log file."""
-        if self._session_log is None:
-            self._session_log = SessionFileHandler(self._config["session"])
-            add_handler(self._session_log)
+        """Start writing this run's records to the session's log files.
+
+        The application's records go to one file and each launched service's
+        to a file of its own, so a service logging heavily rotates only its own.
+        """
+        if self._session_log is not None:
+            return
+        session = self._config["session"]
+        self._session_log = SessionFileHandler(session)
+        add_handler(self._session_log)
+        for name, service in self._services.items():
+            if service.launched:
+                handler = SessionFileHandler(session, name, self._session_log.run)
+                add_handler(handler, name)
+                self._service_logs[name] = handler
 
     def _close_session_log(self) -> None:
-        """Stop writing to the session's log file, and close it."""
+        """Stop writing to the session's log files, and close them."""
+        for name, handler in self._service_logs.items():
+            remove_handler(handler, name)
+            handler.close()
+        self._service_logs.clear()
         if self._session_log is not None:
             remove_handler(self._session_log)
             self._session_log.close()

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
-from redsun.log import GlobalFormatter, log_buffer, session_log
+from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
 
@@ -55,6 +55,12 @@ _BATCH_INTERVAL_MS = 100
 _BATCH_SIZE = 2_000
 """The most records one batch draws; the rest wait for the next."""
 
+_SERVICES_TAB = 1
+"""Index of the Services tab."""
+
+_ALL_SERVICES = "All services"
+"""Selector entry showing the records of every service."""
+
 
 class LogView(QtView):
     """Read-only console showing the log records of the running session.
@@ -65,18 +71,23 @@ class LogView(QtView):
     the text edit means raising the threshold and lowering it again brings
     records back.
 
+    The application's records and the services' records are shown on tabs of
+    their own. The Services tab appears once a service has logged something,
+    and its selector narrows it to one service. ``Clear log window`` and
+    ``Save logs...`` act on the tab shown and the service selected.
+
     A record is coloured by its level, in one of two sets chosen from the
     console's own background, so the text stays legible under a light and a
     dark palette alike. Changing the palette while the view is open redraws
     it.
 
     Records arriving while the view is open are drawn in batches rather than
-    one by one, so a burst of logging does not stall the window, and the
-    console keeps no more lines than the session buffer holds records.
+    one by one, so a burst of logging does not stall the window, and each
+    console keeps no more lines than the session buffer holds records for it.
 
-    When the session has a log file open, ``Save logs...`` copies it and
-    ``Open log folder`` shows the folder holding it in the system's file
-    browser; without one the folder button is disabled.
+    When the session has log files open, ``Save logs...`` copies the ones the
+    tab shows and ``Open log folder`` shows the folder holding them in the
+    system's file browser; without them the folder button is disabled.
 
     Parameters
     ----------
@@ -99,12 +110,22 @@ class LogView(QtView):
 
         buffer = log_buffer()
 
-        self._console = QtW.QPlainTextEdit(self)
-        self._console.setReadOnly(True)
-        self._console.setMaximumBlockCount(buffer.capacity)
-        font = QtGui.QFont("nosuchfont")
-        font.setStyleHint(QtGui.QFont.StyleHint.Monospace)
-        self._console.setFont(font)
+        self._console = self._make_console(buffer.capacity)
+        self._service_console = self._make_console(buffer.service_capacity)
+        self._service_combo = QtW.QComboBox(self)
+        self._service_combo.addItem(_ALL_SERVICES, None)
+        services_page = QtW.QWidget(self)
+        services_layout = QtW.QVBoxLayout(services_page)
+        services_layout.setContentsMargins(0, 0, 0, 0)
+        services_layout.addWidget(self._service_combo)
+        services_layout.addWidget(self._service_console)
+        self._tabs = QtW.QTabWidget(self)
+        self._tabs.addTab(self._console, "Application")
+        self._tabs.addTab(services_page, "Services")
+        self._tabs.setTabVisible(_SERVICES_TAB, False)
+        for service in buffer.services:
+            self._add_service(service)
+        self._service_combo.currentIndexChanged.connect(self._on_service_selected)
 
         self._level_combo = QtW.QComboBox(self)
         for label, level in _LEVELS:
@@ -124,7 +145,7 @@ class LogView(QtView):
             self._folder_button.setToolTip(str(Path(handler.baseFilename).parent))
 
         root = QtW.QGridLayout(self)
-        root.addWidget(self._console, 0, 0, 1, 4)
+        root.addWidget(self._tabs, 0, 0, 1, 4)
         root.addWidget(QtW.QLabel("Level:", self), 1, 0)
         root.addWidget(self._level_combo, 1, 1, 1, 3)
         root.addWidget(self._save_button, 2, 1)
@@ -137,23 +158,34 @@ class LogView(QtView):
         self.setLayout(root)
 
         # only the newest records can end up on screen, so a burst larger
-        # than the buffer never queues more than the console would keep
-        self._pending: deque[logging.LogRecord] = deque(maxlen=buffer.capacity)
+        # than the buffer never queues more than the consoles would keep
+        self._pending: deque[logging.LogRecord] = deque(
+            maxlen=buffer.capacity + buffer.service_capacity
+        )
         self._batch_timer = QtCore.QTimer(self)
         self._batch_timer.setInterval(_BATCH_INTERVAL_MS)
         self._batch_timer.timeout.connect(self._draw_batch)
 
-        self._render(buffer.records)
+        self._render()
         # psygnal holds the bound method weakly, so a destroyed view drops out
         # of the buffer on its own: a view is never asked to shut down
         buffer.sig_record.connect(self._on_record, thread="main")
+
+    def _make_console(self, capacity: int) -> QtW.QPlainTextEdit:
+        console = QtW.QPlainTextEdit(self)
+        console.setReadOnly(True)
+        console.setMaximumBlockCount(capacity)
+        font = QtGui.QFont("nosuchfont")
+        font.setStyleHint(QtGui.QFont.StyleHint.Monospace)
+        console.setFont(font)
+        return console
 
     def changeEvent(self, event: QtCore.QEvent | None) -> None:
         """Redraw in the colours of the palette the console now carries."""
         if event is not None:
             super().changeEvent(event)
             if event.type() == QtCore.QEvent.Type.PaletteChange:
-                self._render(log_buffer().records)
+                self._render()
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Stop following the buffer once the console is closed."""
@@ -168,6 +200,12 @@ class LogView(QtView):
         """The lowest level currently displayed."""
         return self._level
 
+    @property
+    def service(self) -> str | None:
+        """The service the Services tab shows, ``None`` for every service."""
+        data = self._service_combo.currentData()
+        return None if data is None else str(data)
+
     def set_level(self, level: int) -> None:
         """Show only records at or above *level*, redrawing from the buffer."""
         self._level = level
@@ -177,41 +215,73 @@ class LogView(QtView):
             # which renders once the combo agrees with the level
             self._level_combo.setCurrentIndex(index)
             return
-        self._render(log_buffer().records)
+        self._render()
 
     def _on_level_selected(self, index: int) -> None:
         self.set_level(int(self._level_combo.itemData(index)))
 
+    def _on_service_selected(self, index: int) -> None:
+        self._render()
+
     def clear(self) -> None:
-        """Empty the console.
+        """Empty the console of the tab shown.
 
         The session buffer is untouched, so a later ``Save logs...`` still
         writes everything and changing level brings the records back.
         """
-        self._pending.clear()
-        self._console.clear()
+        showing_services = self._tabs.currentIndex() == _SERVICES_TAB
+        self._pending = deque(
+            (r for r in self._pending if (service_of(r) is None) is showing_services),
+            maxlen=self._pending.maxlen,
+        )
+        (self._service_console if showing_services else self._console).clear()
 
     def save(self, path: str) -> None:
-        """Write this run's records to *path*, whatever the displayed level.
+        """Write the records of the tab shown to *path*, whatever the displayed level.
 
-        The records come from the session's log file when a session opened
-        one, so nothing the buffer has already dropped is missing, and from the
-        buffer otherwise.
+        The Application tab writes the application's records; the Services tab
+        those of the service selected, or of every service one after another.
+        They come from the session's log files when a session opened them, so
+        nothing the buffer has already dropped is missing, and from the buffer
+        otherwise.
         """
-        handler = session_log()
+        buffer = log_buffer()
+        if self._tabs.currentIndex() != _SERVICES_TAB:
+            sources: list[tuple[str | None, Iterable[logging.LogRecord]]] = [
+                (None, buffer.records)
+            ]
+        else:
+            names = buffer.services if self.service is None else (self.service,)
+            sources = [(name, buffer.service_records(name)) for name in names]
         with open(path, "w", encoding="utf-8") as fh:
-            if handler is None:
+            for source, records in sources:
+                handler = session_log(source)
+                if handler is None:
+                    fh.writelines(
+                        f"{self._formatter.format(record)}\n" for record in records
+                    )
+                    continue
+                handler.flush()
                 fh.writelines(
-                    f"{self._formatter.format(record)}\n"
-                    for record in log_buffer().records
+                    file.read_text(encoding="utf-8") for file in handler.files
                 )
-                return
-            handler.flush()
-            fh.writelines(
-                source.read_text(encoding="utf-8") for source in handler.files
-            )
+
+    def _add_service(self, service: str) -> None:
+        """Offer *service* in the selector, and show the Services tab."""
+        self._service_combo.addItem(service, service)
+        self._tabs.setTabVisible(_SERVICES_TAB, True)
+        self._service_console.setMaximumBlockCount(
+            log_buffer().service_capacity * (self._service_combo.count() - 1)
+        )
+
+    def _shows(self, record: logging.LogRecord) -> bool:
+        """Return whether *record* belongs on the Services console as selected."""
+        return self.service is None or service_of(record) == self.service
 
     def _on_record(self, record: logging.LogRecord) -> None:
+        service = service_of(record)
+        if service is not None and self._service_combo.findData(service) == -1:
+            self._add_service(service)
         if record.levelno < self._level:
             return
         self._pending.append(record)
@@ -220,15 +290,32 @@ class LogView(QtView):
 
     def _draw_batch(self) -> None:
         count = min(_BATCH_SIZE, len(self._pending))
-        self._write([self._pending.popleft() for _ in range(count)])
+        batch = [self._pending.popleft() for _ in range(count)]
+        self._write(self._console, [r for r in batch if service_of(r) is None])
+        self._write(
+            self._service_console,
+            [r for r in batch if service_of(r) is not None and self._shows(r)],
+        )
         if not self._pending:
             self._batch_timer.stop()
 
-    def _render(self, records: Iterable[logging.LogRecord]) -> None:
+    def _render(self) -> None:
+        buffer = log_buffer()
         self._batch_timer.stop()
         self._pending.clear()
         self._console.clear()
-        self._write([record for record in records if record.levelno >= self._level])
+        self._service_console.clear()
+        self._write(
+            self._console, [r for r in buffer.records if r.levelno >= self._level]
+        )
+        self._write(
+            self._service_console,
+            [
+                r
+                for r in buffer.service_records(self.service)
+                if r.levelno >= self._level
+            ],
+        )
 
     @property
     def colors(self) -> dict[int, str]:
@@ -236,10 +323,12 @@ class LogView(QtView):
         base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
         return _ON_LIGHT if base.lightness() >= _MID_LIGHTNESS else _ON_DARK
 
-    def _write(self, records: Iterable[logging.LogRecord]) -> None:
+    def _write(
+        self, console: QtW.QPlainTextEdit, records: Iterable[logging.LogRecord]
+    ) -> None:
         # pyqt6 annotates both as optional and pyside6 does not
-        document: QtGui.QTextDocument | None = self._console.document()
-        bar: QtW.QScrollBar | None = self._console.verticalScrollBar()
+        document: QtGui.QTextDocument | None = console.document()
+        bar: QtW.QScrollBar | None = console.verticalScrollBar()
         if document is None or bar is None:
             return
         # follow the newest line only when the reader is already at the bottom

@@ -62,6 +62,22 @@ Dates are specified in the format `DD-MM-YYYY`.
 - The build summary names a service whose every device failed to build:
   `Unused: camera_ioc (no device built)`.
 - An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+- **`service_of`** (`redsun.log`) - the name of the service a record came from,
+  `None` for the application.
+- **`BufferHandler.service_records`**, **`BufferHandler.services`** and
+  **`BufferHandler.service_capacity`** (`redsun.log`) - one service's retained
+  records or every service's merged by time, the services that have logged,
+  and how many records of each are retained, 2 000 by default.
+- A launched service's log file, `<run>.<service>.log` beside the
+  application's, opened by the container and created once the service logs
+  something. `SessionFileHandler` takes a `service` and a `run`, and
+  `SessionFileHandler.run` names the run a file belongs to; `add_handler`,
+  `remove_handler` and `session_log` take a `service`.
+- A line of a service's output that is a JSON log record, written by a stdlib
+  formatter or by loguru with `serialize=True`, is logged with its own level,
+  time and traceback under `redsun.service.<service>.<logger>`.
+- **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
+  Services tab, with a selector for one service or all of them.
 
 ### Changed
 
@@ -71,6 +87,15 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`AppContainer.shutdown`** stops the container's services, the last declared
   first, whether or not the container was built, and before it closes the
   session log file.
+- **`BufferHandler`** (`redsun.log`) retains application records and each
+  service's records apart, each dropping its oldest once full.
+  `BufferHandler.records` holds the application's records only.
+- **`SessionFileHandler`** (`redsun.log`) for the application no longer writes
+  services' records, and pruning old runs counts a run's service files with it.
+- **`GlobalFormatter`** (`redsun.log`) leaves out the location of a record that
+  carries none, such as one rebuilt from a service's output.
+- **`LogView`** (`redsun.view.qt.builtins`): `Save logs...` and
+  `Clear log window` act on the tab shown.
 
 ### Changed (breaking)
 

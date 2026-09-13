@@ -87,9 +87,67 @@ id, such as `2026-09-13T14-02-46_8120.log`. A file reaching 10 MB is rotated to
 `.log.1`, `.log.2` and so on, up to 5 older files. Starting a run deletes the
 files of all but the 20 most recent runs of the same session.
 
+Each service the container launches writes to a file of its own beside it,
+named after the run and the service, such as
+`2026-09-13T14-02-46_8120.camera_ioc.log`, with the same rotation. The
+application's file holds no service records, so a service logging heavily
+rotates only its own file. A service's file is created the first time the
+service logs something.
+
 [`session_log`][redsun.log.session_log] returns the handler writing the current
-run, and its `files` property lists the run's files with the oldest records
-first.
+run, and `session_log("camera_ioc")` the one writing that service's file. A
+handler's `files` property lists its files with the oldest records first.
+
+## Log from a service
+
+A service's output reaches the `redsun` logger under
+`redsun.service.<service>`. A line that is a JSON log record keeps its level,
+time and traceback, under `redsun.service.<service>.<its logger>`; any other
+line, such as a `print`, is logged at `DEBUG`. Two layouts are read.
+
+A service logging through `logging` adds a handler writing one JSON object per
+record to standard output:
+
+```python
+import json
+import logging
+import sys
+
+
+class JsonLines(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        traceback = self.formatException(record.exc_info) if record.exc_info else None
+        return json.dumps(
+            {
+                "name": record.name,
+                "levelno": record.levelno,
+                "created": record.created,
+                "msg": record.getMessage(),
+                "exc_text": traceback,
+            }
+        )
+
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(JsonLines())
+logging.getLogger().addHandler(handler)
+```
+
+A service logging through loguru replaces its console sink with one that
+serializes:
+
+```python
+import sys
+
+from loguru import logger
+
+logger.remove()
+logger.add(sys.stdout, serialize=True, level="INFO")
+```
+
+A service's records obey its logger's level like any other, so hiding its
+`DEBUG` output is
+`logging.getLogger("redsun.service.camera_ioc").setLevel(logging.INFO)`.
 
 ## Show the logs in the application
 
@@ -106,16 +164,20 @@ views:
 
 It sits at the bottom of the main window and shows every record of the session,
 including those logged while the container was building, coloured by level.
-Its controls:
+The application's records are on the **Application** tab. A **Services** tab
+appears once a service logs something, with a selector for one service or all
+of them. The view keeps the most recent 10 000 application records and 2 000 of
+each service, so a service logging heavily never pushes the application's
+records out. Its controls:
 
 | Control | What it does |
 | --- | --- |
-| `Level` | shows only records at or above the chosen level; lowering it again brings hidden records back |
-| `Save logs...` | writes the run's records to a file you choose, whatever level is shown. It copies the session's log file, so records the view no longer holds are saved too |
-| `Clear log window` | empties the console; the records stay available to `Level` and `Save logs...` |
+| `Level` | shows only records at or above the chosen level, on both tabs; lowering it again brings hidden records back |
+| `Save logs...` | writes the records of the tab shown to a file you choose, whatever level is shown: the application's, the selected service's, or every service's. It copies the session's log files, so records the view no longer holds are saved too |
+| `Clear log window` | empties the console of the tab shown; the records stay available to `Level` and `Save logs...` |
 | `Open log folder` | opens the folder holding the session's log files in the system's file browser |
 
-Without a session log file, as when the view is used outside a container,
+Without session log files, as when the view is used outside a container,
 `Save logs...` writes the records kept in memory and `Open log folder` is
 disabled.
 

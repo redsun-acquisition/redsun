@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import signal
@@ -12,8 +13,13 @@ from typing import TYPE_CHECKING, Final
 
 from psygnal import Signal
 
+from redsun.log import SERVICE_LOGGER
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
+
+logger = logging.getLogger("redsun")
 
 STARTUP_TIMEOUT: Final = 15.0
 """Seconds a launched service has to print its readiness line."""
@@ -28,7 +34,9 @@ class Service:
     A container makes one for each service it declares. A service with a
     *module* is launched as ``python -m <module> <args>``; one without is
     attached to, already running elsewhere, and `start` and `stop` do nothing.
-    Its output is logged under ``redsun.service.<name>``.
+    Each line of its output is logged under ``redsun.service.<name>``, as the
+    record the line describes when it is a JSON log record and at ``DEBUG``
+    otherwise; see `service_record`.
 
     Parameters
     ----------
@@ -56,7 +64,6 @@ class Service:
         "__weakref__",
         "_drain",
         "_is_ready",
-        "_log",
         "_process",
         "_settled",
         "_stopping",
@@ -92,7 +99,6 @@ class Service:
         self.args = list(args)
         self.ready = ready
         self.stop_timeout = stop_timeout
-        self._log = logging.getLogger(f"redsun.service.{name}")
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
         self._process: subprocess.Popen[str] | None = None
         self._drain: threading.Thread | None = None
@@ -118,7 +124,8 @@ class Service:
         The process runs without a console window on Windows, with its own
         Channel Access server port, which is added to ``EPICS_CA_ADDR_LIST`` in
         this process so that a device reaches it among several local services.
-        Its output is logged line by line at ``DEBUG``.
+        The process writes UTF-8, and each line of its output is logged as
+        `service_record` rebuilds it.
 
         Raises
         ------
@@ -164,18 +171,18 @@ class Service:
         self._drain.start()
 
         if self._is_ready or self._settled.wait(STARTUP_TIMEOUT) and self._is_ready:
-            self._log.info("Service '%s' started", self.name)
+            logger.info("Service '%s' started", self.name)
             return
         if self._settled.is_set():
             code = self._process.wait()
             self._join_drain()
             self._process = None
-            self._log.error(
+            logger.error(
                 self._with_tail(f"Service '{self.name}' exited with code {code}")
             )
             raise RuntimeError(f"exited with code {code} before it was ready")
         self.stop()
-        self._log.error(
+        logger.error(
             self._with_tail(
                 f"Service '{self.name}' not ready after {STARTUP_TIMEOUT:g} s"
             )
@@ -201,14 +208,14 @@ class Service:
                 if sys.platform != "win32":
                     process.send_signal(signal.SIGINT)
                 if not exited(process, self.stop_timeout):
-                    self._log.warning(
+                    logger.warning(
                         "Service '%s' did not stop within %g s, killing it",
                         self.name,
                         self.stop_timeout,
                     )
                     process.kill()
                     process.wait()
-            self._log.info(
+            logger.info(
                 "Service '%s' stopped with exit code %s", self.name, process.returncode
             )
         self._join_drain()
@@ -220,7 +227,10 @@ class Service:
         for raw in process.stdout:
             line = raw.rstrip()
             self._tail.append(line)
-            self._log.debug(line)
+            record = service_record(self.name, line)
+            target = logging.getLogger(record.name)
+            if target.isEnabledFor(record.levelno):
+                target.handle(record)
             if not self._is_ready and self.ready is not None and self.ready in line:
                 self._is_ready = True
                 self._settled.set()
@@ -228,9 +238,7 @@ class Service:
         code = process.wait()
         if self._stopping or not self._is_ready:
             return
-        self._log.error(
-            self._with_tail(f"Service '{self.name}' exited with code {code}")
-        )
+        logger.error(self._with_tail(f"Service '{self.name}' exited with code {code}"))
         self.sig_exited.emit(self.name, code)
 
     def _join_drain(self) -> None:
@@ -243,6 +251,57 @@ class Service:
         if not self._tail:
             return message
         return f"{message}; last output:\n" + "\n".join(self._tail)
+
+
+def service_record(service: str, line: str) -> logging.LogRecord:
+    """Rebuild the log record one line of *service*'s output describes.
+
+    Two JSON layouts are read: the one loguru writes with ``serialize=True``,
+    and an object carrying the standard ``name``, ``levelno``, ``created``,
+    ``msg`` and ``exc_text`` of a `logging.LogRecord`. The record keeps its
+    level, time and traceback, under ``redsun.service.<service>.<its logger>``.
+    Any other line, a plain ``print`` included, becomes a ``DEBUG`` record
+    under ``redsun.service.<service>``.
+    """
+    base = f"{SERVICE_LOGGER}.{service}"
+    fields: dict[str, Any] = {
+        "name": base,
+        "levelno": logging.DEBUG,
+        "levelname": "DEBUG",
+        "msg": line,
+        "clsname": service,
+    }
+    try:
+        data = json.loads(line)
+        if "record" in data:
+            loguru = data["record"]
+            source = loguru["extra"].get("logger_name") or loguru["name"]
+            fields.update(
+                name=f"{base}.{source}",
+                levelno=loguru["level"]["no"],
+                levelname=loguru["level"]["name"],
+                msg=loguru["message"],
+                created=loguru["time"]["timestamp"],
+                exc_text=(
+                    data["text"].split("\n", 1)[1].strip()
+                    if loguru["exception"]
+                    else None
+                ),
+                uid=source,
+            )
+        else:
+            fields.update(
+                name=f"{base}.{data['name']}",
+                levelno=data["levelno"],
+                levelname=logging.getLevelName(data["levelno"]),
+                msg=data["msg"],
+                created=data["created"],
+                exc_text=data.get("exc_text"),
+                uid=data["name"],
+            )
+    except (ValueError, TypeError, KeyError, IndexError, AttributeError):
+        pass
+    return logging.makeLogRecord(fields)
 
 
 def exited(process: subprocess.Popen[str], timeout: float) -> bool:

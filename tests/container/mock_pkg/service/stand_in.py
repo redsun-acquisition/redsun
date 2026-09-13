@@ -30,6 +30,7 @@ def main() -> int:
     parser.add_argument("--ignore-sigint", action="store_true")
     parser.add_argument("--exit", type=int, help="exit with this code once ready")
     parser.add_argument("--marker", type=Path, help="file written on clean exit")
+    parser.add_argument("--say", help="a line printed once ready")
     options = parser.parse_args()
 
     if options.ignore_sigint:
@@ -40,6 +41,8 @@ def main() -> int:
     print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
     if not options.no_ready:
         print(READY, flush=True)
+    if options.say is not None:
+        print(options.say, flush=True)
     if options.exit is not None:
         print("exiting on request", flush=True)
         return int(options.exit)

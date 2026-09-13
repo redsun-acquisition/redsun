@@ -12,7 +12,8 @@ is shown in [Configure logging](../../how-to/configure-logging.md).
 | [`BufferHandler`][redsun.log.BufferHandler] | keeps the most recent records of the session in memory |
 | [`log_buffer`][redsun.log.log_buffer] | returns the `BufferHandler` installed on the logger |
 | [`SessionFileHandler`][redsun.log.SessionFileHandler] | writes the records of one run of a session to a rotated file |
-| [`session_log`][redsun.log.session_log] | returns the `SessionFileHandler` installed on the logger, if any |
+| [`session_log`][redsun.log.session_log] | returns the `SessionFileHandler` installed on the logger, or on a service's, if any |
+| [`service_of`][redsun.log.service_of] | names the service a record came from |
 
 The built-in [`LogView`][redsun.view.qt.builtins.LogView] shows these records in
 the application.
@@ -27,6 +28,7 @@ the application.
         - remove_handler
         - log_buffer
         - session_log
+        - service_of
 
 ## Logging from a component
 

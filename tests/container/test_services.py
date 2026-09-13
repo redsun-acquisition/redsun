@@ -143,6 +143,36 @@ def test_shutdown_of_a_container_never_built_stops_its_started_services(
     assert "Service 'stand_in' stopped with exit code 0" in logged(handler)
 
 
+def test_a_launched_service_logs_to_a_file_of_its_own(
+    containers: list[AppContainer],
+) -> None:
+    warning = (
+        '{"name": "ioc", "levelno": 30, "created": 1.0, "msg": "frame dropped", '
+        '"exc_text": null}'
+    )
+
+    class App(AppContainer):
+        stand_in = declare_service(
+            module=STAND_IN, ready=READY, args=["--say", warning]
+        )
+        attached = declare_service(prefix="BL01:")
+
+    app = App()
+    containers.append(app)
+    application = open_log()
+    service = session_log("stand_in")
+    assert service is not None
+    assert session_log("attached") is None
+
+    app.build()
+    app.shutdown()
+
+    assert "frame dropped" in logged(service)
+    assert "frame dropped" not in logged(application)
+    assert "Service 'stand_in' started" in logged(application)
+    assert session_log("stand_in") is None
+
+
 def test_a_device_naming_a_service_is_built_with_its_prefix() -> None:
     class App(AppContainer):
         beamline = declare_service(prefix="BL01:")

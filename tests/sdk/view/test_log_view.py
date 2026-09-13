@@ -70,6 +70,10 @@ def small_buffer(logs: logging.Logger) -> Iterator[BufferHandler]:
     add_handler(installed)
 
 
+def _service(name: str) -> logging.Logger:
+    return logging.getLogger(f"redsun.service.{name}")
+
+
 def _draw_pending(view: LogView) -> None:
     """Draw every waiting batch, one timer tick at a time.
 
@@ -219,6 +223,108 @@ def test_save_writes_every_record_whatever_is_displayed(
     written = target.read_text(encoding="utf-8")
     assert "a debug line" in written
     assert "a critical line" in written
+
+
+def test_the_services_tab_appears_once_a_service_logs(
+    make_view: Callable[[], LogView], logs: logging.Logger
+) -> None:
+    """A session without services shows only the Application tab."""
+    view = make_view()
+    assert not view._tabs.isTabVisible(_log_view._SERVICES_TAB)
+
+    _service("cam").warning("frame dropped")
+    _draw_pending(view)
+
+    assert view._tabs.isTabVisible(_log_view._SERVICES_TAB)
+    assert "frame dropped" in view._service_console.toPlainText()
+    assert "frame dropped" not in view._console.toPlainText()
+
+
+def test_the_service_selector_narrows_the_services_console(
+    make_view: Callable[[], LogView], logs: logging.Logger
+) -> None:
+    _service("cam").warning("from the camera")
+    _service("stage").warning("from the stage")
+    view = make_view()
+
+    view._service_combo.setCurrentIndex(view._service_combo.findData("stage"))
+
+    text = view._service_console.toPlainText()
+    assert view.service == "stage"
+    assert "from the stage" in text
+    assert "from the camera" not in text
+
+
+@pytest.mark.parametrize(
+    ("tab", "service", "saved", "left_out"),
+    [
+        (0, None, ["from the application"], ["from the camera", "from the stage"]),
+        (1, "cam", ["from the camera"], ["from the application", "from the stage"]),
+        (1, None, ["from the camera", "from the stage"], ["from the application"]),
+    ],
+    ids=["application", "one-service", "all-services"],
+)
+def test_save_writes_the_records_of_the_tab_shown(
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    tmp_path: Path,
+    tab: int,
+    service: str | None,
+    saved: list[str],
+    left_out: list[str],
+) -> None:
+    logs.warning("from the application")
+    _service("cam").warning("from the camera")
+    _service("stage").warning("from the stage")
+    view = make_view()
+    view._tabs.setCurrentIndex(tab)
+    view._service_combo.setCurrentIndex(view._service_combo.findData(service))
+    target = tmp_path / "saved.log"
+
+    view.save(str(target))
+
+    written = target.read_text(encoding="utf-8")
+    assert all(line in written for line in saved)
+    assert not any(line in written for line in left_out)
+
+
+def test_clear_empties_only_the_tab_shown(
+    make_view: Callable[[], LogView], logs: logging.Logger
+) -> None:
+    logs.warning("from the application")
+    _service("cam").warning("from the camera")
+    view = make_view()
+    view._tabs.setCurrentIndex(_log_view._SERVICES_TAB)
+
+    view.clear()
+
+    assert view._service_console.toPlainText() == ""
+    assert "from the application" in view._console.toPlainText()
+
+
+def test_save_copies_the_services_log_file_rather_than_the_buffer(
+    make_view: Callable[[], LogView], logs: logging.Logger, tmp_path: Path
+) -> None:
+    application = SessionFileHandler("saved")
+    camera = SessionFileHandler("saved", "cam", application.run)
+    add_handler(application)
+    add_handler(camera, "cam")
+    try:
+        _service("cam").warning("logged before the buffer dropped it")
+        view = make_view()
+        log_buffer().clear()
+        view._tabs.setCurrentIndex(_log_view._SERVICES_TAB)
+        view._service_combo.setCurrentIndex(view._service_combo.findData("cam"))
+        target = tmp_path / "session.log"
+
+        view.save(str(target))
+    finally:
+        remove_handler(application)
+        remove_handler(camera, "cam")
+        application.close()
+        camera.close()
+
+    assert "logged before the buffer dropped it" in target.read_text(encoding="utf-8")
 
 
 def test_save_copies_the_session_log_rather_than_the_buffer(

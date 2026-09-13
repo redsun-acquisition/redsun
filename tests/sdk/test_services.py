@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -14,7 +15,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from redsun.log import GlobalFormatter
 from redsun.services import Service, _service
+from redsun.services._service import service_record
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -22,6 +25,28 @@ if TYPE_CHECKING:
 STAND_IN = "mock_pkg.service.stand_in"
 READY = "stand-in ready"
 MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
+STDLIB_WARNING = json.dumps(
+    {
+        "name": "caproto.ioc.camera",
+        "levelno": logging.WARNING,
+        "created": 1.5,
+        "msg": "frame dropped at sequence 41",
+        "exc_text": None,
+    }
+)
+LOGURU_ERROR = json.dumps(
+    {
+        "text": "trigger failed\nTraceback (most recent call last):\nRuntimeError: no answer\n",
+        "record": {
+            "extra": {},
+            "name": "fastcs_camera",
+            "level": {"no": logging.ERROR, "name": "ERROR", "icon": "\u274c"},
+            "message": "trigger failed",
+            "time": {"timestamp": 2.5},
+            "exception": {"type": "RuntimeError"},
+        },
+    }
+)
 
 
 @pytest.fixture
@@ -187,6 +212,84 @@ def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     assert os.environ["EPICS_CA_ADDR_LIST"].split() == [
         f"127.0.0.1:{port}" for port in ports
     ]
+
+
+@pytest.mark.parametrize(
+    ("line", "name", "level", "message", "created", "traceback"),
+    [
+        (
+            "a plain print",
+            "redsun.service.cam",
+            logging.DEBUG,
+            "a plain print",
+            None,
+            None,
+        ),
+        (
+            STDLIB_WARNING,
+            "redsun.service.cam.caproto.ioc.camera",
+            logging.WARNING,
+            "frame dropped at sequence 41",
+            1.5,
+            None,
+        ),
+        (
+            LOGURU_ERROR,
+            "redsun.service.cam.fastcs_camera",
+            logging.ERROR,
+            "trigger failed",
+            2.5,
+            "Traceback (most recent call last):\nRuntimeError: no answer",
+        ),
+        (
+            '{"name": "incomplete"}',
+            "redsun.service.cam",
+            logging.DEBUG,
+            '{"name": "incomplete"}',
+            None,
+            None,
+        ),
+        ("[1, 2]", "redsun.service.cam", logging.DEBUG, "[1, 2]", None, None),
+    ],
+    ids=["plain", "stdlib-json", "loguru-json", "incomplete-json", "not-an-object"],
+)
+def test_a_line_of_output_becomes_the_record_it_describes(
+    line: str,
+    name: str,
+    level: int,
+    message: str,
+    created: float | None,
+    traceback: str | None,
+) -> None:
+    record = service_record("cam", line)
+
+    assert (record.name, record.levelno, record.getMessage()) == (name, level, message)
+    assert record.exc_text == traceback
+    if created is not None:
+        assert record.created == created
+
+
+def test_a_rebuilt_record_names_its_service_and_no_location() -> None:
+    text = GlobalFormatter(datefmt="%H").format(service_record("cam", STDLIB_WARNING))
+
+    assert text.endswith(
+        "[WARNING][cam -> caproto.ioc.camera]: frame dropped at sequence 41"
+    )
+
+
+def test_non_ascii_output_arrives_intact(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """The child writes UTF-8 whatever the platform's console encoding."""
+    message = "température 21 °C \u2713"
+    line = json.dumps(
+        {**json.loads(STDLIB_WARNING), "msg": message}, ensure_ascii=False
+    )
+    stand_in = launch("--say", line)
+
+    stand_in.start()
+
+    assert message in messages(service_log, logging.WARNING)
 
 
 def test_an_attached_service_has_nothing_to_start_or_stop() -> None:
