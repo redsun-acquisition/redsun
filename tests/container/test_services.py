@@ -303,6 +303,7 @@ def test_a_device_whose_service_did_not_start_is_skipped(
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
     assert "Failed to build device 'camera': service 'broken' was not started" in errors
     assert "Failed to build device 'typo': service 'atached' is not declared" in errors
+    assert not any("Unused:" in message for message in warnings)
 
 
 def test_a_service_whose_every_device_failed_is_reported_unused(
@@ -311,7 +312,10 @@ def test_a_service_whose_every_device_failed_is_reported_unused(
     class App(AppContainer):
         beamline = declare_service(prefix="BL01:")
         spare = declare_service(prefix="BL02:")
+        stages = declare_service(prefix="ST:")
         broken = declare_device(BrokenDevice, service="beamline")
+        broken_stage = declare_device(BrokenDevice, service="stages")
+        stage = declare_device(PrefixedDevice, service="stages")
         motor = declare_device(MyMotor)
 
     App().build()

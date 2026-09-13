@@ -850,29 +850,17 @@ class AppContainer:
                 for name, error in self._failed.items()
             )
             summary = f"{summary}\nNot built: {missing}"
-        unused = self._unused_services()
+        # a service no device names is not unused: nothing was meant to use it
+        named = {c.service for c in self._device_components.values()}
+        used = {c.service for c in self._built if isinstance(c, _DeviceComponent)}
+        unused = [
+            f"{name} (no device built)"
+            for name in self._services
+            if name in named - used and name not in self._failed_services
+        ]
         if unused:
-            named = ", ".join(f"{name} (no device built)" for name in unused)
-            summary = f"{summary}\nUnused: {named}"
+            summary = f"{summary}\nUnused: {', '.join(unused)}"
         return summary
-
-    def _unused_services(self) -> list[str]:
-        """Return the running services whose every device failed to build.
-
-        A service no device names is not counted: nothing was expected to use it.
-        """
-        unused = []
-        for name in self._services:
-            if name in self._failed_services:
-                continue
-            naming = [
-                component
-                for component in self._device_components.values()
-                if component.service == name
-            ]
-            if naming and not any(component in self._built for component in naming):
-                unused.append(name)
-        return unused
 
     def start_services(self) -> None:
         """Start every service the container launches, and attach to the rest.
