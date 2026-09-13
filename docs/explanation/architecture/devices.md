@@ -4,9 +4,7 @@ A device represents an interface with a hardware component.
 
 `redsun` delegates the device layer entirely to
 [ophyd-async](https://bluesky.github.io/ophyd-async/): device primitives are
-imported directly from `ophyd_async.core`. The `redsun.device` module only
-hosts redsun-specific device protocols (currently
-[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown]).
+imported directly from `ophyd_async.core`.
 
 ```python
 from ophyd_async.core import Device, StandardReadable, SignalRW, soft_signal_rw
@@ -84,7 +82,8 @@ Such a presenter must not read the device before connecting it. Calling
 `connect()` on a device that is already connected returns at once, and
 `force_reconnect=True` is what connects it again.
 [`connect_devices`][redsun.containers.container.AppContainer.connect_devices]
-connects every device, whatever its `autoconnect` says.
+connects every device, whatever its `autoconnect` says, and
+`connect_devices(mock=True)` connects them to mock backends for tests.
 
 !!! note
 
@@ -178,28 +177,40 @@ live view streams frames without creating a store - is documented in
 reference implementation of both patterns lives in
 `tests/sdk/storage/test_integration_plans.py`.
 
-## Connecting devices
+## Standby
 
-ophyd-async devices must be connected before use - this initialises their signal backends
-and verifies hardware communication. Use
-[`AppContainer.connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
-after calling [`build()`][redsun.containers.container.AppContainer.build]:
-
-```python
-app = MyApp()
-app.build()
-app.connect_devices()  # connects all registered devices
-app.run()
-```
-
-Pass `mock=True` to skip hardware communication in tests:
+A service that holds hardware, a serial port or a camera, can let it go while
+it keeps running, and take it back later, when it exposes a command for each.
+Triggering those commands is the application's to do, from the presenter that
+owns the devices:
 
 ```python
-app.connect_devices(mock=True)
+import asyncio
+from typing import Annotated as A
+
+from ophyd_async.core import TriggerableCommand
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
+
+from redsun.presenter import Presenter
+from redsun.virtual import slot
+
+
+class MyCamera(EpicsDevice):
+    open_camera: A[TriggerableCommand, PvSuffix("Open")]
+    close_camera: A[TriggerableCommand, PvSuffix("Close")]
+
+
+class HardwarePresenter(Presenter):
+    @slot
+    async def standby(self) -> None:
+        await asyncio.gather(
+            *(
+                device.close_camera.trigger()
+                for device in self.devices.values()
+                if isinstance(device, MyCamera)
+            )
+        )
 ```
 
-## redsun-specific protocols
-
-The only redsun-specific protocol in the device layer is
-[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown], which marks a
-device as supporting an asynchronous shutdown at application teardown.
+The devices stay connected and the service keeps running throughout; what
+letting go means is the service's to decide.

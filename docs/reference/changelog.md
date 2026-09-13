@@ -112,6 +112,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`LogView`** (`redsun.view.qt.builtins`): `Save logs...` and
   `Clear log window` act on the tab shown.
 
+### Removed
+
+- **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
+  else. No container ever called `shutdown` on a device.
+
 ### Changed (breaking)
 
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device

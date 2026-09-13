@@ -55,7 +55,7 @@ class Presenter(ABC):
     ----------
     name : str
         Identity key of the presenter. Passed as positional-only argument.
-    devices : Mapping[str, redsun.device.Device]
+    devices : Mapping[str, ophyd_async.core.Device]
         Reference to the devices used in the presenter.
     kwargs : Any, optional
         Additional keyword arguments for presenter subclasses.

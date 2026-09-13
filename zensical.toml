@@ -68,7 +68,6 @@ nav = [
         { "API" = [
             { "Async runtime" = "reference/api/aio.md" },
             { "Container" = "reference/api/container.md" },
-            { "Device" = "reference/api/device.md" },
             { "Engine" = "reference/api/engine.md" },
             { "Presenter" = "reference/api/presenter.md" },
             { "Services" = "reference/api/services.md" },
