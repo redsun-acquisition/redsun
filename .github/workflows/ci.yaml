@@ -28,6 +28,18 @@ jobs:
     name: Check Documentation
     uses: ./.github/workflows/check-docs.yaml
 
+  # the one check the ruleset requires: a job skipped because a dependency
+  # failed counts as passed, so this runs regardless and fails on its own
+  all_checks:
+    name: All Checks Passed
+    if: ${{ !cancelled() }}
+    needs: [code_analysis, tests, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any check did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
   publish_docs:
     name: Publish Documentation
     needs: [code_analysis, tests, docs]
