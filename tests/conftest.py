@@ -15,8 +15,11 @@ from psygnal._queue import QueuedCallback
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
+from redsun.log import SessionFileHandler, logger
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 @pytest.fixture(scope="session")
@@ -25,6 +28,20 @@ def qapp() -> QApplication:
 
     start_emitting_from_queue()
     return app
+
+
+@pytest.fixture(autouse=True)
+def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Write session log files under *tmp_path*, and close any a test left open.
+
+    A container opens a log file when it is constructed; without this, every
+    test building one would write to the user's own log directory.
+    """
+    monkeypatch.setattr("redsun.log.user_log_dir", lambda *a, **k: str(tmp_path))
+    yield tmp_path
+    for handler in [h for h in logger.handlers if isinstance(h, SessionFileHandler)]:
+        logger.removeHandler(handler)
+        handler.close()
 
 
 @pytest.fixture(autouse=True)

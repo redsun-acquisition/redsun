@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
+import re
 import sys
 from collections import deque
+from datetime import datetime
 from functools import cached_property
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
+from platformdirs import user_log_dir
 from psygnal import Signal
 
 if TYPE_CHECKING:
@@ -15,9 +22,11 @@ if TYPE_CHECKING:
 __all__ = [
     "BufferHandler",
     "Loggable",
+    "SessionFileHandler",
     "add_handler",
     "log_buffer",
     "remove_handler",
+    "session_log",
     "set_level",
 ]
 
@@ -26,6 +35,15 @@ DEFAULT_LEVEL: Final = "INFO"
 
 DATE_FORMAT: Final = "%d-%m-%y|%H:%M:%S"
 """How a record's timestamp is written."""
+
+LOG_MAX_BYTES: Final = 10 * 1024 * 1024
+"""Size at which a session's log file is rotated."""
+
+LOG_BACKUPS: Final = 5
+"""Rotated files kept for one run of a session, beside the current one."""
+
+LOG_RUNS_KEPT: Final = 20
+"""Runs of one session whose log files are kept; older runs are deleted."""
 
 logger = logging.getLogger("redsun")
 
@@ -141,6 +159,51 @@ class BufferHandler(logging.Handler):
         self._records.clear()
 
 
+class SessionFileHandler(RotatingFileHandler):
+    """Write the records of one run of a session to a file of its own.
+
+    The file sits in the user's log directory, in a folder named after the
+    session, and is named after the moment the run started and its process.
+    It is rotated at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files, and
+    opening it deletes the files of all but the `LOG_RUNS_KEPT` most recent
+    runs of the session.
+    """
+
+    def __init__(self, session: str) -> None:
+        folder = Path(user_log_dir("redsun", appauthor=False)) / re.sub(
+            r"[^\w.-]+", "_", session
+        )
+        folder.mkdir(parents=True, exist_ok=True)
+        _delete_old_runs(folder, keep=LOG_RUNS_KEPT - 1)
+        started = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
+        super().__init__(
+            folder / f"{started}_{os.getpid()}.log",
+            maxBytes=LOG_MAX_BYTES,
+            backupCount=LOG_BACKUPS,
+            encoding="utf-8",
+        )
+
+    @property
+    def files(self) -> list[Path]:
+        """The files of this run, oldest records first."""
+        current = Path(self.baseFilename)
+        rotated = [
+            current.with_name(f"{current.name}.{index}")
+            for index in range(self.backupCount, 0, -1)
+        ]
+        return [path for path in (*rotated, current) if path.exists()]
+
+
+def _delete_old_runs(folder: Path, keep: int) -> None:
+    """Delete the log files of every run in *folder* but the *keep* most recent."""
+    runs = sorted(folder.glob("*.log"))
+    for run in runs[: max(len(runs) - keep, 0)]:
+        for path in folder.glob(f"{run.name}*"):
+            # a run still open in another process keeps its file on Windows
+            with contextlib.suppress(OSError):
+                path.unlink()
+
+
 def set_level(level: int | str) -> None:
     """Set the level of the ``redsun`` logger.
 
@@ -190,6 +253,14 @@ def log_buffer() -> BufferHandler:
         if isinstance(handler, BufferHandler):
             return handler
     raise RuntimeError("no BufferHandler is installed on the 'redsun' logger")
+
+
+def session_log() -> SessionFileHandler | None:
+    """Return the handler writing this run's log file, if a session opened one."""
+    for handler in logger.handlers:
+        if isinstance(handler, SessionFileHandler):
+            return handler
+    return None
 
 
 class Loggable:

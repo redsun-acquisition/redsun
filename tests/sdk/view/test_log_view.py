@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,6 +11,7 @@ from qtpy import QtCore, QtGui
 
 from redsun.log import (
     BufferHandler,
+    SessionFileHandler,
     add_handler,
     log_buffer,
     remove_handler,
@@ -22,7 +24,6 @@ from redsun.view.qt.builtins import LogView
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
-    from pathlib import Path
 
     from qtpy.QtWidgets import QApplication
 
@@ -218,6 +219,53 @@ def test_save_writes_every_record_whatever_is_displayed(
     written = target.read_text(encoding="utf-8")
     assert "a debug line" in written
     assert "a critical line" in written
+
+
+def test_save_copies_the_session_log_rather_than_the_buffer(
+    make_view: Callable[[], LogView], logs: logging.Logger, tmp_path: Path
+) -> None:
+    """A record the buffer has dropped is still in the saved file."""
+    handler = SessionFileHandler("saved")
+    add_handler(handler)
+    try:
+        logs.warning("logged before the buffer dropped it")
+        log_buffer().clear()
+        target = tmp_path / "session.log"
+
+        make_view().save(str(target))
+    finally:
+        remove_handler(handler)
+        handler.close()
+
+    assert "logged before the buffer dropped it" in target.read_text(encoding="utf-8")
+
+
+def test_the_folder_button_opens_the_session_log_folder(
+    make_view: Callable[[], LogView],
+    logs: logging.Logger,
+    log_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    opened: list[QtCore.QUrl] = []
+
+    def open_url(url: QtCore.QUrl) -> bool:
+        opened.append(url)
+        return True
+
+    monkeypatch.setattr(QtGui.QDesktopServices, "openUrl", open_url)
+    assert not make_view()._folder_button.isEnabled()
+
+    handler = SessionFileHandler("browsed")
+    add_handler(handler)
+    try:
+        view = make_view()
+        assert view._folder_button.isEnabled()
+        view._folder_button.click()
+    finally:
+        remove_handler(handler)
+        handler.close()
+
+    assert [Path(url.toLocalFile()) for url in opened] == [log_directory / "browsed"]
 
 
 def test_the_level_selector_follows_the_displayed_level(

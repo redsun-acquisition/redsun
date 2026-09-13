@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
-from redsun.log import GlobalFormatter, log_buffer
+from redsun.log import GlobalFormatter, log_buffer, session_log
 from redsun.view import ViewPosition
 from redsun.view.qt import QtView
 
@@ -77,6 +78,10 @@ class LogView(QtView):
     one by one, so a burst of logging does not stall the window, and the
     console keeps no more lines than the session buffer holds records.
 
+    When the session has a log file open, ``Save logs...`` copies it and
+    ``Open log folder`` shows the folder holding it in the system's file
+    browser; without one the folder button is disabled.
+
     Parameters
     ----------
     name : str
@@ -115,17 +120,24 @@ class LogView(QtView):
         self._save_button.clicked.connect(self._on_save_clicked)
         self._clear_button = QtW.QPushButton("Clear log window", self)
         self._clear_button.clicked.connect(self.clear)
+        self._folder_button = QtW.QPushButton("Open log folder", self)
+        self._folder_button.clicked.connect(self._on_folder_clicked)
+        handler = session_log()
+        self._folder_button.setEnabled(handler is not None)
+        if handler is not None:
+            self._folder_button.setToolTip(str(Path(handler.baseFilename).parent))
 
         root = QtW.QGridLayout(self)
-        root.addWidget(self._console, 0, 0, 1, 3)
+        root.addWidget(self._console, 0, 0, 1, 4)
         root.addWidget(QtW.QLabel("Level:", self), 1, 0)
-        root.addWidget(self._level_combo, 1, 1, 1, 2)
+        root.addWidget(self._level_combo, 1, 1, 1, 3)
         root.addWidget(self._save_button, 2, 1)
         root.addWidget(self._clear_button, 2, 2)
-        # the label column keeps its own width; the two that carry the buttons
-        # share the rest evenly, so the combo box spans exactly both of them
-        root.setColumnStretch(1, 1)
-        root.setColumnStretch(2, 1)
+        root.addWidget(self._folder_button, 2, 3)
+        # the label column keeps its own width; the three that carry the
+        # buttons share the rest evenly, so the combo box spans exactly them
+        for column in (1, 2, 3):
+            root.setColumnStretch(column, 1)
         self.setLayout(root)
 
         # only the newest records can end up on screen, so a burst larger
@@ -184,10 +196,23 @@ class LogView(QtView):
         self._console.clear()
 
     def save(self, path: str) -> None:
-        """Write every buffered record to *path*, whatever the displayed level."""
+        """Write this run's records to *path*, whatever the displayed level.
+
+        The records come from the session's log file when a session opened
+        one, so nothing the buffer has already dropped is missing, and from the
+        buffer otherwise.
+        """
+        handler = session_log()
         with open(path, "w", encoding="utf-8") as fh:
+            if handler is None:
+                fh.writelines(
+                    f"{self._formatter.format(record)}\n"
+                    for record in log_buffer().records
+                )
+                return
+            handler.flush()
             fh.writelines(
-                f"{self._formatter.format(record)}\n" for record in log_buffer().records
+                source.read_text(encoding="utf-8") for source in handler.files
             )
 
     def _on_record(self, record: logging.LogRecord) -> None:
@@ -251,3 +276,11 @@ class LogView(QtView):
             self.save(chosen)
         except OSError as e:
             QtW.QMessageBox.warning(self, "Could not save logs", str(e))
+
+    def _on_folder_clicked(self) -> None:
+        handler = session_log()
+        if handler is None:
+            return
+        folder = Path(handler.baseFilename).parent
+        if not QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(folder))):
+            QtW.QMessageBox.warning(self, "Could not open the log folder", str(folder))

@@ -21,11 +21,21 @@ Dates are specified in the format `DD-MM-YYYY`.
   own background, so the text keeps its contrast under a light and a dark
   palette alike, and redrawn when the palette changes. Buttons choose the lowest level displayed,
   redrawing from the buffer so raising the threshold never discards anything,
-  and `Save logs...` writes every buffered record regardless of what is on
-  screen. Records arriving while it is open are drawn in batches every 100 ms,
+  and `Save logs...` writes every record of the run regardless of what is on
+  screen, copied from the session's log file when one is open and taken from
+  the buffer otherwise. `Open log folder` opens the folder holding the
+  session's log files, and is disabled when no log file is open. Records arriving while it is open are drawn in batches every 100 ms,
   at most 2 000 per batch, and the console keeps no more lines than the buffer
   holds records. Available from a configuration file as `plugin_name: redsun`,
   `plugin_id: logs` under `views`.
+- `SessionFileHandler` and `session_log()` (`redsun.log`) - a file of each run's
+  log records, at `<user log directory>/redsun/<session>/<start time>_<pid>.log`.
+  The file is rotated at 10 MB with 5 older files kept, and opening one deletes
+  the files of all but the 20 most recent runs of that session. `session_log()`
+  returns the handler installed on the `redsun` logger, or `None`.
+- `AppContainer` (`redsun.containers`) opens a `SessionFileHandler` for its
+  session when it is constructed and when it is built after a shutdown, and
+  `shutdown()` closes it.
 
 ### Changed
 
