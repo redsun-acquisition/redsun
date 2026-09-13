@@ -48,7 +48,7 @@ jobs:
 
   upload_coverage:
     name: Upload coverage
-    if: always()
+    if: ${{ !cancelled() }}
     needs: [test]
     runs-on: ubuntu-latest
     steps:
