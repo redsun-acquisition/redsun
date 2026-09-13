@@ -49,19 +49,10 @@ jobs:
             uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
         shell: bash
 
-      - name: Generate UUID
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            echo "UUID=$(powershell -Command '[guid]::NewGuid().ToString()')" >> $GITHUB_ENV
-          else
-            echo "UUID=$(uuidgen)" >> $GITHUB_ENV
-          fi
-
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}-${{ env.UUID }}
+          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}
           path: ./.coverage*
           include-hidden-files: true
 
