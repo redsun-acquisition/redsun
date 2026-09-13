@@ -37,7 +37,7 @@ from redsun._hooks import (
     parse_hook_specs,
     resolve_hooks,
 )
-from redsun.aio import _loop_factory, run_coro
+from redsun.aio import get_shared_loop, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers.components import (
     _ComponentField,
@@ -51,7 +51,7 @@ from redsun.containers.components import (
     _ViewField,
     expects_positionals,
 )
-from redsun.log import set_level
+from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
@@ -240,6 +240,7 @@ class AppContainer:
         "_hooks",
         "_is_built",
         "_report",
+        "_session_log",
         "_virtual_container",
     )
 
@@ -489,6 +490,9 @@ class AppContainer:
                 if key not in COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
 
+        self._session_log: SessionFileHandler | None = None
+        self._open_session_log()
+
     @classmethod
     def _refuse_unresolved_fields(cls) -> None:
         """Refuse a container whose ``from_config`` fields have no file to read.
@@ -668,9 +672,8 @@ class AppContainer:
             logger.warning("Container already built, skipping rebuild")
             return self
 
-        # ensure the background loop
-        # is running
-        _ = _loop_factory()
+        get_shared_loop()
+        self._open_session_log()
 
         logger.info("Building application container...")
 
@@ -932,9 +935,12 @@ class AppContainer:
         5. ``_destroy`` - end what dropping a reference does not end.
 
         Afterwards the container holds nothing it built, so ``devices``,
-        ``presenters`` and ``views`` raise until the next ``build()``.
+        ``presenters`` and ``views`` raise until the next ``build()``. The
+        session's log file is closed too, whether or not the container was
+        built; the next ``build()`` starts a new one.
         """
         if not self._is_built:
+            self._close_session_log()
             return
 
         self._disconnect()
@@ -945,6 +951,20 @@ class AppContainer:
 
         self._is_built = False
         logger.info("Container shutdown complete")
+        self._close_session_log()
+
+    def _open_session_log(self) -> None:
+        """Start writing this run's records to the session's log file."""
+        if self._session_log is None:
+            self._session_log = SessionFileHandler(self._config["name"])
+            add_handler(self._session_log)
+
+    def _close_session_log(self) -> None:
+        """Stop writing to the session's log file, and close it."""
+        if self._session_log is not None:
+            remove_handler(self._session_log)
+            self._session_log.close()
+            self._session_log = None
 
     def _disconnect(self) -> None:
         """Undo every connection and subscription the wiring made."""

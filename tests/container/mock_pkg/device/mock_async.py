@@ -14,7 +14,7 @@ class MockOAMotor(StandardReadable):
     their values can be read.
     """
 
-    def __init__(self, name: str, /, *, units: str = "mm") -> None:
+    def __init__(self, name: str, *, units: str = "mm") -> None:
         self.x = soft_signal_rw(float, units=units)
         self.y = soft_signal_rw(float, units=units)
         super().__init__(name=name)

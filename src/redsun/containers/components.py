@@ -288,7 +288,7 @@ class _DeviceComponent(_ComponentBase[Device]):
 
     def build(self) -> Device:
         """Build the device instance, validating it is an ophyd-async Device."""
-        instance = self.cls(self.name, **self.kwargs)
+        instance = self.cls(name=self.name, **self.kwargs)
         if not isinstance(instance, Device):
             raise TypeError(
                 f"{type(instance).__name__!r} (device {self.name!r}) is not an "

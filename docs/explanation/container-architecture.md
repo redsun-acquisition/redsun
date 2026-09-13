@@ -125,7 +125,7 @@ ordinary checked code rather than a script whose mistakes only surface at build.
 
 ## Component naming
 
-Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries and passed as the first positional argument to the component constructor. The name is resolved with the following priority:
+Every component receives a `name` that is used as its key in the container's `devices`, `presenters`, or `views` dictionaries. A device receives it as the `name` keyword argument, and a presenter or a view as the first positional argument of its constructor. The name is resolved with the following priority:
 
 1. `alias` - if an explicit `alias` is passed to `declare_device()`, `declare_presenter()`, or `declare_view()`, that value is used regardless of everything else.
 2. attribute name - in the declarative flow, the Python attribute name becomes the component name when no `alias` is provided.
@@ -242,7 +242,7 @@ to run ophyd-async's connect lifecycle on every registered device.
 **Construction** - the steps `virtual container`, `devices`, `presenters` and `views`:
 
 1. [`VirtualContainer`][redsun.virtual.VirtualContainer] - created and seeded with the application configuration.
-2. **Devices** - each receives its resolved name and keyword arguments.
+2. **Devices** - each is constructed as `cls(name=<resolved name>, **kwargs)`.
 3. **Presenters** - each receives its resolved name and the full device dictionary.
 4. **Views** - each receives its resolved name.
 

@@ -1,0 +1,25 @@
+name: Publish documentation
+
+on:
+  workflow_call:
+
+jobs:
+  publish-docs:
+    name: Publish on pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download the built site
+        uses: actions/download-artifact@v8
+        with:
+          name: docs-site
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: site

@@ -11,7 +11,6 @@ class MockDetector(StandardReadable):
     def __init__(
         self,
         name: str,
-        /,
         *,
         exposure: float = 1.0,
         egu: str = "s",

@@ -35,3 +35,5 @@
 ## Built-ins
 
 ::: redsun.view.qt.builtins.StorageView
+
+::: redsun.view.qt.builtins.LogView

@@ -11,27 +11,70 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- **`AppContainer.build`** (`redsun.containers.container`) constructs a device
+  as `cls(name=<name>, **kwargs)` rather than `cls(<name>, **kwargs)`. A device
+  subclassing `ophyd_async.epics.core.EpicsDevice`, whose first parameter is
+  `prefix`, can be declared with `declare_device(MyCamera, prefix="CAM:")`. A
+  device constructor taking `name` positional-only fails to build; drop the `/`:
+
+  ```python
+  class MyMotor(StandardReadable):
+      def __init__(self, name: str, *, egu: str = "mm") -> None: ...
+  ```
+
+## [0.12.3] - 13-09-2026
+
 ### Added
 
 - `BufferHandler` and `log_buffer()` (`redsun.log`) - the session's log records,
   retained as they are emitted. The handler is installed on the `redsun` logger
   alongside the stdout one and keeps the most recent 10 000 records, so a
   consumer built later in the session can still show what happened before it
-  existed.
+  existed. `BufferHandler.capacity` is how many records it keeps.
 - `LogView` (`redsun.view.qt.builtins`) - a read-only console showing those
   records, colour-coded by level in one of two sets chosen from the console's
   own background, so the text keeps its contrast under a light and a dark
   palette alike, and redrawn when the palette changes. Buttons choose the lowest level displayed,
   redrawing from the buffer so raising the threshold never discards anything,
-  and `Save logs...` writes every buffered record regardless of what is on
-  screen. Available from a configuration file as `plugin_name: redsun`,
+  and `Save logs...` writes every record of the run regardless of what is on
+  screen, copied from the session's log file when one is open and taken from
+  the buffer otherwise. `Open log folder` opens the folder holding the
+  session's log files, and is disabled when no log file is open. Records arriving while it is open are drawn in batches every 100 ms,
+  at most 2 000 per batch, and the console keeps no more lines than the buffer
+  holds records. Available from a configuration file as `plugin_name: redsun`,
   `plugin_id: logs` under `views`.
+- `SessionFileHandler` and `session_log()` (`redsun.log`) - a file of each run's
+  log records, at `<user log directory>/redsun/<session>/<start time>_<pid>.log`.
+  The file is rotated at 10 MB with 5 older files kept, and opening one deletes
+  the files of all but the 20 most recent runs of that session. `session_log()`
+  returns the handler installed on the `redsun` logger, or `None`.
+- `AppContainer` (`redsun.containers`) opens a `SessionFileHandler` for its
+  session when it is constructed and when it is built after a shutdown, and
+  `shutdown()` closes it.
+
+### Changed
+
+- **`RunEngine`** (`redsun.engine`) runs each plan, and each `resume`, on a
+  thread of its own named `RunEngine`, which ends with the plan, instead of on
+  a thread pool kept for the engine's lifetime. A plan submitted while another
+  is running fails with bluesky's error instead of waiting its turn.
 
 ### Fixed
 
+- **`RunEngine`** (`redsun.engine`) takes `loop=None` and falls back to the
+  shared background loop when an engine is built, so importing `redsun.engine`
+  no longer starts the loop and its thread.
 - **`GlobalFormatter.format`** (`redsun.log`) appends the traceback of a record
   carrying one, and the stack of a record logged with `stack_info=True`, so a
   `logger.exception(...)` call reaches stdout and `LogView` with both.
+
+### Removed
+
+- **`redsun.common.qt.ask_file_path`** and the `redsun.common` package.
+- **`QtAppContainer`**'s main window no longer has a `File` menu or its
+  `Save configuration as...` action, which wrote no file.
 
 ## [0.12.2] - 07-09-2026
 
@@ -860,6 +903,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0

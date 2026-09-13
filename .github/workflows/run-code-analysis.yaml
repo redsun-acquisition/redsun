@@ -2,13 +2,6 @@ name: Check code formatting and type hints
 
 on:
   workflow_call:
-    inputs:
-      ref:
-        required: true
-        type: string
-      event_name:
-        required: true
-        type: string
 
 jobs:
   ruff:
@@ -20,35 +13,30 @@ jobs:
       # violation would pass here and reach the branch unnoticed
       - uses: astral-sh/ruff-action@v4.1.0
         with:
-          version: 0.16.5
+          version-file: uv.lock
           args: "check"
           src: "."
       - uses: astral-sh/ruff-action@v4.1.0
         with:
-          version: 0.16.5
+          version-file: uv.lock
           args: "format --check"
           src: "."
 
   mypy:
-    strategy:
-        matrix:
-            python-version: ["3.14"]
-            frontend: ["pyside", "pyqt"]
-            os: [ubuntu-latest]
-
     name: mypy with Qt
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        frontend: ["pyside", "pyqt"]
     steps:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+          python-version: "3.14"
 
       # the environment, the binding and the flags all come from
       # [tool.tox] in pyproject.toml, so this runs what a contributor runs

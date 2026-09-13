@@ -14,8 +14,9 @@ should not build a loop or install a backend of their own.
 from __future__ import annotations
 
 import asyncio
+from functools import cache
 from threading import Thread
-from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 import aiologic as aiol
 import psygnal._async
@@ -64,48 +65,16 @@ class AwaitableEvent:
 R = TypeVar("R")
 
 
-class _LoopFactory:
-    """Factory for a shared background event loop.
-
-    Not public API.
-    """
-
-    _loop: ClassVar[asyncio.AbstractEventLoop | None] = None
-    _thread: ClassVar[Thread | None] = None
-
-    def __call__(self) -> asyncio.AbstractEventLoop:
-        if _LoopFactory._loop is None:
-            loop = asyncio.new_event_loop()
-            thread = Thread(target=loop.run_forever, daemon=True)
-            thread.start()
-
-            # this is a hack to make sure that the internal function
-            # that caches the event loop associated with the current thread
-            # is already aware of the loop we just created
-            _ensure_event_loop_running.loop_to_thread[loop] = thread  # type: ignore
-
-            _LoopFactory._loop = loop
-            _LoopFactory._thread = thread
-        return _LoopFactory._loop
-
-    @property
-    def loop(self) -> asyncio.AbstractEventLoop:
-        return self()
-
-
-#: Global factory for shared background event loop. Not public.
-_loop_factory = _LoopFactory()
-
-
+@cache
 def get_shared_loop() -> asyncio.AbstractEventLoop:
-    """Return the background event loop.
-
-    Returns
-    -------
-    asyncio.AbstractEventLoop
-        The shared event loop.
-    """
-    return _loop_factory()
+    """Return the background event loop, starting it on its own thread on first use."""
+    loop = asyncio.new_event_loop()
+    thread = Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    # bluesky's RunEngine looks up the thread of a loop that is already running,
+    # and a loop it did not start itself is missing from that registry
+    _ensure_event_loop_running.loop_to_thread[loop] = thread  # type: ignore[attr-defined]
+    return loop
 
 
 class CulsansAsyncioBackend(_AsyncBackend, Loggable):
@@ -242,7 +211,7 @@ def run_coro(
     R
         The result of the coroutine.
     """
-    future = asyncio.run_coroutine_threadsafe(coro, _loop_factory())
+    future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
     return future if return_future else future.result()
 
 

@@ -145,13 +145,17 @@ views:
   storage:
     plugin_name: redsun
     plugin_id: storage
+  logs:
+    plugin_name: redsun
+    plugin_id: logs
 ```
 
 A manifest entry is imported only when a configuration names it, so a headless
 installation never imports the Qt views.
 
 The available built-ins are documented in
-[Presenters](architecture/presenters.md#built-in-presenters).
+[Presenters](architecture/presenters.md#built-in-presenters), and the `logs`
+view in [Configure logging](../how-to/configure-logging.md#show-the-logs-in-the-application).
 
 ## Inline vs. config-based registration
 

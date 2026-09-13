@@ -69,6 +69,56 @@ set_level("debug")
 A name is matched without regard to case, so a value taken straight from a
 command-line flag works. One that names no level raises `ValueError`.
 
+## Find a session's log file
+
+A container writes the records of a run to a file as well as to the console.
+The file is opened when the container is constructed and closed by
+`shutdown()`. It lives in the user's log directory as `platformdirs` reports it,
+in a folder named after the session:
+
+| Platform | Folder |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\redsun\Logs\<session>\` |
+| macOS | `~/Library/Logs/redsun/<session>/` |
+| Linux | `~/.local/state/redsun/log/<session>/` |
+
+Each run gets its own file, named after the moment it started and its process
+id, such as `2026-09-13T14-02-46_8120.log`. A file reaching 10 MB is rotated to
+`.log.1`, `.log.2` and so on, up to 5 older files. Starting a run deletes the
+files of all but the 20 most recent runs of the same session.
+
+[`session_log`][redsun.log.session_log] returns the handler writing the current
+run, and its `files` property lists the run's files with the oldest records
+first.
+
+## Show the logs in the application
+
+redsun ships a Qt view for the session's records,
+[`LogView`][redsun.view.qt.builtins.LogView]. Declare it under `views` like any
+other component:
+
+```yaml
+views:
+  logs:
+    plugin_name: redsun
+    plugin_id: logs
+```
+
+It sits at the bottom of the main window and shows every record of the session,
+including those logged while the container was building, coloured by level.
+Its controls:
+
+| Control | What it does |
+| --- | --- |
+| `Level` | shows only records at or above the chosen level; lowering it again brings hidden records back |
+| `Save logs...` | writes the run's records to a file you choose, whatever level is shown. It copies the session's log file, so records the view no longer holds are saved too |
+| `Clear log window` | empties the console; the records stay available to `Level` and `Save logs...` |
+| `Open log folder` | opens the folder holding the session's log files in the system's file browser |
+
+Without a session log file, as when the view is used outside a container,
+`Save logs...` writes the records kept in memory and `Open log folder` is
+disabled.
+
 ## Send records somewhere else as well
 
 [`add_handler`][redsun.log.add_handler] adds a destination without disturbing

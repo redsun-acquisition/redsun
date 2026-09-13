@@ -26,6 +26,29 @@ ophyd-async provides several base classes depending on the complexity of your de
 
 For most simple devices, `StandardReadable` is the right starting point.
 
+## Constructing a device in a container
+
+A container builds a device as `cls(name=<component name>, **kwargs)`, the
+keyword arguments coming from the declaration and the configuration file. The
+constructor has to accept `name` by keyword, as every ophyd-async base class
+does, so a device whose first parameter is something else builds too:
+
+```python
+from ophyd_async.epics.core import EpicsDevice
+
+from redsun.containers import AppContainer, declare_device
+
+
+class MyCamera(EpicsDevice): ...
+
+
+class MyApp(AppContainer):
+    camera = declare_device(MyCamera, prefix="CAM:")
+```
+
+A constructor taking `name` positional-only (`def __init__(self, name: str, /)`)
+fails to build, and the container logs it and skips the device.
+
 ## Signals
 
 Signals are the typed, named attributes of a device. ophyd-async provides four signal types:

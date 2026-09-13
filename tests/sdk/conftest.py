@@ -1,4 +1,6 @@
-from pathlib import Path
+from __future__ import annotations
+
+from collections.abc import Iterator
 
 import pytest
 
@@ -10,13 +12,12 @@ from .mocks import MockDetector
 
 
 @pytest.fixture
-def config_path() -> Path:
-    return Path(__file__).parent / "data"
-
-
-@pytest.fixture(scope="function")
-def RE() -> RunEngine:
-    return RunEngine()
+def RE() -> Iterator[RunEngine]:
+    """Yield an engine, and abort whatever plan the test left running or paused."""
+    engine = RunEngine()
+    yield engine
+    if engine.state != "idle":
+        engine.abort()
 
 
 @pytest.fixture(scope="function")
@@ -32,7 +33,9 @@ def detector() -> MockDetector:
     return device
 
 
-@pytest.fixture(scope="function")
-def bus() -> VirtualContainer:
-    # containers are fully instance-scoped; no shared state to reset
-    return VirtualContainer()
+@pytest.fixture
+def bus() -> Iterator[VirtualContainer]:
+    """Yield a container, and undo every connection and subscription it made."""
+    container = VirtualContainer()
+    yield container
+    container.disconnect_all()
