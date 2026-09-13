@@ -53,6 +53,12 @@ Dates are specified in the format `DD-MM-YYYY`.
   carrying one, and the stack of a record logged with `stack_info=True`, so a
   `logger.exception(...)` call reaches stdout and `LogView` with both.
 
+### Removed
+
+- **`redsun.common.qt.ask_file_path`** and the `redsun.common` package.
+- **`QtAppContainer`**'s main window no longer has a `File` menu or its
+  `Save configuration as...` action, which wrote no file.
+
 ## [0.12.2] - 07-09-2026
 
 ### Fixed
