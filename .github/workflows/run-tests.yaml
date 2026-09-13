@@ -10,6 +10,9 @@ jobs:
   test:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # a job takes about a minute; a hung one otherwise holds main's queue for
+    # GitHub's six-hour default
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
