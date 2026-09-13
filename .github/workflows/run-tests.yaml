@@ -2,19 +2,9 @@ name: Run tests
 
 on:
   workflow_call:
-    inputs:
-      ref:
-        required: true
-        type: string
-      event_name:
-        required: true
-        type: string
     secrets:
       codecov_token:
         required: false
-
-env:
-  PROJECT_NAME: redsun
 
 jobs:
   test:
@@ -28,55 +18,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install dependencies
+      - name: Install Qt system libraries
+        if: runner.os == 'Linux'
         run: |
-            if [ "$RUNNER_OS" == "Linux" ]; then
-                echo "DISPLAY=:99.0" >> $GITHUB_ENV
-                sudo apt-get update
-                sudo apt-get install -y libegl1 libdbus-1-3 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 x11-utils libxcb-cursor0 libopengl0
-                /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX
-            fi
-            uv sync --group dev
-        shell: bash
+            sudo apt-get update
+            sudo apt-get install -y libegl1 libdbus-1-3 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 x11-utils libxcb-cursor0 libopengl0
       
-      # if we're running on linux make sure to
-      # create a virtual display otherwise it goes crazy
       - name: Run tests with coverage
         run: |
-            uv run coverage run -p -m pytest --color=yes --log-cli-level=DEBUG
+            uv run --locked coverage run -p -m pytest --color=yes
         shell: bash
-
-      - name: Generate UUID
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            echo "UUID=$(powershell -Command '[guid]::NewGuid().ToString()')" >> $GITHUB_ENV
-          else
-            echo "UUID=$(uuidgen)" >> $GITHUB_ENV
-          fi
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v7
         with:
-          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}-${{ env.UUID }}
+          name: covreport-${{ matrix.os }}-py${{ matrix.python-version }}
           path: ./.coverage*
           include-hidden-files: true
 
   upload_coverage:
     name: Upload coverage
-    if: always()
+    if: ${{ !cancelled() }}
     needs: [test]
     runs-on: ubuntu-latest
     steps:
@@ -95,23 +65,7 @@ jobs:
 
       - name: Combine coverage data
         run: |
-          REPO_NAME="${GITHUB_REPOSITORY##*/}"
-          echo "[paths]" > ci_coveragerc
-          echo "source =" >> ci_coveragerc
-          if [[ -d "src" ]]; then
-            echo "    ${GITHUB_WORKSPACE}/src" >> ci_coveragerc
-            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME\\src" >> ci_coveragerc
-            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
-            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
-          else
-            echo "    ${GITHUB_WORKSPACE}" >> ci_coveragerc
-            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME" >> ci_coveragerc
-            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
-            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
-          fi
-          echo "    */site-packages/" >> ci_coveragerc
-          cat ci_coveragerc
-          uv run coverage combine --rcfile=ci_coveragerc covreports
+          uv run coverage combine covreports
           uv run coverage xml -o coverage.xml
           uv run coverage report
           uv run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY

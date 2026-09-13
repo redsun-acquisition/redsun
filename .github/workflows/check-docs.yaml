@@ -1,0 +1,31 @@
+name: Check documentation
+
+on:
+  workflow_call:
+
+jobs:
+  check-docs:
+    name: Build and check cross-references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.11"
+
+      - name: Build docs and check cross-references
+        run: uv run tox -e docs
+
+      # the publish job deploys this artifact rather than building again,
+      # so what reaches Pages is what was checked
+      - name: Store the built site
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: site/
+          if-no-files-found: error
+          retention-days: 7

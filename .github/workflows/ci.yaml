@@ -7,44 +7,54 @@ on:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
+# a newer push to main must not cancel a run that is publishing the docs
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   code_analysis:
     name: Run Code Analysis
     uses: ./.github/workflows/run-code-analysis.yaml
-    with:
-      ref: ${{ github.ref }}
-      event_name: ${{ github.event_name }}
 
   tests:
     name: Run Tests
     uses: ./.github/workflows/run-tests.yaml
-    with:
-      ref: ${{ github.ref }}
-      event_name: ${{ github.event_name }}
-    secrets: inherit
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
-    name: Deploy Documentation
-    needs: [code_analysis, tests]
-    if: success()
-    uses: ./.github/workflows/deploy-docs.yaml
+    name: Check Documentation
+    uses: ./.github/workflows/check-docs.yaml
+
+  # the one check the ruleset requires: a job skipped because a dependency
+  # failed counts as passed, so this runs regardless and fails on its own
+  all_checks:
+    name: All Checks Passed
+    if: ${{ !cancelled() }}
+    needs: [code_analysis, tests, docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any check did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
+  publish_docs:
+    name: Publish Documentation
+    needs: [code_analysis, tests, docs]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/publish-docs.yaml
     permissions:
       contents: write
-    with:
-      ref: ${{ github.ref }}
-    secrets: inherit
+    concurrency:
+      group: pages
+      cancel-in-progress: false
 
   build:
     name: Build Package
-    needs: [tests, docs]
-    if: success() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [code_analysis, tests, docs]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -55,18 +65,7 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
 
       - name: Build a binary wheel and a source tarball
-        run: |
-          uv build
-          echo "Build completed. Contents of dist/:"
-          ls -lah dist/
-
-      - name: Verify build artifacts
-        run: |
-          if [ ! -f dist/*.whl ] || [ ! -f dist/*.tar.gz ]; then
-            echo "Error: Expected build artifacts not found"
-            exit 1
-          fi
-          echo "Build artifacts verified successfully"
+        run: uv build
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v7
@@ -91,5 +90,3 @@ jobs:
             path: dist/
         - name: Publish distribution 📦 to PyPI
           uses: pypa/gh-action-pypi-publish@release/v1
-          with:
-            verbose: true
