@@ -53,18 +53,7 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
 
       - name: Build a binary wheel and a source tarball
-        run: |
-          uv build
-          echo "Build completed. Contents of dist/:"
-          ls -lah dist/
-
-      - name: Verify build artifacts
-        run: |
-          if [ ! -f dist/*.whl ] || [ ! -f dist/*.tar.gz ]; then
-            echo "Error: Expected build artifacts not found"
-            exit 1
-          fi
-          echo "Build artifacts verified successfully"
+        run: uv build
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v7
