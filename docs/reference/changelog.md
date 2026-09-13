@@ -9,6 +9,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+## [0.12.3] - 13-09-2026
+
 ### Added
 
 - `BufferHandler` and `log_buffer()` (`redsun.log`) - the session's log records,
@@ -886,6 +888,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/redsun-acquisition/redsun/compare/v0.11.2...v0.12.0
