@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -32,7 +35,9 @@ def detector() -> MockDetector:
     return device
 
 
-@pytest.fixture(scope="function")
-def bus() -> VirtualContainer:
-    # containers are fully instance-scoped; no shared state to reset
-    return VirtualContainer()
+@pytest.fixture
+def bus() -> Iterator[VirtualContainer]:
+    """Yield a container, and undo every connection and subscription it made."""
+    container = VirtualContainer()
+    yield container
+    container.disconnect_all()
