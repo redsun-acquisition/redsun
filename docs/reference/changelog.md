@@ -9,6 +9,19 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- **`AppContainer.build`** (`redsun.containers.container`) constructs a device
+  as `cls(name=<name>, **kwargs)` rather than `cls(<name>, **kwargs)`. A device
+  subclassing `ophyd_async.epics.core.EpicsDevice`, whose first parameter is
+  `prefix`, can be declared with `declare_device(MyCamera, prefix="CAM:")`. A
+  device constructor taking `name` positional-only fails to build; drop the `/`:
+
+  ```python
+  class MyMotor(StandardReadable):
+      def __init__(self, name: str, *, egu: str = "mm") -> None: ...
+  ```
+
 ## [0.12.3] - 13-09-2026
 
 ### Added

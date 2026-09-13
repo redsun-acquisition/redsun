@@ -11,7 +11,6 @@ class MyMotor(StandardReadable):
     def __init__(
         self,
         name: str,
-        /,
         *,
         egu: str = "mm",
         integer: int = 0,

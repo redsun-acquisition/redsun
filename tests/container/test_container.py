@@ -18,6 +18,7 @@ from mock_pkg.controller import (
 from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
 from mock_pkg.view import BrokenView, MockMotorView, MockQtView
 from ophyd_async.core import Device
+from ophyd_async.epics.core import EpicsDevice
 from qtpy.QtWidgets import QApplication
 
 from redsun.containers import (
@@ -1173,7 +1174,7 @@ class TestChildDevices:
         class MotorWithChild(MyMotor):
             """Motor that owns a child axis device."""
 
-            def __init__(self, name: str, /, **kwargs: Any) -> None:
+            def __init__(self, name: str, **kwargs: Any) -> None:
                 super().__init__(name, **kwargs)
                 # child device shares the parent name as a namespace prefix
                 self.aux = MyMotor(f"{name}-aux", egu="deg")
@@ -1194,7 +1195,7 @@ class TestChildDevices:
         """Child device signals work independently from the parent."""
 
         class MotorWithChild(MyMotor):
-            def __init__(self, name: str, /, **kwargs: Any) -> None:
+            def __init__(self, name: str, **kwargs: Any) -> None:
                 super().__init__(name, **kwargs)
                 self.aux = MyMotor(f"{name}-aux", egu="deg")
 
@@ -1242,6 +1243,19 @@ class TestOphyAsyncDevices:
         app.build()
         assert "motor" in app.devices
         assert app.devices["motor"].name == "motor"
+
+    def test_an_epics_device_builds_with_its_prefix(self) -> None:
+        """A device whose first parameter is not ``name`` gets its name by keyword."""
+
+        class Camera(EpicsDevice):
+            pass
+
+        class TestApp(AppContainer):
+            cam = declare_device(Camera, prefix="CAM:")
+
+        app = TestApp().build()
+
+        assert app.devices["cam"].name == "cam"
 
     def test_oa_device_satisfies_device(self) -> None:
         """An ophyd-async StandardReadable satisfies ophyd-async Device."""
