@@ -26,12 +26,8 @@ _LEVELS: tuple[tuple[str, int], ...] = (
     ("CRITICAL", logging.CRITICAL),
 )
 
-# TODO: these hardcoded color encodings
-# are not really great. at some point
-# a smarter solution would be preferred.
-# especially because when writing logs to file,
-# these colors seem to be part of the written file as well
-# (although maybe this is not such a bad thing after all)
+# TODO: the level colours are fixed, two sets picked by background lightness;
+# a palette with its own colours for log levels could supply them instead
 _ON_LIGHT: dict[int, str] = {
     logging.DEBUG: "#5c5c5c",
     logging.INFO: "#0b3d91",
