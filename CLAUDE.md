@@ -76,10 +76,13 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   through the `schema_version` / `frontend` / `session` / `metadata`
   properties.
 - **`AppContainer.build()` phase order cannot change**, and its docstring
-  records it: VirtualContainer -> devices -> presenters -> views ->
+  records it: services -> VirtualContainer -> devices -> presenters -> views ->
   `register_providers` -> `wire` -> `inject_dependencies`. Every provider is
   registered before any injection runs; never interleave the last two phases,
   and never move work into `__init__` that belongs in a phase.
+- **Services live outside the build.** `shutdown()` stops them whether or not
+  the container was built, and before the session log file closes; a build
+  that raises stops them before the exception leaves it.
 - **A component that fails to build is logged and skipped, in every layer.**
   The build records the exception under the component's name in `_failed` and
   carries on, so a session runs with what it has. Phases and the

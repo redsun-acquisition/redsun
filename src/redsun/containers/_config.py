@@ -12,6 +12,7 @@ class AppConfig(RedSunConfig, total=False):
     used by the application layer. These are **not** propagated to components.
     """
 
+    services: NotRequired[dict[str, Any]]
     devices: NotRequired[dict[str, Any]]
     presenters: NotRequired[dict[str, Any]]
     views: NotRequired[dict[str, Any]]

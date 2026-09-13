@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 from ophyd_async.core import Device
 
 from redsun.presenter import PPresenter
+from redsun.services import Service
 from redsun.view import PView
 
 from ._structural import problems
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from redsun.containers.container import AppContainer
 
@@ -214,6 +215,95 @@ def declare_presenter(
     )
 
 
+class _ServiceField:
+    """Sentinel returned by [`declare_service`][redsun.containers.declare_service]. Resolved by the metaclass into a ``_ServiceComponent``."""
+
+    __slots__ = ("alias", "kwargs")
+
+    def __init__(self, alias: str | None, kwargs: dict[str, Any]) -> None:
+        self.alias = alias
+        self.kwargs = kwargs
+
+
+def declare_service(
+    *,
+    module: str | None = None,
+    ready: str | None = None,
+    prefix: str = "",
+    args: Sequence[str] = (),
+    stop_timeout: float = 10.0,
+    alias: str | None = None,
+) -> Service:
+    """Declare a service the devices of the container talk to.
+
+    A service with a *module* is launched by the container, as
+    ``python -m <module> <args>``, when the container is built; one without is
+    attached to, already running elsewhere:
+
+    ```python
+    class MyApp(AppContainer):
+        camera_ioc = declare_service(
+            module="mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"
+        )
+        camera = declare_device(MyCamera, service="camera_ioc")
+    ```
+
+    A device naming the service receives its prefix as the ``prefix`` keyword.
+    The attribute is typed as `redsun.services.Service`, so ``wire`` connects to
+    its ``sig_exited``.
+
+    Parameters
+    ----------
+    module : str | None
+        Module to run. ``None`` attaches to a service that is already running.
+    ready : str | None
+        Text of the output line that marks a launched service ready. ``None``
+        counts it ready as soon as its process starts.
+    prefix : str
+        Prefix given to every device naming the service.
+    args : Sequence[str]
+        Command-line arguments following the module.
+    stop_timeout : float
+        Seconds each step of stopping the service waits for it to exit.
+    alias : str | None
+        Service name, overriding the attribute name.
+    """
+    kwargs: dict[str, Any] = {
+        "module": module,
+        "ready": ready,
+        "prefix": prefix,
+        "args": args,
+        "stop_timeout": stop_timeout,
+    }
+    return cast("Service", _ServiceField(alias=alias, kwargs=kwargs))
+
+
+class _ServiceComponent:
+    """A declared service, from which each container makes a `Service` of its own."""
+
+    __slots__ = ("kwargs", "name")
+
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        self.name = name
+        self.kwargs = kwargs
+        # made once here so that keywords a Service refuses are refused as the
+        # container class is created, not when a container is
+        self.create()
+
+    def create(self) -> Service:
+        """Return a new `Service` for this declaration."""
+        return Service(self.name, **self.kwargs)
+
+    def __get__(self, obj: object, objtype: type | None = None) -> Any:
+        """Resolve to the container's own `Service` when read from a container."""
+        if obj is None:
+            return self
+        return cast("AppContainer", obj)._services[self.name]
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.name!r})"
+
+
 class _NotBuilt:
     """Stands in for a component the build failed on.
 
@@ -285,11 +375,39 @@ class _ComponentBase(Generic[T]):
 
 
 class _DeviceComponent(_ComponentBase[Device]):
-    """Device component wrapper."""
+    """Device component wrapper.
 
-    def build(self) -> Device:
-        """Build the device instance, validating it is an ophyd-async Device."""
-        instance = self.cls(name=self.name, **self.kwargs)
+    A ``service`` keyword is taken by the container rather than passed to the
+    constructor: it names the service whose prefix the device is built with.
+    """
+
+    __slots__ = ("service",)
+
+    def __init__(self, cls: Callable[..., Device], name: str, /, **kwargs: Any) -> None:
+        service: str | None = kwargs.pop("service", None)
+        if service is not None:
+            if "prefix" in kwargs:
+                raise TypeError(
+                    f"device {name!r} names service {service!r} and a prefix; "
+                    "give one, the service's prefix is the device's"
+                )
+            if _takes_keyword(cls, "service"):
+                raise TypeError(
+                    f"{cls!r} (device {name!r}) takes a 'service' keyword of its "
+                    "own, which a device declaration reserves for the service "
+                    "the device talks to"
+                )
+        super().__init__(cls, name, **kwargs)
+        self.service = service
+
+    def build(self, prefix: str | None = None) -> Device:
+        """Build the device instance, validating it is an ophyd-async Device.
+
+        A *prefix* is passed as the ``prefix`` keyword, the one the device's
+        service gives.
+        """
+        extra = {} if prefix is None else {"prefix": prefix}
+        instance = self.cls(name=self.name, **self.kwargs, **extra)
         if not isinstance(instance, Device):
             raise TypeError(
                 f"{type(instance).__name__!r} (device {self.name!r}) is not an "
@@ -360,7 +478,19 @@ class _ViewComponent(_ComponentBase[PView]):
         return instance
 
 
-__all__ = ["declare_device", "declare_presenter", "declare_view"]
+def _takes_keyword(cls: Callable[..., Any], keyword: str) -> bool:
+    """Return whether *cls* names a parameter *keyword* that a caller may pass."""
+    try:
+        parameter = inspect.signature(cls).parameters.get(keyword)
+    except (TypeError, ValueError):
+        return False
+    return parameter is not None and parameter.kind in (
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.KEYWORD_ONLY,
+    )
+
+
+__all__ = ["declare_device", "declare_presenter", "declare_service", "declare_view"]
 
 
 class _HookField:

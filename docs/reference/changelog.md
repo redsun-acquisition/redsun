@@ -9,6 +9,69 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Added
+
+- **`Service`** and **`STARTUP_TIMEOUT`** (`redsun.services`) - the handle a
+  container makes for each service it declares. A service with a module runs
+  as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds
+  for its readiness line, logs its output at `DEBUG` on
+  `redsun.service.<name>`, and gives it a Channel Access server port of its
+  own, appended to `EPICS_CA_ADDR_LIST`. `stop` closes the process's standard
+  input, then sends `SIGINT` on POSIX, then kills it, each step waiting
+  `stop_timeout` seconds. A ready service exiting unasked logs its exit code
+  and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
+  service without a module is attached to and has nothing to start or stop.
+- **`declare_service`** (`redsun.containers`, `redsun`) - declares a service on
+  a container. One with a `module` is launched as `python -m <module> <args>`;
+  one without only lends its `prefix`:
+
+  ```python
+  class MyApp(AppContainer):
+      camera_ioc = declare_service(
+          module="mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"
+      )
+      camera = declare_device(MyCamera, service="camera_ioc")
+  ```
+
+- **`service`** keyword of a device declaration - names the service whose
+  prefix the device is built with, passed as `prefix`. Giving `prefix` as well,
+  or naming a service for a device whose constructor takes a `service` keyword
+  of its own, is refused at declaration. A device naming a service that did not
+  start, or one that is not declared, is logged and skipped by the build.
+- **`AppContainer.start_services`** and **`AppContainer.services`**
+  (`redsun.containers.container`) - start every launched service, logging
+  `Services started: <n>/<m>` and the ones that did not start; and the
+  container's services by name. `build` calls `start_services` unless it has
+  already run.
+- A `services` section in a session file, and a `services` group in a plugin
+  manifest giving a service's `module` and `ready` line. A session entry with
+  `plugin_name` and `plugin_id` takes both from the manifest; one without is
+  attached to:
+
+  ```yaml
+  services:
+    camera_ioc:
+      plugin_name: mylab
+      plugin_id: camera-ioc
+      prefix: "CAM:"
+      stop_timeout: 60
+    beamline:
+      prefix: "BL01:"
+  ```
+
+- The build summary names a service whose every device failed to build:
+  `Unused: camera_ioc (no device built)`.
+- An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+
+### Changed
+
+- **`AppContainer.BUILD_STEPS`** (`redsun.containers.container`) starts with
+  `"services"`, so a `during_build` hook reports services starting. A build
+  that raises stops the services before the exception propagates.
+- **`AppContainer.shutdown`** stops the container's services, the last declared
+  first, whether or not the container was built, and before it closes the
+  session log file.
+
 ### Changed (breaking)
 
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device

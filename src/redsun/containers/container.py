@@ -49,6 +49,8 @@ from redsun.containers.components import (
     _NotBuilt,
     _PresenterComponent,
     _PresenterField,
+    _ServiceComponent,
+    _ServiceField,
     _ViewComponent,
     _ViewField,
     expects_positionals,
@@ -73,6 +75,7 @@ if TYPE_CHECKING:
     from psygnal import SignalInstance
 
     from redsun.containers.components import _ComponentBase
+    from redsun.services import Service
     from redsun.virtual import RedSunConfig
     from redsun.virtual._wiring import SlotThread
 
@@ -177,7 +180,9 @@ def _silent(step: str) -> None:
     """
 
 
-_COMPONENT_SECTIONS: frozenset[str] = frozenset({"devices", "presenters", "views"})
+_COMPONENT_SECTIONS: frozenset[str] = frozenset(
+    {"services", "devices", "presenters", "views"}
+)
 """The configuration sections whose entries are a component's constructor call."""
 
 _IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
@@ -211,8 +216,8 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
     mappings, which merge in turn. Anything that is not a mapping - a list, a
     scalar - is replaced rather than combined.
 
-    A component entry is the exception: under ``devices``, ``presenters`` and
-    ``views`` the section merges by component name, but a component *named* in
+    A component entry is the exception: under ``services``, ``devices``,
+    ``presenters`` and ``views`` the section merges by component name, but a component *named* in
     *overlay* is taken from it whole. Those entries are the keyword arguments
     of a constructor call rather than a tree of settings, so one file owns one
     component's arguments and a reader stops at the last file naming it.
@@ -322,14 +327,18 @@ class AppContainer:
         "_config",
         "_devices_connected",
         "_failed",
+        "_failed_services",
         "_hook_by_moment",
         "_hooks",
         "_is_built",
         "_report",
+        "_services",
+        "_services_started",
         "_session_log",
         "_virtual_container",
     )
 
+    _service_components: ClassVar[dict[str, _ServiceComponent]] = {}
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
     _presenter_components: ClassVar[dict[str, _PresenterComponent]] = {}
     _view_components: ClassVar[dict[str, _ViewComponent]] = {}
@@ -350,6 +359,7 @@ class AppContainer:
     """
 
     BUILD_STEPS: ClassVar[tuple[str, ...]] = (
+        "services",
         "virtual container",
         "devices",
         "presenters",
@@ -415,12 +425,14 @@ class AppContainer:
             seen.setdefault(path, None)
         cls._config_paths = tuple(seen)
 
+        services: dict[str, _ServiceComponent] = {}
         devices: dict[str, _DeviceComponent] = {}
         presenters: dict[str, _PresenterComponent] = {}
         views: dict[str, _ViewComponent] = {}
 
         for base in cls.__bases__:
             if issubclass(base, AppContainer):
+                services.update(base._service_components)
                 devices.update(base._device_components)
                 presenters.update(base._presenter_components)
                 views.update(base._view_components)
@@ -431,7 +443,15 @@ class AppContainer:
             if attr_name.startswith("_"):
                 continue
 
-            if isinstance(attr_value, _DeviceComponent):
+            if isinstance(attr_value, _ServiceField):
+                service = _ServiceComponent(
+                    attr_value.alias or attr_name, **attr_value.kwargs
+                )
+                services[service.name] = service
+                setattr(cls, attr_name, service)
+            elif isinstance(attr_value, _ServiceComponent):
+                services[attr_value.name] = attr_value
+            elif isinstance(attr_value, _DeviceComponent):
                 devices[attr_value.name] = attr_value
             elif isinstance(attr_value, _PresenterComponent):
                 presenters[attr_value.name] = attr_value
@@ -495,6 +515,7 @@ class AppContainer:
                     views[comp_name] = wrapper
                 setattr(cls, attr_name, wrapper)
 
+        cls._service_components = services
         cls._device_components = devices
         cls._presenter_components = presenters
         cls._view_components = views
@@ -558,6 +579,14 @@ class AppContainer:
             **self._view_components,
         }
         self._report: Callable[[str], None] = _silent
+        # a container launches and stops processes of its own, so each one
+        # makes its services from the declarations the class shares
+        self._services: dict[str, Service] = {
+            name: declaration.create()
+            for name, declaration in self._service_components.items()
+        }
+        self._failed_services: dict[str, BaseException] = {}
+        self._services_started: bool = False
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
@@ -650,6 +679,11 @@ class AppContainer:
         if not self._is_built:
             raise RuntimeError("Container not built. Call build() first.")
         return self._built_of(self._view_components)
+
+    @property
+    def services(self) -> dict[str, Service]:
+        """Return the container's services, started or not."""
+        return dict(self._services)
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -746,13 +780,17 @@ class AppContainer:
         The order is fixed, and each step is announced to whatever is watching
         the build:
 
-        1. VirtualContainer
-        2. Devices
-        3. Presenters
-        4. Views
-        5. Providers, registered into the VirtualContainer
-        6. Wiring, connecting the signals and slots of built components
-        7. Remaining dependency injection
+        1. Services, started unless `start_services` already ran
+        2. VirtualContainer
+        3. Devices
+        4. Presenters
+        5. Views
+        6. Providers, registered into the VirtualContainer
+        7. Wiring, connecting the signals and slots of built components
+        8. Remaining dependency injection
+
+        A build that raises stops the services before the exception leaves it,
+        so no process it launched outlives it.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -767,20 +805,27 @@ class AppContainer:
         # that a malformed hooks section is refused wherever it is built
         self._ensure_hooks()
 
-        self._report("virtual container")
-        self._create_virtual_container()
-        self._report("devices")
-        self._build_devices()
-        self._report("presenters")
-        self._build_presenters()
-        self._report("views")
-        self._build_views()
-        self._report("providers")
-        self._register_providers()
-        self._report("wiring")
-        self._apply_wiring()
-        self._report("injection")
-        self._inject_dependencies()
+        try:
+            self._report("services")
+            if not self._services_started:
+                self.start_services()
+            self._report("virtual container")
+            self._create_virtual_container()
+            self._report("devices")
+            self._build_devices()
+            self._report("presenters")
+            self._build_presenters()
+            self._report("views")
+            self._build_views()
+            self._report("providers")
+            self._register_providers()
+            self._report("wiring")
+            self._apply_wiring()
+            self._report("injection")
+            self._inject_dependencies()
+        except BaseException:
+            self._stop_services()
+            raise
 
         self._is_built = True
         summary = self._summarise_build()
@@ -807,13 +852,65 @@ class AppContainer:
             for kind, components in declared
         )
         summary = f"Container built: {counts}"
-        if not self._failed:
-            return summary
-        kind_of = {name: kind for kind, components in declared for name in components}
-        missing = ", ".join(
-            f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+        if self._failed:
+            kind_of = {
+                name: kind for kind, components in declared for name in components
+            }
+            missing = ", ".join(
+                f"{name} ({kind_of.get(name, 'component')})" for name in self._failed
+            )
+            summary = f"{summary}\nNot built: {missing}"
+        unused = self._unused_services()
+        if unused:
+            named = ", ".join(f"{name} (no device built)" for name in unused)
+            summary = f"{summary}\nUnused: {named}"
+        return summary
+
+    def _unused_services(self) -> list[str]:
+        """Return the running services whose every device failed to build.
+
+        A service no device names is not counted: nothing was expected to use it.
+        """
+        unused = []
+        for name in self._services:
+            if name in self._failed_services:
+                continue
+            naming = [
+                component
+                for component in self._device_components.values()
+                if component.service == name
+            ]
+            if naming and not any(component in self._built for component in naming):
+                unused.append(name)
+        return unused
+
+    def start_services(self) -> None:
+        """Start every service the container launches, and attach to the rest.
+
+        `build` calls this unless it has already run. A service that fails to
+        start is logged and recorded, and every device naming it is skipped by
+        the build; the rest of the session runs.
+        """
+        self._services_started = True
+        if not self._services:
+            return
+        for name, service in self._services.items():
+            try:
+                service.start()
+            except Exception as e:  # noqa: BLE001 - a missing service must not abort the app
+                self._failed_services[name] = e
+                logger.error(f"Failed to start service '{name}': {e}")
+        summary = (
+            f"Services started: {len(self._services) - len(self._failed_services)}"
+            f"/{len(self._services)}"
         )
-        return f"{summary}\nNot built: {missing}"
+        if not self._failed_services:
+            logger.info(summary)
+            return
+        failed = ", ".join(
+            f"{name} ({reason})" for name, reason in self._failed_services.items()
+        )
+        logger.warning(f"{summary}\nNot started: {failed}")
 
     @classmethod
     def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
@@ -929,12 +1026,32 @@ class AppContainer:
         built_devices: dict[str, Device] = {}
         for name, device_comp in self._device_components.items():
             try:
-                built_devices[name] = self._built[device_comp] = device_comp.build()
+                built_devices[name] = self._built[device_comp] = device_comp.build(
+                    self._prefix_for(device_comp)
+                )
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 self._failed[name] = e
                 logger.error(f"Failed to build device '{name}': {e}")
         self._built_devices = built_devices
+
+    def _prefix_for(self, device: _DeviceComponent) -> str | None:
+        """Return the prefix *device*'s service gives it, or ``None`` if it names none.
+
+        Raises
+        ------
+        LookupError
+            If the device names a service that is not declared.
+        RuntimeError
+            If the device names a service that did not start.
+        """
+        if device.service is None:
+            return None
+        if device.service not in self._services:
+            raise LookupError(f"service {device.service!r} is not declared")
+        if device.service in self._failed_services:
+            raise RuntimeError(f"service {device.service!r} was not started")
+        return self._services[device.service].prefix
 
     def _build_presenters(self) -> None:
         """Build every declared presenter against the built devices.
@@ -1021,23 +1138,38 @@ class AppContainer:
         5. ``_destroy`` - end what dropping a reference does not end.
 
         Afterwards the container holds nothing it built, so ``devices``,
-        ``presenters`` and ``views`` raise until the next ``build()``. The
-        session's log file is closed too, whether or not the container was
-        built; the next ``build()`` starts a new one.
+        ``presenters`` and ``views`` raise until the next ``build()``.
+
+        Whether or not the container was built, the services it launched are
+        stopped, the last declared first, and then the session's log file is
+        closed; the next ``build()`` starts both again.
         """
-        if not self._is_built:
-            self._close_session_log()
-            return
+        if self._is_built:
+            self._disconnect()
+            self._shutdown_presenters()
+            # after the components, which may still be using what a hook installed
+            self._shutdown_hooks()
+            self._destroy(self._release_components())
 
-        self._disconnect()
-        self._shutdown_presenters()
-        # after the components, which may still be using what a hook installed
-        self._shutdown_hooks()
-        self._destroy(self._release_components())
-
-        self._is_built = False
-        logger.info("Container shutdown complete")
+            self._is_built = False
+            logger.info("Container shutdown complete")
+        # started before the build, so stopped whether or not it completed, and
+        # before the log file closes, since stopping logs how each service ended
+        self._stop_services()
         self._close_session_log()
+
+    def _stop_services(self) -> None:
+        """Stop every service the container launched, the last declared first.
+
+        One service failing to stop does not stop the others.
+        """
+        for name, service in reversed(self._services.items()):
+            try:
+                service.stop()
+            except Exception as e:  # noqa: BLE001 - one failed stop must not block the rest
+                logger.error(f"Error stopping service '{name}': {e}")
+        self._failed_services.clear()
+        self._services_started = False
 
     def _open_session_log(self) -> None:
         """Start writing this run's records to the session's log file."""
@@ -1114,9 +1246,11 @@ class AppContainer:
 
         *log_level* is passed to the container it builds.
         """
-        config, plugin_types = cls._load_configuration(config_path)
+        config, plugin_types, services = cls._load_configuration(config_path)
 
-        namespace: dict[str, Any] = {}
+        namespace: dict[str, Any] = {
+            name: _ServiceComponent(name, **kwargs) for name, kwargs in services.items()
+        }
 
         declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
             ("devices", _DeviceComponent),
@@ -1153,13 +1287,33 @@ class AppContainer:
     @classmethod
     def _load_configuration(
         cls, config_path: str
-    ) -> tuple[dict[str, Any], _PluginTypeDict]:
-        """Load configuration and discover plugin classes from a YAML file."""
+    ) -> tuple[dict[str, Any], _PluginTypeDict, dict[str, dict[str, Any]]]:
+        """Load configuration, discover plugin classes and resolve services.
+
+        The services come back as the keyword arguments of each declaration: a
+        service naming a plugin takes its module and readiness line from that
+        plugin's manifest, under what the session file gives it.
+        """
         with open(config_path, "r") as f:
             config: dict[str, Any] = yaml.safe_load(f)
 
         plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
         available_manifests = entry_points(group="redsun.plugins")
+
+        services: dict[str, dict[str, Any]] = {}
+        for name, entry in (config.get("services") or {}).items():
+            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
+            if "plugin_name" in entry:
+                launched = cls._manifest_item(
+                    entry["plugin_name"],
+                    "services",
+                    entry["plugin_id"],
+                    available_manifests,
+                )
+                if not isinstance(launched, dict):
+                    continue
+                kwargs = {**launched, **kwargs}
+            services[name] = kwargs
 
         groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 
@@ -1177,7 +1331,44 @@ class AppContainer:
             for name, plugin_cls in loaded:
                 plugin_types[group][name] = plugin_cls  # type: ignore[assignment]
 
-        return config, plugin_types
+        return config, plugin_types, services
+
+    @classmethod
+    def _manifest_item(
+        cls,
+        plugin_name: str,
+        group: str,
+        plugin_id: str,
+        available_manifests: EntryPoints,
+    ) -> Any:
+        """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
+
+        ``None``, with the reason logged, when the plugin is not installed or
+        its manifest has no such entry.
+        """
+        plugin = next(
+            (entry for entry in available_manifests if entry.name == plugin_name), None
+        )
+        if plugin is None:
+            logger.error('Plugin "%s" not found in the installed plugins.', plugin_name)
+            return None
+
+        pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
+        with as_file(pkg_manifest) as manifest_path, open(manifest_path) as f:
+            manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+
+        if group not in manifest:
+            logger.error(
+                'Plugin "%s" manifest does not contain group "%s".', plugin_name, group
+            )
+            return None
+        items = manifest[group]
+        if plugin_id not in items:
+            logger.error(
+                'Plugin "%s" does not contain the id "%s".', plugin_name, plugin_id
+            )
+            return None
+        return items[plugin_id]
 
     @classmethod
     def _load_plugins(
@@ -1191,67 +1382,36 @@ class AppContainer:
         plugins: list[tuple[str, PluginType]] = []
 
         for name, info in group_cfg.items():
-            plugin_name: str = info["plugin_name"]
             plugin_id: str = info["plugin_id"]
-
-            iterator = (
-                entry for entry in available_manifests if entry.name == plugin_name
+            class_path = cls._manifest_item(
+                info["plugin_name"], group, plugin_id, available_manifests
             )
-            plugin = next(iterator, None)
-
-            if plugin is None:
+            if class_path is None:
+                continue
+            try:
+                class_item_module, class_item_type = class_path.split(":")
+                imported_class = getattr(
+                    import_module(class_item_module), class_item_type
+                )
+            except (KeyError, ValueError):
                 logger.error(
-                    'Plugin "%s" not found in the installed plugins.', plugin_name
+                    'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
+                    plugin_id,
+                    name,
+                    class_path,
                 )
                 continue
 
-            pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-            with as_file(pkg_manifest) as manifest_path:
-                with open(manifest_path, "r") as f:
-                    manifest: dict[str, ManifestItems] = yaml.safe_load(f)
+            if not _check_plugin_protocol(imported_class, group):
+                logger.error(
+                    "%s cannot be loaded as a plugin in group %r: it %s.",
+                    imported_class,
+                    group,
+                    _PLUGIN_EXPECTATIONS[group],
+                )
+                continue
 
-                if group not in manifest:
-                    logger.error(
-                        'Plugin "%s" manifest does not contain group "%s".',
-                        plugin_name,
-                        group,
-                    )
-                    continue
-
-                items = manifest[group]
-                if plugin_id not in items:
-                    logger.error(
-                        'Plugin "%s" does not contain the id "%s".',
-                        plugin_name,
-                        plugin_id,
-                    )
-                    continue
-
-                class_path = items[plugin_id]
-                try:
-                    class_item_module, class_item_type = class_path.split(":")
-                    imported_class = getattr(
-                        import_module(class_item_module), class_item_type
-                    )
-                except (KeyError, ValueError):
-                    logger.error(
-                        'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
-                        plugin_id,
-                        name,
-                        class_path,
-                    )
-                    continue
-
-                if not _check_plugin_protocol(imported_class, group):
-                    logger.error(
-                        "%s cannot be loaded as a plugin in group %r: it %s.",
-                        imported_class,
-                        group,
-                        _PLUGIN_EXPECTATIONS[group],
-                    )
-                    continue
-
-                plugins.append((name, imported_class))
+            plugins.append((name, imported_class))
 
         return plugins
 

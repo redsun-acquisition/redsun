@@ -147,6 +147,7 @@ class TestAppContainerBuild:
         app.build()
 
         assert seen == [
+            "services",
             "virtual container",
             "devices",
             "presenters",
