@@ -70,6 +70,18 @@ def small_buffer(logs: logging.Logger) -> Iterator[BufferHandler]:
     add_handler(installed)
 
 
+@pytest.fixture
+def small_service_buffer(logs: logging.Logger) -> Iterator[BufferHandler]:
+    """Swap the session buffer for one holding 10 records of each service."""
+    installed = log_buffer()
+    small = BufferHandler(service_capacity=10)
+    remove_handler(installed)
+    add_handler(small)
+    yield small
+    remove_handler(small)
+    add_handler(installed)
+
+
 def _service(name: str) -> logging.Logger:
     return logging.getLogger(f"redsun.service.{name}")
 
@@ -248,10 +260,14 @@ def test_the_service_selector_narrows_the_services_console(
     view = make_view()
 
     view._service_combo.setCurrentIndex(view._service_combo.findData("stage"))
+    _service("cam").warning("later from the camera")
+    _service("stage").warning("later from the stage")
+    _draw_pending(view)
 
     text = view._service_console.toPlainText()
     assert view.service == "stage"
     assert "from the stage" in text
+    assert "later from the stage" in text
     assert "from the camera" not in text
 
 
@@ -288,18 +304,42 @@ def test_save_writes_the_records_of_the_tab_shown(
     assert not any(line in written for line in left_out)
 
 
+@pytest.mark.parametrize("shown", ["application", "services"])
 def test_clear_empties_only_the_tab_shown(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    make_view: Callable[[], LogView], logs: logging.Logger, shown: str
 ) -> None:
+    """Records still waiting to be drawn are cleared with the tab they belong to."""
     logs.warning("from the application")
     _service("cam").warning("from the camera")
     view = make_view()
-    view._tabs.setCurrentIndex(_log_view._SERVICES_TAB)
+    logs.warning("waiting from the application")
+    _service("cam").warning("waiting from the camera")
+    consoles = {"application": view._console, "services": view._service_console}
+    kept = "services" if shown == "application" else "application"
+    view._tabs.setCurrentIndex(0 if shown == "application" else _log_view._SERVICES_TAB)
 
     view.clear()
+    _draw_pending(view)
 
-    assert view._service_console.toPlainText() == ""
-    assert "from the application" in view._console.toPlainText()
+    assert consoles[shown].toPlainText() == ""
+    assert consoles[kept].toPlainText().count("from the") == 2
+
+
+def test_a_burst_from_several_services_is_kept_for_each(
+    make_view: Callable[[], LogView], small_service_buffer: BufferHandler
+) -> None:
+    """The services console and its queue grow with each service that logs."""
+    view = make_view()
+
+    for i in range(10):
+        _service("cam").warning("cam %02d", i)
+    for i in range(10):
+        _service("stage").warning("stage %02d", i)
+    _draw_pending(view)
+
+    text = view._service_console.toPlainText()
+    assert "cam 00" in text
+    assert "stage 09" in text
 
 
 def test_save_copies_the_services_log_file_rather_than_the_buffer(

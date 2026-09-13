@@ -53,7 +53,7 @@ _BATCH_INTERVAL_MS = 100
 """How often records that arrived since the last batch are drawn."""
 
 _BATCH_SIZE = 2_000
-"""The most records one batch draws; the rest wait for the next."""
+"""The most records one batch draws on each console; the rest wait for the next."""
 
 _SERVICES_TAB = 1
 """Index of the Services tab."""
@@ -118,6 +118,12 @@ class LogView(QtView):
         self._tabs.addTab(self._console, "Application")
         self._tabs.addTab(services_page, "Services")
         self._tabs.setTabVisible(_SERVICES_TAB, False)
+        # only the newest records can end up on screen, so a burst larger than
+        # the buffer never queues more than a console would keep
+        self._pending: deque[logging.LogRecord] = deque(maxlen=buffer.capacity)
+        self._service_pending: deque[logging.LogRecord] = deque(
+            maxlen=buffer.service_capacity
+        )
         for service in buffer.services:
             self._add_service(service)
         self._service_combo.currentIndexChanged.connect(self._on_service_selected)
@@ -152,11 +158,6 @@ class LogView(QtView):
             root.setColumnStretch(column, 1)
         self.setLayout(root)
 
-        # only the newest records can end up on screen, so a burst larger
-        # than the buffer never queues more than the consoles would keep
-        self._pending: deque[logging.LogRecord] = deque(
-            maxlen=buffer.capacity + buffer.service_capacity
-        )
         self._batch_timer = QtCore.QTimer(self)
         self._batch_timer.setInterval(_BATCH_INTERVAL_MS)
         self._batch_timer.timeout.connect(self._draw_batch)
@@ -187,6 +188,7 @@ class LogView(QtView):
         log_buffer().sig_record.disconnect(self._on_record, missing_ok=True)
         self._batch_timer.stop()
         self._pending.clear()
+        self._service_pending.clear()
         if event is not None:
             super().closeEvent(event)
 
@@ -224,12 +226,12 @@ class LogView(QtView):
         The buffer is untouched, so ``Save logs...`` still writes everything and
         changing the level brings records back.
         """
-        showing_services = self._tabs.currentIndex() == _SERVICES_TAB
-        self._pending = deque(
-            (r for r in self._pending if (service_of(r) is None) is showing_services),
-            maxlen=self._pending.maxlen,
-        )
-        (self._service_console if showing_services else self._console).clear()
+        if self._tabs.currentIndex() == _SERVICES_TAB:
+            self._service_pending.clear()
+            self._service_console.clear()
+        else:
+            self._pending.clear()
+            self._console.clear()
 
     def save(self, path: str) -> None:
         """Write the records of the tab shown to *path*, whatever the displayed level.
@@ -264,13 +266,9 @@ class LogView(QtView):
         """Offer *service* in the selector, and show the Services tab."""
         self._service_combo.addItem(service, service)
         self._tabs.setTabVisible(_SERVICES_TAB, True)
-        self._service_console.setMaximumBlockCount(
-            log_buffer().service_capacity * (self._service_combo.count() - 1)
-        )
-
-    def _shows(self, record: logging.LogRecord) -> bool:
-        """Return whether *record* belongs on the Services console as selected."""
-        return self.service is None or service_of(record) == self.service
+        capacity = log_buffer().service_capacity * (self._service_combo.count() - 1)
+        self._service_console.setMaximumBlockCount(capacity)
+        self._service_pending = deque(self._service_pending, maxlen=capacity)
 
     def _on_record(self, record: logging.LogRecord) -> None:
         service = service_of(record)
@@ -278,25 +276,30 @@ class LogView(QtView):
             self._add_service(service)
         if record.levelno < self._level:
             return
-        self._pending.append(record)
+        if service is None:
+            self._pending.append(record)
+        elif self.service in (None, service):
+            self._service_pending.append(record)
+        else:
+            return
         if not self._batch_timer.isActive():
             self._batch_timer.start()
 
     def _draw_batch(self) -> None:
-        count = min(_BATCH_SIZE, len(self._pending))
-        batch = [self._pending.popleft() for _ in range(count)]
-        self._write(self._console, [r for r in batch if service_of(r) is None])
-        self._write(
-            self._service_console,
-            [r for r in batch if service_of(r) is not None and self._shows(r)],
-        )
-        if not self._pending:
+        for pending, console in (
+            (self._pending, self._console),
+            (self._service_pending, self._service_console),
+        ):
+            count = min(_BATCH_SIZE, len(pending))
+            self._write(console, [pending.popleft() for _ in range(count)])
+        if not (self._pending or self._service_pending):
             self._batch_timer.stop()
 
     def _render(self) -> None:
         buffer = log_buffer()
         self._batch_timer.stop()
         self._pending.clear()
+        self._service_pending.clear()
         self._console.clear()
         self._service_console.clear()
         self._write(
