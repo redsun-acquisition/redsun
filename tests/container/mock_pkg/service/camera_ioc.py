@@ -5,16 +5,10 @@ Run as ``python -m mock_pkg.service.camera_ioc --prefix CAM:``.
 
 from __future__ import annotations
 
-import signal
-import sys
 import threading
 
 from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
-
-
-def stop_when_stdin_closes() -> None:
-    sys.stdin.read()
-    signal.raise_signal(signal.SIGINT)
+from mock_pkg.service.stand_in import stop_when_stdin_closes
 
 
 class Camera(PVGroup):  # type: ignore[misc]
