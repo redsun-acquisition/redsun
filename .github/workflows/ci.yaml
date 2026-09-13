@@ -21,7 +21,8 @@ jobs:
   tests:
     name: Run Tests
     uses: ./.github/workflows/run-tests.yaml
-    secrets: inherit
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
     name: Check Documentation
