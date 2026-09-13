@@ -207,16 +207,6 @@ def declare_presenter(
     )
 
 
-class _ServiceField:
-    """Sentinel returned by [`declare_service`][redsun.containers.declare_service]. Resolved by the metaclass into a ``_ServiceComponent``."""
-
-    __slots__ = ("alias", "kwargs")
-
-    def __init__(self, alias: str | None, kwargs: dict[str, Any]) -> None:
-        self.alias = alias
-        self.kwargs = kwargs
-
-
 def declare_service(
     *,
     module: str | None = None,
@@ -267,20 +257,23 @@ def declare_service(
         "args": args,
         "stop_timeout": stop_timeout,
     }
-    return cast("Service", _ServiceField(alias=alias, kwargs=kwargs))
+    return cast("Service", _ServiceComponent(alias or "", **kwargs))
 
 
 class _ServiceComponent:
-    """A declared service, from which each container makes a `Service` of its own."""
+    """A declared service, from which each container makes a `Service` of its own.
+
+    Without a name, it takes the attribute name it is assigned to.
+    """
 
     __slots__ = ("kwargs", "name")
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(self, name: str = "", /, **kwargs: Any) -> None:
         self.name = name
         self.kwargs = kwargs
-        # made once here so that keywords a Service refuses are refused as the
-        # container class is created, not when a container is
-        self.create()
+
+    def __set_name__(self, owner: type, attr: str) -> None:
+        self.name = self.name or attr
 
     def create(self) -> Service:
         """Return a new `Service` for this declaration."""

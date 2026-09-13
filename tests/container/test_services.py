@@ -210,6 +210,38 @@ def test_a_device_naming_a_service_is_built_with_its_prefix() -> None:
     assert stage.name == "stage"
 
 
+def test_an_aliased_service_is_named_by_its_alias() -> None:
+    class App(AppContainer):
+        ioc = declare_service(prefix="BL01:", alias="beamline")
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert app.ioc is app.services["beamline"]
+    stage = app.devices["stage"]
+    assert isinstance(stage, PrefixedDevice)
+    assert stage.prefix == "BL01:"
+
+
+def test_a_service_it_cannot_make_is_refused_as_the_class_is_created() -> None:
+    with pytest.raises(TypeError, match="'ioc' gives args but no module"):
+
+        class App(AppContainer):
+            ioc = declare_service(args=["--prefix", "X:"])
+
+
+def test_a_session_file_service_it_cannot_make_is_refused(tmp_path: Path) -> None:
+    config = tmp_path / "session.yaml"
+    config.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nsession: refused\n"
+        "services:\n  ioc:\n    launch: attach\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(TypeError, match="launch"):
+        AppContainer.from_config(str(config))
+
+
 @pytest.mark.parametrize(
     ("cls", "kwargs", "reason"),
     [

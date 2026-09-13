@@ -46,7 +46,6 @@ from redsun.containers.components import (
     _PresenterComponent,
     _PresenterField,
     _ServiceComponent,
-    _ServiceField,
     _ViewComponent,
     _ViewField,
     expects_positionals,
@@ -436,13 +435,11 @@ class AppContainer:
             if attr_name.startswith("_"):
                 continue
 
-            if isinstance(attr_value, _ServiceField):
-                service = _ServiceComponent(
-                    attr_value.alias or attr_name, **attr_value.kwargs
-                )
-                services[service.name] = service
-                setattr(cls, attr_name, service)
-            elif isinstance(attr_value, _ServiceComponent):
+            if isinstance(attr_value, _ServiceComponent):
+                # made once here so that keywords a Service refuses are refused
+                # as the class is created; raised from __set_name__, Python 3.11
+                # would wrap the error in a RuntimeError
+                attr_value.create()
                 services[attr_value.name] = attr_value
             elif isinstance(attr_value, _DeviceComponent):
                 devices[attr_value.name] = attr_value
