@@ -32,7 +32,7 @@ from typing import (
 import yaml
 from ophyd_async.core import Device
 
-from redsun.aio import _loop_factory, run_coro
+from redsun.aio import get_shared_loop, run_coro
 from redsun.containers._config import AppConfig
 from redsun.containers._hooks import (
     HookError,
@@ -754,9 +754,7 @@ class AppContainer:
             logger.warning("Container already built, skipping rebuild")
             return self
 
-        # ensure the background loop
-        # is running
-        _ = _loop_factory()
+        get_shared_loop()
 
         logger.info("Building application container...")
 
