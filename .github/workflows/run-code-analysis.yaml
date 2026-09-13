@@ -36,9 +36,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python 3.14
-        run: uv python install 3.14
+          python-version: "3.14"
 
       # the environment, the binding and the flags all come from
       # [tool.tox] in pyproject.toml, so this runs what a contributor runs

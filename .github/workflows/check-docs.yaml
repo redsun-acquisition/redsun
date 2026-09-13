@@ -15,9 +15,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python
-        run: uv python install 3.11
+          python-version: "3.11"
 
       - name: Build docs and check cross-references
         run: uv run tox -e docs
