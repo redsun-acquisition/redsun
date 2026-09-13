@@ -134,6 +134,11 @@ omit = [
     "src/redsun/view/**",
 ]
 
+# CI combines data from Linux, macOS and Windows runners, each checking out
+# the repository under a different absolute path
+[tool.coverage.paths]
+source = ["src/", "*/src/"]
+
 [tool.ruff]
 fix = true
 

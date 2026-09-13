@@ -70,23 +70,7 @@ jobs:
 
       - name: Combine coverage data
         run: |
-          REPO_NAME="${GITHUB_REPOSITORY##*/}"
-          echo "[paths]" > ci_coveragerc
-          echo "source =" >> ci_coveragerc
-          if [[ -d "src" ]]; then
-            echo "    ${GITHUB_WORKSPACE}/src" >> ci_coveragerc
-            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME\\src" >> ci_coveragerc
-            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
-            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME/src" >> ci_coveragerc
-          else
-            echo "    ${GITHUB_WORKSPACE}" >> ci_coveragerc
-            echo "    D:\\a\\$REPO_NAME\\$REPO_NAME" >> ci_coveragerc
-            echo "    /home/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
-            echo "    /Users/runner/work/$REPO_NAME/$REPO_NAME" >> ci_coveragerc
-          fi
-          echo "    */site-packages/" >> ci_coveragerc
-          cat ci_coveragerc
-          uv run coverage combine --rcfile=ci_coveragerc covreports
+          uv run coverage combine covreports
           uv run coverage xml -o coverage.xml
           uv run coverage report
           uv run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
