@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 
@@ -10,11 +9,6 @@ from redsun.engine import RunEngine
 from redsun.virtual import VirtualContainer
 
 from .mocks import MockDetector
-
-
-@pytest.fixture
-def config_path() -> Path:
-    return Path(__file__).parent / "data"
 
 
 @pytest.fixture
