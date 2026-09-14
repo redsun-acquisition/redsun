@@ -670,11 +670,8 @@ class Session(BuildableSession):
         used = {
             d.service for d in self._declarations.values() if d.instance is not None
         }
-        unused = [
-            name
-            for name in self._services
-            if name in named_services - used and name not in self._failed_services
-        ]
+        idle = named_services - used - self._failed_services.keys()
+        unused = [name for name in self._services if name in idle]
         if unused:
             summary += "\nUnused: " + ", ".join(
                 f"{name} (no device built)" for name in unused
