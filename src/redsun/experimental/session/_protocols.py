@@ -157,6 +157,11 @@ class BuildableSession(Protocol):
         ...
 
     @abstractmethod
+    def connect_built_devices(self) -> None:
+        """Connect the devices declared with autoconnect."""
+        ...
+
+    @abstractmethod
     def open_registry(self) -> None:
         """Open the store the components are built out of, and fill it."""
         ...

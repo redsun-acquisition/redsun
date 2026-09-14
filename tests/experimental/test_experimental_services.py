@@ -10,6 +10,8 @@ import pytest
 import yaml
 from ophyd_async.core import (
     Device,
+    DeviceConnector,
+    NotConnectedError,
     SignalRW,
     StandardReadable,
     StandardReadableFormat,
@@ -27,6 +29,7 @@ from redsun.experimental import (
     Launch,
     Session,
 )
+from redsun.experimental.session import _base as session_base
 
 if TYPE_CHECKING:
     from .conftest import BuildSession
@@ -45,6 +48,36 @@ CameraIoc: TypeAlias = Annotated[
 
 class Camera(EpicsDevice):
     exposure: Annotated[SignalRW[float], PvSuffix("Exposure")]
+
+
+class CountingConnector(DeviceConnector):
+    """Counts the connections made through it, and makes none."""
+
+    def __init__(self) -> None:
+        self.connections = 0
+
+    async def connect_real(
+        self, device: Device, timeout: float, force_reconnect: bool
+    ) -> None:
+        self.connections += 1
+
+
+class RefusingConnector(DeviceConnector):
+    async def connect_real(
+        self, device: Device, timeout: float, force_reconnect: bool
+    ) -> None:
+        raise NotConnectedError("the camera did not answer")
+
+
+class CountedDevice(Device):
+    def __init__(self, name: str = "") -> None:
+        self.connector = CountingConnector()
+        super().__init__(name=name, connector=self.connector)
+
+
+class RefusingDevice(Device):
+    def __init__(self, prefix: str, name: str = "") -> None:
+        super().__init__(name=name, connector=RefusingConnector())
 
 
 class DeviceWithServiceKeyword(Device):
@@ -109,7 +142,7 @@ def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
     """A device whose first parameter is not ``name`` gets its name by keyword."""
 
     class App(Session):
-        camera: Annotated[AsDevice[Camera], Declare(prefix="CAM:")]
+        camera: Annotated[AsDevice[Camera], Declare(prefix="CAM:", autoconnect=False)]
 
     app = build(App)
 
@@ -371,3 +404,48 @@ def test_a_session_built_again_starts_its_services_again(
 
     started = [r for r in caplog.records if r.getMessage() == "Services started: 1/1"]
     assert len(started) == 2
+
+
+def test_the_build_connects_devices_declared_with_autoconnect(
+    build: BuildSession,
+) -> None:
+    class App(Session):
+        motor: AsDevice[CountedDevice]
+        idle: Annotated[AsDevice[CountedDevice], Declare(autoconnect=False)]
+
+    app = build(App)
+
+    counts = {
+        name: device.connector.connections
+        for name, device in app.devices.items()
+        if isinstance(device, CountedDevice)
+    }
+    assert counts == {"motor": 1, "idle": 0}
+
+
+def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(session_base, "CONNECT_TIMEOUT", 0.5)
+
+    class App(Session):
+        beamline: Annotated[AsService, Attach("BL01:")]
+        camera: Annotated[AsDevice[RefusingDevice], Declare(service="beamline")]
+        motor: AsDevice[CountedDevice]
+
+    app = build(App)
+
+    assert set(app.devices) == {"motor"}
+    assert "camera" not in vars(app)
+    assert (
+        "Failed to connect device 'camera': service 'beamline' (attached) did not "
+        "answer within 0.5 s: the camera did not answer"
+    ) in errors_in(caplog)
+    (summary,) = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("Container built")
+    ]
+    assert "Not built: camera (device, not connected)" in summary.splitlines()

@@ -517,6 +517,17 @@ listed in the [changelog](changelog.md).
   Unused: beamline (no device built)
   ```
 
+- `Session.connect_built_devices` is the build step announced as `"connect"`,
+  after `"devices"`. It connects every device whose declaration does not give
+  `autoconnect=False`, all at once, and waits up to `CONNECT_TIMEOUT` (10 s) for
+  each. A device that does not connect is skipped and listed as
+  `<name> (device, not connected)`. The error names the service the device
+  talks to:
+
+  ```
+  Failed to connect device 'camera': service 'beamline' (attached) did not answer within 10 s: ...
+  ```
+
 ### Changed
 
 - A device is built as `cls(name=<name>, **kwargs)` rather than

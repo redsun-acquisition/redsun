@@ -168,6 +168,9 @@ it was written for, so nothing can be watching until the runtime that shows it
 exists.
 """
 
+CONNECT_TIMEOUT: Final = 10.0
+"""Seconds the build waits for each device it connects."""
+
 FRONTENDS: Final[dict[str, str]] = {
     "pyqt": "redsun.experimental.session.qt:QtSession",
     "pyside": "redsun.experimental.session.qt:QtSession",
@@ -661,7 +664,9 @@ class Session(BuildableSession):
         ):
             if names:
                 named = ", ".join(
-                    f"{name} ({self._declarations[name].kind})" for name in names
+                    f"{name} ({self._declarations[name].kind}"
+                    f"{', not connected' if isinstance(reason, ConnectionError) else ''})"
+                    for name, reason in names.items()
                 )
                 summary += f"\n{label}: {named}"
         named_services = {d.service for d in self._declarations.values()}
@@ -1611,7 +1616,54 @@ class Session(BuildableSession):
         return {"prefix": service.prefix}
 
     def connect_built_devices(self) -> None:
-        """Connect every built device declared with autoconnect."""
+        """Connect every built device declared with autoconnect, all at once.
+
+        A device that does not connect within `CONNECT_TIMEOUT` is recorded as
+        failed and dropped, as a device that fails to build is, so no component
+        receives a device that raises on its first read.
+        """
+        targets = {
+            name: device
+            for name, device in self._devices.items()
+            if self._declarations[name].autoconnect
+        }
+        if not targets:
+            return
+
+        async def connect_all() -> list[BaseException | None]:
+            return await asyncio.gather(
+                *(
+                    device.connect(timeout=CONNECT_TIMEOUT)
+                    for device in targets.values()
+                ),
+                return_exceptions=True,
+            )
+
+        for name, result in zip(targets, run_coro(connect_all()), strict=True):
+            if result is None:
+                continue
+            declaration = self._declarations[name]
+            reason = self._connection_failure(declaration, result)
+            self._failed[name] = ConnectionError(reason)
+            del self._devices[name]
+            declaration.instance = None
+            delattr(self, name)
+            logger.error("Failed to connect device '%s': %s", name, reason)
+
+    def _connection_failure(
+        self, declaration: Declaration, error: BaseException
+    ) -> str:
+        """Return why *declaration*'s device did not connect, naming its service."""
+        # ophyd-async pads the message of a NotConnectedError with whitespace
+        detail = str(error).strip()
+        service = self._services.get(declaration.service or "")
+        if service is None:
+            return detail
+        how = "launched" if service.launched else "attached"
+        return (
+            f"service {service.name!r} ({how}) did not answer within "
+            f"{CONNECT_TIMEOUT:g} s: {detail}"
+        )
 
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         declaration.instance = instance
