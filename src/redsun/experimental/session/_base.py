@@ -741,6 +741,7 @@ class Session(BuildableSession):
         self._not_set_up.clear()
         self._built_components.clear()
         self._names.clear()
+        self._shared.clear()
         logger.info("Container shutdown complete")
 
     def serialize(self) -> dict[str, Any]:

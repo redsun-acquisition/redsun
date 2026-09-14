@@ -630,3 +630,8 @@ listed in the [changelog](changelog.md).
   device mapping and the bluesky callback registry. `redsun.experimental`
   re-exports all three, and is still the import a component is written
   against.
+
+### Fixed
+
+- `Session.build` on a session that was built and shut down no longer raises
+  `TypeError` saying a component shares a type with itself.

@@ -257,3 +257,16 @@ def test_a_build_looks_each_plugin_up_once(
     build(ConfiguredApp, str(config_path / SESSION))
 
     assert (once, lookups.call_count) == (1, 2)
+
+
+def test_a_session_builds_again_after_shutdown(
+    mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
+) -> None:
+    """What one component shares reaches another on the second build too."""
+    app = build(ConfiguredApp, str(config_path / SESSION))
+    app.shutdown()
+
+    app.build()
+
+    widget = built(app, "motor_widget", MockMotorView)
+    assert widget.readings == {"stage": pytest.approx(4.8)}
