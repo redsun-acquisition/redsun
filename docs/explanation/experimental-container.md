@@ -29,6 +29,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | --- | --- |
 | Assembling | `Session`, `Frontend` |
 | Declaring | `AsDevice`, `AsPresenter`, `AsView`, `Declare`, `FromConfig`, `Alias` |
+| Services | `AsService`, `Launch`, `Attach` |
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
 | Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
@@ -652,16 +653,81 @@ graph LR
     C["components, newest first"]
     G["shared services"]
     V["devices"]
+    L["launched services"]
 
     D --> C
     C --> G
     G --> V
+    V --> L
 ```
 
 Signal connections go first, so nothing is delivered to a component that is
 already shutting down. Components go in the reverse of the order they were
 built, so a component is never torn down while something that was built from it
-is still alive.
+is still alive. Launched services go last, because they were started first.
+
+## Services
+
+=== "Today"
+
+    ```python
+    class MyApp(QtSession):
+        stage_ioc = declare_service(
+            module="mylab.iocs.stage", ready="Server startup complete.", prefix="ST:"
+        )
+        motor = declare_device(MyStage, service="stage_ioc")
+    ```
+
+=== "Experimental"
+
+    ```python
+    class MyApp(QtSession):
+        stage_ioc: Annotated[
+            AsService,
+            Launch("mylab.iocs.stage", ready="Server startup complete.", prefix="ST:"),
+        ]
+        beamline: Annotated[AsService, Attach("BL01:")]
+        motor: Annotated[AsDevice[MyStage], Declare(service="stage_ioc")]
+    ```
+
+`Launch` describes a service the session runs, and `Attach` one that is already
+running elsewhere. A keyword a marker leaves out comes from the service's entry
+in the `services` section, and a service with no marker comes from that entry
+alone.
+
+A service is not a component. It has no layer and nothing receives it by
+injection. It is set on the session under its name, so `wire` can connect
+`self.stage_ioc.sig_exited` to a presenter.
+
+A marker is ordinary annotation metadata, so a bundle can declare a service once
+in its own module and every session can import it:
+
+```python
+StageIoc: TypeAlias = Annotated[
+    AsService,
+    Launch("mylab.iocs.stage", ready="Server startup complete.", prefix="ST:"),
+]
+
+
+class MyApp(QtSession):
+    stage_ioc: StageIoc
+```
+
+A marker written where the alias is used replaces the alias's own. `mypy` does
+not check arguments inside `Annotated`, so a wrong keyword is reported when the
+session reads the class.
+
+The build gains two steps around the devices. `"services"` starts the services
+before any device is built, and `"connect"` connects every device not declared
+with `autoconnect=False` before any presenter is built. A device naming a
+service receives the service's prefix as `prefix`. The device is skipped when
+the service is not declared, did not start, gives no prefix, or does not answer
+within `CONNECT_TIMEOUT`.
+
+A service behaves as it does in the supported container, described in
+[Services](services.md) and [Write a service](../how-to/write-a-service.md). The
+experimental session opens no session log file, so a service's output reaches
+the `redsun.service.<name>` loggers but no file of its own.
 
 ## Two components of the same class
 
@@ -1043,6 +1109,7 @@ connect them in `wire` and skip the question entirely.
 | | Today | Experimental |
 | --- | --- | --- |
 | Declaring a component | `declare_presenter(Cls, ...)` | `name: AsPresenter[Cls]` |
+| Declaring a service | `declare_service(module=..., prefix=...)` | `name: Annotated[AsService, Launch(...)]` |
 | Asking for something | `container.require(KEY)` in a method | a constructor parameter |
 | Sharing something | `container.provide(KEY, value)` in a method | `@provides` on a method |
 | Optional collaborator | `container.try_require(KEY)` | `X \| None = None` |
