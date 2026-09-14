@@ -9,12 +9,14 @@ from __future__ import annotations
 from ._base import BUILD_STEPS, ConfigurationInUse, Session
 from ._declarations import (
     Alias,
+    Attach,
     Declaration,
     Declare,
     FromConfig,
     Hook,
     HookDeclaration,
     Key,
+    Launch,
     Layer,
     Serves,
     check,
@@ -44,7 +46,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from .components import AsDevice, AsHook, AsPresenter, AsView
+from .components import AsDevice, AsHook, AsPresenter, AsService, AsView
 
 __all__ = [
     "BUILD_STEPS",
@@ -52,7 +54,9 @@ __all__ = [
     "AsDevice",
     "AsHook",
     "AsPresenter",
+    "AsService",
     "AsView",
+    "Attach",
     "AttachableComponent",
     "BuildableSession",
     "ConfigurationInUse",
@@ -67,6 +71,7 @@ __all__ = [
     "Hook",
     "HookDeclaration",
     "Key",
+    "Launch",
     "Layer",
     "NamedComponent",
     "PluginError",

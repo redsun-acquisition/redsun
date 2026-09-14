@@ -57,6 +57,7 @@ from ._declarations import (
     Layer,
     read,
     read_hooks,
+    read_services,
 )
 from ._factories import (
     constructor,
@@ -88,6 +89,7 @@ if TYPE_CHECKING:
 
     from redsun.experimental.injection import Question
     from redsun.experimental.ports import SlotThread
+    from redsun.services import Service
 
     from ._declarations import Key
 
@@ -214,6 +216,7 @@ class Session(BuildableSession):
         "_not_set_up",
         "_releases",
         "_report",
+        "_services",
         "_session_config",
         "_settings",
         "_shared",
@@ -265,6 +268,7 @@ class Session(BuildableSession):
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
+        self._services: dict[str, Service] = {}
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
@@ -315,6 +319,11 @@ class Session(BuildableSession):
         """
         config = load(source)
         return cast("Self", base_for(cls, config.get("frontend"))(config))
+
+    @property
+    def services(self) -> Mapping[str, Service]:
+        """The session's services, started or not."""
+        return dict(self._services)
 
     @property
     def devices(self) -> Mapping[str, Device]:
@@ -553,6 +562,15 @@ class Session(BuildableSession):
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
+        self._services = read_services(type(self), config)
+        clash = sorted(self._services.keys() & self._declarations.keys())
+        if clash:
+            raise TypeError(
+                f"{type(self).__qualname__} names {listed(clash)} as both a "
+                "service and a component"
+            )
+        for name, service in self._services.items():
+            setattr(self, name, service)
 
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.

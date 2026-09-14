@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from importlib.metadata import EntryPoints
 
-__all__ = ["PluginError", "load_providers", "resolve"]
+__all__ = ["PluginError", "load_providers", "resolve", "service_entry"]
 
 logger = logging.getLogger("redsun")
 
@@ -79,8 +79,42 @@ def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
     return found
 
 
+def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the keywords a ``services`` entry gives, its plugin's included.
+
+    An entry naming a plugin takes ``module`` and ``ready`` from the plugin's
+    manifest, under anything the entry itself gives.
+
+    Raises
+    ------
+    PluginError
+        If the plugin does not resolve, or its entry is not a mapping.
+    """
+    own = {k: v for k, v in entry.items() if k not in META_KEYS}
+    if not META_KEYS <= entry.keys():
+        return own
+    listed = manifest_item(entry["plugin_name"], entry["plugin_id"], "services")
+    if not isinstance(listed, dict):
+        raise PluginError(
+            f"plugin {entry['plugin_name']!r} lists service "
+            f"{entry['plugin_id']!r} as {listed!r}, not a mapping"
+        )
+    return {**listed, **own}
+
+
 def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
     """Look up ``module:Class`` for *plugin_id* in *plugin_name*'s manifest."""
+    return str(manifest_item(plugin_name, plugin_id, group))
+
+
+def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
+    """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
+
+    Raises
+    ------
+    PluginError
+        If the plugin is not installed, or its manifest has no such entry.
+    """
     manifests: EntryPoints = entry_points(group=PLUGIN_GROUP)
     plugin = next((e for e in manifests if e.name == plugin_name), None)
     if plugin is None:
@@ -91,7 +125,7 @@ def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
 
     resource = files(plugin.name.replace("-", "_")) / plugin.value
     with as_file(resource) as path, open(path) as fh:
-        manifest: dict[str, dict[str, str]] = yaml.safe_load(fh) or {}
+        manifest: dict[str, dict[str, Any]] = yaml.safe_load(fh) or {}
 
     if group not in manifest:
         known = ", ".join(sorted(manifest)) or "none"

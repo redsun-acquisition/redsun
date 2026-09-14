@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import logging
-from dataclasses import dataclass, field
+from dataclasses import KW_ONLY, dataclass, field, fields
 from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
@@ -20,29 +20,34 @@ from ophyd_async.core import Device
 
 from redsun._hooks import HookError, known_points
 from redsun.experimental.view import Placement
+from redsun.services import Service
 
 from ._frontend import Frontend
-from ._plugins import META_KEYS, resolve
+from ._plugins import META_KEYS, resolve, service_entry
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Mapping, Sequence
 
 logger = logging.getLogger("redsun")
 
 __all__ = [
     "Alias",
+    "Attach",
     "Declaration",
     "Declare",
     "FromConfig",
     "Hook",
     "HookDeclaration",
     "Key",
+    "Launch",
     "Layer",
     "Serves",
+    "ServiceMark",
     "check",
     "leads_with_name",
     "read",
     "read_hooks",
+    "read_services",
 ]
 
 Key: TypeAlias = Any
@@ -111,6 +116,39 @@ class Hook:
 
 
 @dataclass(frozen=True)
+class ServiceMark:
+    """Marks an annotation as a service rather than a component.
+
+    Carried by `redsun.experimental.AsService`. A service is started before any
+    component is built and stopped after every one is released. It is never
+    injected, and it is not a layer.
+    """
+
+
+@dataclass(frozen=True)
+class Launch:
+    """A service the session runs as ``python -m <module> <args>``.
+
+    A keyword left as ``None`` is taken from the service's ``services`` entry,
+    and otherwise from `redsun.services.Service`.
+    """
+
+    module: str
+    _: KW_ONLY
+    ready: str | None = None
+    prefix: str | None = None
+    args: Sequence[str] | None = None
+    stop_timeout: float | None = None
+
+
+@dataclass(frozen=True)
+class Attach:
+    """A service already running elsewhere, which only lends its prefix."""
+
+    prefix: str
+
+
+@dataclass(frozen=True)
 class Serves:
     """The hook points one provider serves, when the attribute name is not one.
 
@@ -133,7 +171,7 @@ class HookDeclaration:
     kwargs: dict[str, Any]
 
 
-MARKERS = (Declare, FromConfig, Alias, Serves)
+MARKERS = (Declare, FromConfig, Alias, Serves, Launch, Attach)
 
 
 class Declaration:
@@ -298,7 +336,7 @@ def read(
     declarations: dict[str, Declaration] = {}
 
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or is_hook(hint):
+        if attr.startswith("_") or is_hook(hint) or is_service(hint):
             continue
         target, metadata, kind = split(hint)
         if kind is None:
@@ -325,6 +363,63 @@ def read(
     declarations.update(from_config(config, declarations.keys(), frontend))
     refuse_shadowed(cls, declarations)
     return declarations
+
+
+def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
+    """Make the services *cls* declares and the ``services`` section names.
+
+    What an annotation's `Launch` or `Attach` gives overrides the section's
+    entry for it, `FromConfig` names that entry and `Alias` names the service.
+    A marker given twice counts once, the last one, so a marker written where a
+    shared alias is used overrides the alias's own. An entry that no annotation
+    reads is a service too.
+
+    Raises
+    ------
+    TypeError
+        If an annotation carries `Declare`, one declared with `Attach` has an
+        entry giving a module, a service is given a keyword `Service` does not
+        take, or it shares its name with an attribute of the session.
+    PluginError
+        If an entry names a plugin that does not resolve.
+    """
+    section: Mapping[str, Any] = config.get("services") or {}
+    found: dict[str, Service] = {}
+    read_keys: set[str] = set()
+    for attr, hint in hints(cls).items():
+        if attr.startswith("_") or not is_service(hint):
+            continue
+        _, metadata, _ = split(hint)
+        where = f"{cls.__qualname__}.{attr}"
+        given: Launch | Attach | None = None
+        cfg_key = attr
+        name = attr
+        for marker in metadata:
+            if isinstance(marker, (Launch, Attach)):
+                given = marker
+            elif isinstance(marker, FromConfig):
+                cfg_key = marker.key
+            elif isinstance(marker, Alias):
+                name = marker.name
+            elif isinstance(marker, Declare):
+                raise TypeError(
+                    f"{where} declares a service with Declare; describe it with "
+                    "Launch or Attach instead"
+                )
+        read_keys.add(cfg_key)
+        listed = section.get(cfg_key)
+        from_file = service_entry(listed) if isinstance(listed, dict) else {}
+        if isinstance(given, Attach) and "module" in from_file:
+            raise TypeError(
+                f"{where} is declared with Attach, but its services entry "
+                f"{cfg_key!r} gives a module to launch"
+            )
+        found[name] = Service(name, **{**from_file, **given_keywords(given)})
+    for cfg_key, listed in section.items():
+        if cfg_key not in read_keys and isinstance(listed, dict):
+            found[cfg_key] = Service(cfg_key, **service_entry(listed))
+    refuse_shadowed(cls, found, "service")
+    return found
 
 
 def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclaration]:
@@ -374,21 +469,21 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
     return found
 
 
-def refuse_shadowed(cls: type, declarations: Mapping[str, Declaration]) -> None:
-    """Refuse a component whose name the session already answers itself.
+def refuse_shadowed(cls: type, names: Iterable[str], what: str = "component") -> None:
+    """Refuse a component or service whose name the session answers itself.
 
-    A built component is set on the session under its own name, so one sharing
-    a name with a method would hide it, and one sharing a name with a property
-    could never be set at all.
+    Each is set on the session under its own name, so one sharing a name with a
+    method would hide it, and one sharing a name with a property could never be
+    set at all.
     """
-    for name in declarations:
+    for name in names:
         if not hasattr(cls, name):
             continue
         raise TypeError(
-            f"{cls.__qualname__} declares a component named {name!r}, but that "
+            f"{cls.__qualname__} declares a {what} named {name!r}, but that "
             f"is already an attribute of the session, so reading it would "
-            "give the attribute rather than the component. Rename it, or name "
-            "the component something else with Alias."
+            f"give the attribute rather than the {what}. Rename it, or name "
+            f"the {what} something else with Alias."
         )
 
 
@@ -493,6 +588,24 @@ def is_hook(hint: Any) -> bool:
     if get_origin(hint) is not Annotated:
         return False
     return any(isinstance(m, Hook) for m in get_args(hint)[1:])
+
+
+def given_keywords(marker: Launch | Attach | None) -> dict[str, Any]:
+    """Return the `Service` keywords *marker* sets, leaving out those left unset."""
+    if marker is None:
+        return {}
+    return {
+        f.name: getattr(marker, f.name)
+        for f in fields(marker)
+        if getattr(marker, f.name) is not None
+    }
+
+
+def is_service(hint: Any) -> bool:
+    """Return whether *hint* is annotated as a service."""
+    if get_origin(hint) is not Annotated:
+        return False
+    return any(isinstance(m, ServiceMark) for m in get_args(hint)[1:])
 
 
 def entry(section: Mapping[str, Any], key: str) -> dict[str, Any]:

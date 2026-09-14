@@ -22,9 +22,11 @@ from __future__ import annotations
 
 from typing import Annotated, TypeAlias, TypeVar
 
-from ._declarations import Hook, Layer
+from redsun.services import Service
 
-__all__ = ["AsDevice", "AsHook", "AsPresenter", "AsView"]
+from ._declarations import Hook, Layer, ServiceMark
+
+__all__ = ["AsDevice", "AsHook", "AsPresenter", "AsService", "AsView"]
 
 T = TypeVar("T")
 
@@ -42,6 +44,26 @@ AsView: TypeAlias = Annotated[T, Layer.VIEW]
 
 Satisfies `redsun.experimental.AttachableComponent`, so it declares the
 `redsun.experimental.Placement` it asks the frontend to attach it at.
+"""
+
+
+AsService: TypeAlias = Annotated[Service, ServiceMark()]
+"""A server the session's devices talk to, started before any component is built.
+
+`redsun.experimental.Launch` describes a service the session runs, and
+`redsun.experimental.Attach` one already running elsewhere. Without either,
+the service comes from the session's ``services`` entry for it. An alias
+carrying the marker can be declared once and used by several sessions:
+
+```python
+CameraIoc: TypeAlias = Annotated[
+    AsService, Launch("mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:")
+]
+
+
+class MyApp(Session):
+    camera_ioc: CameraIoc
+```
 """
 
 

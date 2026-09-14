@@ -474,6 +474,32 @@ listed in the [changelog](changelog.md).
   component counts as being used, as does answering a `Requires`, `RequiresOne`
   or `RequiresMaybe` question.
 
+- `AsService`, `Launch` and `Attach` declare a service on a session. `Launch`
+  describes a service the session runs as `python -m <module>`, with `ready`,
+  `prefix`, `args` and `stop_timeout`. `Attach` describes a service already
+  running elsewhere by its prefix. A keyword a marker leaves out is taken from
+  the service's `services` entry. `Alias` names the service and `FromConfig`
+  names its entry. `Declare` on a service is refused, and so is `Attach` with an
+  entry that gives a module.
+
+  A `services` section declares services from a file, and an entry naming a
+  plugin takes `module` and `ready` from that plugin's `services` manifest group.
+  `Session.services` holds the services by name, and each one is an attribute of
+  the session. A service is not a component: it has no layer and is never
+  injected.
+
+  ```python
+  CameraIoc: TypeAlias = Annotated[
+      AsService,
+      Launch("mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"),
+  ]
+
+
+  class MyApp(QtSession):
+      camera_ioc: CameraIoc
+      beamline: Annotated[AsService, Attach("BL01:")]
+  ```
+
 ### Changed
 
 - A device is built as `cls(name=<name>, **kwargs)` rather than
