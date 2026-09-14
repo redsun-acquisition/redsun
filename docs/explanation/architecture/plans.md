@@ -1,15 +1,15 @@
 # Plans
 
-Redsun builds on the [Bluesky plan system](https://blueskyproject.io/bluesky/main/plans.html).
-A *plan* is a generator function that yields `Msg` objects; the `RunEngine`
-consumes them and drives hardware.
+`redsun` builds on the [Bluesky plan system](https://blueskyproject.io/bluesky/main/plans.html).
+A *plan* is a generator yielding `Msg` objects, which the `RunEngine` turns
+into hardware calls.
 
-Redsun adds two layers on top:
+`redsun` adds two things:
 
-- **`continous` plans** - plans that run in a loop, with optional pause/resume
-  and in-flight user actions.
-- **`PlanSpec`** - a structured description of a plan's signature, used by the
-  view layer to build a parameter form automatically.
+- **`continous` plans** run in a loop, optionally pausable, and accept user
+  actions while running.
+- **`PlanSpec`** describes a plan's signature, from which the view layer builds
+  a parameter form.
 
 ---
 
@@ -28,13 +28,13 @@ def live_scan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]:
         yield from bps.trigger_and_read(detectors)
 ```
 
-The decorator stamps `__togglable__` and `__pausable__` onto the function.
-`create_plan_spec` reads these to configure the run/pause buttons in the UI.
+The decorator sets `__togglable__` and `__pausable__` on the function;
+`create_plan_spec` reads them to set up the run and pause buttons.
 
 ### In-flight actions
 
-An `Action` is a user-triggered side effect that can fire while the plan runs.
-Declare one as a parameter default:
+An `Action` is something the user triggers while the plan runs. Declare one
+as a parameter default:
 
 ```python
 from redsun.engine.actions import Action
@@ -52,10 +52,10 @@ def live_view(
         yield from bps.trigger_and_read([camera])
 ```
 
-The view renders `snap` as a button. When clicked, the `SRLatch` inside
-`snap_action` is set, unblocking `wait_for_actions` inside `read_while_waiting`.
+The view shows `snap` as a button. A click sets the `SRLatch` inside
+`snap_action`, which releases `wait_for_actions` inside `read_while_waiting`.
 
-Togglable actions (represented as toggle buttons) use `togglable=True`:
+A toggle button is an action with `togglable=True`:
 
 ```python
 Action(
@@ -68,8 +68,8 @@ Action(
 
 ### SRLatch
 
-`SRLatch` is the synchronisation primitive behind `Action`. It wraps two
-`asyncio.Event` objects and supports waiting for either state:
+`SRLatch` is the primitive behind `Action`: two `asyncio.Event` objects, with
+a wait for either state:
 
 ```python
 latch = SRLatch()
@@ -79,9 +79,8 @@ await latch.wait_for_set()  # blocks until set()
 await latch.wait_for_reset()  # blocks until reset()
 ```
 
-The `RunEngine` handles `wait_for_actions` messages by running one
-`wait_for_set` (or `wait_for_reset`) task per latch and returning the first
-that completes.
+For a `wait_for_actions` message, the `RunEngine` runs one `wait_for_set` (or
+`wait_for_reset`) task per latch and returns the first to finish.
 
 ---
 
@@ -107,8 +106,7 @@ Each parameter becomes a `ParamDescription` with:
 
 ### Annotation dispatch
 
-The dispatch is table-driven. Annotations are mapped to `ParamDescription`
-fields in this priority order:
+Annotations map to `ParamDescription` fields, first match wins:
 
 1. `Literal["a", "b"]` -> `choices=["a", "b"]`
 2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
@@ -124,20 +122,19 @@ Step 5 accepts:
 - any `Enum` subclass
 - a sequence of anything that is not a device
 
-A *required* parameter annotated with anything else raises
-`UnresolvableAnnotationError`, and the plan is skipped rather than shown with a
-control nobody can fill in correctly. `Any` is excluded deliberately: it would
-accept everything and render as a bare text field.
+A *required* parameter with any other annotation raises
+`UnresolvableAnnotationError`, and the plan is skipped instead of shown with a
+control nobody can fill in. `Any` is excluded on purpose: it would accept
+everything and show as a bare text field.
 
-The check is pure Python and imports no toolkit, so a plan can be inspected
-before any application object exists. Turning these descriptions into actual
-widgets belongs to the view layer; for the Qt one, see
-[Qt widgets - plans](qt-widgets.md).
+The check is plain Python and imports no toolkit, so a plan can be inspected
+before any application object exists. The view layer turns descriptions into
+widgets; for Qt, see [Qt widgets - plans](qt-widgets.md).
 
 ### Collecting and resolving arguments
 
-Once the user fills in the form, the presenter calls two functions to
-turn widget values into a plan call:
+Once the user fills in the form, the presenter turns the values into a plan
+call:
 
 ```python
 from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
@@ -156,7 +153,7 @@ engine(my_plan(*args, **kwargs))
 
 ## Plan stubs
 
-`redsun.engine.plan_stubs` provides stubs that compose inside larger plans.
+`redsun.engine.plan_stubs` holds stubs to use inside larger plans.
 
 ### Action flow-control stubs
 

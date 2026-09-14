@@ -32,20 +32,16 @@ class _SignalSetters:
 
 
 class PlanFilenameProvider(FilenameProvider):
-    """Provides auto-incrementing filenames scoped per plan.
+    """Filenames with a counter per plan.
 
-    Templated as `<plan_name>_<counter>`, where `counter`
-    is zero-padded to `max_digits`. Backends deriving
-    per-key files must append their suffix with `-`
-    (e.g. `plan_00003-camera`) so the counter remains
-    parseable.
+    Filenames are `<plan_name>_<counter>`, the counter zero-padded to
+    `max_digits`. A backend writing one file per key appends its suffix with
+    `-` (as in `plan_00003-camera`), so the counter can still be parsed.
 
     Parameters
     ----------
     max_digits : int
-        Zero-padding with for the counter.
-
-        Defaults to 5 (e.g. `00001`).
+        Zero-padding width of the counter, as in `00001` for 5.
     """
 
     __slots__ = ("_counters", "_max_digits", "_plan")
@@ -57,7 +53,7 @@ class PlanFilenameProvider(FilenameProvider):
 
     @property
     def max_digits(self) -> int:
-        """The maximum number of digits for the counter."""
+        """Zero-padding width of the counter."""
         return self._max_digits
 
     def __init__(self, *, max_digits: int = 5) -> None:
@@ -70,7 +66,7 @@ class PlanFilenameProvider(FilenameProvider):
         self._plan = plan
 
     def reset(self, counters: Mapping[str, int]) -> None:
-        """Replace the counters wholesale (e.g. after a base directory change)."""
+        """Replace every counter, as after a base directory change."""
         self._counters = dict(counters)
 
     def bump(self, plan: str, next_count: int) -> None:
@@ -81,10 +77,8 @@ class PlanFilenameProvider(FilenameProvider):
     def __call__(self, datakey_name: str | None = None) -> str:
         """Return the next filename for the active plan.
 
-        Each call uses up the current counter value and increments it,
-        so the same filename is never returned twice.
-
-        `datakey_name` is ignored: per-key naming is the responsibility of the backend.
+        Each call increments the counter, so no filename is returned twice.
+        `datakey_name` is ignored: the backend names files per key.
         """
         count = self._counters.get(self._plan, 0)
         self._counters[self._plan] = count + 1
@@ -92,31 +86,28 @@ class PlanFilenameProvider(FilenameProvider):
 
 
 class SessionPathProvider(PathProvider):
-    """Session-scoped path provider.
+    """Path provider for one session.
 
-    Computes paths in the layout:
+    Paths have the layout:
 
     ```
     base_dir / session_name / YYYY-MM-DD/ <plan>_<counter>{.ext}
     ```
 
-    The date is evaluated per request, not at construction. The counter is
-    per `(session, plan)` and only ever increases: the date directory groups
-    files, it does not scope the counter.
+    The date is read on each request, not at construction. The counter belongs
+    to `(session, plan)` and only increases: date directories group files but
+    do not reset the counter.
 
     Parameters
     ----------
     base_dir : Path | None
-        Base directory for storage; `~` is expanded. Defaults to
-        `~/redsun-storage`.
+        Base directory, with `~` expanded. Defaults to `~/redsun-storage`.
     session : str
-        Session name, fixed for the provider's lifetime. Defaults to
-        `"unknown-session"`.
+        Session name, fixed for the provider's lifetime.
     max_digits : int
-        Zero-padding width for the counter. Defaults to 5 (e.g. `00001`).
+        Zero-padding width of the counter, as in `00001` for 5.
     now: Callable[[], datetime] | None
-        Clock used to compute the date directory, for testing. Defaults to
-        `datetime.now`.
+        Clock giving the date directory, for tests. Defaults to `datetime.now`.
     """
 
     __slots__ = (
@@ -176,9 +167,8 @@ class SessionPathProvider(PathProvider):
     def _scan_existing(self) -> None:
         """Recover per-plan counters from files under the session directory.
 
-        Walks every date directory and raises each plan's counter to one
-        past the highest number found, so newly generated filenames never
-        reuse a number already present on disk.
+        Sets each plan's counter one past the highest number found in any date
+        directory, so new filenames never reuse a number on disk.
         """
         directory = self._base_dir / self._session
         if not directory.exists():
@@ -193,10 +183,9 @@ class SessionPathProvider(PathProvider):
                 self._filenames.bump(match.group("plan"), int(match.group("count")) + 1)
 
     def __call__(self, datakey_name: str | None = None) -> PathInfo:
-        """Create the `PathInfo` for the next burst, ticking the plan counter.
+        """Return the `PathInfo` of the next burst, incrementing the plan's counter.
 
-        Each call produces a new, unique path: the active plan's counter
-        value is used up and incremented.
+        Each call returns a new path.
         """
         directory = self._base_dir / self._session / self._now().strftime("%Y-%m-%d")
         return PathInfo(directory_path=directory, filename=self._filenames())

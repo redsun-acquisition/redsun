@@ -9,3 +9,4 @@
 - **[Wire components together](wire-components.md)**
 - **[Install container hooks](install-hooks.md)**
 - **[Configure logging](configure-logging.md)**
+- **[Write a service](write-a-service.md)**

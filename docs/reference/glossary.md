@@ -1,140 +1,133 @@
 # Glossary
 
-The vocabulary these pages are written in. Terms that read as ordinary English
-elsewhere are defined here in the sense redsun uses them.
+Terms as `redsun` uses them, including ones that look like ordinary English.
 
-Acronyms and the less common terms below also appear as tooltips throughout the
-documentation: hover a dotted-underlined word to read its definition without
-leaving the page.
+Acronyms and rarer terms also appear as tooltips across the site: hover a
+dotted-underlined word to read its definition.
 
 ### Application container
 
-The object a session is: it declares the components, builds them in order,
+The object a session is. It declares the components, builds them in order,
 registers their providers, wires them together and injects their dependencies.
 [`AppContainer`][redsun.containers.container.AppContainer] is the base;
-[`QtAppContainer`][redsun.qt.QtAppContainer] is the one a Qt session uses.
+[`QtAppContainer`][redsun.qt.QtAppContainer] is the Qt one.
 
 ### ADR
 
 Architecture Decision Record. A numbered document under
-`docs/explanation/decisions` recording one decision and the reasoning behind
-it. An ADR is never edited once accepted; a later one supersedes it.
+`docs/explanation/decisions` recording one decision and its reasons. An
+accepted ADR is never edited; a later one supersedes it.
 
 ### Build step
 
 One stage of `AppContainer.build`, announced by name as it starts.
-`AppContainer.BUILD_STEPS` names them in order, so a progress display sizes
-itself from the framework rather than from a count of its own.
+`AppContainer.BUILD_STEPS` lists them in order, so a progress display can size
+itself from it.
 
 ### Component
 
-A device, a presenter or a view: the three kinds of object a container
-declares, builds and owns.
+A device, presenter or view: the three kinds of object a container declares,
+builds and owns.
 
 ### DVP
 
-Device-View-Presenter, the architecture a redsun session is built on. It is
-Model-View-Presenter with the Model layer replaced by a Device layer, and with
-the presenters and views decoupled from each other through the virtual
-container rather than holding references to one another.
+Device-View-Presenter, the architecture of a `redsun` session.
+Model-View-Presenter with a Device layer in place of the Model, and with
+presenters and views talking through the virtual container instead of holding
+references to each other.
 
 ### Device
 
-A piece of hardware, or a stand-in for one, as an `ophyd-async` device.
-Hardware access is asynchronous throughout. A device that fails to build is
-logged and skipped, as any component is, so a missing instrument does not
-abort the session.
+Hardware, or a stand-in for it, as an `ophyd-async` device. Hardware access is
+asynchronous. A device that fails to build is logged and skipped like any
+component, so a missing instrument does not abort the session.
 
 ### Frontend
 
-The toolkit a session's views are written against, named in the configuration
-as `pyqt` or `pyside`. It selects the container class a
-`AppContainer.from_config` session is built on.
+The toolkit a session's views use, named in the configuration as `pyqt` or
+`pyside`. It picks the container class `AppContainer.from_config` builds on.
 
 ### Hook
 
-An object a session installs on its container to act at one point in the
-build. A hook never changes what the container builds or the order it builds
-it in; it acts at a moment the container reaches anyway.
+An object a session installs on its container to act at one point of the
+build. A hook never changes what the container builds or in which order.
 
 ### Hook point
 
-A named moment in the build at which a hook is called, named after the method
+A named moment of the build at which a hook is called, named after the method
 it calls: `create_application`, `configure_application`, `during_build`,
-`configure_main_view`. Every point belongs to a toolkit, so a toolkit
-container declares them.
+`configure_main_view`. Each point belongs to a toolkit, whose container
+declares it.
 
 ### Plan
 
-A bluesky generator describing an acquisition, run by the
-[`RunEngine`][redsun.engine.RunEngine]. A presenter launches one; the engine
-executes it and emits the documents it produces.
+A `bluesky` generator describing an acquisition, run by the
+[`RunEngine`][redsun.engine.RunEngine]. A presenter launches it; the engine
+runs it and emits its documents.
 
 ### Port
 
-One end of a connection: a signal on the publishing side, a slot on the
-consuming side. A port is addressed as `component.port` in a configuration
-file.
+One end of a connection: a signal on the sending side, a slot on the receiving
+side. A configuration file addresses a port as `component.port`.
 
 ### Presenter
 
 The component holding a session's behaviour. It owns devices, exposes signals
-and slots, and never touches a widget. Its constructor leads with
+and slots, and never touches a widget. Its constructor starts with
 `(name, devices)`.
 
 ### Provider key
 
-A typed key a component binds a value to in the virtual container, so another
-component can resolve it without knowing who produced it.
+A typed key under which a component puts a value in the virtual container, so
+another component can resolve it without knowing who produced it.
 
 ### Session
 
-One running application: its configuration, its components, and the
-connections between them.
+One running application: its configuration, components and the connections
+between them.
 
 ### Signal
 
-A psygnal signal a component emits. Every public signal attribute is a port,
+A `psygnal` signal a component emits. Every public signal attribute is a port,
 named `sig_snake_case`.
 
 ### Sink
 
-The producer's face of a storage queue. A device holding a
-[`FrameSink`][redsun.storage.FrameSink] can put frames and close it, and
-nothing else.
+The producer side of a storage queue. A device holding a
+[`FrameSink`][redsun.storage.FrameSink] can put frames and close it, nothing
+else.
 
 ### Slot
 
-A method marked with [`slot`][redsun.virtual.slot], making it connectable.
-Marking a method makes its name and signature public API, since that is what
-other components are connected against.
+A method marked with [`slot`][redsun.virtual.slot], which makes it
+connectable. Its name and signature become public API, since other components
+connect to them.
 
 ### Storage backend
 
-The mechanics of writing to one storage format, split in two:
+How one storage format is written, in two parts:
 [`StorageIO`][redsun.storage.StorageIO] opens and describes it, and
-[`OpenStore`][redsun.storage.OpenStore] is the handle bound to its lifetime.
+[`OpenStore`][redsun.storage.OpenStore] is the handle that lives as long as it
+is open.
 
 ### Structural subtyping
 
-Conformance decided by the members a class has rather than by what it inherits
-from. Presenters and views are validated against `@runtime_checkable`
-protocols on the built instance, so a component never has to inherit from
-redsun to satisfy one.
+A class conforms by the members it has, not by what it inherits. Presenters and
+views are checked against `@runtime_checkable` protocols on the built instance,
+so a component never inherits from `redsun` to satisfy one.
 
 ### View
 
 The component holding a session's widgets. It declares signals and slots and
-holds no behaviour of its own. Its constructor takes `(name)` alone.
+no behaviour of its own. Its constructor takes `(name)` alone.
 
 ### Virtual container
 
-The session-wide object that is at once the signal bus, the provider registry
-and the document-callback registry. Every component reaches the others through
-it rather than holding a reference to them.
+The session-wide signal bus, provider registry and document-callback registry
+in one object. Components reach each other through it instead of holding
+references.
 
 ### Wiring
 
-The declaration of which signal reaches which slot. It belongs to the
-application, not to the components: a component declares its ports, and the
-session says how they connect.
+Which signal reaches which slot. The application declares it, not the
+components: a component declares its ports and the session connects them.

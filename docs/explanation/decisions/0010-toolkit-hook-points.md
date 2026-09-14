@@ -82,7 +82,7 @@ Four properties follow, and are the reason for the shape:
 - The container never learns what a splash is. There is no `show`, `update` or
   `close` vocabulary in `AppContainer`; it opens a block and calls a reporter.
 - No signal is needed. `sig_phase_complete` is removed, and it was the only
-  psygnal `Signal` on `AppContainer`, so `__weakref__` leaves its `__slots__`.
+  `psygnal` `Signal` on `AppContainer`, so `__weakref__` leaves its `__slots__`.
 - Nothing branches on whether a hook was declared. With no provider the
   container enters a `nullcontext` over a reporter that discards what it is
   given, so the build has one path.

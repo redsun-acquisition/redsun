@@ -1,34 +1,33 @@
 # Writing a custom storage backend
 
-Redsun ships with an in-memory backend (for tests) and an
+`redsun` ships an in-memory backend, for tests, and an
 [acquire-zarr](https://github.com/acquire-project/acquire-zarr) backend.
-If your lab uses another format, you can plug it in by implementing two
-small classes. In this tutorial you will build a naive raw-binary backend - each stream lands in a flat `.bin` file next to a JSON sidecar - and
-drive it end to end through [`BaseStorage`][redsun.storage.BaseStorage].
+Another format takes two small classes. This tutorial builds a simple
+raw-binary backend, writing each stream to a flat `.bin` file beside a JSON
+sidecar, and drives it through [`BaseStorage`][redsun.storage.BaseStorage].
 
-The format itself is deliberately simple; the point is the contract.
+The format is kept simple on purpose; the contract is what matters.
 
 ## The contract
 
-A backend is split in two (see the
+A backend has two parts (the
 [storage redesign decision](../explanation/decisions/0002-storage-dual-context-redesign.md)
-for why):
+explains why):
 
-- [`StorageIO`][redsun.storage.StorageIO] - the *unopened* factory. It
-  knows the format's identity (`mimetype`, `extension`), how to `open` a
-  store at a path, and how to describe streams to bluesky
-  (`uri`, `resource_info`).
-- [`OpenStore`][redsun.storage.OpenStore] - the *hot* write path returned
-  by `open`. It only writes (`write`), releases finished streams
-  (`release`), and closes (`close`).
+- [`StorageIO`][redsun.storage.StorageIO], the factory before opening. It
+  knows the format (`mimetype`, `extension`), how to `open` a store at a path,
+  and how to describe streams to `bluesky` (`uri`, `resource_info`).
+- [`OpenStore`][redsun.storage.OpenStore], the write path `open` returns. It
+  writes (`write`), releases finished streams (`release`) and closes
+  (`close`).
 
-You never call `OpenStore` yourself: `BaseStorage` owns the lifecycle.
-Producers - async device logics and sync document callbacks - only ever
-see a [`FrameSink`][redsun.storage.FrameSink].
+You never call `OpenStore` yourself: `BaseStorage` manages its lifecycle.
+Producers, async device logic and sync document callbacks, only see a
+[`FrameSink`][redsun.storage.FrameSink].
 
 ## Step 1: the open store
 
-Create a file `raw_backend.py` and start with the write path:
+Create `raw_backend.py` and start with the write path:
 
 ```python
 from __future__ import annotations
@@ -89,18 +88,17 @@ class RawStore(OpenStore):
         self._sidecar.write_text(json.dumps(self._meta, indent=2))
 ```
 
-Three things to notice:
+Note:
 
-- `write` receives the `data_key` on every call - one store serves all
-  registered streams of the burst.
-- `release` is called once per stream when its drain retires (capacity
-  reached, or teardown). `close` is called exactly once, by whichever
-  drain retires last - any stream still open at that point is cleaned up
-  there.
-- The methods are `async` but this implementation blocks the event loop
-  on file I/O. That is fine for a tutorial and for fast local disks;
-  a production backend should hand the heavy lifting to a library that
-  does its own buffering off-thread (as acquire-zarr does).
+- `write` receives the `data_key` on every call: one store serves every
+  stream registered for the burst.
+- `release` is called once per stream when its drain ends (at capacity or
+  teardown). `close` is called exactly once, by the last drain to end, and
+  cleans up any stream still open.
+- The methods are `async`, but this implementation blocks the event loop on
+  file I/O. That is acceptable here and on fast local disks; a production
+  backend should use a library that buffers on its own thread, as
+  `acquire-zarr` does.
 
 ## Step 2: the IO factory
 
@@ -133,20 +131,19 @@ class RawIO(StorageIO):
         )
 ```
 
-- `mimetype` is the backend's identity in the
-  [storage registry][redsun.storage.register_storage] - pick something
-  unique and stable.
-- `uri` and `resource_info` exist so that device data logics can emit
-  `StreamResource` documents pointing at your files; consumers (e.g. a
-  reader in your analysis environment) use them to find and interpret
-  the data. Since one `.bin` file holds exactly one stream, the URI is
-  just that file. `parameters` can carry any extra format-specific hints
-  a reader needs.
+- `mimetype` identifies the backend in the
+  [storage registry][redsun.storage.register_storage]; choose something unique
+  and stable.
+- `uri` and `resource_info` let device data logic emit `StreamResource`
+  documents pointing at your files, which a reader in your analysis
+  environment uses to find and interpret the data. One `.bin` file holds one
+  stream, so the URI is that file. `parameters` can carry format-specific
+  hints for a reader.
 
 ## Step 3: drive it
 
-`BaseStorage` does the rest: queueing, backpressure, lazy opening, and
-teardown ordering. Append a small demo:
+`BaseStorage` handles queueing, backpressure, lazy opening and teardown order.
+Append a demo:
 
 ```python
 import asyncio
@@ -188,9 +185,9 @@ Run it:
 python raw_backend.py
 ```
 
-You get the canonical session layout - `raw-demo/tutorial/<YYYY-MM-DD>/unknown_00000-{camera,stats}.bin` plus
-the `unknown_00000.json` sidecar (the plan name defaults to `unknown`
-until a presenter sets it). Reading a stream back is one line:
+It writes the session layout `raw-demo/tutorial/<YYYY-MM-DD>/unknown_00000-{camera,stats}.bin`
+and the `unknown_00000.json` sidecar (the plan name is `unknown` until a
+presenter sets it). Reading a stream back takes one line:
 
 ```python
 frames = np.fromfile(
@@ -198,24 +195,22 @@ frames = np.fromfile(
 ).reshape(-1, 64, 64)
 ```
 
-Note what you did *not* write: no queues, no tasks, no open/close
-ordering. `register` allocated the burst path, the first frame through a
-drain opened the store lazily, capacity (or `close`) shut the sinks
-down, and the last drain out closed `RawStore`.
+You wrote no queues, tasks or open and close ordering. `register` allocated the
+burst path, the first frame through a drain opened the store, capacity (or
+`close`) shut the sinks down, and the last drain to end closed `RawStore`.
 
 ## Where to go next
 
-- **Share it across the app** - put the instance in the process-wide
+- **Share it across the application**: put the instance in the process-wide
   registry with
-  [`register_storage("group", storage)`][redsun.storage.register_storage]
-  so device data logics and document callbacks retrieve the same
-  instance via [`get_storage`][redsun.storage.get_storage].
-- **Feed it from devices and callbacks** - the
+  [`register_storage("group", storage)`][redsun.storage.register_storage], so
+  device data logic and document callbacks get the same instance from
+  [`get_storage`][redsun.storage.get_storage].
+- **Feed it from devices and callbacks**: the
   [session storage explanation](../explanation/storage.md) covers how
-  `StandardDetector` data logics and document callbacks share one store,
-  and the write-window rules that come with it.
-- **Understand the invariants** - the
+  `StandardDetector` data logic and document callbacks share one store, and
+  when each may write.
+- **Rely on the lifecycle**: the
   [dual-context redesign ADR](../explanation/decisions/0002-storage-dual-context-redesign.md)
-  documents the lifecycle your backend can rely on: `open` is called
-  once per burst, `write`/`release` only between `open` and `close`,
-  and `close` exactly once.
+  guarantees `open` once per burst, `write`/`release` only between `open` and
+  `close`, and `close` exactly once.

@@ -9,20 +9,17 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class HasShutdown(Protocol):  # pragma: no cover
-    """Protocol marking your class as capable of shutting down synchronously."""
+    """A class that shuts down synchronously."""
 
     @abstractmethod
     def shutdown(self) -> None:
-        """Shutdown an object. Perform cleanup operations.
-
-        For use in presenters and in container hooks.
-        """
+        """Clean up. Called on presenters and container hooks."""
         ...
 
 
 @runtime_checkable
 class IsProvider(Protocol):  # pragma: no cover
-    """Protocol marking a class as a provider of dependencies."""
+    """A class providing dependencies to the virtual container."""
 
     @abstractmethod
     def register_providers(self, container: VirtualContainer) -> None:
@@ -32,7 +29,7 @@ class IsProvider(Protocol):  # pragma: no cover
 
 @runtime_checkable
 class IsInjectable(Protocol):  # pragma: no cover
-    """Protocol marking a class as injectable with dependencies from the container."""
+    """A class receiving dependencies from the virtual container."""
 
     @abstractmethod
     def inject_dependencies(self, container: VirtualContainer) -> None:

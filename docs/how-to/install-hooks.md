@@ -1,15 +1,14 @@
 # Install container hooks
 
-A component acts on its own behalf. A **hook** acts on the toolkit the session
-runs on: it supplies the application object, themes every window, or covers the
-build with a splash screen. It is an ordinary object, with no base class to
-inherit, and it never changes what the container builds or the order it builds
-it in.
+A component acts for itself. A **hook** acts on the session's toolkit: it
+supplies the application object, themes every window, or shows a splash screen
+during the build. It is an ordinary object with no base class, and it never
+changes what the container builds or in which order.
 
-Each hook point is named by the method it calls, and a container installs one
-provider per point. A provider is named in one of two places, and every example
-below is shown in both. Picking a tab switches every other tab on this page, and
-on any other page of this documentation, to the same form.
+Each hook point is named after the method it calls, and a container installs
+one provider per point. A provider is named in one of two places, and each
+example below shows both. Picking a tab switches every tab on the site to the
+same form.
 
 === "Container class"
 
@@ -19,7 +18,7 @@ on any other page of this documentation, to the same form.
 
 === "Configuration file"
 
-    A session declares a provider under the `hooks` section, keyed by the same
+    A session declares a provider in the `hooks` section, under the point's
     name, with the provider's import path.
 
 ## Pick a hook point
@@ -31,19 +30,18 @@ on any other page of this documentation, to the same form.
 | `during_build` | the application | around the whole build, closing once the window is shown |
 | `configure_main_view` | the main window | when the window is built, before it is shown |
 
-Every point belongs to a toolkit, so all four live on
+Each point belongs to a toolkit, so all four are on
 [`QtAppContainer`][redsun.qt.QtAppContainer]. A plain
-[`AppContainer`][redsun.containers.container.AppContainer] calls none, and
-naming one on it is refused; a container for another toolkit declares the
-moments that toolkit actually has.
+[`AppContainer`][redsun.containers.container.AppContainer] calls none and
+refuses them; a container for another toolkit declares that toolkit's points.
 
-Each point has a protocol carrying its one method:
+Each point has a protocol with its one method:
 [`CreatesApplication`][redsun.containers._hooks.CreatesApplication],
 [`ConfiguresApplication`][redsun.containers._hooks.ConfiguresApplication],
 [`WrapsBuild`][redsun.containers._hooks.WrapsBuild] and
-[`ConfiguresMainView`][redsun.containers._hooks.ConfiguresMainView]. Implement
-the method and the provider satisfies the protocol; there is nothing to
-subclass and nothing to register.
+[`ConfiguresMainView`][redsun.containers._hooks.ConfiguresMainView]. A provider
+implementing the method satisfies the protocol, with nothing to subclass or
+register.
 
 ## Write a provider
 
@@ -61,8 +59,8 @@ class DarkTheme:
         app.setStyleSheet(f"QWidget {{ background: #202020; color: {self.accent}; }}")
 ```
 
-Type the parameter against the toolkit alias rather than the bare protocol, so
-a provider written for the wrong toolkit fails a type check rather than at
+Annotate parameters with the toolkit alias, not the bare protocol, so a
+provider for the wrong toolkit fails a type check instead of failing at
 runtime:
 
 ```python
@@ -80,9 +78,9 @@ exported from `redsun.qt`.
 
 !!! note
 
-    `isinstance` cannot be given a parameterised protocol, so the container
-    checks the bare form. A provider built against the wrong toolkit is caught
-    by a type checker, not by the build.
+    `isinstance` does not accept a parameterised protocol, so the container
+    checks the bare one. Only a type checker catches a provider for the wrong
+    toolkit.
 
 ## Install it
 
@@ -97,8 +95,8 @@ exported from `redsun.qt`.
         configure_application = declare_hook(DarkTheme)
     ```
 
-    A subclass inherits the points its bases declare, and may replace one by
-    declaring the same attribute.
+    A subclass inherits its bases' points and replaces one by declaring the
+    same attribute.
 
 === "Configuration file"
 
@@ -119,7 +117,7 @@ exported from `redsun.qt`.
 
 === "Container class"
 
-    Keyword arguments go to the constructor, and the provider is built as the
+    Keyword arguments go to the constructor; the provider is built when the
     container class is created:
 
     ```python
@@ -127,8 +125,8 @@ exported from `redsun.qt`.
         configure_application = declare_hook(DarkTheme, accent="#d47f4c")
     ```
 
-    Pass an object instead of a class to install one you built yourself. Keyword
-    arguments are then a `TypeError`, since there is nothing left to construct:
+    Pass an object instead of a class to install one you built. Keyword
+    arguments then raise `TypeError`, since nothing is left to construct:
 
     ```python
     theme = DarkTheme(accent="#d47f4c")
@@ -150,13 +148,13 @@ exported from `redsun.qt`.
           accent: "#d47f4c"
     ```
 
-    An entry takes `provider` and `kwargs` and nothing else, so a provider is
-    free to take a constructor argument of its own called `provider`.
+    An entry takes only `provider` and `kwargs`, so a provider may have a
+    constructor argument named `provider`.
 
 ## Serve more than one hook point
 
-A provider holding state between two points is installed at both, as **one
-object**. Sharing is written down rather than inferred.
+A provider keeping state between two points is installed at both as **one
+object**, and the sharing is written out, not inferred.
 
 === "Container class"
 
@@ -184,19 +182,18 @@ object**. Sharing is written down rather than inferred.
       configure_main_view: *theme
     ```
 
-    `&name` and `*name` are ordinary YAML anchors and aliases: an alias *is* the
+    `&name` and `*name` are YAML anchors and aliases: an alias *is* the
     anchored node, so both keys hold one provider.
 
-Two separate entries naming the same provider with the same arguments are
-refused, because whether they mean one shared object or two identical ones
-cannot be read off the file. Give them different arguments to build two.
+Two separate entries with the same provider and arguments are refused, since
+the file cannot say whether they mean one shared object or two identical ones.
+Give them different arguments to build two.
 
 ## Cover the build with a splash screen
 
-`during_build` is a span rather than a moment: it returns a context manager
-entered before the first component is built and left once the window is on
-screen. What the context manager yields is called with the name of each step as
-it starts.
+`during_build` is a span, not a moment: it returns a context manager entered
+before the first component is built and exited once the window is on screen.
+What it yields is called with each step's name as the step starts.
 
 ```python
 from collections.abc import Callable, Generator
@@ -228,31 +225,29 @@ class Splash:
             screen.close()
 ```
 
-Build the `QPixmap` in the constructor and check it. `QPixmap` reports a
-missing file by being null rather than by raising, and `QSplashScreen` given a
-null pixmap is a window of size 0x0 - so a mistyped path produces a splash that
-silently shows nothing.
+Build the `QPixmap` in the constructor and check it. A missing file gives a
+null `QPixmap` instead of raising, and `QSplashScreen` shows a null pixmap as a
+0x0 window, so a mistyped path gives a splash that shows nothing.
 
 The steps reported are
 [`AppContainer.BUILD_STEPS`][redsun.containers.container.AppContainer.BUILD_STEPS]:
-`virtual container`, `devices`, `presenters`, `views`, `providers`, `wiring`
-and `injection`, in that order. Size a display from that tuple rather than from
-a count of your own, which would drift the day the sequence changes.
+`services`, `virtual container`, `devices`, `connect`, `presenters`, `views`,
+`providers`, `wiring` and `injection`, in that order. Size a display from that
+tuple, not from your own count, which goes stale when the steps change.
 
-The span is left through the context manager, so a build that raises closes the
-splash on the way out rather than leaving it over an application that never got
-a window. Anything else wanting to surround the build belongs here too: a busy
-cursor, a profiler, a logging context.
+The span exits through the context manager, so a build that raises still closes
+the splash instead of leaving it over an application with no window. Anything
+else surrounding the build belongs here too: a busy cursor, a profiler, a
+logging context.
 
-The span opens only on [`run`][redsun.qt.QtAppContainer.run]. Calling `build` on
-its own reports nothing, which is what a test driving the container directly
-wants.
+The span opens only in [`run`][redsun.qt.QtAppContainer.run]. `build` alone
+reports nothing, which suits a test driving the container directly.
 
 ### Show progress
 
-Each step is reported as it *starts*, so a bar showing how many are finished
-sets the value before advancing its own count, and fills to the total after the
-`yield` returns. Map the step names to whatever wording you want:
+Each step is reported when it *starts*, so a bar counting finished steps sets
+its value before advancing the count, and fills to the total after the `yield`
+returns. Map step names to any wording:
 
 ```python
 from functools import partial
@@ -263,8 +258,10 @@ from qtpy.QtWidgets import QProgressBar
 from redsun.containers import AppContainer
 
 LABELS = {
+    "services": "Starting services...",
     "virtual container": "Building virtual layer...",
-    "devices": "Connecting devices...",
+    "devices": "Building devices...",
+    "connect": "Connecting devices...",
     "presenters": "Starting presenters...",
     "views": "Laying out views...",
     "providers": "Registering providers...",
@@ -313,25 +310,22 @@ class ProgressSplash:
 ```
 
 `report` is an ordinary method taking the widgets it draws on, and
-`functools.partial` binds them to give the container the `Callable[[str], None]`
-it expects. Only the count is instance state, because only the count has to
-survive from one call to the next; the widgets belong to one span and stay
-local to it. Resetting `_done` when the span opens rather than only in
-`__init__` is what lets one provider serve a container that is built twice.
+`functools.partial` binds them into the `Callable[[str], None]` the container
+expects. Only the count is instance state, since only the count must survive
+between calls; the widgets belong to one span. Resetting `_done` when the span
+opens, not only in `__init__`, lets one provider serve a container built twice.
 
-Filling the bar after the `yield` rather than inside `report` is what makes it
-reach the total: the last step is announced when it begins, and nothing is
-reported once it finishes. Statements after the `yield` run only on a build
-that succeeded, so a failed build leaves the bar where it stopped and the
-`finally` still closes the splash.
+The bar reaches the total only because it is filled after the `yield`: the
+last step is announced when it begins, and nothing is reported when it ends.
+Code after the `yield` runs only for a successful build, so a failed build
+leaves the bar where it stopped and `finally` still closes the splash.
 
 ### Hand over to the window rather than closing
 
-`close` dismisses the splash at once. Qt's own handoff is
+`close` dismisses the splash at once. Qt's handoff is
 [`finish`](https://doc.qt.io/qt-6/qsplashscreen.html#finish), which keeps the
-splash up until the widget passed to it is displayed. A provider reaches the
-window by serving `configure_main_view` as well, and is installed at both
-points as one object:
+splash up until the given widget is displayed. A provider gets the window by
+also serving `configure_main_view`, installed at both points as one object:
 
 ```python
 from qtpy.QtWidgets import QMainWindow
@@ -366,19 +360,19 @@ class Splash:
                 screen.finish(self.window)
 ```
 
-`configure_main_view` runs inside the span, before it is left, so the window is
-there by the time the splash is dismissed. It stays `None` when the build
-raises before the window exists, which is why the fallback is kept.
+`configure_main_view` runs inside the span, so the window exists when the
+splash is dismissed. It stays `None` if the build raises before the window
+exists, hence the fallback.
 
-`run` processes events once after showing the window and before leaving the
-span, so the window has painted either way; `finish` additionally waits for it
-to be shown on platforms where that takes longer than one pass.
+`run` processes events once after showing the window and before exiting the
+span, so the window has painted either way; `finish` also waits for it on
+platforms where showing takes longer than one pass.
 
 ## Undo what a hook did
 
-Add [`HasShutdown`][redsun.virtual.HasShutdown]'s `shutdown`. Hooks are torn
+Add [`HasShutdown`][redsun.virtual.HasShutdown]'s `shutdown`. Hooks are shut
 down after the presenters, in reverse order, and a provider serving several
-points is torn down once:
+points only once:
 
 ```python
 class DarkTheme:
@@ -391,14 +385,13 @@ class DarkTheme:
         self._app.setStyleSheet(self._previous)
 ```
 
-A `during_build` provider needs no `shutdown`: its context manager already
-closes what it opened. A failing `shutdown` is logged and does not stop the
-rest.
+A `during_build` provider needs no `shutdown`: its context manager closes what
+it opened. A failing `shutdown` is logged and the others still run.
 
 ## Read a failure
 
-Every way of getting a hook wrong raises
-[`HookError`][redsun.containers.HookError], naming the point.
+A wrong hook raises [`HookError`][redsun.containers.HookError], naming the
+point.
 
 === "Container class"
 
@@ -409,8 +402,8 @@ Every way of getting a hook wrong raises
     | `cannot construct hook provider 'X' declared at 'y' with [...]` | the constructor rejected the keywords |
     | `TypeError: declare_hook takes keyword arguments only with a class` | keywords were passed with an already built provider |
 
-    These are raised as the class body is read, so a mistake fails at import
-    rather than at build.
+    These are raised when the class body is read, so a mistake fails at import,
+    not at build.
 
 === "Configuration file"
 
@@ -426,9 +419,9 @@ Every way of getting a hook wrong raises
     | `hook provider 'X' configured at 'y' does not implement Z` | the method is missing or misspelled |
     | `hook provider 'p' is named twice, at 'a' and at 'b', with the same keys` | two entries are indistinguishable; anchor one, or vary the arguments |
 
-A point named on the container class *and* in the file is
+A point named on the container class *and* in the file raises
 `hook point(s) 'x' are named both on MyApp and in the configuration`. Neither
-source wins: drop one.
+wins: remove one.
 
 ## Related
 

@@ -46,9 +46,8 @@ class WiringError(RuntimeError):
 class ComponentNotBuilt(WiringError):
     """Raised when a port path names a component that is not there.
 
-    ``component`` is the name the path used, so a caller that knows which
-    components failed to build can tell one of those from a name that was
-    never declared.
+    ``component`` is the name in the path, so a caller knowing which components
+    failed to build can tell those apart from a name never declared.
     """
 
     def __init__(self, component: str, message: str) -> None:
@@ -79,17 +78,17 @@ def slot(
 ) -> F | Callable[[F], F]:
     """Mark a method as connectable to a signal.
 
-    A marked method is public API: its name and signature are what other
-    components are connected against, and an unmarked method cannot be
-    connected at all. `async def` methods may be marked too.
+    A marked method's name and signature are public API, since other components
+    connect to them; an unmarked method cannot be connected. `async def`
+    methods can be marked too.
 
     Parameters
     ----------
     name : str | None
-        Port name a configuration file addresses the method by. Defaults to
-        the method name without leading underscores.
+        Port name in a configuration file. Defaults to the method name without
+        leading underscores.
     thread : SlotThread
-        Delivery thread, overriding the affinity the class declares.
+        Thread the slot runs on, overriding the class's affinity.
     """
 
     def deco(target: F) -> F:
@@ -119,8 +118,8 @@ def ports(component: object) -> Ports:
     """Return the signals and slots *component* exposes, by port name.
 
     A signal is a public [`Signal`][psygnal.Signal] attribute, or a member of a
-    [`SignalGroup`][psygnal.SignalGroup] the component holds, in which case the
-    member name is the port name. A slot is a method marked with `slot`.
+    [`SignalGroup`][psygnal.SignalGroup] the component holds, named by its
+    member name. A slot is a method marked with `slot`.
 
     Parameters
     ----------
@@ -135,8 +134,7 @@ def ports(component: object) -> Ports:
     Raises
     ------
     WiringError
-        If two signals claim the same port name, which would leave the
-        component unaddressable.
+        If two signals have the same port name.
     """
     cls = type(component)
     signals: dict[str, SignalInstance] = {}
@@ -185,8 +183,8 @@ class Connection:
 class Unconnected:
     """Ports of the built components that no connection reaches.
 
-    Each entry is a ``component.port`` path. A signal listed here emits into
-    nothing; a slot listed here is never called.
+    Each entry is a ``component.port`` path. A listed signal emits to nothing; a
+    listed slot is never called.
     """
 
     signals: list[str] = field(default_factory=list)

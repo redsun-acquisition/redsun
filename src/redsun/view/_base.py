@@ -9,19 +9,18 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class PView(Protocol):
-    """Minimal protocol a view component should implement.
+    """Protocol of a view component.
 
-    ``name`` is declared as a **read-only property**: the framework only
-    reads it, so implementers may satisfy the protocol with a plain
-    instance attribute, a class attribute, or a property.
+    ``name`` is a read-only property, so an instance attribute, a class
+    attribute or a property satisfies it.
 
     Notes
     -----
-    Access to the virtual container is optional and should be acquired
-    by implementing :class:`~redsun.virtual.IsInjectable`.
+    A view reaches the virtual container by implementing
+    [`IsInjectable`][redsun.virtual.IsInjectable].
 
-    Compliance is enforced at build time via ``isinstance`` - class-level
-    checks cannot see attributes assigned in ``__init__``.
+    Checked with ``isinstance`` on the built instance, since attributes
+    assigned in ``__init__`` do not exist on the class.
     """
 
     @property
@@ -32,21 +31,20 @@ class PView(Protocol):
     @property
     @abstractmethod
     def view_position(self) -> ViewPosition:
-        """Position of the view component in the main view of the UI."""
+        """Position of the view in the main window."""
 
 
 class View(ABC):
     """Base view class.
 
-    Deliberately does **not** inherit [`PView`][redsun.view.PView]: the
-    protocol's read-only ``name`` property descriptor would shadow the
-    instance attribute assigned here. Instances satisfy the protocol
-    structurally - which is also how any non-ABC view is expected to comply.
+    Does not inherit [`PView`][redsun.view.PView], whose read-only ``name``
+    property would shadow the instance attribute set here. Instances satisfy
+    the protocol by shape, like any other view.
 
     Parameters
     ----------
     name : str
-        Identity key of the view. Passed as positional-only argument.
+        Identity key of the view, positional-only.
     kwargs : Any, optional
         Additional keyword arguments for view subclasses.
     """
@@ -66,4 +64,4 @@ class View(ABC):
     @property
     @abstractmethod
     def view_position(self) -> ViewPosition:
-        """Position of the view component in the main view of the UI."""
+        """Position of the view in the main window."""

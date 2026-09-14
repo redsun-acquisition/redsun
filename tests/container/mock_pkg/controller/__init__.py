@@ -3,6 +3,7 @@ from .mock_presenters import (
     BrokenController,
     GroupedController,
     MockController,
+    SignalReader,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "BrokenController",
     "GroupedController",
     "MockController",
+    "SignalReader",
 ]

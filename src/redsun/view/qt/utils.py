@@ -1,15 +1,13 @@
-"""Qt widget utilities for plan-based UIs.
+"""Qt widgets for interfaces that run plans.
 
-This module provides the building blocks for a plan parameter form:
-
-- `ActionButton` - a `QPushButton` that carries `Action` metadata and
-  auto-updates its label when toggled.
-- `PlanWidget` - a frozen dataclass owning all Qt widgets for a single
-  plan (parameter form, run/pause buttons, action buttons).
-- `create_plan_widget` - factory that builds a complete `PlanWidget` from
-  a `PlanSpec` and wires up the caller-supplied callbacks.
-- `PlanInfoDialog` - a simple Markdown-rendering dialog for displaying the plan docstring (if available).
-- `create_param_widget` - re-exported from `_widget_factory` for convenience.
+- `ActionButton`: a `QPushButton` carrying an `Action`, its label following
+  the toggle state.
+- `PlanWidget`: a frozen dataclass owning one plan's widgets (parameter form,
+  run and pause buttons, action buttons).
+- `create_plan_widget`: builds a `PlanWidget` from a `PlanSpec` and connects
+  the given callbacks.
+- `PlanInfoDialog`: a dialog rendering a plan's docstring as Markdown.
+- `create_param_widget`: re-exported from `_widget_factory`.
 """
 
 from __future__ import annotations
@@ -40,22 +38,21 @@ __all__ = [
 
 
 class ActionButton(QtW.QPushButton):
-    """A ``QPushButton`` that carries ``Action`` metadata.
+    """A ``QPushButton`` carrying an ``Action``.
 
-    Automatically updates its label based on toggle state using the action's
-    ``toggle_states`` attribute.
+    Its label follows the toggle state, using the action's ``toggle_states``.
 
     Parameters
     ----------
     action : Action
-        The action to associate with this button.
+        The button's action.
     parent : QtWidgets.QWidget | None, optional
-        The parent widget. Default is ``None``.
+        The parent widget.
 
     Attributes
     ----------
     action : Action
-        The action associated with this button.
+        The button's action.
     """
 
     def __init__(self, action: Action, parent: QtW.QWidget | None = None) -> None:
@@ -72,7 +69,7 @@ class ActionButton(QtW.QPushButton):
             self._update_text(False)
 
     def _update_text(self, checked: bool) -> None:
-        """Update button text based on toggle state."""
+        """Update the label to the toggle state."""
         state_text = (
             self.action.toggle_states[1] if checked else self.action.toggle_states[0]
         )
@@ -81,43 +78,43 @@ class ActionButton(QtW.QPushButton):
 
 @dataclass(frozen=True)
 class PlanWidget:
-    """Container for all Qt widgets that represent a single plan."""
+    """The Qt widgets of one plan."""
 
     spec: PlanSpec
-    """The plan specification that this widget represents."""
+    """The plan's specification."""
 
     group_box: QtW.QWidget
-    """The top-level page widget suitable for stacking in a QStackedWidget."""
+    """The top-level page, for a QStackedWidget."""
 
     run_button: QtW.QPushButton
-    """The button to run (or stop) the plan."""
+    """The button running or stopping the plan."""
 
     container: mgw.Container[mgw_bases.ValueWidget[Any]]
-    """The magicgui Container holding the parameter input widgets."""
+    """The ``magicgui`` Container of parameter widgets."""
 
     device_widgets: list[mgw_bases.ValueWidget[Any]]
     """Device parameter widgets (``DeviceSequenceEdit`` or ``ComboBox``).
 
-    Exposed so callers can connect validation logic directly to each
-    device widget's ``changed`` signal.
+    Exposed so callers can connect validation to each widget's ``changed``
+    signal.
     """
 
     params_widget: QtW.QWidget
-    """Widget wrapping devices_group + params_group; disable this to lock
-    all parameter inputs without affecting the run/stop/pause buttons.
+    """Widget holding devices_group and params_group; disabling it locks every
+    parameter input but not the run, stop and pause buttons.
     """
 
     action_buttons: dict[str, ActionButton]
-    """Mapping of action names to their buttons for direct access."""
+    """Action buttons by action name."""
 
     actions_group: QtW.QGroupBox | None = None
-    """The group box containing action buttons, or None if the plan has no actions."""
+    """The group box of action buttons, or None if the plan has no actions."""
 
     pause_button: QtW.QPushButton | None = None
     """The pause/resume button, or None if the plan is not pausable."""
 
     def toggle(self, status: bool) -> None:
-        """Update UI state when a togglable plan starts or stops.
+        """Update the widgets when a togglable plan starts or stops.
 
         Parameters
         ----------
@@ -132,7 +129,7 @@ class PlanWidget:
         self.params_widget.setEnabled(not status)
 
     def pause(self, status: bool) -> None:
-        """Update UI state when a plan is paused or resumed.
+        """Update the widgets when a plan pauses or resumes.
 
         Parameters
         ----------
@@ -144,7 +141,7 @@ class PlanWidget:
             self.run_button.setEnabled(not status)
 
     def setEnabled(self, enabled: bool) -> None:
-        """Enable or disable the entire plan widget.
+        """Enable or disable the whole plan widget.
 
         Parameters
         ----------
@@ -161,7 +158,7 @@ class PlanWidget:
         Parameters
         ----------
         enabled : bool, optional
-            ``True`` to enable; ``False`` to disable. Default is ``True``.
+            ``True`` to enable; ``False`` to disable.
         """
         if self.actions_group:
             self.actions_group.setEnabled(enabled)
@@ -177,15 +174,15 @@ class PlanWidget:
         return self.action_buttons.get(action_name)
 
     def has_actions(self) -> bool:
-        """Return `True` if this plan has at least one action button."""
+        """Return `True` if the plan has an action button."""
         return bool(self.action_buttons)
 
     @property
     def parameters(self) -> dict[str, Any]:
-        """Current parameter values keyed by parameter name.
+        """Current parameter values by name.
 
-        The presenter is responsible for routing these into positional args
-        and keyword args via ``collect_arguments`` / ``resolve_arguments``.
+        The presenter turns them into positional and keyword arguments with
+        ``collect_arguments`` / ``resolve_arguments``.
         """
         return {w.name: w.value for w in self.container}
 
@@ -196,18 +193,18 @@ def _build_param_widgets(
     list[mgw_bases.ValueWidget[Any]],  # device widgets (multiselect or single)
     list[mgw_bases.ValueWidget[Any]],  # plain parameter widgets
 ]:
-    """Arrange *spec* parameters into device widgets and plain parameter widgets.
+    """Split *spec*'s parameters into device widgets and plain parameter widgets.
 
-    Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``, ``*args: PDevice``
-    and bare ``PDevice`` parameters.  Everything else (scalars, Literals, ...) goes
-    into the plain parameters list.
+    Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``,
+    ``*args: PDevice`` and ``PDevice`` parameters; scalars, Literals and the
+    rest are plain parameters.
 
     Returns
     -------
     device_widgets : list
-        One magicgui widget per device parameter, in signature order.
+        One ``magicgui`` widget per device parameter, in signature order.
     param_widgets : list
-        One magicgui widget per non-device parameter, in signature order.
+        One ``magicgui`` widget per other parameter, in signature order.
     """
     device_widgets: list[mgw_bases.ValueWidget[Any]] = []
     param_widgets: list[mgw_bases.ValueWidget[Any]] = []
@@ -233,10 +230,9 @@ def _build_devices_group(
 ) -> QtW.QGroupBox | None:
     """Build the *Devices* group box.
 
-    Each device parameter gets its own titled sub-group box containing
-    its widget (a ``DeviceSequenceEdit`` checkbox list for multi-select,
-    or a ``ComboBox`` for single-select).  Returns ``None`` when there
-    are no device parameters.
+    Each device parameter gets a titled group box holding its widget, a
+    ``DeviceSequenceEdit`` for several devices or a ``ComboBox`` for one.
+    Returns ``None`` without device parameters.
     """
     if not device_widgets:
         return None
@@ -263,8 +259,8 @@ def _build_params_group(
 ) -> QtW.QGroupBox | None:
     """Build the *Parameters* group box using a ``QFormLayout``.
 
-    Each plain parameter (scalar, Literal, ...) is added as a labelled
-    form row.  Returns ``None`` when there are no plain parameters.
+    Each plain parameter is a labelled form row. Returns ``None`` without plain
+    parameters.
     """
     if not param_widgets:
         return None
@@ -289,7 +285,7 @@ def _build_run_buttons(
     toggle_callback: Callable[[bool], None],
     pause_callback: Callable[[bool], None],
 ) -> tuple[QtW.QPushButton, QtW.QPushButton | None]:
-    """Build run (and optionally pause) buttons and add them to *page_layout*."""
+    """Add the run button, and the pause button if needed, to *page_layout*."""
     run_layout = QtW.QHBoxLayout()
     run_container = QtW.QWidget(parent)
 
@@ -320,7 +316,7 @@ def _build_actions_group(
     action_clicked_callback: Callable[[str], None],
     action_toggled_callback: Callable[[bool, str], None],
 ) -> tuple[QtW.QGroupBox | None, dict[str, ActionButton]]:
-    """Build the actions group box and add it to *page_layout* if needed."""
+    """Add the actions group box to *page_layout*, if the plan has actions."""
     actions_params = [p for p in spec.parameters if p.actions is not None]
     if not actions_params:
         return None, {}
@@ -368,7 +364,7 @@ def create_plan_widget(
     Parameters
     ----------
     spec : PlanSpec
-        The plan specification to build a widget for.
+        The plan's specification.
     run_callback : Callable[[], None] | None, optional
         Connected to ``run_button.clicked`` for non-togglable plans.
     toggle_callback : Callable[[bool], None] | None, optional
@@ -383,7 +379,7 @@ def create_plan_widget(
     Returns
     -------
     PlanWidget
-        Fully constructed widget, ready to be added to a ``QStackedWidget``.
+        The widget, ready for a ``QStackedWidget``.
     """
     page = QtW.QWidget()
     page_layout = QtW.QVBoxLayout(page)
@@ -439,16 +435,16 @@ def create_plan_widget(
 
 
 class PlanInfoDialog(QtW.QDialog):
-    """Dialog to provide information to the user.
+    """Dialog showing information to the user.
 
     Parameters
     ----------
     title : str
         The title of the dialog window.
     text : str
-        The text to display in the text edit area (rendered as Markdown).
+        Text shown, rendered as Markdown.
     parent : QtWidgets.QWidget | None, optional
-        The parent widget, by default ``None``.
+        The parent widget.
     """
 
     def __init__(
@@ -491,9 +487,9 @@ class PlanInfoDialog(QtW.QDialog):
         title : str
             The title of the dialog window.
         text : str
-            The text to display in the text edit area.
+            Text shown.
         parent : QtWidgets.QWidget | None, optional
-            The parent widget, by default ``None``.
+            The parent widget.
 
         Returns
         -------

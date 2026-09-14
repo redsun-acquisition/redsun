@@ -41,25 +41,24 @@ __all__ = [
 
 
 class BlueskyException(Exception):
-    """Bluesky base exception class."""
+    """Base ``bluesky`` exception."""
 
 
 class InvalidState(RuntimeError, BlueskyException):
-    """When Status.set_finished() or Status.set_exception(exc) is called too late."""
+    """Status.set_finished() or Status.set_exception(exc) called too late."""
 
 
 class UnknownStatusFailure(BlueskyException):
-    """Generic error when a Status object is marked success=False without details."""
+    """A Status marked success=False without details."""
 
 
 class StatusTimeoutError(TimeoutError, BlueskyException):
-    """Timeout specified when a Status object was created has expired."""
+    """The timeout given to a Status expired."""
 
 
 class WaitTimeoutError(TimeoutError, BlueskyException):
-    """TimeoutError raised when we ware waiting on completion of a task.
+    """Waiting for a task to complete timed out.
 
-    This is distinct from TimeoutError, just as concurrent.futures.TimeoutError
-    is distinct from TimeoutError, to differentiate when the task itself has
-    raised a TimeoutError.
+    Distinct from TimeoutError, as concurrent.futures.TimeoutError is, to tell
+    it apart from a TimeoutError the task raised itself.
     """

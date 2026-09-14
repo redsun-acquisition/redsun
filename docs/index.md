@@ -8,17 +8,17 @@
 # `redsun`
 
 !!! note
-    `redsun` is slowly reaching maturity, enough that it is safe to start being deployed. Still, expect major breaking changes as the API crystallizes.
+    `redsun` is ready to deploy, but expect breaking changes while the API settles.
 
-`redsun` is an acquisition software written in [CPython], with the concept of building modular softwares for scientific data acquisition.
+`redsun` is a [CPython] framework for building modular scientific data acquisition software.
 
-It leverages the [Bluesky] ecosystem to provide a flexible, hardware-agnostic and unopinionated framework for building a control software tailored to the specific needs of different users in different scientific fields.
+It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
 
-The philosophy of `redsun` is to:
+`redsun` aims to:
 
-- not "reinvent the wheel", but rather "ship the tools to build the wheel";
-- be extensible and modular: pick only the tools you need to get the job done;
-- give the control of your data (and metadata) to you: you decide what is what.
+- ship the tools to build the wheel, rather than another wheel;
+- stay modular: use only the parts a job needs;
+- leave data and metadata to you: you decide what they mean.
 
 ## Getting started
 
@@ -28,7 +28,7 @@ The philosophy of `redsun` is to:
 
     ---
 
-    Learn Redsun from the ground up with step-by-step lessons
+    Step-by-step lessons
 
     [Start learning :octicons-arrow-right-24:](tutorials/index.md)
 
@@ -36,7 +36,7 @@ The philosophy of `redsun` is to:
 
     ---
 
-    Practical guides for common tasks and problems
+    Recipes for common tasks
 
     [Browse guides :octicons-arrow-right-24:](how-to/index.md)
 
@@ -44,7 +44,7 @@ The philosophy of `redsun` is to:
 
     ---
 
-    Technical documentation and API reference
+    API reference and changelog
 
     [View reference :octicons-arrow-right-24:](reference/index.md)
 
@@ -52,7 +52,7 @@ The philosophy of `redsun` is to:
 
     ---
 
-    Understand the concepts and design behind Redsun
+    Concepts and design
 
     [Read explanations :octicons-arrow-right-24:](explanation/index.md)
 
@@ -67,12 +67,12 @@ The philosophy of `redsun` is to:
 
 ## About the documentation
 
-This documentation follows the [Diataxis](https://diataxis.fr/) framework, organizing content into four distinct categories based on your needs:
+The pages follow the [Diataxis](https://diataxis.fr/) layout:
 
-- **Tutorials** are learning-oriented lessons
-- **How-to guides** are task-oriented recipes
-- **Reference** is information-oriented technical descriptions
-- **Explanation** is understanding-oriented discussions
+- **Tutorials** teach by building something
+- **How-to guides** solve one task
+- **Reference** describes the API
+- **Explanation** discusses concepts and decisions
 
 ## Project links
 

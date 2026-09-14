@@ -1,12 +1,10 @@
 # Devices
 
-A device represents an interface with a hardware component.
+A device is the interface to a piece of hardware.
 
-`redsun` delegates the device layer entirely to
-[ophyd-async](https://bluesky.github.io/ophyd-async/): device primitives are
-imported directly from `ophyd_async.core`. The `redsun.device` module only
-hosts redsun-specific device protocols (currently
-[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown]).
+`redsun` leaves the device layer to
+[ophyd-async](https://bluesky.github.io/ophyd-async/): device classes come
+straight from `ophyd_async.core`.
 
 ```python
 from ophyd_async.core import Device, StandardReadable, SignalRW, soft_signal_rw
@@ -14,7 +12,7 @@ from ophyd_async.core import Device, StandardReadable, SignalRW, soft_signal_rw
 
 ## Choosing a base class
 
-ophyd-async provides several base classes depending on the complexity of your device:
+`ophyd-async` has a base class for each kind of device:
 
 | Base class | Use when |
 |------------|----------|
@@ -24,13 +22,13 @@ ophyd-async provides several base classes depending on the complexity of your de
 | `StandardFlyer` | flyer device that runs asynchronously and emits data at completion |
 | `DeviceMap` | a `Device` holding string-keyed child devices (e.g. motor axes) |
 
-For most simple devices, `StandardReadable` is the right starting point.
+Start from `StandardReadable` for most simple devices.
 
 ## Constructing a device in a container
 
-A container builds a device as `cls(name=<component name>, **kwargs)`, the
-keyword arguments coming from the declaration and the configuration file. The
-constructor has to accept `name` by keyword, as every ophyd-async base class
+A container builds a device as `cls(name=<component name>, **kwargs)`, with
+the keyword arguments from the declaration and the configuration file. The
+constructor must accept `name` by keyword, as every `ophyd-async` base class
 does, so a device whose first parameter is something else builds too:
 
 ```python
@@ -47,13 +45,58 @@ class MyApp(AppContainer):
 ```
 
 A constructor taking `name` positional-only (`def __init__(self, name: str, /)`)
-fails to build, and the container logs it and skips the device.
+fails to build; the container logs it and skips the device.
+
+## Connecting
+
+After building the devices and before building the presenters, the build
+connects every device at once, so a presenter reading a device while it is
+built reads a connected one. A device that does not connect within ten seconds
+is logged and skipped like one that fails to build: no presenter receives it,
+and the build summary lists it as `camera (device, not connected)`. If the
+device talks to a service, the message names the service.
+
+A device declared with `autoconnect=False` (`autoconnect: false` in a
+configuration file) is left unconnected. The application connects it when it
+chooses, usually from a presenter a view reaches through the wiring:
+
+```python
+from psygnal import Signal
+
+from redsun.presenter import Presenter
+from redsun.virtual import slot
+
+
+class StagePresenter(Presenter):
+    sig_connected = Signal(str)
+
+    @slot
+    async def connect_stage(self) -> None:
+        stage = self.devices["stage"]
+        await stage.connect()
+        self.sig_connected.emit(stage.name)
+```
+
+Such a presenter must not read the device before connecting it. `connect()` on
+a connected device returns at once; `force_reconnect=True` connects it again.
+[`connect_devices`][redsun.containers.container.AppContainer.connect_devices]
+connects every device whatever its `autoconnect`, and
+`connect_devices(mock=True)` connects them to mock backends for tests.
+
+!!! note
+
+    libca, the Channel Access client library, reads its list of addresses to
+    search once per process, the first time the process uses Channel Access.
+    A container launching its services before that works, and a container
+    built again keeps each service on its port. A second container launching
+    services under *other* names in the same process gives them ports the list
+    lacks, and on Windows their devices do not connect.
 
 ## Signals
 
-Signals are the typed, named attributes of a device. ophyd-async provides four signal types:
+Signals are a device's typed, named attributes. `ophyd-async` has four signal types:
 
-| Signal type | bluesky protocols | Description |
+| Signal type | `bluesky` protocols | Description |
 |-------------|-------------------|-------------|
 | `SignalR[T]` | `Readable[T]`, `Subscribable[T]` | read-only |
 | `SignalW[T]` | `HasName`, `Movable[T]` | write-only |
@@ -62,10 +105,9 @@ Signals are the typed, named attributes of a device. ophyd-async provides four s
 
 ### Soft signals
 
-For simulation and testing, soft signals hold their value in memory.
-Use `soft_signal_rw` to create a read-write soft signal and
-`soft_signal_r_and_setter` to create a read-only signal paired with a
-programmatic setter:
+Soft signals keep their value in memory, for simulation and tests.
+`soft_signal_rw` creates a read-write soft signal, and
+`soft_signal_r_and_setter` a read-only signal with a setter for code:
 
 ```python
 from ophyd_async.core import StandardReadable, soft_signal_rw
@@ -78,13 +120,13 @@ class MyStage(StandardReadable):
         super().__init__(name)
 ```
 
-Signals added before the `super().__init__()` call are automatically picked up by
-`StandardReadable` and included in `read()` / `describe()`.
+`StandardReadable` includes signals assigned before `super().__init__()` in
+`read()` and `describe()`.
 
 ### Standalone signals
 
-Each signal is itself a bluesky-readable object and can be passed directly to a plan
-without going through its parent device:
+A signal is readable by `bluesky` on its own and can go straight into a plan
+without its parent device:
 
 ```python
 import bluesky.plans as bp
@@ -96,8 +138,7 @@ RE(bp.count([stage]))  # read all signals registered by StandardReadable
 
 ## Detectors
 
-`StandardDetector` is assembled by **composition** from three logic classes,
-each owning one concern:
+A `StandardDetector` is composed from three logic classes, one concern each:
 
 | Logic class | Concern |
 |---|---|
@@ -115,45 +156,55 @@ StandardDetector.__init__(det, name="det")
 
 ### Writing acquired data
 
-Detector data logics meet redsun's storage layer through
-[`BaseStorage`][redsun.storage.BaseStorage]: the trigger logic registers a
-[`StreamSpec`][redsun.storage.StreamSpec] at prepare time, the data logic
-obtains a [`FrameSink`][redsun.storage.FrameSink] and builds its
-`StreamResourceDataProvider` from `uri_for` / `resource_info_for` /
-`signal_for`, and the acquire logic pushes frames with `await sink.put(...)`
-from kickoff onwards. Devices never see the path provider - only the
-storage instance, resolved through the
-[storage registry][redsun.storage.get_storage].
+Detector logics reach `redsun`'s storage through
+[`BaseStorage`][redsun.storage.BaseStorage]. The trigger logic registers a
+[`StreamSpec`][redsun.storage.StreamSpec] when preparing; the data logic gets a
+[`FrameSink`][redsun.storage.FrameSink] and builds its
+`StreamResourceDataProvider` from `uri_for`, `resource_info_for` and
+`signal_for`; the acquire logic pushes frames with `await sink.put(...)` from
+kickoff on. Devices never see the path provider, only the storage instance,
+resolved through the [storage registry][redsun.storage.get_storage].
 
-The full contract - including when to open eagerly versus lazily, and how a
-live view streams frames without creating a store - is documented in
 [Session storage](../storage.md) and
-[ADR 0002](../decisions/0002-storage-dual-context-redesign.md). The
-reference implementation of both patterns lives in
-`tests/sdk/storage/test_integration_plans.py`.
+[ADR 0002](../decisions/0002-storage-dual-context-redesign.md) describe the
+full contract, including when to open eagerly or lazily and how a live view
+streams frames without creating a store.
+`tests/sdk/storage/test_integration_plans.py` implements both patterns.
 
-## Connecting devices
+## Standby
 
-ophyd-async devices must be connected before use - this initialises their signal backends
-and verifies hardware communication. Use
-[`AppContainer.connect_devices()`][redsun.containers.container.AppContainer.connect_devices]
-after calling [`build()`][redsun.containers.container.AppContainer.build]:
-
-```python
-app = MyApp()
-app.build()
-app.connect_devices()  # connects all registered devices
-app.run()
-```
-
-Pass `mock=True` to skip hardware communication in tests:
+A service holding hardware, such as a serial port or a camera, can release it
+while it keeps running and take it back later, if it exposes a command for
+each. The application triggers those commands, from the presenter owning the
+devices:
 
 ```python
-app.connect_devices(mock=True)
+import asyncio
+from typing import Annotated as A
+
+from ophyd_async.core import TriggerableCommand
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
+
+from redsun.presenter import Presenter
+from redsun.virtual import slot
+
+
+class MyCamera(EpicsDevice):
+    open_camera: A[TriggerableCommand, PvSuffix("Open")]
+    close_camera: A[TriggerableCommand, PvSuffix("Close")]
+
+
+class HardwarePresenter(Presenter):
+    @slot
+    async def standby(self) -> None:
+        await asyncio.gather(
+            *(
+                device.close_camera.trigger()
+                for device in self.devices.values()
+                if isinstance(device, MyCamera)
+            )
+        )
 ```
 
-## redsun-specific protocols
-
-The only redsun-specific protocol in the device layer is
-[`HasAsyncShutdown`][redsun.device.protocols.HasAsyncShutdown], which marks a
-device as supporting an asynchronous shutdown at application teardown.
+The devices stay connected and the service keeps running; the service decides
+what releasing its hardware means.

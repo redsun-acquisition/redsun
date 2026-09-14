@@ -1,4 +1,4 @@
-"""Component field definitions."""
+"""The ``declare_*`` functions and the component wrappers they create."""
 
 from __future__ import annotations
 
@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 from ophyd_async.core import Device
 
 from redsun.presenter import PPresenter
+from redsun.services import STOP_TIMEOUT, Service
 from redsun.view import PView
 
 from ._structural import problems
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from redsun.containers.container import AppContainer
 
@@ -23,21 +24,20 @@ T = TypeVar("T")
 def expects_positionals(cls: Callable[..., Any], expected: tuple[str, ...]) -> bool:
     """Verify a component constructor's positional shape.
 
-    The container instantiates components as ``cls(*positionals, **kwargs)``
-    with *kwargs* coming from the configuration file, so the class-level
-    contract is purely positional: the constructor's leading positional
-    parameters must be exactly *expected* (checked by name and by binding),
-    any further positional-or-keyword parameters must carry defaults, and
-    ``*args`` is rejected. Keyword arguments are deliberately not validated - the container has no control over them.
+    The container calls ``cls(*positionals, **kwargs)`` with *kwargs* from the
+    configuration file, so only the positional shape is checked: the leading
+    positional parameters must be exactly *expected*, by name and by binding,
+    any further positional-or-keyword parameter needs a default, and ``*args``
+    is refused. Keyword arguments are not checked, since the configuration
+    supplies them.
 
     Parameters
     ----------
     cls : Callable[..., Any]
-        The component class (or factory) to inspect.
+        The component class or factory.
     expected : tuple[str, ...]
-        The exact names of the leading positional parameters, in order
-        (e.g. ``("name", "devices")`` for presenters, ``("name",)`` for
-        views).
+        Names of the leading positional parameters, in order:
+        ``("name", "devices")`` for presenters, ``("name",)`` for views.
     """
     try:
         sig = inspect.signature(cls)
@@ -109,17 +109,14 @@ def declare_device(
     from_config: str | None = None,
     **kwargs: Any,
 ) -> T:
-    """Declare a component as a device layer field.
-
-    A device can be declared inside the body of an `AppContainer`:
+    """Declare a device on a container.
 
     ```python
     class MyApp(AppContainer):
         motor = declare_device(MyMotor, axis=["X"])
     ```
 
-    The attribute is typed as *cls*, so reading it on a built container gives a
-    checked `MyMotor`.
+    The attribute's type is *cls*, so on a built container it is a `MyMotor`.
 
     Parameters
     ----------
@@ -128,12 +125,11 @@ def declare_device(
     alias : str | None
         Component name, overriding the attribute name.
     from_config : str | None
-        Key to read further keyword arguments from, in the configuration
-        file's ``devices`` section. Read from the file the container class
-        naming the field declares, so a subclass with a ``config`` of its own
-        reads this field from that file.
+        Key in the configuration file's ``devices`` section holding more
+        keyword arguments. The file is the one declared by the container class
+        using the field, so a subclass with its own ``config`` reads its own.
     **kwargs : Any
-        Keyword arguments forwarded to the component constructor.
+        Keyword arguments passed to the constructor.
     """
     return cast(
         "T", _DeviceField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
@@ -147,15 +143,14 @@ def declare_view(
     from_config: str | None = None,
     **kwargs: Any,
 ) -> T:
-    """Declare a component as a view layer field.
+    """Declare a view on a container.
 
     ```python
     class MyApp(AppContainer):
         ui = declare_view(MyView)
     ```
 
-    The attribute is typed as *cls*, so reading it on a built container gives a
-    checked `MyView`.
+    The attribute's type is *cls*, so on a built container it is a `MyView`.
 
     Parameters
     ----------
@@ -164,12 +159,11 @@ def declare_view(
     alias : str | None
         Component name, overriding the attribute name.
     from_config : str | None
-        Key to read further keyword arguments from, in the configuration
-        file's ``views`` section. Read from the file the container class
-        naming the field declares, so a subclass with a ``config`` of its own
-        reads this field from that file.
+        Key in the configuration file's ``views`` section holding more keyword
+        arguments. The file is the one declared by the container class using
+        the field, so a subclass with its own ``config`` reads its own.
     **kwargs : Any
-        Keyword arguments forwarded to the component constructor.
+        Keyword arguments passed to the constructor.
     """
     return cast(
         "T", _ViewField(cls=cls, alias=alias, from_config=from_config, kwargs=kwargs)
@@ -183,16 +177,16 @@ def declare_presenter(
     from_config: str | None = None,
     **kwargs: Any,
 ) -> T:
-    """Declare a component as a presenter layer field.
+    """Declare a presenter on a container.
 
     ```python
     class MyApp(AppContainer):
         ctrl = declare_presenter(MyCtrl, gain=1.0)
     ```
 
-    The attribute is typed as *cls*, so a connection written in
-    [`wire`][redsun.containers.container.AppContainer.wire] is checked: naming a
-    signal or slot the class does not have is an error before the build runs.
+    The attribute's type is *cls*, so connections in
+    [`wire`][redsun.containers.container.AppContainer.wire] are type-checked:
+    naming a signal or slot the class lacks is an error before the build.
 
     Parameters
     ----------
@@ -201,12 +195,11 @@ def declare_presenter(
     alias : str | None
         Component name, overriding the attribute name.
     from_config : str | None
-        Key to read further keyword arguments from, in the configuration
-        file's ``presenters`` section. Read from the file the container class
-        naming the field declares, so a subclass with a ``config`` of its own
-        reads this field from that file.
+        Key in the configuration file's ``presenters`` section holding more
+        keyword arguments. The file is the one declared by the container class
+        using the field, so a subclass with its own ``config`` reads its own.
     **kwargs : Any
-        Keyword arguments forwarded to the component constructor.
+        Keyword arguments passed to the constructor.
     """
     return cast(
         "T",
@@ -214,13 +207,94 @@ def declare_presenter(
     )
 
 
+def declare_service(
+    *,
+    module: str | None = None,
+    ready: str | None = None,
+    prefix: str = "",
+    args: Sequence[str] = (),
+    stop_timeout: float = STOP_TIMEOUT,
+    alias: str | None = None,
+) -> Service:
+    """Declare a service the container's devices talk to.
+
+    A service with a *module* is launched as ``python -m <module> <args>`` when
+    the container is built; one without is attached to, already running
+    elsewhere:
+
+    ```python
+    class MyApp(AppContainer):
+        camera_ioc = declare_service(
+            module="mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"
+        )
+        camera = declare_device(MyCamera, service="camera_ioc")
+    ```
+
+    A device naming the service receives its prefix as ``prefix``. The
+    attribute's type is `redsun.services.Service`, so ``wire`` can connect its
+    ``sig_exited``.
+
+    Parameters
+    ----------
+    module : str | None
+        Module to run. ``None`` attaches to a service that is already running.
+    ready : str | None
+        Text of the output line marking a launched service ready. ``None``
+        counts it ready once its process starts.
+    prefix : str
+        Prefix given to each device naming the service.
+    args : Sequence[str]
+        Command-line arguments following the module.
+    stop_timeout : float
+        Seconds each stopping step waits for the service to exit.
+    alias : str | None
+        Service name, overriding the attribute name.
+    """
+    kwargs: dict[str, Any] = {
+        "module": module,
+        "ready": ready,
+        "prefix": prefix,
+        "args": args,
+        "stop_timeout": stop_timeout,
+    }
+    return cast("Service", _ServiceComponent(alias or "", **kwargs))
+
+
+class _ServiceComponent:
+    """A declared service, from which each container makes a `Service` of its own.
+
+    Without a name, it takes the attribute name it is assigned to.
+    """
+
+    __slots__ = ("kwargs", "name")
+
+    def __init__(self, name: str = "", /, **kwargs: Any) -> None:
+        self.name = name
+        self.kwargs = kwargs
+
+    def __set_name__(self, owner: type, attr: str) -> None:
+        self.name = self.name or attr
+
+    def create(self) -> Service:
+        """Return a new `Service` for this declaration."""
+        return Service(self.name, **self.kwargs)
+
+    def __get__(self, obj: object, objtype: type | None = None) -> Any:
+        """Resolve to the container's own `Service` when read from a container."""
+        if obj is None:
+            return self
+        return cast("AppContainer", obj)._services[self.name]
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.name!r})"
+
+
 class _NotBuilt:
     """Stands in for a component the build failed on.
 
-    Reading any attribute gives another of these, carrying the name that was
-    read, so a ``wire`` body naming a component that is not there reaches
-    ``connect`` instead of raising and the connections around it are still
-    made.
+    Any attribute read gives another one carrying the name read, so ``wire``
+    naming a missing component reaches ``connect`` instead of raising, and the
+    other connections are still made.
     """
 
     __slots__ = ("component", "port")
@@ -246,14 +320,12 @@ class _NotBuilt:
 class _ComponentBase(Generic[T]):
     """Generic base class for components.
 
-    The ``name`` attribute holds the fully-resolved component name.
-    For declarative fields it is ``alias`` (if set) or the attribute name;
-    for ``from_config()``-built containers it is the YAML key.
+    ``name`` is the resolved component name: ``alias`` or the attribute name
+    when declared in Python, the YAML key for a ``from_config()`` container.
 
-    A wrapper is a declaration and holds no built object. The container it was
-    declared on keeps what it built, keyed by the wrapper, so two containers of
-    the same class build their own components and neither outlives the
-    container that built it.
+    A wrapper is a declaration and holds no built object. Each container keeps
+    what it built, keyed by the wrapper, so two containers of one class build
+    their own components, and none outlives its container.
     """
 
     __slots__ = ("cls", "kwargs", "name")
@@ -266,10 +338,9 @@ class _ComponentBase(Generic[T]):
     def __get__(self, obj: object, objtype: type | None = None) -> Any:
         """Resolve to the built instance when read from a built container.
 
-        Reading the attribute on the class, on a container that has not been
-        built, or on one that has been shut down, gives the wrapper itself. A
-        component whose build failed gives a `_NotBuilt` for as long as that
-        build lasts.
+        On the class, or on a container not built or shut down, it gives the
+        wrapper. A component that failed to build gives a `_NotBuilt` until
+        shutdown.
         """
         if obj is None:
             return self
@@ -285,11 +356,45 @@ class _ComponentBase(Generic[T]):
 
 
 class _DeviceComponent(_ComponentBase[Device]):
-    """Device component wrapper."""
+    """Device component wrapper.
 
-    def build(self) -> Device:
-        """Build the device instance, validating it is an ophyd-async Device."""
-        instance = self.cls(name=self.name, **self.kwargs)
+    The container keeps two keywords from the constructor: ``service``, naming
+    the service whose prefix the device gets, and ``autoconnect``, true unless
+    given, whether the build connects it.
+    """
+
+    __slots__ = ("autoconnect", "service")
+
+    def __init__(self, cls: Callable[..., Device], name: str, /, **kwargs: Any) -> None:
+        for reserved in ("service", "autoconnect"):
+            if reserved in kwargs and _takes_keyword(cls, reserved):
+                raise TypeError(
+                    f"{cls!r} (device {name!r}) takes a {reserved!r} keyword of "
+                    "its own, which a device declaration reserves for the container"
+                )
+        service: str | None = kwargs.pop("service", None)
+        if service is not None and "prefix" in kwargs:
+            raise TypeError(
+                f"device {name!r} names service {service!r} and a prefix; "
+                "give one, the service's prefix is the device's"
+            )
+        autoconnect = kwargs.pop("autoconnect", True)
+        if not isinstance(autoconnect, bool):
+            raise TypeError(
+                f"device {name!r} gives autoconnect={autoconnect!r}; "
+                "it takes true or false"
+            )
+        super().__init__(cls, name, **kwargs)
+        self.service = service
+        self.autoconnect = autoconnect
+
+    def build(self, prefix: str | None = None) -> Device:
+        """Build the device, checking it is an ``ophyd-async`` Device.
+
+        *prefix*, the one the device's service gives, is passed as ``prefix``.
+        """
+        extra = {} if prefix is None else {"prefix": prefix}
+        instance = self.cls(name=self.name, **self.kwargs, **extra)
         if not isinstance(instance, Device):
             raise TypeError(
                 f"{type(instance).__name__!r} (device {self.name!r}) is not an "
@@ -301,11 +406,9 @@ class _DeviceComponent(_ComponentBase[Device]):
 class _PresenterComponent(_ComponentBase[PPresenter]):
     """Presenter component wrapper.
 
-    Validation is a dual gate: the constructor's positional shape
-    (``name``, ``devices``) is checked at wrapper creation via
-    ``inspect``; PPresenter compliance is validated on the built
-    instance - class-level checks cannot see attributes assigned in
-    ``__init__``.
+    Checked twice: the constructor's positional shape (``name``, ``devices``)
+    when the wrapper is created, and the PPresenter protocol on the built
+    instance, since attributes assigned in ``__init__`` are not on the class.
     """
 
     def __init__(
@@ -320,7 +423,7 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
         super().__init__(cls, name, **kwargs)
 
     def build(self, devices: dict[str, Device]) -> PPresenter:
-        """Build the presenter instance, validating the PPresenter protocol."""
+        """Build the presenter, checking the PPresenter protocol."""
         instance = self.cls(self.name, devices, **self.kwargs)
         if not isinstance(instance, PPresenter):
             raise TypeError(
@@ -334,10 +437,9 @@ class _PresenterComponent(_ComponentBase[PPresenter]):
 class _ViewComponent(_ComponentBase[PView]):
     """View component wrapper.
 
-    Validation is a dual gate: the constructor's positional shape
-    (``name``) is checked at wrapper creation via ``inspect``; PView
-    compliance is validated on the built instance - class-level checks
-    cannot see attributes assigned in ``__init__``.
+    Checked twice: the constructor's positional shape (``name``) when the
+    wrapper is created, and the PView protocol on the built instance, since
+    attributes assigned in ``__init__`` are not on the class.
     """
 
     def __init__(self, cls: Callable[..., PView], name: str, /, **kwargs: Any) -> None:
@@ -350,7 +452,7 @@ class _ViewComponent(_ComponentBase[PView]):
         super().__init__(cls, name, **kwargs)
 
     def build(self) -> PView:
-        """Build the view instance, validating the PView protocol."""
+        """Build the view, checking the PView protocol."""
         instance = self.cls(self.name, **self.kwargs)
         if not isinstance(instance, PView):
             raise TypeError(
@@ -360,7 +462,19 @@ class _ViewComponent(_ComponentBase[PView]):
         return instance
 
 
-__all__ = ["declare_device", "declare_presenter", "declare_view"]
+def _takes_keyword(cls: Callable[..., Any], keyword: str) -> bool:
+    """Return whether *cls* names a parameter *keyword* that a caller may pass."""
+    try:
+        parameter = inspect.signature(cls).parameters.get(keyword)
+    except (TypeError, ValueError):
+        return False
+    return parameter is not None and parameter.kind in (
+        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        inspect.Parameter.KEYWORD_ONLY,
+    )
+
+
+__all__ = ["declare_device", "declare_presenter", "declare_service", "declare_view"]
 
 
 class _HookField:
@@ -380,29 +494,29 @@ def declare_hook(provider: T, /) -> T: ...
 def declare_hook(provider: Any, /, **kwargs: Any) -> Any:
     """Declare a hook provider for the hook point the attribute names.
 
-    The attribute name is the method the hook point calls, so a container
-    installs at most one provider per point:
+    The attribute name is the method the hook point calls, so a container has
+    at most one provider per point:
 
     ```python
     class MyApp(QtAppContainer):
         configure_application = declare_hook(DarkTheme, theme="nord")
     ```
 
-    A class is constructed with *kwargs* as the container class is created; an
-    already built instance is taken as it is, and the same instance declared at
-    two points is one provider serving both.
+    A class is constructed with *kwargs* when the container class is created;
+    an instance is used as is, and one instance declared at two points serves
+    both.
 
     Parameters
     ----------
     provider : type[T] | T
         The provider class to instantiate, or a provider already built.
     **kwargs : Any
-        Keyword arguments forwarded to the provider constructor.
+        Keyword arguments passed to the provider's constructor.
 
     Raises
     ------
     TypeError
-        If keyword arguments are given for a provider that is already built.
+        If keyword arguments are given with an instance.
     """
     if not isinstance(provider, type) and kwargs:
         raise TypeError(

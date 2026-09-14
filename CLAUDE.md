@@ -3,13 +3,53 @@
 Single source of conventions for agents (Claude, Copilot) and contributors:
 cross-link, don't duplicate.
 
-Things the tree does not show:
+## Repository layout
 
-- `src/redsun/device/` holds device protocols only; `DeviceMap` comes from
-  ophyd-async, not from this package.
-- `benchmarks/` are not tests and are never collected by pytest; they ship in
-  the sdist only. Run one with `uv run python benchmarks/bench_acquire_zarr.py`.
-- `pyproject.toml` carries all tool config: pytest, ruff, mypy, coverage, tox.
+```text
+redsun/
+|-- src/redsun/
+|   |-- __init__.py            AppContainer and the declare_* functions
+|   |-- aio.py                 shared background event loop, run_coro
+|   |-- log.py                 redsun logger, buffer, session log files
+|   |-- plugins.yaml           manifest of the built-in presenters and views
+|   |-- containers/            AppContainer, declare_*, hook points, config loading
+|   |   `-- qt/                QtAppContainer and the main window
+|   |-- engine/                RunEngine wrapper, actions, plan stubs
+|   |-- presenter/             Presenter ABC, PPresenter, plan spec, built-ins
+|   |-- services/              Service: a process or server devices talk to
+|   |-- storage/               BaseStorage, sinks, routing, path provider
+|   |   `-- backends/          acquire-zarr and in-memory backends
+|   |-- view/                  View ABC, PView
+|   |   `-- qt/                Qt widgets and the built-in views (LogView, StorageView)
+|   |-- virtual/               VirtualContainer, wiring, provider protocols
+|   |-- qt/                    public Qt entry point, re-exports
+|   `-- utils/                 find_signals, descriptor helpers
+|-- tests/
+|   |-- conftest.py            qt marker, qapp, log directory, psygnal queue
+|   |-- sdk/                   unit tests, mirroring src/redsun
+|   |-- container/             container, plugin discovery, services, hooks
+|   |   |-- mock_pkg/          fake plugin package: devices, presenters, views, services
+|   |   `-- configs/           session YAML files the tests load
+|   |-- compose/               an IOC in a container, for the tests marked compose
+|   `-- typing/                assert_type modules, checked by mypy, never run
+|-- docs/                      Diataxis site built by zensical
+|   |-- tutorials/
+|   |-- how-to/
+|   |-- explanation/           architecture pages and decisions/ (ADRs)
+|   `-- reference/             api/ pages and changelog.md
+|-- benchmarks/                performance scripts, not tests, sdist only
+|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs)
+|-- .github/workflows/         CI: code analysis, tests, docs check and publish
+|-- .claude/                   agents, commands, docs-conventions skill
+|-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
+|-- zensical.toml              docs site and navigation
+`-- uv.lock
+```
+
+- There is no device package: devices, `DeviceMap` included, come from
+  ophyd-async.
+- `benchmarks/` are never collected by pytest. Run one with
+  `uv run python benchmarks/bench_acquire_zarr.py`.
 
 ## Build & validate
 
@@ -76,10 +116,13 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   through the `schema_version` / `frontend` / `session` / `metadata`
   properties.
 - **`AppContainer.build()` phase order cannot change**, and its docstring
-  records it: VirtualContainer -> devices -> presenters -> views ->
+  records it: services -> VirtualContainer -> devices -> connect -> presenters -> views ->
   `register_providers` -> `wire` -> `inject_dependencies`. Every provider is
   registered before any injection runs; never interleave the last two phases,
   and never move work into `__init__` that belongs in a phase.
+- **Services live outside the build.** `shutdown()` stops them whether or not
+  the container was built, and before the session log file closes; a build
+  that raises stops them before the exception leaves it.
 - **A component that fails to build is logged and skipped, in every layer.**
   The build records the exception under the component's name in `_failed` and
   carries on, so a session runs with what it has. Phases and the
@@ -87,8 +130,8 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   declarations, so a mapping can be shorter than what was declared.
   Rationale: `docs/explanation/decisions/0011-tolerating-a-component-that-fails-to-build.md`.
 - Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
-  `HasShutdown` (sync, presenters) and `HasAsyncShutdown` (async, devices) are
-  `@runtime_checkable` Protocols checked with `isinstance`.
+  `HasShutdown` (sync, presenters and hooks) are `@runtime_checkable`
+  Protocols checked with `isinstance`.
 - `PPresenter`/`PView` data members are **read-only properties**, never plain
   attributes, which would break structural subtyping for property-based and
   covariant implementers. The `Presenter`/`View` ABCs must NOT inherit the
@@ -221,6 +264,12 @@ mkdocstrings mistakes a green `zensical build` will not catch.
   names in is the easiest mistake to make: it reads correctly to whoever wrote
   it and names nothing the reader can look up. An ADR recording a decision that
   spanned two repositories is the exception, and says so.
+- **Library and package names are code spans.** In docs pages write
+  `` `redsun` ``, `` `ophyd-async` ``, `` `bluesky` ``, `` `psygnal` ``,
+  `` `caproto` ``, `` `pyqt6` ``, at every mention, `redsun` included.
+  Docstrings do the same with double backticks (``` ``ophyd-async`` ```), the
+  form they use for literals. Headings, link text and a name inside a code
+  block stay as they are.
 
 ## Response style (agents)
 

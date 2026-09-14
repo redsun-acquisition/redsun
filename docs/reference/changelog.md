@@ -9,6 +9,115 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Added
+
+- **`Service`**, **`STARTUP_TIMEOUT`** and **`STOP_TIMEOUT`** (`redsun.services`) - the handle a
+  container makes for each service it declares. A service with a module runs
+  as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds
+  for its readiness line, logs its output at `DEBUG` on
+  `redsun.service.<name>`, and gives it a Channel Access server port of its
+  own, appended to `EPICS_CA_ADDR_LIST`. `stop` closes the process's standard
+  input, then sends `SIGINT` on POSIX, then kills it, each step waiting
+  `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
+  and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
+  service without a module is attached to and has nothing to start or stop.
+- **`declare_service`** (`redsun.containers`, `redsun`) - declares a service on
+  a container. One with a `module` is launched as `python -m <module> <args>`;
+  one without only lends its `prefix`:
+
+  ```python
+  class MyApp(AppContainer):
+      camera_ioc = declare_service(
+          module="mylab.iocs.camera", ready="Server startup complete.", prefix="CAM:"
+      )
+      camera = declare_device(MyCamera, service="camera_ioc")
+  ```
+
+- **`service`** keyword of a device declaration - names the service whose
+  prefix the device is built with, passed as `prefix`. Giving `prefix` as well,
+  or naming a service for a device whose constructor takes a `service` keyword
+  of its own, is refused at declaration. A device naming a service that did not
+  start, one that is not declared, or one that gives no prefix, is logged and
+  skipped by the build.
+- **`AppContainer.start_services`** and **`AppContainer.services`**
+  (`redsun.containers.container`) - start every launched service, logging
+  `Services started: <n>/<m>` and the ones that did not start; and the
+  container's services by name. `build` calls `start_services` as well; only the
+  first call before `shutdown` starts anything.
+- A `services` section in a session file, and a `services` group in a plugin
+  manifest giving a service's `module` and `ready` line. A session entry with
+  `plugin_name` and `plugin_id` takes both from the manifest; one without is
+  attached to:
+
+  ```yaml
+  services:
+    camera_ioc:
+      plugin_name: mylab
+      plugin_id: camera-ioc
+      prefix: "CAM:"
+      stop_timeout: 60
+    beamline:
+      prefix: "BL01:"
+  ```
+
+- The build summary names a service whose every device failed to build:
+  `Unused: camera_ioc (no device built)`.
+- An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+- **`autoconnect`** keyword of a device declaration, true unless given - whether
+  the build connects the device. The build connects every such device at once,
+  in a `"connect"` step between devices and presenters, waiting up to
+  `CONNECT_TIMEOUT` (`redsun.containers.container`, 10 s) for each. A device
+  that does not connect is logged and skipped, listed as
+  `<name> (device, not connected)` in the build summary, with the service it
+  talks to named in the message.
+- **`service_of`** (`redsun.log`) - the name of the service a record came from,
+  `None` for the application.
+- **`BufferHandler.service_records`**, **`BufferHandler.services`** and
+  **`BufferHandler.service_capacity`** (`redsun.log`) - one service's retained
+  records or every service's merged by time, the services that have logged,
+  and how many records of each are retained, 2 000 by default.
+- A launched service's log file, `<run>.<service>.log` beside the
+  application's, opened by the container and created once the service logs
+  something. `SessionFileHandler` takes a `service` and a `run`, and
+  `SessionFileHandler.run` names the run a file belongs to; `add_handler`,
+  `remove_handler` and `session_log` take a `service`.
+- A line of a service's output that is a JSON log record, written by a stdlib
+  formatter or by `loguru` with `serialize=True`, is logged with its own level,
+  time and traceback under `redsun.service.<service>.<logger>`.
+- **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
+  Services tab, with a selector for one service or all of them.
+
+### Changed
+
+- **`AppContainer.BUILD_STEPS`** (`redsun.containers.container`) starts with
+  `"services"`, so a `during_build` hook reports services starting, and has
+  `"connect"` after `"devices"`. A build that raises stops the services before
+  the exception propagates.
+- **`AppContainer.run`** no longer calls `connect_devices`; the build connects
+  the devices declared with `autoconnect`. `connect_devices` connects every
+  device, whatever its `autoconnect` says.
+- A service keeps its Channel Access server port for as long as the process
+  runs, and a container stopping the services it launched closes the process's
+  Channel Access channels, so a container built again in the same process
+  reaches its services at once.
+- **`AppContainer.shutdown`** stops the container's services, the last declared
+  first, whether or not the container was built, and before it closes the
+  session log file.
+- **`BufferHandler`** (`redsun.log`) retains application records and each
+  service's records apart, each dropping its oldest once full.
+  `BufferHandler.records` holds the application's records only.
+- **`SessionFileHandler`** (`redsun.log`) for the application no longer writes
+  services' records, and pruning old runs counts a run's service files with it.
+- **`GlobalFormatter`** (`redsun.log`) leaves out the location of a record that
+  carries none, such as one rebuilt from a service's output.
+- **`LogView`** (`redsun.view.qt.builtins`): `Save logs...` and
+  `Clear log window` act on the tab shown.
+
+### Removed
+
+- **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
+  else. No container ever called `shutdown` on a device.
+
 ### Changed (breaking)
 
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device
@@ -57,7 +166,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`RunEngine`** (`redsun.engine`) runs each plan, and each `resume`, on a
   thread of its own named `RunEngine`, which ends with the plan, instead of on
   a thread pool kept for the engine's lifetime. A plan submitted while another
-  is running fails with bluesky's error instead of waiting its turn.
+  is running fails with `bluesky`'s error instead of waiting its turn.
 
 ### Fixed
 
@@ -79,7 +188,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 ### Fixed
 
 - **`QtAppContainer.shutdown`** (`redsun.containers.qt`) stops the timer
-  draining psygnal's emission queue and delivers what is left in it before
+  draining `psygnal`'s emission queue and delivers what is left in it before
   destroying the widgets. An emission queued for a slot with a thread affinity
   reached a destroyed widget as `RuntimeError: wrapped C/C++ object of type
   <widget> has been deleted`, and carried into the next container built in the
@@ -319,7 +428,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   **`AppContainer.unregister_phase`** - the build sequence is a straight-line
   body again and cannot be added to.
 - **`AppContainer.sig_phase_complete`** - a `during_build` provider is given a
-  reporter instead. It was the only psygnal `Signal` on `AppContainer`, so
+  reporter instead. It was the only `psygnal` `Signal` on `AppContainer`, so
   `__weakref__` leaves its `__slots__`.
 - **`ConfiguresBuild`**, **`ConfiguresSession`**, **`AppConfiguresBuild`** and
   **`AppConfiguresSession`** (`redsun.containers`) - the `configure_build` and
@@ -473,7 +582,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 - `__weakref__` to `AppContainer.__slots__`, required by any `__slots__` class
-  owning a psygnal `Signal`.
+  owning a `psygnal` `Signal`.
 
 - `QtAppContainer._ensure_main_view`, so the main window is built and
   configured once whether reached through `run` or directly.
@@ -511,7 +620,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   `self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)`.
 - `AppContainer.connect()` and `VirtualContainer.connect()` - connect a signal to
   a slot, applying the thread affinity of the slot or its class and recording the
-  link. A slot that is not marked, or whose signature psygnal rejects, raises
+  link. A slot that is not marked, or whose signature `psygnal` rejects, raises
   `WiringError` naming both ports.
 - `VirtualContainer.connections` and `VirtualContainer.disconnect_all()` - the
   recorded wiring graph and its teardown. `AppContainer.shutdown()` now
@@ -535,8 +644,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `PATH_PROVIDER` (`redsun.storage`) - the key for the session path provider
   owned by `StoragePresenter`.
 - `VirtualContainer.subscribe()` and `VirtualContainer.subscriptions` - observe
-  an ophyd-async device signal from a marked slot. The reading is marshalled
-  through psygnal, so `thread` behaves as it does for `connect`, and the
+  an `ophyd-async` device signal from a marked slot. The reading is marshalled
+  through `psygnal`, so `thread` behaves as it does for `connect`, and the
   subscription is released by `disconnect_all()`. Previously a component had to
   call `subscribe_reading` itself, from inside a coroutine, with no way to set a
   thread affinity and nothing tracking the release.
@@ -587,10 +696,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   `find_signals` and hand-written `inject_dependencies` are otherwise
   unaffected.
-- `redsun.aio.set_async_backend()` - installs `CulsansAsyncioBackend` as psygnal's
+- `redsun.aio.set_async_backend()` - installs `CulsansAsyncioBackend` as `psygnal`'s
   active async backend, so coroutines connected to a signal are dispatched onto the
   shared event loop from any thread. Idempotent; raises if a different backend is
-  already active. Tear it down with psygnal's `clear_async_backend()`.
+  already active. Tear it down with `psygnal`'s `clear_async_backend()`.
   `QtAppContainer` calls it in `build()` and clears it in `shutdown()` (ADR 0005).
 - `CulsansAsyncioBackend` and `AwaitableEvent` (`redsun.aio`) - the backend itself and
   the resettable, awaitable event it reports `running` through. Exceptions raised by a
@@ -608,18 +717,18 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - `get_shared_loop()` (`redsun.engine`) - returns the single `asyncio` event loop created
   at module import time.
-- `AppContainer.connect_devices(mock=False)` - connects all registered ophyd-async devices
+- `AppContainer.connect_devices(mock=False)` - connects all registered `ophyd-async` devices
   via their async connect lifecycle. Call after `build()`. Pass `mock=True` to skip hardware
   communication in tests.
 - `FrameSink`, `StoreStateError`, and the process-wide storage registry
   (`register_storage`, `get_storage`, `reset_group`, `clear_registry`).
-- culsans (>=0.11.0) as a runtime dependency.
+- `culsans` (>=0.11.0) as a runtime dependency.
 - `redsun.presenter.builtins` - built-in, reusable presenter components.
   First entry: `StoragePresenter` (ported from redsun-mimir's
   `FileStoragePresenter`), which owns the `SessionPathProvider`, exposes it
   on the virtual container as the `path_provider` DI provider, and wires
   plan names from `sig_pre_launch_notify`/`sig_plan_done`.
-- `redsun.plugins` entry point: redsun ships its own plugin manifest
+- `redsun.plugins` entry point: `redsun` ships its own plugin manifest
   (`plugins.yaml`), so built-in components resolve from configuration files
   through the same discovery path as external plugins
   (`plugin_name: redsun`, `plugin_id: storage`).
@@ -628,9 +737,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   one component's signal cache (ADR 0004).
 - `SinkFactory`, `StorageIO`, `OpenStore`, and `PathSignals` are exported from
   `redsun.storage` - the backend protocols are part of the public contract.
-- `benchmarks/` - acquire-zarr dual-load benchmark (live view via
+- `benchmarks/` - `acquire-zarr` dual-load benchmark (live view via
   `bps.monitor` + disk storage, two detectors, inline processing callback).
-  Shipped in the sdist only, never in wheels, not collected by pytest.
+  Shipped in the sdist only, never in wheels, not collected by `pytest`.
 - Tutorial: [writing a custom storage backend](../tutorials/custom-storage-backend.md)
   (`StorageIO`/`OpenStore` implementation driven through `BaseStorage`).
 
@@ -642,7 +751,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - Removed `StorageStateMachine`, `StorageState`, `InvalidStoreState`, and the
   `FrameSender` async-generator API. `StoreStateError` replaces
   `InvalidStoreState`.
-- Removed `redsun.device.DeviceMap` - ophyd-async now ships `DeviceMap` as a
+- Removed `redsun.device.DeviceMap` - `ophyd-async` now ships `DeviceMap` as a
   built-in; import it from `ophyd_async.core` instead (downstream consumers
   such as redsun-mimir should migrate on their next refactor).
 - Signal naming convention: `sig_snake_case` replaces `sigCamelCase`
@@ -660,10 +769,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- **Custom device layer removed**, `redsun.device` now re-exports ophyd-async primitives
+- **Custom device layer removed**, `redsun.device` now re-exports `ophyd-async` primitives
   directly. Removed: `PDevice`, `HasChildren`, `AttrR`, `AttrRW`, `AttrW`, `AttrT`,
   `SoftAttrR`, `SoftAttrRW`, `SoftAttrT`, `AcquisitionController`, `DataWriter`,
-  `ControllableDataWriter`, `TriggerType`, `PrepareInfo`. Use their ophyd-async equivalents
+  `ControllableDataWriter`, `TriggerType`, `PrepareInfo`. Use their `ophyd-async` equivalents
   (`Device`, `StandardReadable`, `SignalR/RW/W/X`, `soft_signal_rw`,
   `soft_signal_r_and_setter`, `DetectorController`, `DetectorWriter`, `TriggerInfo`,
   `DetectorTrigger`).
@@ -676,14 +785,14 @@ Dates are specified in the format `DD-MM-YYYY`.
 - Updated CI tag pattern to support release candidates (e.g. `v0.10.0rc0`).
 - Re-enabled CI after the test-suite rewrite: the cross-platform test matrix
   and Codecov upload run again, and docs deployment / package build depend on
-  green tests once more. CI mypy now uses the config-driven invocation (tests
+  green tests once more. CI `mypy` now uses the config-driven invocation (tests
   and benchmarks in scope) with `QT_API` pinning the Qt binding per matrix
-  leg, and ruff checks the whole repository instead of `src/redsun` only.
+  leg, and `ruff` checks the whole repository instead of `src/redsun` only.
 
 ### Removed
 - Removed `attrs` from dev dependencies - drop support for it in favor of `ophyd-async`.
 - Removed unused utilities: `redsun.utils.resolve_sync_or_async` and
-  `redsun.utils.descriptors.make_key` / `make_descriptor` / `make_reading` - descriptors and readings come from ophyd-async signal backends; the
+  `redsun.utils.descriptors.make_key` / `make_descriptor` / `make_reading` - descriptors and readings come from `ophyd-async` signal backends; the
   `parse_key` / `parse_map_key` helpers remain.
 
 ## [0.9.1] - 06-03-2026
@@ -746,13 +855,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- Migrated sunflare codebase to redsun. Sunflare will be archived.
+- Migrated `sunflare` codebase to `redsun`. `sunflare` will be archived.
 
 ## [0.7.2] - 22-02-2026
 
 ### Changed
 
-- Merged SDK (formerly sunflare) into redsun
+- Merged SDK (formerly `sunflare`) into `redsun`
 - Migrated the HasStorage protocol to toolkit
 
 ### Fixed
@@ -828,8 +937,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Relaxed the `component()` overloads: all three (`layer="device"`, `layer="presenter"`,
   `layer="view"`) now accept `type` instead of `type[Device]`, `type[Presenter]`,
-  `type[View]`. This fixes mypy errors for classes built from protocol mixins that do
-  not inherit from the sunflare base classes directly.
+  `type[View]`. This fixes `mypy` errors for classes built from protocol mixins that do
+  not inherit from the `sunflare` base classes directly.
 
 ## [0.5.3] - 18-02-2026
 
@@ -893,7 +1002,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   - The approach now loosely follows the [`napari` manifest](https://napari.org/stable/plugins/technical_references/manifest.html), where plugins are to be published via a `yaml` configuration file in the root folder of the plugin package, specifiying where the classes have to be imported.
   - The manifest is taken as the actual entry point of a plugin, which will be used to redirect to the actual imports which is executed via the standard library `importlib`.
 - Added additional coverage for the ``factory`` module.
-- Bumped sunflare version to ``sunflare>=0.5.0``, which implements the above changes at toolkit level
+- Bumped `sunflare` version to ```sunflare`>=0.5.0``, which implements the above changes at toolkit level
 
 ## [0.1.0] - 22-02-2025
 

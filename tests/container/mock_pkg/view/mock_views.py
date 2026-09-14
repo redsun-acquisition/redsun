@@ -61,6 +61,26 @@ class MockMotorView(QtView):
         self.sig_motor_move.emit(self.motor, self.position)
 
 
+class ReadingView(QtView):
+    """Asks for a reading with a button, and keeps every reading it is shown."""
+
+    sig_read_requested = Signal()
+
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        super().__init__(name, **kwargs)
+        self.readings: list[tuple[str, object]] = []
+        self.read_button = QPushButton("read", self)
+        self.read_button.clicked.connect(lambda: self.sig_read_requested.emit())
+
+    @property
+    def view_position(self) -> ViewPosition:
+        return ViewPosition.CENTER
+
+    @slot
+    def show_reading(self, device: str, value: object) -> None:
+        self.readings.append((device, value))
+
+
 class StyleRecordingView(QtView):
     """Records the application stylesheet in force when it is constructed.
 

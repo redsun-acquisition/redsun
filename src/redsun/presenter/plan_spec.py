@@ -1,12 +1,10 @@
-"""Plan specification: inspect a plan's signature into a structured `PlanSpec`.
+"""Describe a plan's signature as a `PlanSpec`.
 
-This module provides `create_plan_spec`, which inspects a Bluesky
-``MsgGenerator`` function and returns a `PlanSpec` - a structured
-description of the plan's parameters that the view layer can use to
-automatically generate a parameter form.
+`create_plan_spec` inspects a ``bluesky`` ``MsgGenerator`` function and returns
+a `PlanSpec` describing its parameters, from which a view builds a parameter
+form.
 
-The annotation dispatch system is table-driven: `_ANN_HANDLER_MAP` maps
-``(predicate, handler)`` pairs that convert raw type annotations into
+`_ANN_HANDLER_MAP` lists ``(predicate, handler)`` pairs turning annotations into
 `ParamDescription` fields (choices, ``device_proto``, ``multiselect``).
 """
 
@@ -48,16 +46,16 @@ if TYPE_CHECKING:
 
 
 class UnresolvableAnnotationError(TypeError):
-    """Raised when a plan parameter's annotation cannot be mapped to a widget.
+    """Raised when a plan parameter's annotation maps to no widget.
 
     Parameters
     ----------
     plan_name : str
-        Name of the plan that contains the unresolvable parameter.
+        Name of the plan.
     param_name : str
-        Name of the parameter whose annotation could not be resolved.
+        Name of the parameter.
     annotation : Any
-        The annotation that could not be resolved.
+        The unresolvable annotation.
     """
 
     def __init__(self, plan_name: str, param_name: str, annotation: Any) -> None:
@@ -75,10 +73,10 @@ class UnresolvableAnnotationError(TypeError):
 
 
 class ParamKind(IntEnum):
-    """Public mirror of `inspect._ParameterKind` as a stable `IntEnum`.
+    """`inspect._ParameterKind` as a public `IntEnum`.
 
-    Using a dedicated enum keeps the public API stable and allows use in
-    ``match``/``case`` statements without importing private stdlib symbols.
+    Usable in ``match``/``case`` without importing private standard library
+    names.
     """
 
     POSITIONAL_ONLY = 0
@@ -100,66 +98,65 @@ _PARAM_KIND_MAP: dict[Any, ParamKind] = {
 
 @dataclass
 class ParamDescription:
-    """Description of a single plan parameter."""
+    """Description of one plan parameter."""
 
     name: str
-    """Name of the parameter, as declared in the plan signature."""
+    """Name of the parameter in the plan signature."""
 
     kind: ParamKind
-    """Kind of the parameter, mirroring `inspect.Parameter.kind`."""
+    """Kind of the parameter, as `inspect.Parameter.kind`."""
 
     annotation: Any
-    """Unwrapped type annotation; `Annotated` metadata has been stripped."""
+    """Type annotation, without `Annotated` metadata."""
 
     default: Any
     """Default value of the parameter, or `inspect.Parameter.empty` if none."""
 
     choices: list[str] | None = None
-    """String labels for selectable values; used for `Literal` and `OADevice`-backed parameters."""
+    """Labels of selectable values, for `Literal` and device parameters."""
 
     multiselect: bool = False
-    """Whether the parameter allows multiple simultaneous selections (e.g. for `Sequence[OADevice]`)."""
+    """Whether several values can be selected, as for `Sequence[OADevice]`."""
 
     hidden: bool = False
-    """Whether this parameter should be hidden from the UI (e.g. because it's only for metadata, not user input)."""
+    """Whether the parameter is hidden from the interface, as for metadata only."""
 
     actions: Sequence[Action] | Action | None = None
-    """Action metadata extracted from the parameter's default value, if any."""
+    """Actions taken from the parameter's default value, if any."""
 
     device_proto: type[Any] | None = None
-    """The device class or runtime-checkable protocol for model-backed parameters, if any; used for device look-up during argument resolution."""
+    """Device class or runtime-checkable protocol of a device parameter, used to look devices up when resolving arguments."""
 
     @property
     def has_default(self) -> bool:
-        """Return ``True`` if this parameter carries a default value."""
+        """Return ``True`` if the parameter has a default."""
         return self.default is not _empty
 
 
 @dataclass(eq=False)
 class PlanSpec:
-    """Structured description of a plan's signature and type hints."""
+    """Description of a plan's signature and type hints."""
 
     name: str
-    """Plan name (``__name__`` of the underlying callable)."""
+    """Plan name, the callable's ``__name__``."""
 
     docs: str
-    """Plan docstring, or a default message if no docstring is available."""
+    """Plan docstring, or a default message without one."""
 
     parameters: list[ParamDescription]
-    """Ordered list of parameter descriptions, one per plan parameter."""
+    """One description per parameter, in order."""
 
     togglable: bool = False
-    """Whether the plan runs as an infinite loop that can be stopped via a toggle button."""
+    """Whether the plan loops until stopped with a toggle button."""
 
     pausable: bool = False
     """Whether a running togglable plan can be paused and resumed."""
 
 
 class _FieldsFromAnnotation(NamedTuple):
-    """Structured result returned by each annotation handler.
+    """Fields an annotation handler returns.
 
-    Fields not relevant to a particular annotation shape should be left
-    at their defaults (None / False).
+    Fields irrelevant to an annotation keep their defaults (None / False).
     """
 
     choices: list[str] | None = None
@@ -248,7 +245,7 @@ def _try_dispatch_entry(
     kind: ParamKind,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation | None:
-    """Attempt one ``(predicate, handler)`` entry; return ``None`` on any exception."""
+    """Try one ``(predicate, handler)`` entry; return ``None`` if it raises."""
     try:
         if predicate(ann, kind):
             return handler(ann, devices)
@@ -264,8 +261,8 @@ def _dispatch_annotation(
 ) -> _FieldsFromAnnotation:
     """Walk ``_ANN_HANDLER_MAP`` and call the first matching handler.
 
-    An entry whose predicate or handler raises is skipped, and an annotation
-    no entry claims yields empty fields.
+    An entry whose predicate or handler raises is skipped; an annotation no
+    entry matches gives empty fields.
     """
     for predicate, handler in _ANN_HANDLER_MAP:
         result = _try_dispatch_entry(predicate, handler, ann, kind, devices)
@@ -280,16 +277,14 @@ def _extract_action_meta(
 ) -> Sequence[Action] | Action | None:
     """Extract ``Action`` instances from a parameter's default value.
 
-    Returns the ``Action`` (or list of ``Action``) if the default value is
-    action metadata, ``None`` otherwise.  Also validates that the annotation
-    is compatible (``Action``, ``Sequence[Action]``, or a union containing
-    ``Action``).
+    Returns the ``Action``, or list of them, if the default holds actions, and
+    ``None`` otherwise. Also checks the annotation is ``Action``,
+    ``Sequence[Action]`` or a union containing ``Action``.
 
     Raises
     ------
     TypeError
-        If the default contains ``Action`` instances but the annotation is
-        incompatible.
+        If the default holds actions but the annotation does not allow them.
     """
     if param.default is _empty:
         return None
@@ -331,7 +326,7 @@ def _is_action_type(ann: Any) -> bool:
 
 
 def _safe_issubclass(cls: Any, parent: type) -> bool:
-    """``issubclass`` wrapper that returns ``False`` on ``TypeError``."""
+    """``issubclass`` returning ``False`` instead of raising ``TypeError``."""
     try:
         return issubclass(cls, parent)
     except TypeError:
@@ -339,12 +334,12 @@ def _safe_issubclass(cls: Any, parent: type) -> bool:
 
 
 def _iterate_signature(sig: inspect.Signature) -> cabc.Iterator[tuple[str, Parameter]]:
-    """Iterate over a function signature's parameters, skipping ``self``/``cls``.
+    """Iterate a signature's parameters, skipping ``self``/``cls``.
 
     Yields
     ------
     Iterator[tuple[str, Parameter]]
-        Tuples of (parameter name, ``Parameter`` object).
+        (name, ``Parameter``) pairs.
     """
     items = list(sig.parameters.items())
     if items:
@@ -377,12 +372,11 @@ _PRIMITIVE_TYPES: frozenset[type] = frozenset(
 def _is_renderable(ann: Any) -> bool:
     """Return ``True`` if a view layer can be expected to build a control for *ann*.
 
-    A pure-Python check that imports no toolkit, so it is safe to call at plan
-    construction time, before any application object exists.
+    Imports no toolkit, so it can run before any application object exists.
 
     `Any` is excluded: it says nothing about the value, so no view can choose a
-    control for it. Refusing here names the plan and the parameter, which a
-    failure raised while the form is being built does not.
+    control. Refusing here names the plan and parameter, which a failure while
+    building the form would not.
     """
     if ann is Any:
         return False
@@ -402,8 +396,8 @@ def _resolve_annotations(
     """Resolve every annotation of *func_obj*, one at a time.
 
     Returns the annotations that evaluate, and the source text of those naming
-    something unavailable at runtime. Resolving them separately keeps a single
-    unimportable name from hiding every other annotation.
+    something missing at runtime. Resolving each separately keeps one missing
+    name from hiding the others.
     """
     namespace = getattr(func_obj, "__globals__", None)
     resolved: dict[str, Any] = {}
@@ -429,16 +423,16 @@ def create_plan_spec(
     Parameters
     ----------
     plan : Callable[..., Any]
-        The plan function (or bound method) to inspect.
-        Must be a generator function whose return annotation is a ``MsgGenerator``.
+        The plan function or bound method, a generator function annotated to
+        return a ``MsgGenerator``.
     devices : Mapping[str, OADevice]
-        Registry of active devices; used to compute ``choices`` for parameters
-        annotated with a ``OADevice`` subtype.
+        The session's devices, giving ``choices`` for parameters annotated
+        with an ``OADevice`` subtype.
 
     Returns
     -------
     PlanSpec
-        Fully populated plan specification.
+        The plan specification.
 
     Raises
     ------
@@ -446,10 +440,10 @@ def create_plan_spec(
         If *plan* is not a generator function or its return type is not a
         ``MsgGenerator`` (``Generator[Msg, Any, Any]``).
     UnresolvableAnnotationError
-        If an annotation names something unavailable at runtime, or is one no
-        view layer can build a control for.
+        If an annotation names something missing at runtime, or no view can
+        build a control for it.
     RuntimeError
-        If an unexpected ``inspect.Parameter.kind`` is encountered.
+        On an unexpected ``inspect.Parameter.kind``.
     """
     func_obj: cabc.Callable[..., cabc.Generator[Any, Any, Any]] = getattr(
         plan, "__func__", plan
@@ -552,19 +546,19 @@ def collect_arguments(
     spec: PlanSpec,
     values: cabc.Mapping[str, Any],
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    """Build ``(args, kwargs)`` for calling a plan, driven by a ``PlanSpec``.
+    """Build the ``(args, kwargs)`` calling a plan, from its ``PlanSpec``.
 
     Parameters
     ----------
     spec : PlanSpec
         The plan specification.
     values : Mapping[str, Any]
-        Mapping of parameter names to their resolved values.
+        Resolved values by parameter name.
 
     Returns
     -------
     tuple[tuple[Any, ...], dict[str, Any]]
-        Positional and keyword arguments ready to be splatted into the plan.
+        Positional and keyword arguments for the plan.
 
     Notes
     -----
@@ -610,27 +604,27 @@ def resolve_arguments(
     param_values: Mapping[str, Any],
     devices: Mapping[str, OADevice],
 ) -> dict[str, Any]:
-    """Resolve raw UI parameter values into plan-callable values.
+    """Turn parameter values from the interface into values a plan takes.
 
-    Handles:
-    * **Action parameters** - injected from metadata when absent from the UI.
-    * **Model-backed parameters** - string labels are resolved to live
-      ``OADevice`` instances via the ``devices`` registry.
-    * **Everything else** - passed through unchanged.
+    * **Action parameters** are filled from the spec when the interface lacks
+      them.
+    * **Device parameters**: names become ``OADevice`` instances from
+      ``devices``.
+    * **Everything else** passes unchanged.
 
     Parameters
     ----------
     spec : PlanSpec
-        The plan specification containing parameter metadata.
+        The plan specification.
     param_values : Mapping[str, Any]
-        Raw parameter values from the UI.
+        Parameter values from the interface.
     devices : Mapping[str, OADevice]
-        Active device registry.
+        The session's devices.
 
     Returns
     -------
     dict[str, Any]
-        Resolved arguments ready for ``collect_arguments``.
+        Resolved arguments for ``collect_arguments``.
     """
     values: dict[str, Any] = dict(param_values)
 

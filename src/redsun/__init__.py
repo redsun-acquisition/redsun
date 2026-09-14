@@ -5,6 +5,7 @@ from redsun.containers import (
     Frontend,
     declare_device,
     declare_presenter,
+    declare_service,
     declare_view,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "__version__",
     "declare_device",
     "declare_presenter",
+    "declare_service",
     "declare_view",
 ]

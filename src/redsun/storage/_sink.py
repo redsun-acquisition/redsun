@@ -12,11 +12,10 @@ __all__ = ["FrameSink"]
 
 
 class FrameSink:
-    """Producer-facing handle for one stream's frame queue.
+    """Producer handle on one stream's frame queue.
 
-    Exposes only the producer face of the underlying queue: the consumer
-    face (``async_get``, immediate shutdown, ``clear``) stays private to
-    the owning storage's drain task.
+    Only the producer side is exposed; the consumer side (``async_get``,
+    immediate shutdown, ``clear``) belongs to the storage's drain task.
 
     Parameters
     ----------
@@ -30,7 +29,7 @@ class FrameSink:
         self._queue = queue
 
     async def put(self, frame: npt.NDArray[Any]) -> None:
-        """Enqueue a frame from an async producer, parking when the queue is full.
+        """Queue a frame from an async producer, waiting while the queue is full.
 
         Raises
         ------
@@ -40,14 +39,14 @@ class FrameSink:
         await self._queue.async_put(frame)
 
     def put_nowait(self, frame: npt.NDArray[Any]) -> None:
-        """Enqueue a frame from a sync producer without ever blocking.
+        """Queue a frame from a sync producer without blocking.
 
-        Safe inside ``emit_sync`` document callbacks on the loop thread.
+        Safe in ``emit_sync`` document callbacks on the loop thread.
 
         Raises
         ------
         culsans.QueueFull
-            If the queue is full - a callback bug or a stalled backend.
+            If the queue is full: a callback bug or a stalled backend.
         culsans.QueueShutDown
             If the stream has reached capacity or was closed.
         """
@@ -56,8 +55,8 @@ class FrameSink:
     def close(self) -> None:
         """Shut the stream down cleanly. Idempotent.
 
-        Queued frames are still written (flush semantics); further puts
-        raise ``culsans.QueueShutDown``.
+        Queued frames are still written; later puts raise
+        ``culsans.QueueShutDown``.
         """
         if not self._queue.is_shutdown:
             self._queue.shutdown()

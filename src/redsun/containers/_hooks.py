@@ -35,10 +35,10 @@ class HookError(RuntimeError):
 
 
 def known_points(moments: Iterable[str]) -> str:
-    """Name the hook points a container calls, to close an error message.
+    """Name the hook points a container calls, to end an error message.
 
-    A container calling none is the ordinary case for one that is not bound to
-    a toolkit, so it is said in words rather than as an empty list.
+    A container bound to no toolkit calls none, which is said in words, not as
+    an empty list.
     """
     listed = ", ".join(moments)
     if not listed:
@@ -83,9 +83,9 @@ class ConfiguresMainView(Protocol[ViewT_contra]):
 class WrapsBuild(Protocol[AppT_contra]):
     """Surrounds the build, from before the first component to after the window.
 
-    The only hook point that is a span rather than a moment: a splash screen
-    appears before anything is built, reports progress while it is, and closes
-    once the window is on screen.
+    The one hook point that is a span, not a moment: a splash screen appears
+    before anything is built, reports progress, and closes once the window is
+    on screen.
     """
 
     @abstractmethod
@@ -103,8 +103,8 @@ class WrapsBuild(Protocol[AppT_contra]):
 class HookSpec:
     """One provider of the configuration ``hooks`` section, and what it serves.
 
-    *moments* holds every key the entry appeared under, so an anchor shared by
-    two keys gives one spec, and one provider instance.
+    *moments* holds every key the entry appeared under, so a YAML anchor shared
+    by two keys gives one spec and one provider.
     """
 
     moments: tuple[str, ...]
@@ -117,8 +117,8 @@ def parse_hook_specs(
 ) -> list[HookSpec]:
     """Read the ``hooks`` section into one spec per distinct entry.
 
-    Keys are the hook points *owner* calls; an entry appearing under several of
-    them through a YAML anchor is one spec serving them all.
+    Keys are the hook points *owner* calls; an entry under several keys through
+    a YAML anchor is one spec serving all of them.
 
     Raises
     ------
@@ -189,8 +189,8 @@ def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
     Raises
     ------
     HookError
-        If two entries are indistinguishable, since whether they mean one
-        shared provider or two identical ones cannot be read off the file.
+        If two entries are identical, since the file cannot say whether they
+        mean one shared provider or two.
     """
     seen: list[HookSpec] = []
     for spec in specs:
@@ -212,8 +212,8 @@ def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
 def resolve_hooks(specs: Iterable[HookSpec]) -> dict[str, object]:
     """Instantiate the provider each spec names, once per spec.
 
-    Returns one entry per hook point, so a spec serving several points maps
-    them all to the same object.
+    Returns one entry per hook point; a spec serving several points maps them
+    to one object.
 
     Raises
     ------

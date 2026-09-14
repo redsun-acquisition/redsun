@@ -1,8 +1,8 @@
 # Statement of need
 
-Scientific data acquisition often involves controlling a variety of hardware devices, coordinating measurements, and managing the resulting data and metadata. While the [Bluesky] ecosystem provides a powerful hardware abstraction layer and data model, building a complete application that integrates these capabilities into a usable interface remains a non-trivial task.
+Scientific data acquisition means controlling many devices, coordinating measurements, and managing the data and metadata they produce. The [Bluesky] ecosystem provides a hardware abstraction layer and a data model, but turning them into a complete application with a usable interface is still hard work.
 
-`redsun` aims to address this gap by providing a modular, event-driven framework for constructing scientific data acquisition applications.
+`redsun` fills that gap with a modular, event-driven framework for building acquisition applications.
 
 ```mermaid
 graph TD
@@ -13,23 +13,23 @@ graph TD
 
 ## The role of each part
 
-- **Redsun** provides both the application container and the SDK - shared base classes and communication patterns (devices, presenters, views, a shared container for inter-component communication and data exchange) - ensuring a consistent programming model across the entire ecosystem.
-- **Components** are user-developed packages that implement the actual hardware drivers, business logic, and UI components using the redsun SDK.
-- **redsun** is the application shell that discovers plugins, wires them together through its container architecture, and launches the final application.
+- **`redsun` as SDK** provides base classes and communication patterns (devices, presenters, views, and a shared container through which components exchange signals and data), so every package is written the same way.
+- **Components** are packages users write: hardware drivers, logic and interfaces built on the `redsun` SDK.
+- **`redsun` as application shell** discovers plugins, wires them together through its container, and launches the application.
 
 ## Design philosophy
 
-`redsun` follows three guiding principles:
+`redsun` follows three principles:
 
-1. **Don't reinvent the wheel** - leverage existing tools like Bluesky's hardware protocols and Qt's UI framework. Instead of building everything from scratch, ship the tools to build the wheel.
-2. **Be modular** - users should be able to pick only the components they need. A plugin providing a motor controller should work independently of one providing a camera interface.
-3. **Give users control** - users own their data and metadata. The framework provides the structure but does not impose constraints on what data means or how it should be organized.
+1. **Don't reinvent the wheel.** Use existing tools, such as the `bluesky` hardware protocols and Qt for the interface, and ship the tools to build the wheel.
+2. **Be modular.** Users pick only the components they need. A plugin providing a motor controller works without one providing a camera interface.
+3. **Give users control.** Users own their data and metadata. The framework gives structure but does not decide what data means or how it is organized.
 
-## Why not just use Bluesky directly?
+## Why not use Bluesky directly?
 
-Bluesky was originally designed with an interactive approach in mind, in the sense that the user would directly control the `RunEngine` execution via a command-line interface or via `IPython`. This is imperative for the context in which Bluesky was developed (large experimental setups with multiple hardware devices connected to a central control system such as [EPICS] and [Tango]).
+`bluesky` was designed for interactive use: the user drives the `RunEngine` from a command line or `IPython`. That fits where it was developed, large facilities with many devices behind a central control system such as [EPICS] or [Tango].
 
-What `redsun` provides on top of Bluesky is a more lab-bench experience, for setups that are meant to be controlled via a Graphical User Interface similar to [Micro-Manager].
+`redsun` adds a lab-bench experience on top of `bluesky`, for setups controlled through a graphical interface, as with [Micro-Manager].
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [micro-manager]: https://micro-manager.org/

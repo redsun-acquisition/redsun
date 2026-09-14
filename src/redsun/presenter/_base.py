@@ -14,23 +14,20 @@ __all__ = ["PPresenter", "Presenter"]
 
 @runtime_checkable
 class PPresenter(Protocol):  # pragma: no cover
-    """Presenter protocol class.
+    """Protocol of a presenter component.
 
-    Members are declared as **read-only properties**: the framework only
-    ever reads them, so implementers may satisfy the protocol with plain
-    instance attributes, class attributes, or properties, and ``devices``
-    may be any ``Mapping`` subtype (e.g. a plain ``dict``). Declaring them
-    read-write would force implementers to expose settable, invariantly
-    typed attributes, ruling out property-based classes.
+    Members are read-only properties, so instance attributes, class attributes
+    or properties satisfy them, and ``devices`` may be any ``Mapping``, such
+    as a ``dict``.
 
     Notes
     -----
-    Access to the virtual container is optional and should be acquired
-    by implementing [`IsProvider`][redsun.virtual.IsProvider] or
+    A presenter reaches the virtual container by implementing
+    [`IsProvider`][redsun.virtual.IsProvider] or
     [`IsInjectable`][redsun.virtual.IsInjectable].
 
-    Compliance is enforced at build time via ``isinstance`` - class-level
-    checks cannot see attributes assigned in ``__init__``.
+    Checked with ``isinstance`` on the built instance, since attributes
+    assigned in ``__init__`` do not exist on the class.
     """
 
     @property
@@ -40,23 +37,23 @@ class PPresenter(Protocol):  # pragma: no cover
 
     @property
     def devices(self) -> Mapping[str, Device]:
-        """Reference to the devices used in the presenter."""
+        """The session's devices."""
         ...
 
 
 class Presenter(ABC):
-    """Presenter base class.
+    """Base presenter class.
 
-    Deliberately does **not** inherit [`PPresenter`][redsun.presenter.PPresenter]:
-    the protocol's read-only property descriptors would shadow the instance
-    attributes assigned here. Instances satisfy the protocol structurally - which is also how any non-ABC presenter is expected to comply.
+    Does not inherit [`PPresenter`][redsun.presenter.PPresenter], whose
+    read-only properties would shadow the instance attributes set here.
+    Instances satisfy the protocol by shape, like any other presenter.
 
     Parameters
     ----------
     name : str
-        Identity key of the presenter. Passed as positional-only argument.
-    devices : Mapping[str, redsun.device.Device]
-        Reference to the devices used in the presenter.
+        Identity key of the presenter, positional-only.
+    devices : Mapping[str, ophyd_async.core.Device]
+        The session's devices.
     kwargs : Any, optional
         Additional keyword arguments for presenter subclasses.
     """

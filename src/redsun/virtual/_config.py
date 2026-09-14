@@ -6,7 +6,7 @@ __all__ = ["RedSunConfig"]
 
 
 class RedSunConfig(TypedDict, total=False):
-    """Base configuration schema for Redsun applications."""
+    """Base configuration schema of a ``redsun`` application."""
 
     schema_version: Required[float]
     """Plugin schema version."""
@@ -15,7 +15,7 @@ class RedSunConfig(TypedDict, total=False):
     """Frontend toolkit identifier (e.g. `"pyqt"`, `"pyside"`)."""
 
     session: NotRequired[str]
-    """Session display name. If not provided, default is `"redsun"`."""
+    """Session display name, `"redsun"` if not given."""
 
     metadata: NotRequired[dict[str, Any]]
-    """Additional session-specific metadata to include in the configuration."""
+    """Session metadata."""

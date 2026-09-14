@@ -3,6 +3,7 @@ from .mock_views import (
     MockMotorView,
     MockQtView,
     NotAView,
+    ReadingView,
     StyleRecordingView,
 )
 
@@ -11,5 +12,6 @@ __all__ = [
     "MockMotorView",
     "MockQtView",
     "NotAView",
+    "ReadingView",
     "StyleRecordingView",
 ]

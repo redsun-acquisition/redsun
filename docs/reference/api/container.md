@@ -7,6 +7,7 @@
         - declare_device
         - declare_hook
         - declare_presenter
+        - declare_service
         - declare_view
 
 ::: redsun.containers.container.AppContainer

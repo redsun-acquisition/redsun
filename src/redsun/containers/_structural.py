@@ -32,13 +32,13 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
     """Every reason *candidate* fails to satisfy *protocol*.
 
     Callable members are compared by signature: the implementation must accept
-    every call the protocol permits, so a renamed parameter or an extra
-    required one is a mismatch, while an extra defaulted parameter is not.
-    Types are not compared; a type checker does that at the call site.
+    every call the protocol allows, so a renamed or extra required parameter
+    fails and an extra defaulted one does not. Types are not compared; a type
+    checker does that.
 
-    Data members are read off an instance, because a value assigned in
-    ``__init__`` cannot be seen on the class. Passing a class therefore leaves
-    them unchecked, and passing an instance checks everything.
+    Data members are read from an instance, since a value assigned in
+    ``__init__`` is not on the class. A class leaves them unchecked; an
+    instance checks everything.
     """
     cls = candidate if isinstance(candidate, type) else type(candidate)
     found = list(_signature_problems(cls, protocol))
@@ -92,9 +92,9 @@ def _rendered(name: str, signature: inspect.Signature) -> str:
 def _call_signature(owner: type, name: str) -> inspect.Signature | None:
     """How *name* is called on an instance of *owner*, if that is knowable.
 
-    ``None`` for a data member, and for a callable whose signature cannot be
-    read. Binding through the descriptor protocol is what drops ``self`` from
-    a method and leaves a ``staticmethod`` untouched.
+    ``None`` for a data member or an unreadable signature. Binding through the
+    descriptor protocol drops ``self`` from a method and leaves a
+    ``staticmethod`` as is.
     """
     static = inspect.getattr_static(owner, name, None)
     if isinstance(static, property):
@@ -122,9 +122,8 @@ def _probes(
 ) -> Iterator[tuple[list[Any], dict[str, Any]]]:
     """Yield the calls *wanted* permits, which an implementation must accept.
 
-    Three are enough to pin a signature: every parameter passed the way the
-    protocol names it, only the required ones, and everything that may travel
-    positionally doing so.
+    Three calls pin a signature: every parameter as the protocol names it, only
+    the required ones, and every positional-capable one passed positionally.
     """
     seen: list[tuple[list[Any], dict[str, Any]]] = []
     for only_required, positionally in product((False, True), repeat=2):

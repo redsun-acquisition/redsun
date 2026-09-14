@@ -87,20 +87,47 @@ def test_opening_a_run_deletes_all_but_the_most_recent_runs(
     folder = log_directory / "pruned"
     folder.mkdir()
     for day in range(1, 6):
-        (folder / f"2026-09-0{day}T10-00-00_1.log").write_text("run")
-        (folder / f"2026-09-0{day}T10-00-00_1.log.1").write_text("rotated")
+        run = f"2026-09-0{day}T10-00-00_1"
+        for name in (".log", ".log.1", ".cam.log", ".cam.log.1"):
+            (folder / f"{run}{name}").write_text("run")
 
     handler = open_handler("pruned")
     close_handler(handler)
 
     kept = sorted(path.name for path in folder.iterdir())
-    assert kept[:4] == [
-        "2026-09-04T10-00-00_1.log",
-        "2026-09-04T10-00-00_1.log.1",
-        "2026-09-05T10-00-00_1.log",
-        "2026-09-05T10-00-00_1.log.1",
+    assert kept[:8] == [
+        f"2026-09-0{day}T10-00-00_1{name}"
+        for day in (4, 5)
+        for name in (".cam.log", ".cam.log.1", ".log", ".log.1")
     ]
-    assert len(kept) == 5
+    assert len(kept) == 9
+
+
+def test_a_service_writes_a_file_of_its_own_beside_the_application(
+    log_directory: Path, redsun_logger: logging.Logger
+) -> None:
+    """The application's file takes no service record; a silent service has no file."""
+    application = open_handler("lab")
+    camera = SessionFileHandler("lab", "cam", application.run)
+    silent = SessionFileHandler("lab", "stage", application.run)
+    add_handler(camera, "cam")
+    add_handler(silent, "stage")
+
+    redsun_logger.warning("stage homed")
+    logging.getLogger("redsun.service.cam.caproto").warning("frame dropped")
+    close_handler(application)
+    for name, handler in (("cam", camera), ("stage", silent)):
+        remove_handler(handler, name)
+        handler.close()
+
+    files = {
+        path.name: path.read_text(encoding="utf-8")
+        for path in (log_directory / "lab").iterdir()
+    }
+    assert set(files) == {f"{application.run}.log", f"{application.run}.cam.log"}
+    assert "stage homed" in files[f"{application.run}.log"]
+    assert "frame dropped" not in files[f"{application.run}.log"]
+    assert "frame dropped" in files[f"{application.run}.cam.log"]
 
 
 def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -> None:

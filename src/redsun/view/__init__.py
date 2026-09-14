@@ -7,13 +7,10 @@ __all__ = ["PView", "View", "ViewPosition"]
 
 @unique
 class ViewPosition(str, Enum):
-    """Supported view positions.
-
-    Where a view component sits in the main window.
+    """Where a view sits in the main window.
 
     !!! warning
-        These values are based on how Qt manages dock widgets.
-        They may change in the future.
+        The values follow Qt's dock widget areas and may change.
     """
 
     CENTER = "center"
