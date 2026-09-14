@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import logging
-from dataclasses import KW_ONLY, dataclass, field, fields
+from dataclasses import KW_ONLY, dataclass, field
 from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
@@ -474,7 +474,9 @@ def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
                 f"{where} is declared with Attach, but its services entry "
                 f"{cfg_key!r} gives a module to launch"
             )
-        found[name] = Service(name, **{**from_file, **given_keywords(given)})
+        if given is not None:
+            from_file.update((k, v) for k, v in vars(given).items() if v is not None)
+        found[name] = Service(name, **from_file)
     for cfg_key, listed in section.items():
         if cfg_key not in read_keys and isinstance(listed, dict):
             found[cfg_key] = Service(cfg_key, **service_entry(listed))
@@ -648,17 +650,6 @@ def is_hook(hint: Any) -> bool:
     if get_origin(hint) is not Annotated:
         return False
     return any(isinstance(m, Hook) for m in get_args(hint)[1:])
-
-
-def given_keywords(marker: Launch | Attach | None) -> dict[str, Any]:
-    """Return the `Service` keywords *marker* sets, leaving out those left unset."""
-    if marker is None:
-        return {}
-    return {
-        f.name: getattr(marker, f.name)
-        for f in fields(marker)
-        if getattr(marker, f.name) is not None
-    }
 
 
 def is_service(hint: Any) -> bool:
