@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
+import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, TypeAlias
 
 import pytest
-from ophyd_async.epics.core import EpicsDevice
+import yaml
+from ophyd_async.core import (
+    Device,
+    SignalRW,
+    StandardReadable,
+    StandardReadableFormat,
+    soft_signal_rw,
+)
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
+from redsun.aio import run_coro
 from redsun.experimental import (
     Alias,
     AsDevice,
@@ -23,6 +34,7 @@ if TYPE_CHECKING:
 
 STAND_IN = "mock_pkg.service.stand_in"
 READY = "stand-in ready"
+MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
 
 
 CameraIoc: TypeAlias = Annotated[
@@ -32,7 +44,43 @@ CameraIoc: TypeAlias = Annotated[
 
 
 class Camera(EpicsDevice):
-    pass
+    exposure: Annotated[SignalRW[float], PvSuffix("Exposure")]
+
+
+class DeviceWithServiceKeyword(Device):
+    def __init__(self, name: str = "", service: str = "") -> None:
+        super().__init__(name=name)
+
+
+class Broken(EpicsDevice):
+    def __init__(self, prefix: str, name: str = "") -> None:
+        raise ValueError("broken")
+
+
+class SavedStage(StandardReadable):
+    """Device on a service, saving the velocity its configuration signal holds."""
+
+    def __init__(self, prefix: str, name: str = "", velocity: float = 1.0) -> None:
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.velocity = soft_signal_rw(float, initial_value=velocity)
+        super().__init__(name=name)
+
+    def serialize(self) -> dict[str, float]:
+        return {"velocity": run_coro(self.velocity.get_value())}
+
+
+class ServiceAndPrefix(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[Camera], Declare(service="beamline", prefix="X:")]
+
+
+class OwnServiceKeyword(Session):
+    beamline: Annotated[AsService, Attach("BL01:")]
+    device: Annotated[AsDevice[DeviceWithServiceKeyword], Declare(service="beamline")]
+
+
+class AutoconnectNotBool(Session):
+    device: Annotated[AsDevice[Camera], Declare(prefix="X:", autoconnect="yes")]
 
 
 class DescribedWithDeclare(Session):
@@ -46,6 +94,17 @@ class AttachedToAModule(Session):
     ioc: Annotated[AsService, Attach("CAM:")]
 
 
+@pytest.fixture
+def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let a launched service import ``mock_pkg``, and restore the CA address list."""
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
+
+
+def errors_in(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+
+
 def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
     """A device whose first parameter is not ``name`` gets its name by keyword."""
 
@@ -54,7 +113,9 @@ def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
 
     app = build(App)
 
-    assert app.devices["camera"].name == "camera"
+    camera = app.devices["camera"]
+    assert isinstance(camera, Camera)
+    assert (camera.name, camera.exposure.source) == ("camera", "ca://CAM:Exposure")
 
 
 def test_services_are_read_from_annotations_and_the_configuration() -> None:
@@ -168,3 +229,145 @@ def test_a_service_named_like_a_component_is_refused() -> None:
 
     with pytest.raises(TypeError, match="'camera' as both a service and a component"):
         App().read_configuration()
+
+
+def test_services_start_before_devices_and_stop_after_shutdown(
+    build: BuildSession, launchable: None, tmp_path: Path
+) -> None:
+    marker = tmp_path / "cleaned"
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {"stand_in": {"args": ["--marker", str(marker)]}}
+        }
+        stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY, prefix="SIM:")]
+        camera: Annotated[
+            AsDevice[Camera], Declare(service="stand_in", autoconnect=False)
+        ]
+
+    app = build(App)
+    was_running = app.stand_in.running
+    camera = app.devices["camera"]
+
+    app.shutdown()
+
+    assert isinstance(camera, Camera)
+    assert camera.exposure.source == "ca://SIM:Exposure"
+    assert (was_running, app.stand_in.running) == (True, False)
+    assert marker.read_text() == "cleaned up"
+
+
+def test_a_build_that_raises_stops_the_services_it_started(launchable: None) -> None:
+    class App(Session):
+        stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
+
+        def wire(self) -> None:
+            raise RuntimeError("wiring went wrong")
+
+    app = App()
+    with pytest.raises(RuntimeError, match="wiring went wrong"):
+        app.build()
+
+    assert not app.stand_in.running
+
+
+def test_a_device_whose_service_is_missing_is_skipped(
+    build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
+) -> None:
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {"services": {"unprefixed": {}}}
+        broken: Annotated[
+            AsService, Launch(STAND_IN, ready=READY, args=["--no-ready", "--exit", "3"])
+        ]
+        beamline: Annotated[AsService, Attach("BL01:")]
+        camera: Annotated[AsDevice[Camera], Declare(service="broken")]
+        typo: Annotated[AsDevice[Camera], Declare(service="beamlin")]
+        bare: Annotated[AsDevice[Camera], Declare(service="unprefixed")]
+        stage: Annotated[
+            AsDevice[Camera], Declare(service="beamline", autoconnect=False)
+        ]
+
+    app = build(App)
+
+    assert set(app.devices) == {"stage"}
+    errors = errors_in(caplog)
+    assert "Failed to build device 'camera': service 'broken' was not started" in errors
+    assert "Failed to build device 'typo': service 'beamlin' is not declared" in errors
+    assert (
+        "Failed to build device 'bare': service 'unprefixed' gives no prefix" in errors
+    )
+
+
+@pytest.mark.parametrize(
+    ("cls", "reason"),
+    [
+        (ServiceAndPrefix, "and a prefix"),
+        (OwnServiceKeyword, "'service' keyword"),
+        (AutoconnectNotBool, "takes true or false"),
+    ],
+    ids=["service-and-prefix", "own-service-keyword", "autoconnect-not-bool"],
+)
+def test_a_device_declared_with_keywords_the_session_cannot_read_is_refused(
+    cls: type[Session], reason: str
+) -> None:
+    with pytest.raises(TypeError, match=reason):
+        cls().read_configuration()
+
+
+def test_a_service_whose_every_device_failed_is_reported_unused(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    class App(Session):
+        beamline: Annotated[AsService, Attach("BL01:")]
+        spare: Annotated[AsService, Attach("BL02:")]
+        stages: Annotated[AsService, Attach("ST:")]
+        broken: Annotated[AsDevice[Broken], Declare(service="beamline")]
+        broken_stage: Annotated[AsDevice[Broken], Declare(service="stages")]
+        stage: Annotated[AsDevice[Camera], Declare(service="stages", autoconnect=False)]
+
+    build(App)
+
+    (summary,) = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("Container built")
+    ]
+    assert summary.endswith("Unused: beamline (no device built)")
+
+
+def test_a_saved_device_keeps_the_service_it_names(
+    build: BuildSession, tmp_path: Path
+) -> None:
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "name": "saved",
+            "services": {"beamline": {"prefix": "BL01:"}},
+            "devices": {
+                "stage": {"service": "beamline", "autoconnect": False, "velocity": 1.5}
+            },
+        }
+        stage: AsDevice[SavedStage]
+
+    written = yaml.safe_load(build(App).write(tmp_path / "saved.yaml").read_text())
+
+    assert written["devices"]["stage"] == {
+        "velocity": 1.5,
+        "service": "beamline",
+        "autoconnect": False,
+    }
+
+
+def test_a_session_built_again_starts_its_services_again(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class App(Session):
+        beamline: Annotated[AsService, Attach("BL01:")]
+
+    app = App()
+    app.build()
+    app.shutdown()
+    app.build()
+    app.shutdown()
+
+    started = [r for r in caplog.records if r.getMessage() == "Services started: 1/1"]
+    assert len(started) == 2

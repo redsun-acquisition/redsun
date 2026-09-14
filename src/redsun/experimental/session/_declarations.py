@@ -178,10 +178,26 @@ class Declaration:
     """A declared component, before and after it is built.
 
     ``key`` is a distinct type per component name, so two instances of one
-    class stay separable in a type-keyed graph.
+    class stay separable in a type-keyed graph. A device's ``service`` and
+    ``autoconnect`` are read off its keyword arguments rather than passed on.
+
+    Raises
+    ------
+    TypeError
+        If a device's keywords name its service ambiguously, or give an
+        ``autoconnect`` that is not a bool.
     """
 
-    __slots__ = ("cfg_kwargs", "cls", "instance", "key", "kind", "name")
+    __slots__ = (
+        "autoconnect",
+        "cfg_kwargs",
+        "cls",
+        "instance",
+        "key",
+        "kind",
+        "name",
+        "service",
+    )
 
     def __init__(
         self, cls: type, name: str, kind: Layer, cfg_kwargs: dict[str, Any]
@@ -189,13 +205,57 @@ class Declaration:
         self.cls = cls
         self.name = name
         self.kind = kind
-        self.cfg_kwargs = cfg_kwargs
+        self.service: str | None = None
+        self.autoconnect = True
+        self.cfg_kwargs = (
+            take_device_keys(self, cfg_kwargs) if kind is Layer.DEVICE else cfg_kwargs
+        )
         self.key: Key = NewType(name, cls)
         self.instance: Any = None
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"
         return f"Declaration({self.name!r}, {self.kind}, {state})"
+
+
+DEVICE_KEYS: Final = ("service", "autoconnect")
+"""Keywords of a device declaration the session reads rather than passes on."""
+
+
+def take_device_keys(
+    declaration: Declaration, kwargs: dict[str, Any]
+) -> dict[str, Any]:
+    """Move the session's keywords off *kwargs* onto *declaration*, and return the rest.
+
+    Raises
+    ------
+    TypeError
+        If the device's class takes one of the keywords itself, a service and a
+        prefix are both given, or ``autoconnect`` is not a bool.
+    """
+    params = inspect.signature(declaration.cls).parameters
+    for key in DEVICE_KEYS:
+        if key in kwargs and key in params:
+            raise TypeError(
+                f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
+                f"a {key!r} keyword of its own, which a device declaration "
+                "reserves for the session"
+            )
+    rest = dict(kwargs)
+    declaration.service = rest.pop("service", None)
+    if declaration.service is not None and "prefix" in rest:
+        raise TypeError(
+            f"device {declaration.name!r} names service {declaration.service!r} "
+            "and a prefix; give one, since the service's prefix is the device's"
+        )
+    autoconnect = rest.pop("autoconnect", True)
+    if not isinstance(autoconnect, bool):
+        raise TypeError(
+            f"device {declaration.name!r} gives autoconnect={autoconnect!r}; it "
+            "takes true or false"
+        )
+    declaration.autoconnect = autoconnect
+    return rest
 
 
 def check(

@@ -6,6 +6,7 @@ import logging
 from collections.abc import Mapping, Sequence
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
+from functools import partial
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, cast
@@ -50,6 +51,7 @@ from redsun.experimental.registry import (
     DeviceMapping,
     SessionConfig,
 )
+from redsun.services._service import close_channel_access
 
 from ._declarations import (
     Declaration,
@@ -140,7 +142,9 @@ ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIE
 """The order the layers are built in, which is the order they may depend in."""
 
 BUILD_STEPS: Final[tuple[str, ...]] = (
+    "services",
     "devices",
+    "connect",
     "registry",
     "presenters",
     "views",
@@ -208,6 +212,7 @@ class Session(BuildableSession):
         "_declarations",
         "_devices",
         "_failed",
+        "_failed_services",
         "_hooks",
         "_is_built",
         "_links",
@@ -217,6 +222,7 @@ class Session(BuildableSession):
         "_releases",
         "_report",
         "_services",
+        "_services_started",
         "_session_config",
         "_settings",
         "_shared",
@@ -269,6 +275,8 @@ class Session(BuildableSession):
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
         self._services: dict[str, Service] = {}
+        self._failed_services: dict[str, BaseException] = {}
+        self._services_started = False
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
@@ -521,7 +529,9 @@ class Session(BuildableSession):
             with self.open_span() as report:
                 self._report = report
                 for step, run in (
+                    ("services", self.start_services),
                     ("devices", self.build_devices),
+                    ("connect", self.connect_built_devices),
                     ("registry", self.open_registry),
                     ("presenters", self.build_presenters),
                     ("views", self.build_views),
@@ -654,6 +664,19 @@ class Session(BuildableSession):
                     f"{name} ({self._declarations[name].kind})" for name in names
                 )
                 summary += f"\n{label}: {named}"
+        named_services = {d.service for d in self._declarations.values()}
+        used = {
+            d.service for d in self._declarations.values() if d.instance is not None
+        }
+        unused = [
+            name
+            for name in self._services
+            if name in named_services - used and name not in self._failed_services
+        ]
+        if unused:
+            summary += "\nUnused: " + ", ".join(
+                f"{name} (no device built)" for name in unused
+            )
         return summary
 
     def wire(self) -> None:
@@ -699,6 +722,8 @@ class Session(BuildableSession):
         self._is_built = False
         self.disconnect_all()
         self._releases.close()
+        self._failed_services.clear()
+        self._services_started = False
         self._callbacks.clear()
         self._not_set_up.clear()
         self._built_components.clear()
@@ -721,6 +746,10 @@ class Session(BuildableSession):
         for declaration in self._declarations.values():
             entry = self._entry_for(declaration)
             if entry is not None:
+                if declaration.service is not None:
+                    entry["service"] = declaration.service
+                if not declaration.autoconnect:
+                    entry["autoconnect"] = False
                 section = config.setdefault(declaration.kind.section, {})
                 section[declaration.name] = entry
         return config
@@ -1497,18 +1526,57 @@ class Session(BuildableSession):
         )
         return False
 
+    def start_services(self) -> None:
+        """Start every service the session launches, and attach to the rest.
+
+        `build` runs this first, unless it already ran. A service that does not
+        start is logged, and every device naming it is skipped. Stopping a
+        started service is registered as a release, so `shutdown` stops the
+        services after every component is released, the last started first,
+        and then closes the process's Channel Access channels, so a session
+        built again connects afresh.
+        """
+        if self._services_started:
+            return
+        self._services_started = True
+        if not self._services:
+            return
+        self.on_release(lambda: run_coro(close_channel_access()))
+        for name, service in self._services.items():
+            try:
+                service.start()
+            except Exception as e:  # noqa: BLE001 - a missing service must not abort the app
+                self._failed_services[name] = e
+                logger.error("Failed to start service '%s': %s", name, e)
+                continue
+            if service.launched:
+                self.on_release(partial(stop_logged, service))
+        started = len(self._services) - len(self._failed_services)
+        summary = f"Services started: {started}/{len(self._services)}"
+        if not self._failed_services:
+            logger.info(summary)
+            return
+        failed = ", ".join(
+            f"{name} ({reason})" for name, reason in self._failed_services.items()
+        )
+        logger.warning("%s\nNot started: %s", summary, failed)
+
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component.
 
         They come before the store because a device is made from its own
-        declaration and asks the session for nothing.
+        declaration and asks the session for nothing. A device naming a service
+        receives that service's prefix as ``prefix``, and is skipped when the
+        service is not declared, did not start, or gives no prefix.
         """
         for declaration in self._declarations.values():
             if declaration.kind is not Layer.DEVICE:
                 continue
             try:
                 device = declaration.cls(
-                    name=declaration.name, **declaration.cfg_kwargs
+                    name=declaration.name,
+                    **declaration.cfg_kwargs,
+                    **self._prefix_for(declaration),
                 )
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 self._failed[declaration.name] = e
@@ -1518,6 +1586,32 @@ class Session(BuildableSession):
             declaration.instance = device
             setattr(self, declaration.name, device)
             self._register_teardown(device)
+
+    def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
+        """Return the ``prefix`` keyword *declaration*'s service gives, if it names one.
+
+        Raises
+        ------
+        LookupError
+            If the device names a service that is not declared.
+        RuntimeError
+            If the device names a service that did not start.
+        ValueError
+            If the device names a service that gives no prefix.
+        """
+        if declaration.service is None:
+            return {}
+        service = self._services.get(declaration.service)
+        if service is None:
+            raise LookupError(f"service {declaration.service!r} is not declared")
+        if declaration.service in self._failed_services:
+            raise RuntimeError(f"service {declaration.service!r} was not started")
+        if not service.prefix:
+            raise ValueError(f"service {declaration.service!r} gives no prefix")
+        return {"prefix": service.prefix}
+
+    def connect_built_devices(self) -> None:
+        """Connect every built device declared with autoconnect."""
 
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         declaration.instance = instance
@@ -1766,6 +1860,17 @@ def refuse_backwards(
         f"nothing about a {target.kind}; share the value the other way, or "
         "move what they both need into an earlier layer."
     )
+
+
+def stop_logged(service: Service) -> None:
+    """Stop *service*, logging rather than raising if it cannot be stopped.
+
+    A release that raises would skip the releases registered before it.
+    """
+    try:
+        service.stop()
+    except Exception as e:  # noqa: BLE001 - one failed stop must not block the rest
+        logger.error("Error stopping service '%s': %s", service.name, e)
 
 
 def listed(names: Iterable[str], *, quote: bool = True) -> str:

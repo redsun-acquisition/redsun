@@ -355,8 +355,8 @@ listed in the [changelog](changelog.md).
   in the section, a point claimed twice, a point the container does not call,
   and a provider that does not implement the protocol its point calls.
 
-  A `during_build` hook is told `devices`, `registry`, `presenters`, `views`,
-  `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
+  A `during_build` hook is told `services`, `devices`, `connect`, `registry`,
+  `presenters`, `views`, `setup`, `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
   `start_runtime` run before the span it opens and are not announced to it.
 
 - An `actions:` section in the configuration of a Qt session, read at build and
@@ -498,6 +498,23 @@ listed in the [changelog](changelog.md).
   class MyApp(QtSession):
       camera_ioc: CameraIoc
       beamline: Annotated[AsService, Attach("BL01:")]
+  ```
+
+- `Session.start_services` is the first build step, announced as `"services"`.
+  It starts the launched services, logs `Services started: <n>/<m>`, and
+  registers each stop as a release, so `shutdown` stops the services after every
+  component, the last started first. A service that does not start is logged.
+
+- A device declared with `service` receives that service's prefix as `prefix`.
+  The device is skipped when the service is not declared, did not start, or
+  gives no prefix. `service` and `autoconnect` are read by the session and not
+  passed to the constructor. A declaration giving both `service` and `prefix`,
+  an `autoconnect` that is not a bool, or a device class taking one of the two
+  keywords itself is refused. A saved device entry keeps both keys. The build
+  summary names a service whose every device failed:
+
+  ```
+  Unused: beamline (no device built)
   ```
 
 ### Changed

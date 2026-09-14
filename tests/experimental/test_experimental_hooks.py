@@ -259,7 +259,9 @@ def test_during_build_brackets_the_build_and_names_every_step(
     assert Splash.exited == 1
     assert Splash.steps == list(BUILD_STEPS)
     assert Splash.steps == [
+        "services",
         "devices",
+        "connect",
         "registry",
         "presenters",
         "views",

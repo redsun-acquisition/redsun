@@ -147,6 +147,11 @@ class BuildableSession(Protocol):
         ...
 
     @abstractmethod
+    def start_services(self) -> None:
+        """Start the services the session launches, and attach to the rest."""
+        ...
+
+    @abstractmethod
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component."""
         ...
