@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
 STAND_IN = "mock_pkg.service.stand_in"
 READY = "stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
 
 
 CameraIoc: TypeAlias = Annotated[
@@ -142,13 +141,6 @@ class AttachedToAModule(Session):
         "services": {"ioc": {"module": "mylab.iocs.camera"}}
     }
     ioc: Annotated[AsService, Attach("CAM:")]
-
-
-@pytest.fixture
-def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Let a launched service import ``mock_pkg``, and restore the CA address list."""
-    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
 
 
 def errors_in(caplog: pytest.LogCaptureFixture) -> list[str]:

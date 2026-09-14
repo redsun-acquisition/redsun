@@ -99,17 +99,6 @@ class CameraPanel(QtAppContainer):
 
 
 @pytest.fixture
-def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Let a launched service import ``mock_pkg``, and restore the CA address list.
-
-    ``redsun.services._service.ports`` is left alone: libca reads the address list
-    once per process, so a service keeps the port it first got from test to test.
-    """
-    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
-
-
-@pytest.fixture
 def containers(launchable: None) -> Iterator[list[AppContainer]]:
     """Collect containers, shutting each down after the test whatever it did."""
     made: list[AppContainer] = []
