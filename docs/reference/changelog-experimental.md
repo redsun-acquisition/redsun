@@ -534,6 +534,9 @@ listed in the [changelog](changelog.md).
   than a `dict[str, Any]`. `satisfies` narrows an instance it accepts to the
   protocol for a type checker, and leaves a class as `type`.
 
+- `constant` (`redsun.experimental.injection`) returns a callable typed by the
+  value it holds, `Callable[[], T]`, rather than `Callable[[], Any]`.
+
 - A device is built as `cls(name=<name>, **kwargs)` rather than
   `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
   whose first parameter is `prefix`, can be declared. A device that takes `name`

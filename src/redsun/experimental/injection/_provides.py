@@ -14,6 +14,7 @@ __all__ = ["constant", "provides", "register_shared", "shared_keys"]
 PROVIDES = "__redsun_provides__"
 
 F = TypeVar("F", bound="Callable[..., Any]")
+T = TypeVar("T")
 
 
 def provides(method: F) -> F:
@@ -86,10 +87,10 @@ def register_shared(
         store.register_provider(constant(shared), type_hint=provided)
 
 
-def constant(value: Any) -> Callable[[], Any]:
+def constant(value: T) -> Callable[[], T]:
     """Return a callable answering with *value*."""
 
-    def read() -> Any:
+    def read() -> T:
         return value
 
     return read

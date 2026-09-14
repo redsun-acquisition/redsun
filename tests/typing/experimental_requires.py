@@ -7,7 +7,7 @@ nothing statically, which only `assert_type` can observe.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Protocol, assert_type, runtime_checkable
 
 from redsun.experimental import (
@@ -18,6 +18,7 @@ from redsun.experimental import (
     Session,
     satisfies,
 )
+from redsun.experimental.injection import constant
 
 
 @runtime_checkable
@@ -96,3 +97,7 @@ def check_satisfies_narrows_an_instance_but_not_a_class(
         component.reset()
     if satisfies(cls, Resettable):
         assert_type(cls, type)
+
+
+def check_a_constant_answers_with_the_type_it_holds(component: Resettable) -> None:
+    assert_type(constant(component), Callable[[], Resettable])
