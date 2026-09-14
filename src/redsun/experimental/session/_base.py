@@ -9,7 +9,18 @@ from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Final,
+    Literal,
+    Self,
+    TypeAlias,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import yaml
 from event_model import DocumentRouter
@@ -1415,6 +1426,10 @@ class Session(BuildableSession):
             if declaration.instance is not None
         }
 
+    @overload
+    def _built(self, layer: Literal[Layer.PRESENTER]) -> dict[str, NamedComponent]: ...
+    @overload
+    def _built(self, layer: Literal[Layer.VIEW]) -> dict[str, AttachableComponent]: ...
     def _built(self, layer: Layer) -> dict[str, Any]:
         return {
             d.name: d.instance
