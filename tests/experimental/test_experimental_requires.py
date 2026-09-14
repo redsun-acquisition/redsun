@@ -374,6 +374,26 @@ class AsksBoth:
         self.resettable = resettable
 
 
+class UnionCensus:
+    """Presenter asking about a union, which no protocol class names."""
+
+    def __init__(self, name: str, /, either: Requires[Resettable | None]) -> None:
+        self.name = name
+
+
+class ConcreteReset(Resettable):
+    """A class inheriting a protocol, which makes it no protocol of its own."""
+
+    def reset(self) -> None: ...
+
+
+class ConcreteCensus:
+    """Presenter asking about a concrete class rather than a protocol."""
+
+    def __init__(self, name: str, /, every: Requires[ConcreteReset]) -> None:
+        self.name = name
+
+
 class MisshapenDevices:
     """Presenter carrying the device marker on the wrong shape."""
 
@@ -492,6 +512,14 @@ class BothCensusApp(Session):
     stage: AsDevice[Stage]
     both: AsPresenter[AsksBoth]
     motor: AsPresenter[Motor]
+
+
+class UnionCensusApp(Session):
+    broken: AsPresenter[UnionCensus]
+
+
+class ConcreteCensusApp(Session):
+    broken: AsPresenter[ConcreteCensus]
 
 
 class MisshapenDevicesApp(Session):
@@ -693,6 +721,18 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
             TypeError,
             r"not a 'Mapping\[str, P\]'",
             id="census-on-the-wrong-shape",
+        ),
+        pytest.param(
+            UnionCensusApp,
+            TypeError,
+            "is not a protocol. Write 'Requires",
+            id="census-of-a-union",
+        ),
+        pytest.param(
+            ConcreteCensusApp,
+            TypeError,
+            "is not a protocol. Write 'Requires",
+            id="census-of-a-class-inheriting-a-protocol",
         ),
         pytest.param(
             MisshapenDevicesApp,

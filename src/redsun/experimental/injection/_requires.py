@@ -13,10 +13,12 @@ from typing import (
     get_origin,
 )
 
+from typing_extensions import is_protocol
+
 from redsun._structural import members, methods, problems, satisfies
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeForm
+    from typing_extensions import TypeForm, TypeIs
 
     from redsun.experimental.session import Key
 
@@ -201,7 +203,7 @@ def question_of(hint: TypeForm[Any]) -> Question | None:
     return Question(protocol, marker)
 
 
-def protocol_of(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
+def protocol_of(hint: TypeForm[Any], inner: object, marker: Every) -> type:
     """Return the protocol *hint* asks about, given the shape *marker* expects.
 
     Raises
@@ -210,29 +212,40 @@ def protocol_of(hint: TypeForm[Any], inner: Any, marker: Every) -> type:
         If the annotation is not the shape the marker is written for.
     """
     if isinstance(marker, One):
-        if not isinstance(inner, type):
+        if not is_protocol_class(inner):
             raise TypeError(
                 f"{hint} is marked with One() but is not a protocol. Write "
-                "'RequiresOne[P]'."
+                "'RequiresOne[P]' with P a protocol class."
             )
         return inner
     if isinstance(marker, Maybe):
         options = [arg for arg in get_args(inner) if arg is not type(None)]
-        if len(options) != 1 or not isinstance(options[0], type):
+        if len(options) != 1 or not is_protocol_class(options[0]):
             raise TypeError(
-                f"{hint} is marked with Maybe() but is not a 'P | None'. Write "
-                "'RequiresMaybe[P]'."
+                f"{hint} is marked with Maybe() but is not a 'P | None' with P a "
+                "protocol class. Write 'RequiresMaybe[P]'."
             )
         return options[0]
     args = get_args(inner)
+    alias = "DevicesOf" if isinstance(marker, Devices) else "Requires"
     if get_origin(inner) is not Mapping or len(args) != 2 or args[0] is not str:
-        alias = "DevicesOf" if isinstance(marker, Devices) else "Requires"
         raise TypeError(
             f"{hint} is marked with {type(marker).__name__}() but is not a "
             f"'Mapping[str, P]'. Write '{alias}[P]', which expands to the right "
             "shape."
         )
-    return args[1]  # type: ignore[no-any-return]
+    protocol = args[1]
+    if not is_protocol_class(protocol):
+        raise TypeError(
+            f"{hint} is marked with {type(marker).__name__}() but {protocol!r} is "
+            f"not a protocol. Write '{alias}[P]' with P a protocol class."
+        )
+    return protocol
+
+
+def is_protocol_class(candidate: object) -> TypeIs[type]:
+    """Return whether *candidate* is a protocol class, not a class inheriting one."""
+    return isinstance(candidate, type) and is_protocol(candidate)
 
 
 def validate(protocol: type, marker: Every) -> None:

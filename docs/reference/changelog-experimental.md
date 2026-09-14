@@ -537,6 +537,11 @@ listed in the [changelog](changelog.md).
 - `constant` (`redsun.experimental.injection`) returns a callable typed by the
   value it holds, `Callable[[], T]`, rather than `Callable[[], Any]`.
 
+- A question whose `P` is not a protocol class, such as a union or a class
+  inheriting a protocol, is refused saying `P` is not a protocol, for
+  `Requires`, `RequiresOne`, `RequiresMaybe` and `DevicesOf` alike. A class
+  inheriting a runtime-checkable protocol was accepted as the protocol.
+
 - A device is built as `cls(name=<name>, **kwargs)` rather than
   `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
   whose first parameter is `prefix`, can be declared. A device that takes `name`
