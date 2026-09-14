@@ -534,6 +534,10 @@ listed in the [changelog](changelog.md).
   than a `dict[str, Any]`. `satisfies` narrows an instance it accepts to the
   protocol for a type checker, and leaves a class as `type`.
 
+- `Settings.set` (`redsun.experimental`) takes a `JsonValue`, a value the
+  settings file can hold, so a type checker refuses one it cannot write.
+  `Settings.get` still returns `Any`.
+
 - `Declaration.instance` (`redsun.experimental.session`) is typed
   `Device | NamedComponent | None` rather than `Any`, so reading a component's
   own attribute through it needs an `isinstance` check first.

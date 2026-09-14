@@ -11,6 +11,12 @@ from platformdirs import user_config_dir
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import TypeAlias
+
+    JsonValue: TypeAlias = (
+        str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+    )
+    """A value the settings file can hold."""
 
 __all__ = ["Settings"]
 
@@ -39,7 +45,7 @@ class Settings:
     def __init__(self, path: Path) -> None:
         """Read *path* if it is there, and remember where to write it back."""
         self._path = path
-        self._values: dict[str, Any] = read(path)
+        self._values: dict[str, JsonValue] = read(path)
 
     @classmethod
     def for_session(cls, name: str) -> Self:
@@ -59,7 +65,7 @@ class Settings:
         """Return what *key* was last set to, or *default*."""
         return self._values.get(key, default)
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: JsonValue) -> None:
         """Remember *value* under *key*, and write the file.
 
         Written as it is set rather than at shutdown, so a session that ends
@@ -89,7 +95,7 @@ class Settings:
         self._path.write_text(json.dumps(self._values, indent=2), encoding="utf-8")
 
 
-def read(path: Path) -> dict[str, Any]:
+def read(path: Path) -> dict[str, JsonValue]:
     """Return what *path* holds, or nothing when it is absent or unreadable.
 
     A settings file is written by the program and read by it, so one that
