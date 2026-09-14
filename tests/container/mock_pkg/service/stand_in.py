@@ -29,6 +29,9 @@ def main() -> int:
     parser.add_argument("--ignore-stdin", action="store_true")
     parser.add_argument("--ignore-sigint", action="store_true")
     parser.add_argument("--exit", type=int, help="exit with this code once ready")
+    parser.add_argument(
+        "--exit-when", type=Path, help="exit with --exit's code once this file exists"
+    )
     parser.add_argument("--marker", type=Path, help="file written on clean exit")
     parser.add_argument("--say", help="a line printed once ready")
     options = parser.parse_args()
@@ -43,11 +46,14 @@ def main() -> int:
         print(READY, flush=True)
     if options.say is not None:
         print(options.say, flush=True)
-    if options.exit is not None:
+    if options.exit is not None and options.exit_when is None:
         print("exiting on request", flush=True)
         return int(options.exit)
     try:
         while True:
+            if options.exit_when is not None and options.exit_when.exists():
+                print("exiting on request", flush=True)
+                return int(options.exit)
             time.sleep(0.05)
     except KeyboardInterrupt:
         # before printing: with the launcher gone, nothing reads the output

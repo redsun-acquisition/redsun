@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, TypeAlias
 
@@ -23,11 +24,13 @@ from redsun.aio import run_coro
 from redsun.experimental import (
     Alias,
     AsDevice,
+    AsPresenter,
     AsService,
     Attach,
     Declare,
     Launch,
     Session,
+    slot,
 )
 from redsun.experimental.session import _base as session_base
 
@@ -83,6 +86,20 @@ class RefusingDevice(Device):
 class DeviceWithServiceKeyword(Device):
     def __init__(self, name: str = "", service: str = "") -> None:
         super().__init__(name=name)
+
+
+class ExitWatcher:
+    """Presenter recording each service exit it hears, and the thread it ran on."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.exits: list[tuple[str, int, str]] = []
+        self.heard = threading.Event()
+
+    @slot
+    def on_exit(self, service: str, code: int) -> None:
+        self.exits.append((service, code, threading.current_thread().name))
+        self.heard.set()
 
 
 class Broken(EpicsDevice):
@@ -449,3 +466,50 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
         if r.getMessage().startswith("Container built")
     ]
     assert "Not built: camera (device, not connected)" in summary.splitlines()
+
+
+def test_a_caproto_ioc_is_launched_and_its_device_read_while_building(
+    build: BuildSession, launchable: None
+) -> None:
+    """The service is named as in the container tests, so it keeps libca's port."""
+
+    class App(Session):
+        ioc_a: Annotated[
+            AsService,
+            Launch(
+                "mock_pkg.service.camera_ioc",
+                ready="Server startup complete",
+                prefix="A:",
+                args=["--prefix", "A:"],
+            ),
+        ]
+        camera: Annotated[AsDevice[Camera], Declare(service="ioc_a")]
+
+    camera = build(App).devices["camera"]
+
+    assert isinstance(camera, Camera)
+    assert run_coro(camera.exposure.get_value()) == 0.25
+
+
+def test_a_presenter_hears_a_service_exit_through_wire(
+    build: BuildSession, launchable: None, tmp_path: Path
+) -> None:
+    exit_now = tmp_path / "exit-now"
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {
+                "stand_in": {"args": ["--exit", "4", "--exit-when", str(exit_now)]}
+            }
+        }
+        stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
+        watcher: AsPresenter[ExitWatcher]
+
+        def wire(self) -> None:
+            self.connect(self.stand_in.sig_exited, self.watcher.on_exit)
+
+    app = build(App)
+    exit_now.touch()
+
+    assert app.watcher.heard.wait(10)
+    assert app.watcher.exits == [("stand_in", 4, "service-stand_in")]
