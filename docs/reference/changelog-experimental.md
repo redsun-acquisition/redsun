@@ -485,8 +485,7 @@ listed in the [changelog](changelog.md).
   A `services` section declares services from a file, and an entry naming a
   plugin takes `module` and `ready` from that plugin's `services` manifest group.
   `Session.services` holds the services by name, and each one is an attribute of
-  the session. A service is not a component: it has no layer and is never
-  injected.
+  the session.
 
   ```python
   CameraIoc: TypeAlias = Annotated[
@@ -506,12 +505,11 @@ listed in the [changelog](changelog.md).
   every component, the last declared first. A service that does not start is
   logged.
 
-- A device declared with `service` receives that service's prefix as `prefix`.
-  The device is skipped when the service is not declared, did not start, or
-  gives no prefix. `service` and `autoconnect` are read by the session and not
-  passed to the constructor. A declaration giving both `service` and `prefix`,
-  an `autoconnect` that is not a bool, or a device class taking one of the two
-  keywords itself is refused. A saved device entry keeps both keys. The build
+- A device declared with `service` receives that service's prefix as `prefix`,
+  and is skipped when the service is not declared, did not start, or gives no
+  prefix. The session reads `service` and `autoconnect` and refuses a
+  declaration giving `service` with `prefix`, a non-bool `autoconnect`, or a
+  device class taking either keyword. A saved entry keeps both keys. The build
   summary names a service whose every device failed:
 
   ```

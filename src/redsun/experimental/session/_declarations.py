@@ -117,11 +117,10 @@ class Hook:
 
 @dataclass(frozen=True)
 class ServiceMark:
-    """Marks an annotation as a service rather than a component.
+    """Marks an annotation as a service, as `redsun.experimental.AsService` does.
 
-    Carried by `redsun.experimental.AsService`. A service is started before any
-    component is built and stopped after every one is released. It is never
-    injected, and it is not a layer.
+    A service starts before every component, stops after them, and is never
+    injected.
     """
 
 
@@ -179,7 +178,7 @@ class Declaration:
 
     ``key`` is a distinct type per component name, so two instances of one
     class stay separable in a type-keyed graph. A device's ``service`` and
-    ``autoconnect`` are read off its keyword arguments rather than passed on.
+    ``autoconnect`` keywords are kept here, not passed to its constructor.
 
     Raises
     ------
@@ -221,7 +220,9 @@ class Declaration:
 def take_device_keys(
     declaration: Declaration, kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    """Move the session's keywords off *kwargs* onto *declaration*, and return the rest.
+    """Move ``service`` and ``autoconnect`` from *kwargs* onto *declaration*.
+
+    Returns the keywords left for the device's constructor.
 
     Raises
     ------
@@ -422,12 +423,11 @@ def read(
 
 
 def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
-    """Make the services *cls* declares and the ``services`` section names.
+    """Make the services *cls* annotates and the ``services`` section lists.
 
-    What an annotation's `Launch` or `Attach` gives overrides the section's
-    entry for it, `FromConfig` names that entry and `Alias` names the service.
-    A marker given twice counts once, the last one, so a marker written where a
-    shared alias is used overrides the alias's own. An entry that no annotation
+    A `Launch` or `Attach` marker overrides the section's entry, and the last
+    marker wins, so one written where an alias is used replaces the alias's.
+    `FromConfig` names the entry and `Alias` the service. An entry no annotation
     reads is a service too.
 
     Raises

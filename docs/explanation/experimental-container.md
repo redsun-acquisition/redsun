@@ -695,9 +695,9 @@ running elsewhere. A keyword a marker leaves out comes from the service's entry
 in the `services` section, and a service with no marker comes from that entry
 alone.
 
-A service is not a component. It has no layer and nothing receives it by
-injection. It is set on the session under its name, so `wire` can connect
-`self.stage_ioc.sig_exited` to a presenter.
+A service is not a component: it has no layer and nothing injects it. It is set
+on the session under its name, so `wire` can connect `self.stage_ioc.sig_exited`
+to a presenter.
 
 A marker is ordinary annotation metadata, so a bundle can declare a service once
 in its own module and every session can import it:
@@ -717,12 +717,11 @@ A marker written where the alias is used replaces the alias's own. `mypy` does
 not check arguments inside `Annotated`, so a wrong keyword is reported when the
 session reads the class.
 
-The build gains two steps around the devices. `"services"` starts the services
-before any device is built, and `"connect"` connects every device not declared
-with `autoconnect=False` before any presenter is built. A device naming a
-service receives the service's prefix as `prefix`. The device is skipped when
-the service is not declared, did not start, gives no prefix, or does not answer
-within `CONNECT_TIMEOUT`.
+`"services"` starts the services before any device is built, and `"connect"`
+connects every device not declared with `autoconnect=False` before any presenter
+is built. A device naming a service receives the service's prefix as `prefix`.
+The device is skipped when the service is not declared, did not start, gives no
+prefix, or does not answer within `CONNECT_TIMEOUT`.
 
 A service behaves as it does in the supported container, described in
 [Services](services.md) and [Write a service](../how-to/write-a-service.md). The

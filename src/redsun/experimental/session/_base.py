@@ -1526,15 +1526,13 @@ class Session(BuildableSession):
         return False
 
     def start_services(self) -> None:
-        """Start every service the session launches, and attach to the rest.
+        """Start the launched services together, and attach to the rest.
 
-        `build` runs this first. Services start together, so the step takes as
-        long as the slowest one. A service that does not start is logged, and
-        every device naming it is skipped. Stopping a started service is
-        registered as a release, so `shutdown` stops the services after every
-        component is released, the last declared first, and then closes the
-        process's Channel Access channels, so a session built again connects
-        afresh.
+        The step takes as long as the slowest service. A service that does not
+        start is logged, and devices naming it are skipped. Each stop is a
+        release, so `shutdown` stops services after every component, the last
+        declared first, then closes Channel Access channels so a rebuilt session
+        reconnects at once.
         """
         self._failed_services = {}
         if not self._services:
@@ -1587,7 +1585,7 @@ class Session(BuildableSession):
             self._register_teardown(device)
 
     def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
-        """Return the ``prefix`` keyword *declaration*'s service gives, if it names one.
+        """Return the ``prefix`` keyword from *declaration*'s service, if it names one.
 
         Raises
         ------
@@ -1610,11 +1608,10 @@ class Session(BuildableSession):
         return {"prefix": service.prefix}
 
     def connect_built_devices(self) -> None:
-        """Connect every built device declared with autoconnect, all at once.
+        """Connect every autoconnect device at once.
 
-        A device that does not connect within `CONNECT_TIMEOUT` is recorded as
-        failed and dropped, as a device that fails to build is, so no component
-        receives a device that raises on its first read.
+        A device not connected within `CONNECT_TIMEOUT` is dropped and recorded
+        as failed, like one that fails to build.
         """
         targets = {
             name: device
