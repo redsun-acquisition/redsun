@@ -28,6 +28,8 @@ from ._plugins import META_KEYS, resolve, service_entry
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
+    from ._protocols import NamedComponent
+
 logger = logging.getLogger("redsun")
 
 __all__ = [
@@ -210,7 +212,7 @@ class Declaration:
             take_device_keys(self, cfg_kwargs) if kind is Layer.DEVICE else cfg_kwargs
         )
         self.key: Key = NewType(name, cls)
-        self.instance: Any = None
+        self.instance: Device | NamedComponent | None = None
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"

@@ -534,6 +534,10 @@ listed in the [changelog](changelog.md).
   than a `dict[str, Any]`. `satisfies` narrows an instance it accepts to the
   protocol for a type checker, and leaves a class as `type`.
 
+- `Declaration.instance` (`redsun.experimental.session`) is typed
+  `Device | NamedComponent | None` rather than `Any`, so reading a component's
+  own attribute through it needs an `isinstance` check first.
+
 - `constant` (`redsun.experimental.injection`) returns a callable typed by the
   value it holds, `Callable[[], T]`, rather than `Callable[[], Any]`.
 

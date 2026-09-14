@@ -815,11 +815,12 @@ class Session(BuildableSession):
         `serialize` places an entry: a key that would be refused there still
         tells whether the component has changed.
         """
-        return {
-            declaration.name: declaration.instance.serialize()
-            for declaration in self._declarations.values()
-            if isinstance(declaration.instance, Serializable)
-        }
+        found: dict[str, Mapping[str, object]] = {}
+        for declaration in self._declarations.values():
+            serializable = as_protocol(declaration.instance, Serializable)
+            if serializable is not None:
+                found[declaration.name] = serializable.serialize()
+        return found
 
     def _entry_for(self, declaration: Declaration) -> dict[str, Any] | None:
         """Return the entry *declaration*'s component asks to be written.
@@ -831,10 +832,10 @@ class Session(BuildableSession):
         key, loses it, and keeps the old one beside values that assume the
         rename.
         """
-        instance = declaration.instance
-        if instance is None or not isinstance(instance, Serializable):
+        serializable = as_protocol(declaration.instance, Serializable)
+        if serializable is None:
             return None
-        entry = dict(instance.serialize())
+        entry = dict(serializable.serialize())
         refused = unaccepted(declaration.cls, entry)
         if not refused:
             return entry
@@ -843,7 +844,7 @@ class Session(BuildableSession):
             "entry as loaded",
             declaration.name,
             ", ".join(refused),
-            type(instance).__name__,
+            type(serializable).__name__,
         )
         return None
 
@@ -1204,7 +1205,10 @@ class Session(BuildableSession):
                 )
             else:
                 try:
-                    store.inject(setup_call(instance, declaration.name))()
+                    # `as_protocol` cannot take the generic `HasSetup`, which
+                    # mypy refuses as a type form; the class was checked above
+                    ready = cast("HasSetup[...]", instance)
+                    store.inject(setup_call(ready, declaration.name))()
                     continue
                 except Exception as e:  # noqa: BLE001 - a setup must not abort the app
                     self._not_set_up[declaration.name] = e
@@ -1510,9 +1514,10 @@ class Session(BuildableSession):
                     f"{declaration.kind}, but does not satisfy "
                     f"{protocol.__name__!r}: " + "; ".join(reasons)
                 )
-            if view:
+            attachable = as_protocol(instance, AttachableComponent) if view else None
+            if attachable is not None:
                 frontend.check_placement(
-                    instance, instance.placement, f"view {declaration.name!r}"
+                    attachable, attachable.placement, f"view {declaration.name!r}"
                 )
 
     def _verify_answers(self) -> None:
@@ -1921,6 +1926,17 @@ def refuse_backwards(
         f"nothing about a {target.kind}; share the value the other way, or "
         "move what they both need into an earlier layer."
     )
+
+
+def as_protocol(instance: object, protocol: TypeForm[P]) -> P | None:
+    """Return *instance* typed as the runtime-checkable *protocol*, or ``None``.
+
+    Returning the value rather than a `TypeIs` keeps narrowing out of the
+    caller: mypy reports a check of a union of a class and a protocol against
+    another protocol as unreachable.
+    """
+    # the protocols passed are classes at runtime
+    return cast("P", instance) if isinstance(instance, cast("type", protocol)) else None
 
 
 def listed(names: Iterable[str], *, quote: bool = True) -> str:

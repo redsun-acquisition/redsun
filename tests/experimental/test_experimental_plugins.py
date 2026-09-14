@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar, TypeVar
 from unittest import mock
 
 import pytest
 import yaml
 from mock_bundle.devices import MockStage
 from mock_bundle.keys import Calibration
-from mock_bundle.presenters import MockMotorPresenter, MockRegistrar
+from mock_bundle.presenters import (
+    MockLatePresenter,
+    MockMotorPresenter,
+    MockRegistrar,
+)
 from mock_bundle.views import MockMotorView
 
 from redsun.aio import run_coro
@@ -50,6 +54,17 @@ class PartlyDeclaredApp(Session):
 
 DECLARED = {"stage", "motor_ctrl", "late_ctrl", "motor_widget"}
 
+C = TypeVar("C")
+
+
+def built(session: Session, name: str, kind: type[C]) -> C:
+    """Return the component *session* built under *name*, checked to be a *kind*."""
+    instance = session.declarations[name].instance
+    assert isinstance(instance, kind), (
+        f"{name!r} is {instance!r}, not a {kind.__name__}"
+    )
+    return instance
+
 
 @pytest.fixture
 def configured(
@@ -75,20 +90,20 @@ def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
 
     assert isinstance(stage, MockStage)
     assert run_coro(stage.axis.get_value()) == "Z"
-    assert configured.declarations["motor_ctrl"].instance.step == 4.0
-    assert configured.declarations["motor_widget"].instance.title == "from-config"
+    assert built(configured, "motor_ctrl", MockMotorPresenter).step == 4.0
+    assert built(configured, "motor_widget", MockMotorView).title == "from-config"
 
 
 def test_plugin_provider_supplies_a_dependency(configured: ConfiguredApp) -> None:
     """The bundle's own shared services are loaded from the manifest."""
-    presenter = configured.declarations["motor_ctrl"].instance
+    presenter = built(configured, "motor_ctrl", MockMotorPresenter)
 
     assert presenter.calibration == pytest.approx(Calibration(1.2))
 
 
 def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) -> None:
     """`provides` works for components the class never named."""
-    widget = configured.declarations["motor_widget"].instance
+    widget = built(configured, "motor_widget", MockMotorView)
 
     assert widget.readings == {"stage": pytest.approx(4.8)}
     assert widget.missing is None
@@ -121,7 +136,9 @@ def test_configured_component_receives_the_catalogue(
 
     app = build(WithRegistrar, str(config_path / SESSION))
 
-    assert app.declarations["late_ctrl"].instance.seen == {"registrar": app.registrar}
+    assert built(app, "late_ctrl", MockLatePresenter).seen == {
+        "registrar": app.registrar
+    }
 
 
 @pytest.mark.parametrize(
@@ -191,7 +208,7 @@ def test_from_config_takes_the_configuration_itself(
         )
     )
 
-    assert app.declarations["motor_ctrl"].instance.step == 7.0
+    assert built(app, "motor_ctrl", MockMotorPresenter).step == 7.0
 
 
 def test_the_class_keeps_what_it_declares(
