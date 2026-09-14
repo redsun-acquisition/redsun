@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, ClassVar
+from unittest import mock
 
 import pytest
 import yaml
@@ -19,6 +20,7 @@ from redsun.experimental import (
     PluginError,
     Session,
 )
+from redsun.experimental.session import _plugins
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -224,3 +226,17 @@ def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> Non
 
     with pytest.raises(TypeError, match="which is not one of those"):
         HeadlessApp.from_config(str(path))
+
+
+def test_a_build_looks_each_plugin_up_once(
+    mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
+) -> None:
+    """Five entries name one plugin; a second build looks it up again."""
+    lookups = vars(_plugins)["entry_points"]
+    assert isinstance(lookups, mock.Mock)
+
+    build(ConfiguredApp, str(config_path / SESSION))
+    once = lookups.call_count
+    build(ConfiguredApp, str(config_path / SESSION))
+
+    assert (once, lookups.call_count) == (1, 2)

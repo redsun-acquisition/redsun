@@ -72,7 +72,7 @@ from ._factories import (
     setup_call,
 )
 from ._frontend import Frontend
-from ._plugins import load_providers
+from ._plugins import load_providers, manifest
 from ._protocols import (
     AttachableComponent,
     BuildableSession,
@@ -569,6 +569,7 @@ class Session(BuildableSession):
 
     def read_configuration(self) -> None:
         """Merge the sources, install the hooks, and read the declarations."""
+        manifest.cache_clear()
         config = self._configuration()
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._set_configuration(config, self.name)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import cache
 from importlib import import_module
 from importlib.metadata import entry_points
 from importlib.resources import as_file, files
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from importlib.metadata import EntryPoints
 
-__all__ = ["PluginError", "load_providers", "resolve", "service_entry"]
+__all__ = ["PluginError", "load_providers", "manifest", "resolve", "service_entry"]
 
 logger = logging.getLogger("redsun")
 
@@ -103,13 +104,19 @@ def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
     return {**listed, **own}
 
 
-def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
-    """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
+@cache
+def manifest(plugin_name: str) -> dict[str, dict[str, Any]]:
+    """Return *plugin_name*'s parsed manifest, read once until the cache is cleared.
+
+    Looking a plugin up scans every installed distribution, so a session reading
+    many entries of one plugin reads its manifest once. `Session.build` clears
+    the cache before it reads the configuration, so a build sees plugins
+    installed since the last one.
 
     Raises
     ------
     PluginError
-        If the plugin is not installed, or its manifest has no such entry.
+        If the plugin is not installed.
     """
     manifests: EntryPoints = entry_points(group=PLUGIN_GROUP)
     plugin = next((e for e in manifests if e.name == plugin_name), None)
@@ -118,18 +125,28 @@ def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
         raise PluginError(
             f"plugin {plugin_name!r} is not installed. Installed: {known}"
         )
-
     resource = files(plugin.name.replace("-", "_")) / plugin.value
     with as_file(resource) as path, open(path) as fh:
-        manifest: dict[str, dict[str, Any]] = yaml.safe_load(fh) or {}
+        found: dict[str, dict[str, Any]] = yaml.safe_load(fh) or {}
+    return found
 
-    if group not in manifest:
-        known = ", ".join(sorted(manifest)) or "none"
+
+def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
+    """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
+
+    Raises
+    ------
+    PluginError
+        If the plugin is not installed, or its manifest has no such entry.
+    """
+    listed = manifest(plugin_name)
+    if group not in listed:
+        known = ", ".join(sorted(listed)) or "none"
         raise PluginError(
             f"plugin {plugin_name!r} declares no {group!r} section. "
             f"Its sections: {known}"
         )
-    items = manifest[group]
+    items = listed[group]
     if plugin_id not in items:
         known = ", ".join(sorted(items)) or "none"
         raise PluginError(
