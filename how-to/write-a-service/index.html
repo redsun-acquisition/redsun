@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0009-inherited-component-configuration/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/write-a-service/">
       
       
-        <link rel="prev" href="../0008-container-hooks-and-the-phase-registry/">
+        <link rel="prev" href="../wire-components/">
       
       
-        <link rel="next" href="../0010-toolkit-hook-points/">
+        <link rel="next" href="../../reference/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.61">
     
     
       
-        <title>9. Inherited and layered component configuration - Redsun</title>
+        <title>Write a service - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.ce62732f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.ce62732f.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#9-inherited-and-layered-component-configuration" class="md-skip">
+        <a href="#write-a-service" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              9. Inherited and layered component configuration
+              Write a service
             
           </span>
         </div>
@@ -215,13 +215,55 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   redsun
 
       </a>
     </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../explanation/" class="md-tabs__link">
+          
+  
+  Explanation
+
+        </a>
+      </li>
+    
   
 
       
@@ -258,49 +300,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
-          
-  
-  Explanation
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-      
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../how-to/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   How to
@@ -334,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -364,7 +364,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -397,7 +397,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -427,7 +427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -442,944 +442,6 @@
   
 
       </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-        
-        
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Explanation
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-  Explanation
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../component-system/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Component system
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../container-architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Container architecture
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../services/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Services
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../statement/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Statement of need
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../storage/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Storage
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Architecture
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-  Architecture
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/devices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Devices
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/plans/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Plans
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/presenters/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Presenters
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/qt-widgets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Qt widgets
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../architecture/virtual/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Virtual container
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Decisions
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-  Decisions
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  1. Record architecture decisions
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  2. Storage dual-context redesign
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  3. Structural subtyping for presenters and views
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  4. Owner-scoped signal lookup
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  5. Culsans-backed psygnal async backend
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0006-application-declared-wiring/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  6. Application-declared wiring
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0007-typed-provider-keys/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  7. Typed provider keys
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  8. Container hooks and the build phase registry
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited and layered component configuration
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited and layered component configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Status
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Context
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Decision
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Consequences
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  10. Toolkit hook points
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  11. Tolerating a component that fails to build
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  12. Services and two connection levels
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -1424,11 +486,850 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../how-to/" class="md-nav__link ">
+            <a href="../../explanation/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Explanation
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Explanation
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/component-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Component system
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/container-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Container architecture
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/statement/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Statement of need
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Storage
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Architecture
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture/devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Devices
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture/plans/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Plans
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture/presenters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Presenters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture/qt-widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Qt widgets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/architecture/virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Virtual container
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Decisions
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Decisions
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  1. Record architecture decisions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  2. Storage dual-context redesign
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  4. Owner-scoped signal lookup
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  5. Culsans-backed psygnal async backend
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0007-typed-provider-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  7. Typed provider keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  8. Container hooks and the build phase registry
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0009-inherited-component-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  9. Inherited and layered component configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0010-toolkit-hook-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  10. Toolkit hook points
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  11. Tolerating a component that fails to build
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1445,13 +1346,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1470,7 +1371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/build-docs/" class="md-nav__link">
+      <a href="../build-docs/" class="md-nav__link">
         
   
   
@@ -1497,7 +1398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/configure-logging/" class="md-nav__link">
+      <a href="../configure-logging/" class="md-nav__link">
         
   
   
@@ -1524,7 +1425,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/install-hooks/" class="md-nav__link">
+      <a href="../install-hooks/" class="md-nav__link">
         
   
   
@@ -1551,7 +1452,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -1578,7 +1479,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/run-tests/" class="md-nav__link">
+      <a href="../run-tests/" class="md-nav__link">
         
   
   
@@ -1605,7 +1506,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/wire-components/" class="md-nav__link">
+      <a href="../wire-components/" class="md-nav__link">
         
   
   
@@ -1629,10 +1530,36 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1647,6 +1574,82 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-the-ioc" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Write the IOC
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#declare-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Declare it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#react-when-it-exits" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        React when it exits
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-from-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Log from it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1695,7 +1698,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../reference/" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1737,7 +1740,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/changelog/" class="md-nav__link">
+      <a href="../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1764,7 +1767,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/glossary/" class="md-nav__link">
+      <a href="../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -1863,7 +1866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/aio/" class="md-nav__link">
+      <a href="../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -1890,7 +1893,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/container/" class="md-nav__link">
+      <a href="../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1917,7 +1920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/engine/" class="md-nav__link">
+      <a href="../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1944,7 +1947,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/log/" class="md-nav__link">
+      <a href="../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1971,7 +1974,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1998,7 +2001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/services/" class="md-nav__link">
+      <a href="../../reference/api/services/" class="md-nav__link">
         
   
   
@@ -2025,7 +2028,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/storage/" class="md-nav__link">
+      <a href="../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -2052,7 +2055,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/utils/" class="md-nav__link">
+      <a href="../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -2079,7 +2082,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/view/" class="md-nav__link">
+      <a href="../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -2106,7 +2109,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -2173,7 +2176,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../tutorials/" class="md-nav__link ">
+            <a href="../../tutorials/" class="md-nav__link ">
               
   
   
@@ -2215,7 +2218,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/custom-storage-backend/" class="md-nav__link">
+      <a href="../../tutorials/custom-storage-backend/" class="md-nav__link">
         
   
   
@@ -2283,10 +2286,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Status
+        Prerequisites
       </span>
     </span>
   </a>
@@ -2294,10 +2297,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#write-the-ioc" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Context
+        Write the IOC
       </span>
     </span>
   </a>
@@ -2305,10 +2308,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#declare-it" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Decision
+        Declare it
       </span>
     </span>
   </a>
@@ -2316,10 +2319,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#react-when-it-exits" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Consequences
+        React when it exits
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-from-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Log from it
       </span>
     </span>
   </a>
@@ -2344,127 +2358,128 @@
   
 
 
-<h1 id="9-inherited-and-layered-component-configuration">9. Inherited and layered component configuration<a class="headerlink" href="#9-inherited-and-layered-component-configuration" title="Permanent link">&para;</a></h1>
-<p>Date: 2026-08-28</p>
-<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Two sessions of the same instrument differ in their hardware and in almost
-nothing else. A simulated microscope and the real one declare the same
-presenters, the same views and the same wiring; only the devices and the
-configuration change. Written as two container classes, everything but the
-devices is duplicated, and the duplication is the part that carries the
-application's structure.</p>
-<p>Python already has the mechanism for that: a base class holding the shared
-declarations, subclassed once per session. It did not work here, for two
-reasons that both come from <code>from_config</code> being resolved as the class body is
-read.</p>
-<p>A base class has no configuration file of its own - the file is the thing that
-differs - so every <code>from_config</code> field in it raised at class creation:
-<code>Component field 'ui' in InstrumentApp has from_config set but no config path
-was provided</code>. Giving the base a file instead makes the resolution happen
-against that file, and <code>__init_subclass__</code> then copies the built wrappers into
-the subclass, so a subclass naming its own <code>config</code> inherits the base's keyword
-arguments and silently ignores its own file.</p>
-<p>Both are consequences of the same thing: the fields were consumed at class
-creation and not kept, so nothing was left for a subclass to re-resolve.</p>
-<p>Sharing the declarations is only half of it. <code>config</code> named a single file and a
-subclass replaced its base's rather than adding to it, so a subclass had to
-restate every section its base's file carried. The duplication would move from
-the Python to the YAML rather than going away.</p>
-<p>The objection to layering files is that a reader would have to consult two of
-them to know one component's arguments. That objection is real, and it is the
-same one that made <a href="../0008-container-hooks-and-the-phase-registry/">container hooks</a>
-refuse a silent override between two sources. It is not the same situation. A
-hook override is invisible: two files name the same <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> and nothing in
-either says which wins. A layered configuration is declared at the class that
-does the layering - <code>class Simulation(InstrumentApp, config="simulation.yaml")</code>
-reads as "this session, on top of what InstrumentApp set up" - and the order is the
-class hierarchy, which the reader is already holding.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>The declared fields outlive class creation.</strong> <code>AppContainer._component_fields</code>
-records every <code>declare_*</code> field a container and its bases declared, keyed by
-attribute name. It is accumulated the way the component wrappers already are:
-bases first, then the class's own body.</p>
-<p><strong>Every class resolves the whole inherited set against its own files.</strong>
-<code>__init_subclass__</code> no longer resolves only the fields written in that body; it
-resolves everything in <code>_component_fields</code>. A subclass therefore rebuilds the
-wrappers it inherited, reading its own configuration.</p>
-<p><strong>A missing configuration file is refused at construction, not at class
-creation.</strong> A base class exists to be subclassed, and the subclass is where
-<code>config</code> is named, so a class body cannot know whether a file will arrive. The
-<code>TypeError</code> moves to <code>AppContainer.__init__</code>, and names every field that asked
-for a section rather than the first one reached.</p>
-<p>Resolution stays at class creation for a class that has a file. It is what lets
-a type checker read a component's type off the class body, and moving it to
-build time would buy nothing that the subclass rule does not already give.</p>
-<p><strong><code>_config_paths</code> is a tuple, and a subclass appends to it.</strong> <code>config</code> accepts
-one path or a sequence of them, and what a class declares is read <em>after</em> what
-its bases declared. A subclass does not replace its base's file; it lays its own
-over the top.</p>
-<p><strong>Files merge as mappings, recursively.</strong> <code>merge_config</code> takes a key from the
-later file unless both values are mappings, which merge in turn. A list or a
-scalar is replaced rather than combined, because there is no combination of two
-lists that is right more often than it is wrong.</p>
-<p><strong>A component entry is the exception: it is replaced whole.</strong> Under <code>devices</code>,
-<code>presenters</code> and <code>views</code> the section still merges by component name, so an
-overlay adds components and leaves alone the ones it does not mention - but a
-component it <em>does</em> name is taken from it entirely. Those entries are not a
-tree of settings; they are the keyword arguments of <code>cls(name, **kwargs)</code>.
-Assembling one constructor call from two files is how a session ends up running
-with an argument nobody reading its file can see, and this framework drives
-stages and cameras. One file owns one component's arguments, and a reader finds
-them by looking at the last file that names it and stopping.</p>
-<p>The hazard is not hypothetical. Two sessions of one instrument routinely give
-the same component name to different classes - a mock light source and a real
-one - so merged keyword arguments would reach two different constructors and
-fail, if they failed at all, at build time naming the component but not the
-file that contributed the key.</p>
-<p><strong>Required keys are checked on the merged result, not on each file.</strong> A file
-that sits under another is a fragment - it has no reason to carry
-<code>schema_version</code> or <code>frontend</code>, which belong to the session rather than to the
-components. <code>_read_yaml</code> reads a file without judging it, and <code>_load_yaml</code>
-validates once, after the merge, naming every file that took part.</p>
-<p><strong>Two files may not disagree about what kind of session this is.</strong>
-<code>schema_version</code> and <code>frontend</code> name the session's identity rather than its
-content, so a later file giving a different value is a contradiction rather
-than an override, and raises. Restating an identical value is legal. Everything
-else, <code>session</code> included, follows the ordinary rule that the later file wins -
-naming the session per layer is the point of layering it.</p>
-<p><code>frontend</code> earns the rule twice over: on a declarative container it is already
-inert, since the class is <code>QtAppContainer</code> whatever the file says. An overlay
-flipping it would leave <code>container.config["frontend"]</code> reporting a toolkit the
-container is not running, and nothing would say so.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h1 id="write-a-service">Write a service<a class="headerlink" href="#write-a-service" title="Permanent link">&para;</a></h1>
+<p>Write a <code>caproto</code> IOC for a session to launch, declare it, and point a device
+at it. <a href="../../explanation/services/">Services</a> explains what a service is and
+how the container handles it.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>The <code>epics</code> extra, with <code>caproto</code> and <code>ophyd-async</code>'s Channel Access support:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>add<span class="w"> </span><span class="s2">"redsun[epics]"</span>
+</span></code></pre></div>
+<h2 id="write-the-ioc">Write the IOC<a class="headerlink" href="#write-the-ioc" title="Permanent link">&para;</a></h2>
+<p>Besides serving its process variables, a service <code>redsun</code> launches prints a
+line when ready, stops when its standard input closes, and binds to the
+loopback interface.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># mylab/iocs/camera.py</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">caproto.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">PVGroup</span><span class="p">,</span> <span class="n">ioc_arg_parser</span><span class="p">,</span> <span class="n">pvproperty</span><span class="p">,</span> <span class="n">run</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">def</span><span class="w"> </span><span class="nf">stop_when_stdin_closes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">signal</span><span class="o">.</span><span class="n">raise_signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="k">class</span><span class="w"> </span><span class="nc">Camera</span><span class="p">(</span><span class="n">PVGroup</span><span class="p">):</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">exposure</span> <span class="o">=</span> <span class="n">pvproperty</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"Exposure"</span><span class="p">)</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">options</span><span class="p">,</span> <span class="n">run_options</span> <span class="o">=</span> <span class="n">ioc_arg_parser</span><span class="p">(</span><span class="n">default_prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">"camera"</span><span class="p">)</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stop_when_stdin_closes</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="n">run</span><span class="p">(</span><span class="n">Camera</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">pvdb</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">run_options</span><span class="p">,</span> <span class="s2">"interfaces"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"127.0.0.1"</span><span class="p">]})</span>
+</span></code></pre></div>
 <ul>
-<li>A base class can carry the presenters, views, hooks and <code>wire</code> that two
-  sessions share, with each subclass supplying only its devices and the file
-  that differs; a file common to both sits under the base.</li>
-<li>A class that previously failed at import now fails when constructed. The
-  message is the same and names more; the timing is not.</li>
-<li>A configuration file is no longer necessarily a whole session. A file naming
-  only a <code>presenters</code> section is legal as long as something under it supplies
-  what <code>AppConfig</code> requires.</li>
-<li>The order is the class hierarchy, so a reader who wants a component's
-  arguments reads the files from the base down. <code>_config_paths</code> reports that
-  order. Every base contributes, and a file reached twice through the hierarchy
-  is read once.</li>
-<li>The files a container read, and every component one file took from another,
-  are logged at debug level, so an investigation into an unexpected keyword
-  argument starts from the layer chain rather than from a guess.</li>
-<li><strong>An overlay naming a component restates all of its arguments.</strong> That is the
-  cost of the rule, and it is the one that buys back a reader's ability to know
-  a component's arguments from one place. Where two sessions genuinely share a
-  component, it belongs in the file underneath and the overlay says nothing.</li>
-<li>A key whose value is a list cannot be extended by an overlay, only replaced.
-  An overlay wanting to add one axis to three restates all four.</li>
-<li>An inherited field whose section is missing from the merged configuration
-  falls back to its inline keyword arguments with a warning, exactly as a
-  directly declared one does. Treating inheritance as a stronger statement of
-  intent, and raising instead, stays available as a later change.</li>
-<li>Nothing changes for a container naming a single file, which is still what
-  <code>AppContainer.from_config</code> builds and what most sessions are.</li>
+<li><strong>The readiness line.</strong> <code>caproto</code> prints <code>Server startup complete.</code> once it
+  serves its process variables; wait for that line.</li>
+<li><strong>Standard input.</strong> Closing it is how the container asks a service to stop on
+  every platform. The watcher raises <code>SIGINT</code>, so the service shuts down as on
+  Ctrl+C and runs <code>caproto</code>'s shutdown hooks. Use a daemon thread: a watcher run
+  through <code>loop.run_in_executor</code> leaves the process waiting on a thread still
+  blocked on the read.</li>
+<li><strong>Cleanup before output.</strong> If the launching session dies, the service's input
+  closes and nobody reads its output, so writing to standard output raises.
+  Clean up first, then print, or do not print.</li>
+<li><strong>Loopback.</strong> Binding to <code>127.0.0.1</code> keeps a local service off the network. A
+  service other machines attach to leaves <code>interfaces</code> alone.</li>
 </ul>
+<h2 id="declare-it">Declare it<a class="headerlink" href="#declare-it" title="Permanent link">&para;</a></h2>
+<p>In Python, on the container, beside the device that talks to it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">declare_device</span><span class="p">,</span> <span class="n">declare_service</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">):</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">camera_ioc</span> <span class="o">=</span> <span class="n">declare_service</span><span class="p">(</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="n">module</span><span class="o">=</span><span class="s2">"mylab.iocs.camera"</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="n">ready</span><span class="o">=</span><span class="s2">"Server startup complete."</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="s2">"--prefix"</span><span class="p">,</span> <span class="s2">"CAM:"</span><span class="p">],</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">stop_timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="p">)</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">camera</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="s2">"camera_ioc"</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The device receives the service's prefix as its <code>prefix</code> keyword, so a device
+also given <code>prefix</code> is refused. The build skips a device whose service did not
+start.</p>
+<p>In a plugin, the manifest gives the module and readiness line, and the session
+file names the plugin entry:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># mylab/redsun.yaml</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">camera-ioc</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab.iocs.camera</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">ready</span><span class="p">:</span><span class="w"> </span><span class="s">"Server</span><span class="nv"> </span><span class="s">startup</span><span class="nv"> </span><span class="s">complete."</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># session.yaml</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM:"</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"--prefix"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"CAM:"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">beamline</span><span class="p">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"BL01:"</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="nt">devices</span><span class="p">:</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nt">camera</span><span class="p">:</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">service</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera_ioc</span>
+</span></code></pre></div>
+<p><code>beamline</code> has no module, so it is attached to: nothing starts or stops, and
+its devices only receive its prefix.</p>
+<h2 id="react-when-it-exits">React when it exits<a class="headerlink" href="#react-when-it-exits" title="Permanent link">&para;</a></h2>
+<p>A launched service exiting unasked emits <code>sig_exited</code> with its name and exit
+code. Connect it in <code>wire</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span><span class="p">,</span> <span class="n">declare_presenter</span><span class="p">,</span> <span class="n">declare_service</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Loggable</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">Presenter</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.virtual</span><span class="w"> </span><span class="kn">import</span> <span class="n">slot</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">CameraPresenter</span><span class="p">(</span><span class="n">Presenter</span><span class="p">,</span> <span class="n">Loggable</span><span class="p">):</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="nd">@slot</span><span class="p">(</span><span class="n">thread</span><span class="o">=</span><span class="s2">"main"</span><span class="p">)</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_service_exited</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> exited with code </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">):</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">camera_ioc</span> <span class="o">=</span> <span class="n">declare_service</span><span class="p">(</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>        <span class="n">module</span><span class="o">=</span><span class="s2">"mylab.iocs.camera"</span><span class="p">,</span> <span class="n">ready</span><span class="o">=</span><span class="s2">"Server startup complete."</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="p">)</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="n">presenter</span> <span class="o">=</span> <span class="n">declare_presenter</span><span class="p">(</span><span class="n">CameraPresenter</span><span class="p">)</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">camera_ioc</span><span class="o">.</span><span class="n">sig_exited</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">presenter</span><span class="o">.</span><span class="n">on_service_exited</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Without <code>thread="main"</code>, a presenter slot runs on the thread reading the
+service's output.</p>
+<h2 id="log-from-it">Log from it<a class="headerlink" href="#log-from-it" title="Permanent link">&para;</a></h2>
+<p>The service's output is logged under <code>redsun.service.&lt;name&gt;</code>. To keep record
+levels instead of every line at <code>DEBUG</code>, write JSON; see
+<a href="../configure-logging/#log-from-a-service">Log from a service</a>.</p>
 
 
 
@@ -2504,7 +2519,7 @@ container is not running, and nothing would say so.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0008-container-hooks-and-the-phase-registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 8. Container hooks and the build phase registry">
+          <a href="../wire-components/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Wire components together">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2514,20 +2529,20 @@ container is not running, and nothing would say so.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                8. Container hooks and the build phase registry
+                Wire components together
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0010-toolkit-hook-points/" class="md-footer__link md-footer__link--next" aria-label="Next: 10. Toolkit hook points">
+          <a href="../../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                10. Toolkit hook points
+                Reference
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2595,10 +2610,10 @@ container is not running, and nothing would say so.</p>
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.df5d1f2b.min.js"></script>
+      <script src="../../assets/javascripts/bundle.df5d1f2b.min.js"></script>
       
     
   </body>

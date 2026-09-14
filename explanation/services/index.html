@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0009-inherited-component-configuration/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/services/">
       
       
-        <link rel="prev" href="../0008-container-hooks-and-the-phase-registry/">
+        <link rel="prev" href="../container-architecture/">
       
       
-        <link rel="next" href="../0010-toolkit-hook-points/">
+        <link rel="next" href="../statement/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.61">
     
     
       
-        <title>9. Inherited and layered component configuration - Redsun</title>
+        <title>Services - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.ce62732f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.ce62732f.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#9-inherited-and-layered-component-configuration" class="md-skip">
+        <a href="#services" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              9. Inherited and layered component configuration
+              Services
             
           </span>
         </div>
@@ -215,7 +215,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   redsun
@@ -258,7 +258,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   Explanation
@@ -300,7 +300,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../how-to/" class="md-tabs__link">
+        <a href="../../how-to/" class="md-tabs__link">
           
   
   How to
@@ -334,7 +334,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -364,7 +364,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -397,7 +397,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -427,7 +427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -495,7 +495,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -537,7 +537,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../component-system/" class="md-nav__link">
+      <a href="../component-system/" class="md-nav__link">
         
   
   
@@ -564,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../container-architecture/" class="md-nav__link">
+      <a href="../container-architecture/" class="md-nav__link">
         
   
   
@@ -588,10 +588,36 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../services/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -606,6 +632,104 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#two-connection-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Two connection levels
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launched-and-attached" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Launched and attached
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stopping-a-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Stopping a process
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#several-services-on-one-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Several services on one host
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-service-exiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A service exiting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-services-output-becomes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What a service's output becomes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What is not here
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -618,7 +742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../statement/" class="md-nav__link">
+      <a href="../statement/" class="md-nav__link">
         
   
   
@@ -645,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../storage/" class="md-nav__link">
+      <a href="../storage/" class="md-nav__link">
         
   
   
@@ -737,7 +861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/devices/" class="md-nav__link">
+      <a href="../architecture/devices/" class="md-nav__link">
         
   
   
@@ -764,7 +888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/plans/" class="md-nav__link">
+      <a href="../architecture/plans/" class="md-nav__link">
         
   
   
@@ -791,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/presenters/" class="md-nav__link">
+      <a href="../architecture/presenters/" class="md-nav__link">
         
   
   
@@ -818,7 +942,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/qt-widgets/" class="md-nav__link">
+      <a href="../architecture/qt-widgets/" class="md-nav__link">
         
   
   
@@ -845,7 +969,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/virtual/" class="md-nav__link">
+      <a href="../architecture/virtual/" class="md-nav__link">
         
   
   
@@ -877,8 +1001,6 @@
                 
   
   
-    
-  
   
   
     
@@ -920,11 +1042,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
           <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
@@ -944,7 +1066,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -961,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../decisions/0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -988,7 +1110,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -1015,7 +1137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -1042,7 +1164,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -1069,7 +1191,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -1096,7 +1218,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../decisions/0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -1123,7 +1245,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../decisions/0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -1150,7 +1272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -1174,36 +1296,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited and layered component configuration
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../decisions/0009-inherited-component-configuration/" class="md-nav__link">
         
   
   
@@ -1218,71 +1314,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Status
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Context
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Decision
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Consequences
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1295,7 +1326,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
+      <a href="../decisions/0010-toolkit-hook-points/" class="md-nav__link">
         
   
   
@@ -1322,7 +1353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+      <a href="../decisions/0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
         
   
   
@@ -1349,7 +1380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+      <a href="../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
         
   
   
@@ -1428,7 +1459,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../how-to/" class="md-nav__link ">
+            <a href="../../how-to/" class="md-nav__link ">
               
   
   
@@ -1470,7 +1501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/build-docs/" class="md-nav__link">
+      <a href="../../how-to/build-docs/" class="md-nav__link">
         
   
   
@@ -1497,7 +1528,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/configure-logging/" class="md-nav__link">
+      <a href="../../how-to/configure-logging/" class="md-nav__link">
         
   
   
@@ -1524,7 +1555,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/install-hooks/" class="md-nav__link">
+      <a href="../../how-to/install-hooks/" class="md-nav__link">
         
   
   
@@ -1551,7 +1582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/installation/" class="md-nav__link">
+      <a href="../../how-to/installation/" class="md-nav__link">
         
   
   
@@ -1578,7 +1609,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/run-tests/" class="md-nav__link">
+      <a href="../../how-to/run-tests/" class="md-nav__link">
         
   
   
@@ -1605,7 +1636,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/wire-components/" class="md-nav__link">
+      <a href="../../how-to/wire-components/" class="md-nav__link">
         
   
   
@@ -1632,7 +1663,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+      <a href="../../how-to/write-a-service/" class="md-nav__link">
         
   
   
@@ -1695,7 +1726,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../reference/" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1737,7 +1768,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/changelog/" class="md-nav__link">
+      <a href="../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1764,7 +1795,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/glossary/" class="md-nav__link">
+      <a href="../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -1863,7 +1894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/aio/" class="md-nav__link">
+      <a href="../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -1890,7 +1921,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/container/" class="md-nav__link">
+      <a href="../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -1917,7 +1948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/engine/" class="md-nav__link">
+      <a href="../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -1944,7 +1975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/log/" class="md-nav__link">
+      <a href="../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -1971,7 +2002,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -1998,7 +2029,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/services/" class="md-nav__link">
+      <a href="../../reference/api/services/" class="md-nav__link">
         
   
   
@@ -2025,7 +2056,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/storage/" class="md-nav__link">
+      <a href="../../reference/api/storage/" class="md-nav__link">
         
   
   
@@ -2052,7 +2083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/utils/" class="md-nav__link">
+      <a href="../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -2079,7 +2110,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/view/" class="md-nav__link">
+      <a href="../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -2106,7 +2137,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -2173,7 +2204,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../tutorials/" class="md-nav__link ">
+            <a href="../../tutorials/" class="md-nav__link ">
               
   
   
@@ -2215,7 +2246,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../tutorials/custom-storage-backend/" class="md-nav__link">
+      <a href="../../tutorials/custom-storage-backend/" class="md-nav__link">
         
   
   
@@ -2283,10 +2314,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#two-connection-levels" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Status
+        Two connection levels
       </span>
     </span>
   </a>
@@ -2294,10 +2325,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#launched-and-attached" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Context
+        Launched and attached
       </span>
     </span>
   </a>
@@ -2305,10 +2336,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#stopping-a-process" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Decision
+        Stopping a process
       </span>
     </span>
   </a>
@@ -2316,10 +2347,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#several-services-on-one-host" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Consequences
+        Several services on one host
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-service-exiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        A service exiting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-services-output-becomes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What a service's output becomes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-not-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What is not here
       </span>
     </span>
   </a>
@@ -2344,127 +2408,124 @@
   
 
 
-<h1 id="9-inherited-and-layered-component-configuration">9. Inherited and layered component configuration<a class="headerlink" href="#9-inherited-and-layered-component-configuration" title="Permanent link">&para;</a></h1>
-<p>Date: 2026-08-28</p>
-<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Two sessions of the same instrument differ in their hardware and in almost
-nothing else. A simulated microscope and the real one declare the same
-presenters, the same views and the same wiring; only the devices and the
-configuration change. Written as two container classes, everything but the
-devices is duplicated, and the duplication is the part that carries the
-application's structure.</p>
-<p>Python already has the mechanism for that: a base class holding the shared
-declarations, subclassed once per session. It did not work here, for two
-reasons that both come from <code>from_config</code> being resolved as the class body is
-read.</p>
-<p>A base class has no configuration file of its own - the file is the thing that
-differs - so every <code>from_config</code> field in it raised at class creation:
-<code>Component field 'ui' in InstrumentApp has from_config set but no config path
-was provided</code>. Giving the base a file instead makes the resolution happen
-against that file, and <code>__init_subclass__</code> then copies the built wrappers into
-the subclass, so a subclass naming its own <code>config</code> inherits the base's keyword
-arguments and silently ignores its own file.</p>
-<p>Both are consequences of the same thing: the fields were consumed at class
-creation and not kept, so nothing was left for a subclass to re-resolve.</p>
-<p>Sharing the declarations is only half of it. <code>config</code> named a single file and a
-subclass replaced its base's rather than adding to it, so a subclass had to
-restate every section its base's file carried. The duplication would move from
-the Python to the YAML rather than going away.</p>
-<p>The objection to layering files is that a reader would have to consult two of
-them to know one component's arguments. That objection is real, and it is the
-same one that made <a href="../0008-container-hooks-and-the-phase-registry/">container hooks</a>
-refuse a silent override between two sources. It is not the same situation. A
-hook override is invisible: two files name the same <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> and nothing in
-either says which wins. A layered configuration is declared at the class that
-does the layering - <code>class Simulation(InstrumentApp, config="simulation.yaml")</code>
-reads as "this session, on top of what InstrumentApp set up" - and the order is the
-class hierarchy, which the reader is already holding.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>The declared fields outlive class creation.</strong> <code>AppContainer._component_fields</code>
-records every <code>declare_*</code> field a container and its bases declared, keyed by
-attribute name. It is accumulated the way the component wrappers already are:
-bases first, then the class's own body.</p>
-<p><strong>Every class resolves the whole inherited set against its own files.</strong>
-<code>__init_subclass__</code> no longer resolves only the fields written in that body; it
-resolves everything in <code>_component_fields</code>. A subclass therefore rebuilds the
-wrappers it inherited, reading its own configuration.</p>
-<p><strong>A missing configuration file is refused at construction, not at class
-creation.</strong> A base class exists to be subclassed, and the subclass is where
-<code>config</code> is named, so a class body cannot know whether a file will arrive. The
-<code>TypeError</code> moves to <code>AppContainer.__init__</code>, and names every field that asked
-for a section rather than the first one reached.</p>
-<p>Resolution stays at class creation for a class that has a file. It is what lets
-a type checker read a component's type off the class body, and moving it to
-build time would buy nothing that the subclass rule does not already give.</p>
-<p><strong><code>_config_paths</code> is a tuple, and a subclass appends to it.</strong> <code>config</code> accepts
-one path or a sequence of them, and what a class declares is read <em>after</em> what
-its bases declared. A subclass does not replace its base's file; it lays its own
-over the top.</p>
-<p><strong>Files merge as mappings, recursively.</strong> <code>merge_config</code> takes a key from the
-later file unless both values are mappings, which merge in turn. A list or a
-scalar is replaced rather than combined, because there is no combination of two
-lists that is right more often than it is wrong.</p>
-<p><strong>A component entry is the exception: it is replaced whole.</strong> Under <code>devices</code>,
-<code>presenters</code> and <code>views</code> the section still merges by component name, so an
-overlay adds components and leaves alone the ones it does not mention - but a
-component it <em>does</em> name is taken from it entirely. Those entries are not a
-tree of settings; they are the keyword arguments of <code>cls(name, **kwargs)</code>.
-Assembling one constructor call from two files is how a session ends up running
-with an argument nobody reading its file can see, and this framework drives
-stages and cameras. One file owns one component's arguments, and a reader finds
-them by looking at the last file that names it and stopping.</p>
-<p>The hazard is not hypothetical. Two sessions of one instrument routinely give
-the same component name to different classes - a mock light source and a real
-one - so merged keyword arguments would reach two different constructors and
-fail, if they failed at all, at build time naming the component but not the
-file that contributed the key.</p>
-<p><strong>Required keys are checked on the merged result, not on each file.</strong> A file
-that sits under another is a fragment - it has no reason to carry
-<code>schema_version</code> or <code>frontend</code>, which belong to the session rather than to the
-components. <code>_read_yaml</code> reads a file without judging it, and <code>_load_yaml</code>
-validates once, after the merge, naming every file that took part.</p>
-<p><strong>Two files may not disagree about what kind of session this is.</strong>
-<code>schema_version</code> and <code>frontend</code> name the session's identity rather than its
-content, so a later file giving a different value is a contradiction rather
-than an override, and raises. Restating an identical value is legal. Everything
-else, <code>session</code> included, follows the ordinary rule that the later file wins -
-naming the session per layer is the point of layering it.</p>
-<p><code>frontend</code> earns the rule twice over: on a declarative container it is already
-inert, since the class is <code>QtAppContainer</code> whatever the file says. An overlay
-flipping it would leave <code>container.config["frontend"]</code> reporting a toolkit the
-container is not running, and nothing would say so.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h1 id="services">Services<a class="headerlink" href="#services" title="Permanent link">&para;</a></h1>
+<p>A service is a server devices talk to: an EPICS IOC, a camera server, a motion
+controller's gateway. <code>ophyd-async</code> devices talk to it over Channel Access;
+<code>redsun</code> does not. What <code>redsun</code> handles is the session's side: starting the
+service when the session owns it, noticing when it exits, stopping it cleanly,
+and giving its prefix to the devices that use it.</p>
+<h2 id="two-connection-levels">Two connection levels<a class="headerlink" href="#two-connection-levels" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+    subgraph app [session process]
+        D[device]
+        P[presenter]
+        V[view]
+    end
+    subgraph svc [service process or container]
+        S[IOC]
+        H[(hardware)]
+    end
+    D -- "1. connect()" --&gt; S
+    S -- "2. open / close" --&gt; H
+    V --&gt; P --&gt; D</code></pre>
+<ol>
+<li><strong>Session to service.</strong> <code>ophyd-async</code>'s <code>connect()</code>, which the build runs for
+   every device declared with <code>autoconnect</code>. A device that does not connect is
+   skipped, like one that fails to build.</li>
+<li><strong>Service to hardware.</strong> The service opens a serial port or a camera, and
+   chooses which, driven over process variables. This works the same for a
+   service on another machine, since the list of ports comes from the machine
+   that has them.</li>
+</ol>
+<p>The two levels are kept apart on purpose. A session can be connected to a
+service holding no hardware yet, and a service can release its hardware while
+every connection stays up.</p>
+<h2 id="launched-and-attached">Launched and attached<a class="headerlink" href="#launched-and-attached" title="Permanent link">&para;</a></h2>
+<p>A service declared with a <code>module</code> is <strong>launched</strong>: the container runs it as
+<code>python -m &lt;module&gt;</code> when built and stops it at shutdown. A service declared
+without one is <strong>attached</strong>: it already runs, in a container or on another
+host, and only lends its devices their prefix. Declare either with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_service&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_service"><code>declare_service</code></a> or in the <code>services</code>
+section of a session file; see <a href="../../how-to/write-a-service/">Write a service</a>.</p>
+<p>The session owns a launched service from start to stop:</p>
 <ul>
-<li>A base class can carry the presenters, views, hooks and <code>wire</code> that two
-  sessions share, with each subclass supplying only its devices and the file
-  that differs; a file common to both sits under the base.</li>
-<li>A class that previously failed at import now fails when constructed. The
-  message is the same and names more; the timing is not.</li>
-<li>A configuration file is no longer necessarily a whole session. A file naming
-  only a <code>presenters</code> section is legal as long as something under it supplies
-  what <code>AppConfig</code> requires.</li>
-<li>The order is the class hierarchy, so a reader who wants a component's
-  arguments reads the files from the base down. <code>_config_paths</code> reports that
-  order. Every base contributes, and a file reached twice through the hierarchy
-  is read once.</li>
-<li>The files a container read, and every component one file took from another,
-  are logged at debug level, so an investigation into an unexpected keyword
-  argument starts from the layer chain rather than from a guess.</li>
-<li><strong>An overlay naming a component restates all of its arguments.</strong> That is the
-  cost of the rule, and it is the one that buys back a reader's ability to know
-  a component's arguments from one place. Where two sessions genuinely share a
-  component, it belongs in the file underneath and the overlay says nothing.</li>
-<li>A key whose value is a list cannot be extended by an overlay, only replaced.
-  An overlay wanting to add one axis to three restates all four.</li>
-<li>An inherited field whose section is missing from the merged configuration
-  falls back to its inline keyword arguments with a warning, exactly as a
-  directly declared one does. Treating inheritance as a stronger statement of
-  intent, and raising instead, stays available as a later change.</li>
-<li>Nothing changes for a container naming a single file, which is still what
-  <code>AppContainer.from_config</code> builds and what most sessions are.</li>
+<li><strong>Starting</strong> is the first build step, before any device is built. The
+  container waits for the line the service prints when ready, up to
+  <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;STARTUP_TIMEOUT&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-module-attribute&quot;&gt;&lt;code&gt;module-attribute&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/services/#redsun.services.STARTUP_TIMEOUT"><code>STARTUP_TIMEOUT</code></a>. A service that does not
+  start is logged, and every device naming it is skipped.</li>
+<li><strong>Stopping</strong> runs at shutdown, whether or not the container was built, and
+  before the session's log file closes, so the file records how each service
+  ended. A build that raises stops the services it started before the
+  exception propagates.</li>
 </ul>
+<h2 id="stopping-a-process">Stopping a process<a class="headerlink" href="#stopping-a-process" title="Permanent link">&para;</a></h2>
+<p>A service is stopped in three steps, each waiting <code>stop_timeout</code> seconds:</p>
+<ol>
+<li><strong>Close its standard input.</strong> A service watching it cleans up and exits.</li>
+<li><strong>Send <code>SIGINT</code></strong>, on POSIX only.</li>
+<li><strong>Kill it.</strong></li>
+</ol>
+<p>Closing standard input comes first because it is the only request that runs a
+service's cleanup on every platform. <code>Popen.terminate()</code> skips cleanup on both
+Windows and Linux. A console control event never reaches a process started
+without a console window, and a Qt application must start services without
+one, or each opens its own window. Closing standard input also stops a service
+when the session crashes: the operating system closes the pipe and the service
+reads end of input.</p>
+<p>A killed service may leave work unfinished, typically a large file being
+written. A service needing longer to close sets a longer <code>stop_timeout</code>.</p>
+<h2 id="several-services-on-one-host">Several services on one host<a class="headerlink" href="#several-services-on-one-host" title="Permanent link">&para;</a></h2>
+<p>Each launched service gets its own Channel Access server port, added to
+<code>EPICS_CA_ADDR_LIST</code> in the session process. Without it, two IOCs on the
+default port both answer on Linux, but on Windows the second is never found. A
+service keeps its port while the session process runs, so a container built
+again reaches it again. The note in
+<a href="../architecture/devices/#connecting">Connecting</a> describes the limit: libca
+reads the address list once per process.</p>
+<h2 id="a-service-exiting">A service exiting<a class="headerlink" href="#a-service-exiting" title="Permanent link">&para;</a></h2>
+<p>A launched service that exits unasked is logged at <code>ERROR</code> with its exit code
+and last lines of output, and emits
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;sig_exited&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-class-attribute&quot;&gt;&lt;code&gt;class-attribute&lt;/code&gt;&lt;/small&gt;
+      &lt;small class=&quot;doc doc-label doc-label-instance-attribute&quot;&gt;&lt;code&gt;instance-attribute&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/services/#redsun.services.Service.sig_exited"><code>sig_exited</code></a> with its name and code.
+Nothing restarts it. While it is down, reads and writes on its devices raise
+<code>TimeoutError</code> after ten seconds; once it is back they answer again without a
+reconnect, since Channel Access channels recover on their own.</p>
+<p><code>sig_exited</code> is emitted from the thread reading the service's output. A slot
+connected to it in <code>wire</code> runs where its owner asks: a view's slots run on the
+main thread, and a presenter slot declared without a thread runs on the output
+thread, named <code>service-&lt;name&gt;</code>. That is harmless, since the service has already
+exited. A presenter slot touching anything bound to the main thread declares
+<code>@slot(thread="main")</code>.</p>
+<p>An attached service has no process to watch; an outage shows as timeouts on its
+devices.</p>
+<h2 id="what-a-services-output-becomes">What a service's output becomes<a class="headerlink" href="#what-a-services-output-becomes" title="Permanent link">&para;</a></h2>
+<p>Each line a launched service prints is logged under <code>redsun.service.&lt;name&gt;</code> and
+written to its own log file beside the application's. A line that is a JSON log
+record keeps its level and time; any other line is logged at <code>DEBUG</code>. See
+<a href="../../how-to/configure-logging/#log-from-a-service">Log from a service</a>.</p>
+<h2 id="what-is-not-here">What is not here<a class="headerlink" href="#what-is-not-here" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Restarting a crashed service.</strong></li>
+<li><strong>Standby</strong>, a service releasing its hardware while connected, is for now
+  written by the application, in the presenter owning the devices; see
+  <a href="../architecture/devices/#standby">Standby</a>. The container takes it over once
+  <code>ophyd-async</code> can disconnect a device, when standby can also drop connections
+  and stop launched services.</li>
+<li><strong>Launching a service in a container.</strong> An attached service covers one
+  started beside the session with <code>docker compose</code>.</li>
+</ul>
+<p><a href="../decisions/0012-services-and-two-connection-levels/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 12</a> records the
+decisions behind this design.</p>
 
 
 
@@ -2504,7 +2565,7 @@ container is not running, and nothing would say so.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../0008-container-hooks-and-the-phase-registry/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 8. Container hooks and the build phase registry">
+          <a href="../container-architecture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Container architecture">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2514,20 +2575,20 @@ container is not running, and nothing would say so.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                8. Container hooks and the build phase registry
+                Container architecture
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0010-toolkit-hook-points/" class="md-footer__link md-footer__link--next" aria-label="Next: 10. Toolkit hook points">
+          <a href="../statement/" class="md-footer__link md-footer__link--next" aria-label="Next: Statement of need">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                10. Toolkit hook points
+                Statement of need
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2595,10 +2656,10 @@ container is not running, and nothing would say so.</p>
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.df5d1f2b.min.js"></script>
+      <script src="../../assets/javascripts/bundle.df5d1f2b.min.js"></script>
       
     
   </body>

@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -585,6 +591,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../statement/" class="md-nav__link">
         
   
@@ -669,10 +702,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -689,8 +722,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -970,6 +1003,8 @@
       
         
       
+        
+      
     
     
     
@@ -986,10 +1021,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -1006,8 +1041,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1313,6 +1348,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1339,6 +1401,8 @@
       
         
           
+        
+      
         
       
         
@@ -1555,6 +1619,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1832,33 +1923,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1921,6 +1985,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2266,88 +2357,83 @@
 
 
 <h1 id="presenters">Presenters<a class="headerlink" href="#presenters" title="Permanent link">&para;</a></h1>
-<p><code>Presenters</code> represent the execution logic of your system.</p>
-<p>Where <code>Devices</code> are "workers" (as they instruct your device to perform a certain task), <code>Presenters</code> <strong>can be</strong> "orchestrators", in the sense that they define the sequence of actions that workers must perform through Bluesky <a href="https://blueskyproject.io/bluesky/main/plans.html">plans</a>.</p>
-<p>We highlight "<strong>can be</strong>" because <code>Presenters</code> are not limited to that:</p>
+<p>A presenter holds the logic of a session.</p>
+<p>Devices do the work on hardware. A presenter can decide the order of that work, through <code>bluesky</code> <a href="https://blueskyproject.io/bluesky/main/plans.html">plans</a>, but it is not limited to that. A presenter can also:</p>
 <ul>
-<li>they can consume Bluesky <a href="https://blueskyproject.io/bluesky/main/documents.html">documents</a> for on-the-fly processing, intermediate storage or redirection to a GUI (i.e. computing the FFT of an image and sending it to the GUI for display);</li>
-<li>they can provide manual control for device task execution and/or configuration;</li>
-<li>in comparison to plans (which represents an experimental procedure), one may wish to - for example - manually move a motor stage from the GUI, or change the exposure time of a camera; the <code>Presenter</code> in this case acts as a middle-man between the GUI and the device, directly calling Bluesky methods and bypassing the <code>RunEngine</code>;</li>
-<li>they can act as communication points with external applications to trigger actions via a custom communication protocol (or wait for possible commands incoming by said applications).</li>
+<li>consume <code>bluesky</code> <a href="https://blueskyproject.io/bluesky/main/documents.html">documents</a> to process them on the fly, store intermediate results or forward them to the interface (for example, computing the FFT of an image and sending it to a view);</li>
+<li>control devices by hand: move a motor stage or change a camera's exposure from the interface, calling the device directly without going through the <code>RunEngine</code>;</li>
+<li>talk to external applications over a protocol of its own, sending commands or waiting for them.</li>
 </ul>
-<p><code>Presenters</code> are meant to communicate between each other via the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>, which takes care of redirecting information (commands and/or documents) to the appropriate destination (whether it is another <code>Presenter</code> or a <code>View</code>).</p>
+<p>Presenters talk to each other and to views through the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>, which routes commands and documents to whoever receives them.</p>
 <h2 id="the-presenter-contract">The presenter contract<a class="headerlink" href="#the-presenter-contract" title="Permanent link">&para;</a></h2>
-<p>A presenter is recognized <strong>structurally</strong> through the
+<p>A presenter is recognised by shape, through the
 <a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> protocol: any class whose
-<em>instances</em> expose a <code>name</code> (<code>str</code>) and a <code>devices</code>
-(<code>Mapping[str, Device]</code>) satisfies it. The protocol declares both members
-as <strong>read-only properties</strong>, so implementers are free to use plain instance
-attributes, class attributes, or properties - and <code>devices</code> may be any
-<code>Mapping</code> subtype, such as a plain <code>dict</code>.</p>
-<p>Compliance is a <strong>dual gate</strong>. At class level, the constructor's
-positional shape is verified: its leading positional parameters must be
-exactly <code>(name, devices)</code> - the container instantiates presenters as
-<code>cls(name, devices, **config_kwargs)</code> and has no control over the keyword
-arguments. At build time, the constructed instance is checked against the
-protocol, raising a <code>TypeError</code> naming the missing members - attributes
-assigned in <code>__init__</code> are invisible before instantiation
+instances expose a <code>name</code> (<code>str</code>) and <code>devices</code> (<code>Mapping[str, Device]</code>)
+satisfies it. The protocol declares both as read-only properties, so an
+implementer may use instance attributes, class attributes or properties, and
+<code>devices</code> may be any <code>Mapping</code>, such as a <code>dict</code>.</p>
+<p>A presenter is checked twice. When the class is declared, its constructor's
+leading positional parameters must be exactly <code>(name, devices)</code>: the container
+calls <code>cls(name, devices, **config_kwargs)</code>. When it is built, the instance is
+checked against the protocol, and a <code>TypeError</code> names the missing members.
+Attributes assigned in <code>__init__</code> do not exist before the instance does, which
+is why the second check runs on the instance
 (see <a href="../../decisions/0003-structural-subtyping-for-presenters-and-views/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0003</a>).</p>
-<p>The <a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> ABC is an optional
-convenience base providing the conventional constructor shape:</p>
+<p>The <a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> ABC is an optional base with the
+usual constructor:</p>
 <ul>
-<li>a <code>name</code>, used as the unique identifier of the presenter;</li>
-<li>a <code>Mapping[str, Device]</code> of the allocated devices in the session;</li>
-<li>additional keyword arguments, parsed from the session configuration file.</li>
+<li>a <code>name</code>, the presenter's unique identifier;</li>
+<li>a <code>Mapping[str, Device]</code> of the session's devices;</li>
+<li>keyword arguments from the session configuration file.</li>
 </ul>
-<p>The ABC deliberately does <em>not</em> inherit the protocol - it satisfies it
-structurally, like every other implementer.</p>
-<p>Access to the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr> is opt-in via the
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> and
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a> protocols; synchronous
-teardown via <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>.</p>
+<p>The ABC does not inherit the protocol; it satisfies it by shape, like any
+other implementer.</p>
+<p>A presenter reaches the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr> by implementing
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsProvider&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsProvider"><code>IsProvider</code></a> or
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;IsInjectable&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.IsInjectable"><code>IsInjectable</code></a>, and is shut down through
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>.</p>
 <h2 id="consuming-documents">Consuming documents<a class="headerlink" href="#consuming-documents" title="Permanent link">&para;</a></h2>
-<p>Presenters that process acquisition data subscribe to the <code>RunEngine</code>'s
-document stream (directly, or through the callback registry on the
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>). Document callbacks
-run <em>synchronously</em> on the engine's event loop thread - they can never
-await. To persist derived results (e.g. a median image computed from Event
-documents), a callback uses the storage layer's synchronous face:
-<code>register</code> a <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.StreamSpec"><code>StreamSpec</code></a> derived from the
-descriptor document, then <code>put_nowait</code> on a
-<a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.FrameSink"><code>FrameSink</code></a>. The dual-context design is
-documented in <a href="../../storage/">Session storage</a> and
+<p>A presenter processing acquisition data subscribes to the <code>RunEngine</code>'s
+documents, directly or through the callback registry of the
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;VirtualContainer&lt;/span&gt;" href="../../../reference/api/virtual/#redsun.virtual.VirtualContainer"><code>VirtualContainer</code></a>. Document callbacks run
+synchronously on the engine's event loop thread and cannot await. To store a
+derived result, such as a median image computed from Event documents, a
+callback uses the storage layer's synchronous side: it calls <code>register</code> with a
+<a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.StreamSpec"><code>StreamSpec</code></a> built from the descriptor document,
+then <code>put_nowait</code> on a <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.FrameSink"><code>FrameSink</code></a>. The design is
+described in <a href="../../storage/">Session storage</a> and
 <a href="../../decisions/0002-storage-dual-context-redesign/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0002</a>.</p>
 <h2 id="built-in-presenters">Built-in presenters<a class="headerlink" href="#built-in-presenters" title="Permanent link">&para;</a></h2>
-<p>Reusable presenters ship in <code>redsun.presenter.builtins</code> and are available
-both for declarative containers and from configuration files via the
-<code>redsun</code> plugin (see <a href="../../component-system/#built-in-components">component system</a>).</p>
+<p><code>redsun.presenter.builtins</code> holds presenters any session can use, declared in
+Python or from a configuration file through the <code>redsun</code> plugin (see
+<a href="../../component-system/#built-in-components">component system</a>).</p>
 <h3 id="storagepresenter"><code>StoragePresenter</code><a class="headerlink" href="#storagepresenter" title="Permanent link">&para;</a></h3>
-<p><a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.builtins.StoragePresenter"><code>StoragePresenter</code></a> is the
-application-level control point for storage paths. It owns the
-<a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.SessionPathProvider"><code>SessionPathProvider</code></a> (created with
-the session name from the configuration), exposes it on the virtual
-container under <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.PATH_PROVIDER"><code>PATH_PROVIDER</code></a>. Views observe
-the provider through its <code>signals</code> (base directory and plan name).</p>
-<p>Plan lifecycle reaches it through two slots the application connects:</p>
+<p><a class="autorefs autorefs-internal" href="../../../reference/api/presenter/#redsun.presenter.builtins.StoragePresenter"><code>StoragePresenter</code></a> controls
+where a session stores its data. It owns the
+<a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.SessionPathProvider"><code>SessionPathProvider</code></a>, created with the
+session name from the configuration, and registers it in the <abbr title="The session-wide signal bus, provider registry and document-callback registry.">virtual container</abbr>
+under <a class="autorefs autorefs-internal" href="../../../reference/api/storage/#redsun.storage.PATH_PROVIDER"><code>PATH_PROVIDER</code></a>. Views follow the
+provider through its <code>signals</code> (base directory and plan name).</p>
+<p>The application connects two slots to the plan lifecycle:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_pre_launch_notify</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">set_plan</span><span class="p">)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">sig_plan_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">reset_plan</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>set_plan</code> makes burst filenames adopt the name of the upcoming run;
-<code>reset_plan</code> returns it to <code>unknown</code>, so bursts arriving after a run are not
-attributed to it. Which signals mean "a plan started" is the application's
-knowledge, not the presenter's, so nothing is connected until it says so.</p>
+<p><code>set_plan</code> names burst files after the upcoming run; <code>reset_plan</code> sets the name
+back to <code>unknown</code>, so bursts after a run are not filed under it. Only the
+application knows which signals mean "a plan started", so nothing is connected
+until it says so.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">presenters</span><span class="p">:</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">storage</span><span class="p">:</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">storage</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">base_dir</span><span class="p">:</span><span class="w"> </span><span class="s">"~/my-data"</span><span class="w">   </span><span class="c1"># optional; defaults to ~/redsun-storage</span>
 </span></code></pre></div>
-<p>Its Qt counterpart ships alongside it:
-<a class="autorefs autorefs-internal" href="../../../reference/api/view/#redsun.view.qt.builtins.StorageView"><code>StorageView</code></a> shows the base
-directory and lets the user change it. It resolves the same key, so an
-application that declares the view without the presenter still builds, showing
-a read-only placeholder.</p>
+<p>Its Qt view ships beside it:
+<a class="autorefs autorefs-internal" href="../../../reference/api/view/#redsun.view.qt.builtins.StorageView"><code>StorageView</code></a> shows the base directory
+and lets the user change it. It resolves the same key, so an application
+declaring the view without the presenter still builds and shows a read-only
+placeholder.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">views</span><span class="p">:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">storage</span><span class="p">:</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>

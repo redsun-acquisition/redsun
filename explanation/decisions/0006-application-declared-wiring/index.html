@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -585,6 +591,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../statement/" class="md-nav__link">
         
   
@@ -667,10 +700,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -687,8 +720,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -873,6 +906,8 @@
       
         
       
+        
+      
     
     
     
@@ -889,10 +924,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -909,8 +944,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1307,6 +1342,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1333,6 +1395,8 @@
       
         
           
+        
+      
         
       
         
@@ -1549,6 +1613,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1826,33 +1917,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1915,6 +1979,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2269,7 +2360,7 @@ signal registry for names they hoped existed:</p>
 only the first.</p>
 <p><strong>A rename breaks the connection silently.</strong> The emitter and the consumer agree
 on a string, checked by nobody. <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0004 records this happening across the
-redsun and redsun-mimir boundary during the <code>sigCamelCase</code> rename.</p>
+<code>redsun</code> and redsun-mimir boundary during the <code>sigCamelCase</code> rename.</p>
 <p><strong>Optionality is expressed by silence.</strong> The <code>if name in sigs</code> guard makes a
 typo, a rename, an uninstalled plugin, and a deliberately absent optional
 collaborator indistinguishable at runtime.</p>
@@ -2278,7 +2369,7 @@ so no single place says how an application is wired. The answer is distributed
 across every <code>inject_dependencies</code> in every installed plugin.</p>
 <p><strong>Nothing is recorded.</strong> A pull-based connection leaves no trace, so the graph
 cannot be reported, and <code>shutdown</code> cannot release what was connected.</p>
-<p>psygnal supplies the machinery underneath (class-scoped declaration, signature
+<p><code>psygnal</code> supplies the machinery underneath (class-scoped declaration, signature
 validation at connect, grouping, cross-thread delivery) but has no cross-object
 concept: nothing in it says which component's signal reaches which component's
 method. That is the gap.</p>
@@ -2302,8 +2393,8 @@ component attribute resolves to its built instance, so a connection reads as
 session built from a configuration file uses the <code>wiring</code> section, addressing
 each end as <code>component.port</code>. Both forms end in the same
 <code>VirtualContainer.connect</code>.</p>
-<p><strong>Validation is psygnal's, at connection time.</strong> The argument count is always
-checked; argument types are checked as well when the signal names them. redsun
+<p><strong>Validation is <code>psygnal</code>'s, at connection time.</strong> The argument count is always
+checked; argument types are checked as well when the signal names them. <code>redsun</code>
 adds only the port names to the failure, so the error identifies both ends.</p>
 <p><strong>Thread affinity belongs to the component</strong>, declared once on the class
 (<code>__redsun_slot_thread__</code>), overridable per slot and per connection. <code>QtView</code>
@@ -2317,7 +2408,7 @@ demoted to an escape hatch for dynamic lookup, not the way components are wired.
 <ul>
 <li>The wiring of an application is readable in one place, in the container class
   or in its configuration file. Adding a producer to an existing consumer is one
-  line there, and it is the same line whether the producer ships with redsun or
+  line there, and it is the same line whether the producer ships with <code>redsun</code> or
   with a third-party plugin.</li>
 <li>A connection that cannot be made fails the build with both port paths in the
   message, rather than not happening.</li>

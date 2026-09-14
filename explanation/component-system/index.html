@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -455,6 +459,8 @@
       
         
           
+        
+      
         
       
         
@@ -709,6 +715,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../statement/" class="md-nav__link">
         
   
@@ -791,10 +824,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -811,8 +844,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -995,6 +1028,8 @@
       
         
       
+        
+      
     
     
     
@@ -1011,10 +1046,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -1031,8 +1066,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1338,6 +1373,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1364,6 +1426,8 @@
       
         
           
+        
+      
         
       
         
@@ -1580,6 +1644,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1857,33 +1948,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1946,6 +2010,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2318,9 +2409,9 @@
 
 
 <h1 id="component-system">Component system<a class="headerlink" href="#component-system" title="Permanent link">&para;</a></h1>
-<p><code>redsun</code> component system allows third-party packages to provide devices, presenters, and views that are dynamically discovered and loaded at runtime.</p>
+<p><code>redsun</code>'s component system lets other packages provide devices, presenters and views, discovered and loaded at runtime.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>From Python point of view, components are standard Python packages that register themselves via <a href="https://packaging.python.org/en/latest/specifications/entry-points/">entry points</a>. When <code>redsun</code> builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.</p>
+<p>Components ship in ordinary Python packages that register through <a href="https://packaging.python.org/en/latest/specifications/entry-points/">entry points</a>. Building an application from a YAML configuration file, <code>redsun</code> reads those entry points to find the installed plugins and load the components the file asks for.</p>
 <pre class="mermaid"><code>graph TB
     Config[YAML config] --&gt;|references| Plugins
     Plugins --&gt;|discovered via| EntryPoints[entry points]
@@ -2334,17 +2425,17 @@
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-classmethod&quot;&gt;&lt;code&gt;classmethod&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.from_config"><code>AppContainer.from_config()</code></a>
-is called with a configuration file, Redsun:</p>
+is called with a configuration file, <code>redsun</code>:</p>
 <ol>
-<li><strong>Reads the configuration</strong> - parses the YAML file to determine which devices, presenters, and views are needed.</li>
-<li><strong>Queries entry points</strong> - looks up installed packages registered under the <code>redsun.plugins</code> entry point group.</li>
-<li><strong>Loads manifests</strong> - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.</li>
-<li><strong>Validates components</strong> - devices are checked at discovery (must subclass <code>ophyd_async.core.Device</code>); presenter and view instances are validated against <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> / <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a> when the container builds (see <a href="#protocol-validation">Protocol validation</a>).</li>
-<li><strong>Creates the container</strong> - a dynamic container class is assembled with the discovered components.</li>
+<li><strong>Reads the configuration</strong> to learn which devices, presenters and views are needed.</li>
+<li><strong>Queries entry points</strong> for installed packages in the <code>redsun.plugins</code> group.</li>
+<li><strong>Loads manifests</strong>: each plugin's YAML manifest maps plugin IDs to Python classes.</li>
+<li><strong>Validates components</strong>: a device class must subclass <code>ophyd_async.core.Device</code>; presenter and view instances are checked against <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> / <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a> when the container builds (see <a href="#protocol-validation">Protocol validation</a>).</li>
+<li><strong>Creates the container</strong> class from the discovered components.</li>
 </ol>
 <h2 id="component-manifest">Component manifest<a class="headerlink" href="#component-manifest" title="Permanent link">&para;</a></h2>
-<p>Each component package must include a YAML manifest file named <code>redsun.yaml</code> that declares the available components. </p>
-<p>Each entry maps a plugin ID directly to its <code>"module:ClassName"</code> class path:</p>
+<p>A component package includes a YAML manifest, <code>redsun.yaml</code>, declaring its components.</p>
+<p>Each entry maps a plugin ID to a <code>"module:ClassName"</code> class path:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># redsun.yaml</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">devices</span><span class="p">:</span>
@@ -2356,17 +2447,17 @@ is called with a configuration file, Redsun:</p>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nt">views</span><span class="p">:</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">my_ui</span><span class="p">:</span><span class="w"> </span><span class="s">"my_plugin.views:MyView"</span>
 </span></code></pre></div>
-<p>The manifest must be registered as a <a href="https://packaging.python.org/en/latest/specifications/entry-points/">Python entry point</a> in the package <code>pyproject.toml</code>:</p>
+<p>Register the manifest as a <a href="https://packaging.python.org/en/latest/specifications/entry-points/">Python entry point</a> in the package's <code>pyproject.toml</code>:</p>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[project.entry-points.</span><span class="s2">"redsun.plugins"</span><span class="k">]</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">my-plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"redsun.yaml"</span>
 </span></code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>This is inspired by the <a href="https://napari.org/stable/plugins/technical_references/manifest.html">napari manifest</a>.</p>
-<p>Make sure that depending on the packaging system you use, the <code>redsun.yaml</code> is included in the built package otherwise your components will not be discoverable.</p>
+<p>The design follows the <a href="https://napari.org/stable/plugins/technical_references/manifest.html">napari manifest</a>.</p>
+<p>Check that your packaging tool includes <code>redsun.yaml</code> in the built package, or the components cannot be discovered.</p>
 </div>
 <h2 id="configuration-file-format">Configuration file format<a class="headerlink" href="#configuration-file-format" title="Permanent link">&para;</a></h2>
-<p>The application configuration file references plugins by name and ID. A full example follows:</p>
+<p>An application configuration file names plugins by name and ID:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">application"</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="s">"pyqt"</span>
@@ -2393,47 +2484,40 @@ is called with a configuration file, Redsun:</p>
 </span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-plugin</span>
 </span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_ui</span>
 </span></code></pre></div>
-<p>The top-level keys represent application level information:</p>
+<p>The top-level keys describe the application:</p>
 <ul>
-<li><code>schema_version</code> is the version value of the component system, kept for future compatibility;</li>
-<li><code>session</code> is the name which will be assigned to the application for display;</li>
-<li><code>frontend</code> is the UI toolkit used to load the correct subclass of <code>AppContainer</code>;</li>
-<li><code>metadata</code> are application-level metadata to add contextual informations.</li>
+<li><code>schema_version</code> is the component system's version, kept for compatibility;</li>
+<li><code>session</code> is the application's display name;</li>
+<li><code>frontend</code> is the UI toolkit, which picks the <code>AppContainer</code> subclass;</li>
+<li><code>metadata</code> holds application-level context.</li>
 </ul>
-<p>The <code>plugin_name</code> and <code>plugin_id</code> keys are used for plugin resolution and are not passed to the component constructors. All other keys become keyword arguments for the component.</p>
+<p><code>plugin_name</code> and <code>plugin_id</code> resolve the plugin and are not passed to the constructor. Every other key becomes a keyword argument of the component.</p>
 <h2 id="protocol-validation">Protocol validation<a class="headerlink" href="#protocol-validation" title="Permanent link">&para;</a></h2>
-<p>Validation happens at two different moments, matching where the required
-information actually exists:</p>
+<p>Each check runs where its information exists:</p>
 <ul>
-<li><strong>Devices</strong> are checked at discovery time: the loaded class must subclass
-  <code>ophyd_async.core.Device</code>. This is a sound class-level check because the
-  device layer is nominal.</li>
-<li><strong>Presenters and views</strong> pass a <strong>dual gate</strong>, each part checked where
-  the information exists:<ol>
-<li><em>Constructor signature (class level, at discovery)</em> - the leading
-   positional parameters must be exactly <code>(name, devices)</code> for
-   presenters and <code>(name,)</code> for views; further parameters must be
-   keyword-assignable (the container calls
-   <code>cls(*positionals, **config_kwargs)</code> and has no control over the
-   keywords). Plugins failing this gate are rejected before
-   instantiation.</li>
-<li><em>Protocol compliance (instance level, at build)</em> - the constructed
-   instance must satisfy <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a>
-   (exposing <code>name</code> and <code>devices</code>) or <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a>
-   (exposing <code>name</code> and <code>view_position</code>) structurally. Attributes
-   assigned in <code>__init__</code> are only visible here; a non-compliant
-   instance raises a <code>TypeError</code> naming the missing members.</li>
+<li><strong>Devices</strong> are checked at discovery: the class must subclass
+  <code>ophyd_async.core.Device</code>. A class check is enough, because devices conform
+  by inheritance.</li>
+<li><strong>Presenters and views</strong> are checked twice:<ol>
+<li><em>Constructor signature, at discovery.</em> The leading positional parameters
+   must be exactly <code>(name, devices)</code> for presenters and <code>(name,)</code> for
+   views, and any further parameter must accept a keyword: the container
+   calls <code>cls(*positionals, **config_kwargs)</code>. A plugin failing this is
+   rejected before it is instantiated.</li>
+<li><em>Protocol, at build.</em> The instance must satisfy
+   <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.PPresenter"><code>PPresenter</code></a> (<code>name</code> and <code>devices</code>) or
+   <a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.PView"><code>PView</code></a> (<code>name</code> and <code>view_position</code>) by shape.
+   Attributes assigned in <code>__init__</code> exist only now; an instance that does
+   not conform raises a <code>TypeError</code> naming the missing members.</li>
 </ol>
 </li>
 </ul>
-<p>Inheriting the <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> /
-<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> ABCs is optional - compliance is purely
-structural (see
+<p>Inheriting the <a class="autorefs autorefs-internal" href="../../reference/api/presenter/#redsun.presenter.Presenter"><code>Presenter</code></a> or
+<a class="autorefs autorefs-internal" href="../../reference/api/view/#redsun.view.View"><code>View</code></a> ABC is optional, since conformance is by shape (see
 <a href="../decisions/0003-structural-subtyping-for-presenters-and-views/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0003</a>).</p>
 <h2 id="built-in-components">Built-in components<a class="headerlink" href="#built-in-components" title="Permanent link">&para;</a></h2>
-<p>redsun itself ships a plugin manifest under the <code>redsun</code> entry point, so
-built-in components resolve through the same discovery path as external
-plugins - no special-casing in configuration files:</p>
+<p><code>redsun</code> ships its own manifest under the <code>redsun</code> entry point, so a
+configuration file names built-in components the same way as any plugin's:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">presenters</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">storage</span><span class="p">:</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
@@ -2449,23 +2533,25 @@ plugins - no special-casing in configuration files:</p>
 </span></code></pre></div>
 <p>A manifest entry is imported only when a configuration names it, so a headless
 installation never imports the Qt views.</p>
-<p>The available built-ins are documented in
+<p>The built-ins are described in
 <a href="../architecture/presenters/#built-in-presenters">Presenters</a>, and the <code>logs</code>
 view in <a href="../../how-to/configure-logging/#show-the-logs-in-the-application">Configure logging</a>.</p>
 <h2 id="inline-vs-config-based-registration">Inline vs. config-based registration<a class="headerlink" href="#inline-vs-config-based-registration" title="Permanent link">&para;</a></h2>
-<p>The plugin system is used when building from configuration files via
+<p>Plugin discovery only runs when building from a configuration file with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;from_config&lt;/span&gt;
 
 
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-classmethod&quot;&gt;&lt;code&gt;classmethod&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.from_config"><code>AppContainer.from_config()</code></a>.
-When using the declarative class-based approach (defining a container subclass with
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_device&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_device"><code>declare_device()</code></a>, <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_presenter&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_presenter"><code>declare_presenter()</code></a> or <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_view&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_view"><code>declare_view()</code></a> field functions), component classes are
-passed directly as the first argument to the respective function and do not go through plugin discovery. Build-time protocol validation applies identically to both paths.</p>
-<p>Both approaches produce the same result: an
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with registered device,
-presenter, and view components ready to be built.</p>
+A container subclass declared with
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_device&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_device"><code>declare_device()</code></a>,
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_presenter&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_presenter"><code>declare_presenter()</code></a> or
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_view&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_view"><code>declare_view()</code></a> passes the
+classes directly and skips discovery. The build checks both the same way.</p>
+<p>Either way the result is an
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> with its devices,
+presenters and views declared and ready to build.</p>
 
 
 

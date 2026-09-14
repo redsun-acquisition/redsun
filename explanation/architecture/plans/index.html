@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -585,6 +591,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../statement/" class="md-nav__link">
         
   
@@ -669,10 +702,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -689,8 +722,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1048,6 +1081,8 @@
       
         
       
+        
+      
     
     
     
@@ -1064,10 +1099,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -1084,8 +1119,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1391,6 +1426,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1417,6 +1479,8 @@
       
         
           
+        
+      
         
       
         
@@ -1633,6 +1697,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1910,33 +2001,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1999,6 +2063,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2422,15 +2513,15 @@
 
 
 <h1 id="plans">Plans<a class="headerlink" href="#plans" title="Permanent link">&para;</a></h1>
-<p>Redsun builds on the <a href="https://blueskyproject.io/bluesky/main/plans.html">Bluesky plan system</a>.
-A <em>plan</em> is a generator function that yields <code>Msg</code> objects; the <code>RunEngine</code>
-consumes them and drives hardware.</p>
-<p>Redsun adds two layers on top:</p>
+<p><code>redsun</code> builds on the <a href="https://blueskyproject.io/bluesky/main/plans.html">Bluesky plan system</a>.
+A <em>plan</em> is a generator yielding <code>Msg</code> objects, which the <code>RunEngine</code> turns
+into hardware calls.</p>
+<p><code>redsun</code> adds two things:</p>
 <ul>
-<li><strong><code>continous</code> plans</strong> - plans that run in a loop, with optional pause/resume
-  and in-flight user actions.</li>
-<li><strong><code>PlanSpec</code></strong> - a structured description of a plan's signature, used by the
-  view layer to build a parameter form automatically.</li>
+<li><strong><code>continous</code> plans</strong> run in a loop, optionally pausable, and accept user
+  actions while running.</li>
+<li><strong><code>PlanSpec</code></strong> describes a plan's signature, from which the view layer builds
+  a parameter form.</li>
 </ul>
 <hr />
 <h2 id="continuous-plans">Continuous plans<a class="headerlink" href="#continuous-plans" title="Permanent link">&para;</a></h2>
@@ -2444,11 +2535,11 @@ consumes them and drives hardware.</p>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="k">yield from</span> <span class="n">bps</span><span class="o">.</span><span class="n">trigger_and_read</span><span class="p">(</span><span class="n">detectors</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The decorator stamps <code>__togglable__</code> and <code>__pausable__</code> onto the function.
-<code>create_plan_spec</code> reads these to configure the run/pause buttons in the UI.</p>
+<p>The decorator sets <code>__togglable__</code> and <code>__pausable__</code> on the function;
+<code>create_plan_spec</code> reads them to set up the run and pause buttons.</p>
 <h3 id="in-flight-actions">In-flight actions<a class="headerlink" href="#in-flight-actions" title="Permanent link">&para;</a></h3>
-<p>An <code>Action</code> is a user-triggered side effect that can fire while the plan runs.
-Declare one as a parameter default:</p>
+<p>An <code>Action</code> is something the user triggers while the plan runs. Declare one
+as a parameter default:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.engine.actions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Action</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">snap_action</span> <span class="o">=</span> <span class="n">Action</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"snap"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Capture a single frame"</span><span class="p">)</span>
@@ -2463,9 +2554,9 @@ Declare one as a parameter default:</p>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="k">yield from</span> <span class="n">read_while_waiting</span><span class="p">([</span><span class="n">camera</span><span class="p">],</span> <span class="n">snap_action</span><span class="o">.</span><span class="n">event_map</span><span class="p">)</span>
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="k">yield from</span> <span class="n">bps</span><span class="o">.</span><span class="n">trigger_and_read</span><span class="p">([</span><span class="n">camera</span><span class="p">])</span>
 </span></code></pre></div>
-<p>The view renders <code>snap</code> as a button. When clicked, the <code>SRLatch</code> inside
-<code>snap_action</code> is set, unblocking <code>wait_for_actions</code> inside <code>read_while_waiting</code>.</p>
-<p>Togglable actions (represented as toggle buttons) use <code>togglable=True</code>:</p>
+<p>The view shows <code>snap</code> as a button. A click sets the <code>SRLatch</code> inside
+<code>snap_action</code>, which releases <code>wait_for_actions</code> inside <code>read_while_waiting</code>.</p>
+<p>A toggle button is an action with <code>togglable=True</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">Action</span><span class="p">(</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"led"</span><span class="p">,</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">"Toggle illumination"</span><span class="p">,</span>
@@ -2474,17 +2565,16 @@ Declare one as a parameter default:</p>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="srlatch">SRLatch<a class="headerlink" href="#srlatch" title="Permanent link">&para;</a></h3>
-<p><code>SRLatch</code> is the synchronisation primitive behind <code>Action</code>. It wraps two
-<code>asyncio.Event</code> objects and supports waiting for either state:</p>
+<p><code>SRLatch</code> is the primitive behind <code>Action</code>: two <code>asyncio.Event</code> objects, with
+a wait for either state:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">latch</span> <span class="o">=</span> <span class="n">SRLatch</span><span class="p">()</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># in a coroutine:</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">await</span> <span class="n">latch</span><span class="o">.</span><span class="n">wait_for_set</span><span class="p">()</span>  <span class="c1"># blocks until set()</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">await</span> <span class="n">latch</span><span class="o">.</span><span class="n">wait_for_reset</span><span class="p">()</span>  <span class="c1"># blocks until reset()</span>
 </span></code></pre></div>
-<p>The <code>RunEngine</code> handles <code>wait_for_actions</code> messages by running one
-<code>wait_for_set</code> (or <code>wait_for_reset</code>) task per latch and returning the first
-that completes.</p>
+<p>For a <code>wait_for_actions</code> message, the <code>RunEngine</code> runs one <code>wait_for_set</code> (or
+<code>wait_for_reset</code>) task per latch and returns the first to finish.</p>
 <hr />
 <h2 id="plan-specification">Plan specification<a class="headerlink" href="#plan-specification" title="Permanent link">&para;</a></h2>
 <p><code>create_plan_spec</code> inspects a plan's signature and returns a <code>PlanSpec</code>:</p>
@@ -2524,8 +2614,7 @@ that completes.</p>
 </tbody>
 </table>
 <h3 id="annotation-dispatch">Annotation dispatch<a class="headerlink" href="#annotation-dispatch" title="Permanent link">&para;</a></h3>
-<p>The dispatch is table-driven. Annotations are mapped to <code>ParamDescription</code>
-fields in this priority order:</p>
+<p>Annotations map to <code>ParamDescription</code> fields, first match wins:</p>
 <ol>
 <li><code>Literal["a", "b"]</code> -&gt; <code>choices=["a", "b"]</code></li>
 <li><code>Sequence[MyDevice]</code> -&gt; multi-select, <code>choices=&lt;matching device names&gt;</code></li>
@@ -2541,17 +2630,16 @@ fields in this priority order:</p>
 <li>any <code>Enum</code> subclass</li>
 <li>a sequence of anything that is not a device</li>
 </ul>
-<p>A <em>required</em> parameter annotated with anything else raises
-<code>UnresolvableAnnotationError</code>, and the plan is skipped rather than shown with a
-control nobody can fill in correctly. <code>Any</code> is excluded deliberately: it would
-accept everything and render as a bare text field.</p>
-<p>The check is pure Python and imports no toolkit, so a plan can be inspected
-before any application object exists. Turning these descriptions into actual
-widgets belongs to the view layer; for the Qt one, see
-<a href="../qt-widgets/">Qt widgets - plans</a>.</p>
+<p>A <em>required</em> parameter with any other annotation raises
+<code>UnresolvableAnnotationError</code>, and the plan is skipped instead of shown with a
+control nobody can fill in. <code>Any</code> is excluded on purpose: it would accept
+everything and show as a bare text field.</p>
+<p>The check is plain Python and imports no toolkit, so a plan can be inspected
+before any application object exists. The view layer turns descriptions into
+widgets; for Qt, see <a href="../qt-widgets/">Qt widgets - plans</a>.</p>
 <h3 id="collecting-and-resolving-arguments">Collecting and resolving arguments<a class="headerlink" href="#collecting-and-resolving-arguments" title="Permanent link">&para;</a></h3>
-<p>Once the user fills in the form, the presenter calls two functions to
-turn widget values into a plan call:</p>
+<p>Once the user fills in the form, the presenter turns the values into a plan
+call:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter.plan_spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">collect_arguments</span><span class="p">,</span> <span class="n">resolve_arguments</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># 1. Resolve: string device names -&gt; live device instances</span>
@@ -2565,7 +2653,7 @@ turn widget values into a plan call:</p>
 </span></code></pre></div>
 <hr />
 <h2 id="plan-stubs">Plan stubs<a class="headerlink" href="#plan-stubs" title="Permanent link">&para;</a></h2>
-<p><code>redsun.engine.plan_stubs</code> provides stubs that compose inside larger plans.</p>
+<p><code>redsun.engine.plan_stubs</code> holds stubs to use inside larger plans.</p>
 <h3 id="action-flow-control-stubs">Action flow-control stubs<a class="headerlink" href="#action-flow-control-stubs" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">redsun.engine.plan_stubs</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">rps</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>

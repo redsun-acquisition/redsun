@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -585,6 +591,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../statement/" class="md-nav__link">
         
   
@@ -667,10 +700,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -687,8 +720,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -873,6 +906,8 @@
       
         
       
+        
+      
     
     
     
@@ -889,10 +924,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -909,8 +944,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1445,6 +1480,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1471,6 +1533,8 @@
       
         
           
+        
+      
         
       
         
@@ -1687,6 +1751,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1964,33 +2055,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
@@ -2053,6 +2117,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2538,7 +2629,7 @@
 async generator (<code>FrameSender</code>), so frames can only be pushed from the device
 layer. Two producer contexts need the same store:</p>
 <ul>
-<li><strong>Device layer (async):</strong> ophyd-async <code>StandardDetector</code> logic
+<li><strong>Device layer (async):</strong> <code>ophyd-async</code> <code>StandardDetector</code> logic
   decomposition (<code>TriggerLogic</code> / <code>AcquireLogic</code> / <code>DataLogic</code>) pushing
   frames during the prepare -&gt; kickoff -&gt; complete -&gt; collect cycle.</li>
 <li><strong>Callback layer (sync):</strong> <code>DocumentRouter</code> presenters running inside the
@@ -2561,9 +2652,9 @@ if a stream action fires. Any design that opens a store eagerly at prepare
 would create empty stores on every idle iteration.</p>
 <p>Guiding principles agreed for the redesign:</p>
 <ul>
-<li>Plans stay generic: only stock bluesky verbs; documents are the interface;
+<li>Plans stay generic: only stock <code>bluesky</code> verbs; documents are the interface;
   callbacks decide what to consume. No storage-aware plan stubs.</li>
-<li>Stick close to the ophyd-async <code>data_logic</code> design for data producers.</li>
+<li>Stick close to the <code>ophyd-async</code> <code>data_logic</code> design for data producers.</li>
 <li>Backwards compatibility is explicitly not required.</li>
 </ul>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
@@ -2572,7 +2663,7 @@ would create empty stores on every idle iteration.</p>
 with one bounded <a href="https://github.com/redsun-acquisition/culsans">culsans</a>
 queue per registered key (<code>maxsize</code> default 100, overridable per
 <code>BaseStorage</code>). Device producers keep generator-era backpressure via
-<code>await put</code>; the bound caps RAM if the backend falls behind. culsans is
+<code>await put</code>; the bound caps RAM if the backend falls behind. <code>culsans</code> is
 thread-safe and same-thread-safe: <code>green_put(blocking=False)</code> never blocks,
 so it is safe inside <code>emit_sync</code> on the loop thread.</p>
 <h3 id="framesink-producer-face-only-handle"><code>FrameSink</code>: producer-face-only handle<a class="headerlink" href="#framesink-producer-face-only-handle" title="Permanent link">&para;</a></h3>
@@ -2594,7 +2685,7 @@ sync code because every caller (async device prepare, <code>emit_sync</code> cal
 runs on the loop thread. The drain loop is the old <code>_pusher</code> inverted:
 <code>await queue.async_get()</code> -&gt; ensure open -&gt; <code>await store.write(key, frame)</code> -&gt;
 <code>router.mark_written(key)</code> -&gt; count. <code>FrameRouter.mark_written</code> remains the
-single counter-advance point; ophyd-async <code>complete()</code> machinery is untouched
+single counter-advance point; <code>ophyd-async</code> <code>complete()</code> machinery is untouched
 (it waits on <code>collections_written_signal</code> = <code>signal_for(key)</code>).</p>
 <p>All per-key teardown flows through the drain's exit path: whether the queue
 was shut by capacity, <code>sink.close()</code>, or <code>storage.close()</code>, the exiting drain
@@ -2605,7 +2696,7 @@ open lock. No separate release API, no double-release ambiguity.</p>
 backend; concurrent and later callers await/return on the same open. Entry
 points:</p>
 <ul>
-<li><strong>Eager (optional):</strong> <code>DataLogic.prepare</code> calls it - stock ophyd-async
+<li><strong>Eager (optional):</strong> <code>DataLogic.prepare</code> calls it - stock <code>ophyd-async</code>
   writer behaviour ("prepare means writing is imminent"). Snap-style
   acquisition detectors opt in.</li>
 <li><strong>Lazy (always on):</strong> the drain calls it before its first write. Live-view
@@ -2705,7 +2796,7 @@ opens and writes -&gt; stop doc -&gt; <code>sink.close()</code> -&gt; drain flus
   test (several keys putting concurrently - single backend open, all frames
   written). In addition, <strong>integration tests execute real plans through the
   <code>RunEngine</code></strong> combining a disk-writing device (mock detector built on the
-  ophyd-async logic decomposition, backed by <code>MemoryIO</code>) with a
+  <code>ophyd-async</code> logic decomposition, backed by <code>MemoryIO</code>) with a
   <code>DocumentRouter</code> callback that consumes the emitted documents and writes a
   derived key through the sync API - pinning the dual-producer behaviour
   <code>live_median_scan</code> will rely on after the mimir rework.</li>
@@ -2716,8 +2807,8 @@ opens and writes -&gt; stop doc -&gt; <code>sink.close()</code> -&gt; drain flus
   complete as a plain bounded fly segment), <code>write_sig</code> is deleted too. Until
   then, today's plan shapes keep working unchanged against the new storage
   layer.</li>
-<li><strong>New dependency:</strong> culsans (redsun-acquisition fork) becomes a hard
-  runtime dependency of redsun.</li>
+<li><strong>New dependency:</strong> <code>culsans</code> (redsun-acquisition fork) becomes a hard
+  runtime dependency of <code>redsun</code>.</li>
 </ul>
 
 

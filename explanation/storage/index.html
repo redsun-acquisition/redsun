@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -566,6 +572,33 @@
     
   
   Container architecture
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -791,10 +824,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -811,8 +844,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -995,6 +1028,8 @@
       
         
       
+        
+      
     
     
     
@@ -1011,10 +1046,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -1031,8 +1066,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1338,6 +1373,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1364,6 +1426,8 @@
       
         
           
+        
+      
         
       
         
@@ -1580,6 +1644,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1857,33 +1948,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1946,6 +2010,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2320,15 +2411,14 @@
 <h1 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h1>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Storage support is under active development. Expect breaking changes.</p>
+<p>Storage is under active development. Expect breaking changes.</p>
 </div>
-<p><code>redsun</code> provides a session-scoped storage layer that lets devices write
-acquired frames without managing file handles or knowing where data lands.</p>
+<p><code>redsun</code> has a storage layer scoped to the session: devices write frames
+without managing file handles or knowing where the data goes.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Storage is split across two axes: <strong>what a backend does</strong> (<code>StorageIO</code> /
-<code>OpenStore</code>) and <strong>how frames reach it</strong> (<code>SinkFactory</code> / <code>BaseStorage</code>).
-A single <code>BaseStorage</code> instance fans frames from many named channels
-(<code>data_key</code>s) into one backend store.</p>
+<p>Storage has two sides: <strong>what a backend does</strong> (<code>StorageIO</code> / <code>OpenStore</code>) and
+<strong>how frames reach it</strong> (<code>SinkFactory</code> / <code>BaseStorage</code>). One <code>BaseStorage</code>
+routes frames from many named channels (<code>data_key</code>s) into one backend store.</p>
 <pre class="mermaid"><code>graph TD
     P[PathProvider] --&gt; BS[BaseStorage]
     IO[StorageIO backend] --&gt; BS
@@ -2360,14 +2450,13 @@ A single <code>BaseStorage</code> instance fans frames from many named channels
 </tr>
 </tbody>
 </table>
-<p><code>BaseStorage</code> implements <code>SinkFactory</code> on top of a <code>StorageIO</code> and a
-<code>PathProvider</code>. Backends live in <code>redsun.storage.backends</code> (<code>_memory</code>,
-<code>_acquire_zarr</code>).</p>
-<p>The <code>StorageIO</code>/<code>OpenStore</code> split is deliberate: a backend describes <em>how</em> to
-open and address data, while the returned handle owns the <em>open lifetime</em>.
-Don't push lifecycle methods onto <code>StorageIO</code>.</p>
+<p><code>BaseStorage</code> implements <code>SinkFactory</code> on a <code>StorageIO</code> and a <code>PathProvider</code>.
+Backends live in <code>redsun.storage.backends</code> (<code>_memory</code>, <code>_acquire_zarr</code>).</p>
+<p>The split is deliberate: a backend describes <em>how</em> to open and address data,
+and the handle it returns owns the time the data is <em>open</em>. Do not add
+lifecycle methods to <code>StorageIO</code>.</p>
 <h2 id="declaring-a-stream">Declaring a stream<a class="headerlink" href="#declaring-a-stream" title="Permanent link">&para;</a></h2>
-<p>Each channel is described by a frozen <code>StreamSpec</code>:</p>
+<p>A frozen <code>StreamSpec</code> describes each channel:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.storage</span><span class="w"> </span><span class="kn">import</span> <span class="n">StreamSpec</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">StreamSpec</span><span class="p">(</span>
@@ -2377,9 +2466,9 @@ Don't push lifecycle methods onto <code>StorageIO</code>.</p>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>  <span class="c1"># None means unbounded</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </span></code></pre></div>
-<p><code>capacity</code> must be <code>None</code> or <code>&gt;= 1</code>; anything else raises at construction.
-<code>spec.is_unbounded</code> is the canonical check for a never-ending stream.</p>
-<p>Register the spec (sync), then obtain a sink for the channel:</p>
+<p><code>capacity</code> must be <code>None</code> or <code>&gt;= 1</code>; anything else raises on construction.
+<code>spec.is_unbounded</code> tells whether a stream never ends.</p>
+<p>Register the spec (sync), then get a sink for the channel:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">storage</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">sink</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">sink</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">data_key</span><span class="p">)</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">await</span> <span class="n">sink</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>  <span class="c1"># async producer: device logic</span>
@@ -2387,24 +2476,22 @@ Don't push lifecycle methods onto <code>StorageIO</code>.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">sink</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>  <span class="c1"># end the stream; queued frames still flush</span>
 </span></code></pre></div>
 <h2 id="frame-sinks-and-capacity">Frame sinks and capacity<a class="headerlink" href="#frame-sinks-and-capacity" title="Permanent link">&para;</a></h2>
-<p><code>sink(data_key)</code> returns a <code>FrameSink</code> - a thin producer-only handle over a
-bounded <code>culsans.Queue</code>. Async device logics <code>await put</code>; sync document
-callbacks (running inside <code>emit_sync</code> on the loop thread, which can never
-await) use <code>put_nowait</code>. <code>sink.close()</code> is sync and idempotent.</p>
-<p>Calling <code>sink()</code> also spawns a <strong>drain task</strong>, one per key, owned by
-<code>BaseStorage</code>. The drain is the only consumer of the queue - producers cannot
-read frames back. <strong>Capacity is enforced by the drain, not by exceptions</strong>: it
-counts writes and, at <code>spec.capacity</code>, calls <code>queue.shutdown()</code> and exits;
-unbounded specs (<code>capacity=None</code>) drain until close. An overrunning producer's
-next <code>put</code>/<code>put_nowait</code> observes this as <code>culsans.QueueShutDown</code> - the
-queue-era analogue of the old generator returning. Nothing raises
-<code>StopAsyncIteration</code> by hand. Shutdown on overrun is best-effort, not a hard
-guarantee: a fast async producer can enqueue a few frames past capacity
-before the drain's <code>queue.shutdown()</code> call takes effect, and those overshoot
-frames are simply discarded at teardown rather than written.</p>
-<p>All per-key teardown happens in the drain's exit path, whichever way it was
-triggered (capacity, <code>sink.close()</code>, or <code>storage.close()</code>); the last drain out
-closes the backend.</p>
+<p><code>sink(data_key)</code> returns a <code>FrameSink</code>, a producer-only handle on a bounded
+<code>culsans.Queue</code>. Async device logic calls <code>await put</code>; sync document callbacks,
+which run inside <code>emit_sync</code> on the loop thread and cannot await, call
+<code>put_nowait</code>. <code>sink.close()</code> is sync and idempotent.</p>
+<p><code>sink()</code> also starts a <strong>drain task</strong> per key, owned by <code>BaseStorage</code>. The drain
+is the queue's only consumer; producers cannot read frames back. <strong>The drain
+enforces capacity, not exceptions</strong>: it counts writes and, at <code>spec.capacity</code>,
+calls <code>queue.shutdown()</code> and exits. An unbounded spec (<code>capacity=None</code>) drains
+until closed. A producer writing past capacity sees <code>culsans.QueueShutDown</code> on
+its next <code>put</code> or <code>put_nowait</code>. Nothing raises <code>StopAsyncIteration</code> by hand.
+Stopping at capacity is best effort: a fast async producer can queue a few
+frames before <code>queue.shutdown()</code> takes effect, and those frames are discarded
+at teardown instead of written.</p>
+<p>Teardown for a key always runs in the drain's exit path, whatever triggered it
+(capacity, <code>sink.close()</code> or <code>storage.close()</code>); the last drain to exit closes
+the backend.</p>
 <h2 id="lifecycle-open-drain-close">Lifecycle: open, drain, close<a class="headerlink" href="#lifecycle-open-drain-close" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>sequenceDiagram
     participant P as Producer
@@ -2427,40 +2514,39 @@ closes the backend.</p>
     D-&gt;&gt;D: queue.shutdown()
     P--xBS: further put() raises QueueShutDown
     D-&gt;&gt;BS: last drain out closes store</code></pre>
-<p><code>open()</code> is idempotent and lock-guarded, with two entry points: <strong>eager</strong>,
-called from a device's write-intent <code>prepare</code> when writing is imminent, and
-<strong>lazy</strong>, called by a drain before its first write - the store materialises
-on the first frame actually written, never earlier. Concurrent openers await
-the same in-flight open on the lock rather than racing the backend.</p>
-<p><code>register()</code> is sync and only legal before open - it raises <code>StoreStateError</code>
-while the store is open, opening, or closing.</p>
-<p><code>close(flush=True)</code> (default) shuts every queue down cleanly: drains finish
-writing what's already queued, then exit. <code>close(flush=False)</code> (used by
-<code>reset_group</code> for abort) shuts queues down immediately, dropping queued
-frames for a fast teardown. Either way, the last drain to exit closes the
-backend under the open lock - no separate release API.</p>
-<p>Drain write failures don't raise at the producer - <code>gather</code> collects them
-with <code>return_exceptions=True</code> - so <code>close()</code> is the error observation point:
-awaiting it re-raises whatever a drain failed on.</p>
+<p><code>open()</code> is idempotent and guarded by a lock. It is called in two ways:
+<strong>eagerly</strong>, from a device's <code>prepare</code> when writing is about to start, and
+<strong>lazily</strong>, by a drain before its first write, so the store is created at the
+first frame written and not before. Concurrent callers wait on the lock for the
+same open instead of racing the backend.</p>
+<p><code>register()</code> is sync and only allowed before opening: it raises
+<code>StoreStateError</code> while the store is open, opening or closing.</p>
+<p><code>close(flush=True)</code>, the default, shuts every queue down cleanly: drains write
+what is already queued, then exit. <code>close(flush=False)</code>, which <code>reset_group</code>
+uses to abort, shuts queues down at once and drops queued frames. Either way,
+the last drain to exit closes the backend under the open lock; there is no
+separate release call.</p>
+<p>A failed drain write does not raise at the producer: <code>gather</code> collects it with
+<code>return_exceptions=True</code>. Awaiting <code>close()</code> re-raises what a drain failed on.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>A bluesky plan that collects a <code>StandardDetector</code> must pre-declare the
-stream (<code>bps.declare_stream(det, name=..., collect=True)</code>) - otherwise
-<code>collect</code> has no stream to attach documents to.</p>
+<p>A <code>bluesky</code> plan collecting a <code>StandardDetector</code> must declare the stream
+first (<code>bps.declare_stream(det, name=..., collect=True)</code>), or <code>collect</code> has
+no stream to attach documents to.</p>
 </div>
-<p>Design rationale, including the concurrent-first-write and abort-vs-flush
-tradeoffs, lives in <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr>
-<a href="../decisions/0002-storage-dual-context-redesign/">0002</a>.</p>
+<p><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> <a href="../decisions/0002-storage-dual-context-redesign/">0002</a> records the design,
+including the trade-offs for concurrent first writes and for aborting versus
+flushing.</p>
 <h2 id="paths">Paths<a class="headerlink" href="#paths" title="Permanent link">&para;</a></h2>
-<p><code>SessionPathProvider</code> resolves where a burst lands, combining a session base
-directory with a <code>PlanFilenameProvider</code> that tracks a per-plan counter and
-zero-pads it. It exposes <code>PathSignals</code> so the current directory, plan, and
-counter are observable from the UI, and <code>_scan_existing()</code> resumes numbering
-from files already on disk rather than overwriting them.</p>
+<p><code>SessionPathProvider</code> decides where a burst is written, from a session base
+directory and a <code>PlanFilenameProvider</code> keeping a zero-padded counter per plan.
+Its <code>PathSignals</code> let the interface follow the current directory, plan and
+counter, and <code>_scan_existing()</code> continues numbering from files already on disk
+instead of overwriting them.</p>
 <h2 id="counters">Counters<a class="headerlink" href="#counters" title="Permanent link">&para;</a></h2>
-<p><code>FrameRouter</code> owns the per-<code>data_key</code> <code>StreamSpec</code> and a <code>SignalR[int]</code> frame
-counter. <code>mark_written()</code> is the single place counts advance - subscribe to
-<code>signal_for(data_key)</code> to follow progress rather than polling the backend.</p>
+<p><code>FrameRouter</code> holds each <code>data_key</code>'s <code>StreamSpec</code> and a <code>SignalR[int]</code> frame
+counter. <code>mark_written()</code> is the only place counts advance: subscribe to
+<code>signal_for(data_key)</code> to follow progress instead of polling the backend.</p>
 
 
 

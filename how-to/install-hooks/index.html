@@ -249,6 +249,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -467,6 +471,8 @@
       
         
       
+        
+      
     
     
     
@@ -580,6 +586,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/statement/" class="md-nav__link">
         
   
@@ -659,10 +692,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
             
   
   
@@ -679,8 +712,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -863,6 +896,8 @@
       
         
       
+        
+      
     
     
     
@@ -876,10 +911,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
             
   
   
@@ -896,8 +931,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1203,6 +1238,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1231,6 +1293,8 @@
       
         
           
+        
+      
         
       
         
@@ -1636,6 +1700,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1901,33 +1992,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1990,6 +2054,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2412,15 +2503,14 @@
 
 
 <h1 id="install-container-hooks">Install container hooks<a class="headerlink" href="#install-container-hooks" title="Permanent link">&para;</a></h1>
-<p>A component acts on its own behalf. A <strong>hook</strong> acts on the toolkit the session
-runs on: it supplies the application object, themes every window, or covers the
-build with a splash screen. It is an ordinary object, with no base class to
-inherit, and it never changes what the container builds or the order it builds
-it in.</p>
-<p>Each <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> is named by the method it calls, and a container installs one
-provider per point. A provider is named in one of two places, and every example
-below is shown in both. Picking a tab switches every other tab on this page, and
-on any other page of this documentation, to the same form.</p>
+<p>A component acts for itself. A <strong>hook</strong> acts on the session's toolkit: it
+supplies the application object, themes every window, or shows a splash screen
+during the build. It is an ordinary object with no base class, and it never
+changes what the container builds or in which order.</p>
+<p>Each <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr> is named after the method it calls, and a container installs
+one provider per point. A provider is named in one of two places, and each
+example below shows both. Picking a tab switches every tab on the site to the
+same form.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Container class</label><label for="__tabbed_1_2">Configuration file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2429,7 +2519,7 @@ on any other page of this documentation, to the same form.</p>
 attribute that names the point.</p>
 </div>
 <div class="tabbed-block">
-<p>A session declares a provider under the <code>hooks</code> section, keyed by the same
+<p>A session declares a provider in the <code>hooks</code> section, under the point's
 name, with the provider's import path.</p>
 </div>
 </div>
@@ -2466,18 +2556,17 @@ name, with the provider's import path.</p>
 </tr>
 </tbody>
 </table>
-<p>Every point belongs to a toolkit, so all four live on
+<p>Each point belongs to a toolkit, so all four are on
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;QtAppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer"><code>QtAppContainer</code></a>. A plain
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> calls none, and
-naming one on it is refused; a container for another toolkit declares the
-moments that toolkit actually has.</p>
-<p>Each point has a protocol carrying its one method:
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;AppContainer&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer"><code>AppContainer</code></a> calls none and
+refuses them; a container for another toolkit declares that toolkit's points.</p>
+<p>Each point has a protocol with its one method:
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;CreatesApplication&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.CreatesApplication"><code>CreatesApplication</code></a>,
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresApplication&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.ConfiguresApplication"><code>ConfiguresApplication</code></a>,
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;WrapsBuild&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.WrapsBuild"><code>WrapsBuild</code></a> and
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresMainView&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.ConfiguresMainView"><code>ConfiguresMainView</code></a>. Implement
-the method and the provider satisfies the protocol; there is nothing to
-subclass and nothing to register.</p>
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfiguresMainView&lt;/span&gt;" href="../../reference/api/container/#redsun.containers._hooks.ConfiguresMainView"><code>ConfiguresMainView</code></a>. A provider
+implementing the method satisfies the protocol, with nothing to subclass or
+register.</p>
 <h2 id="write-a-provider">Write a provider<a class="headerlink" href="#write-a-provider" title="Permanent link">&para;</a></h2>
 <p>A class with the point's method on it:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QApplication</span>
@@ -2490,8 +2579,8 @@ subclass and nothing to register.</p>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="n">app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="sa">f</span><span class="s2">"QWidget </span><span class="se">{{</span><span class="s2"> background: #202020; color: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">accent</span><span class="si">}</span><span class="s2">; </span><span class="se">}}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Type the parameter against the toolkit alias rather than the bare protocol, so
-a provider written for the wrong toolkit fails a type check rather than at
+<p>Annotate parameters with the toolkit alias, not the bare protocol, so a
+provider for the wrong toolkit fails a type check instead of failing at
 runtime:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtConfiguresApplication</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
@@ -2525,9 +2614,9 @@ runtime:</p>
 exported from <code>redsun.qt</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code>isinstance</code> cannot be given a parameterised protocol, so the container
-checks the bare form. A provider built against the wrong toolkit is caught
-by a type checker, not by the build.</p>
+<p><code>isinstance</code> does not accept a parameterised protocol, so the container
+checks the bare one. Only a type checker catches a provider for the wrong
+toolkit.</p>
 </div>
 <h2 id="install-it">Install it<a class="headerlink" href="#install-it" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Container class</label><label for="__tabbed_2_2">Configuration file</label></div>
@@ -2540,8 +2629,8 @@ by a type checker, not by the build.</p>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">configure_application</span> <span class="o">=</span> <span class="n">declare_hook</span><span class="p">(</span><span class="n">DarkTheme</span><span class="p">)</span>
 </span></code></pre></div>
-<p>A subclass inherits the points its bases declare, and may replace one by
-declaring the same attribute.</p>
+<p>A subclass inherits its bases' points and replaces one by declaring the
+same attribute.</p>
 </div>
 <div class="tabbed-block">
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
@@ -2561,13 +2650,13 @@ declaring the same attribute.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Container class</label><label for="__tabbed_3_2">Configuration file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p>Keyword arguments go to the constructor, and the provider is built as the
+<p>Keyword arguments go to the constructor; the provider is built when the
 container class is created:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtAppContainer</span><span class="p">):</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">configure_application</span> <span class="o">=</span> <span class="n">declare_hook</span><span class="p">(</span><span class="n">DarkTheme</span><span class="p">,</span> <span class="n">accent</span><span class="o">=</span><span class="s2">"#d47f4c"</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Pass an object instead of a class to install one you built yourself. Keyword
-arguments are then a <code>TypeError</code>, since there is nothing left to construct:</p>
+<p>Pass an object instead of a class to install one you built. Keyword
+arguments then raise <code>TypeError</code>, since nothing is left to construct:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">theme</span> <span class="o">=</span> <span class="n">DarkTheme</span><span class="p">(</span><span class="n">accent</span><span class="o">=</span><span class="s2">"#d47f4c"</span><span class="p">)</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -2583,14 +2672,14 @@ arguments are then a <code>TypeError</code>, since there is nothing left to cons
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">kwargs</span><span class="p">:</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">accent</span><span class="p">:</span><span class="w"> </span><span class="s">"#d47f4c"</span>
 </span></code></pre></div>
-<p>An entry takes <code>provider</code> and <code>kwargs</code> and nothing else, so a provider is
-free to take a constructor argument of its own called <code>provider</code>.</p>
+<p>An entry takes only <code>provider</code> and <code>kwargs</code>, so a provider may have a
+constructor argument named <code>provider</code>.</p>
 </div>
 </div>
 </div>
 <h2 id="serve-more-than-one-hook-point">Serve more than one <abbr title="A named moment in the build at which a session's own object is called.">hook point</abbr><a class="headerlink" href="#serve-more-than-one-hook-point" title="Permanent link">&para;</a></h2>
-<p>A provider holding state between two points is installed at both, as <strong>one
-object</strong>. Sharing is written down rather than inferred.</p>
+<p>A provider keeping state between two points is installed at both as <strong>one
+object</strong>, and the sharing is written out, not inferred.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Container class</label><label for="__tabbed_4_2">Configuration file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2612,19 +2701,18 @@ object</strong>. Sharing is written down rather than inferred.</p>
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">accent</span><span class="p">:</span><span class="w"> </span><span class="s">"#d47f4c"</span>
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">configure_main_view</span><span class="p">:</span><span class="w"> </span><span class="nv">*theme</span>
 </span></code></pre></div>
-<p><code>&amp;name</code> and <code>*name</code> are ordinary YAML anchors and aliases: an alias <em>is</em> the
+<p><code>&amp;name</code> and <code>*name</code> are YAML anchors and aliases: an alias <em>is</em> the
 anchored node, so both keys hold one provider.</p>
 </div>
 </div>
 </div>
-<p>Two separate entries naming the same provider with the same arguments are
-refused, because whether they mean one shared object or two identical ones
-cannot be read off the file. Give them different arguments to build two.</p>
+<p>Two separate entries with the same provider and arguments are refused, since
+the file cannot say whether they mean one shared object or two identical ones.
+Give them different arguments to build two.</p>
 <h2 id="cover-the-build-with-a-splash-screen">Cover the build with a splash screen<a class="headerlink" href="#cover-the-build-with-a-splash-screen" title="Permanent link">&para;</a></h2>
-<p><code>during_build</code> is a span rather than a moment: it returns a context manager
-entered before the first component is built and left once the window is on
-screen. What the context manager yields is called with the name of each step as
-it starts.</p>
+<p><code>during_build</code> is a span, not a moment: it returns a context manager entered
+before the first component is built and exited once the window is on screen.
+What it yields is called with each step's name as the step starts.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
@@ -2653,10 +2741,9 @@ it starts.</p>
 </span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>        <span class="k">finally</span><span class="p">:</span>
 </span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
-<p>Build the <code>QPixmap</code> in the constructor and check it. <code>QPixmap</code> reports a
-missing file by being null rather than by raising, and <code>QSplashScreen</code> given a
-null pixmap is a window of size 0x0 - so a mistyped path produces a splash that
-silently shows nothing.</p>
+<p>Build the <code>QPixmap</code> in the constructor and check it. A missing file gives a
+null <code>QPixmap</code> instead of raising, and <code>QSplashScreen</code> shows a null pixmap as a
+0x0 window, so a mistyped path gives a splash that shows nothing.</p>
 <p>The steps reported are
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;BUILD_STEPS&lt;/span&gt;
 
@@ -2664,20 +2751,19 @@ silently shows nothing.</p>
   &lt;span class=&quot;doc doc-labels&quot;&gt;
       &lt;small class=&quot;doc doc-label doc-label-class-attribute&quot;&gt;&lt;code&gt;class-attribute&lt;/code&gt;&lt;/small&gt;
   &lt;/span&gt;" href="../../reference/api/container/#redsun.containers.container.AppContainer.BUILD_STEPS"><code>AppContainer.BUILD_STEPS</code></a>:
-<code>virtual container</code>, <code>devices</code>, <code>presenters</code>, <code>views</code>, <code>providers</code>, <code>wiring</code>
-and <code>injection</code>, in that order. Size a display from that tuple rather than from
-a count of your own, which would drift the day the sequence changes.</p>
-<p>The span is left through the context manager, so a build that raises closes the
-splash on the way out rather than leaving it over an application that never got
-a window. Anything else wanting to surround the build belongs here too: a busy
-cursor, a profiler, a logging context.</p>
-<p>The span opens only on <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;run&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer.run"><code>run</code></a>. Calling <code>build</code> on
-its own reports nothing, which is what a test driving the container directly
-wants.</p>
+<code>services</code>, <code>virtual container</code>, <code>devices</code>, <code>connect</code>, <code>presenters</code>, <code>views</code>,
+<code>providers</code>, <code>wiring</code> and <code>injection</code>, in that order. Size a display from that
+tuple, not from your own count, which goes stale when the steps change.</p>
+<p>The span exits through the context manager, so a build that raises still closes
+the splash instead of leaving it over an application with no window. Anything
+else surrounding the build belongs here too: a busy cursor, a profiler, a
+logging context.</p>
+<p>The span opens only in <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-method&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;run&lt;/span&gt;" href="../../reference/api/container/#redsun.qt.QtAppContainer.run"><code>run</code></a>. <code>build</code> alone
+reports nothing, which suits a test driving the container directly.</p>
 <h3 id="show-progress">Show progress<a class="headerlink" href="#show-progress" title="Permanent link">&para;</a></h3>
-<p>Each step is reported as it <em>starts</em>, so a bar showing how many are finished
-sets the value before advancing its own count, and fills to the total after the
-<code>yield</code> returns. Map the step names to whatever wording you want:</p>
+<p>Each step is reported when it <em>starts</em>, so a bar counting finished steps sets
+its value before advancing the count, and fills to the total after the <code>yield</code>
+returns. Map step names to any wording:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtCore</span><span class="w"> </span><span class="kn">import</span> <span class="n">Qt</span>
@@ -2686,71 +2772,70 @@ sets the value before advancing its own count, and fills to the total after the
 </span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppContainer</span>
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
 </span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">LABELS</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="s2">"virtual container"</span><span class="p">:</span> <span class="s2">"Building virtual layer..."</span><span class="p">,</span>
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="s2">"devices"</span><span class="p">:</span> <span class="s2">"Connecting devices..."</span><span class="p">,</span>
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="s2">"presenters"</span><span class="p">:</span> <span class="s2">"Starting presenters..."</span><span class="p">,</span>
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="s2">"views"</span><span class="p">:</span> <span class="s2">"Laying out views..."</span><span class="p">,</span>
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="s2">"providers"</span><span class="p">:</span> <span class="s2">"Registering providers..."</span><span class="p">,</span>
-</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="s2">"wiring"</span><span class="p">:</span> <span class="s2">"Wiring signals..."</span><span class="p">,</span>
-</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="s2">"injection"</span><span class="p">:</span> <span class="s2">"Injecting dependencies..."</span><span class="p">,</span>
-</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="p">}</span>
-</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
-</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProgressSplash</span><span class="p">:</span>
-</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
-</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
-</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span>
-</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>
-</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span>
-</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">screen</span><span class="p">:</span> <span class="n">QSplashScreen</span><span class="p">,</span> <span class="n">bar</span><span class="p">:</span> <span class="n">QProgressBar</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">)</span>
-</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span>
-</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">..."</span><span class="p">),</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span>
-</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>        <span class="p">)</span>
-</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>
-</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>    <span class="nd">@contextmanager</span>
-</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
-</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">AppContainer</span><span class="o">.</span><span class="n">BUILD_STEPS</span><span class="p">)</span>
-</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
-</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>        <span class="n">bar</span> <span class="o">=</span> <span class="n">QProgressBar</span><span class="p">(</span><span class="n">screen</span><span class="p">)</span>
-</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
-</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setGeometry</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">height</span><span class="p">()</span> <span class="o">-</span> <span class="mi">18</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="mi">18</span><span class="p">)</span>
-</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-</span><span id="__span-10-48"><a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a>
-</span><span id="__span-10-49"><a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-10-50"><a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a>            <span class="k">yield</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report</span><span class="p">,</span> <span class="n">screen</span><span class="p">,</span> <span class="n">bar</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
-</span><span id="__span-10-51"><a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>            <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
-</span><span id="__span-10-52"><a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s2">"Ready"</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span><span class="p">)</span>
-</span><span id="__span-10-53"><a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-</span><span id="__span-10-54"><a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a>        <span class="k">finally</span><span class="p">:</span>
-</span><span id="__span-10-55"><a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="s2">"services"</span><span class="p">:</span> <span class="s2">"Starting services..."</span><span class="p">,</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="s2">"virtual container"</span><span class="p">:</span> <span class="s2">"Building virtual layer..."</span><span class="p">,</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    <span class="s2">"devices"</span><span class="p">:</span> <span class="s2">"Building devices..."</span><span class="p">,</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    <span class="s2">"connect"</span><span class="p">:</span> <span class="s2">"Connecting devices..."</span><span class="p">,</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="s2">"presenters"</span><span class="p">:</span> <span class="s2">"Starting presenters..."</span><span class="p">,</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="s2">"views"</span><span class="p">:</span> <span class="s2">"Laying out views..."</span><span class="p">,</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="s2">"providers"</span><span class="p">:</span> <span class="s2">"Registering providers..."</span><span class="p">,</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    <span class="s2">"wiring"</span><span class="p">:</span> <span class="s2">"Wiring signals..."</span><span class="p">,</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    <span class="s2">"injection"</span><span class="p">:</span> <span class="s2">"Injecting dependencies..."</span><span class="p">,</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="p">}</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProgressSplash</span><span class="p">:</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span> <span class="o">=</span> <span class="n">QPixmap</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">isNull</span><span class="p">():</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no image at </span><span class="si">{</span><span class="n">image</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>        <span class="bp">self</span><span class="p">,</span> <span class="n">screen</span><span class="p">:</span> <span class="n">QSplashScreen</span><span class="p">,</span> <span class="n">bar</span><span class="p">:</span> <span class="n">QProgressBar</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">)</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">..."</span><span class="p">),</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>        <span class="p">)</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>    <span class="nd">@contextmanager</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">during_build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]:</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">AppContainer</span><span class="o">.</span><span class="n">BUILD_STEPS</span><span class="p">)</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>        <span class="n">screen</span> <span class="o">=</span> <span class="n">QSplashScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="p">)</span>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>        <span class="n">bar</span> <span class="o">=</span> <span class="n">QProgressBar</span><span class="p">(</span><span class="n">screen</span><span class="p">)</span>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">setGeometry</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">height</span><span class="p">()</span> <span class="o">-</span> <span class="mi">18</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixmap</span><span class="o">.</span><span class="n">width</span><span class="p">(),</span> <span class="mi">18</span><span class="p">)</span>
+</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a>        <span class="n">screen</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-10-48"><a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a>        <span class="n">bar</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</span><span id="__span-10-49"><a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a>        <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-50"><a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a>
+</span><span id="__span-10-51"><a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-10-52"><a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a>            <span class="k">yield</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">report</span><span class="p">,</span> <span class="n">screen</span><span class="p">,</span> <span class="n">bar</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+</span><span id="__span-10-53"><a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a>            <span class="n">bar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+</span><span id="__span-10-54"><a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">showMessage</span><span class="p">(</span><span class="s2">"Ready"</span><span class="p">,</span> <span class="n">Qt</span><span class="o">.</span><span class="n">AlignmentFlag</span><span class="o">.</span><span class="n">AlignBottom</span><span class="p">)</span>
+</span><span id="__span-10-55"><a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a>            <span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+</span><span id="__span-10-56"><a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a>        <span class="k">finally</span><span class="p">:</span>
+</span><span id="__span-10-57"><a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a>            <span class="n">screen</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
 <p><code>report</code> is an ordinary method taking the widgets it draws on, and
-<code>functools.partial</code> binds them to give the container the <code>Callable[[str], None]</code>
-it expects. Only the count is instance state, because only the count has to
-survive from one call to the next; the widgets belong to one span and stay
-local to it. Resetting <code>_done</code> when the span opens rather than only in
-<code>__init__</code> is what lets one provider serve a container that is built twice.</p>
-<p>Filling the bar after the <code>yield</code> rather than inside <code>report</code> is what makes it
-reach the total: the last step is announced when it begins, and nothing is
-reported once it finishes. Statements after the <code>yield</code> run only on a build
-that succeeded, so a failed build leaves the bar where it stopped and the
-<code>finally</code> still closes the splash.</p>
+<code>functools.partial</code> binds them into the <code>Callable[[str], None]</code> the container
+expects. Only the count is instance state, since only the count must survive
+between calls; the widgets belong to one span. Resetting <code>_done</code> when the span
+opens, not only in <code>__init__</code>, lets one provider serve a container built twice.</p>
+<p>The bar reaches the total only because it is filled after the <code>yield</code>: the
+last step is announced when it begins, and nothing is reported when it ends.
+Code after the <code>yield</code> runs only for a successful build, so a failed build
+leaves the bar where it stopped and <code>finally</code> still closes the splash.</p>
 <h3 id="hand-over-to-the-window-rather-than-closing">Hand over to the window rather than closing<a class="headerlink" href="#hand-over-to-the-window-rather-than-closing" title="Permanent link">&para;</a></h3>
-<p><code>close</code> dismisses the splash at once. Qt's own handoff is
+<p><code>close</code> dismisses the splash at once. Qt's handoff is
 <a href="https://doc.qt.io/qt-6/qsplashscreen.html#finish"><code>finish</code></a>, which keeps the
-splash up until the widget passed to it is displayed. A provider reaches the
-window by serving <code>configure_main_view</code> as well, and is installed at both
-points as one object:</p>
+splash up until the given widget is displayed. A provider gets the window by
+also serving <code>configure_main_view</code>, installed at both points as one object:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">qtpy.QtWidgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">QMainWindow</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
@@ -2782,16 +2867,16 @@ points as one object:</p>
 </span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>            <span class="k">else</span><span class="p">:</span>
 </span><span id="__span-11-30"><a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>                <span class="n">screen</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>configure_main_view</code> runs inside the span, before it is left, so the window is
-there by the time the splash is dismissed. It stays <code>None</code> when the build
-raises before the window exists, which is why the fallback is kept.</p>
-<p><code>run</code> processes events once after showing the window and before leaving the
-span, so the window has painted either way; <code>finish</code> additionally waits for it
-to be shown on platforms where that takes longer than one pass.</p>
+<p><code>configure_main_view</code> runs inside the span, so the window exists when the
+splash is dismissed. It stays <code>None</code> if the build raises before the window
+exists, hence the fallback.</p>
+<p><code>run</code> processes events once after showing the window and before exiting the
+span, so the window has painted either way; <code>finish</code> also waits for it on
+platforms where showing takes longer than one pass.</p>
 <h2 id="undo-what-a-hook-did">Undo what a hook did<a class="headerlink" href="#undo-what-a-hook-did" title="Permanent link">&para;</a></h2>
-<p>Add <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>'s <code>shutdown</code>. Hooks are torn
+<p>Add <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HasShutdown&lt;/span&gt;" href="../../reference/api/virtual/#redsun.virtual.HasShutdown"><code>HasShutdown</code></a>'s <code>shutdown</code>. Hooks are shut
 down after the presenters, in reverse order, and a provider serving several
-points is torn down once:</p>
+points only once:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">DarkTheme</span><span class="p">:</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">configure_application</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">:</span> <span class="n">QApplication</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span> <span class="o">=</span> <span class="n">app</span>
@@ -2801,12 +2886,11 @@ points is torn down once:</p>
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_app</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_previous</span><span class="p">)</span>
 </span></code></pre></div>
-<p>A <code>during_build</code> provider needs no <code>shutdown</code>: its context manager already
-closes what it opened. A failing <code>shutdown</code> is logged and does not stop the
-rest.</p>
+<p>A <code>during_build</code> provider needs no <code>shutdown</code>: its context manager closes what
+it opened. A failing <code>shutdown</code> is logged and the others still run.</p>
 <h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
-<p>Every way of getting a hook wrong raises
-<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HookError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.HookError"><code>HookError</code></a>, naming the point.</p>
+<p>A wrong hook raises <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HookError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.HookError"><code>HookError</code></a>, naming the
+point.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Container class</label><label for="__tabbed_5_2">Configuration file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2836,8 +2920,8 @@ rest.</p>
 </tr>
 </tbody>
 </table>
-<p>These are raised as the class body is read, so a mistake fails at import
-rather than at build.</p>
+<p>These are raised when the class body is read, so a mistake fails at import,
+not at build.</p>
 </div>
 <div class="tabbed-block">
 <table>
@@ -2889,9 +2973,9 @@ rather than at build.</p>
 </div>
 </div>
 </div>
-<p>A point named on the container class <em>and</em> in the file is
+<p>A point named on the container class <em>and</em> in the file raises
 <code>hook point(s) 'x' are named both on MyApp and in the configuration</code>. Neither
-source wins: drop one.</p>
+wins: remove one.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../explanation/decisions/0010-toolkit-hook-points/">Toolkit hook points</a>

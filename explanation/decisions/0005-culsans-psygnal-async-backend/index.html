@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -277,6 +279,8 @@
       
         
           
+        
+      
         
       
         
@@ -469,6 +473,8 @@
       
         
       
+        
+      
     
     
     
@@ -585,6 +591,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../statement/" class="md-nav__link">
         
   
@@ -667,10 +700,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
         
           
-          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
             
   
   
@@ -687,8 +720,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -873,6 +906,8 @@
       
         
       
+        
+      
     
     
     
@@ -889,10 +924,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
@@ -909,8 +944,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1307,6 +1342,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1333,6 +1395,8 @@
       
         
           
+        
+      
         
       
         
@@ -1549,6 +1613,33 @@
     
   
   Wire components together
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Write a service
 
     
   </span>
@@ -1826,33 +1917,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Device
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
@@ -1915,6 +1979,33 @@
     
   
   Presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/api/services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Services
 
     
   </span>
@@ -2258,9 +2349,9 @@
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p>Accepted</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Redsun's UI runs on the Qt main thread while device logic runs on a single
+<p><code>redsun</code>'s UI runs on the Qt main thread while device logic runs on a single
 background <code>asyncio</code> loop. A view emits a signal; a presenter reacts to it by
-awaiting hardware. psygnal already supports this shape directly - connecting a
+awaiting hardware. <code>psygnal</code> already supports this shape directly - connecting a
 coroutine function to a signal builds a coroutine callback that hands the call
 to whatever async backend is installed - so no bridging code of our own is
 needed at the call sites.</p>
@@ -2274,52 +2365,52 @@ needed at the call sites.</p>
 <li><code>asyncio.Queue</code> binds to the loop that first awaits it while empty. The
   backend outlives any single loop - it is created once and lives for the
   process - so a queue bound to one loop raises once another is running, which
-  is exactly what pytest's per-test event loops produce.</li>
+  is exactly what <code>pytest</code>'s per-test event loops produce.</li>
 </ul>
-<p>psygnal's <code>set_async_backend()</code> accepts only the three literal names
+<p><code>psygnal</code>'s <code>set_async_backend()</code> accepts only the three literal names
 <code>"asyncio"</code>, <code>"anyio"</code>, and <code>"trio"</code>, so there is no public API for selecting a
 backend of our own. Its teardown helper, <code>clear_async_backend()</code>, dispatches on
 <code>isinstance</code> against the three concrete backend classes to decide whether to
 close the queue.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><code>redsun.aio.CulsansAsyncioBackend</code> implements psygnal's backend contract on a
+<p><code>redsun.aio.CulsansAsyncioBackend</code> implements <code>psygnal</code>'s backend contract on a
 <a href="https://pypi.org/project/culsans/">culsans</a> queue, which is thread-safe on the
 producing side by construction and is not bound to any one event loop. A drain
 coroutine runs on the shared loop and dispatches each queued callback as its
 own task, so a slow slot does not serialize the ones behind it.</p>
-<p>The class is wired into psygnal at two levels, and both are load-bearing:</p>
+<p>The class is wired into <code>psygnal</code> at two levels, and both are load-bearing:</p>
 <ul>
 <li>It <strong>inherits</strong> <code>psygnal._async._AsyncBackend</code>, which supplies the abstract
-  contract and makes the instance assignable where psygnal expects a backend.
+  contract and makes the instance assignable where <code>psygnal</code> expects a backend.
   Virtual registration alone is invisible to a type checker.</li>
 <li>It is <strong>registered as a virtual subclass</strong> of <code>AsyncioBackend</code>, because that
   <code>isinstance</code> check is what makes <code>clear_async_backend()</code> call <code>close()</code>.
   Without it the backend is dropped with its queue and drain task still live.</li>
 </ul>
 <p>Installation goes through <code>redsun.aio.set_async_backend()</code>, which assigns
-psygnal's module global directly - the only way to install a backend that
+<code>psygnal</code>'s module global directly - the only way to install a backend that
 <code>set_async_backend()</code> cannot name. It is idempotent and refuses to displace a
 backend it did not install. The backend reports its name as <code>"culsans"</code>, so
-psygnal's own setter raises rather than silently replacing it.</p>
+<code>psygnal</code>'s own setter raises rather than silently replacing it.</p>
 <p><code>QtAppContainer</code> owns the lifecycle: <code>build()</code> installs the backend before the
 dependency-injection phase, since coroutine slots resolve a backend at connect
-time, and <code>shutdown()</code> hands teardown back to psygnal's <code>clear_async_backend()</code>.</p>
+time, and <code>shutdown()</code> hands teardown back to <code>psygnal</code>'s <code>clear_async_backend()</code>.</p>
 <p>Exceptions raised inside a dispatched slot are logged on the <code>redsun</code> logger
 through a task done-callback. Nothing awaits these tasks, so an unhandled
 exception would otherwise surface only as asyncio's "task exception was never
 retrieved" at garbage-collection time, or not at all.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Redsun depends on two private psygnal symbols: <code>_AsyncBackend</code> as a base
+<li><code>redsun</code> depends on two private <code>psygnal</code> symbols: <code>_AsyncBackend</code> as a base
   class and <code>_ASYNC_BACKEND</code> as the assignment target, plus
   <code>WeakCallback.dereference()</code> reached through the inherited <code>call_back</code>. A
-  psygnal release that renames any of them breaks dispatch. The test suite
+  <code>psygnal</code> release that renames any of them breaks dispatch. The test suite
   pins the observable behaviour - installation, teardown, and delivery - so
   the break surfaces as a test failure rather than as silently dropped
   signals.</li>
-<li>culsans and aiologic become runtime dependencies. Both are pre-1.0.</li>
+<li><code>culsans</code> and <code>aiologic</code> become runtime dependencies. Both are pre-1.0.</li>
 <li>Only <code>QtAppContainer</code> installs a backend. Under a bare <code>AppContainer</code>,
-  connecting a coroutine to a signal raises <code>RuntimeError</code> from psygnal.</li>
+  connecting a coroutine to a signal raises <code>RuntimeError</code> from <code>psygnal</code>.</li>
 <li>A failing slot no longer propagates anywhere a caller can see: emitters
   never learn that a slot raised, and the log is the only record.</li>
 <li><code>close()</code> is synchronous and returns before in-flight callbacks finish. It
