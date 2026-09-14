@@ -7,6 +7,7 @@ from typing import Any, cast
 from ophyd_async.core import Device
 from psygnal import Signal, SignalGroup
 
+from redsun.aio import run_coro
 from redsun.presenter import Presenter
 from redsun.virtual import VirtualContainer, slot
 
@@ -97,6 +98,33 @@ class AsyncMotorController(Presenter):
 
     def shutdown(self) -> None:
         self.shutdown_calls += 1
+
+
+class SignalReader(Presenter):
+    """Reads one signal of every device when asked, and once more as it shuts down."""
+
+    sig_read = Signal(str, object)
+
+    def __init__(
+        self, name: str, devices: Mapping[str, Device], /, *, signal: str
+    ) -> None:
+        super().__init__(name, devices)
+        self.signal = signal
+        self.read_at_shutdown: dict[str, object] = {}
+
+    def _read_all(self) -> dict[str, object]:
+        return {
+            name: run_coro(getattr(device, self.signal).get_value())
+            for name, device in self.devices.items()
+        }
+
+    @slot
+    def read(self) -> None:
+        for name, value in self._read_all().items():
+            self.sig_read.emit(name, value)
+
+    def shutdown(self) -> None:
+        self.read_at_shutdown = self._read_all()
 
 
 class FrameSignals(SignalGroup, strict=True):

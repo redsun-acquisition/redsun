@@ -1,4 +1,4 @@
-"""A device attached to a service outside the process survives the service going away.
+"""A session attached to a service outside the process, and the service going away.
 
 Runs against the IOC in ``tests/compose/compose.yaml``, and is skipped unless
 ``REDSUN_COMPOSE`` is set.
@@ -6,17 +6,30 @@ Runs against the IOC in ``tests/compose/compose.yaml``, and is skipped unless
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import time
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import pytest
+from mock_pkg.controller import SignalReader
+from mock_pkg.view import ReadingView
 from ophyd_async.core import SignalRW
 from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
 from redsun.aio import run_coro
-from redsun.containers import AppContainer, declare_device, declare_service
+from redsun.containers import (
+    AppContainer,
+    declare_device,
+    declare_presenter,
+    declare_service,
+    declare_view,
+)
+from redsun.qt import QtAppContainer
+
+if TYPE_CHECKING:
+    from qtpy.QtWidgets import QApplication
 
 pytestmark = pytest.mark.compose
 
@@ -30,6 +43,24 @@ class SimpleIoc(EpicsDevice):
 class Attached(AppContainer):
     ioc = declare_service(prefix="REDSUN:ATTACHED:")
     simple = declare_device(SimpleIoc, service="ioc")
+
+
+class AttachedPanel(QtAppContainer):
+    ioc = declare_service(prefix="REDSUN:ATTACHED:")
+    simple = declare_device(SimpleIoc, service="ioc")
+    reader = declare_presenter(SignalReader, signal="a")
+    panel = declare_view(ReadingView)
+
+    def wire(self) -> None:
+        self.connect(self.panel.sig_read_requested, self.reader.read)
+        self.connect(self.reader.sig_read, self.panel.show_reading)
+
+
+@pytest.fixture
+def attachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Find the IOC only through the port compose publishes on the loopback."""
+    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "127.0.0.1")
+    monkeypatch.setenv("EPICS_CA_AUTO_ADDR_LIST", "NO")
 
 
 def compose(*command: str) -> None:
@@ -46,11 +77,9 @@ def read(device: SimpleIoc) -> int:
 
 
 def test_an_attached_service_that_stops_times_out_and_answers_once_back(
-    monkeypatch: pytest.MonkeyPatch,
+    attachable: None,
 ) -> None:
     """Channels recover on their own: no reconnect is asked for."""
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "127.0.0.1")
-    monkeypatch.setenv("EPICS_CA_AUTO_ADDR_LIST", "NO")
     app = Attached().build()
     simple = app.devices["simple"]
     assert isinstance(simple, SimpleIoc)
@@ -74,3 +103,29 @@ def test_an_attached_service_that_stops_times_out_and_answers_once_back(
     app.shutdown()
 
     assert after == before
+
+
+@pytest.mark.qt
+def test_a_session_attached_to_an_ioc_shuts_down_cleanly(
+    attachable: None, qapp: QApplication, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A view reads the IOC through a presenter, and shutdown ends each in turn.
+
+    The presenter still reads the IOC as it shuts down, and the view is destroyed,
+    without a warning.
+    """
+    app = AttachedPanel()
+    app.build()
+    panel, reader = app.panel, app.reader
+    readings = panel.readings
+    panel.read_button.click()
+    caplog.clear()
+
+    app.shutdown()
+
+    assert readings == [("simple", 1)]
+    assert reader.read_at_shutdown == {"simple": 1}
+    with pytest.raises(RuntimeError):
+        panel.isVisible()
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert warnings == []

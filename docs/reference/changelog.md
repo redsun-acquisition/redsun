@@ -37,7 +37,8 @@ Dates are specified in the format `DD-MM-YYYY`.
   prefix the device is built with, passed as `prefix`. Giving `prefix` as well,
   or naming a service for a device whose constructor takes a `service` keyword
   of its own, is refused at declaration. A device naming a service that did not
-  start, or one that is not declared, is logged and skipped by the build.
+  start, one that is not declared, or one that gives no prefix, is logged and
+  skipped by the build.
 - **`AppContainer.start_services`** and **`AppContainer.services`**
   (`redsun.containers.container`) - start every launched service, logging
   `Services started: <n>/<m>` and the ones that did not start; and the

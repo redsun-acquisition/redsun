@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
+from mock_pkg.controller import SignalReader
 from mock_pkg.device import BrokenDevice, MyMotor
 from mock_pkg.service.stand_in import READY
+from mock_pkg.view import ReadingView
 from ophyd_async.core import Device, SignalRW
 from ophyd_async.epics.core import EpicsDevice, PvSuffix
 
@@ -18,14 +20,17 @@ from redsun.containers import (
     declare_device,
     declare_presenter,
     declare_service,
+    declare_view,
 )
 from redsun.containers import container as container_module
 from redsun.log import SessionFileHandler, session_log
 from redsun.presenter import Presenter
-from redsun.services import _service
+from redsun.qt import QtAppContainer
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+
+    from qtpy.QtWidgets import QApplication
 
 STAND_IN = "mock_pkg.service.stand_in"
 
@@ -77,12 +82,31 @@ class TwoCameras(AppContainer):
     reader = declare_presenter(ExposureReader)
 
 
+class CameraPanel(QtAppContainer):
+    ioc_a = declare_service(
+        module="mock_pkg.service.camera_ioc",
+        ready="Server startup complete",
+        prefix="A:",
+        args=["--prefix", "A:"],
+    )
+    cam_a = declare_device(Camera, service="ioc_a")
+    reader = declare_presenter(SignalReader, signal="exposure")
+    panel = declare_view(ReadingView)
+
+    def wire(self) -> None:
+        self.connect(self.panel.sig_read_requested, self.reader.read)
+        self.connect(self.reader.sig_read, self.panel.show_reading)
+
+
 @pytest.fixture
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Let a launched service import ``mock_pkg``, and restore the CA address list."""
+    """Let a launched service import ``mock_pkg``, and restore the CA address list.
+
+    ``redsun.services._service.ports`` is left alone: libca reads the address list
+    once per process, so a service keeps the port it first got from test to test.
+    """
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
-    monkeypatch.setattr(_service, "ports", {})
 
 
 @pytest.fixture
@@ -306,6 +330,22 @@ def test_a_device_whose_service_did_not_start_is_skipped(
     assert not any("Unused:" in message for message in warnings)
 
 
+def test_a_device_naming_a_service_without_a_prefix_is_skipped(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class App(AppContainer):
+        beamline = declare_service()
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert set(app.devices) == set()
+    errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+    assert (
+        "Failed to build device 'stage': service 'beamline' gives no prefix" in errors
+    )
+
+
 def test_a_service_whose_every_device_failed_is_reported_unused(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -398,3 +438,37 @@ def test_a_presenter_reads_two_caproto_iocs_while_it_is_built(
         assert isinstance(reader, ExposureReader)
         assert reader.exposures == {"cam_a": 0.25, "cam_b": 0.25}
         app.shutdown()
+
+
+@pytest.mark.qt
+def test_a_session_with_one_of_each_component_shuts_down_cleanly(
+    containers: list[AppContainer],
+    qapp: QApplication,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A view reads a launched IOC through a presenter, and shutdown ends each in turn.
+
+    The presenter still reads the camera as it shuts down, the view is destroyed,
+    and the IOC exits once its input closes, all without a warning. The service is
+    named as in ``TwoCameras``, so its IOC answers on a port libca already lists
+    when the process first used Channel Access in that test.
+    """
+    app = CameraPanel()
+    containers.append(app)
+    app.build()
+    panel, reader = app.panel, app.reader
+    readings = panel.readings
+    panel.read_button.click()
+    caplog.clear()
+
+    app.shutdown()
+
+    assert readings == [("cam_a", 0.25)]
+    assert reader.read_at_shutdown == {"cam_a": 0.25}
+    with pytest.raises(RuntimeError):
+        panel.isVisible()
+    assert not app.ioc_a.running
+    messages = [r.getMessage() for r in caplog.records]
+    assert "Service 'ioc_a' stopped with exit code 0" in messages
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert warnings == []

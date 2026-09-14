@@ -1072,6 +1072,8 @@ class AppContainer:
             If the device names a service that is not declared.
         RuntimeError
             If the device names a service that did not start.
+        ValueError
+            If the device names a service that gives no prefix.
         """
         if device.service is None:
             return None
@@ -1079,7 +1081,10 @@ class AppContainer:
             raise LookupError(f"service {device.service!r} is not declared")
         if device.service in self._failed_services:
             raise RuntimeError(f"service {device.service!r} was not started")
-        return self._services[device.service].prefix
+        prefix = self._services[device.service].prefix
+        if not prefix:
+            raise ValueError(f"service {device.service!r} gives no prefix")
+        return prefix
 
     def _build_presenters(self) -> None:
         """Build every declared presenter against the built devices.
