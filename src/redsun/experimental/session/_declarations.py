@@ -218,10 +218,6 @@ class Declaration:
         return f"Declaration({self.name!r}, {self.kind}, {state})"
 
 
-DEVICE_KEYS: Final = ("service", "autoconnect")
-"""Keywords of a device declaration the session reads rather than passes on."""
-
-
 def take_device_keys(
     declaration: Declaration, kwargs: dict[str, Any]
 ) -> dict[str, Any]:
@@ -234,7 +230,7 @@ def take_device_keys(
         prefix are both given, or ``autoconnect`` is not a bool.
     """
     params = inspect.signature(declaration.cls).parameters
-    for key in DEVICE_KEYS:
+    for key in ("service", "autoconnect"):
         if key in kwargs and key in params:
             raise TypeError(
                 f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
