@@ -476,6 +476,11 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
+- A device is built as `cls(name=<name>, **kwargs)` rather than
+  `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
+  whose first parameter is `prefix`, can be declared. A device that takes `name`
+  positional-only no longer builds, and is logged and skipped.
+
 - What another component owns arrives in `setup` rather than in a constructor:
   a constructor naming a component, its class, a type a component shares with
   `provides`, or the callback catalogue is refused, naming the parameter. A

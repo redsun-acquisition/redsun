@@ -250,7 +250,9 @@ TypeError: MyApp.motor is declared as a presenter, but MyStage is an
 
 This is what keeps devices buildable first. They are plain ophyd-async objects
 that depend on no other layer, so they are constructed before the graph runs,
-and the container knows which ones they are because you said so.
+and the container knows which ones they are because you said so. A device gets
+its name as a keyword, `cls(name=<name>, **kwargs)`, which every `ophyd-async`
+device accepts, `EpicsDevice` included.
 
 Components that appear only in the session file need no marker: the section they
 sit under (`devices:`, `presenters:`, `views:`) is their layer, and it is checked
