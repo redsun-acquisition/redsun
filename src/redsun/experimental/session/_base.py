@@ -1548,13 +1548,11 @@ class Session(BuildableSession):
                 self.on_release(service.stop)
         started = len(self._services) - len(self._failed_services)
         summary = f"Services started: {started}/{len(self._services)}"
-        if not self._failed_services:
+        failed = ", ".join(f"{n} ({e})" for n, e in self._failed_services.items())
+        if failed:
+            logger.warning("%s\nNot started: %s", summary, failed)
+        else:
             logger.info(summary)
-            return
-        failed = ", ".join(
-            f"{name} ({reason})" for name, reason in self._failed_services.items()
-        )
-        logger.warning("%s\nNot started: %s", summary, failed)
 
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component.
