@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 import yaml
-from ophyd_async.core import Device
+from ophyd_async.core import StandardReadable, StandardReadableFormat, soft_signal_rw
 
+from redsun.aio import run_coro
 from redsun.experimental import (
     AsDevice,
     AsPresenter,
@@ -23,15 +24,16 @@ if TYPE_CHECKING:
     from .conftest import BuildSession
 
 
-class Stage(Device):
-    """Device writing back the axis it was configured with."""
+class Stage(StandardReadable):
+    """Device writing back the axis its configuration signal holds."""
 
-    def __init__(self, name: str, /, axis: str = "X") -> None:
+    def __init__(self, name: str, axis: str = "X") -> None:
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.axis = soft_signal_rw(str, initial_value=axis)
         super().__init__(name=name)
-        self.axis = axis
 
     def serialize(self) -> dict[str, str]:
-        return {"axis": self.axis}
+        return {"axis": run_coro(self.axis.get_value())}
 
 
 @dataclass
@@ -101,14 +103,18 @@ def test_a_changed_session_rebuilds_from_what_it_wrote(
 ) -> None:
     session = build(App)
     session.ctrl.step = 9.0
-    session.stage.axis = "Y"
+
+    async def set_axis_to_y() -> None:
+        await session.stage.axis.set("Y")
+
+    run_coro(set_axis_to_y())
     written = session.serialize()
     session.shutdown()
 
     rebuilt = build(App, written)
 
     assert rebuilt.ctrl.step == 9.0
-    assert rebuilt.stage.axis == "Y"
+    assert run_coro(rebuilt.stage.axis.get_value()) == "Y"
     assert rebuilt.serialize() == written
 
 

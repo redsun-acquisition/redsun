@@ -12,9 +12,15 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
 import pydantic
 import pytest
 from event_model import DocumentRouter
-from ophyd_async.core import Device
+from ophyd_async.core import (
+    Device,
+    StandardReadable,
+    StandardReadableFormat,
+    soft_signal_rw,
+)
 from psygnal import Signal
 
+from redsun.aio import run_coro
 from redsun.experimental import (
     Alias,
     AsDevice,
@@ -57,12 +63,13 @@ Descriptions = NewType("Descriptions", "dict[str, str]")
 Missing = NewType("Missing", "dict[str, int]")
 
 
-class Stage(Device):
-    """Device with a configured keyword argument."""
+class Stage(StandardReadable):
+    """Device holding its configured axis in a configuration signal."""
 
-    def __init__(self, name: str, /, axis: str = "X") -> None:
+    def __init__(self, name: str, axis: str = "X") -> None:
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.axis = soft_signal_rw(str, initial_value=axis)
         super().__init__(name=name)
-        self.axis = axis
 
 
 class Ctrl:
@@ -788,7 +795,7 @@ def test_build_resolves_every_declaration(app: App) -> None:
     assert isinstance(app.widget, Widget)
     assert isinstance(app.motor, Stage)
     assert app.devices == {"motor": app.motor}
-    assert app.motor.axis == "Z"
+    assert run_coro(app.motor.axis.get_value()) == "Z"
 
 
 def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
@@ -1215,13 +1222,13 @@ def test_a_subclass_layers_over_its_base() -> None:
     app = Layered().build()
     assert app.name == "layered"
     assert app.ctrl.gain == 9.0
-    assert app.motor.axis == "Z"
+    assert run_coro(app.motor.axis.get_value()) == "Z"
 
 
 def test_layering_follows_the_mro() -> None:
     """Reading the bases in the order they are written would give 'Y'."""
     app = Diamond().build()
-    assert app.motor.axis == "Z"
+    assert run_coro(app.motor.axis.get_value()) == "Z"
     assert app.ctrl.gain == 9.0
 
 
@@ -1230,7 +1237,7 @@ def test_the_constructor_layers_over_the_class() -> None:
     app = Layered({"presenters": {"ctrl": {"gain": 4.0}}}).build()
     assert app.ctrl.gain == 4.0
     assert app.name == "layered"
-    assert app.motor.axis == "Z"
+    assert run_coro(app.motor.axis.get_value()) == "Z"
 
 
 def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:

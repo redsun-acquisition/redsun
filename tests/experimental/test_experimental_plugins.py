@@ -11,6 +11,7 @@ from mock_bundle.keys import Calibration
 from mock_bundle.presenters import MockMotorPresenter, MockRegistrar
 from mock_bundle.views import MockMotorView
 
+from redsun.aio import run_coro
 from redsun.experimental import (
     AsPresenter,
     AsView,
@@ -71,7 +72,7 @@ def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
     stage = configured.devices["stage"]
 
     assert isinstance(stage, MockStage)
-    assert stage.axis == "Z"
+    assert run_coro(stage.axis.get_value()) == "Z"
     assert configured.declarations["motor_ctrl"].instance.step == 4.0
     assert configured.declarations["motor_widget"].instance.title == "from-config"
 

@@ -1489,7 +1489,9 @@ class Session(BuildableSession):
             if declaration.kind is not Layer.DEVICE:
                 continue
             try:
-                device = declaration.cls(declaration.name, **declaration.cfg_kwargs)
+                device = declaration.cls(
+                    name=declaration.name, **declaration.cfg_kwargs
+                )
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 self._failed[declaration.name] = e
                 logger.error("Failed to build device '%s': %s", declaration.name, e)

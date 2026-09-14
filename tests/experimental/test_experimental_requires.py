@@ -16,7 +16,12 @@ from typing import Annotated, Any, Protocol, get_type_hints, runtime_checkable
 
 import pydantic
 import pytest
-from ophyd_async.core import Device
+from ophyd_async.core import (
+    AsyncStatus,
+    StandardReadable,
+    StandardReadableFormat,
+    soft_signal_rw,
+)
 
 from redsun.experimental import (
     Alias,
@@ -321,24 +326,31 @@ class AsksDataOnly:
 
 @runtime_checkable
 class Movable(Protocol):
-    """A device that can be told where to go."""
+    """A device that can be told where to go, as ``bluesky`` moves it."""
 
-    async def move(self, position: float) -> None: ...
+    def set(self, value: float) -> AsyncStatus[None]: ...
 
 
-class Stage(Device):
-    """Device answering the device census."""
+class Stage(StandardReadable):
+    """Device answering the device census, moving its position signal."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
+        with self.add_children_as_readables(StandardReadableFormat.HINTED_SIGNAL):
+            self.position = soft_signal_rw(float, units="mm")
         super().__init__(name=name)
-        self.position = 0.0
 
-    async def move(self, position: float) -> None:
-        self.position = position
+    @AsyncStatus.wrap
+    async def set(self, value: float) -> None:
+        await self.position.set(value)
 
 
-class Shutter(Device):
-    """Device that cannot move, so it stays out of the answer."""
+class Shutter(StandardReadable):
+    """Device that opens and closes but cannot move, so it stays out of the answer."""
+
+    def __init__(self, name: str) -> None:
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.open = soft_signal_rw(bool)
+        super().__init__(name=name)
 
 
 class MotorPresenter:
