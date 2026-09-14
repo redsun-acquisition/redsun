@@ -10,7 +10,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol, assert_type, runtime_checkable
 
-from redsun.experimental import DevicesOf, Requires, RequiresMaybe, RequiresOne
+from redsun.experimental import (
+    DevicesOf,
+    Requires,
+    RequiresMaybe,
+    RequiresOne,
+    Session,
+    satisfies,
+)
 
 
 @runtime_checkable
@@ -73,3 +80,19 @@ class DeviceCensus:
         for device in self.motors.values():
             assert_type(device, Movable)
             await device.move(1.0)
+
+
+def check_satisfying_types_what_it_returns(session: Session) -> None:
+    assert_type(session.satisfying(Resettable), dict[str, Resettable])
+    for component in session.satisfying(HasCamera).values():
+        component.apply_camera(2.0)
+
+
+def check_satisfies_narrows_an_instance_but_not_a_class(
+    component: object, cls: type
+) -> None:
+    if satisfies(component, Resettable):
+        assert_type(component, Resettable)
+        component.reset()
+    if satisfies(cls, Resettable):
+        assert_type(cls, type)

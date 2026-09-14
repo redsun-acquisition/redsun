@@ -9,7 +9,7 @@ from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, TypeVar, cast
 
 import yaml
 from event_model import DocumentRouter
@@ -88,6 +88,7 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
 
     from ophyd_async.core import SignalR
+    from typing_extensions import TypeForm
 
     from redsun.experimental.injection import Question
     from redsun.experimental.ports import SlotThread
@@ -96,6 +97,8 @@ if TYPE_CHECKING:
     from ._declarations import Key
 
 __all__ = ["BUILD_STEPS", "ConfigurationInUse", "Session"]
+
+P = TypeVar("P")
 
 CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
 """The key a component asks for to receive every document router the session built."""
@@ -1112,7 +1115,7 @@ class Session(BuildableSession):
             ]
         return Unconnected(signals=signals, slots=slots)
 
-    def satisfying(self, protocol: type) -> dict[str, Any]:
+    def satisfying(self, protocol: TypeForm[P]) -> dict[str, P]:
         """Return the built components satisfying *protocol*, by name."""
         return satisfying(self._built_components, protocol)
 

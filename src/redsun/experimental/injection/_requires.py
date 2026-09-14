@@ -156,7 +156,7 @@ class Question:
         return f"{self.kind} {self.protocol.__name__!r}"
 
 
-def satisfying(components: Mapping[str, Any], protocol: type) -> dict[str, Any]:
+def satisfying(components: Mapping[str, object], protocol: TypeForm[P]) -> dict[str, P]:
     """Return the components of *components* that satisfy *protocol*, by name."""
     return {
         name: component

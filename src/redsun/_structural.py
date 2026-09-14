@@ -9,14 +9,18 @@ from __future__ import annotations
 import inspect
 from functools import cache
 from itertools import product
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 from typing_extensions import get_protocol_members
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from typing_extensions import TypeForm, TypeIs
+
 __all__ = ["members", "methods", "problems", "satisfies"]
+
+P = TypeVar("P")
 
 _PROBE = object()
 _MISSING = object()
@@ -41,9 +45,18 @@ def methods(protocol: type) -> frozenset[str]:
     )
 
 
-def satisfies(candidate: type | object, protocol: type) -> bool:
-    """Whether *candidate* satisfies *protocol*."""
-    return not problems(candidate, protocol)
+@overload
+def satisfies(candidate: type, protocol: TypeForm[P]) -> bool: ...
+@overload
+def satisfies(candidate: object, protocol: TypeForm[P]) -> TypeIs[P]: ...
+def satisfies(candidate: object, protocol: object) -> bool:
+    """Whether *candidate* satisfies *protocol*.
+
+    An instance that does is narrowed to *protocol* for a type checker; a class
+    is not, since it is not an instance of the protocol it satisfies.
+    """
+    # a protocol is a class at runtime, which is what `problems` inspects
+    return not problems(candidate, cast("type", protocol))
 
 
 def problems(candidate: type | object, protocol: type) -> list[str]:

@@ -529,6 +529,11 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
+- `Session.satisfying` and `satisfying` are typed by the protocol they are
+  given: `session.satisfying(Resettable)` is a `dict[str, Resettable]` rather
+  than a `dict[str, Any]`. `satisfies` narrows an instance it accepts to the
+  protocol for a type checker, and leaves a class as `type`.
+
 - A device is built as `cls(name=<name>, **kwargs)` rather than
   `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
   whose first parameter is `prefix`, can be declared. A device that takes `name`
