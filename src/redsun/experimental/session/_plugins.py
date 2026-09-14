@@ -47,7 +47,8 @@ def resolve(entry: Mapping[str, Any], group: str) -> type | None:
     """
     if not META_KEYS <= entry.keys():
         return None
-    return import_class(class_path(entry["plugin_name"], entry["plugin_id"], group))
+    listed = manifest_item(entry["plugin_name"], entry["plugin_id"], group)
+    return import_class(str(listed))
 
 
 def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
@@ -100,11 +101,6 @@ def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
             f"{entry['plugin_id']!r} as {listed!r}, not a mapping"
         )
     return {**listed, **own}
-
-
-def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
-    """Look up ``module:Class`` for *plugin_id* in *plugin_name*'s manifest."""
-    return str(manifest_item(plugin_name, plugin_id, group))
 
 
 def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
