@@ -224,7 +224,6 @@ class Session(BuildableSession):
         "_releases",
         "_report",
         "_services",
-        "_services_started",
         "_session_config",
         "_settings",
         "_shared",
@@ -278,7 +277,6 @@ class Session(BuildableSession):
         self._declarations: dict[str, Declaration] = {}
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
-        self._services_started = False
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
@@ -726,8 +724,6 @@ class Session(BuildableSession):
         self._is_built = False
         self.disconnect_all()
         self._releases.close()
-        self._failed_services.clear()
-        self._services_started = False
         self._callbacks.clear()
         self._not_set_up.clear()
         self._built_components.clear()
@@ -1533,16 +1529,14 @@ class Session(BuildableSession):
     def start_services(self) -> None:
         """Start every service the session launches, and attach to the rest.
 
-        `build` runs this first, unless it already ran. A service that does not
-        start is logged, and every device naming it is skipped. Stopping a
-        started service is registered as a release, so `shutdown` stops the
-        services after every component is released, the last started first,
-        and then closes the process's Channel Access channels, so a session
-        built again connects afresh.
+        `build` runs this first. A service that does not start is logged, and
+        every device naming it is skipped. Stopping a started service is
+        registered as a release, so `shutdown` stops the services after every
+        component is released, the last started first, and then closes the
+        process's Channel Access channels, so a session built again connects
+        afresh.
         """
-        if self._services_started:
-            return
-        self._services_started = True
+        self._failed_services = {}
         if not self._services:
             return
         self.on_release(lambda: run_coro(close_channel_access()))
