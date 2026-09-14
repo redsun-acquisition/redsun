@@ -3,7 +3,6 @@
 ## API reference
 
 - **[Container](api/container.md)** - `AppContainer`, `AppConfig`, component field functions
-- **[Device](api/device.md)** - `HasAsyncShutdown`; device primitives come from `ophyd_async.core`
 - **[Engine](api/engine.md)** - `RunEngine`, `Status`, actions, plan stubs
 - **[Presenter](api/presenter.md)** - `Presenter`, `PPresenter`, plan spec, built-ins
 - **[Storage](api/storage.md)** - `BaseStorage`, `FrameSink`, `StreamSpec`, backend protocols, `SessionPathProvider`, storage registry

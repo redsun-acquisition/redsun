@@ -4,14 +4,13 @@ Components do not connect themselves. A presenter declares signals, a view
 declares signals and connectable methods, and the **application** says which
 signal reaches which method.
 
-An application is declared in one of two ways, and every connection below is
-shown in both. Picking a tab switches every other tab on this page, and on any
-other page of this documentation, to the same form.
+An application is declared in one of two ways, and each connection below is
+shown in both. Picking a tab switches every tab on the site to the same form.
 
 === "Container class"
 
-    A container subclass declares its components as fields and its connections
-    by overriding [`wire`][redsun.containers.container.AppContainer.wire].
+    A container subclass declares components as fields and connections by
+    overriding [`wire`][redsun.containers.container.AppContainer.wire].
 
 === "Configuration file"
 
@@ -20,9 +19,8 @@ other page of this documentation, to the same form.
 
 ## Mark a method as connectable
 
-Decorate it with [`slot`][redsun.virtual.slot]. Only a marked method can be
-connected, so marking one makes it public API: its name and its signature are
-what other components are connected against.
+Decorate it with [`slot`][redsun.virtual.slot]. Only marked methods can be
+connected, so marking one makes its name and signature public API.
 
 ```python
 from redsun.view import View
@@ -43,20 +41,20 @@ Name a slot as you would any public method. `slot` accepts two options:
     def update_layers(self, readings: dict[str, Reading[Any]]) -> None: ...
 ```
 
-- `name` is the port name used in a configuration file. It defaults to the
-  method name without leading underscores, and exists so the method can be
-  renamed without breaking a configuration.
-- `thread` overrides the thread the slot is delivered on.
+- `name` is the port name in a configuration file. It defaults to the method
+  name without leading underscores, and lets the method be renamed without
+  breaking a configuration.
+- `thread` overrides the thread the slot runs on.
 
-Signals need no marker. Every public [`Signal`][psygnal.Signal] attribute is
-already a port.
+Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
+port.
 
 ## Declare the connections
 
 === "Container class"
 
-    Every component is built by the time `wire` runs, and reads back as the
-    attribute it was declared under:
+    Every component is built when `wire` runs, available as the attribute it
+    was declared under:
 
     ```python
     class MyApp(QtAppContainer, config="session.yaml"):
@@ -69,15 +67,14 @@ already a port.
             self.connect(self.det_widget.sig_property_changed, self.det_ctrl.configure)
     ```
 
-    Each attribute is typed as the class it was declared with, so a type checker
-    reads `self.det_ctrl.sig_new_data` as the signal it is. A renamed or
-    misspelled port is an error before the application runs; if it reaches the
-    build anyway, it is an `AttributeError` on the line that names it.
+    Each attribute has the type it was declared with, so a type checker sees
+    `self.det_ctrl.sig_new_data` as a signal. A renamed or misspelled port is a
+    type error before the application runs, and an `AttributeError` on its line
+    if it reaches the build.
 
-    A component that failed to build is the one case `connect` does not raise
-    on. It returns `None`, logs the link it did not make, and the connections
-    around it are still made, so one panel refusing to construct does not cost
-    the session its other wiring.
+    `connect` does not raise for a component that failed to build. It returns
+    `None` and logs the skipped link, and the other connections are made, so
+    one broken panel does not break the rest of the wiring.
 
 === "Configuration file"
 
@@ -108,19 +105,18 @@ already a port.
         to: det_ctrl.configure
     ```
 
-    The component name is the key it was declared under. A signal port is the
-    signal's attribute name; a slot port is the name the slot declares.
+    The component name is its declared key. A signal port is the signal's
+    attribute name; a slot port is the name the slot declares.
 
-Fan-in is another line, not another concept: a second producer of frames reaches
-the same viewer by adding one connection.
+Fan-in is one more line: a second frame producer reaches the same viewer with
+one more connection.
 
-Both forms end in the same call, so a container may use both. `wire` runs first,
-then the `wiring` section of its configuration file.
+Both forms make the same call, so a container may use both: `wire` runs first,
+then the `wiring` section.
 
 ## Connect a coroutine
 
-An `async def` method is a slot like any other. Mark it and connect it; nothing
-else changes.
+An `async def` method is a slot like any other: mark it and connect it.
 
 ```python
 class MotorPresenter(Presenter):
@@ -144,17 +140,15 @@ class MotorPresenter(Presenter):
         to: motor_ctrl.move
     ```
 
-Dispatch differs from a plain method in three ways:
+It is delivered differently from a plain method:
 
-- the coroutine runs on redsun's shared event loop, not on the thread that
-  emitted;
-- the emitter does not wait for it. The emission returns as soon as the
-  coroutine is scheduled;
-- an exception inside it is logged on the `redsun` logger instead of
-  propagating back to the emitter, and later emissions keep being delivered.
+- the coroutine runs on `redsun`'s shared event loop, not on the emitting
+  thread;
+- the emitter does not wait: emitting returns once the coroutine is scheduled;
+- an exception inside it is logged on the `redsun` logger instead of reaching
+  the emitter, and later emissions are still delivered.
 
-If the last two matter, keep a sync method that owns the call and connect that
-instead:
+If the last two matter, connect a sync method that makes the call:
 
 ```python
     @slot
@@ -164,16 +158,16 @@ instead:
 
 !!! warning
 
-    The async backend must be installed before the wiring phase, or psygnal
-    rejects the coroutine at connect. `QtAppContainer.build` calls
-    [`set_async_backend`][redsun.aio.set_async_backend] for you; a plain
-    `AppContainer` does not, so call it yourself before `build`.
+    Install the async backend before wiring, or `psygnal` rejects the coroutine
+    on connect. `QtAppContainer.build` calls
+    [`set_async_backend`][redsun.aio.set_async_backend]; a plain `AppContainer`
+    does not, so call it before `build`.
 
 ## Address a signal group
 
-A component whose signals live in a [`SignalGroup`][psygnal.SignalGroup]
-exposes each **member** as a port, under the member name. The group attribute
-itself is not a port.
+A component whose signals are in a [`SignalGroup`][psygnal.SignalGroup] exposes
+each **member** as a port under its member name. The group attribute is not a
+port.
 
 ```python
 class FrameSignals(SignalGroup, strict=True):
@@ -199,8 +193,7 @@ class MedianPresenter(Presenter):
 
 === "Configuration file"
 
-    The port path is flat: the member name follows the component name, with no
-    group in between.
+    The port path is flat: component name, then member name, no group.
 
     ```yaml
     wiring:
@@ -214,16 +207,16 @@ class MedianPresenter(Presenter):
 
     Pass `instance=self` when building the group. Without it the container
     cannot tell which component owns the signal, and the wiring report names
-    the group instead of the component.
+    the group instead.
 
-Group members and plain signals share one port namespace, so a member named
-after an existing public signal on the same class raises
+Group members and plain signals share one port namespace, so a member with the
+name of a public signal on the same class raises
 [`WiringError`][redsun.virtual.WiringError] when the ports are read.
 
 ## Choose the thread a slot runs on
 
-Thread affinity belongs to the component, not to the connection. A class
-declares it once:
+Thread affinity belongs to the component, not the connection. A class declares
+it once:
 
 ```python
 from typing import ClassVar
@@ -235,16 +228,16 @@ class MyView(View):
     __redsun_slot_thread__: ClassVar[SlotThread] = "main"
 ```
 
-Every slot on that class is then delivered on the main thread. `@slot(thread=...)`
+Every slot of that class then runs on the main thread. `@slot(thread=...)`
 overrides it for one method, and `connect(..., thread=...)` overrides both.
 
-`QtView` already declares `"main"`, so a Qt widget's slots need nothing.
+`QtView` already declares `"main"`, so Qt widget slots need nothing.
 
 ## Observe a device signal
 
-Device signals are ophyd-async, not psygnal, so `connect` does not take them.
-[`subscribe`][redsun.virtual.VirtualContainer.subscribe] does, and gives the
-same guarantees:
+Device signals come from `ophyd-async`, not `psygnal`, so `connect` does not
+accept them. [`subscribe`][redsun.virtual.VirtualContainer.subscribe] does, with
+the same guarantees:
 
 ```python
 class StorageView(QtView):
@@ -261,15 +254,15 @@ class MyApp(QtAppContainer):
         )
 ```
 
-The slot still has to be marked, the thread affinity still comes from the
-component, and the subscription is released at shutdown. That last one matters
-more here than for signals: ophyd-async releases a subscription by identity, so
-whoever subscribed has to keep the exact callback object to undo it.
+The slot must be marked, the thread affinity comes from the component, and the
+subscription is released at shutdown. That matters more than for signals:
+`ophyd-async` releases a subscription by identity, so the subscriber must keep
+the exact callback object to undo it.
 
 !!! note
 
-    ophyd-async needs a running event loop to subscribe, and `wire` runs on the
-    main thread. `subscribe` handles that for you.
+    `ophyd-async` needs a running event loop to subscribe, and `wire` runs on the
+    main thread; `subscribe` handles this.
 
 ## Inspect what is connected
 
@@ -288,8 +281,7 @@ base_dir ~> storage_widget.update_base_dir  [thread=main]
 
 `->` is a signal connection, `~>` a device subscription.
 
-[`ports`][redsun.virtual.ports] answers the other half, what a component
-offers:
+[`ports`][redsun.virtual.ports] lists what a component offers:
 
 ```python
 >>> ports(view).slots
@@ -300,9 +292,9 @@ Both are recorded, so `AppContainer.shutdown` releases them.
 
 ## Find what is *not* connected
 
-A wrong port name fails at build. A connection you forgot to write fails
-nowhere: a signal simply emits into nothing. `unconnected` is what finds it,
-by subtracting the recorded links from what every built component offers.
+A wrong port name fails at build. A forgotten connection fails nowhere: the
+signal emits to nothing. `unconnected` finds it by subtracting the recorded
+links from what every built component offers.
 
 ```python
 report = app.virtual_container.unconnected
@@ -315,22 +307,22 @@ det_ctrl.sig_error -> nothing
 nothing -> img_widget.clear
 ```
 
-It is a plain [`Unconnected`][redsun.virtual.Unconnected] record, so a script
-can assert on it instead of reading it:
+It is an [`Unconnected`][redsun.virtual.Unconnected] record, so a script can
+assert on it:
 
 ```python
 assert not app.virtual_container.unconnected.slots
 ```
 
-Not every entry is a defect. A component may legitimately offer more than one
-application uses; the report says what is unused, not what is wrong.
+An entry is not always a mistake: a component may offer more than an
+application uses. The report lists what is unused, not what is wrong.
 
 ## Read a failure
 
-Every way of getting a connection wrong fails at build, naming both ends. The
-exception is a connection whose component failed to build, in `wire` or in the
-configuration file: that one is logged at `WARNING` and skipped, and the
-connections around it are still made.
+A wrong connection fails at build, naming both ends. The exception is a
+connection to a component that failed to build, in `wire` or the configuration
+file: it is logged at `WARNING` and skipped, and the other connections are
+made.
 
 ```
 Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
@@ -342,7 +334,7 @@ Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
     |---|---|
     | `AttributeError: 'DetectorPresenter' object has no attribute 'sig_typo'` | the signal was renamed or misspelled |
     | `... is not connectable; mark it with the 'slot' decorator` | the method exists but has no `@slot` |
-    | `cannot connect a.sig -> b.port: Cannot connect slot ...` | psygnal rejected the signature: wrong argument count, or wrong type against a signal that names one |
+    | `cannot connect a.sig -> b.port: Cannot connect slot ...` | `psygnal` rejected the signature: wrong argument count, or wrong type against a signal that names one |
 
 === "Configuration file"
 
@@ -353,4 +345,4 @@ Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
     | `'a' exposes no slot named 'port'. Its slot ports: ...` | the port name is wrong, or the method was never marked |
     | `'a.b.c' is not a port path; expected 'component.port'` | malformed path |
     | `wiring entry 0 must be a mapping with exactly the keys 'from' and 'to'` | a rule is missing a key or carries an extra one |
-    | `cannot connect a.sig -> b.port: Cannot connect slot ...` | psygnal rejected the signature |
+    | `cannot connect a.sig -> b.port: Cannot connect slot ...` | `psygnal` rejected the signature |

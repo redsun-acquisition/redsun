@@ -1,10 +1,10 @@
 # Component system
 
-`redsun` component system allows third-party packages to provide devices, presenters, and views that are dynamically discovered and loaded at runtime.
+`redsun`'s component system lets other packages provide devices, presenters and views, discovered and loaded at runtime.
 
 ## Overview
 
-From Python point of view, components are standard Python packages that register themselves via [entry points]. When `redsun` builds an application from a YAML configuration file, it uses these entry points to discover available plugins and load the requested components.
+Components ship in ordinary Python packages that register through [entry points]. Building an application from a YAML configuration file, `redsun` reads those entry points to find the installed plugins and load the components the file asks for.
 
 ```mermaid
 graph TB
@@ -18,19 +18,19 @@ graph TB
 ## Plugin discovery
 
 When [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config]
-is called with a configuration file, Redsun:
+is called with a configuration file, `redsun`:
 
-1. **Reads the configuration** - parses the YAML file to determine which devices, presenters, and views are needed.
-2. **Queries entry points** - looks up installed packages registered under the `redsun.plugins` entry point group.
-3. **Loads manifests** - each plugin provides a YAML manifest file that maps plugin IDs to their Python class locations.
-4. **Validates components** - devices are checked at discovery (must subclass `ophyd_async.core.Device`); presenter and view instances are validated against [`PPresenter`][redsun.presenter.PPresenter] / [`PView`][redsun.view.PView] when the container builds (see [Protocol validation](#protocol-validation)).
-5. **Creates the container** - a dynamic container class is assembled with the discovered components.
+1. **Reads the configuration** to learn which devices, presenters and views are needed.
+2. **Queries entry points** for installed packages in the `redsun.plugins` group.
+3. **Loads manifests**: each plugin's YAML manifest maps plugin IDs to Python classes.
+4. **Validates components**: a device class must subclass `ophyd_async.core.Device`; presenter and view instances are checked against [`PPresenter`][redsun.presenter.PPresenter] / [`PView`][redsun.view.PView] when the container builds (see [Protocol validation](#protocol-validation)).
+5. **Creates the container** class from the discovered components.
 
 ## Component manifest
 
-Each component package must include a YAML manifest file named `redsun.yaml` that declares the available components. 
+A component package includes a YAML manifest, `redsun.yaml`, declaring its components.
 
-Each entry maps a plugin ID directly to its `"module:ClassName"` class path:
+Each entry maps a plugin ID to a `"module:ClassName"` class path:
 
 ```yaml
 # redsun.yaml
@@ -45,7 +45,7 @@ views:
   my_ui: "my_plugin.views:MyView"
 ```
 
-The manifest must be registered as a [Python entry point] in the package `pyproject.toml`:
+Register the manifest as a [Python entry point] in the package's `pyproject.toml`:
 
 ```toml
 [project.entry-points."redsun.plugins"]
@@ -54,13 +54,13 @@ my-plugin = "redsun.yaml"
 
 !!! tip
 
-    This is inspired by the [napari manifest](https://napari.org/stable/plugins/technical_references/manifest.html).
+    The design follows the [napari manifest](https://napari.org/stable/plugins/technical_references/manifest.html).
 
-    Make sure that depending on the packaging system you use, the `redsun.yaml` is included in the built package otherwise your components will not be discoverable.
+    Check that your packaging tool includes `redsun.yaml` in the built package, or the components cannot be discovered.
 
 ## Configuration file format
 
-The application configuration file references plugins by name and ID. A full example follows:
+An application configuration file names plugins by name and ID:
 
 ```yaml
 schema_version: 1.0
@@ -90,50 +90,43 @@ views:
     plugin_id: my_ui
 ```
 
-The top-level keys represent application level information:
+The top-level keys describe the application:
 
-- `schema_version` is the version value of the component system, kept for future compatibility;
-- `name` identifies the session, and names the application its commands and
+- `schema_version` is the component system's version, kept for compatibility;
+- `name` identifies the session and names the application its commands and
   menus are registered on. It defaults to the container class's own name;
-- `frontend` is the UI toolkit used to load the correct subclass of `AppContainer`;
-- `metadata` are application-level metadata to add contextual informations.
+- `frontend` is the UI toolkit, which picks the `AppContainer` subclass;
+- `metadata` holds application-level context.
 
-The `plugin_name` and `plugin_id` keys are used for plugin resolution and are not passed to the component constructors. All other keys become keyword arguments for the component.
+`plugin_name` and `plugin_id` resolve the plugin and are not passed to the constructor. Every other key becomes a keyword argument of the component.
 
 ## Protocol validation
 
-Validation happens at two different moments, matching where the required
-information actually exists:
+Each check runs where its information exists:
 
-- **Devices** are checked at discovery time: the loaded class must subclass
-  `ophyd_async.core.Device`. This is a sound class-level check because the
-  device layer is nominal.
-- **Presenters and views** pass a **dual gate**, each part checked where
-  the information exists:
-    1. *Constructor signature (class level, at discovery)* - the leading
-       positional parameters must be exactly `(name, devices)` for
-       presenters and `(name,)` for views; further parameters must be
-       keyword-assignable (the container calls
-       `cls(*positionals, **config_kwargs)` and has no control over the
-       keywords). Plugins failing this gate are rejected before
-       instantiation.
-    2. *Protocol compliance (instance level, at build)* - the constructed
-       instance must satisfy [`PPresenter`][redsun.presenter.PPresenter]
-       (exposing `name` and `devices`) or [`PView`][redsun.view.PView]
-       (exposing `name` and `view_position`) structurally. Attributes
-       assigned in `__init__` are only visible here; a non-compliant
-       instance raises a `TypeError` naming the missing members.
+- **Devices** are checked at discovery: the class must subclass
+  `ophyd_async.core.Device`. A class check is enough, because devices conform
+  by inheritance.
+- **Presenters and views** are checked twice:
+    1. *Constructor signature, at discovery.* The leading positional parameters
+       must be exactly `(name, devices)` for presenters and `(name,)` for
+       views, and any further parameter must accept a keyword: the container
+       calls `cls(*positionals, **config_kwargs)`. A plugin failing this is
+       rejected before it is instantiated.
+    2. *Protocol, at build.* The instance must satisfy
+       [`PPresenter`][redsun.presenter.PPresenter] (`name` and `devices`) or
+       [`PView`][redsun.view.PView] (`name` and `view_position`) by shape.
+       Attributes assigned in `__init__` exist only now; an instance that does
+       not conform raises a `TypeError` naming the missing members.
 
-Inheriting the [`Presenter`][redsun.presenter.Presenter] /
-[`View`][redsun.view.View] ABCs is optional - compliance is purely
-structural (see
+Inheriting the [`Presenter`][redsun.presenter.Presenter] or
+[`View`][redsun.view.View] ABC is optional, since conformance is by shape (see
 [ADR 0003](decisions/0003-structural-subtyping-for-presenters-and-views.md)).
 
 ## Built-in components
 
-redsun itself ships a plugin manifest under the `redsun` entry point, so
-built-in components resolve through the same discovery path as external
-plugins - no special-casing in configuration files:
+`redsun` ships its own manifest under the `redsun` entry point, so a
+configuration file names built-in components the same way as any plugin's:
 
 ```yaml
 presenters:
@@ -153,21 +146,23 @@ views:
 A manifest entry is imported only when a configuration names it, so a headless
 installation never imports the Qt views.
 
-The available built-ins are documented in
+The built-ins are described in
 [Presenters](architecture/presenters.md#built-in-presenters), and the `logs`
 view in [Configure logging](../how-to/configure-logging.md#show-the-logs-in-the-application).
 
 ## Inline vs. config-based registration
 
-The plugin system is used when building from configuration files via
+Plugin discovery only runs when building from a configuration file with
 [`AppContainer.from_config()`][redsun.containers.container.AppContainer.from_config].
-When using the declarative class-based approach (defining a container subclass with
-[`declare_device()`][redsun.containers.components.declare_device], [`declare_presenter()`][redsun.containers.components.declare_presenter] or [`declare_view()`][redsun.containers.components.declare_view] field functions), component classes are
-passed directly as the first argument to the respective function and do not go through plugin discovery. Build-time protocol validation applies identically to both paths.
+A container subclass declared with
+[`declare_device()`][redsun.containers.components.declare_device],
+[`declare_presenter()`][redsun.containers.components.declare_presenter] or
+[`declare_view()`][redsun.containers.components.declare_view] passes the
+classes directly and skips discovery. The build checks both the same way.
 
-Both approaches produce the same result: an
-[`AppContainer`][redsun.containers.container.AppContainer] with registered device,
-presenter, and view components ready to be built.
+Either way the result is an
+[`AppContainer`][redsun.containers.container.AppContainer] with its devices,
+presenters and views declared and ready to build.
 
 [entry points]: https://packaging.python.org/en/latest/specifications/entry-points/
 [python entry point]: https://packaging.python.org/en/latest/specifications/entry-points/

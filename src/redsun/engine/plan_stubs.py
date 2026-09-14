@@ -1,10 +1,8 @@
-"""Custom Bluesky plan stubs for redsun plans.
+"""Plan stubs adding action flow control to `bluesky.plan_stubs`.
 
-These stubs extend the standard `bluesky.plan_stubs` with redsun-specific
-action-based flow control (`wait_for_actions`, `read_while_waiting`).
-
-All functions are generator functions that yield `Msg` objects and are
-intended to be composed inside larger Bluesky plans via ``yield from``.
+`wait_for_actions` and `read_while_waiting` wait on user actions. Every stub is
+a generator yielding `Msg` objects, used inside larger plans with
+``yield from``.
 """
 
 from __future__ import annotations
@@ -38,19 +36,18 @@ def wait_for_actions(
 ) -> MsgGenerator[tuple[str, SRLatch]]:
     """Wait for any of the given latches to change state.
 
-    Loops at *timeout* intervals until a latch transitions, then returns
-    the name and latch that fired. Plan execution yields control on each
-    iteration so background tasks continue running normally.
+    Polls every *timeout* seconds until a latch changes, then returns its name
+    and latch. The plan yields control on each poll, so background tasks keep
+    running.
 
     Parameters
     ----------
     events : Mapping[str, SRLatch]
         Mapping of action names to their `SRLatch` objects.
     timeout : float, optional
-        Polling interval in seconds. Default is 1/60 s (60 Hz).
+        Polling interval in seconds, 1/60 s by default.
     wait_for : Literal["set", "reset"], optional
         Whether to wait for a latch to be set or reset.
-        Default is `"set"`.
 
     Returns
     -------

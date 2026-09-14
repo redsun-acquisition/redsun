@@ -6,12 +6,13 @@ __all__ = ["AppConfig"]
 
 
 class AppConfig(RedSunConfig, total=False):
-    """Extended configuration for Redsun application containers.
+    """Configuration of an application container.
 
-    Extends [`RedSunConfig`][redsun.virtual.RedSunConfig] with component sections
-    used by the application layer. These are **not** propagated to components.
+    [`RedSunConfig`][redsun.virtual.RedSunConfig] plus the component sections,
+    which the container reads and does not pass to components.
     """
 
+    services: NotRequired[dict[str, Any]]
     devices: NotRequired[dict[str, Any]]
     presenters: NotRequired[dict[str, Any]]
     views: NotRequired[dict[str, Any]]

@@ -1,4 +1,4 @@
-"""General-purpose utilities for redsun.
+"""General-purpose utilities.
 
 Exposes:
 - `find_signals` - locate named signals in a `VirtualContainer`.
@@ -28,9 +28,9 @@ def find_signals(
     """Find signals in a `VirtualContainer` by name, optionally scoped to an owner.
 
     The registry is keyed by owner first (``container.signals[owner][signal]``),
-    since components may expose signals of the same name. Pass *owner* to scope
-    the lookup to one component; omit it and every cache is searched, first
-    match per name winning. Names not found are omitted rather than raising.
+    since components may share signal names. *owner* limits the search to one
+    component; without it every owner is searched and the first match per name
+    wins. Names not found are left out.
 
     Parameters
     ----------
@@ -39,14 +39,13 @@ def find_signals(
     signal_names : Iterable[str]
         Signal names to look up (e.g. ``["sig_motor_move", "sig_config_changed"]``).
     owner : str | None
-        Registry key of the owning component (its ``name``, or the alias
-        used at registration). If ``None``, every cache is searched.
+        Registry key of the owning component: its ``name``, or the alias
+        given at registration. ``None`` searches every owner.
 
     Returns
     -------
     dict[str, SignalInstance]
-        Mapping of signal name to signal instance for each name found.
-        Names that are not found are omitted.
+        Signal instance by name, for each name found.
     """
     result: dict[str, SignalInstance] = {}
     remaining = set(signal_names)

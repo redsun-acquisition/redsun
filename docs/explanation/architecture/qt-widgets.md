@@ -1,12 +1,12 @@
 # Qt widgets
 
-`redsun.view.qt` provides reusable Qt widgets for building plan-driven UIs.
+`redsun.view.qt` provides Qt widgets for interfaces that run plans.
 
 ---
 
 ## Plan widgets
 
-`create_plan_widget` builds a complete parameter form for a `PlanSpec`:
+`create_plan_widget` builds a parameter form for a `PlanSpec`:
 
 ```python
 from redsun.view.qt.utils import create_plan_widget
@@ -22,12 +22,12 @@ widget = create_plan_widget(
 stack.addWidget(widget.group_box)
 ```
 
-The returned `PlanWidget` is a frozen dataclass that owns the full widget tree:
+It returns a `PlanWidget`, a frozen dataclass owning the widget tree:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `group_box` | `QWidget` | top-level page for a `QStackedWidget` |
-| `container` | `mgw.Container` | magicgui parameter form |
+| `container` | `mgw.Container` | `magicgui` parameter form |
 | `run_button` | `QPushButton` | run / stop button |
 | `pause_button` | `QPushButton \| None` | pause / resume (pausable plans only) |
 | `actions_group` | `QGroupBox \| None` | action buttons (if any) |
@@ -36,7 +36,7 @@ The returned `PlanWidget` is a frozen dataclass that owns the full widget tree:
 
 ### Runtime control
 
-The presenter drives UI state through `PlanWidget`'s methods:
+The presenter sets the widget's state through its methods:
 
 ```python
 widget.toggle(True)  # plan started  -> "Stop", enables actions
@@ -53,7 +53,7 @@ widget.enable_actions(True)  # enable action buttons independently
 args, kwargs = collect_arguments(spec, widget.parameters)
 ```
 
-`widget.parameters` returns `{name: value}` for every widget in the container.
+`widget.parameters` returns `{name: value}` for every widget in the form.
 
 ### Document callbacks
 
@@ -90,7 +90,7 @@ engine is left to the presenter.
 
 ## Parameter widget factory
 
-`create_param_widget` maps a `ParamDescription` to a magicgui widget:
+`create_param_widget` maps a `ParamDescription` to a `magicgui` widget:
 
 | Annotation | Widget |
 |-----------|--------|
@@ -99,14 +99,14 @@ engine is left to the presenter.
 | `Sequence[MyDevice]` | `Select` (multi-select) |
 | `Sequence[T]` (non-device) | `ListEdit` |
 | `Path` | `FileEdit` |
-| `int`, `float`, `str`, ... | `create_widget` (magicgui default) |
+| `int`, `float`, `str`, ... | `create_widget` (`magicgui` default) |
 
 ---
 
 ## Action buttons
 
-`ActionButton` is a `QPushButton` that carries `Action` metadata. For togglable
-actions it auto-updates its label based on the toggle state:
+`ActionButton` is a `QPushButton` carrying an `Action`. For a togglable action
+its label follows the toggle state:
 
 ```python
 from redsun.view.qt.utils import ActionButton
@@ -122,7 +122,7 @@ btn = ActionButton(action)
 ## Descriptor tree view
 
 `DescriptorTreeView` renders a device's `describe_configuration` /
-`read_configuration` output as an editable two-column property tree:
+`read_configuration` output as an editable two-column tree:
 
 ```python
 from redsun.view.qt.treeview import DescriptorTreeView
@@ -135,16 +135,16 @@ tree = DescriptorTreeView(
 tree.sig_property_changed.connect(on_property_changed)
 ```
 
-The view groups properties by their `source` field. Properties whose source
-carries a `:readonly` suffix are rendered as greyed labels.
+Properties are grouped by their `source` field. A property whose source ends
+in `:readonly` is shown as a greyed label.
 
-To push a live value update:
+Update a value:
 
 ```python
 tree.update_reading("stage-position", new_reading)
 ```
 
-To confirm or revert a pending edit:
+Confirm or revert a pending edit:
 
 ```python
 tree.confirm_change("stage-position", success=True)  # keep new value

@@ -25,11 +25,14 @@ from redsun.containers import (
     AppContainer,
     declare_device,
     declare_presenter,
+    declare_service,
     declare_view,
 )
+from redsun.services import Service
 
 
 class _App(AppContainer):
+    ioc = declare_service(module="mylab.iocs.motor", prefix="MOT:")
     motor = declare_device(MyMotor)
     mover = declare_presenter(AsyncMotorController)
     ctrl = declare_presenter(MockController, alias="controller")
@@ -38,6 +41,7 @@ class _App(AppContainer):
 
 
 def check_declared_attributes_keep_their_class(app: _App) -> None:
+    assert_type(app.ioc, Service)
     assert_type(app.motor, MyMotor)
     assert_type(app.mover, AsyncMotorController)
     assert_type(app.ctrl, MockController)
@@ -51,6 +55,7 @@ def check_alias_and_kwargs_do_not_erase_the_type(app: _App) -> None:
 
 
 def check_ports_resolve_through_the_attribute(app: _App) -> None:
+    assert_type(app.ioc.sig_exited, SignalInstance)
     assert_type(app.mover.sig_motor_moved, SignalInstance)
     assert_type(app.grouped.frames.median, SignalInstance)
 

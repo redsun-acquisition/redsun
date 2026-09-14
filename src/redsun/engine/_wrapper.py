@@ -42,131 +42,89 @@ R = TypeVar("R")
 
 
 class RunEngine(BlueskyRunEngine):
-    """The Run Engine execute messages and emits Documents.
+    """Runs plans and emits documents without blocking the calling thread.
 
-    This is a wrapper for the `bluesky.run_engine.RunEngine` class that
-    allows execution without blocking the main thread.
-    The main difference is that the ``__call__`` method
-    is executed in a separate thread,
-    and it returns a concurrent.futures.Future object
-    representing the result of the plan execution.
+    Wraps `bluesky.run_engine.RunEngine`: ``__call__`` runs the plan on a
+    separate thread and returns a concurrent.futures.Future of its result.
 
     Parameters
     ----------
     md : dict[str, Any], optional
-        The default is a standard Python dictionary, but fancier
-        objects can be used to store long-term history and persist
-        it between sessions. The standard configuration
-        instantiates a Run Engine with historydict.HistoryDict, a
-        simple interface to a sqlite file. Any object supporting
-        `__getitem__`, `__setitem__`, and `clear` will work.
+        Metadata store, a ``dict`` by default. Any object with `__getitem__`,
+        `__setitem__` and `clear` works, such as historydict.HistoryDict,
+        which persists history in a sqlite file.
 
     loop: asyncio.AbstractEventLoop, optional
-        The event loop plans run on. Defaults to redsun's shared background
-        loop, created the first time an engine or another caller needs it.
+        Event loop plans run on. Defaults to the shared background loop.
 
     preprocessors : list, optional
-        Generator functions that take in a plan (generator instance) and
-        modify its messages on the way out. Suitable examples include
-        the functions in the module ``bluesky.plans`` with names ending in
-        'wrapper'.  Functions are composed in order: the preprocessors
-        ``[f, g]`` are applied like ``f(g(plan))``.
+        Generator functions modifying a plan's messages, such as the
+        ``bluesky.plans`` functions ending in 'wrapper'. ``[f, g]`` applies as
+        ``f(g(plan))``.
 
     md_validator : Callable[dict[str, Any], None], optional
-        a function that raises and prevents starting a run if it deems
-        the metadata to be invalid or incomplete
-        Function should raise if md is invalid. What that means is
-        completely up to the user. The function's return value is
-        ignored.
+        Raises to prevent a run whose metadata it finds invalid; its return
+        value is ignored.
 
     md_normalizer : Callable[dict[str, Any], dict[str, Any]], optional
-        a function that, similar to md_validator, raises and prevents starting
-        a run if it deems the metadata to be invalid or incomplete.
-        If it succeeds, it returns the normalized/transformed version of
-        the original metadata.
-        Function should raise if md is invalid. What that means is
-        completely up to the user.
-        Expected return: normalized metadata
+        Like md_validator, raises for invalid metadata; otherwise returns the
+        normalized metadata.
 
     scan_id_source : Callable[dict[str, Any], int | Awaitable[int]], optional
-        a (possibly async) function that will be used to calculate scan_id.
-        Default is to increment scan_id by 1 each time. However you could pass
-        in a customized function to get a scan_id from any source.
-        Expected return: updated scan_id value
+        Function, possibly async, returning the next scan_id. By default
+        scan_id increments by 1.
 
     call_returns_result : bool, default True
-        A flag that controls the return value of ``__call__``.
-        If ``True``, the ``RunEngine`` will return a :class:``RunEngineResult``
-        object that contains information about the plan that was run.
-        If ``False``, the ``RunEngine`` will return a tuple of uids.
-        The potential return value is encapsulated in the returned Future object,
-        accessible via ``future.result()``.
-        Defaults to ``True``.
+        What the Future ``__call__`` returns holds: a ``RunEngineResult``
+        describing the run if ``True``, a tuple of uids if ``False``.
 
 
     Attributes
     ----------
     md
-        Direct access to the dict-like persistent storage described above
+        The metadata store described above.
 
     record_interruptions
-        False by default. Set to True to generate an extra event stream
-        that records any interruptions (pauses, suspensions).
+        False by default. True adds an event stream recording interruptions
+        (pauses, suspensions).
 
     state
         {'idle', 'running', 'paused'}
 
     suspenders
         Read-only collection of `bluesky.suspenders.SuspenderBase` objects
-        which can suspend and resume execution; see related methods.
+        that suspend and resume execution.
 
     preprocessors : list
-        Generator functions that take in a plan (generator instance) and
-        modify its messages on the way out. Suitable examples include
-        the functions in the module ``bluesky.plans`` with names ending in
-        'wrapper'.  Functions are composed in order: the preprocessors
-        ``[f, g]`` are applied like ``f(g(plan))``.
+        The preprocessors described above.
 
     msg_hook
-        Callable that receives all messages before they are processed
-        (useful for logging or other development purposes); expected
-        signature is ``f(msg)`` where ``msg`` is a ``bluesky.Msg``, a
-        kind of namedtuple; default is None.
+        ``f(msg)`` called with every ``bluesky.Msg`` before it is processed,
+        for logging or debugging. None by default.
 
     state_hook
-        Callable with signature ``f(new_state, old_state)`` that will be
-        called whenever the RunEngine's state attribute is updated; default
-        is None
+        ``f(new_state, old_state)`` called on every state change. None by
+        default.
 
     waiting_hook
-        Callable with signature ``f(status_object)`` that will be called
-        whenever the RunEngine is waiting for long-running commands
-        (trigger, set, kickoff, complete) to complete. This hook is useful to
-        incorporate a progress bar.
+        ``f(status_object)`` called while waiting for long-running commands
+        (trigger, set, kickoff, complete), for example to show progress.
 
     ignore_callback_exceptions
         Boolean, False by default.
-
-    call_returns_result
-        Boolean, False by default. If False, RunEngine will return uuid list
-        after running a plan. If True, RunEngine will return a RunEngineResult
-        object that contains the plan result, error status, and uuid list.
 
     loop : asyncio event loop
         e.g., ``asyncio.get_event_loop()`` or ``asyncio.new_event_loop()``
 
     max_depth
-        Maximum stack depth; set this to prevent users from calling the
-        RunEngine inside a function (which can result in unexpected
-        behavior and breaks introspection tools). Default is None.
-        For built-in Python interpreter, set to 2. For IPython, set to 11
-        (tested on IPython 5.1.0; other versions may vary).
+        Maximum stack depth, preventing calls to the RunEngine from inside a
+        function, which breaks introspection. None by default; 2 suits the
+        Python interpreter and 11 ``IPython`` (tested on 5.1.0).
 
     pause_msg : str
-        The message printed when a run is interrupted. This message
-        includes instructions of changing the state of the RunEngine.
-        It is set to ``bluesky.run_engine.PAUSE_MSG`` by default and
-        can be modified based on needs.
+        Message printed when a run is interrupted, with instructions for
+        changing the RunEngine's state. ``bluesky.run_engine.PAUSE_MSG`` by
+        default.
 
     commands:
         The list of commands available to Msg.
@@ -216,19 +174,15 @@ class RunEngine(BlueskyRunEngine):
     ) -> Future[RunEngineResult | tuple[str, ...]]:
         """Execute a plan.
 
-        Any keyword arguments will be interpreted as metadata and recorded with
-        any run(s) created by executing the plan. Notice that the plan
-        (required) and extra subscriptions (optional) must be given as
-        positional arguments.
+        Keyword arguments are metadata recorded with every run the plan
+        creates. The plan and optional subscriptions are positional.
 
         Parameters
         ----------
         plan : typing.Iterable[`bluesky.utils.Msg`]
-            A generator or that yields ``Msg`` objects (or an iterable that
-            returns such a generator).
+            A generator yielding ``Msg`` objects, or an iterable returning one.
         subs : `bluesky.utils.Subscribers`, optional (positional only)
-            Temporary subscriptions (a.k.a. callbacks) to be used on this run.
-            For convenience, any of the following are accepted:
+            Callbacks subscribed for this run only, given as:
 
             * a callable, which will be subscribed to 'all'
             * a list of callables, which again will be subscribed to 'all'
@@ -239,9 +193,7 @@ class RunEngine(BlueskyRunEngine):
         Returns
         -------
         Future[RunEngineResult | tuple[str, ...]]
-            Future object representing the result of the plan execution.
-
-        The result contained in the future is either:
+            Future of the plan's result, which is either:
         uids : tuple
             list of uids (i.e. RunStart Document uids) of run(s)
             if :attr:`RunEngine._call_returns_result` is ``False``
@@ -251,18 +203,15 @@ class RunEngine(BlueskyRunEngine):
         return self._run_in_thread(partial(super().__call__, plan, subs, **metadata_kw))
 
     def resume(self) -> Future[RunEngineResult | tuple[str, ...]]:
-        """Resume the paused plan in a separate thread.
+        """Resume the paused plan on a separate thread.
 
-        If the plan has been paused, the initial
-        future returned by ``__call__`` will be set as completed.
-
-        With this method, the plan is resumed in a separate thread,
-        and a new future is returned.
+        Pausing completes the future ``__call__`` returned, so this returns a
+        new one.
 
         Returns
         -------
         ``Future[RunEngineResult | tuple[str, ...]]``
-            Future object representing the result of the resumed plan.
+            Future of the resumed plan's result.
         """
         return self._run_in_thread(super().resume)
 
@@ -282,23 +231,20 @@ class RunEngine(BlueskyRunEngine):
         return future
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
-        """Instruct the run engine to wait for any of the given latches to be set or reset.
+        """Wait for any of the given latches to be set or reset.
 
         Parameters
         ----------
         msg: Msg
-            The message containing the latches to wait for.
-            Packs a map of SRLatch in `msg.args` and a timeout in `msg.kwargs`.
-
-            Expected message format:
+            Carries a map of SRLatch in `msg.args` and a timeout in
+            `msg.kwargs`:
 
             Msg("wait_for_actions", None, latches, timeout=timeout, wait_for="set")
 
         Returns
         -------
         tuple[str, SRLatch] | None
-            A tuple containing the name and the latch that was set/reset to unblock the plan;
-            None if timeout occurred before any latch changed state.
+            Name and latch that changed; None if the timeout expired first.
         """
         latch_map: Mapping[str, SRLatch] = msg.args[0]
         timeout: float | None = msg.kwargs.get("timeout", None)
@@ -338,16 +284,14 @@ def register_bound_command(
 ) -> None:
     """Register a custom command in the given run engine.
 
-    In contrast to `RunEngine.register_command`, this function
-    binds the command to the given run engine instance.
+    Unlike `RunEngine.register_command`, binds the command to *engine*.
 
     Parameters
     ----------
     engine: RunEngine
         The run engine to register the command in.
     command: Callable[[RunEngine, Msg], Any]
-        The command function to register.
-        The function must accept a `RunEngine` instance and a `Msg` object as input.
+        The command, taking a `RunEngine` and a `Msg`.
     """
     bound_command = partial(command, engine)
     command_name = command.__name__

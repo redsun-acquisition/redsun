@@ -33,7 +33,9 @@ __all__ = [
     "refuse_identity_conflict",
 ]
 
-COMPONENT_SECTIONS: frozenset[str] = frozenset({"devices", "presenters", "views"})
+COMPONENT_SECTIONS: frozenset[str] = frozenset(
+    {"services", "devices", "presenters", "views"}
+)
 """The configuration sections whose entries are a component's constructor call."""
 
 IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
@@ -99,11 +101,12 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
     mappings, which merge in turn. Anything that is not a mapping - a list, a
     scalar - is replaced rather than combined.
 
-    A component entry is the exception: under ``devices``, ``presenters`` and
-    ``views`` the section merges by component name, but a component *named* in
-    *overlay* is taken from it whole. Those entries are the keyword arguments
-    of a constructor call rather than a tree of settings, so one source owns
-    one component's arguments and a reader stops at the last source naming it.
+    A component entry is the exception: under ``services``, ``devices``,
+    ``presenters`` and ``views`` the section merges by component name, but a
+    component *named* in *overlay* is taken from it whole. Those entries are
+    the keyword arguments of a constructor call rather than a tree of settings,
+    so one source owns one component's arguments and a reader stops at the
+    last source naming it.
     """
     merged = dict(base)
     for key, value in overlay.items():

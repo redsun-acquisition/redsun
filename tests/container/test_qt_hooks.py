@@ -137,8 +137,10 @@ class TestQtBuildSpan:
         assert span.entries == 1
         assert mock_hooks.open_spans == []
         assert span.steps == [
+            "services",
             "virtual container",
             "devices",
+            "connect",
             "presenters",
             "views",
             "providers",

@@ -14,12 +14,11 @@ Design rationale:
 
 !!! warning "Not part of the public API"
 
-    The symbols below are wired up by the application container at startup and
-    torn down on shutdown. They are documented so that the runtime's behaviour
-    is inspectable, not so that components call them: installing a second
-    backend, or building a loop alongside the shared one, breaks signal
-    dispatch for the whole process. Use [`run_coro`](#redsun.aio.run_coro) to
-    reach the shared loop.
+    The container sets these up at startup and tears them down at shutdown.
+    They are documented so the runtime can be inspected, not for components to
+    call: a second backend, or a loop beside the shared one, breaks signal
+    dispatch for the whole process. Reach the shared loop with
+    [`run_coro`](#redsun.aio.run_coro).
 
 ::: redsun.aio.get_shared_loop
 

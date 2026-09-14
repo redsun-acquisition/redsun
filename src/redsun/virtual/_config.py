@@ -6,7 +6,7 @@ __all__ = ["RedSunConfig"]
 
 
 class RedSunConfig(TypedDict, total=False):
-    """Base configuration schema for Redsun applications."""
+    """Base configuration schema of a ``redsun`` application."""
 
     schema_version: Required[float]
     """Plugin schema version."""
@@ -25,4 +25,4 @@ class RedSunConfig(TypedDict, total=False):
     """
 
     metadata: NotRequired[dict[str, Any]]
-    """Additional session-specific metadata to include in the configuration."""
+    """Session metadata."""

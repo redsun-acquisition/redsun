@@ -38,7 +38,7 @@ by component authors), replacing the previous `sigCamelCase` style.
 - Consumers that must disambiguate same-named signals pass the owner name;
   redsun-mimir's presenters and views should adopt the owner-scoped form in
   their refactor and rename their signals to `sig_snake_case` - until then,
-  mimir's `sigCamelCase` emitters will not match redsun's renamed
+  mimir's `sigCamelCase` emitters will not match `redsun`'s renamed
   `StoragePresenter` wiring.
 - The rename is breaking for any consumer that looked up the old
   `sigCamelCase` keys.

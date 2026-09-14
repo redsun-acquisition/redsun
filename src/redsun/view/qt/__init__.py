@@ -15,22 +15,20 @@ if TYPE_CHECKING:
 
 
 class QtView(QWidget):
-    """Abstract base Qt widget implementing the View protocol.
+    """Abstract Qt widget implementing the view protocol.
 
-    Every slot on a Qt view is delivered on the main thread unless the slot or
-    the connection says otherwise, since touching a widget from any other
-    thread is undefined.
+    Slots run on the main thread unless the slot or the connection says
+    otherwise, since touching a widget from another thread is undefined.
 
     Parameters
     ----------
     name : str
-        Identity key of the view. Passed as positional-only argument.
+        Identity key of the view, positional-only.
     kwargs : Any, optional
         Additional keyword arguments for view subclasses.
 
     !!! note
-        ``kwargs`` are kept for consistency but not forwarded to
-        ``QWidget.__init__``.
+        ``kwargs`` are accepted but not passed to ``QWidget.__init__``.
     """
 
     __redsun_slot_thread__: ClassVar[SlotThread] = "main"
@@ -48,7 +46,7 @@ class QtView(QWidget):
     @property
     @abstractmethod
     def view_position(self) -> ViewPosition:
-        """Position of the view component in the main view of the UI."""
+        """Position of the view in the main window."""
 
 
 View.register(QtView)  # type: ignore[type-abstract]

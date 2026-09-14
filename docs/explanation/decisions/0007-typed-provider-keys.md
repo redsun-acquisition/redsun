@@ -85,7 +85,7 @@ removed. Nothing forces an existing provider onto keys, but new providers should
 use them, and untyped attribute registration should not be added.
 
 dishka was considered as an alternative and rejected. It resolves dependencies
-by type at a composition root, which inverts this build model: redsun constructs
+by type at a composition root, which inverts this build model: `redsun` constructs
 plugin instances discovered from configuration at runtime and lets them register
 what they own. Type keys also collide with the plugin model, where two cameras
 or two presenters of one class are normal and the configuration key is the

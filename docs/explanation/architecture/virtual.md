@@ -1,16 +1,16 @@
 # Virtual container
 
-At application construction, `redsun` creates a [`VirtualContainer`][redsun.virtual.VirtualContainer], a shared resource container which provides the following things:
+When an application is constructed, `redsun` creates a [`VirtualContainer`][redsun.virtual.VirtualContainer], shared by every component. It holds:
 
-- a registration point for [`psygnal.Signals`][psygnal.Signal] declared in your component;
-- a registration point for `bluesky`-compliant callbacks to consume documents produced by a `RunEngine` during a plan execution;
-- a registration point for any other resource a component wants to share, so each component decides for itself what to expose and what to look up.
+- the [`psygnal.Signals`][psygnal.Signal] components register;
+- `bluesky` callbacks consuming the documents a `RunEngine` produces while running a plan;
+- any other object a component chooses to share, so each component decides what to expose and what to look up.
 
-Additionally it provides a view of the configuration file app-level fields, described in [`RedSunConfig`][redsun.virtual.RedSunConfig].
+It also exposes the application-level fields of the configuration file, described in [`RedSunConfig`][redsun.virtual.RedSunConfig].
 
 ## Provider components
 
-Components that may wish to inject one of the above functionalities must implement the [`IsProvider`][redsun.virtual.IsProvider] protocol, by adding the following method:
+A component sharing any of these implements the [`IsProvider`][redsun.virtual.IsProvider] protocol by adding this method:
 
 ```python
 from typing import Any
@@ -72,13 +72,13 @@ class MyComponent:
         container.my_object = providers.Object(self.my_provider)
 ```
 
-[`python-dependency-injector`](https://python-dependency-injector.ets-labs.org/index.html) offers many more provider kinds than `Object`. See its documentation for the full set.
+[`python-dependency-injector`](https://python-dependency-injector.ets-labs.org/index.html) has many more provider kinds than `Object`; see its documentation.
 
 ## Typed provider keys
 
-An object shared through the container should be identified by a key rather than
-by an attribute name. A key is a [`ProviderKey`][redsun.virtual.ProviderKey],
-declared in the package that owns the type it identifies:
+Identify a shared object by a key, not by an attribute name. A key is a
+[`ProviderKey`][redsun.virtual.ProviderKey], declared in the package owning the
+type it identifies:
 
 ```python
 import dependency_injector.providers as dip
@@ -86,7 +86,7 @@ import dependency_injector.providers as dip
 PATH_PROVIDER = dip.Dependency(instance_of=SessionPathProvider)
 ```
 
-The producer binds it, the consumer resolves it:
+The producer binds it and the consumer resolves it:
 
 ```python
 class StoragePresenter:
@@ -103,22 +103,21 @@ class StorageView:
         maybe = container.try_require(PATH_PROVIDER)
 ```
 
-Both halves are typed: `require(PATH_PROVIDER)` is a `SessionPathProvider` to a
-type checker, and `provide` rejects a wrong value both statically and through
-the key's `instance_of`.
+Both sides are typed: to a type checker `require(PATH_PROVIDER)` is a
+`SessionPathProvider`, and `provide` rejects a wrong value both statically and
+through the key's `instance_of`.
 
-A key names a binding; it does not hold one. Each container keeps its own, so
+A key names a binding but does not hold one. Each container keeps its own, so
 two applications in one process never see each other's objects.
 
 !!! note
 
-    Prefer keys for anything new. The dynamic form below still works and is not
-    removed, but it is untyped in both directions and cannot express an optional
-    collaborator.
+    Use keys for anything new. The attribute form above still works, but it is
+    untyped on both sides and cannot express an optional collaborator.
 
 ## Injected components
 
-Through the `VirtualContainer`, objects provided by other components may be retrieved by implementing the [`IsInjectable`][redsun.virtual.IsInjectable] protocol.
+A component retrieves objects other components provided by implementing the [`IsInjectable`][redsun.virtual.IsInjectable] protocol.
 
 ```python
 from redsun.virtual import VirtualContainer
@@ -142,25 +141,24 @@ class MyOtherComponent:
 
 !!! note
 
-    Dynamically registering objects via `container.my_object = providers.Object()` or any other provider
-    does not allow other components to be aware of the type hints associated with that injected object;
-    it is the responsibility of component developers to document whatever object is stored in the virtual
-    container and what type does it represent.
+    An object registered as `container.my_object = providers.Object()`, or
+    through any other provider, carries no type other components can see. Its
+    author must document what it is and what type it has.
 
 ## Wiring
 
-Signal connections are not made by the components. A component states what it
+Components do not connect their own signals. A component states what it
 offers, and the application states what is connected:
 
 - a signal is offered by declaring it, as a plain attribute or as a member of a
   [`SignalGroup`][psygnal.SignalGroup];
 - a method is offered by marking it with [`slot`][redsun.virtual.slot], which
-  makes its name and signature part of the component's public surface;
+  makes its name and signature part of the component's public API;
 - the application connects them, in
-  [`AppContainer.wire`][redsun.containers.container.AppContainer.wire] or in the `wiring`
-  section of its configuration file. Both end in
+  [`AppContainer.wire`][redsun.containers.container.AppContainer.wire] or in the
+  `wiring` section of its configuration file. Both call
   [`VirtualContainer.connect`][redsun.virtual.VirtualContainer.connect], which
-  records the link so the graph can be reported and released.
+  records the link so it can be reported and released.
 
 ```python
 from redsun.virtual import slot
@@ -194,21 +192,21 @@ class MyOtherComponent:
         to: consumer.my_slot
     ```
 
-Signature validation happens at connection time and is psygnal's: the argument
-count is always checked, and the argument types are checked as well when the
-signal names them (`Signal(FrameBatch)` rather than `Signal(object)`).
+`psygnal` validates signatures when connecting: it always checks the argument
+count, and checks argument types too when the signal names them
+(`Signal(FrameBatch)` rather than `Signal(object)`).
 
-Device signals are the one channel that is not psygnal.
-[`subscribe`][redsun.virtual.VirtualContainer.subscribe] brings them under the
-same rules: a marked slot, an affinity from the component, and a record that
-`disconnect_all` releases. It marshals the reading through a psygnal signal,
-which is what gives an ophyd-async subscription a thread affinity at all, since
-ophyd-async calls its subscribers on whatever thread produced the reading.
+Device signals are the one channel outside `psygnal`.
+[`subscribe`][redsun.virtual.VirtualContainer.subscribe] puts them under the
+same rules: a marked slot, a thread affinity from the component, and a record
+`disconnect_all` releases. It passes each reading through a `psygnal` signal,
+which is what gives an `ophyd-async` subscription a thread affinity, since
+`ophyd-async` calls subscribers on whichever thread produced the reading.
 
-The signal registry above (`register_signals` / `find_signals`) predates this
-and still works, but it matches on names alone and leaves no record of what was
-connected. New components should not use it.
+The signal registry above (`register_signals` / `find_signals`) is older and
+still works, but it matches names only and records nothing about what was
+connected. Do not use it in new components.
 
-See [wire components together](../../how-to/wire-components.md) for the full
-task, and [ADR 6](../decisions/0006-application-declared-wiring.md) for why the
-connection lives in the application.
+See [wire components together](../../how-to/wire-components.md) for the task,
+and [ADR 6](../decisions/0006-application-declared-wiring.md) for why the
+application owns the connections.

@@ -49,12 +49,12 @@ ProviderKey: TypeAlias = dip.Dependency[T]
 """A typed key identifying an object shared through the container."""
 
 CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
-"""Type alias for document callback functions."""
+"""A document callback."""
 
 __all__ = ["Connection", "ProviderKey", "Signal", "VirtualContainer"]
 
 SignalCache: TypeAlias = dict[str, SignalInstance]
-"""Cache type for storing signal instances registered from component classes."""
+"""Signal instances registered by components."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -70,8 +70,8 @@ class _FrozenConfig:
 def _owner_of(signal: SignalInstance) -> object | None:
     """Return the component a signal belongs to.
 
-    A signal declared inside a `SignalGroup` reports the group as its
-    instance, so the owning component is one level further out.
+    A signal in a `SignalGroup` reports the group as its instance, so the
+    component is one level further out.
     """
     instance: object | None = signal.instance
     if isinstance(instance, SignalGroup):
@@ -84,8 +84,7 @@ def _resolve_slot(
 ) -> tuple[object | None, SlotThread]:
     """Return the object *slot* is bound to, and the thread it is delivered on.
 
-    An explicit *thread* wins; otherwise the affinity the slot declares, then
-    the one its class declares.
+    An explicit *thread* wins, then the slot's affinity, then its class's.
 
     Raises
     ------
@@ -107,10 +106,10 @@ def _resolve_slot(
 
 
 class VirtualContainer(dic.DynamicContainer, Loggable):
-    """Data exchange and dependency injection layer.
+    """Signal bus, shared data and dependency injection of an application.
 
-    `VirtualContainer` is a [`DynamicContainer`][dependency_injector.containers.DynamicContainer]
-    that also acts as a runtime signal bus and data sharing layer for an application.
+    A [`DynamicContainer`][dependency_injector.containers.DynamicContainer] that
+    is also the application's signal bus and data exchange.
     """
 
     def __init__(self) -> None:
@@ -136,12 +135,12 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
 
     @property
     def schema_version(self) -> float:
-        """The plugin schema version specified in the configuration."""
+        """The configuration's plugin schema version."""
         return self._config().schema_version
 
     @property
     def frontend(self) -> str:
-        """The frontend toolkit identifier specified in the configuration."""
+        """The configuration's frontend toolkit."""
         return self._config().frontend
 
     @property
@@ -151,13 +150,11 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
 
     @property
     def metadata(self) -> dict[str, object]:
-        """The session metadata specified in the configuration."""
+        """The configuration's session metadata."""
         return self._config().metadata
 
     def _set_configuration(self, config: RedSunConfig) -> None:
-        """Set the application configuration.
-
-        Private for use by the application layer at build time.
+        """Set the application configuration, at build time.
 
         Parameters
         ----------
@@ -209,9 +206,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         KeyError
-            If nothing bound *key*. Providers are bound during
-            ``register_providers``, so a key read before that phase is unbound
-            even when the owning component is present.
+            If nothing bound *key*. Keys are bound in ``register_providers``,
+            so one read earlier is unbound even if its component exists.
         """
         try:
             return cast("T", self._provided[key])
@@ -233,8 +229,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Returns
         -------
         T | None
-            The bound value, or ``None`` for an optional collaborator that this
-            application does not include.
+            The bound value, or ``None`` if the application lacks this optional
+            collaborator.
         """
         return cast("T | None", self._provided.get(key))
 
@@ -292,8 +288,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         TypeError
-            If *callback* is not callable, or its signature is incompatible
-            with ``(str, Document)``.
+            If *callback* is not callable as ``(str, Document)``.
         """
         if isinstance(callback, DocumentRouter):
             return callback
@@ -341,8 +336,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         TypeError
-            If a callback is not callable or its signature is incompatible
-            with ``(str, Document)``.
+            If a callback is not callable as ``(str, Document)``.
         """
         if callback_map is not None:
             for key, callback in callback_map.items():
@@ -354,16 +348,16 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
 
     @property
     def callbacks(self) -> dict[str, CallbackType]:
-        """The currently registered document callbacks."""
+        """The registered document callbacks."""
         return self._callbacks()
 
     @property
     def signals(self) -> dict[str, SignalCache]:
-        """The currently registered signals."""
+        """The registered signals."""
         return self._signals()
 
     def _set_components(self, components: Mapping[str, object]) -> None:
-        """Record the names built components are known by, for the wiring report."""
+        """Record the built components' names, for the wiring report."""
         self._components = dict(components)
 
     def _label(self, component: object | None) -> str:
@@ -394,8 +388,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
             A bound method marked with [`slot`][redsun.virtual.slot]. May be a
             coroutine function.
         thread : SlotThread
-            Delivery thread. Defaults to the affinity the slot declares, then
-            to the one its class declares.
+            Thread the slot runs on. Defaults to the slot's affinity, then its
+            class's.
 
         Returns
         -------
@@ -405,8 +399,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         WiringError
-            If *slot* is not marked as connectable, or if psygnal rejects the
-            two signatures.
+            If *slot* is not marked, or ``psygnal`` rejects the signatures.
         """
         consumer, thread = _resolve_slot(slot, thread)
 
@@ -434,12 +427,12 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         *,
         thread: SlotThread = None,
     ) -> Subscription:
-        """Subscribe a slot to an ophyd-async device signal and record it.
+        """Subscribe a slot to an ``ophyd-async`` device signal and record it.
 
-        Delivery is marshalled through a psygnal signal, so *thread* behaves as
-        it does for `connect`. This is the only way a device signal can reach a
-        slot with a thread affinity: ophyd-async calls its subscribers on
-        whatever thread produced the reading.
+        Readings pass through a ``psygnal`` signal, so *thread* works as in
+        `connect`. It is the only way a device signal reaches a slot with a
+        thread affinity: ``ophyd-async`` calls subscribers on whichever thread
+        produced the reading.
 
         Parameters
         ----------
@@ -449,8 +442,8 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
             A bound method marked with [`slot`][redsun.virtual.slot], called
             with the reading dictionary.
         thread : SlotThread
-            Delivery thread. Defaults to the affinity the slot declares, then
-            to the one its class declares.
+            Thread the slot runs on. Defaults to the slot's affinity, then its
+            class's.
 
         Returns
         -------
@@ -460,7 +453,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         WiringError
-            If *slot* is not marked as connectable.
+            If *slot* is not marked.
         """
         consumer, thread = _resolve_slot(slot, thread)
 
@@ -498,10 +491,9 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     ) -> Connection:
         """Connect two ports addressed as ``component.port``.
 
-        The string form of `connect`, used by the ``wiring`` section of a
-        configuration file. A signal port is the signal's attribute name, or the
-        member name when it belongs to a signal group; a slot port is the name
-        the slot declares.
+        The string form of `connect`, used by a configuration file's ``wiring``
+        section. A signal port is the signal's attribute name, or its member
+        name in a signal group; a slot port is the name the slot declares.
 
         Parameters
         ----------
@@ -510,7 +502,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         target : str
             Path of the consuming slot.
         thread : SlotThread
-            Delivery thread, overriding the slot and its class.
+            Thread the slot runs on, overriding the slot and its class.
 
         Returns
         -------
@@ -520,10 +512,10 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         Raises
         ------
         WiringError
-            If either path is malformed or names a port the component does not
-            expose. The message lists what does exist.
+            If a path is malformed or names a port the component lacks; the
+            message lists the existing ones.
         ComponentNotBuilt
-            If either path names a component that is not there.
+            If a path names a component that is not there.
         """
         signal = self._resolve_port(source, "signal")
         slot = self._resolve_port(target, "slot")
@@ -565,9 +557,9 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
     def unconnected(self) -> Unconnected:
         """Ports of the built components that no connection reaches.
 
-        The complement of `connections` and `subscriptions`: what a component
-        offers and nothing uses. A forgotten connection leaves no trace
-        anywhere else, since a port that is never named cannot fail.
+        What components offer minus `connections` and `subscriptions`. A
+        forgotten connection shows nowhere else, since an unnamed port cannot
+        fail.
 
         Returns
         -------
@@ -618,5 +610,5 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._subscription_records.clear()
 
     def _clear_components(self) -> None:
-        """Forget the built components, once they have been disconnected."""
+        """Forget the built components, after disconnecting them."""
         self._components = {}

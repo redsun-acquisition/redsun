@@ -1,15 +1,12 @@
-"""Qt-specific public API for Redsun.
-
-Exposes the Qt application container for use in explicit,
-developer-written application configurations.
+"""Qt public API of ``redsun``: the Qt application container and hook aliases.
 
 Examples
 --------
+>>> from redsun.containers import declare_device
 >>> from redsun.qt import QtAppContainer
->>> from redsun import AppContainer, component
 
 >>> class MyApp(QtAppContainer, config="config.yaml"):
-...     motor = component(MyMotor, layer="device", from_config="motor")
+...     motor = declare_device(MyMotor, from_config="motor")
 """
 
 from __future__ import annotations

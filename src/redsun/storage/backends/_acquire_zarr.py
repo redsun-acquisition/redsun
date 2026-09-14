@@ -35,23 +35,21 @@ DTYPE_MAP: Final[dict[str, az.DataType]] = {
 class AcquireZarrIO(StorageIO):
     """Zarr storage backend through [`acquire-zarr`](https://acquire-project.github.io/acquire-docs/stable/).
 
-    A single Zarr store holds one array per registered data key
-    (via `output_key`), so all detectors of a burst land in the same
-    store under distinct keys.
+    One Zarr store holds an array per registered data key (as `output_key`),
+    so every detector of a burst writes to one store under its own key.
 
-    Chunking policy is fixed at construction: spatial chunks are
-    `dimension // chunk_divisor` (at least 1 pixel), the time chunk is
-    `chunk_t` frames, sharding is `shard_size_chunks` chunks per shard.
+    Chunking is fixed at construction: spatial chunks are
+    `dimension // chunk_divisor` pixels (at least 1), time chunks `chunk_t`
+    frames, and shards `shard_size_chunks` chunks.
 
     Parameters
     ----------
     chunk_divisor : int
-        Divisor for spatial chunk sizes. Defaults to 4
-        (i.e. 4x4 chunks per frame).
+        Divisor of spatial chunk sizes; 4 gives 4x4 chunks per frame.
     chunk_t : int
-        Chunk size along the time axis, in frames. Defaults to 1.
+        Chunk size along the time axis, in frames.
     shard_size_chunks : int
-        Number of chunks per shard, per axis. Defaults to 2.
+        Chunks per shard, per axis.
     """
 
     mimetype = "application/x-zarr"
@@ -77,7 +75,7 @@ class AcquireZarrIO(StorageIO):
         return AcquireZarrStore(stream)
 
     def _spatial_chunks(self, spec: StreamSpec) -> tuple[int, int]:
-        """Spatial chunk sizes for a spec. Single source for dimensions and documents."""
+        """Return a spec's spatial chunk sizes, used for both dimensions and documents."""
         height, width = spec.shape
         return (
             max(1, height // self._chunk_divisor),

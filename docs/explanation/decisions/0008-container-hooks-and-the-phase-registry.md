@@ -28,14 +28,14 @@ subclass.
 
 Whatever mechanism was chosen had to work from a configuration file as well as
 from Python, because a session assembled entirely from YAML is a first-class
-way to run redsun and must not lose a capability that a container class has.
+way to run `redsun` and must not lose a capability that a container class has.
 
 ## Decision
 
 **The build sequence is a registry, not a straight-line body.** `AppContainer`
 holds `_phases`, an insertion-ordered mapping of name to bound method, built in
 `__init__`. `build` iterates it. The shape is `RunEngine._command_registry` from
-bluesky, already a dependency: a dict of bound methods populated in `__init__`
+`bluesky`, already a dependency: a dict of bound methods populated in `__init__`
 and read publicly through a property.
 
 Bound methods rather than a module-level table of names, for two reasons.
@@ -79,7 +79,7 @@ type-level tests.
 Static checking is the whole point of the parameter, because runtime checking
 cannot reach it: `isinstance` refuses a parameterised protocol, so a container
 narrows to the bare form and a provider built for the wrong toolkit is only
-caught when called. `tests/typing/qt_hook_aliases.py` pins what mypy sees.
+caught when called. `tests/typing/qt_hook_aliases.py` pins what `mypy` sees.
 
 **A hook point is named by the method it calls, and takes one provider.** A
 container maps the points it calls to their protocols in `_hook_keys`, and that
@@ -134,20 +134,20 @@ name of each phase as it finishes, and a provider connects to it in
 `AppContainer` rather than on `VirtualContainer` because the bus is created
 *by* the first phase and so could not report that phase.
 
-This forces `__weakref__` into `AppContainer.__slots__`. psygnal keeps one
+This forces `__weakref__` into `AppContainer.__slots__`. `psygnal` keeps one
 `SignalInstance` per owner and refers to that owner weakly, both in the
 instance itself and in the `weakref.finalize` that drops its cache entry. Both
 fall back to a strong reference when the owner cannot be weakly referenced, and
 a class using `__slots__` cannot be unless `__weakref__` is among its slots.
-The fallback is deliberate on psygnal's part - it keeps signals working for
+The fallback is deliberate on `psygnal`'s part - it keeps signals working for
 owners that are neither hashable nor weak-referenceable - but its cost here is
 that no container is ever collected: not the container, nor its devices,
 presenters, views, bus or connections. An ordinary class never reaches this
-path, because psygnal stores the `SignalInstance` as a plain attribute when the
+path, because `psygnal` stores the `SignalInstance` as a plain attribute when the
 owner has a `__dict__`; only a slotted owner does.
 
 The rule generalises past this signal: **a `__slots__` class that owns a
-psygnal `Signal` needs `__weakref__` in its slots.**
+`psygnal` `Signal` needs `__weakref__` in its slots.**
 
 **Teardown is symmetric and owned by the container.** `shutdown` walks the
 providers in reverse, after the presenters, logging failures rather than

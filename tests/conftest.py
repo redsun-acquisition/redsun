@@ -6,6 +6,7 @@ when no display is available (headless CI without ``QT_QPA_PLATFORM=offscreen``)
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from typing import TYPE_CHECKING
@@ -15,7 +16,7 @@ from psygnal._queue import QueuedCallback
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
-from redsun.log import SessionFileHandler, logger
+from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -39,9 +40,15 @@ def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[P
     """
     monkeypatch.setattr("redsun.log.user_log_dir", lambda *a, **k: str(tmp_path))
     yield tmp_path
-    for handler in [h for h in logger.handlers if isinstance(h, SessionFileHandler)]:
-        logger.removeHandler(handler)
-        handler.close()
+    loggers = [
+        logging.getLogger(name)
+        for name in list(logging.Logger.manager.loggerDict)
+        if name.startswith(SERVICE_LOGGER)
+    ]
+    for owner in (logger, *loggers):
+        for handler in [h for h in owner.handlers if isinstance(h, SessionFileHandler)]:
+            owner.removeHandler(handler)
+            handler.close()
 
 
 @pytest.fixture(autouse=True)
@@ -77,11 +84,17 @@ _SKIP_QT = pytest.mark.skip(
     reason="requires a Qt display; set QT_QPA_PLATFORM=offscreen or run with pytest-env"
 )
 
+_SKIP_COMPOSE = pytest.mark.skip(
+    reason="requires tests/compose/compose.yaml up and REDSUN_COMPOSE set"
+)
+
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-skip @pytest.mark.qt tests in headless environments."""
-    if _has_display():
-        return
+    """Auto-skip Qt tests in headless environments, and compose tests unless asked for."""
+    display = _has_display()
+    compose = bool(os.environ.get("REDSUN_COMPOSE"))
     for item in items:
-        if item.get_closest_marker("qt"):
+        if not display and item.get_closest_marker("qt"):
             item.add_marker(_SKIP_QT)
+        if not compose and item.get_closest_marker("compose"):
+            item.add_marker(_SKIP_COMPOSE)

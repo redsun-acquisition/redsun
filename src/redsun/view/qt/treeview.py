@@ -1,12 +1,11 @@
-"""Descriptor-driven tree view for displaying and editing device settings.
+"""Tree view showing and editing device settings from their descriptors.
 
-`DescriptorTreeView` is a self-contained `QTreeWidget`-based widget that
-renders Bluesky-compatible ``describe()`` / ``read()``
-dicts as a two-column property tree.
+`DescriptorTreeView`, a `QTreeWidget`, shows ``bluesky`` ``describe()`` /
+``read()`` dicts as a two-column property tree.
 
-The design is inspired by the ``ParameterTree`` widget from the
-[pyqtgraph](https://github.com/pyqtgraph/pyqtgraph) library (MIT licence,
-© 2012 University of North Carolina at Chapel Hill, Luke Campagnola).
+The design follows the ``ParameterTree`` widget of
+[pyqtgraph](https://github.com/pyqtgraph/pyqtgraph) (MIT licence,
+(c) 2012 University of North Carolina at Chapel Hill, Luke Campagnola).
 """
 
 from __future__ import annotations
@@ -42,20 +41,20 @@ def _make_value_widget(
     readonly: bool,
     parent: QtWidgets.QWidget,
 ) -> QtWidgets.QWidget:
-    """Build an appropriate editor or display widget for *descriptor*.
+    """Build the editor or display widget for *descriptor*.
 
     Parameters
     ----------
     key : str
-        Canonical ``name-property`` key (used when emitting changes).
+        ``name-property`` key, emitted with changes.
     descriptor : Descriptor
-        Bluesky descriptor for this setting.
+        ``bluesky`` descriptor of the setting.
     initial_value : Any
         Current reading value.
     on_changed : Callable[[str, Any], None]
-        Callable invoked when the user commits a change.
+        Called when the user commits a change.
     readonly : bool
-        If ``True``, return a plain greyed label.
+        Return a greyed label instead.
     parent : QtWidgets.QWidget
         Qt parent for the created widget.
     """
@@ -177,7 +176,7 @@ def _set_label_text(
 
 
 def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
-    """Push a new *value* into an existing editor/display widget without re-emitting.
+    """Show *value* in an existing widget without emitting a change.
 
     Parameters
     ----------
@@ -217,23 +216,22 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 class DescriptorTreeView(QtWidgets.QTreeWidget):
     """Two-column property tree for browsing and editing device settings.
 
-    Rows are grouped by the ``source`` field of each descriptor (one
-    header per device, leaf labels strip the device-name prefix).
+    Rows are grouped by each descriptor's ``source`` field: one header per
+    device, with the device name dropped from leaf labels.
 
     Parameters
     ----------
     descriptors : dict[str, Descriptor]
-        Mapping of canonical ``name-property`` keys to descriptors.
+        Descriptors by ``name-property`` key.
     readings : dict[str, Reading[Any]]
-        Initial readings for the same keys; only ``reading["value"]``
-        is used.
+        Initial readings for the same keys; only ``reading["value"]`` is read.
     parent : QtWidgets.QWidget, optional
-        Optional parent widget.
+        Parent widget.
 
     Signals
     -------
     sig_property_changed : Signal[str, str, Any]
-        Emitted when the user commits an edit to a setting.
+        Emitted when the user commits an edit.
         - str: object name
         - str: property name
         - Any: new value
@@ -275,14 +273,14 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._build()
 
     def update_reading(self, key: str, reading: Reading[Any]) -> None:
-        """Push a live value update for *key* into the corresponding widget.
+        """Show a new reading for *key*.
 
         Parameters
         ----------
         key : str
-            Canonical ``name-property`` key.
+            ``name-property`` key.
         reading : Reading[Any]
-            New reading dict; only ``reading["value"]`` is used.
+            New reading; only ``reading["value"]`` is read.
         """
         value = reading["value"]
         self._readings[key] = value
@@ -298,10 +296,10 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         Parameters
         ----------
         key : str
-            Canonical key of the setting that was attempted.
+            Key of the edited setting.
         success : bool
-            ``True`` -> keep the new value; ``False`` -> revert to the
-            pre-edit value and refresh the widget.
+            ``True`` keeps the new value; ``False`` restores the previous one
+            and refreshes the widget.
         """
         old = self._pending.pop(key, None)
         if old is None:
@@ -315,11 +313,11 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
             _log.info("Reverted '%s' to previous value.", key)
 
     def get_keys(self) -> set[str]:
-        """Return the set of all descriptor keys in this view."""
+        """Return every descriptor key in the view."""
         return set(self._descriptors.keys())
 
     def _on_changed(self, key: str, value: Any) -> None:
-        """Slot wired to every editor widget's change signal."""
+        """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
         owner, property = key.split("-", 1)
@@ -333,7 +331,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         desc: Descriptor,
         readonly: bool,
     ) -> None:
-        """Append one leaf row (setting + value widget) to *group_item*."""
+        """Append a row (setting and value widget) to *group_item*."""
         child = QtWidgets.QTreeWidgetItem()
         units = desc.get("units", "") or ""
         label = f"{prop} ({units})" if units else prop
@@ -359,7 +357,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self._widgets[full_key] = widget
 
     def _make_group_item(self, label: str) -> QtWidgets.QTreeWidgetItem:
-        """Create and register a bold top-level group header item."""
+        """Create and register a bold top-level group header."""
         item = QtWidgets.QTreeWidgetItem([label])
         item.setFirstColumnSpanned(True)
         font = item.font(0)
@@ -378,7 +376,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.resizeColumnToContents(0)
 
     def _build_from_sources(self) -> None:
-        """Build tree grouped by the ``source`` field prefix of each descriptor."""
+        """Build the tree grouped by each descriptor's ``source`` prefix."""
         groups: dict[str, list[tuple[str, str, Descriptor, bool]]] = {}
         for full_key, desc in self._descriptors.items():
             prop = full_key.split("-", 1)[-1] if "-" in full_key else full_key
