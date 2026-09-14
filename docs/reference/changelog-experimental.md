@@ -501,9 +501,10 @@ listed in the [changelog](changelog.md).
   ```
 
 - `Session.start_services` is the first build step, announced as `"services"`.
-  It starts the launched services, logs `Services started: <n>/<m>`, and
-  registers each stop as a release, so `shutdown` stops the services after every
-  component, the last started first. A service that does not start is logged.
+  It starts the launched services together, logs `Services started: <n>/<m>`,
+  and registers each stop as a release, so `shutdown` stops the services after
+  every component, the last declared first. A service that does not start is
+  logged.
 
 - A device declared with `service` receives that service's prefix as `prefix`.
   The device is skipped when the service is not declared, did not start, or

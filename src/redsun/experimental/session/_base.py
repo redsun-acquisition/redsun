@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from importlib import import_module
@@ -1526,10 +1527,11 @@ class Session(BuildableSession):
     def start_services(self) -> None:
         """Start every service the session launches, and attach to the rest.
 
-        `build` runs this first. A service that does not start is logged, and
+        `build` runs this first. Services start together, so the step takes as
+        long as the slowest one. A service that does not start is logged, and
         every device naming it is skipped. Stopping a started service is
         registered as a release, so `shutdown` stops the services after every
-        component is released, the last started first, and then closes the
+        component is released, the last declared first, and then closes the
         process's Channel Access channels, so a session built again connects
         afresh.
         """
@@ -1537,15 +1539,18 @@ class Session(BuildableSession):
         if not self._services:
             return
         self.on_release(lambda: run_coro(close_channel_access()))
-        for name, service in self._services.items():
-            try:
-                service.start()
-            except Exception as e:  # noqa: BLE001 - a missing service must not abort the app
-                self._failed_services[name] = e
-                logger.error("Failed to start service '%s': %s", name, e)
-                continue
-            if service.launched:
-                self.on_release(service.stop)
+        with ThreadPoolExecutor(len(self._services), "service-start") as pool:
+            starts = {
+                name: pool.submit(service.start)
+                for name, service in self._services.items()
+            }
+        for name, start in starts.items():
+            error = start.exception()
+            if error is not None:
+                self._failed_services[name] = error
+                logger.error("Failed to start service '%s': %s", name, error)
+            elif self._services[name].launched:
+                self.on_release(self._services[name].stop)
         started = len(self._services) - len(self._failed_services)
         summary = f"Services started: {started}/{len(self._services)}"
         failed = ", ".join(f"{n} ({e})" for n, e in self._failed_services.items())

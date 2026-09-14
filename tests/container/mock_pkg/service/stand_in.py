@@ -34,6 +34,10 @@ def main() -> int:
     )
     parser.add_argument("--marker", type=Path, help="file written on clean exit")
     parser.add_argument("--say", help="a line printed once ready")
+    parser.add_argument("--touch", type=Path, help="file created as soon as it runs")
+    parser.add_argument(
+        "--ready-when", type=Path, help="print READY only once this file exists"
+    )
     options = parser.parse_args()
 
     if options.ignore_sigint:
@@ -42,6 +46,10 @@ def main() -> int:
         threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
 
     print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
+    if options.touch is not None:
+        options.touch.touch()
+    while options.ready_when is not None and not options.ready_when.exists():
+        time.sleep(0.05)
     if not options.no_ready:
         print(READY, flush=True)
     if options.say is not None:

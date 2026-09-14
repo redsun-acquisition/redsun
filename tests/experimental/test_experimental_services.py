@@ -33,6 +33,7 @@ from redsun.experimental import (
     slot,
 )
 from redsun.experimental.session import _base as session_base
+from redsun.services import _service
 
 if TYPE_CHECKING:
     from .conftest import BuildSession
@@ -502,3 +503,28 @@ def test_a_presenter_hears_a_service_exit_through_wire(
 
     assert app.watcher.heard.wait(10)
     assert app.watcher.exits == [("stand_in", 4, "service-stand_in")]
+
+
+def test_services_start_together(
+    build: BuildSession,
+    launchable: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each stand-in is ready only once the other runs, so one at a time never is."""
+    monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 5.0)
+    first, second = tmp_path / "first", tmp_path / "second"
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {
+                "left": {"args": ["--touch", str(first), "--ready-when", str(second)]},
+                "right": {"args": ["--touch", str(second), "--ready-when", str(first)]},
+            }
+        }
+        left: Annotated[AsService, Launch(STAND_IN, ready=READY)]
+        right: Annotated[AsService, Launch(STAND_IN, ready=READY)]
+
+    app = build(App)
+
+    assert (app.left.running, app.right.running) == (True, True)
