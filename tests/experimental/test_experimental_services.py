@@ -344,6 +344,11 @@ def test_a_device_whose_service_is_missing_is_skipped(
     assert (
         "Failed to build device 'bare': service 'unprefixed' gives no prefix" in errors
     )
+    assert (
+        "Services started: 2/3\nNot started: broken (exited with code 3 before it "
+        "was ready)"
+    ) in caplog.messages
+    assert summary_in(caplog).splitlines()[-1] == "Unused: unprefixed (no device built)"
 
 
 @pytest.mark.parametrize(
