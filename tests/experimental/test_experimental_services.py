@@ -147,6 +147,11 @@ def errors_in(caplog: pytest.LogCaptureFixture) -> list[str]:
     return [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
 
 
+def summary_in(caplog: pytest.LogCaptureFixture) -> str:
+    (summary,) = [m for m in caplog.messages if m.startswith("Container built")]
+    return summary
+
+
 def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
     """A device whose first parameter is not ``name`` gets its name by keyword."""
 
@@ -369,12 +374,7 @@ def test_a_service_whose_every_device_failed_is_reported_unused(
 
     build(App)
 
-    (summary,) = [
-        r.getMessage()
-        for r in caplog.records
-        if r.getMessage().startswith("Container built")
-    ]
-    assert summary.endswith("Unused: beamline (no device built)")
+    assert summary_in(caplog).endswith("Unused: beamline (no device built)")
 
 
 def test_a_saved_device_keeps_the_service_it_names(
@@ -452,12 +452,9 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
         "Failed to connect device 'camera': service 'beamline' (attached) did not "
         "answer within 0.5 s: the camera did not answer"
     ) in errors_in(caplog)
-    (summary,) = [
-        r.getMessage()
-        for r in caplog.records
-        if r.getMessage().startswith("Container built")
-    ]
-    assert "Not built: camera (device, not connected)" in summary.splitlines()
+    assert (
+        "Not built: camera (device, not connected)" in summary_in(caplog).splitlines()
+    )
 
 
 def test_a_caproto_ioc_is_launched_and_its_device_read_while_building(
