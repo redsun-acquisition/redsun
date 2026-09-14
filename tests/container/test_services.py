@@ -26,6 +26,7 @@ from redsun.containers import container as container_module
 from redsun.log import SessionFileHandler, session_log
 from redsun.presenter import Presenter
 from redsun.qt import QtAppContainer
+from redsun.services import _service
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -195,6 +196,32 @@ def test_services_start_once_until_shutdown(
 
     started = [r for r in caplog.records if r.getMessage() == "Services started: 1/1"]
     assert len(started) == 2
+
+
+def test_services_start_together(
+    containers: list[AppContainer], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each stand-in is ready only once the other runs, so one at a time never is."""
+    monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 5.0)
+    first, second = tmp_path / "first", tmp_path / "second"
+
+    class App(AppContainer):
+        left = declare_service(
+            module=STAND_IN,
+            ready=READY,
+            args=["--touch", str(first), "--ready-when", str(second)],
+        )
+        right = declare_service(
+            module=STAND_IN,
+            ready=READY,
+            args=["--touch", str(second), "--ready-when", str(first)],
+        )
+
+    app = App()
+    containers.append(app)
+    app.start_services()
+
+    assert (app.left.running, app.right.running) == (True, True)
 
 
 def test_a_launched_service_logs_to_a_file_of_its_own(

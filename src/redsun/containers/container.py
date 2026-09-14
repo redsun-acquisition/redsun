@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -781,19 +782,24 @@ class AppContainer:
 
         `build` calls this too. Only the first call until `shutdown` does
         anything. A service that fails to start is logged, and the build skips
-        every device naming it; the rest of the session runs.
+        every device naming it; the rest of the session runs. Services start
+        together, so this takes as long as the slowest one.
         """
         if self._services_started:
             return
         self._services_started = True
         if not self._services:
             return
-        for name, service in self._services.items():
-            try:
-                service.start()
-            except Exception as e:  # noqa: BLE001 - a missing service must not abort the app
-                self._failed_services[name] = e
-                logger.error(f"Failed to start service '{name}': {e}")
+        with ThreadPoolExecutor(len(self._services), "service-start") as pool:
+            starts = {
+                name: pool.submit(service.start)
+                for name, service in self._services.items()
+            }
+        for name, start in starts.items():
+            error = start.exception()
+            if error is not None:
+                self._failed_services[name] = error
+                logger.error(f"Failed to start service '{name}': {error}")
         summary = (
             f"Services started: {len(self._services) - len(self._failed_services)}"
             f"/{len(self._services)}"
