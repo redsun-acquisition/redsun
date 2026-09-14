@@ -157,7 +157,11 @@ class Service:
         with ports_lock:
             port = ports.get(self.name)
             if port is None:
-                port = ports[self.name] = free_udp_port()
+                # the system may hand out a port it already gave another service
+                port = free_udp_port()
+                while port in ports.values():
+                    port = free_udp_port()
+                ports[self.name] = port
                 os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
                     filter(
                         None,
@@ -348,7 +352,11 @@ def exited(process: subprocess.Popen[str], timeout: float) -> bool:
 
 
 def free_udp_port() -> int:
-    """Return a UDP port on the loopback interface that nothing is bound to."""
+    """Return a UDP port on the loopback interface that nothing is bound to.
+
+    The port is free when read; nothing holds it for the caller, so another
+    program can bind it first, and a later call may return it again.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port: int = sock.getsockname()[1]
