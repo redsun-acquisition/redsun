@@ -6,7 +6,6 @@ import logging
 from collections.abc import Mapping, Sequence
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
-from functools import partial
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Self, TypeAlias, cast
@@ -1555,7 +1554,7 @@ class Session(BuildableSession):
                 logger.error("Failed to start service '%s': %s", name, e)
                 continue
             if service.launched:
-                self.on_release(partial(stop_logged, service))
+                self.on_release(service.stop)
         started = len(self._services) - len(self._failed_services)
         summary = f"Services started: {started}/{len(self._services)}"
         if not self._failed_services:
@@ -1912,17 +1911,6 @@ def refuse_backwards(
         f"nothing about a {target.kind}; share the value the other way, or "
         "move what they both need into an earlier layer."
     )
-
-
-def stop_logged(service: Service) -> None:
-    """Stop *service*, logging rather than raising if it cannot be stopped.
-
-    A release that raises would skip the releases registered before it.
-    """
-    try:
-        service.stop()
-    except Exception as e:  # noqa: BLE001 - one failed stop must not block the rest
-        logger.error("Error stopping service '%s': %s", service.name, e)
 
 
 def listed(names: Iterable[str], *, quote: bool = True) -> str:
