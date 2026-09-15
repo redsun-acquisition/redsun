@@ -716,6 +716,23 @@ class NamedServicesApp(Session):
     served: AsPresenter[Served]
 
 
+class ScaleOwner:
+    """Presenter sharing the type a shared service already shares."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(3.5)
+
+
+class ProviderAndComponentApp(Session):
+    providers: ClassVar[list[type]] = [ModelServices]
+
+    owner: AsPresenter[ScaleOwner]
+
+
 class BrokenPresenter:
     """Presenter whose construction cannot succeed."""
 
@@ -1311,6 +1328,12 @@ def test_a_shared_service_is_given_no_name() -> None:
     """A component is handed its name; a provider has none, so it must ask."""
     with pytest.raises(TypeError, match="'NamedServices' asks for 'name'"):
         NamedServicesApp().build()
+
+
+def test_a_shared_service_and_a_component_sharing_one_type_is_refused() -> None:
+    """The service's value would otherwise win, and the component's goes unread."""
+    with pytest.raises(TypeError, match="'owner' and 'ModelServices' both share"):
+        ProviderAndComponentApp().build()
 
 
 def test_a_component_that_fails_to_build_is_skipped(

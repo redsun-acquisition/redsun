@@ -635,3 +635,5 @@ listed in the [changelog](changelog.md).
 
 - `Session.build` on a session that was built and shut down no longer raises
   `TypeError` saying a component shares a type with itself.
+- `Session.build` raises `TypeError` naming both when a session provider and a
+  component share one type.

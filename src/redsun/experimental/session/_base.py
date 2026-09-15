@@ -508,14 +508,13 @@ class Session(BuildableSession):
         `redsun.experimental.provides`, and its own constructor is filled from
         the store like anything else.
         """
-        shared: dict[Key, str] = {}
         classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
         classes.update(load_providers(config))
         for name, cls in classes.items():
             params = injectable(cls, {}, binds_name=False)
             refuse_unanswered(store, name, params)
             instance = store.inject(provider(cls, name))()
-            register_shared(store, instance, cls, name, shared)
+            register_shared(store, instance, cls, name, self._shared)
 
     def build(self) -> Self:
         """Run each step of `BuildableSession` in turn, announcing all but two.
