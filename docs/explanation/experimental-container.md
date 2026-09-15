@@ -61,8 +61,8 @@ earlier:
   an `actions:` section can declare the entries, but the session never calls
   `setModelMenuBar`, so a hook has to - and a hook that does discards the menu
   bar the placed views were attached to, since `setMenuBar` deletes the one
-  already there. Stable's `QtMainView` carries a File menu with "save
-  configuration".
+  already there. The save action joins `SAVE_MENU`, so no menu shows it, and
+  a user reaches it only through the close prompt.
 - `redsun.experimental.ports._wiring` is a copy of `redsun.virtual._wiring`. The two
   fold back together if this graduates.
 - No decision recorded. This page is the whole of the rationale; no ADR revisits
