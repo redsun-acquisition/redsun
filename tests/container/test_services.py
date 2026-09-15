@@ -26,6 +26,7 @@ from redsun.containers import container as container_module
 from redsun.log import SessionFileHandler, session_log
 from redsun.presenter import Presenter
 from redsun.qt import QtAppContainer
+from redsun.services import _service
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -96,17 +97,6 @@ class CameraPanel(QtAppContainer):
     def wire(self) -> None:
         self.connect(self.panel.sig_read_requested, self.reader.read)
         self.connect(self.reader.sig_read, self.panel.show_reading)
-
-
-@pytest.fixture
-def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Let a launched service import ``mock_pkg``, and restore the CA address list.
-
-    ``redsun.services._service.ports`` is left alone: libca reads the address list
-    once per process, so a service keeps the port it first got from test to test.
-    """
-    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
-    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
 
 
 @pytest.fixture
@@ -208,6 +198,32 @@ def test_services_start_once_until_shutdown(
     assert len(started) == 2
 
 
+def test_services_start_together(
+    containers: list[AppContainer], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each stand-in is ready only once the other runs, so one at a time never is."""
+    monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 5.0)
+    first, second = tmp_path / "first", tmp_path / "second"
+
+    class App(AppContainer):
+        left = declare_service(
+            module=STAND_IN,
+            ready=READY,
+            args=["--touch", str(first), "--ready-when", str(second)],
+        )
+        right = declare_service(
+            module=STAND_IN,
+            ready=READY,
+            args=["--touch", str(second), "--ready-when", str(first)],
+        )
+
+    app = App()
+    containers.append(app)
+    app.start_services()
+
+    assert (app.left.running, app.right.running) == (True, True)
+
+
 def test_a_launched_service_logs_to_a_file_of_its_own(
     containers: list[AppContainer],
 ) -> None:
@@ -274,7 +290,7 @@ def test_a_service_it_cannot_make_is_refused_as_the_class_is_created() -> None:
 def test_a_session_file_service_it_cannot_make_is_refused(tmp_path: Path) -> None:
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nsession: refused\n"
+        "schema_version: 1.0\nfrontend: pyqt\nname: refused\n"
         "services:\n  ioc:\n    launch: attach\n",
         encoding="utf-8",
     )
@@ -406,7 +422,7 @@ def test_a_service_its_plugin_cannot_give_is_left_out_with_one_error(
 ) -> None:
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nsession: left-out\n"
+        "schema_version: 1.0\nfrontend: pyqt\nname: left-out\n"
         f"services:\n  ioc:\n    plugin_name: mock-pkg\n    plugin_id: {plugin_id}\n",
         encoding="utf-8",
     )

@@ -74,6 +74,13 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | `tests` | `pytest -q` |
 | `docs` | `zensical build` then `scripts/check_xrefs.py` |
 
+**Run what the change can break, not the whole matrix.** A change confined to
+`docs/` (pages, ADRs, changelogs, `zensical.toml`) can only break the docs
+build, so validate it with `uv run tox -e docs` alone. A change to docstrings
+in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
+reference pages render them: `uv run tox -e lint,docs`. Anything touching code
+or tests runs the full `uv run tox`.
+
 The project `.venv` still works for a quick loop (`uv run pytest -q`), but it
 is not authoritative: it holds every group any `uv sync` has installed, both Qt
 bindings included. One such run reported five `QAction` errors tox does not,
@@ -113,7 +120,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 - **`VirtualContainer`** subclasses `dependency_injector.DynamicContainer` and
   is at once the DI container, the psygnal signal bus, and the
   document-callback registry. Config is frozen (`_FrozenConfig`); read it
-  through the `schema_version` / `frontend` / `session` / `metadata`
+  through the `schema_version` / `frontend` / `name` / `metadata`
   properties.
 - **`AppContainer.build()` phase order cannot change**, and its docstring
   records it: services -> VirtualContainer -> devices -> connect -> presenters -> views ->

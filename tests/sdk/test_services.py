@@ -214,6 +214,22 @@ def test_a_stopped_service_emits_no_exit(launch: Callable[..., Service]) -> None
     assert exits == []
 
 
+def test_a_port_another_service_holds_is_not_given_again(
+    launch: Callable[..., Service],
+    service_log: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The system may hand out one port twice; the second service draws again."""
+    drawn = iter([40001, 40001, 40002])
+    monkeypatch.setattr(_service, "free_udp_port", lambda: next(drawn))
+    first, second = launch(name="first"), launch(name="second")
+
+    first.start()
+    second.start()
+
+    assert logged_ports(service_log) == ["40001", "40002"]
+
+
 def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:

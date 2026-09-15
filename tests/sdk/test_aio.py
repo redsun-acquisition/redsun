@@ -8,6 +8,7 @@ import logging
 import sys
 import threading
 import time
+import traceback
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -44,6 +45,17 @@ def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
             return True
         time.sleep(0.005)
     return predicate()
+
+
+def drain_state(backend: CulsansAsyncioBackend) -> str:
+    """Describe the drain and what the shared loop's thread is running."""
+    thread = _ensure_event_loop_running.loop_to_thread[get_shared_loop()]  # type: ignore[attr-defined]
+    frame = sys._current_frames().get(thread.ident)
+    stack = "".join(traceback.format_stack(frame)) if frame else "no frame\n"
+    return (
+        f"draining={backend._draining}, running={backend.running.is_set()}, "
+        f"run task={backend._run_task}\nshared loop thread:\n{stack}"
+    )
 
 
 class Emitter:
@@ -292,7 +304,9 @@ def test_drain_cancellation_is_not_an_error(
 ) -> None:
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         assert backend._run_task.cancel()
-        assert wait_until(lambda: "Dispatch cancelled" in caplog.text)
+        assert wait_until(lambda: "Dispatch cancelled" in caplog.text), drain_state(
+            backend
+        )
 
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 

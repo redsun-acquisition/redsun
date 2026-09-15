@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from event_model import DocumentRouter
+from psygnal import Signal
+
+from redsun.experimental import (
+    CallbackType,
+    DeviceMapping,
+    provides,
+    slot,
+)
+
+from .keys import Calibration, Readings
+
+
+class MockMotorPresenter:
+    """Presenter sharing a value it computes from its devices.
+
+    Asks for the device map and for a service the bundle's own provider
+    supplies, so a config-driven session exercises both routes.
+    """
+
+    sig_moved = Signal(str, float)
+
+    def __init__(
+        self,
+        name: str,
+        /,
+        devices: DeviceMapping,
+        calibration: Calibration,
+        step: float = 1.0,
+    ) -> None:
+        self.name = name
+        self.devices = devices
+        self.calibration = calibration
+        self.step = step
+
+    @provides
+    def readings(self) -> Readings:
+        return Readings({name: self.step * self.calibration for name in self.devices})
+
+    @slot
+    def move(self, axis: str, amount: float) -> None:
+        self.moved = (axis, amount)
+
+
+class MockLatePresenter:
+    """Presenter asking for the callback catalogue."""
+
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+        self.seen: dict[str, CallbackType] = {}
+
+    def setup(self, callbacks: Mapping[str, CallbackType]) -> None:
+        self.seen = dict(callbacks)
+
+
+class MockRegistrar(DocumentRouter):
+    """Presenter that is a document router, and so a callback."""
+
+    def __init__(self, name: str, /) -> None:
+        super().__init__()
+        self.name = name
+        self.documents: list[str] = []
+
+    def __call__(
+        self, name: str, doc: dict[Any, Any], validate: bool = False
+    ) -> tuple[str, dict[Any, Any]]:
+        self.documents.append(name)
+        return super().__call__(name, doc, validate)

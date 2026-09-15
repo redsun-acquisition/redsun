@@ -38,6 +38,13 @@ Access, so a service restarted by a rebuilt container must answer on the port
 the list already holds.
 """
 
+ports_lock = threading.Lock()
+"""Held while a service takes its port and copies the environment.
+
+Services started from several threads at once would otherwise lose an entry of
+``EPICS_CA_ADDR_LIST`` or copy the environment while another thread changes it.
+"""
+
 
 class Service:
     """A server devices talk to, and its process if the session owns it.
@@ -147,15 +154,21 @@ class Service:
         """
         if self.module is None or self.running:
             return
-        port = ports.get(self.name)
-        if port is None:
-            port = ports[self.name] = free_udp_port()
-            os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
-                filter(
-                    None, [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"]
+        with ports_lock:
+            port = ports.get(self.name)
+            if port is None:
+                # the system may hand out a port it already gave another service
+                port = free_udp_port()
+                while port in ports.values():
+                    port = free_udp_port()
+                ports[self.name] = port
+                os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
+                    filter(
+                        None,
+                        [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"],
+                    )
                 )
-            )
-        env = {**os.environ, "EPICS_CA_SERVER_PORT": str(port), "PYTHONUTF8": "1"}
+            env = {**os.environ, "EPICS_CA_SERVER_PORT": str(port), "PYTHONUTF8": "1"}
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
@@ -339,7 +352,11 @@ def exited(process: subprocess.Popen[str], timeout: float) -> bool:
 
 
 def free_udp_port() -> int:
-    """Return a UDP port on the loopback interface that nothing is bound to."""
+    """Return a UDP port on the loopback interface that nothing is bound to.
+
+    The port is free when read; nothing holds it for the caller, so another
+    program can bind it first, and a later call may return it again.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port: int = sock.getsockname()[1]

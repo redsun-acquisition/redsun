@@ -83,7 +83,7 @@ class StoragePresenter(Presenter, Loggable):
         """Create the session's provider and register it in the container."""
         self._provider = SessionPathProvider(
             base_dir=self._base_dir,
-            session=container.session,
+            session=container.name,
             max_digits=self._max_digits,
         )
         container.provide(PATH_PROVIDER, self._provider)

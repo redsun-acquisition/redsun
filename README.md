@@ -57,7 +57,7 @@ So the same application can be expressed as:
 # session.yaml
 schema_version: 1.0
 frontend: pyqt
-session: my-session
+name: my-session
 
 devices:
   stage:

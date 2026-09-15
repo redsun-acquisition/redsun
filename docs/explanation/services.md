@@ -85,6 +85,11 @@ again reaches it again. The note in
 [Connecting](architecture/devices.md#connecting) describes the limit: libca
 reads the address list once per process.
 
+A port is free when it is chosen, and nothing holds it until the service binds
+it, so another program on the host can take it in between. The service then
+fails to start, or its devices do not connect. The service keeps that port for
+the life of the session process, so only a new process picks another one.
+
 ## A service exiting
 
 A launched service that exits unasked is logged at `ERROR` with its exit code

@@ -49,7 +49,7 @@ class _AcquisitionSignals:
 @pytest.fixture
 def configured_bus(bus: VirtualContainer) -> VirtualContainer:
     bus._set_configuration(
-        {"schema_version": 1.0, "frontend": "pyqt", "session": "unit-session"}
+        {"schema_version": 1.0, "frontend": "pyqt", "name": "unit-session"}
     )
     return bus
 

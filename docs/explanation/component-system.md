@@ -64,7 +64,7 @@ An application configuration file names plugins by name and ID:
 
 ```yaml
 schema_version: 1.0
-session: "My application"
+name: "My application"
 frontend: "pyqt"
 metadata:
     user: Jacopo Abramo
@@ -93,7 +93,8 @@ views:
 The top-level keys describe the application:
 
 - `schema_version` is the component system's version, kept for compatibility;
-- `session` is the application's display name;
+- `name` identifies the session and names the application its commands and
+  menus are registered on. It defaults to the container class's own name;
 - `frontend` is the UI toolkit, which picks the `AppContainer` subclass;
 - `metadata` holds application-level context.
 
