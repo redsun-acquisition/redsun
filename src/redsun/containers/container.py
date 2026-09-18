@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import logging
 
 # resolved at runtime: the ClassVar annotation below is evaluated by ruff's
@@ -29,7 +30,7 @@ import yaml
 from ophyd_async.core import Device
 
 from redsun.aio import get_shared_loop, run_coro
-from redsun.containers._config import AppConfig
+from redsun.containers._config import AppConfig, TiledConfig
 from redsun.containers._hooks import (
     HookError,
     distinct,
@@ -161,6 +162,19 @@ CONNECT_TIMEOUT: Final = 10.0
 
 PATH_PROVIDER_PORT: Final = "path_provider"
 """Name the session's path provider is wired under."""
+
+
+def _require_tiled() -> None:
+    """Raise if a session asks for a catalog and `tiled` is not installed."""
+    if importlib.util.find_spec("tiled") is not None:
+        return
+    raise RuntimeError(
+        "this session has a 'tiled' section and 'tiled' is not installed. "
+        "Install it with 'pip install redsun[tiled]', or drop the section. "
+        "The extra installs nothing on Python 3.14, which tiled does not "
+        "support yet."
+    )
+
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
@@ -335,6 +349,7 @@ class AppContainer:
         "_services",
         "_services_started",
         "_session_log",
+        "_tiled",
         "_virtual_container",
     )
 
@@ -556,6 +571,7 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._path_provider: SessionPathProvider | None = None
+        self._tiled: TiledConfig | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
@@ -680,6 +696,11 @@ class AppContainer:
     def services(self) -> dict[str, Service]:
         """Return the container's services, started or not."""
         return dict(self._services)
+
+    @property
+    def tiled(self) -> TiledConfig | None:
+        """Return the session's catalog configuration, `None` without a section."""
+        return self._tiled
 
     @property
     def path_provider(self) -> SessionPathProvider:
@@ -1011,6 +1032,10 @@ class AppContainer:
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
+
+        if "tiled" in self._config:
+            _require_tiled()
+            self._tiled = TiledConfig.from_mapping(self._config["tiled"])
 
         storage = self._config.get("storage", {})
         base_dir = storage.get("base_dir")
@@ -1361,6 +1386,8 @@ class AppContainer:
         )
         if "storage" in config:
             instance._config["storage"] = config["storage"]
+        if "tiled" in config:
+            instance._config["tiled"] = config["tiled"]
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
         if "hooks" in config:

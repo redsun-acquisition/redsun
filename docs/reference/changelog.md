@@ -156,6 +156,26 @@ Dates are specified in the format `DD-MM-YYYY`.
   few or too many dimensions, or the format's package is absent, in which case
   the message names the extra that installs it.
 - A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
+- **`TiledConfig`** (`redsun.containers`) and a `tiled` section in a session
+  file, which a session uses to opt into a catalog. Present and empty is a
+  valid catalog, since every key has a default:
+
+  ```yaml
+  tiled:
+    directory: /data/catalogs/aht   # optional, the session's own by default
+    readable:                       # optional, added to the session's directory
+      - /data/aht
+  ```
+
+  `AppContainer.tiled` gives the section, or `None` when there is none. A
+  `directory` of `None` means the session's own
+  `<base_dir>/<session>/catalog`, resolved when the catalog is built. `readable`
+  names further directories the catalog may register assets from, for services
+  writing where their own configuration says. A section naming a key that does
+  not exist is refused, and so is a section in a session without the `tiled`
+  extra installed.
+- A `tiled` extra and dependency group, with `tiled[client,server]`. It
+  installs nothing on Python 3.14, which `tiled` does not support yet.
 
 
 ### Changed

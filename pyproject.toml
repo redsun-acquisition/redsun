@@ -40,6 +40,7 @@ requires-python = ">=3.11"
 dev = [
     { include-group = "epics" },
     { include-group = "pyqt" },
+    { include-group = "tiled" },
     { include-group = "zarr" },
     "mypy>=2.3.1",
     "prek>=0.5.0",
@@ -80,6 +81,9 @@ epics = [
 zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]
+tiled = [
+    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -100,6 +104,9 @@ epics = [
 ]
 zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
+]
+tiled = [
+    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
 ]
 
 [project.entry-points."redsun.plugins"]

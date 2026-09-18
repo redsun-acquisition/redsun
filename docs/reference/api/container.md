@@ -19,6 +19,10 @@
     options:
       show_root_heading: true
 
+::: redsun.containers._config.TiledConfig
+    options:
+      show_root_heading: true
+
 ::: redsun.containers.HookError
     options:
       show_root_heading: true
