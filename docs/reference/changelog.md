@@ -174,7 +174,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
   session's catalog is served, and the key a component asks for it with.
   `CatalogAddress.uri` carries the server's API key, so a component connects
-  with it alone. The module imports nothing from `tiled`:
+  with it alone; the address's `repr` leaves it out. The module imports nothing from `tiled`:
 
   ```python
   from redsun.catalog import CATALOG

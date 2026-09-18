@@ -1044,14 +1044,13 @@ class AppContainer:
         # parsed before the extra is checked, so a malformed section is refused
         # whether or not it is installed
         self._storage = StorageConfig.from_mapping(self._config.get("storage"))
-        if self._storage.catalog is not None:
-            _require_tiled()
         self._path_provider = SessionPathProvider(
             base_dir=self._storage.base_dir,
             session=base_cfg["session"],
             max_digits=self._storage.max_digits,
         )
         if self._storage.catalog is not None:
+            _require_tiled()
             self._catalog = self._start_catalog(
                 self._storage.catalog, base_cfg["session"]
             )
@@ -1074,6 +1073,7 @@ class AppContainer:
         from tiled.server.simple import SimpleTiledServer
 
         session_dir = self.path_provider.base_dir / session
+        server: SimpleTiledServer | None = None
         try:
             server = SimpleTiledServer(
                 directory=session_dir / "catalog",
@@ -1090,6 +1090,10 @@ class AppContainer:
             register_consolidator()
             return server
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
+            # a server that started and then failed to be set up is stopped,
+            # since nothing else holds it
+            if server is not None:
+                server.close()
             self._failed["catalog"] = e
             logger.error(f"Failed to start the catalog: {e}")
             return None

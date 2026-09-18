@@ -6,7 +6,7 @@ for the catalog whether or not the ``tiled`` extra is installed.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import dependency_injector.providers as dip
 
@@ -27,12 +27,13 @@ class CatalogAddress:
     ----------
     uri : str
         URI of the server, carrying its API key, so a client needs nothing
-        else to connect.
+        else to connect. Left out of the ``repr``, so logging an address does
+        not write the key.
     """
 
-    uri: str
+    uri: str = field(repr=False)
 
 
 CATALOG: dip.Dependency[CatalogAddress] = dip.Dependency(instance_of=CatalogAddress)
 """Key for the session's catalog address, bound by the container when the
-session has a ``tiled`` section."""
+session's ``storage`` section has a ``catalog`` key."""

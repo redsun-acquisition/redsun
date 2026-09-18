@@ -15,8 +15,9 @@ from bluesky_tiled_plugins import TiledWriter
 from event_model import compose_run, compose_stream_resource
 from tiled.client import from_uri
 from tiled.client.register import register
+from tiled.server.simple import SimpleTiledServer
 
-from redsun.catalog import CATALOG
+from redsun.catalog import CATALOG, CatalogAddress
 from redsun.containers import AppContainer
 
 if TYPE_CHECKING:
@@ -180,6 +181,39 @@ def test_a_catalog_that_fails_to_start_is_logged_and_skipped(
     assert app.is_built
     assert app.virtual_container.try_require(CATALOG) is None
     assert "Failed to start the catalog" in caplog.text
+
+
+def test_a_server_failing_its_setup_is_stopped(
+    session: Callable[..., AppContainer], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A server that started is not left running when what follows fails."""
+    closed: list[SimpleTiledServer] = []
+    close = SimpleTiledServer.close
+
+    def record(server: SimpleTiledServer) -> None:
+        closed.append(server)
+        close(server)
+
+    def fail() -> None:
+        raise RuntimeError("no consolidator")
+
+    monkeypatch.setattr(SimpleTiledServer, "close", record)
+    monkeypatch.setattr("ome_tiled.bluesky.register_consolidator", fail)
+
+    app = session(storage={"catalog": None})
+
+    assert app.virtual_container.try_require(CATALOG) is None
+    assert len(closed) == 1
+
+
+def test_an_address_does_not_show_its_key(
+    session: Callable[..., AppContainer],
+) -> None:
+    address = session(storage={"catalog": None}).virtual_container.require(CATALOG)
+
+    assert "api_key" in address.uri
+    assert "api_key" not in repr(address)
+    assert address == CatalogAddress(address.uri)
 
 
 def test_shutdown_stops_the_server(session: Callable[..., AppContainer]) -> None:
