@@ -44,6 +44,11 @@ storage:
 pointing at a file outside every readable directory is recorded, and reading
 its data fails.
 
+The readable directories are fixed when the catalog starts, so the root cannot
+change while it runs: `SessionPathProvider.set_base_dir` raises
+`RuntimeError`. Choose the root with `storage.base_dir` before the session
+starts, and list any other disk a service writes to under `readable`.
+
 ## Record runs
 
 Nothing is written into the catalog unless a component does it.

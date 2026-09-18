@@ -134,6 +134,7 @@ class SessionPathProvider(PathProvider):
 
     __slots__ = (
         "_base_dir",
+        "_base_dir_lock",
         "_filenames",
         "_now",
         "_pattern",
@@ -150,6 +151,7 @@ class SessionPathProvider(PathProvider):
     ) -> None:
         self._session = session
         self._base_dir = (base_dir or _base_dir()).expanduser()
+        self._base_dir_lock: str | None = None
         self._filenames = PlanFilenameProvider(max_digits=max_digits)
         self._now = now or datetime.now
 
@@ -180,11 +182,16 @@ class SessionPathProvider(PathProvider):
         Raises
         ------
         RuntimeError
-            If a plan is running, since its remaining files would be written
-            somewhere else than the ones already on disk. A session whose plan
-            lifecycle is not wired to `set_plan` and `reset_plan` cannot tell
-            that a plan is running and does not raise.
+            If the base directory was locked with `lock_base_dir`, or if a plan
+            is running, since its remaining files would be written somewhere
+            else than the ones already on disk. A session whose plan lifecycle
+            is not wired to `set_plan` and `reset_plan` cannot tell that a plan
+            is running and does not raise for that.
         """
+        if self._base_dir_lock is not None:
+            raise RuntimeError(
+                f"The base directory cannot change: {self._base_dir_lock}."
+            )
         if self._filenames.plan != _RESET_PLAN:
             raise RuntimeError(
                 f"Plan {self._filenames.plan!r} is running; changing the base "
@@ -194,6 +201,10 @@ class SessionPathProvider(PathProvider):
         self._base_dir = Path(base_dir).expanduser()
         self._filenames.reset({})
         self._scan_existing()
+
+    def lock_base_dir(self, reason: str) -> None:
+        """Refuse every later `set_base_dir`, giving *reason* in the error."""
+        self._base_dir_lock = reason
 
     @slot
     def set_plan(self, plan: str) -> None:

@@ -218,6 +218,19 @@ def test_an_address_does_not_show_its_key(
     assert address == CatalogAddress(address.uri)
 
 
+def test_the_root_cannot_move_while_the_catalog_runs(
+    session: Callable[..., AppContainer], tmp_path: Path
+) -> None:
+    """New files would land outside what the catalog can read."""
+    app = session(storage={"catalog": None})
+    root = app.path_provider.base_dir
+
+    with pytest.raises(RuntimeError, match="catalog"):
+        app.path_provider.set_base_dir(tmp_path / "elsewhere")
+
+    assert app.path_provider.base_dir == root
+
+
 def test_shutdown_stops_the_server(session: Callable[..., AppContainer]) -> None:
     app = session(storage={"catalog": None})
     client = client_of(app)

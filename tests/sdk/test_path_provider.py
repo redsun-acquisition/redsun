@@ -138,6 +138,16 @@ def test_a_store_with_several_suffixes_counts(tmp_path: Path, stored: str) -> No
     assert provider("det").filename == "scan_00005"
 
 
+def test_a_locked_root_cannot_move(tmp_path: Path) -> None:
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+    provider.lock_base_dir("a catalog reads from it")
+
+    with pytest.raises(RuntimeError, match="a catalog reads from it"):
+        provider.set_base_dir(tmp_path / "elsewhere")
+
+    assert provider.base_dir == tmp_path
+
+
 def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
     """A run's remaining files must not land somewhere else than its first ones."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")

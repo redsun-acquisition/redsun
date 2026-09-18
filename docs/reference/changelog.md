@@ -131,6 +131,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   its `catalog` has no place for is refused, and so is a `catalog` in a session
   without the `tiled` extra installed.
 
+- **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
+  every later `set_base_dir` raise `RuntimeError` with the reason given. A
+  session with a catalog locks its provider once the catalog starts.
 - **`SessionPathProvider.base_dir`** and **`SessionPathProvider.set_base_dir`**,
   the latter a slot taking a `str` or a `Path`. It raises `RuntimeError` while
   a plan is running, since the run's remaining files would be written under a

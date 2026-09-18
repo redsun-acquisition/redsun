@@ -1085,6 +1085,11 @@ class AppContainer:
                 OmeZarrAdapter
             )
             register_consolidator()
+            self.path_provider.lock_base_dir(
+                "the session's catalog reads files only from the readable "
+                "directories it started with; choose the root with "
+                "storage.base_dir before the session starts"
+            )
             return server
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
             # a server that started and then failed to be set up is stopped,
