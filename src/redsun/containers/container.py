@@ -656,14 +656,6 @@ class AppContainer:
         """Return the application configuration."""
         return self._config
 
-    def _instance_of(self, comp: _ComponentBase[T]) -> T:
-        """Return what this container built from *comp*."""
-        if comp not in self._built:
-            raise RuntimeError(
-                f"Component {comp.name} has not been instantiated yet. Call 'build' first."
-            )
-        return cast("T", self._built[comp])
-
     def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
         """Return what this container built from *declared*, by name.
 

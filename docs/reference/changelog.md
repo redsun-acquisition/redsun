@@ -236,6 +236,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Removed
 
+- **`DescriptorTreeView.get_keys`** (`redsun.view.qt`), which nothing called.
 - **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
   else. No container ever called `shutdown` on a device.
 - The `redsun.storage` shim: **`BaseStorage`**, **`StreamSpec`**,
