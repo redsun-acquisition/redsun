@@ -63,6 +63,7 @@ nav = [
         { "Configure logging" = "how-to/configure-logging.md" },
         { "Write a service" = "how-to/write-a-service.md" },
         { "Write a derived product" = "how-to/write-a-derived-product.md" },
+        { "Keep a catalog of runs" = "how-to/keep-a-catalog.md" },
     ]},
     { "Reference" = [
         "reference/index.md",
@@ -88,6 +89,7 @@ nav = [
         { "Container architecture" = "explanation/container-architecture.md" },
         { "Component system" = "explanation/component-system.md" },
         { "Services" = "explanation/services.md" },
+        { "The session catalog" = "explanation/catalog.md" },
         { "Architecture" = [
             { "Devices" = "explanation/architecture/devices.md" },
             { "Presenters" = "explanation/architecture/presenters.md" },

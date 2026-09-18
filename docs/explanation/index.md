@@ -7,6 +7,7 @@
 - **[Container architecture](container-architecture.md)**
 - **[Component system](component-system.md)**
 - **[Services](services.md)**
+- **[The session catalog](catalog.md)**
 
 ## SDK
 
