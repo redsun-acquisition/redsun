@@ -156,20 +156,32 @@ StandardDetector.__init__(det, name="det")
 
 ### Writing acquired data
 
-Detector logics reach `redsun`'s storage through
-[`BaseStorage`][redsun.storage.BaseStorage]. The trigger logic registers a
-[`StreamSpec`][redsun.storage.StreamSpec] when preparing; the data logic gets a
-[`FrameSink`][redsun.storage.FrameSink] and builds its
-`StreamResourceDataProvider` from `uri_for`, `resource_info_for` and
-`signal_for`; the acquire logic pushes frames with `await sink.put(...)` from
-kickoff on. Devices never see the path provider, only the storage instance,
-resolved through the [storage registry][redsun.storage.get_storage].
+A device owns what it writes. Its service or its `ophyd-async` writer chooses
+the format, the dimensions, the chunking and when the file is complete, and the
+device emits `StreamResource` and `StreamDatum` documents naming the result:
+`mimetype` matching the bytes on disk, and `parameters["path"]` naming the
+array inside the store. `redsun` writes no acquisition bytes.
 
-[Session storage](../storage.md) and
-[ADR 0002](../decisions/0002-storage-dual-context-redesign.md) describe the
-full contract, including when to open eagerly or lazily and how a live view
-streams frames without creating a store.
-`tests/sdk/storage/test_integration_plans.py` implements both patterns.
+Where the files go comes from the session. A device whose constructor takes a
+`path_provider` keyword receives the session's
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider], an
+`ophyd-async` `PathProvider` giving
+`<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`:
+
+```python
+class Camera(Device):
+    def __init__(self, name: str, path_provider: PathProvider) -> None:
+        super().__init__(name=name)
+        self._path_provider = path_provider
+```
+
+The data key the device asks with names the last directory, so each detector
+writes into one of its own and owns its store. Counters belong to
+`(plan, datakey)`, so two detectors in one run are both `<plan>_00003`.
+
+A declaration cannot give `path_provider` itself; the container reserves it,
+as it does `service` and `autoconnect`. A device not taking the keyword is
+built unchanged and picks its own paths.
 
 ## Standby
 

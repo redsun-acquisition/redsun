@@ -86,6 +86,51 @@ Dates are specified in the format `DD-MM-YYYY`.
   time and traceback under `redsun.service.<service>.<logger>`.
 - **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
   Services tab, with a selector for one service or all of them.
+- **`SessionPathProvider`**, **`PlanFilenameProvider`** and
+  **`session_directory`** (`redsun.path_provider`) - the session's path
+  provider, moved out of `redsun.storage`. `session_directory(session)` returns
+  `<base_dir>/<session>`.
+- **`path_provider`** keyword of a device declaration, reserved by the
+  container - a device whose constructor takes it is built with the session's
+  provider, and a declaration giving one is refused:
+
+  ```python
+  class Camera(Device):
+      def __init__(self, name: str, path_provider: PathProvider) -> None: ...
+  ```
+
+- **`AppContainer.path_provider`** (`redsun.containers.container`) - the
+  session's provider, built with the session name. It is published for wiring
+  under **`PATH_PROVIDER_PORT`** (`"path_provider"`), with `set_plan`,
+  `reset_plan` and `set_base_dir` as slots:
+
+  ```yaml
+  wiring:
+    - from: acquisition.sig_pre_launch_notify
+      to: path_provider.set_plan
+  ```
+
+- A `storage` section in a session file, with `base_dir` and `max_digits`,
+  giving the root a session writes under. It defaults to
+  `user_data_dir("redsun", appauthor=False)`:
+
+  ```yaml
+  storage:
+    base_dir: "D:/experiments/2026-09"
+  ```
+
+- **`SessionPathProvider.base_dir`** and **`SessionPathProvider.set_base_dir`**,
+  the latter a slot taking a `str` or a `Path`. It raises `RuntimeError` while
+  a plan is running, since the run's remaining files would be written under a
+  different root, and takes effect from the next request on.
+- **`PATH_PROVIDER`** (`redsun.path_provider`) - key the container binds the
+  session's provider to, so a component resolves it without holding the
+  container:
+
+  ```python
+  provider = container.require(PATH_PROVIDER)
+  ```
+
 
 ### Changed
 
@@ -112,11 +157,38 @@ Dates are specified in the format `DD-MM-YYYY`.
   carries none, such as one rebuilt from a service's output.
 - **`LogView`** (`redsun.view.qt.builtins`): `Save logs...` and
   `Clear log window` act on the tab shown.
+- **`SessionPathProvider`** gives each data key a directory of its own,
+  `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`, and counts
+  per `(plan, datakey)`, so two detectors in one run write the same filename
+  in different directories. A call without a data key leaves that level out.
+  **`PlanFilenameProvider.bump`** takes the data key as its second argument
+  and **`PlanFilenameProvider.reset`** takes `(plan, datakey)` keys.
+- **`SessionPathProvider`** writes under
+  `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`,
+  beside the session's logs. Nothing is moved: files already in
+  `~/redsun-storage` stay there, and a provider built while that directory
+  exists logs a `WARNING` naming both locations.
 
 ### Removed
 
 - **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
   else. No container ever called `shutdown` on a device.
+- The `redsun.storage` shim: **`BaseStorage`**, **`StreamSpec`**,
+  **`OpenStore`**, **`StorageIO`**, **`SinkFactory`**, **`StoreStateError`**,
+  **`FrameSink`**, **`PathSignals`**, the storage registry
+  (**`register_storage`**, **`get_storage`**, **`clear_registry`**,
+  **`reset_group`**) and the `acquire-zarr` and in-memory backends. An
+  acquisition is written by the service and its device, which emit
+  `StreamResource` and `StreamDatum` documents naming the result; see
+  [ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md).
+  `StreamDatum` ranges are whatever the device emits, where `FrameRouter`
+  made them contiguous before.
+- **`StoragePresenter`** (`redsun.presenter.builtins`) and **`StorageView`**
+  (`redsun.view.qt.builtins`), with their `redsun` manifest entries. The
+  container builds the session's path provider, so a session declaring them
+  drops both sections and gives `base_dir` in the new `storage` section
+  instead. `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
+- The `zarr` extra and dependency group, with `acquire-zarr`.
 
 ### Changed (breaking)
 
@@ -740,8 +812,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `benchmarks/` - `acquire-zarr` dual-load benchmark (live view via
   `bps.monitor` + disk storage, two detectors, inline processing callback).
   Shipped in the sdist only, never in wheels, not collected by `pytest`.
-- Tutorial: [writing a custom storage backend](../tutorials/custom-storage-backend.md)
-  (`StorageIO`/`OpenStore` implementation driven through `BaseStorage`).
+- Tutorial: writing a custom storage backend (`StorageIO`/`OpenStore`
+  implementation driven through `BaseStorage`). Removed with the storage shim.
 
 ### Changed (breaking)
 

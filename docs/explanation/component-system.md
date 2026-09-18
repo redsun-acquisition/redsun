@@ -128,15 +128,7 @@ Inheriting the [`Presenter`][redsun.presenter.Presenter] or
 configuration file names built-in components the same way as any plugin's:
 
 ```yaml
-presenters:
-  storage:
-    plugin_name: redsun
-    plugin_id: storage
-
 views:
-  storage:
-    plugin_name: redsun
-    plugin_id: storage
   logs:
     plugin_name: redsun
     plugin_id: logs
@@ -145,9 +137,8 @@ views:
 A manifest entry is imported only when a configuration names it, so a headless
 installation never imports the Qt views.
 
-The built-ins are described in
-[Presenters](architecture/presenters.md#built-in-presenters), and the `logs`
-view in [Configure logging](../how-to/configure-logging.md#show-the-logs-in-the-application).
+The `logs` view is described in
+[Configure logging](../how-to/configure-logging.md#show-the-logs-in-the-application).
 
 ## Inline vs. config-based registration
 

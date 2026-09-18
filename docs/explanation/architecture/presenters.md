@@ -47,62 +47,101 @@ A presenter reaches the virtual container by implementing
 A presenter processing acquisition data subscribes to the `RunEngine`'s
 documents, directly or through the callback registry of the
 [`VirtualContainer`][redsun.virtual.VirtualContainer]. Document callbacks run
-synchronously on the engine's event loop thread and cannot await. To store a
-derived result, such as a median image computed from Event documents, a
-callback uses the storage layer's synchronous side: it calls `register` with a
-[`StreamSpec`][redsun.storage.StreamSpec] built from the descriptor document,
-then `put_nowait` on a [`FrameSink`][redsun.storage.FrameSink]. The design is
-described in [Session storage](../storage.md) and
-[ADR 0002](../decisions/0002-storage-dual-context-redesign.md).
+synchronously on the engine's event loop thread and cannot await. A presenter
+storing a derived result, such as a median image computed from Event documents,
+reads the `StreamResource` document for the store the device wrote and adds its
+product to it. The acquisition itself belongs to the device, as
+[ADR 0013](../decisions/0013-acquisition-storage-belongs-to-the-device.md)
+records.
 
-## Built-in presenters
+## The session's path provider
 
-`redsun.presenter.builtins` holds presenters any session can use, declared in
-Python or from a configuration file through the `redsun` plugin (see
-[component system](../component-system.md#built-in-components)).
+The container builds one
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider] per session
+and hands it to every device taking a `path_provider` keyword, so every file a
+session writes lands under one root:
 
-### `StoragePresenter`
+```
+<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
+```
 
-[`StoragePresenter`][redsun.presenter.builtins.StoragePresenter] controls
-where a session stores its data. It owns the
-[`SessionPathProvider`][redsun.storage.SessionPathProvider], created with the
-session name from the configuration, and registers it in the virtual container
-under [`PATH_PROVIDER`][redsun.storage.PATH_PROVIDER]. Views follow the
-provider through its `signals` (base directory and plan name).
+The data key names the last directory, so each detector writes into one of its
+own. Counters belong to `(plan, datakey)`, so two detectors in one run are both
+`<plan>_00003`.
 
-The application connects two slots to the plan lifecycle:
+The root comes from the session file, and defaults to the user data directory,
+beside the session's logs:
+
+```yaml
+session: my-session
+storage:
+  base_dir: "D:/experiments/2026-09"   # optional
+  max_digits: 5                        # optional, width of the counter
+```
+
+The provider is published for wiring as `path_provider`, and a component
+resolves it through
+[`PATH_PROVIDER`][redsun.path_provider.PATH_PROVIDER]:
 
 ```python
-def wire(self) -> None:
-    self.connect(self.acquisition.sig_pre_launch_notify, self.storage.set_plan)
-    self.connect(self.acquisition.sig_plan_done, self.storage.reset_plan)
+provider = container.require(PATH_PROVIDER)
+provider.base_dir  # where files go now
+provider.set_base_dir("E:/other-disk")  # where they go from the next run on
 ```
 
-`set_plan` names burst files after the upcoming run; `reset_plan` sets the name
-back to `unknown`, so bursts after a run are not filed under it. Only the
-application knows which signals mean "a plan started", so nothing is connected
-until it says so.
+A component named `path_provider` is refused, since it would shadow the
+provider in the wiring.
+
+### The plan lifecycle
+
+Three slots, connected to whatever announces a run:
 
 ```yaml
-presenters:
-  storage:
-    plugin_name: redsun
-    plugin_id: storage
-    base_dir: "~/my-data"   # optional; defaults to ~/redsun-storage
+wiring:
+  - from: acquisition.sig_pre_launch_notify
+    to: path_provider.set_plan
+  - from: acquisition.sig_plan_done
+    to: path_provider.reset_plan
+  - from: output_dir_widget.sig_directory_chosen
+    to: path_provider.set_base_dir
 ```
 
-Its Qt view ships beside it:
-[`StorageView`][redsun.view.qt.builtins.StorageView] shows the base directory
-and lets the user change it. It resolves the same key, so an application
-declaring the view without the presenter still builds and shows a read-only
-placeholder.
+`set_plan` names files after the upcoming run and `reset_plan` sets the name
+back to `unknown`, so files written after a run are not filed under it. Only
+the application knows which signals mean "a plan started", so nothing is
+connected until it says so.
 
-```yaml
-views:
-  storage:
-    plugin_name: redsun
-    plugin_id: storage
+`set_base_dir` raises `RuntimeError` while a plan is running, since the run's
+remaining files would land somewhere else than the ones already written. A GUI
+offering the root as an editable field catches it and says so. A session that
+does not wire `set_plan` and `reset_plan` cannot tell that a plan is running,
+so it does not raise.
+
+### What is not supported
+
+A device cannot be given a root of its own from configuration. `path_provider`
+is reserved, as `service` and `autoconnect` are, and there is no per-device
+`base_dir`. One root per session is what makes a session archivable as a unit
+and what keeps a catalog's readable roots correct. A device that has to write
+elsewhere, to a scratch disk or inside a container, does not take the keyword
+and owns its paths:
+
+```python
+class FastCamera(Device):
+    def __init__(self, name: str, scratch: str) -> None:
+        super().__init__(name=name)
+        self._provider = StaticPathProvider(UUIDFilenameProvider(), scratch)
 ```
+
+Two devices must not share a data key. The key is the directory and the
+counter, so both would write the same filenames into the same place, and the
+writer that closes last is the one whose data survives.
+
+A device's own provider cannot be retargeted from outside.
+`ophyd-async`'s `PathProvider` is a protocol with one method, `__call__`, and
+no interface for changing where it points. `set_base_dir` exists because
+`redsun` built that provider itself. If `ophyd-async` grows a public
+interface, this is what follows it.
 
 [plans]: https://blueskyproject.io/bluesky/main/plans.html
 [documents]: https://blueskyproject.io/bluesky/main/documents.html

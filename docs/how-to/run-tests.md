@@ -42,7 +42,7 @@ uv run tox -e tests -- tests/sdk/
 uv run tox -e tests -- tests/container/test_container.py::test_function_name
 
 # everything matching a pattern
-uv run tox -e tests -- -k "test_storage"
+uv run tox -e tests -- -k "test_wiring"
 ```
 
 The project environment skips the sync, so it is faster while editing:

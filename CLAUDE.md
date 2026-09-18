@@ -11,16 +11,16 @@ redsun/
 |   |-- __init__.py            AppContainer and the declare_* functions
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
-|   |-- plugins.yaml           manifest of the built-in presenters and views
+|   |-- plugins.yaml           manifest of the built-in views
 |   |-- containers/            AppContainer, declare_*, hook points, config loading
 |   |   `-- qt/                QtAppContainer and the main window
 |   |-- engine/                RunEngine wrapper, actions, plan stubs
 |   |-- presenter/             Presenter ABC, PPresenter, plan spec, built-ins
 |   |-- services/              Service: a process or server devices talk to
-|   |-- storage/               BaseStorage, sinks, routing, path provider
-|   |   `-- backends/          acquire-zarr and in-memory backends
+|   |-- path_provider.py       SessionPathProvider, session_directory
+|   |-- storage/               writers for derived products, by format
 |   |-- view/                  View ABC, PView
-|   |   `-- qt/                Qt widgets and the built-in views (LogView, StorageView)
+|   |   `-- qt/                Qt widgets and the built-in LogView
 |   |-- virtual/               VirtualContainer, wiring, provider protocols
 |   |-- qt/                    public Qt entry point, re-exports
 |   `-- utils/                 find_signals, descriptor helpers
@@ -63,7 +63,7 @@ a second `uv.exe` in the project `.venv` and shadows the installed one:
 ```bash
 uv run tox                       # lint, both mypy legs, tests, docs
 uv run tox -e tests              # one environment
-uv run tox -e tests -- tests/sdk/storage -x     # posargs reach pytest
+uv run tox -e tests -- tests/sdk -x              # posargs reach pytest
 uv run tox -e mypy-pyqt,mypy-pyside
 ```
 
@@ -142,23 +142,19 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   `_ViewComponent.build`. Never reintroduce class-level attribute checks.
   Rationale: `docs/explanation/decisions/0003-structural-subtyping-for-presenters-and-views.md`.
 
-### Storage
+### Acquisition storage
 
-- Two-level split: **`StorageIO`** is backend mechanics (`open`, `uri`,
-  `resource_info`); **`OpenStore`** is the lifecycle-bound handle (`write`,
-  `release`, `close`). `BaseStorage` implements the `SinkFactory` protocol on
-  top of both. Keep the split: do not give `StorageIO` lifecycle methods.
-- Producers only ever hold a **`FrameSink`** (`await put` / `put_nowait` /
-  `close`). The consumer face of the queue is private to `BaseStorage`'s
-  per-key drain task; all per-key teardown flows through the drain's exit
-  path, and the last drain out closes the backend.
-- `open()` is idempotent and lock-guarded; never open the backend anywhere
-  else. `register` is sync and only legal before open.
-- **Capacity is enforced by the drain, not by exceptions**: the drain counts
-  writes and shuts the queue down at capacity; producers observe
-  `QueueShutDown`. Never raise it by hand.
-- `FrameRouter.mark_written` is the single place frame counts advance.
-- Rationale: `docs/explanation/decisions/0002-storage-dual-context-redesign.md`.
+- `redsun` writes no acquisition bytes. The service and its device choose the
+  format, the dimensions and when a file is complete, and emit
+  `StreamResource` / `StreamDatum` documents naming the result.
+- The container builds one `SessionPathProvider` per session and passes it to
+  every device whose constructor takes a `path_provider` keyword. A
+  declaration giving that keyword is refused, as with `service` and
+  `autoconnect`.
+- `redsun.storage` holds per-format writers for derived products only: a
+  component computing one writes it against the store named in the
+  `StreamResource` document.
+- Rationale: `docs/explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md`.
 
 ## Code conventions
 

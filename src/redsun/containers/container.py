@@ -51,6 +51,7 @@ from redsun.containers.components import (
     expects_positionals,
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
+from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
 from redsun.presenter import PPresenter
 from redsun.services._service import close_channel_access
 from redsun.view import PView
@@ -157,6 +158,9 @@ logger = logging.getLogger("redsun")
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
+
+PATH_PROVIDER_PORT: Final = "path_provider"
+"""Name the session's path provider is wired under."""
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
@@ -325,6 +329,7 @@ class AppContainer:
         "_hook_by_moment",
         "_hooks",
         "_is_built",
+        "_path_provider",
         "_report",
         "_service_logs",
         "_services",
@@ -550,6 +555,7 @@ class AppContainer:
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
+        self._path_provider: SessionPathProvider | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
@@ -674,6 +680,13 @@ class AppContainer:
     def services(self) -> dict[str, Service]:
         """Return the container's services, started or not."""
         return dict(self._services)
+
+    @property
+    def path_provider(self) -> SessionPathProvider:
+        """Return the session's path provider, shared by every device taking one."""
+        if self._path_provider is None:
+            raise RuntimeError("Container not built. Call build() first.")
+        return self._path_provider
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -998,6 +1011,14 @@ class AppContainer:
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
+
+        storage = self._config.get("storage", {})
+        base_dir = storage.get("base_dir")
+        self._path_provider = SessionPathProvider(
+            base_dir=Path(base_dir).expanduser() if base_dir else None,
+            session=base_cfg["session"],
+            max_digits=storage.get("max_digits", 5),
+        )
         logger.debug("VirtualContainer created")
 
     def _build_devices(self) -> None:
@@ -1006,7 +1027,7 @@ class AppContainer:
         for name, device_comp in self._device_components.items():
             try:
                 built_devices[name] = self._built[device_comp] = device_comp.build(
-                    self._prefix_for(device_comp)
+                    self._prefix_for(device_comp), self.path_provider
                 )
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
@@ -1110,7 +1131,8 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
 
     def _register_providers(self) -> None:
-        """Let each component providing dependencies register them."""
+        """Bind the session's path provider, then let each component bind its own."""
+        self.virtual_container.provide(PATH_PROVIDER, self.path_provider)
         for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
@@ -1119,9 +1141,19 @@ class AppContainer:
         """Publish the built components by name, then connect them.
 
         Names come first, since `wire` and the ``wiring`` section resolve
-        components by name.
+        components by name. The session's path provider is published beside
+        them as ``path_provider``, so a configuration file can feed it the
+        plan name.
         """
-        self.virtual_container._set_components(self._built_of(self._components))
+        components = self._built_of(self._components)
+        if PATH_PROVIDER_PORT in components:
+            raise WiringError(
+                f"component {PATH_PROVIDER_PORT!r} shadows the session path "
+                "provider, which is published under that name; rename it"
+            )
+        self.virtual_container._set_components(
+            {**components, PATH_PROVIDER_PORT: self.path_provider}
+        )
         self.wire()
         self._apply_wiring_config()
 
@@ -1327,6 +1359,8 @@ class AppContainer:
             frontend=frontend,
             log_level=log_level,
         )
+        if "storage" in config:
+            instance._config["storage"] = config["storage"]
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
         if "hooks" in config:

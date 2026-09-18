@@ -9,33 +9,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "acquire-zarr"
-version = "0.10.0"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/c6/e02cf95f1f40cb3624a720cb8a778a19de9088138cbb00315ce21f6bd81c/acquire_zarr-0.10.0-cp311-cp311-macosx_15_0_arm64.whl", hash = "sha256:b1075a01fbfec12775f7804854a07839ed1bba06f048e1985a19f4398c4fc384", size = 3838975, upload-time = "2026-09-12T00:03:30.877Z" },
-    { url = "https://files.pythonhosted.org/packages/df/da/095a9c86a27882f1c12f9723c3849ce1ac810995e7633835044dbe519927/acquire_zarr-0.10.0-cp311-cp311-macosx_15_0_x86_64.whl", hash = "sha256:fc1b6c52d99ec62b8db84399677f36974627f5670fc7c98007e1e4dcb2694eb8", size = 3741461, upload-time = "2026-09-12T00:03:32.745Z" },
-    { url = "https://files.pythonhosted.org/packages/35/f4/1d720a83f271c934a33bc4f2ba74d236d2bac18689f8fb0caa1259cd736b/acquire_zarr-0.10.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:e6c2f7af6c076e258550c9916f212c940a0df09f3e482b3641ad677e9f8d885e", size = 5009118, upload-time = "2026-09-12T00:03:34.663Z" },
-    { url = "https://files.pythonhosted.org/packages/58/63/9f1a7b0030dfbdd9c9e7d1a55eb01a3a2d6a5f2896ee5f4e1dc65543faf7/acquire_zarr-0.10.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:02e36e9afaf733bd8620d55c596aeb39b8febe58c99a038865bdd14c59e788d0", size = 4905179, upload-time = "2026-09-12T00:03:37.567Z" },
-    { url = "https://files.pythonhosted.org/packages/85/fc/7fe04b145088ddbff1d457eb6fe7dffc6608f7c0b9eeeeb5c72c04f32b29/acquire_zarr-0.10.0-cp311-cp311-win_amd64.whl", hash = "sha256:3cdad76ba2d2c2c9ac558669bf307d8d00da4b35113317606c00dc51120c13ec", size = 3023348, upload-time = "2026-09-12T00:03:39.381Z" },
-    { url = "https://files.pythonhosted.org/packages/48/75/be4136f626e963f9b4bd6bcc21044dda91cb14d84e004aeb10de22ea83f6/acquire_zarr-0.10.0-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:15b9e650fc2fc27858618868fc67cc253a65fe90a9e5f65944e2537cfebf246f", size = 3840872, upload-time = "2026-09-12T00:03:41.355Z" },
-    { url = "https://files.pythonhosted.org/packages/a0/5c/fa85ddc630d6233a14331642676c78387c789e557ebc2ae8155ecebebdf2/acquire_zarr-0.10.0-cp312-cp312-macosx_15_0_x86_64.whl", hash = "sha256:e6dbcca4c7f91c54ce1ded0fd92d73a43c45a9d1e3f7bb7e91391e3849410aae", size = 3745948, upload-time = "2026-09-12T00:03:43.196Z" },
-    { url = "https://files.pythonhosted.org/packages/dd/83/9a3278b5531b2b1ec2b3628e4a5d6d3250381eeec42eeb51f11396e26ddc/acquire_zarr-0.10.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:0c57ab9aded67d2d05f75586bb71faf8f7704cde8dfed4a714a134191b7380b1", size = 5007364, upload-time = "2026-09-12T00:03:44.929Z" },
-    { url = "https://files.pythonhosted.org/packages/a4/52/fce28e9255d70bdad000dab200063be8c82d114c2b59416dce9151e0548c/acquire_zarr-0.10.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:578bd3f2882e2cc78f8cdf03b7dcb0296745ed403bef3162dcd3265f67d77c8b", size = 4905684, upload-time = "2026-09-12T00:03:46.9Z" },
-    { url = "https://files.pythonhosted.org/packages/41/d2/994bb988a579c5f605a61d897aed06c1993cd9ea91aabc8d0cc2b57bf5e0/acquire_zarr-0.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:26573dbdb1526ed951fb9e97781f5d379ddb7927bbda53c5d4b603a4abb3042e", size = 3028095, upload-time = "2026-09-12T00:03:48.841Z" },
-    { url = "https://files.pythonhosted.org/packages/78/4b/b4a5a8f5f4c45369078d186e3e6e8dc97e024121a61234d5fe9ee8bd340e/acquire_zarr-0.10.0-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:47bdd1162dbb36e553d058b6eb999686a528723dc09b4b447115e753b97e2e0c", size = 3840862, upload-time = "2026-09-12T00:03:50.7Z" },
-    { url = "https://files.pythonhosted.org/packages/df/3d/425ed3b0a17fde59433e4d8c5b5d69f88ceb865a06107adab55bf4a996c7/acquire_zarr-0.10.0-cp313-cp313-macosx_15_0_x86_64.whl", hash = "sha256:0dab7434534f0b92ee0fd98026346c6709be556c1b177d6f4cf0c5ccaf3d6cfa", size = 3745976, upload-time = "2026-09-12T00:03:52.904Z" },
-    { url = "https://files.pythonhosted.org/packages/95/f2/bf03d75af9b078b644a889cba37c165aad6602aeba512d8038fe3f037e1f/acquire_zarr-0.10.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:fa08694fa62fa5dde54c461ee72ce1335e8cd0faa10347eea11dfe5e66718c9d", size = 5008361, upload-time = "2026-09-12T00:03:55.051Z" },
-    { url = "https://files.pythonhosted.org/packages/35/b6/0bd7ca1912dae1e2c96facffd4e53351f84cd745e1d1458d16bfd43a65ec/acquire_zarr-0.10.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:e8b28c8368b0a1e248d5594c06c3376563fd07b560c7f456d483eb1f122b7da7", size = 4906115, upload-time = "2026-09-12T00:03:57.291Z" },
-    { url = "https://files.pythonhosted.org/packages/21/c2/09eb9d9b85e4323fff0fe26067844654569d1fb82bbccb11507d19e9a8ce/acquire_zarr-0.10.0-cp313-cp313-win_amd64.whl", hash = "sha256:b0a3504a7eb30b4787331cc22aa7bedc4997be997a952a4ab371c4458531139d", size = 3028133, upload-time = "2026-09-12T00:03:59.34Z" },
-    { url = "https://files.pythonhosted.org/packages/ba/44/c55a27017d49f0ff0838aa0bc7502f53d040fda9523901dd6da0599ce449/acquire_zarr-0.10.0-cp314-cp314-macosx_15_0_arm64.whl", hash = "sha256:44469eef4f988891ed1a8ddad5955974c91674d2c030af813d27bb0e1d147825", size = 3841315, upload-time = "2026-09-12T00:04:01.538Z" },
-    { url = "https://files.pythonhosted.org/packages/25/fc/e86a6766b7e1fbfb360cda4e307a6704fcbc39ec4791a3e3de0eba9727c4/acquire_zarr-0.10.0-cp314-cp314-macosx_15_0_x86_64.whl", hash = "sha256:33cf570ef996105af4bd0b20ab54e11aab778c40ae644e6b4f5fce7842afc27c", size = 3746962, upload-time = "2026-09-12T00:04:03.591Z" },
-    { url = "https://files.pythonhosted.org/packages/fe/06/5158692fbad2a82c9bfa5f0e7c23057b8fdcb6034a8274558a38a19c263a/acquire_zarr-0.10.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:bcb35acf780f4abe81129667b2f8693e8d0a71e5248cdc331677e6e8f413d5e2", size = 5008955, upload-time = "2026-09-12T00:04:05.596Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/4c/c47fe9ce4c391204489131f5d12806bc8190796419460b08f59e591eb92a/acquire_zarr-0.10.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:63efb51ef653f4f450c85098da35a9b25f9bff6e351626f45171a61bc5964773", size = 4905908, upload-time = "2026-09-12T00:04:07.544Z" },
-    { url = "https://files.pythonhosted.org/packages/4d/fd/db86aac4cd1c32552baad3f155cfaa11dfa81fa883be97e7dcd0e9456ce9/acquire_zarr-0.10.0-cp314-cp314-win_amd64.whl", hash = "sha256:9758288bcf16db8dee12d6288ad74a335ecff65d4cc848c274b2841239bae5a3", size = 3116476, upload-time = "2026-09-12T00:04:09.457Z" },
-]
-
-[[package]]
 name = "aioca"
 version = "2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2060,13 +2033,9 @@ qt-common = [
     { name = "magicgui" },
     { name = "qtpy" },
 ]
-zarr = [
-    { name = "acquire-zarr" },
-]
 
 [package.dev-dependencies]
 dev = [
-    { name = "acquire-zarr" },
     { name = "caproto" },
     { name = "griffe-fieldz" },
     { name = "magicgui" },
@@ -2106,13 +2075,9 @@ qt-common = [
     { name = "magicgui" },
     { name = "qtpy" },
 ]
-zarr = [
-    { name = "acquire-zarr" },
-]
 
 [package.metadata]
 requires-dist = [
-    { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.10.0" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "caproto", marker = "extra == 'epics'", specifier = ">=1.3.0" },
     { name = "culsans", specifier = ">=0.11.0" },
@@ -2132,11 +2097,10 @@ requires-dist = [
     { name = "qtpy", marker = "extra == 'qt-common'", specifier = ">=2.4.3" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["epics", "pyqt", "pyside", "qt-common", "zarr"]
+provides-extras = ["epics", "pyqt", "pyside", "qt-common"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "acquire-zarr", specifier = ">=0.10.0" },
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
     { name = "magicgui", specifier = ">=0.10.2" },
@@ -2176,7 +2140,6 @@ qt-common = [
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
-zarr = [{ name = "acquire-zarr", specifier = ">=0.10.0" }]
 
 [[package]]
 name = "referencing"
