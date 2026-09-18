@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -42,6 +43,11 @@ from redsun.virtual import RedSunConfig, Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+requires_tiled = pytest.mark.skipif(
+    find_spec("tiled") is None,
+    reason="the tiled extra installs nothing on this Python",
+)
 
 
 class TestComponentWrappers:
@@ -1387,6 +1393,7 @@ class TestDevicePathProvider:
 class TestTiledSection:
     """A session opts into a catalog with a `tiled` section, empty or not."""
 
+    @requires_tiled
     def test_an_empty_section_reaches_the_container(self, config_path: Path) -> None:
         """Present and empty is a valid catalog: every key has a default."""
         app = AppContainer.from_config(
@@ -1398,6 +1405,7 @@ class TestTiledSection:
         assert app.tiled is not None
         assert app.tiled.directory is None
 
+    @requires_tiled
     def test_the_paths_reach_the_container(self, config_path: Path) -> None:
         app = AppContainer.from_config(
             str(config_path / "mock_tiled_paths_config.yaml")

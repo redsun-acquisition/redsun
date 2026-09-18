@@ -1034,8 +1034,10 @@ class AppContainer:
         self._virtual_container._set_configuration(base_cfg)
 
         if "tiled" in self._config:
-            _require_tiled()
+            # parsed first, so a malformed section is refused whether or not
+            # the extra is installed
             self._tiled = TiledConfig.from_mapping(self._config["tiled"])
+            _require_tiled()
 
         storage = self._config.get("storage", {})
         base_dir = storage.get("base_dir")
