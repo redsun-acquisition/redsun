@@ -110,14 +110,26 @@ Dates are specified in the format `DD-MM-YYYY`.
       to: path_provider.set_plan
   ```
 
-- A `storage` section in a session file, with `base_dir` and `max_digits`,
-  giving the root a session writes under. It defaults to
-  `user_data_dir("redsun", appauthor=False)`:
+- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`) and a
+  `storage` section in a session file. `base_dir` is the root a session writes
+  under, `user_data_dir("redsun", appauthor=False)` by default, and
+  `max_digits` the width of the counter in file names. A `catalog` key, present
+  and empty or not, gives the session a catalog in `<base_dir>/<session>/catalog`,
+  and needs the `tiled` extra:
 
   ```yaml
   storage:
-    base_dir: "D:/experiments/2026-09"
+    base_dir: "D:/experiments/2026-09"   # optional
+    catalog:                             # optional
+      readable:                          # optional, added to <base_dir>/<session>
+        - /data/aht
   ```
+
+  `AppContainer.storage` gives the section once the container is built.
+  `readable` names further directories the catalog may read assets from, for
+  services writing where their own configuration says. A key the section or
+  its `catalog` has no place for is refused, and so is a `catalog` in a session
+  without the `tiled` extra installed.
 
 - **`SessionPathProvider.base_dir`** and **`SessionPathProvider.set_base_dir`**,
   the latter a slot taking a `str` or a `Path`. It raises `RuntimeError` while
@@ -156,24 +168,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   few or too many dimensions, or the format's package is absent, in which case
   the message names the extra that installs it.
 - A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
-- **`TiledConfig`** (`redsun.containers`) and a `tiled` section in a session
-  file, which a session uses to opt into a catalog. Present and empty is a
-  valid catalog, since every key has a default:
-
-  ```yaml
-  tiled:
-    directory: /data/catalogs/aht   # optional, the session's own by default
-    readable:                       # optional, added to the session's directory
-      - /data/aht
-  ```
-
-  `AppContainer.tiled` gives the section, or `None` when there is none. A
-  `directory` of `None` means the session's own
-  `<base_dir>/<session>/catalog`, resolved when the catalog is built. `readable`
-  names further directories the catalog may read assets from, for services
-  writing where their own configuration says. A section naming a key that does
-  not exist is refused, and so is a section in a session without the `tiled`
-  extra installed.
 - A `tiled` extra and dependency group, with `tiled[client,server]`. It
   installs nothing on Python 3.14, which `tiled` does not support yet.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
@@ -185,18 +179,17 @@ Dates are specified in the format `DD-MM-YYYY`.
   from redsun.catalog import CATALOG
   from tiled.client import from_uri
 
-  address = container.try_require(CATALOG)  # None without a tiled section
+  address = container.try_require(CATALOG)  # None without a catalog
   client = from_uri(address.uri) if address else None
   ```
 
-- A session with a `tiled` section starts a `tiled` server on this machine
-  while its virtual container is created, provides its address under
-  `CATALOG`, and stops it on
-  `shutdown`, after the presenters. It is kept in `directory`, by default
-  `<base_dir>/<session>/catalog` under the path provider's root, and reads
-  assets from `<base_dir>/<session>` and every `readable` directory. `tiled`
-  checks this when an asset is read, not when it is registered. A catalog that
-  fails to start is logged and the session runs without it.
+- A session whose `storage` section has a `catalog` starts a `tiled` server
+  on this machine while its virtual container is created, provides its address
+  under `CATALOG`, and stops it on `shutdown`, after the presenters. The server
+  keeps its database in `<base_dir>/<session>/catalog` and reads assets from
+  `<base_dir>/<session>` and every `readable` directory. `tiled` checks this
+  when an asset is read, not when it is registered. A catalog that fails to
+  start is logged and the session runs without it.
 
 
 ### Changed

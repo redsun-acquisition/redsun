@@ -1,4 +1,4 @@
-"""Tests for the catalog a session starts from its ``tiled`` section."""
+"""Tests for the catalog a session starts from its storage section."""
 
 from __future__ import annotations
 
@@ -62,24 +62,23 @@ def write_table(directory: Path) -> Path:
 
 
 @pytest.mark.parametrize(
-    ("sections", "where"),
+    ("storage", "where"),
     [
-        (lambda tmp: {"tiled": None}, "data/catalog-session/catalog"),
+        (lambda tmp: {"catalog": None}, "data/catalog-session/catalog"),
         (
-            lambda tmp: {"tiled": None, "storage": {"base_dir": str(tmp / "root")}},
+            lambda tmp: {"base_dir": str(tmp / "root"), "catalog": None},
             "root/catalog-session/catalog",
         ),
-        (lambda tmp: {"tiled": {"directory": str(tmp / "elsewhere")}}, "elsewhere"),
     ],
-    ids=["session-directory", "storage-root", "explicit"],
+    ids=["default-root", "configured-root"],
 )
 def test_the_catalog_starts_where_the_session_says(
     session: Callable[..., AppContainer],
     tmp_path: Path,
-    sections: Callable[[Path], dict[str, Any]],
+    storage: Callable[[Path], dict[str, Any]],
     where: str,
 ) -> None:
-    session(**sections(tmp_path))
+    session(storage=storage(tmp_path))
 
     assert (tmp_path / where / "catalog.db").is_file()
 
@@ -88,7 +87,7 @@ async def test_assets_read_back_only_from_readable_directories(
     session: Callable[..., AppContainer], tmp_path: Path
 ) -> None:
     """The session's directory and the configured ones; `tiled` checks on read."""
-    app = session(tiled={"readable": [str(tmp_path / "extra")]})
+    app = session(storage={"catalog": {"readable": [str(tmp_path / "extra")]}})
     client = client_of(app)
     for directory in (
         app.path_provider.base_dir / SESSION / "acquired",
@@ -109,11 +108,12 @@ def test_a_catalog_that_fails_to_start_is_logged_and_skipped(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """The session runs without a catalog rather than not at all."""
-    occupied = tmp_path / "occupied"
+    occupied = tmp_path / "root" / SESSION / "catalog"
+    occupied.parent.mkdir(parents=True)
     occupied.write_text("a file, where the catalog wants a directory")
 
     with caplog.at_level(logging.ERROR, logger="redsun"):
-        app = session(tiled={"directory": str(occupied)})
+        app = session(storage={"base_dir": str(tmp_path / "root"), "catalog": None})
 
     assert app.is_built
     assert app.virtual_container.try_require(CATALOG) is None
@@ -121,7 +121,7 @@ def test_a_catalog_that_fails_to_start_is_logged_and_skipped(
 
 
 def test_shutdown_stops_the_server(session: Callable[..., AppContainer]) -> None:
-    app = session(tiled=None)
+    app = session(storage={"catalog": None})
     client = client_of(app)
 
     app.shutdown()

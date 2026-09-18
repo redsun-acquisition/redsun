@@ -31,7 +31,7 @@ from ophyd_async.core import Device
 
 from redsun.aio import get_shared_loop, run_coro
 from redsun.catalog import CATALOG, CatalogAddress
-from redsun.containers._config import AppConfig, TiledConfig
+from redsun.containers._config import AppConfig, CatalogConfig, StorageConfig
 from redsun.containers._hooks import (
     HookError,
     distinct,
@@ -171,8 +171,9 @@ def _require_tiled() -> None:
     if importlib.util.find_spec("tiled") is not None:
         return
     raise RuntimeError(
-        "this session has a 'tiled' section and 'tiled' is not installed. "
-        "Install it with 'pip install redsun[tiled]', or drop the section. "
+        "this session's 'storage' section has a 'catalog' key and 'tiled' is "
+        "not installed. Install it with 'pip install redsun[tiled]', or drop "
+        "the key. "
         "The extra installs nothing on Python 3.14, which tiled does not "
         "support yet."
     )
@@ -352,7 +353,7 @@ class AppContainer:
         "_services",
         "_services_started",
         "_session_log",
-        "_tiled",
+        "_storage",
         "_virtual_container",
     )
 
@@ -574,7 +575,7 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._path_provider: SessionPathProvider | None = None
-        self._tiled: TiledConfig | None = None
+        self._storage: StorageConfig | None = None
         self._catalog: SimpleTiledServer | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
@@ -702,9 +703,11 @@ class AppContainer:
         return dict(self._services)
 
     @property
-    def tiled(self) -> TiledConfig | None:
-        """Return the session's catalog configuration, `None` without a section."""
-        return self._tiled
+    def storage(self) -> StorageConfig:
+        """Return the session's storage configuration."""
+        if self._storage is None:
+            raise RuntimeError("Container not built. Call build() first.")
+        return self._storage
 
     @property
     def path_provider(self) -> SessionPathProvider:
@@ -1038,25 +1041,24 @@ class AppContainer:
         }
         self._virtual_container._set_configuration(base_cfg)
 
-        if "tiled" in self._config:
-            # parsed first, so a malformed section is refused whether or not
-            # the extra is installed
-            self._tiled = TiledConfig.from_mapping(self._config["tiled"])
+        # parsed before the extra is checked, so a malformed section is refused
+        # whether or not it is installed
+        self._storage = StorageConfig.from_mapping(self._config.get("storage"))
+        if self._storage.catalog is not None:
             _require_tiled()
-
-        storage = self._config.get("storage", {})
-        base_dir = storage.get("base_dir")
         self._path_provider = SessionPathProvider(
-            base_dir=Path(base_dir).expanduser() if base_dir else None,
+            base_dir=self._storage.base_dir,
             session=base_cfg["session"],
-            max_digits=storage.get("max_digits", 5),
+            max_digits=self._storage.max_digits,
         )
-        if self._tiled is not None:
-            self._catalog = self._start_catalog(self._tiled, base_cfg["session"])
+        if self._storage.catalog is not None:
+            self._catalog = self._start_catalog(
+                self._storage.catalog, base_cfg["session"]
+            )
         logger.debug("VirtualContainer created")
 
     def _start_catalog(
-        self, config: TiledConfig, session: str
+        self, config: CatalogConfig, session: str
     ) -> SimpleTiledServer | None:
         """Start the session's catalog, or log why it could not start.
 
@@ -1070,7 +1072,7 @@ class AppContainer:
         session_dir = self.path_provider.base_dir / session
         try:
             return SimpleTiledServer(
-                directory=config.directory or session_dir / "catalog",
+                directory=session_dir / "catalog",
                 readable_storage=[session_dir, *config.readable],
             )
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
@@ -1433,8 +1435,6 @@ class AppContainer:
         )
         if "storage" in config:
             instance._config["storage"] = config["storage"]
-        if "tiled" in config:
-            instance._config["tiled"] = config["tiled"]
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
         if "hooks" in config:

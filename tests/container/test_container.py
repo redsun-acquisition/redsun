@@ -25,7 +25,8 @@ from qtpy.QtWidgets import QApplication
 from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
-    TiledConfig,
+    CatalogConfig,
+    StorageConfig,
     declare_device,
     declare_presenter,
     declare_view,
@@ -1391,41 +1392,47 @@ class TestDevicePathProvider:
         assert app.path_provider().filename == "square_scan_00000"
 
 
-class TestTiledSection:
-    """A session opts into a catalog with a `tiled` section, empty or not."""
+class TestStorageSection:
+    """A session's storage section: its root, and whether it keeps a catalog."""
 
     @requires_tiled
-    def test_an_empty_section_reaches_the_container(self, config_path: Path) -> None:
+    def test_an_empty_catalog_key_reaches_the_container(
+        self, config_path: Path
+    ) -> None:
         """Present and empty is a valid catalog: every key has a default."""
         app = AppContainer.from_config(
-            str(config_path / "mock_tiled_config.yaml")
+            str(config_path / "mock_catalog_config.yaml")
         ).build()
-        tiled = app.tiled
+        storage = app.storage
         app.shutdown()
 
-        assert tiled == TiledConfig()
+        assert storage == StorageConfig(catalog=CatalogConfig())
 
     @requires_tiled
-    def test_the_paths_reach_the_container(self, tmp_path: Path) -> None:
+    def test_every_key_reaches_the_container(self, tmp_path: Path) -> None:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
             "session": "catalog-session",
-            "tiled": {
-                "directory": str(tmp_path / "catalogs"),
-                "readable": [str(tmp_path / "aht"), str(tmp_path / "scratch")],
+            "storage": {
+                "base_dir": str(tmp_path / "root"),
+                "max_digits": 3,
+                "catalog": {
+                    "readable": [str(tmp_path / "aht"), str(tmp_path / "scratch")]
+                },
             },
         }
-        cfg_file = tmp_path / "tiled.yaml"
+        cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
         app = AppContainer.from_config(str(cfg_file)).build()
-        tiled = app.tiled
+        storage = app.storage
         app.shutdown()
 
-        assert tiled == TiledConfig(
-            directory=tmp_path / "catalogs",
-            readable=(tmp_path / "aht", tmp_path / "scratch"),
+        assert storage == StorageConfig(
+            base_dir=tmp_path / "root",
+            max_digits=3,
+            catalog=CatalogConfig(readable=(tmp_path / "aht", tmp_path / "scratch")),
         )
 
     def test_a_session_without_the_section_has_no_catalog(self) -> None:
@@ -1434,30 +1441,41 @@ class TestTiledSection:
 
         app = TestApp().build()
 
-        assert app.tiled is None
+        assert app.storage == StorageConfig()
         assert app.virtual_container.try_require(CATALOG) is None
 
-    def test_an_unknown_key_is_refused(self, tmp_path: Path) -> None:
-        """A misspelled key must not be read as "no catalog here"."""
+    @pytest.mark.parametrize(
+        ("section", "named"),
+        [
+            ({"base_dirs": "x"}, "'base_dirs'"),
+            ({"catalog": {"events": False}}, "'events'"),
+            ({"catalog": {"directory": "x"}}, "'directory'"),
+        ],
+        ids=["storage", "catalog", "catalog-directory"],
+    )
+    def test_an_unknown_key_is_refused(
+        self, tmp_path: Path, section: dict[str, Any], named: str
+    ) -> None:
+        """A misspelled key must not be read as its default."""
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
             "session": "catalog-session",
-            "tiled": {"events": False},
+            "storage": section,
         }
-        cfg_file = tmp_path / "tiled.yaml"
+        cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
-        with pytest.raises(ValueError, match="'events'"):
+        with pytest.raises(ValueError, match=named):
             AppContainer.from_config(str(cfg_file)).build()
 
-    def test_the_section_is_refused_without_the_extra(
+    def test_a_catalog_is_refused_without_the_extra(
         self, config_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Asking for a catalog that cannot be built is a configuration error."""
         monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
 
-        app = AppContainer.from_config(str(config_path / "mock_tiled_config.yaml"))
+        app = AppContainer.from_config(str(config_path / "mock_catalog_config.yaml"))
 
         with pytest.raises(RuntimeError, match=r"redsun\[tiled\]"):
             app.build()

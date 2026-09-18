@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._config import AppConfig, TiledConfig
+from ._config import AppConfig, CatalogConfig, StorageConfig
 from ._hooks import HookError
 from .components import (
     declare_device,
@@ -16,9 +16,10 @@ from .container import AppContainer, Frontend
 __all__ = [
     "AppConfig",
     "AppContainer",
+    "CatalogConfig",
     "Frontend",
     "HookError",
-    "TiledConfig",
+    "StorageConfig",
     "declare_device",
     "declare_hook",
     "declare_presenter",
