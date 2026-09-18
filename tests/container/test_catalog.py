@@ -6,9 +6,13 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import httpx
+import numpy as np
+import ome_writers as ow
 import pytest
 import stamina
 import yaml
+from bluesky_tiled_plugins import TiledWriter
+from event_model import compose_run, compose_stream_resource
 from tiled.client import from_uri
 from tiled.client.register import register
 
@@ -52,6 +56,64 @@ def client_of(app: AppContainer) -> Any:
     address = app.virtual_container.try_require(CATALOG)
     assert address is not None
     return from_uri(address.uri)
+
+
+def write_stack(directory: Path) -> Path:
+    """Write a (t=2, z=3, 8, 8) OME-Zarr stack of ones into *directory*."""
+    settings = ow.AcquisitionSettings(
+        root_path=str(directory / "stack"),
+        dtype="uint16",
+        dimensions=(
+            ow.Dimension(name="t", count=2, type="time", chunk_size=1),
+            ow.Dimension(name="z", count=3, type="space", chunk_size=1),
+            ow.Dimension(name="y", count=8, type="space", chunk_size=8),
+            ow.Dimension(name="x", count=8, type="space", chunk_size=8),
+        ),
+        format=ow.OmeZarrFormat(backend="acquire-zarr"),
+    )
+    stream = ow.create_stream(settings)
+    for _ in range(6):
+        stream.append(np.ones((8, 8), "uint16"))
+    stream.close()
+    return directory / "stack.ome.zarr"
+
+
+def write_frames(client: Any, uri: str) -> str:
+    """Write a run through ``TiledWriter`` describing the stack at *uri* frame by frame."""
+    writer = TiledWriter(client)
+    bundle = compose_run()
+    writer("start", bundle.start_doc)
+    descriptor = bundle.compose_descriptor(
+        name="primary",
+        data_keys={
+            "det": {
+                "source": "camera",
+                "dtype": "array",
+                "shape": [8, 8],
+                "dtype_numpy": "<u2",
+                "external": "STREAM:",
+            }
+        },
+    )
+    writer("descriptor", descriptor.descriptor_doc)
+    resource = compose_stream_resource(
+        mimetype="application/x-ome-zarr",
+        uri=uri,
+        data_key="det",
+        parameters={"chunk_shape": [1, 8, 8]},
+        start=bundle.start_doc,
+    )
+    writer("stream_resource", resource.stream_resource_doc)
+    for frame in range(6):
+        writer(
+            "stream_datum",
+            resource.compose_stream_datum(
+                indices={"start": frame, "stop": frame + 1},
+                descriptor=descriptor.descriptor_doc,
+            ),
+        )
+    writer("stop", bundle.compose_stop())
+    return str(bundle.start_doc["uid"])
 
 
 def write_table(directory: Path) -> Path:
@@ -128,3 +190,18 @@ def test_shutdown_stops_the_server(session: Callable[..., AppContainer]) -> None
 
     with pytest.raises(httpx.ConnectError):
         list(client)
+
+
+def test_an_ome_zarr_run_reads_back_with_its_axis_names(
+    session: Callable[..., AppContainer],
+) -> None:
+    """A ``TiledWriter`` stores the image as the store holds it, not as the frames."""
+    app = session(storage={"catalog": None})
+    store = write_stack(app.path_provider.base_dir / SESSION / "acquired")
+    client = client_of(app)
+
+    det = client[write_frames(client, store.as_uri())]["primary"]["det"]
+
+    assert det.structure().shape == (2, 3, 8, 8)
+    assert det.structure().dims == ("t", "z", "y", "x")
+    assert det.read().sum() == 2 * 3 * 8 * 8

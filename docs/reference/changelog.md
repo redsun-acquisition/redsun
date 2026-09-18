@@ -168,8 +168,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   few or too many dimensions, or the format's package is absent, in which case
   the message names the extra that installs it.
 - A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
-- A `tiled` extra and dependency group, with `tiled[client,server]`. It
-  installs nothing on Python 3.14, which `tiled` does not support yet.
+- A `tiled` extra and dependency group, with `tiled[client,server]` and
+  `ome-tiled[bluesky]`. It installs nothing on Python 3.14, which `tiled` does
+  not support yet.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
   session's catalog is served, and the key a component asks for it with.
   `CatalogAddress.uri` carries the server's API key, so a component connects
@@ -189,7 +190,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   keeps its database in `<base_dir>/<session>/catalog` and reads assets from
   `<base_dir>/<session>` and every `readable` directory. `tiled` checks this
   when an asset is read, not when it is registered. A catalog that fails to
-  start is logged and the session runs without it.
+  start is logged and the session runs without it. The server reads
+  `application/x-ome-zarr` assets with `ome-tiled`'s `OmeZarrAdapter`, and
+  `ome-tiled`'s consolidator is registered for `TiledWriter`, so a
+  `TiledWriter` connected to the catalog stores an OME-Zarr image with the
+  shape and axis names its store holds.
 
 
 ### Changed

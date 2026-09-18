@@ -82,6 +82,7 @@ zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]
 tiled = [
+    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
     "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
 ]
 
@@ -106,6 +107,7 @@ zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]
 tiled = [
+    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
     "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
 ]
 

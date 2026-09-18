@@ -1063,18 +1063,32 @@ class AppContainer:
         """Start the session's catalog, or log why it could not start.
 
         The catalog reads assets from the session's own directory under the
-        path provider's root, and from every directory *config* adds.
+        path provider's root, and from every directory *config* adds. It serves
+        OME-Zarr images with their axis names, and a ``TiledWriter`` in this
+        process registers them as their store holds them.
         """
         # imported here: the tiled extra is optional, and _require_tiled has
         # already refused a session asking for a catalog without it
+        from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter
+        from ome_tiled.bluesky import register_consolidator
         from tiled.server.simple import SimpleTiledServer
 
         session_dir = self.path_provider.base_dir / session
         try:
-            return SimpleTiledServer(
+            server = SimpleTiledServer(
                 directory=session_dir / "catalog",
                 readable_storage=[session_dir, *config.readable],
             )
+            # TODO: let storage.catalog choose the adapters and consolidators
+            # installed here, rather than always installing ome-tiled's
+
+            # SimpleTiledServer takes no adapters; the first map holds the
+            # catalog's own, ahead of tiled's defaults
+            server.catalog.context.adapters_by_mimetype.maps[0][OME_ZARR_MIMETYPE] = (
+                OmeZarrAdapter
+            )
+            register_consolidator()
+            return server
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
             self._failed["catalog"] = e
             logger.error(f"Failed to start the catalog: {e}")
