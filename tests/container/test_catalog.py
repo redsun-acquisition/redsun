@@ -175,12 +175,14 @@ def test_a_catalog_that_fails_to_start_is_logged_and_skipped(
     occupied.parent.mkdir(parents=True)
     occupied.write_text("a file, where the catalog wants a directory")
 
-    with caplog.at_level(logging.ERROR, logger="redsun"):
+    with caplog.at_level(logging.WARNING, logger="redsun"):
         app = session(storage={"base_dir": str(tmp_path / "root"), "catalog": None})
 
     assert app.is_built
     assert app.virtual_container.try_require(CATALOG) is None
     assert "Failed to start the catalog" in caplog.text
+    # reported under a name no component can have
+    assert "storage.catalog" in caplog.text
 
 
 def test_a_server_failing_its_setup_is_stopped(

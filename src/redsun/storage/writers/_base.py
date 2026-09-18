@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
@@ -20,8 +21,6 @@ class WriterError(RuntimeError):
 
 def require(package: str, extra: str) -> Any:
     """Import *package*, naming the extra that installs it when it is absent."""
-    from importlib import import_module
-
     try:
         return import_module(package)
     except ImportError as e:
@@ -50,7 +49,7 @@ def root_attributes(path: Path) -> Mapping[str, Any]:
     """Return the attributes of a Zarr store's root group, empty when it has none.
 
     Reads the metadata file directly, so neither `zarr` nor a reader package
-    is needed to tell an image root from a plain group.
+    is needed to tell a root carrying NGFF metadata from a plain group.
     """
     v3 = path / "zarr.json"
     if v3.is_file():
@@ -64,9 +63,13 @@ def root_attributes(path: Path) -> Mapping[str, Any]:
     return {}
 
 
-def is_image(attributes: Mapping[str, Any]) -> bool:
-    """Return whether *attributes* are those of an OME-Zarr image."""
-    return "multiscales" in attributes or "multiscales" in attributes.get("ome", {})
+def carries_ngff(attributes: Mapping[str, Any]) -> bool:
+    """Return whether *attributes* hold NGFF metadata of their own.
+
+    An image, a plate or a ``bioformats2raw`` layout all do. Adding a key to
+    such a group drops that metadata.
+    """
+    return "ome" in attributes or "multiscales" in attributes
 
 
 def merge_attributes(path: Path, metadata: Mapping[str, Any]) -> None:

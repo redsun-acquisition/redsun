@@ -167,13 +167,18 @@ PATH_PROVIDER_PORT: Final = "path_provider"
 
 
 def _require_tiled() -> None:
-    """Raise if a session asks for a catalog and `tiled` is not installed."""
-    if importlib.util.find_spec("tiled") is not None:
+    """Raise if a session asks for a catalog and the ``tiled`` extra is missing."""
+    missing = [
+        package
+        for package in ("tiled", "ome_tiled", "bluesky_tiled_plugins")
+        if importlib.util.find_spec(package) is None
+    ]
+    if not missing:
         return
     raise RuntimeError(
-        "this session's 'storage' section has a 'catalog' key and 'tiled' is "
-        "not installed. Install it with 'pip install redsun[tiled]', or drop "
-        "the key. "
+        "this session's 'storage' section has a 'catalog' key and "
+        f"{', '.join(repr(package) for package in missing)} not installed. "
+        "Install them with 'pip install redsun[tiled]', or drop the key. "
         "The extra installs nothing on Python 3.14, which tiled does not "
         "support yet."
     )
@@ -1086,7 +1091,8 @@ class AppContainer:
             # since nothing else holds it
             if server is not None:
                 server.close()
-            self._failed["catalog"] = e
+            # a dotted key: no declared component can have this name
+            self._failed["storage.catalog"] = e
             logger.error(f"Failed to start the catalog: {e}")
             return None
 

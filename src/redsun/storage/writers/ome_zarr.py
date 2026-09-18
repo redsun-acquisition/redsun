@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from redsun.storage.writers._acquire_zarr import append_key
 from redsun.storage.writers._base import (
     axis_names,
-    is_image,
+    carries_ngff,
     merge_attributes,
     require,
     root_attributes,
@@ -50,7 +50,7 @@ def write(
         few or too many dimensions.
     """
     path = store_path(uri)
-    if is_image(root_attributes(path)):
+    if carries_ngff(root_attributes(path)):
         return _write_sibling(
             uri, path, data_key=data_key, data=data, metadata=metadata
         )

@@ -125,6 +125,19 @@ def test_scan_existing_resumes_counters(tmp_path: Path) -> None:
     assert provider().filename == "other_00005"
 
 
+@pytest.mark.parametrize(
+    "stored", ["scan_00004", "scan_00004.zarr", "scan_00004.ome.zarr"]
+)
+def test_a_store_with_several_suffixes_counts(tmp_path: Path, stored: str) -> None:
+    """``scan_00004.ome.zarr`` is number 4, so the next file is not a repeat."""
+    (tmp_path / "s" / "2026-07-20" / "det" / stored).mkdir(parents=True)
+
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+    provider.set_plan("scan")
+
+    assert provider("det").filename == "scan_00005"
+
+
 def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
     """A run's remaining files must not land somewhere else than its first ones."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")

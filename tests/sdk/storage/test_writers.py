@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import sys
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -120,6 +121,43 @@ def test_ome_zarr_writes_a_sibling_beside_an_image_root(image_store: Path) -> No
     ] == ["y", "x"]
 
 
+def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
+    """``c`` is a channel: two time axes would not be valid OME-Zarr."""
+    store = tmp_path / "ngff.zarr"
+    data = np.zeros((1, 2, 1, 4, 4), np.uint16)
+
+    append_key(store, data_key="det", data=data, is_ngff=True)
+
+    axes = attributes(store / "det")["ome"]["multiscales"][0]["axes"]
+    assert [(axis["name"], axis["type"]) for axis in axes] == [
+        ("t", "time"),
+        ("c", "channel"),
+        ("z", "space"),
+        ("y", "space"),
+        ("x", "space"),
+    ]
+
+
+def test_ome_zarr_writes_a_sibling_beside_a_plate(tmp_path: Path) -> None:
+    """A root holding a plate keeps it, as an image root does."""
+    store = tmp_path / "plate.ome.zarr"
+    store.mkdir()
+    plate = {"version": "0.5", "plate": {"columns": [], "rows": [], "wells": []}}
+    (store / "zarr.json").write_text(
+        json.dumps(
+            {"zarr_format": 3, "node_type": "group", "attributes": {"ome": plate}}
+        ),
+        encoding="utf-8",
+    )
+
+    product = ome_zarr.write(
+        store.as_uri(), data_key="det_median", data=np.ones((4, 4), np.uint16)
+    )
+
+    assert product == (tmp_path / "plate_det_median.ome.zarr").as_uri()
+    assert attributes(store) == {"ome": plate}
+
+
 def test_both_writers_take_the_same_arguments() -> None:
     """A caller picks the module by mimetype, so the call cannot differ."""
     assert inspect.signature(zarr.write) == inspect.signature(ome_zarr.write)
@@ -129,11 +167,8 @@ def test_a_missing_package_names_the_extra(
     plain_store: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The caller is told what to install, not given an ImportError."""
-
-    def absent(name: str) -> Any:
-        raise ImportError(name)
-
-    monkeypatch.setattr("importlib.import_module", absent)
+    # None in sys.modules makes any import of the package raise ImportError
+    monkeypatch.setitem(sys.modules, "acquire_zarr", None)
 
     with pytest.raises(WriterError, match=r"redsun\[zarr\]"):
         zarr.write(

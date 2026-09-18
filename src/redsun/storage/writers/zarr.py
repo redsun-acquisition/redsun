@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from redsun.storage.writers._acquire_zarr import append_key
 from redsun.storage.writers._base import (
     WriterError,
+    carries_ngff,
     merge_attributes,
     root_attributes,
     store_path,
@@ -39,17 +40,16 @@ def write(
     Raises
     ------
     WriterError
-        If the store's root is an OME-Zarr image, since adding a key to one
-        drops the root's `ome` block and the image stops being OME-Zarr; use
-        the `ome_zarr` module for those. Also if `acquire-zarr` is not
+        If the store's root carries NGFF metadata, an image, a plate or a
+        ``bioformats2raw`` layout, since adding a key to one drops the root's
+        `ome` block; use the `ome_zarr` module for those. Also if `acquire-zarr` is not
         installed, or the array has too few or too many dimensions.
     """
     path = store_path(uri)
-    attributes = root_attributes(path)
-    if "ome" in attributes or "multiscales" in attributes:
+    if carries_ngff(root_attributes(path)):
         raise WriterError(
-            f"the store at {uri} is an OME-Zarr image, and adding a key to one "
-            "drops its root metadata; write it with redsun.storage.writers."
+            f"the store at {uri} has OME-Zarr metadata at its root, which "
+            "adding a key drops; write it with redsun.storage.writers."
             "ome_zarr instead"
         )
     append_key(path, data_key=data_key, data=data, is_ngff=False)

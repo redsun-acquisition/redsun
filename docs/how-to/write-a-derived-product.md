@@ -63,11 +63,12 @@ was added to that store, and a new URI when it was written beside it:
 | Store | Where the product goes | Returned |
 | --- | --- | --- |
 | root is a plain group | another key in the same store | the argument |
-| root is the image | a store of its own, beside it | the new store |
+| root carries OME-Zarr metadata: an image, a plate, a `bioformats2raw` layout | a store of its own, beside it | the new store |
 
-A store whose root is the image cannot take another key: adding one drops the
-root's `ome` block and the image stops being OME-Zarr. `ome_zarr.write` writes
-a sibling instead, and `zarr.write` refuses the store rather than damaging it.
+A store whose root carries OME-Zarr metadata cannot take another key: adding
+one drops the root's `ome` block, and the image or plate stops being OME-Zarr.
+`ome_zarr.write` writes a sibling instead, and `zarr.write` refuses the store
+rather than damaging it.
 
 Metadata is written to the product's own group, never the store's root, since
 a stream closing on the store rewrites the root's metadata and would drop it.

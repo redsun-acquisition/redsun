@@ -227,7 +227,9 @@ class SessionPathProvider(PathProvider):
 
     def _bump_from(self, entry: Path, *, datakey_name: str) -> bool:
         """Raise *datakey_name*'s counter past *entry*, and say whether it did."""
-        match = self._pattern.match(entry.stem)
+        # everything after the first dot is suffix: scan_00004.ome.zarr is
+        # scan_00004, where Path.stem would keep scan_00004.ome
+        match = self._pattern.match(entry.name.split(".", 1)[0])
         if match is None:
             return False
         self._filenames.bump(

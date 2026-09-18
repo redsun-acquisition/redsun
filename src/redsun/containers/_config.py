@@ -54,7 +54,8 @@ class StorageConfig:
         Raises
         ------
         TypeError
-            If the section, or its `catalog` key, is not a mapping.
+            If the section, or its `catalog` key, is not a mapping, or
+            `readable` is not a list.
         ValueError
             If either names a key it has no place for.
         """
@@ -64,10 +65,14 @@ class StorageConfig:
         if "catalog" in section:
             entry = mapping_of(section["catalog"], "storage.catalog")
             refuse_unknown(entry, "storage.catalog", ("readable",))
-            catalog = CatalogConfig(
-                readable=tuple(
-                    Path(path).expanduser() for path in entry.get("readable") or ()
+            readable = entry.get("readable") or []
+            if not isinstance(readable, list):
+                raise TypeError(
+                    "'storage.catalog.readable' must be a list of directories, "
+                    f"got {type(readable).__name__}"
                 )
+            catalog = CatalogConfig(
+                readable=tuple(Path(path).expanduser() for path in readable)
             )
         base_dir = section.get("base_dir")
         return cls(

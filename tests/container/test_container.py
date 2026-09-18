@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 from importlib.util import find_spec
 from pathlib import Path
@@ -1468,6 +1469,36 @@ class TestStorageSection:
 
         with pytest.raises(ValueError, match=named):
             AppContainer.from_config(str(cfg_file)).build()
+
+    def test_readable_must_be_a_list(self, tmp_path: Path) -> None:
+        """A single path must not be read one character at a time."""
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "session": "catalog-session",
+            "storage": {"catalog": {"readable": "/data/camera"}},
+        }
+        cfg_file = tmp_path / "storage.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        with pytest.raises(TypeError, match="must be a list"):
+            AppContainer.from_config(str(cfg_file)).build()
+
+    @pytest.mark.parametrize("absent", ["tiled", "ome_tiled", "bluesky_tiled_plugins"])
+    def test_a_catalog_needs_every_package_of_the_extra(
+        self, config_path: Path, monkeypatch: pytest.MonkeyPatch, absent: str
+    ) -> None:
+        """A partial install is refused at build, rather than failing on an import."""
+        find_spec = importlib.util.find_spec
+        monkeypatch.setattr(
+            "importlib.util.find_spec",
+            lambda name, *args: None if name == absent else find_spec(name, *args),
+        )
+
+        app = AppContainer.from_config(str(config_path / "mock_catalog_config.yaml"))
+
+        with pytest.raises(RuntimeError, match=repr(absent)):
+            app.build()
 
     def test_a_catalog_is_refused_without_the_extra(
         self, config_path: Path, monkeypatch: pytest.MonkeyPatch

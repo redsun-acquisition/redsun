@@ -161,7 +161,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   The returned URI is the argument when the product was added to that store,
   and a new one when it was written beside it, which is what a store whose
-  root is the image gets. `zarr.write` refuses such a store, since adding a
+  root carries OME-Zarr metadata gets: an image, a plate or a
+  `bioformats2raw` layout. `zarr.write` refuses such a store, since adding a
   key to one drops its root `ome` block. A writer registers nothing.
 - **`WriterError`** (`redsun.storage.writers`) - raised when a product cannot
   be written: the store is the wrong shape for the writer, the array has too

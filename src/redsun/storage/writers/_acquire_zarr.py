@@ -32,7 +32,7 @@ def append_key(path: Path, *, data_key: str, data: NDArray[Any], is_ngff: bool) 
     array.dimensions = [
         az.Dimension(
             name=name,
-            kind=az.DimensionType.SPACE if name in _SPATIAL else az.DimensionType.TIME,
+            kind=_kind(az, name),
             # the first axis is the appended one, and is sized as it grows
             array_size_px=0 if index == 0 else size,
             chunk_size_px=1 if index == 0 else size,
@@ -51,6 +51,15 @@ def append_key(path: Path, *, data_key: str, data: NDArray[Any], is_ngff: bool) 
         stream.append(data, data_key)
     finally:
         stream.close()
+
+
+def _kind(az: Any, name: str) -> Any:
+    """Return the `acquire-zarr` dimension type of the NGFF axis *name*."""
+    if name in _SPATIAL:
+        return az.DimensionType.SPACE
+    if name == "c":
+        return az.DimensionType.CHANNEL
+    return az.DimensionType.TIME
 
 
 def _data_type(az: Any, dtype: np.dtype[Any]) -> Any:
