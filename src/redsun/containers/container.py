@@ -30,6 +30,7 @@ import yaml
 from ophyd_async.core import Device
 
 from redsun.aio import get_shared_loop, run_coro
+from redsun.catalog import CATALOG, CatalogAddress
 from redsun.containers._config import AppConfig, TiledConfig
 from redsun.containers._hooks import (
     HookError,
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
     from typing import Final, Self, TypeAlias
 
     from psygnal import SignalInstance
+    from tiled.server.simple import SimpleTiledServer
 
     from redsun.containers.components import _ComponentBase
     from redsun.services import Service
@@ -336,6 +338,7 @@ class AppContainer:
     __slots__ = (
         "_built",
         "_built_devices",
+        "_catalog",
         "_components",
         "_config",
         "_failed",
@@ -572,6 +575,7 @@ class AppContainer:
         self._virtual_container: VirtualContainer | None = None
         self._path_provider: SessionPathProvider | None = None
         self._tiled: TiledConfig | None = None
+        self._catalog: SimpleTiledServer | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
@@ -846,6 +850,7 @@ class AppContainer:
             self._report("injection")
             self._inject_dependencies()
         except BaseException:
+            self._close_catalog()
             self._stop_services()
             raise
 
@@ -1046,7 +1051,32 @@ class AppContainer:
             session=base_cfg["session"],
             max_digits=storage.get("max_digits", 5),
         )
+        if self._tiled is not None:
+            self._catalog = self._start_catalog(self._tiled, base_cfg["session"])
         logger.debug("VirtualContainer created")
+
+    def _start_catalog(
+        self, config: TiledConfig, session: str
+    ) -> SimpleTiledServer | None:
+        """Start the session's catalog, or log why it could not start.
+
+        The catalog reads assets from the session's own directory under the
+        path provider's root, and from every directory *config* adds.
+        """
+        # imported here: the tiled extra is optional, and _require_tiled has
+        # already refused a session asking for a catalog without it
+        from tiled.server.simple import SimpleTiledServer
+
+        session_dir = self.path_provider.base_dir / session
+        try:
+            return SimpleTiledServer(
+                directory=config.directory or session_dir / "catalog",
+                readable_storage=[session_dir, *config.readable],
+            )
+        except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
+            self._failed["catalog"] = e
+            logger.error(f"Failed to start the catalog: {e}")
+            return None
 
     def _build_devices(self) -> None:
         """Build every declared device, skipping those that fail."""
@@ -1158,8 +1188,10 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
 
     def _register_providers(self) -> None:
-        """Bind the session's path provider, then let each component bind its own."""
+        """Bind the session's path provider and catalog address, then each component's own."""
         self.virtual_container.provide(PATH_PROVIDER, self.path_provider)
+        if self._catalog is not None:
+            self.virtual_container.provide(CATALOG, CatalogAddress(self._catalog.uri))
         for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
@@ -1225,9 +1257,10 @@ class AppContainer:
 
         1. ``_disconnect`` - undo the wiring.
         2. ``_shutdown_presenters`` - shut every presenter down.
-        3. ``_shutdown_hooks`` - undo what the hook providers installed.
-        4. ``_release_components`` - drop every built component.
-        5. ``_destroy`` - end what dropping a reference does not end.
+        3. ``_close_catalog`` - stop the session's catalog.
+        4. ``_shutdown_hooks`` - undo what the hook providers installed.
+        5. ``_release_components`` - drop every built component.
+        6. ``_destroy`` - end what dropping a reference does not end.
 
         Afterwards the container holds nothing it built, so ``devices``,
         ``presenters`` and ``views`` raise until the next ``build()``.
@@ -1239,6 +1272,8 @@ class AppContainer:
         if self._is_built:
             self._disconnect()
             self._shutdown_presenters()
+            # after the presenters, which may still be writing to it
+            self._close_catalog()
             # after the components, which may still be using what a hook installed
             self._shutdown_hooks()
             self._destroy(self._release_components())
@@ -1313,6 +1348,16 @@ class AppContainer:
                     presenter.shutdown()
                 except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
+
+    def _close_catalog(self) -> None:
+        """Stop the session's catalog, if one was started."""
+        if self._catalog is None:
+            return
+        try:
+            self._catalog.close()
+        except Exception as e:  # noqa: BLE001 - a failed close must not block the shutdown
+            logger.error(f"Error closing the catalog: {e}")
+        self._catalog = None
 
     def _release_components(self) -> Sequence[object]:
         """Drop every built component, and return what was dropped.

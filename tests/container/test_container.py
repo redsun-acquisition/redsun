@@ -22,6 +22,7 @@ from ophyd_async.core import Device, PathProvider
 from ophyd_async.epics.core import EpicsDevice
 from qtpy.QtWidgets import QApplication
 
+from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
     TiledConfig,
@@ -1399,28 +1400,42 @@ class TestTiledSection:
         app = AppContainer.from_config(
             str(config_path / "mock_tiled_config.yaml")
         ).build()
+        tiled = app.tiled
+        app.shutdown()
 
-        assert app.tiled == TiledConfig()
-        # resolved by the catalog, which is the only thing that knows the path
-        assert app.tiled is not None
-        assert app.tiled.directory is None
+        assert tiled == TiledConfig()
 
     @requires_tiled
-    def test_the_paths_reach_the_container(self, config_path: Path) -> None:
-        app = AppContainer.from_config(
-            str(config_path / "mock_tiled_paths_config.yaml")
-        ).build()
+    def test_the_paths_reach_the_container(self, tmp_path: Path) -> None:
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "session": "catalog-session",
+            "tiled": {
+                "directory": str(tmp_path / "catalogs"),
+                "readable": [str(tmp_path / "aht"), str(tmp_path / "scratch")],
+            },
+        }
+        cfg_file = tmp_path / "tiled.yaml"
+        cfg_file.write_text(yaml.dump(config))
 
-        assert app.tiled == TiledConfig(
-            directory=Path("/data/catalogs/aht"),
-            readable=(Path("/data/aht"), Path("/mnt/scratch")),
+        app = AppContainer.from_config(str(cfg_file)).build()
+        tiled = app.tiled
+        app.shutdown()
+
+        assert tiled == TiledConfig(
+            directory=tmp_path / "catalogs",
+            readable=(tmp_path / "aht", tmp_path / "scratch"),
         )
 
     def test_a_session_without_the_section_has_no_catalog(self) -> None:
         class TestApp(AppContainer):
             pass
 
-        assert TestApp().build().tiled is None
+        app = TestApp().build()
+
+        assert app.tiled is None
+        assert app.virtual_container.try_require(CATALOG) is None
 
     def test_an_unknown_key_is_refused(self, tmp_path: Path) -> None:
         """A misspelled key must not be read as "no catalog here"."""

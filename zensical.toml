@@ -73,6 +73,7 @@ nav = [
             { "Presenter" = "reference/api/presenter.md" },
             { "Services" = "reference/api/services.md" },
             { "Path provider" = "reference/api/path_provider.md" },
+            { "Catalog" = "reference/api/catalog.md" },
             { "View" = "reference/api/view.md" },
             { "Virtual container" = "reference/api/virtual.md" },
             { "Utilities" = "reference/api/utils.md" },

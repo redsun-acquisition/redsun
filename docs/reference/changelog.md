@@ -170,12 +170,33 @@ Dates are specified in the format `DD-MM-YYYY`.
   `AppContainer.tiled` gives the section, or `None` when there is none. A
   `directory` of `None` means the session's own
   `<base_dir>/<session>/catalog`, resolved when the catalog is built. `readable`
-  names further directories the catalog may register assets from, for services
+  names further directories the catalog may read assets from, for services
   writing where their own configuration says. A section naming a key that does
   not exist is refused, and so is a section in a session without the `tiled`
   extra installed.
 - A `tiled` extra and dependency group, with `tiled[client,server]`. It
   installs nothing on Python 3.14, which `tiled` does not support yet.
+- **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
+  session's catalog is served, and the key a component asks for it with.
+  `CatalogAddress.uri` carries the server's API key, so a component connects
+  with it alone. The module imports nothing from `tiled`:
+
+  ```python
+  from redsun.catalog import CATALOG
+  from tiled.client import from_uri
+
+  address = container.try_require(CATALOG)  # None without a tiled section
+  client = from_uri(address.uri) if address else None
+  ```
+
+- A session with a `tiled` section starts a `tiled` server on this machine
+  while its virtual container is created, provides its address under
+  `CATALOG`, and stops it on
+  `shutdown`, after the presenters. It is kept in `directory`, by default
+  `<base_dir>/<session>/catalog` under the path provider's root, and reads
+  assets from `<base_dir>/<session>` and every `readable` directory. `tiled`
+  checks this when an asset is read, not when it is registered. A catalog that
+  fails to start is logged and the session runs without it.
 
 
 ### Changed

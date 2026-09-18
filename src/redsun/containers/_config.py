@@ -21,7 +21,7 @@ class TiledConfig:
         `<base_dir>/<session>/catalog`, which is resolved when the catalog is
         built, since the session name is not known while the file is read.
     readable : tuple[Path, ...]
-        Further directories the catalog may register assets from. The session's
+        Further directories the catalog may read assets from. The session's
         own directory is always readable; these are added to it, for services
         writing where their own configuration says.
     """
