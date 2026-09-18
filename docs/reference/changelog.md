@@ -131,6 +131,32 @@ Dates are specified in the format `DD-MM-YYYY`.
   provider = container.require(PATH_PROVIDER)
   ```
 
+- **`redsun.storage.writers`** - one module per format, each with
+  `write(uri, *, data_key, data, metadata=None) -> str`, adding a derived
+  product to a store an acquisition already wrote. `zarr` writes
+  `application/x-zarr` and `ome_zarr` writes `application/x-ome-zarr`:
+
+  ```python
+  from redsun.storage.writers import ome_zarr
+
+  product_uri = ome_zarr.write(
+      resource["uri"],
+      data_key="det_median",
+      data=median,
+      metadata={"derived_from": resource["data_key"]},
+  )
+  ```
+
+  The returned URI is the argument when the product was added to that store,
+  and a new one when it was written beside it, which is what a store whose
+  root is the image gets. `zarr.write` refuses such a store, since adding a
+  key to one drops its root `ome` block. A writer registers nothing.
+- **`WriterError`** (`redsun.storage.writers`) - raised when a product cannot
+  be written: the store is the wrong shape for the writer, the array has too
+  few or too many dimensions, or the format's package is absent, in which case
+  the message names the extra that installs it.
+- A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
+
 
 ### Changed
 
@@ -188,7 +214,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   container builds the session's path provider, so a session declaring them
   drops both sections and gives `base_dir` in the new `storage` section
   instead. `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
-- The `zarr` extra and dependency group, with `acquire-zarr`.
+- The `zarr` extra and dependency group no longer install `acquire-zarr`
+  directly; they install `ome-writers[acquire-zarr]` for the derived-product
+  writers.
 
 ### Changed (breaking)
 

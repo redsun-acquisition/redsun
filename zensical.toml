@@ -62,6 +62,7 @@ nav = [
         { "Install container hooks" = "how-to/install-hooks.md" },
         { "Configure logging" = "how-to/configure-logging.md" },
         { "Write a service" = "how-to/write-a-service.md" },
+        { "Write a derived product" = "how-to/write-a-derived-product.md" },
     ]},
     { "Reference" = [
         "reference/index.md",

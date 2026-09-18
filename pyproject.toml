@@ -40,6 +40,7 @@ requires-python = ">=3.11"
 dev = [
     { include-group = "epics" },
     { include-group = "pyqt" },
+    { include-group = "zarr" },
     "mypy>=2.3.1",
     "prek>=0.5.0",
     "pytest>=9.0.2",
@@ -76,6 +77,9 @@ epics = [
     "caproto>=1.3.0",
     "ophyd-async[ca]>=0.21.2",
 ]
+zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -93,6 +97,9 @@ pyside = [
 epics = [
     "caproto>=1.3.0",
     "ophyd-async[ca]>=0.21.2",
+]
+zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
 ]
 
 [project.entry-points."redsun.plugins"]

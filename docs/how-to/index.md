@@ -10,3 +10,4 @@
 - **[Install container hooks](install-hooks.md)**
 - **[Configure logging](configure-logging.md)**
 - **[Write a service](write-a-service.md)**
+- **[Write a derived product](write-a-derived-product.md)**
