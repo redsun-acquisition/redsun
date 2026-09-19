@@ -1,17 +1,16 @@
 """Write a derived product against an OME-Zarr store.
 
-Where the product lands depends on the store, not on the format. A store whose
-root is a plain group takes the product as another key; a store whose root is
-the image itself cannot, since adding a key there drops the root's `ome` block,
-so the product is written as its own store beside it.
+A root that is a plain group takes the product as another key. A root carrying
+OME-Zarr metadata would lose its `ome` block to a new key, so the product is
+written as a store of its own beside it.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from redsun.storage.writers._acquire_zarr import append_key
-from redsun.storage.writers._base import (
+from ._acquire_zarr import append_key
+from ._base import (
     axis_names,
     carries_ngff,
     merge_attributes,
@@ -37,11 +36,10 @@ def write(
     data: NDArray[Any],
     metadata: Mapping[str, Any] | None = None,
 ) -> str:
-    """Write *data* for *data_key* against the store at *uri*. Returns its URI.
+    """Write *data* for *data_key* against the store at *uri*, and return its URI.
 
-    The returned URI is *uri* when the product was added to that store, and
-    the new store's when it was written beside it, which is what a store whose
-    root is the image gets.
+    That is *uri* when the product joined the store, and the new store's when
+    it went beside it.
 
     Raises
     ------

@@ -1,8 +1,8 @@
 """Where a session's acquisition files go.
 
-Paths are `<base_dir>/<session>/<YYYY-MM-DD>/<plan>_<counter>`, with
+Paths are `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`,
 `base_dir` defaulting to the user data directory. The container builds one
-provider per session and hands it to every device taking a ``path_provider``
+provider per session and passes it to every device taking a ``path_provider``
 keyword.
 """
 
@@ -18,8 +18,9 @@ import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
 
-from redsun.utils._paths import session_folder
 from redsun.virtual import slot
+
+from .utils._paths import session_folder
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -43,10 +44,9 @@ def _base_dir() -> Path:
 
 
 def session_directory(session: str) -> Path:
-    """Return the directory *session* owns under the default root.
+    """Return *session*'s directory under the default root.
 
-    The folder is named after *session* with every character unsafe in a path
-    replaced, as in `SessionPathProvider.session_dir`.
+    Named as `SessionPathProvider.session_dir` names it.
     """
     return _base_dir() / session_folder(session)
 
@@ -54,9 +54,8 @@ def session_directory(session: str) -> Path:
 class PlanFilenameProvider(FilenameProvider):
     """Filenames with a counter per plan.
 
-    Filenames are `<plan_name>_<counter>`, the counter zero-padded to
-    `max_digits`. Each data key counts on its own, so two detectors in one run
-    are both `<plan>_00003` and are told apart by the directory they go in.
+    Filenames are `<plan_name>_<counter>`, zero-padded to `max_digits`. Each
+    data key counts on its own; its directory tells two detectors apart.
 
     Parameters
     ----------
@@ -96,11 +95,7 @@ class PlanFilenameProvider(FilenameProvider):
             self._counters[key] = next_count
 
     def __call__(self, datakey_name: str | None = None) -> str:
-        """Return the next filename for the active plan and *datakey_name*.
-
-        Each call increments that pair's counter, so no filename is returned
-        twice for one data key.
-        """
+        """Return the next, never repeated, filename for the plan and *datakey_name*."""
         key = (self._plan, datakey_name or "")
         count = self._counters.get(key, 0)
         self._counters[key] = count + 1
@@ -179,30 +174,22 @@ class SessionPathProvider(PathProvider):
 
     @property
     def session_dir(self) -> Path:
-        """Directory the session's files go under, inside `base_dir`.
+        """Directory inside `base_dir` holding the session's files.
 
-        Named after the session, with every run of characters other than
-        letters, digits, `.`, `-` and `_` replaced by `_` and leading and
-        trailing dots removed, so any session name gives a valid directory
-        inside `base_dir`.
+        Named after the session, each run of characters other than letters,
+        digits, `.`, `-` and `_` replaced by `_` and outer dots removed.
         """
         return self._base_dir / session_folder(self._session)
 
     @slot
     def set_base_dir(self, base_dir: str | Path) -> None:
-        """Change the base directory, resetting and rescanning all counters.
-
-        The new root is used from the next request on, so a device that has
-        already been prepared keeps the path it was given.
+        """Change the base directory from the next request on, rescanning counters.
 
         Raises
         ------
         RuntimeError
-            If the base directory was locked with `lock_base_dir`, or if a plan
-            is running, since its remaining files would be written somewhere
-            else than the ones already on disk. A session whose plan lifecycle
-            is not wired to `set_plan` and `reset_plan` cannot tell that a plan
-            is running and does not raise for that.
+            If `lock_base_dir` was called, or a plan is running. A session not
+            wiring `set_plan` and `reset_plan` cannot tell a plan is running.
         """
         if self._base_dir_lock is not None:
             raise RuntimeError(
@@ -233,11 +220,7 @@ class SessionPathProvider(PathProvider):
         self._filenames.set_plan(_RESET_PLAN)
 
     def _scan_existing(self) -> None:
-        """Recover the counters from files under the session directory.
-
-        Sets each `(plan, datakey)` counter one past the highest number found
-        in any date directory, so new filenames never reuse a number on disk.
-        """
+        """Set each `(plan, datakey)` counter one past the highest number on disk."""
         directory = self.session_dir
         if not directory.exists():
             return

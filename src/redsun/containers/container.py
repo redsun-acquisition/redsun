@@ -31,14 +31,6 @@ from ophyd_async.core import Device
 
 from redsun.aio import get_shared_loop, run_coro
 from redsun.catalog import CATALOG, CatalogAddress
-from redsun.containers._config import AppConfig, CatalogConfig, StorageConfig
-from redsun.containers._hooks import (
-    HookError,
-    distinct,
-    known_points,
-    parse_hook_specs,
-    resolve_hooks,
-)
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
@@ -55,7 +47,6 @@ from redsun.containers.components import (
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
 from redsun.presenter import PPresenter
-from redsun.services._service import close_channel_access
 from redsun.view import PView
 from redsun.virtual import (
     ComponentNotBuilt,
@@ -65,6 +56,16 @@ from redsun.virtual import (
     IsProvider,
     VirtualContainer,
     WiringError,
+)
+
+from ..services._service import close_channel_access
+from ._config import AppConfig, CatalogConfig, StorageConfig
+from ._hooks import (
+    HookError,
+    distinct,
+    known_points,
+    parse_hook_specs,
+    resolve_hooks,
 )
 
 if TYPE_CHECKING:
@@ -77,7 +78,8 @@ if TYPE_CHECKING:
     from redsun.containers.components import _ComponentBase
     from redsun.services import Service
     from redsun.virtual import RedSunConfig
-    from redsun.virtual._wiring import SlotThread
+
+    from ..virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
 
@@ -1052,12 +1054,11 @@ class AppContainer:
         logger.debug("VirtualContainer created")
 
     def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
-        """Start the session's catalog, or log why it could not start.
+        """Start the session's catalog, or log why it could not.
 
-        The catalog reads assets from the session's own directory under the
-        path provider's root, and from every directory *config* adds. It serves
-        OME-Zarr images with their axis names, and a ``TiledWriter`` in this
-        process registers them as their store holds them.
+        It reads from the session's directory and every one *config* adds,
+        serves OME-Zarr images with their axis names, and has a ``TiledWriter``
+        in this process store them as their store holds them.
         """
         # imported here: the tiled extra is optional, and _require_tiled has
         # already refused a session asking for a catalog without it

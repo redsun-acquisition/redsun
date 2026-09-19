@@ -1,7 +1,6 @@
-"""Where the session's catalog of runs is served, as components ask for it.
+"""Where the session's catalog is served.
 
-Importing this module imports nothing from ``tiled``, so a component can ask
-for the catalog whether or not the ``tiled`` extra is installed.
+Imports nothing from ``tiled``, so any component can ask, extra or not.
 """
 
 from __future__ import annotations
@@ -26,14 +25,11 @@ class CatalogAddress:
     Attributes
     ----------
     uri : str
-        URI of the server, carrying its API key, so a client needs nothing
-        else to connect. Left out of the ``repr``, so logging an address does
-        not write the key.
+        URI of the server, with its API key. Left out of the ``repr``.
     """
 
     uri: str = field(repr=False)
 
 
 CATALOG: dip.Dependency[CatalogAddress] = dip.Dependency(instance_of=CatalogAddress)
-"""Key for the session's catalog address, bound by the container when the
-session's ``storage`` section has a ``catalog`` key."""
+"""Key for the session's catalog address, bound when ``storage`` has a ``catalog``."""

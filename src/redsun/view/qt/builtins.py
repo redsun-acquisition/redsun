@@ -4,6 +4,6 @@ Declare them with ``declare_view``, or name them in a YAML configuration
 through the ``redsun`` plugin manifest (``plugin_name: redsun``).
 """
 
-from redsun.view.qt._log_view import LogView
+from ._log_view import LogView
 
 __all__ = ["LogView"]

@@ -1,26 +1,22 @@
 # Write a derived product
 
-A component computing something from a finished acquisition, a median over a
-stack or a mask, writes it against the store the device already wrote. The
-acquisition's own bytes belong to the service and its device
-([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)),
-and a derived product is the one thing `redsun` writes.
+A component computing something from a finished acquisition, such as a median
+or a mask, writes it against the store the device wrote. The acquisition
+belongs to the service and its device
+([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md));
+a derived product is the one thing `redsun` writes.
 
 ## Install the extra
-
-The writers need the packages of the formats they write:
 
 ```bash
 pip install redsun[zarr]
 ```
 
-A writer called without its package raises `WriterError` naming the extra,
-rather than failing on an import.
+Without it, a writer raises `WriterError` naming the extra.
 
 ## Pick the writer by mimetype
 
-The `StreamResource` document names the format and the store. Read it and
-import the module that writes that format:
+The `StreamResource` document names the format and the store:
 
 ```python
 from redsun.storage.writers import ome_zarr
@@ -38,8 +34,7 @@ def on_stop(self, resource: StreamResource, median: NDArray[np.uint16]) -> None:
     )
 ```
 
-Every writer takes the same arguments, named for the document's own fields, so
-nothing is renamed between reading a document and calling a writer:
+Every writer takes the same arguments, named after the document's fields:
 
 ```python
 def write(
@@ -51,30 +46,25 @@ def write(
 ) -> str: ...
 ```
 
-Two modules ship today: `zarr` for `application/x-zarr` and `ome_zarr` for
-`application/x-ome-zarr`.
+`zarr` writes `application/x-zarr`, `ome_zarr` writes `application/x-ome-zarr`.
 
 ## Read the returned URI
 
-The writer decides where the product lands by reading the store it is given,
-and the return value says where it went. It is the argument when the product
-was added to that store, and a new URI when it was written beside it:
+The writer reads the store and decides where the product goes; the return
+value says where:
 
-| Store | Where the product goes | Returned |
+| Store root | Product goes | Returned |
 | --- | --- | --- |
-| root is a plain group | another key in the same store | the argument |
-| root carries OME-Zarr metadata: an image, a plate, a `bioformats2raw` layout | a store of its own, beside it | the new store |
+| a plain group | another key in the same store | the argument |
+| OME-Zarr metadata: an image, a plate, a `bioformats2raw` layout | a store of its own, beside it | the new store |
 
-A store whose root carries OME-Zarr metadata cannot take another key: adding
-one drops the root's `ome` block, and the image or plate stops being OME-Zarr.
-`ome_zarr.write` writes a sibling instead, and `zarr.write` refuses the store
-rather than damaging it.
+Adding a key to a root with OME-Zarr metadata drops its `ome` block, so
+`ome_zarr.write` writes a sibling and `zarr.write` refuses the store.
 
-Metadata is written to the product's own group, never the store's root, since
-a stream closing on the store rewrites the root's metadata and would drop it.
+Metadata goes to the product's own group, never the root: a stream closing on
+the store rewrites the root's metadata.
 
 ## Register it, or not
 
-A writer registers nothing. If the product belongs in a catalog, put it there
-in the same callback; the two are chosen per product and `redsun` does not
-chain them.
+A writer registers nothing. A product that belongs in a catalog is put there
+by the same callback; the two are separate choices.

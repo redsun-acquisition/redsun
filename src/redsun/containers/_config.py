@@ -17,9 +17,7 @@ class CatalogConfig:
     Parameters
     ----------
     readable : tuple[Path, ...]
-        Further directories the catalog may read assets from. The session's
-        own directory is always readable; these are added to it, for services
-        writing where their own configuration says.
+        Directories the catalog may read from besides the session's own.
     """
 
     readable: tuple[Path, ...] = field(default_factory=tuple)
@@ -32,13 +30,11 @@ class StorageConfig:
     Parameters
     ----------
     base_dir : Path | None
-        Root the session writes under, as `<base_dir>/<session>`. `None`, the
-        default, is the user data directory.
+        Root the session writes under. `None` is the user data directory.
     max_digits : int
         Width of the counter in file names.
     catalog : CatalogConfig | None
-        The session's catalog, needing the ``tiled`` extra. `None`, the
-        default, is no catalog.
+        The session's catalog, needing the ``tiled`` extra; `None` for none.
     """
 
     base_dir: Path | None = None
@@ -47,9 +43,7 @@ class StorageConfig:
 
     @classmethod
     def from_mapping(cls, section: Mapping[str, Any] | None) -> StorageConfig:
-        """Read a session file's `storage` section.
-
-        A `catalog` key, present and empty, starts a catalog with its defaults.
+        """Read a session file's `storage` section. An empty `catalog` key is a catalog.
 
         Raises
         ------

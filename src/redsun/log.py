@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final
 from platformdirs import user_log_dir
 from psygnal import Signal
 
-from redsun.utils._paths import session_folder
+from .utils._paths import session_folder
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

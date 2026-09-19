@@ -27,7 +27,8 @@ from magicgui.types import Undefined
 
 from redsun.presenter.plan_spec import ParamDescription, ParamKind
 from redsun.presenter.utils import isdevice, isdevicesequence, isdeviceset, issequence
-from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
+
+from ._device_sequence_edit import DeviceSequenceEdit
 
 
 def _is_hidden_or_action(p: ParamDescription) -> bool:

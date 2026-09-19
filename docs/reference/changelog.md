@@ -87,12 +87,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 - **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
   Services tab, with a selector for one service or all of them.
 - **`SessionPathProvider`**, **`PlanFilenameProvider`** and
-  **`session_directory`** (`redsun.path_provider`) - the session's path
-  provider, moved out of `redsun.storage`. `session_directory(session)` returns
+  **`session_directory`** (`redsun.path_provider`), moved from
+  `redsun.storage`. `session_directory(session)` returns
   `<base_dir>/<session>`.
 - **`path_provider`** keyword of a device declaration, reserved by the
-  container - a device whose constructor takes it is built with the session's
-  provider, and a declaration giving one is refused:
+  container: a device whose constructor takes it gets the session's provider,
+  and a declaration giving one is refused:
 
   ```python
   class Camera(Device):
@@ -100,9 +100,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 - **`AppContainer.path_provider`** (`redsun.containers.container`) - the
-  session's provider, built with the session name. It is published for wiring
-  under **`PATH_PROVIDER_PORT`** (`"path_provider"`), with `set_plan`,
-  `reset_plan` and `set_base_dir` as slots:
+  session's provider, wired under **`PATH_PROVIDER_PORT`**
+  (`"path_provider"`), with `set_plan`, `reset_plan` and `set_base_dir` as
+  slots:
 
   ```yaml
   wiring:
@@ -111,11 +111,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 - **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`) and a
-  `storage` section in a session file. `base_dir` is the root a session writes
-  under, `user_data_dir("redsun", appauthor=False)` by default, and
-  `max_digits` the width of the counter in file names. A `catalog` key, present
-  and empty or not, gives the session a catalog in `<base_dir>/<session>/catalog`,
-  and needs the `tiled` extra:
+  `storage` section in a session file: `base_dir`, the root a session writes
+  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
+  the width of the file counter, and `catalog`, which, even empty, gives the
+  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
+  extra:
 
   ```yaml
   storage:
@@ -125,24 +125,20 @@ Dates are specified in the format `DD-MM-YYYY`.
         - /data/aht
   ```
 
-  `AppContainer.storage` gives the section once the container is built.
-  `readable` names further directories the catalog may read assets from, for
-  services writing where their own configuration says. A key the section or
-  its `catalog` has no place for is refused, and so is a `catalog` in a session
-  without the `tiled` extra installed.
+  `AppContainer.storage` gives the section after the build. `readable` adds
+  directories the catalog may read from. Unknown keys are refused, and so is a
+  `catalog` without the `tiled` extra.
 
 - **`SessionPathProvider.session_dir`** (`redsun.path_provider`) - the
-  directory a session's files and catalog go under, inside `base_dir`.
+  session's directory inside `base_dir`, holding its files and catalog.
 - **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
-  every later `set_base_dir` raise `RuntimeError` with the reason given. A
+  every later `set_base_dir` raise `RuntimeError` with the given reason. A
   session with a catalog locks its provider once the catalog starts.
 - **`SessionPathProvider.base_dir`** and **`SessionPathProvider.set_base_dir`**,
-  the latter a slot taking a `str` or a `Path`. It raises `RuntimeError` while
-  a plan is running, since the run's remaining files would be written under a
-  different root, and takes effect from the next request on.
+  a slot taking a `str` or a `Path`, effective from the next request. It raises
+  `RuntimeError` while a plan runs.
 - **`PATH_PROVIDER`** (`redsun.path_provider`) - key the container binds the
-  session's provider to, so a component resolves it without holding the
-  container:
+  session's provider to:
 
   ```python
   provider = container.require(PATH_PROVIDER)
@@ -150,8 +146,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`redsun.storage.writers`** - one module per format, each with
   `write(uri, *, data_key, data, metadata=None) -> str`, adding a derived
-  product to a store an acquisition already wrote. `zarr` writes
-  `application/x-zarr` and `ome_zarr` writes `application/x-ome-zarr`:
+  product to an acquisition's store: `zarr` for `application/x-zarr`,
+  `ome_zarr` for `application/x-ome-zarr`:
 
   ```python
   from redsun.storage.writers import ome_zarr
@@ -164,23 +160,20 @@ Dates are specified in the format `DD-MM-YYYY`.
   )
   ```
 
-  The returned URI is the argument when the product was added to that store,
-  and a new one when it was written beside it, which is what a store whose
-  root carries OME-Zarr metadata gets: an image, a plate or a
-  `bioformats2raw` layout. `zarr.write` refuses such a store, since adding a
-  key to one drops its root `ome` block. A writer registers nothing.
-- **`WriterError`** (`redsun.storage.writers`) - raised when a product cannot
-  be written: the store is the wrong shape for the writer, the array has too
-  few or too many dimensions, or the format's package is absent, in which case
-  the message names the extra that installs it.
+  The returned URI is the argument when the product joined that store, and a
+  new one when it went beside it, as it does for a root carrying OME-Zarr
+  metadata (an image, a plate, a `bioformats2raw` layout), which `zarr.write`
+  refuses. A writer registers nothing.
+- **`WriterError`** (`redsun.storage.writers`) - raised for a store the
+  writer cannot take, an array with too few or too many dimensions, or a
+  missing package, naming the extra that installs it.
 - A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
 - A `tiled` extra and dependency group, with `tiled[client,server]` and
-  `ome-tiled[bluesky]`. It installs nothing on Python 3.14, which `tiled` does
-  not support yet.
+  `ome-tiled[bluesky]`. It installs nothing on Python 3.14.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
-  session's catalog is served, and the key a component asks for it with.
-  `CatalogAddress.uri` carries the server's API key, so a component connects
-  with it alone; the address's `repr` leaves it out. The module imports nothing from `tiled`:
+  session's catalog is served, and its key. `CatalogAddress.uri` carries the
+  API key, which the `repr` leaves out. The module imports nothing from
+  `tiled`:
 
   ```python
   from redsun.catalog import CATALOG
@@ -191,26 +184,22 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 - A session whose `storage` section has a `catalog` starts a `tiled` server
-  on this machine while its virtual container is created, provides its address
-  under `CATALOG`, and stops it on `shutdown`, after the presenters. The server
-  keeps its database in `<base_dir>/<session>/catalog` and reads assets from
-  `<base_dir>/<session>` and every `readable` directory. `tiled` checks this
-  when an asset is read, not when it is registered. A catalog that fails to
-  start is logged and the session runs without it. The server reads
-  `application/x-ome-zarr` assets with `ome-tiled`'s `OmeZarrAdapter`, and
-  `ome-tiled`'s consolidator is registered for `TiledWriter`, so a
-  `TiledWriter` connected to the catalog stores an OME-Zarr image with the
-  shape and axis names its store holds.
+  with its virtual container, provides its address under `CATALOG`, and stops
+  it on `shutdown` after the presenters. The server keeps its database in
+  `<base_dir>/<session>/catalog` and reads assets from `<base_dir>/<session>`
+  and every `readable` directory, checked on read. A catalog that fails to
+  start is logged and skipped. `application/x-ome-zarr` assets are read with
+  `ome-tiled`'s `OmeZarrAdapter`, and `ome-tiled`'s consolidator is registered
+  for `TiledWriter`, which then stores an OME-Zarr image with its store's
+  shape and axis names.
 
 
 ### Changed
 
-- A session's data, catalog and log folders are named after the session with
-  every run of characters other than letters, digits, `.`, `-` and `_`
-  replaced by `_`, and leading and trailing dots removed: `Lab A: STED` writes
-  to `Lab_A_STED`. The data folder used the name unchanged. A session whose
-  name has such characters writes to the new folder, and its earlier files
-  stay where they are.
+- A session's data, catalog and log folders take the session name with each
+  run of characters other than letters, digits, `.`, `-` and `_` replaced by
+  `_` and outer dots removed: `Lab A: STED` becomes `Lab_A_STED`. The data
+  folder used the name unchanged; earlier files stay where they are.
 - **`AppContainer.BUILD_STEPS`** (`redsun.containers.container`) starts with
   `"services"`, so a `during_build` hook reports services starting, and has
   `"connect"` after `"devices"`. A build that raises stops the services before
@@ -234,17 +223,15 @@ Dates are specified in the format `DD-MM-YYYY`.
   carries none, such as one rebuilt from a service's output.
 - **`LogView`** (`redsun.view.qt.builtins`): `Save logs...` and
   `Clear log window` act on the tab shown.
-- **`SessionPathProvider`** gives each data key a directory of its own,
-  `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`, and counts
-  per `(plan, datakey)`, so two detectors in one run write the same filename
-  in different directories. A call without a data key leaves that level out.
+- **`SessionPathProvider`** gives each data key its own directory,
+  `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`, counting per
+  `(plan, datakey)`. A call without a data key leaves that level out.
   **`PlanFilenameProvider.bump`** takes the data key as its second argument
   and **`PlanFilenameProvider.reset`** takes `(plan, datakey)` keys.
 - **`SessionPathProvider`** writes under
-  `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`,
-  beside the session's logs. Nothing is moved: files already in
-  `~/redsun-storage` stay there, and a provider built while that directory
-  exists logs a `WARNING` naming both locations.
+  `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`.
+  Nothing is moved; a provider built while `~/redsun-storage` exists logs a
+  `WARNING` naming both locations.
 
 ### Removed
 
@@ -255,20 +242,15 @@ Dates are specified in the format `DD-MM-YYYY`.
   **`OpenStore`**, **`StorageIO`**, **`SinkFactory`**, **`StoreStateError`**,
   **`FrameSink`**, **`PathSignals`**, the storage registry
   (**`register_storage`**, **`get_storage`**, **`clear_registry`**,
-  **`reset_group`**) and the `acquire-zarr` and in-memory backends. An
-  acquisition is written by the service and its device, which emit
-  `StreamResource` and `StreamDatum` documents naming the result; see
+  **`reset_group`**) and the `acquire-zarr` and in-memory backends; see
   [ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md).
-  `StreamDatum` ranges are whatever the device emits, where `FrameRouter`
-  made them contiguous before.
+  `StreamDatum` ranges are whatever the device emits.
 - **`StoragePresenter`** (`redsun.presenter.builtins`) and **`StorageView`**
-  (`redsun.view.qt.builtins`), with their `redsun` manifest entries. The
-  container builds the session's path provider, so a session declaring them
-  drops both sections and gives `base_dir` in the new `storage` section
-  instead. `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
-- The `zarr` extra and dependency group no longer install `acquire-zarr`
-  directly; they install `ome-writers[acquire-zarr]` for the derived-product
-  writers.
+  (`redsun.view.qt.builtins`), with their manifest entries. A session
+  declaring them drops both and gives `base_dir` in the `storage` section.
+  `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
+- The `zarr` extra and dependency group install
+  `ome-writers[acquire-zarr]` instead of `acquire-zarr`.
 
 ### Changed (breaking)
 
@@ -892,8 +874,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `benchmarks/` - `acquire-zarr` dual-load benchmark (live view via
   `bps.monitor` + disk storage, two detectors, inline processing callback).
   Shipped in the sdist only, never in wheels, not collected by `pytest`.
-- Tutorial: writing a custom storage backend (`StorageIO`/`OpenStore`
-  implementation driven through `BaseStorage`). Removed with the storage shim.
+- The tutorial on writing a custom storage backend.
 
 ### Changed (breaking)
 

@@ -1,13 +1,10 @@
-"""Writers adding a derived product to a store an acquisition already wrote.
+"""Writers adding a derived product to an acquisition's store.
 
-One module per format, each with a `write` function taking the fields of the
-`StreamResource` document the product is derived from. A writer chooses where
-the product lands by reading the store it is given, and returns its URI.
-
-A writer registers nothing. Whether a product also belongs in a catalog is the
-caller's decision, made per product.
+One module per format, each with a `write` taking the fields of the
+`StreamResource` document. A writer reads the store, decides where the product
+goes and returns its URI. It registers nothing in a catalog.
 """
 
-from redsun.storage.writers._base import WriterError
+from ._base import WriterError
 
 __all__ = ["WriterError"]

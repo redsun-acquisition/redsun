@@ -169,6 +169,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   symbols need docstrings; `D100`/`D104` are ignored.
 - Private modules are `_underscored`; the package `__init__.py` re-exports the
   public surface with an explicit `__all__`. Add new public symbols to both.
+- **Import a private module relatively, a public one absolutely.** A module
+  whose dotted path has an `_underscored` part, `_config` or `utils._paths`,
+  is imported as `from ._config import ...` or `from ..utils._paths import
+  ...`; a public one as `from redsun.path_provider import ...`, even from
+  inside its own package. Tests import everything absolutely, since they are
+  not part of the package.
 - **The underscore marks what `__all__` cannot.** A module named `_foo.py` is
   private in its entirety, so its **module-level members carry no underscore**:
   the module name already said it. **Class members always keep the

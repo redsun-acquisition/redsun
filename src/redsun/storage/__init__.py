@@ -1,6 +1,4 @@
-"""Writers for derived products against an acquisition store.
+"""Per-format writers adding a derived product to an acquisition's store.
 
-Acquisition files belong to the service and its device. What stays here is
-the per-format helpers a component uses to add a product to a store that is
-already written.
+The acquisition itself is written by the service and its device.
 """

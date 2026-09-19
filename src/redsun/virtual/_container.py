@@ -19,7 +19,8 @@ from psygnal import Signal, SignalGroup, SignalInstance
 
 from redsun.aio import run_coro
 from redsun.log import Loggable
-from redsun.virtual._wiring import (
+
+from ._wiring import (
     SLOT_ATTR,
     SLOT_THREAD_ATTR,
     ComponentNotBuilt,
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     from bluesky.protocols import HasName
     from ophyd_async.core import SignalR
 
-    from redsun.virtual._config import RedSunConfig
+    from ._config import RedSunConfig
 
 K = TypeVar("K")
 V = TypeVar("V")

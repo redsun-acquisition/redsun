@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from redsun.storage.writers._base import WriterError, axis_names, require
+from ._base import WriterError, axis_names, require
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,10 +15,9 @@ _SPATIAL = frozenset({"z", "y", "x"})
 
 
 def append_key(path: Path, *, data_key: str, data: NDArray[Any], is_ngff: bool) -> None:
-    """Write *data* as a new key of the store at *path*, through `acquire-zarr`.
+    """Write *data* as a new key of the store at *path*, in one `acquire-zarr` append.
 
-    The array is written in one append. A leading axis is added to a 2D array,
-    since the first axis is the one a stream appends along.
+    A 2D array gets a leading axis, the one a stream appends along.
     """
     az = require("acquire_zarr", extra="zarr")
     if data.ndim == 2:
