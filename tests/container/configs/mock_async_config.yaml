@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-async-session
+name: mock-async-session
 devices:
   my_motor:
     plugin_name: mock-pkg

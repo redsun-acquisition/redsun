@@ -1,6 +1,8 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+Changes to `redsun.experimental` that are not yet released are listed in the
+[experimental changelog](changelog-experimental.md).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -40,10 +42,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   start, one that is not declared, or one that gives no prefix, is logged and
   skipped by the build.
 - **`AppContainer.start_services`** and **`AppContainer.services`**
-  (`redsun.containers.container`) - start every launched service, logging
-  `Services started: <n>/<m>` and the ones that did not start; and the
-  container's services by name. `build` calls `start_services` as well; only the
-  first call before `shutdown` starts anything.
+  (`redsun.containers.container`) - start every launched service, all
+  together, logging `Services started: <n>/<m>` and the ones that did not
+  start; and the container's services by name. `build` calls `start_services`
+  as well; only the first call before `shutdown` starts anything.
 - A `services` section in a session file, and a `services` group in a plugin
   manifest giving a service's `module` and `ready` line. A session entry with
   `plugin_name` and `plugin_id` takes both from the manifest; one without is
@@ -101,7 +103,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`AppContainer.path_provider`** (`redsun.containers.container`) - the
   session's provider, wired under **`PATH_PROVIDER_PORT`**
-  (`"path_provider"`), with `set_plan`, `reset_plan` and `set_base_dir` as
+  (`redsun.path_provider`, `"path_provider"`), with `set_plan`, `reset_plan` and `set_base_dir` as
   slots:
 
   ```yaml
@@ -523,7 +525,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 - `schema_version` and `frontend` must agree across layered files. They name
   what kind of session this is rather than what it contains, so a later file
   giving a different value raises `ValueError` instead of overriding. Every
-  other key, `session` included, is taken from the later file.
+  other key, `name` included, is taken from the later file.
 - A container reading more than one configuration file logs them at debug
   level, in the order they layer, and logs each component an upper file takes
   from a lower one.

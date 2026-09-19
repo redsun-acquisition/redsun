@@ -11,8 +11,8 @@ from redsun.containers.components import (
 )
 from redsun.containers.container import AppContainer, Frontend
 
+from .._hooks import HookError
 from ._config import AppConfig, CatalogConfig, StorageConfig
-from ._hooks import HookError
 
 __all__ = [
     "AppConfig",

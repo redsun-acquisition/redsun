@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: mock-shared-hook-session
+name: mock-shared-hook-session
 hooks:
   greet: &shared
     provider: "mock_pkg.hooks:BothPointsHook"

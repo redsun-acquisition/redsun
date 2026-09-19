@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: catalog-session
+name: catalog-session
 
 storage:
   catalog:

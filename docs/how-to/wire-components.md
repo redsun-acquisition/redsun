@@ -83,7 +83,7 @@ port.
     ```yaml
     schema_version: 1.0
     frontend: pyqt
-    session: my-session
+    name: my-session
 
     presenters:
       det_ctrl:

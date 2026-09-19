@@ -19,11 +19,11 @@
     options:
       show_root_heading: true
 
-::: redsun.containers._config.StorageConfig
+::: redsun.containers.StorageConfig
     options:
       show_root_heading: true
 
-::: redsun.containers._config.CatalogConfig
+::: redsun.containers.CatalogConfig
     options:
       show_root_heading: true
 
@@ -31,19 +31,19 @@
     options:
       show_root_heading: true
 
-::: redsun.containers._hooks.CreatesApplication
+::: redsun._hooks.CreatesApplication
     options:
       show_root_heading: true
 
-::: redsun.containers._hooks.ConfiguresApplication
+::: redsun._hooks.ConfiguresApplication
     options:
       show_root_heading: true
 
-::: redsun.containers._hooks.ConfiguresMainView
+::: redsun._hooks.ConfiguresMainView
     options:
       show_root_heading: true
 
-::: redsun.containers._hooks.WrapsBuild
+::: redsun._hooks.WrapsBuild
     options:
       show_root_heading: true
 

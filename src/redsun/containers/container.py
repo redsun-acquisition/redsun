@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import logging
-
-# resolved at runtime: the ClassVar annotation below is evaluated by ruff's
-# runtime-evaluated rules and by anything calling get_type_hints on a subclass
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -45,7 +42,7 @@ from redsun.containers.components import (
     expects_positionals,
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
-from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
+from redsun.path_provider import PATH_PROVIDER, PATH_PROVIDER_PORT, SessionPathProvider
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
@@ -58,15 +55,17 @@ from redsun.virtual import (
     WiringError,
 )
 
-from ..services._service import close_channel_access
-from ._config import AppConfig, CatalogConfig, StorageConfig
-from ._hooks import (
+from .._catalog import require_tiled, start_catalog
+from .._config import COMPONENT_SECTIONS, load
+from .._hooks import (
     HookError,
     distinct,
     known_points,
     parse_hook_specs,
     resolve_hooks,
 )
+from ..services._service import close_channel_access
+from ._config import AppConfig, CatalogConfig, StorageConfig
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -164,27 +163,6 @@ logger = logging.getLogger("redsun")
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
 
-PATH_PROVIDER_PORT: Final = "path_provider"
-"""Name the session's path provider is wired under."""
-
-
-def _require_tiled() -> None:
-    """Raise if a session asks for a catalog and the ``tiled`` extra is missing."""
-    missing = [
-        package
-        for package in ("tiled", "ome_tiled", "bluesky_tiled_plugins")
-        if importlib.util.find_spec(package) is None
-    ]
-    if not missing:
-        return
-    raise RuntimeError(
-        "this session's 'storage' section has a 'catalog' key and "
-        f"{', '.join(repr(package) for package in missing)} not installed. "
-        "Install them with 'pip install redsun[tiled]', or drop the key. "
-        "The extra installs nothing on Python 3.14, which tiled does not "
-        "support yet."
-    )
-
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
@@ -205,115 +183,30 @@ def _silent(step: str) -> None:
     """
 
 
-_COMPONENT_SECTIONS: frozenset[str] = frozenset(
-    {"services", "devices", "presenters", "views"}
-)
-"""The configuration sections whose entries are a component's constructor call."""
-
-_IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
-"""Keys saying what kind of session this is, on which layered files must agree.
-
-Every other key describes the session's content, which a later file may
-override.
-"""
-
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
 
 
-def _read_yaml(path: Path) -> dict[str, Any]:
-    """Read one YAML file into a mapping, unvalidated."""
-    with open(path) as fh:
-        data = yaml.safe_load(fh)
-    if not isinstance(data, dict):
-        raise TypeError(
-            f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
-        )
-    return data
-
-
-def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """Return *base* with *overlay* laid over it, merging nested mappings.
-
-    A key in both is taken from *overlay* unless both values are mappings,
-    which merge in turn. Lists and scalars are replaced, not combined.
-
-    Component entries are the exception: ``services``, ``devices``,
-    ``presenters`` and ``views`` merge by component name, but a component
-    *named* in *overlay* is taken from it whole. Its entry is a constructor
-    call's keyword arguments, so one file owns them all and a reader stops at
-    the last file naming it.
-    """
-    merged = dict(base)
-    for key, value in overlay.items():
-        current = merged.get(key)
-        if not (isinstance(current, dict) and isinstance(value, dict)):
-            merged[key] = value
-        elif key in _COMPONENT_SECTIONS:
-            for shadowed in current.keys() & value.keys():
-                logger.debug(
-                    f"Component '{shadowed}' in '{key}' is taken from a later "
-                    f"configuration file, replacing the entry under it"
-                )
-            merged[key] = {**current, **value}
-        else:
-            merged[key] = merge_config(current, value)
-    return merged
-
-
-def _refuse_identity_conflict(
-    data: dict[str, Any], overlay: dict[str, Any], path: Path
-) -> None:
-    """Refuse a file contradicting what kind of session an earlier one declared.
+def _named(config: Mapping[str, Any]) -> str:
+    """Return the session identity *config* declares.
 
     Raises
     ------
-    ValueError
-        If *overlay* changes a key naming the session's kind.
-    """
-    for key in _IDENTITY_KEYS:
-        if key in data and key in overlay and data[key] != overlay[key]:
-            raise ValueError(
-                f"Configuration file {path} sets {key}={overlay[key]!r}, "
-                f"which contradicts {data[key]!r} from a file layered under it. "
-                f"{key} names what kind of session this is, so every file must "
-                f"agree on it."
-            )
-
-
-def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
-    """Read *paths* in order, merge each over the previous, and validate the result.
-
-    Required keys are checked on the merged mapping, not per file, so a layered
-    file may hold a fragment.
-
-    Raises
-    ------
-    ValueError
-        If two files disagree about the session's schema version or frontend.
     KeyError
-        If the merged mapping is missing a key `AppConfig` requires.
+        If it declares none. A session built from a configuration has no class
+        of its own to be named after, and two that both went unnamed would be
+        indistinguishable.
     """
-    if len(paths) > 1:
-        logger.debug(
-            f"Reading configuration from {len(paths)} files, in order: "
-            f"{', '.join(str(path) for path in paths)}"
-        )
-    data: dict[str, Any] = {}
-    for path in paths:
-        overlay = _read_yaml(path)
-        _refuse_identity_conflict(data, overlay, path)
-        data = merge_config(data, overlay)
-    missing = AppConfig.__required_keys__ - data.keys()
-    if missing:
-        named = ", ".join(str(path) for path in paths)
+    name = config.get("name")
+    if not isinstance(name, str) or not name:
         raise KeyError(
-            f"Configuration ({named}) is missing required keys: "
-            f"{', '.join(sorted(missing))}"
+            "a session built from a configuration must declare 'name'. It "
+            "identifies the session, and two that both went unnamed could not "
+            "be told apart."
         )
-    return data
+    return name
 
 
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
@@ -334,8 +227,9 @@ class AppContainer:
 
     Parameters
     ----------
-    session : str
-        Session display name.
+    name : str | None
+        Session identity. Defaults to the container class's own name, which is
+        distinct per session where a shared constant would not be.
     frontend : str
         Frontend toolkit identifier.
     log_level : int or str, optional
@@ -495,7 +389,7 @@ class AppContainer:
         if component_fields:
             config_data: dict[str, Any] = {}
             if cls._config_paths:
-                config_data = _load_yaml(cls._config_paths)
+                config_data = load(cls._config_paths, AppConfig.__required_keys__)
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -568,7 +462,7 @@ class AppContainer:
     def __init__(
         self,
         *,
-        session: str = "Redsun",
+        name: str | None = None,
         frontend: str = "pyqt",
         log_level: int | str | None = None,
     ) -> None:
@@ -577,7 +471,7 @@ class AppContainer:
             set_level(log_level)
         self._config: AppConfig = {
             "schema_version": 1.0,
-            "session": session,
+            "name": name or type(self).__name__,
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
@@ -613,19 +507,19 @@ class AppContainer:
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
-        # populates _config with top-level sections such as 'storage', 'session',
+        # populates _config with top-level sections such as 'storage', 'name',
         # or 'schema_version'.  We read those here so that build() sees the same
         # state as the from_config() path, which sets them explicitly.
         config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
         if config_paths:
             try:
-                yaml_data = _load_yaml(config_paths)
+                yaml_data = load(config_paths, AppConfig.__required_keys__)
             except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
                 named = ", ".join(str(path) for path in config_paths)
                 logger.warning(f"Could not read config file(s) {named}: {e}")
                 yaml_data = {}
             for key, value in yaml_data.items():
-                if key not in _COMPONENT_SECTIONS:
+                if key not in COMPONENT_SECTIONS:
                     self._config[key] = value  # type: ignore[literal-required]
 
         self._session_log: SessionFileHandler | None = None
@@ -908,19 +802,24 @@ class AppContainer:
 
         `build` calls this too. Only the first call until `shutdown` does
         anything. A service that fails to start is logged, and the build skips
-        every device naming it; the rest of the session runs.
+        every device naming it; the rest of the session runs. Services start
+        together, so this takes as long as the slowest one.
         """
         if self._services_started:
             return
         self._services_started = True
         if not self._services:
             return
-        for name, service in self._services.items():
-            try:
-                service.start()
-            except Exception as e:  # noqa: BLE001 - a missing service must not abort the app
-                self._failed_services[name] = e
-                logger.error(f"Failed to start service '{name}': {e}")
+        with ThreadPoolExecutor(len(self._services), "service-start") as pool:
+            starts = {
+                name: pool.submit(service.start)
+                for name, service in self._services.items()
+            }
+        for name, start in starts.items():
+            error = start.exception()
+            if error is not None:
+                self._failed_services[name] = error
+                logger.error(f"Failed to start service '{name}': {error}")
         summary = (
             f"Services started: {len(self._services) - len(self._failed_services)}"
             f"/{len(self._services)}"
@@ -1035,7 +934,7 @@ class AppContainer:
 
         base_cfg: RedSunConfig = {
             "schema_version": self._config.get("schema_version", 1.0),
-            "session": self._config.get("session", "Redsun"),
+            "name": self._config["name"],
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
@@ -1045,54 +944,19 @@ class AppContainer:
         self._storage = StorageConfig.from_mapping(self._config.get("storage"))
         self._path_provider = SessionPathProvider(
             base_dir=self._storage.base_dir,
-            session=base_cfg["session"],
+            session=base_cfg["name"],
             max_digits=self._storage.max_digits,
         )
         if self._storage.catalog is not None:
-            _require_tiled()
+            require_tiled()
             self._catalog = self._start_catalog(self._storage.catalog)
         logger.debug("VirtualContainer created")
 
     def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
-        """Start the session's catalog, or log why it could not.
-
-        It reads from the session's directory and every one *config* adds,
-        serves OME-Zarr images with their axis names, and has a ``TiledWriter``
-        in this process store them as their store holds them.
-        """
-        # imported here: the tiled extra is optional, and _require_tiled has
-        # already refused a session asking for a catalog without it
-        from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter
-        from ome_tiled.bluesky import register_consolidator
-        from tiled.server.simple import SimpleTiledServer
-
-        session_dir = self.path_provider.session_dir
-        server: SimpleTiledServer | None = None
+        """Start the session's catalog, or log why it could not."""
         try:
-            server = SimpleTiledServer(
-                directory=session_dir / "catalog",
-                readable_storage=[session_dir, *config.readable],
-            )
-            # TODO: let storage.catalog choose the adapters and consolidators
-            # installed here, rather than always installing ome-tiled's
-
-            # SimpleTiledServer takes no adapters; the first map holds the
-            # catalog's own, ahead of tiled's defaults
-            server.catalog.context.adapters_by_mimetype.maps[0][OME_ZARR_MIMETYPE] = (
-                OmeZarrAdapter
-            )
-            register_consolidator()
-            self.path_provider.lock_base_dir(
-                "the session's catalog reads files only from the readable "
-                "directories it started with; choose the root with "
-                "storage.base_dir before the session starts"
-            )
-            return server
+            return start_catalog(config, self.path_provider)
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
-            # a server that started and then failed to be set up is stopped,
-            # since nothing else holds it
-            if server is not None:
-                server.close()
             # a dotted key: no declared component can have this name
             self._failed["storage.catalog"] = e
             logger.error(f"Failed to start the catalog: {e}")
@@ -1332,7 +1196,7 @@ class AppContainer:
         """
         if self._session_log is not None:
             return
-        session = self._config["session"]
+        session = self._config["name"]
         self._session_log = SessionFileHandler(session)
         add_handler(self._session_log)
         for name, service in self._services.items():
@@ -1447,7 +1311,7 @@ class AppContainer:
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
 
         instance = DynamicApp(
-            session=config.get("session", "Redsun"),
+            name=_named(config),
             frontend=frontend,
             log_level=log_level,
         )

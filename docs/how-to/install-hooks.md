@@ -36,10 +36,10 @@ Each point belongs to a toolkit, so all four are on
 refuses them; a container for another toolkit declares that toolkit's points.
 
 Each point has a protocol with its one method:
-[`CreatesApplication`][redsun.containers._hooks.CreatesApplication],
-[`ConfiguresApplication`][redsun.containers._hooks.ConfiguresApplication],
-[`WrapsBuild`][redsun.containers._hooks.WrapsBuild] and
-[`ConfiguresMainView`][redsun.containers._hooks.ConfiguresMainView]. A provider
+[`CreatesApplication`][redsun._hooks.CreatesApplication],
+[`ConfiguresApplication`][redsun._hooks.ConfiguresApplication],
+[`WrapsBuild`][redsun._hooks.WrapsBuild] and
+[`ConfiguresMainView`][redsun._hooks.ConfiguresMainView]. A provider
 implementing the method satisfies the protocol, with nothing to subclass or
 register.
 
@@ -103,7 +103,7 @@ exported from `redsun.qt`.
     ```yaml
     schema_version: 1.0
     frontend: pyqt
-    session: My session
+    name: My session
 
     hooks:
       configure_application:

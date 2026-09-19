@@ -40,7 +40,7 @@ def session(tmp_path: Path) -> Iterator[Callable[..., AppContainer]]:
     built: list[AppContainer] = []
 
     def build(**sections: Any) -> AppContainer:
-        config = {"schema_version": 1.0, "frontend": "pyqt", "session": SESSION}
+        config = {"schema_version": 1.0, "frontend": "pyqt", "name": SESSION}
         cfg_file = tmp_path / "session.yaml"
         cfg_file.write_text(yaml.dump({**config, **sections}))
         app = AppContainer.from_config(str(cfg_file))
@@ -150,7 +150,7 @@ def test_the_catalog_lives_in_the_session_folder_whatever_its_name(
     session: Callable[..., AppContainer], tmp_path: Path
 ) -> None:
     """A name unsafe in a path gives the same folder the files and logs use."""
-    app = session(session="Lab A: STED", storage={"catalog": None})
+    app = session(name="Lab A: STED", storage={"catalog": None})
 
     assert app.path_provider.session_dir == tmp_path / "data" / "Lab_A_STED"
     assert (app.path_provider.session_dir / "catalog" / "catalog.db").is_file()

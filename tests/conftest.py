@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -20,7 +21,6 @@ from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
 
 @pytest.fixture(scope="session")
@@ -29,6 +29,17 @@ def qapp() -> QApplication:
 
     start_emitting_from_queue()
     return app
+
+
+@pytest.fixture
+def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let a launched service import ``mock_pkg``, and restore the CA address list.
+
+    ``redsun.services._service.ports`` is left alone: libca reads the address list
+    once per process, so a service keeps the port it first got from test to test.
+    """
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent / "container"))
+    monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
 
 
 @pytest.fixture(autouse=True)

@@ -142,7 +142,7 @@ def test_a_service_writes_a_file_of_its_own_beside_the_application(
 
 def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -> None:
     """Open from construction, closed by shutdown whether or not it was built."""
-    app = Empty(session="lab")
+    app = Empty(name="lab")
     handler = session_log()
     assert handler is not None
     assert (log_directory / "lab").is_dir()

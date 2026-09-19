@@ -1,0 +1,17 @@
+devices:
+  mock-stage: mock_bundle.devices:MockStage
+
+presenters:
+  mock-motor: mock_bundle.presenters:MockMotorPresenter
+  mock-late: mock_bundle.presenters:MockLatePresenter
+
+views:
+  mock-motor-view: mock_bundle.views:MockMotorView
+
+providers:
+  mock-services: mock_bundle.services:MockServices
+
+services:
+  stand-in:
+    module: mock_pkg.service.stand_in
+    ready: stand-in ready

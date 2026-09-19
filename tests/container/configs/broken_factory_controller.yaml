@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-session: broken-factory-session
+name: broken-factory-session
 presenters:
   MockController:
     plugin_name: mock-pkg
