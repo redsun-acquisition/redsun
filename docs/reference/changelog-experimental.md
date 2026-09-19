@@ -8,6 +8,22 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- A `setup` parameter annotated with a protocol (`redsun.experimental`) is
+  answered by the one component or shared value satisfying it, with no marker.
+  `P | None = None` takes at most one, and `Mapping[str, P]` every component
+  satisfying `P`, the asker included. The check runs on built instances, so
+  `P` need not be `runtime_checkable` and may declare data members. Several
+  answers where one is asked for, none, or one from a later layer raise; a
+  question only a component that failed to build could answer leaves the
+  asker not set up:
+
+  ```python
+  class MyView:
+      def setup(
+          self, viewer: ViewerModel, layers: HasLayers, roi: HasRoi | None = None
+      ) -> None: ...
+  ```
+
 - A presenter or view whose class has `__slots__` without `__weakref__` and
   owns a psygnal `Signal` is skipped at declaration, naming the fix:
   `__weakref__` in its slots, or `weakref_slot=True` on its dataclass. A frozen
@@ -576,6 +592,9 @@ listed in the [changelog](changelog.md).
   ```
 
 ### Changed
+
+- `register_shared` (`redsun.experimental.injection`) returns the values it
+  shared, in the order it registered them.
 
 - A presenter or view failing a declaration check (`redsun.experimental`) is
   logged and skipped, and the session builds without it, where the check
