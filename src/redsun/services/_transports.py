@@ -7,10 +7,16 @@ from typing import TYPE_CHECKING, Final, Protocol
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-__all__ = ["CHANNEL_ACCESS", "TRANSPORTS", "Transport"]
+__all__ = ["CHANNEL_ACCESS", "PV_ACCESS", "TRANSPORTS", "Transport"]
 
 CHANNEL_ACCESS: Final = "channel-access"
 """The protocol a session's services speak unless it says otherwise."""
+
+PV_ACCESS: Final = "pv-access"
+"""The other protocol a session may name."""
+
+LOOPBACK: Final = "127.0.0.1"
+"""Where a launched service listens, and where this process looks for it."""
 
 
 class Transport(Protocol):
@@ -90,7 +96,44 @@ class ChannelAccess:
         return self._ports[service]
 
 
-TRANSPORTS: dict[str, Transport] = {CHANNEL_ACCESS: ChannelAccess()}
+class PVAccess:
+    """PVAccess, every service of the session on the loopback interface.
+
+    A service picks its own ports: ``pvxs`` takes another TCP port when the
+    default one is busy, and local servers share the search port, so several
+    answer without the session assigning anything. What a client cannot do by
+    itself is reach a service bound to the loopback, which its defaults never
+    search, so this process is told that address.
+    """
+
+    name = PV_ACCESS
+
+    def __init__(self) -> None:
+        self._published = False
+
+    def reserve(self, service: str) -> Mapping[str, str]:
+        """Keep the service on the loopback, as a Channel Access one is."""
+        return {"EPICS_PVAS_INTF_ADDR_LIST": LOOPBACK}
+
+    def publish(self, service: str) -> None:
+        """Add the loopback to this process's address list, once for them all.
+
+        ``EPICS_PVA_AUTO_ADDR_LIST`` is left alone, so a session still reaches
+        the servers of its site.
+        """
+        if self._published:
+            return
+        self._published = True
+        add_to_env("EPICS_PVA_ADDR_LIST", LOOPBACK)
+
+    async def release(self) -> None:
+        """Nothing: a client reaches a restarted service without being told."""
+
+
+TRANSPORTS: dict[str, Transport] = {
+    CHANNEL_ACCESS: ChannelAccess(),
+    PV_ACCESS: PVAccess(),
+}
 """The transports a session may name, by the name a session file writes."""
 
 

@@ -18,12 +18,20 @@ import pytest
 from redsun.log import GlobalFormatter
 from redsun.services import Service, _service
 from redsun.services._service import service_record
-from redsun.services._transports import CHANNEL_ACCESS, TRANSPORTS, ChannelAccess
+from redsun.services._transports import (
+    CHANNEL_ACCESS,
+    PV_ACCESS,
+    TRANSPORTS,
+    ChannelAccess,
+    PVAccess,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
 STAND_IN = "mock_pkg.service.stand_in"
+PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
+PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
 MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
 STDLIB_WARNING = json.dumps(
@@ -68,6 +76,32 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
                 args=options,
                 ready=READY,
                 stop_timeout=stop_timeout,
+            )
+        )
+        return made[-1]
+
+    yield make
+    for launched in made:
+        launched.stop()
+
+
+@pytest.fixture
+def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+    """Make stand-in PVA services, restoring the address list and stopping them after."""
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+    made: list[Service] = []
+
+    def make(name: str, pv: str, value: float) -> Service:
+        made.append(
+            Service(
+                name,
+                module=PVA_STAND_IN,
+                args=("--pv", pv, "--value", str(value)),
+                ready=PVA_READY,
+                stop_timeout=0.5,
+                transport=PV_ACCESS,
             )
         )
         return made[-1]
@@ -228,6 +262,24 @@ def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     assert os.environ["EPICS_CA_ADDR_LIST"].split() == [
         f"127.0.0.1:{port}" for port in ports
     ]
+
+
+def test_two_pva_services_answer_on_the_loopback(
+    launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Both are kept local, and a client is told where to find them."""
+    p4p = pytest.importorskip("p4p.client.thread")
+
+    first = launch_pva("first", "SIM:FIRST", 1.0)
+    second = launch_pva("second", "SIM:SECOND", 2.0)
+    first.start()
+    second.start()
+
+    assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
+    assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
+    with p4p.Context("pva") as client:
+        assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
+        assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 
 
 @pytest.mark.parametrize(
