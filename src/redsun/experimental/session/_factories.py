@@ -166,7 +166,10 @@ def wanted_from(
         hint = param.annotation
         question = question_of(hint)
         if question is not None:
-            if refuse_questions and not isinstance(question.marker, Devices):
+            if isinstance(question.marker, Devices):
+                # the session passes the devices itself, the store is not asked
+                continue
+            if refuse_questions:
                 raise TypeError(
                     f"{owner}.{pname} asks the session a question in its "
                     f"constructor: {question}. Only the devices are known "
@@ -179,6 +182,21 @@ def wanted_from(
             hint = hint | None
         wanted[pname] = hint
     return wanted
+
+
+def device_questions(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, type]:
+    """Return the constructor parameters of *cls* asking for devices, by protocol.
+
+    A parameter the configuration fills is left out.
+    """
+    found: dict[str, type] = {}
+    for pname, param in constructor(cls).parameters.items():
+        if pname in cfg_kwargs:
+            continue
+        question = question_of(param.annotation)
+        if question is not None and isinstance(question.marker, Devices):
+            found[pname] = question.protocol
+    return found
 
 
 def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:

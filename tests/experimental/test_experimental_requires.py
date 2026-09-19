@@ -897,6 +897,14 @@ def test_the_device_census_is_readable_while_the_component_is_built(
     assert app.motors.names == ["spare", "stage"]
 
 
+def test_a_component_asking_only_for_devices_is_not_warned_about(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Asking for devices is asking for something, whoever answers it."""
+    build(DeviceApp)
+    assert "'motors' shares nothing" not in caplog.text
+
+
 def test_the_device_census_is_empty_without_devices(
     build: BuildSession,
 ) -> None:

@@ -77,6 +77,7 @@ from ._declarations import (
 )
 from ._factories import (
     constructor,
+    device_questions,
     factory,
     get_setup_params,
     injectable,
@@ -1395,8 +1396,17 @@ class Session(BuildableSession):
         if store is None:
             raise RuntimeError("The registry step has to run before a component is")
         declarations = [d for d in self._components() if d.kind is layer]
-        passed = self.view_arguments if layer is Layer.VIEW else {}
+        view_arguments = self.view_arguments if layer is Layer.VIEW else {}
         for declaration in declarations:
+            passed = {
+                **view_arguments,
+                **{
+                    pname: satisfying(self._devices, protocol)
+                    for pname, protocol in device_questions(
+                        declaration.cls, declaration.cfg_kwargs
+                    ).items()
+                },
+            }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
             if self._refuse_or_skip(store, declaration, params):
                 continue
@@ -1540,17 +1550,14 @@ class Session(BuildableSession):
         any component and which a constructor may therefore ask about.
         """
         for question, askers in requirements(declarations).items():
+            if isinstance(question.marker, Devices):
+                continue
             key = key_for(question)
             if isinstance(question.marker, (One, Maybe)):
                 self._select(store, question, key, askers, declarations)
                 continue
-            population = (
-                (lambda: self._devices)
-                if isinstance(question.marker, Devices)
-                else self._constructed
-            )
             store.register_provider(
-                self._census(question.protocol, population), type_hint=key
+                self._census(question.protocol, self._constructed), type_hint=key
             )
 
     def _census(
@@ -1952,6 +1959,7 @@ class Session(BuildableSession):
         """Return every type *declaration* asks for, constructor and `setup`."""
         return [
             *injectable(declaration.cls, declaration.cfg_kwargs).values(),
+            *device_questions(declaration.cls, declaration.cfg_kwargs).values(),
             *(
                 get_setup_params(declaration.cls).values()
                 if issubclass(declaration.cls, HasSetup)
