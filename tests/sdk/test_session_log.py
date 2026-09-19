@@ -57,6 +57,16 @@ def test_a_run_is_written_to_a_file_in_the_session_folder(
     assert "stage homed" in run.read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize(("session", "folder"), [("..", "_"), (".hidden", "hidden")])
+def test_a_session_name_cannot_climb_out_of_the_log_directory(
+    log_directory: Path, session: str, folder: str
+) -> None:
+    handler = open_handler(session)
+    close_handler(handler)
+
+    assert (log_directory / folder).is_dir()
+
+
 def test_a_rotated_run_lists_its_files_oldest_first(
     log_directory: Path,
     redsun_logger: logging.Logger,

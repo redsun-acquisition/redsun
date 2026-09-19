@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from redsun.virtual._container import VirtualContainer
+    from ._container import VirtualContainer
 
 
 @runtime_checkable

@@ -22,7 +22,8 @@ from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action
 from redsun.presenter.plan_spec import ParamKind
-from redsun.view.qt._widget_factory import create_param_widget
+
+from ._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence

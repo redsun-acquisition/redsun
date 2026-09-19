@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
+from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,12 +19,15 @@ from mock_pkg.controller import (
 )
 from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
 from mock_pkg.view import BrokenView, MockMotorView, MockQtView
-from ophyd_async.core import Device
+from ophyd_async.core import Device, PathProvider
 from ophyd_async.epics.core import EpicsDevice
 from qtpy.QtWidgets import QApplication
 
+from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
+    CatalogConfig,
+    StorageConfig,
     declare_device,
     declare_presenter,
     declare_view,
@@ -32,15 +37,20 @@ from redsun.containers.components import (
     _PresenterComponent,
     _ViewComponent,
 )
+from redsun.path_provider import PATH_PROVIDER
 from redsun.presenter import PPresenter
-from redsun.presenter.builtins import StoragePresenter
 from redsun.qt import QtAppContainer
-from redsun.storage import PATH_PROVIDER
 from redsun.view import PView, ViewPosition
-from redsun.virtual import RedSunConfig, WiringError, ports
+from redsun.view.qt.builtins import LogView
+from redsun.virtual import RedSunConfig, Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+requires_tiled = pytest.mark.skipif(
+    find_spec("tiled") is None,
+    reason="the tiled extra installs nothing on this Python",
+)
 
 
 class TestComponentWrappers:
@@ -1309,6 +1319,211 @@ class TestOphyAsyncDevices:
         assert desc["stage-x"]["units"] == "mm"
 
 
+class TestDevicePathProvider:
+    """A device taking a ``path_provider`` gets the session's."""
+
+    def test_a_device_taking_one_gets_the_sessions_provider(self) -> None:
+        class Writer(Device):
+            def __init__(self, name: str, path_provider: PathProvider) -> None:
+                super().__init__(name=name)
+                self.path_provider = path_provider
+
+        class TestApp(AppContainer):
+            writer = declare_device(Writer)
+
+        app = TestApp(name="its-own-session").build()
+
+        writer = app.devices["writer"]
+        assert isinstance(writer, Writer)
+        provider = writer.path_provider
+        assert provider is app.path_provider
+        assert provider().directory_path.parent.name == "its-own-session"
+
+    def test_a_device_not_taking_one_is_built_unchanged(self) -> None:
+        class TestApp(AppContainer):
+            motor = declare_device(MockOAMotor, units="mm")
+
+        app = TestApp().build()
+
+        assert app.devices["motor"].name == "motor"
+
+    def test_a_configured_path_provider_is_refused(self) -> None:
+        class Writer(Device):
+            def __init__(self, name: str, path_provider: PathProvider) -> None:
+                super().__init__(name=name)
+
+        with pytest.raises(TypeError, match="reserves for the container"):
+            _DeviceComponent(Writer, "writer", path_provider="somewhere")
+
+    def test_the_root_comes_from_the_storage_section(self, tmp_path: Path) -> None:
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "name": "configured-session",
+            "storage": {"base_dir": str(tmp_path / "elsewhere"), "max_digits": 3},
+        }
+        cfg_file = tmp_path / "storage.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        app = AppContainer.from_config(str(cfg_file)).build()
+
+        info = app.path_provider("det")
+        assert info.directory_path.is_relative_to(tmp_path / "elsewhere")
+        assert info.filename == "unknown_000"
+
+    def test_a_component_resolves_the_provider(self) -> None:
+        """A view or presenter reaches it by key, without holding the container."""
+
+        class TestApp(AppContainer):
+            pass
+
+        app = TestApp().build()
+
+        assert app.virtual_container.require(PATH_PROVIDER) is app.path_provider
+
+    def test_the_provider_is_wired_by_name(self) -> None:
+        """The plan-name feed a session file writes reaches the provider."""
+
+        class Source:
+            sig_plan = Signal(str)
+
+            def __init__(self, name: str, devices: dict[str, Device], /) -> None:
+                self.name = name
+                self.devices = devices
+
+        class TestApp(AppContainer):
+            source = declare_presenter(Source)
+
+            def wire(self) -> None:
+                self.virtual_container.connect_paths(
+                    "source.sig_plan", "path_provider.set_plan"
+                )
+
+        app = TestApp().build()
+        app.source.sig_plan.emit("square_scan")
+
+        assert app.path_provider().filename == "square_scan_00000"
+
+
+class TestStorageSection:
+    """A session's storage section: its root, and whether it keeps a catalog."""
+
+    @requires_tiled
+    def test_an_empty_catalog_key_reaches_the_container(
+        self, config_path: Path
+    ) -> None:
+        """Present and empty is a valid catalog: every key has a default."""
+        app = AppContainer.from_config(
+            str(config_path / "mock_catalog_config.yaml")
+        ).build()
+        storage = app.storage
+        app.shutdown()
+
+        assert storage == StorageConfig(catalog=CatalogConfig())
+
+    @requires_tiled
+    def test_every_key_reaches_the_container(self, tmp_path: Path) -> None:
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "name": "catalog-session",
+            "storage": {
+                "base_dir": str(tmp_path / "root"),
+                "max_digits": 3,
+                "catalog": {
+                    "readable": [str(tmp_path / "aht"), str(tmp_path / "scratch")]
+                },
+            },
+        }
+        cfg_file = tmp_path / "storage.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        app = AppContainer.from_config(str(cfg_file)).build()
+        storage = app.storage
+        app.shutdown()
+
+        assert storage == StorageConfig(
+            base_dir=tmp_path / "root",
+            max_digits=3,
+            catalog=CatalogConfig(readable=(tmp_path / "aht", tmp_path / "scratch")),
+        )
+
+    def test_a_session_without_the_section_has_no_catalog(self) -> None:
+        class TestApp(AppContainer):
+            pass
+
+        app = TestApp().build()
+
+        assert app.storage == StorageConfig()
+        assert app.virtual_container.try_require(CATALOG) is None
+
+    @pytest.mark.parametrize(
+        ("section", "named"),
+        [
+            ({"base_dirs": "x"}, "'base_dirs'"),
+            ({"catalog": {"events": False}}, "'events'"),
+            ({"catalog": {"directory": "x"}}, "'directory'"),
+        ],
+        ids=["storage", "catalog", "catalog-directory"],
+    )
+    def test_an_unknown_key_is_refused(
+        self, tmp_path: Path, section: dict[str, Any], named: str
+    ) -> None:
+        """A misspelled key must not be read as its default."""
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "name": "catalog-session",
+            "storage": section,
+        }
+        cfg_file = tmp_path / "storage.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        with pytest.raises(ValueError, match=named):
+            AppContainer.from_config(str(cfg_file)).build()
+
+    def test_readable_must_be_a_list(self, tmp_path: Path) -> None:
+        """A single path must not be read one character at a time."""
+        config = {
+            "schema_version": 1.0,
+            "frontend": "pyqt",
+            "name": "catalog-session",
+            "storage": {"catalog": {"readable": "/data/camera"}},
+        }
+        cfg_file = tmp_path / "storage.yaml"
+        cfg_file.write_text(yaml.dump(config))
+
+        with pytest.raises(TypeError, match="must be a list"):
+            AppContainer.from_config(str(cfg_file)).build()
+
+    @pytest.mark.parametrize("absent", ["tiled", "ome_tiled", "bluesky_tiled_plugins"])
+    def test_a_catalog_needs_every_package_of_the_extra(
+        self, config_path: Path, monkeypatch: pytest.MonkeyPatch, absent: str
+    ) -> None:
+        """A partial install is refused at build, rather than failing on an import."""
+        find_spec = importlib.util.find_spec
+        monkeypatch.setattr(
+            "importlib.util.find_spec",
+            lambda name, *args: None if name == absent else find_spec(name, *args),
+        )
+
+        app = AppContainer.from_config(str(config_path / "mock_catalog_config.yaml"))
+
+        with pytest.raises(RuntimeError, match=repr(absent)):
+            app.build()
+
+    def test_a_catalog_is_refused_without_the_extra(
+        self, config_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Asking for a catalog that cannot be built is a configuration error."""
+        monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+
+        app = AppContainer.from_config(str(config_path / "mock_catalog_config.yaml"))
+
+        with pytest.raises(RuntimeError, match=r"redsun\[tiled\]"):
+            app.build()
+
+
 class TestConnectDevices:
     """Smoke tests for the connect_devices / run lifecycle."""
 
@@ -1331,16 +1546,17 @@ class TestBuiltinPlugins:
     can reference ``plugin_name: redsun`` with zero extra setup.
     """
 
-    def test_from_config_builtin_storage_presenter(self, tmp_path: Path) -> None:
+    def test_from_config_builtin_log_view(
+        self, qapp: QApplication, tmp_path: Path
+    ) -> None:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
             "name": "builtin-session",
-            "presenters": {
-                "storage": {
+            "views": {
+                "logs": {
                     "plugin_name": "redsun",
-                    "plugin_id": "storage",
-                    "base_dir": str(tmp_path),
+                    "plugin_id": "logs",
                 }
             },
         }
@@ -1350,13 +1566,7 @@ class TestBuiltinPlugins:
         container = AppContainer.from_config(str(cfg_file))
         container.build()
 
-        assert "storage" in container.presenters
-        presenter = container.presenters["storage"]
-        assert isinstance(presenter, StoragePresenter)
-        # the provider is session-scoped from the config and DI-exposed
-        provider = container.virtual_container.require(PATH_PROVIDER)
-        assert provider is presenter.path_provider
-        assert "builtin-session" in provider().directory_path.parts
+        assert isinstance(container.views["logs"], LogView)
 
 
 class TestProtocolValidationAtBuild:
@@ -1444,7 +1654,7 @@ class TestConstructorSignatureGate:
             _PresenterComponent(VarArgs, "bad")
 
     def test_presenter_optional_trailing_params_accepted(self) -> None:
-        """StoragePresenter-shaped signatures pass: defaults after the slash."""
+        """Defaults after the slash pass, keyword-only or not."""
 
         class Configurable:
             def __init__(

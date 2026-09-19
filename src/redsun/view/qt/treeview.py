@@ -312,10 +312,6 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
                 _update_widget_value(widget, old)
             _log.info("Reverted '%s' to previous value.", key)
 
-    def get_keys(self) -> set[str]:
-        """Return every descriptor key in the view."""
-        return set(self._descriptors.keys())
-
     def _on_changed(self, key: str, value: Any) -> None:
         """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)

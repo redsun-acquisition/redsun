@@ -5,7 +5,7 @@
 - **[Container](api/container.md)** - `AppContainer`, `AppConfig`, component field functions
 - **[Engine](api/engine.md)** - `RunEngine`, `Status`, actions, plan stubs
 - **[Presenter](api/presenter.md)** - `Presenter`, `PPresenter`, plan spec, built-ins
-- **[Storage](api/storage.md)** - `BaseStorage`, `FrameSink`, `StreamSpec`, backend protocols, `SessionPathProvider`, storage registry
+- **[Path provider](api/path_provider.md)** - `SessionPathProvider`, `PlanFilenameProvider`, `session_directory`
 - **[View](api/view.md)** - `View`, `PView`, Qt plan widgets, `DescriptorTreeView`
 - **[Virtual container](api/virtual.md)** - `VirtualContainer`, `slot`, `ports`, provider protocols
 - **[Utilities](api/utils.md)** - `find_signals`

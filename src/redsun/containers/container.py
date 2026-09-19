@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, unique
@@ -26,16 +27,8 @@ from typing import (
 import yaml
 from ophyd_async.core import Device
 
-from redsun._config import COMPONENT_SECTIONS, load
-from redsun._hooks import (
-    HookError,
-    distinct,
-    known_points,
-    parse_hook_specs,
-    resolve_hooks,
-)
 from redsun.aio import get_shared_loop, run_coro
-from redsun.containers._config import AppConfig
+from redsun.catalog import CATALOG, CatalogAddress
 from redsun.containers.components import (
     _ComponentField,
     _DeviceComponent,
@@ -50,8 +43,8 @@ from redsun.containers.components import (
     expects_positionals,
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
+from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
 from redsun.presenter import PPresenter
-from redsun.services._service import close_channel_access
 from redsun.view import PView
 from redsun.virtual import (
     ComponentNotBuilt,
@@ -63,16 +56,29 @@ from redsun.virtual import (
     WiringError,
 )
 
+from .._config import COMPONENT_SECTIONS, load
+from .._hooks import (
+    HookError,
+    distinct,
+    known_points,
+    parse_hook_specs,
+    resolve_hooks,
+)
+from ..services._service import close_channel_access
+from ._config import AppConfig, CatalogConfig, StorageConfig
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from typing import Final, Self, TypeAlias
 
     from psygnal import SignalInstance
+    from tiled.server.simple import SimpleTiledServer
 
     from redsun.containers.components import _ComponentBase
     from redsun.services import Service
     from redsun.virtual import RedSunConfig
-    from redsun.virtual._wiring import SlotThread
+
+    from ..virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
 
@@ -157,6 +163,28 @@ logger = logging.getLogger("redsun")
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
 
+PATH_PROVIDER_PORT: Final = "path_provider"
+"""Name the session's path provider is wired under."""
+
+
+def _require_tiled() -> None:
+    """Raise if a session asks for a catalog and the ``tiled`` extra is missing."""
+    missing = [
+        package
+        for package in ("tiled", "ome_tiled", "bluesky_tiled_plugins")
+        if importlib.util.find_spec(package) is None
+    ]
+    if not missing:
+        return
+    raise RuntimeError(
+        "this session's 'storage' section has a 'catalog' key and "
+        f"{', '.join(repr(package) for package in missing)} not installed. "
+        "Install them with 'pip install redsun[tiled]', or drop the key. "
+        "The extra installs nothing on Python 3.14, which tiled does not "
+        "support yet."
+    )
+
+
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
 _PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
@@ -233,6 +261,7 @@ class AppContainer:
     __slots__ = (
         "_built",
         "_built_devices",
+        "_catalog",
         "_components",
         "_config",
         "_failed",
@@ -240,11 +269,13 @@ class AppContainer:
         "_hook_by_moment",
         "_hooks",
         "_is_built",
+        "_path_provider",
         "_report",
         "_service_logs",
         "_services",
         "_services_started",
         "_session_log",
+        "_storage",
         "_virtual_container",
     )
 
@@ -465,6 +496,9 @@ class AppContainer:
             "frontend": frontend,
         }
         self._virtual_container: VirtualContainer | None = None
+        self._path_provider: SessionPathProvider | None = None
+        self._storage: StorageConfig | None = None
+        self._catalog: SimpleTiledServer | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
         self._is_built: bool = False
@@ -494,7 +528,7 @@ class AppContainer:
 
         # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
         # the metaclass loads the YAML only to resolve component kwargs and never
-        # populates _config with top-level sections such as 'storage', 'session',
+        # populates _config with top-level sections such as 'storage', 'name',
         # or 'schema_version'.  We read those here so that build() sees the same
         # state as the from_config() path, which sets them explicitly.
         config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
@@ -544,14 +578,6 @@ class AppContainer:
         """Return the application configuration."""
         return self._config
 
-    def _instance_of(self, comp: _ComponentBase[T]) -> T:
-        """Return what this container built from *comp*."""
-        if comp not in self._built:
-            raise RuntimeError(
-                f"Component {comp.name} has not been instantiated yet. Call 'build' first."
-            )
-        return cast("T", self._built[comp])
-
     def _built_of(self, declared: Mapping[str, _ComponentBase[T]]) -> dict[str, T]:
         """Return what this container built from *declared*, by name.
 
@@ -589,6 +615,20 @@ class AppContainer:
     def services(self) -> dict[str, Service]:
         """Return the container's services, started or not."""
         return dict(self._services)
+
+    @property
+    def storage(self) -> StorageConfig:
+        """Return the session's storage configuration."""
+        if self._storage is None:
+            raise RuntimeError("Container not built. Call build() first.")
+        return self._storage
+
+    @property
+    def path_provider(self) -> SessionPathProvider:
+        """Return the session's path provider, shared by every device taking one."""
+        if self._path_provider is None:
+            raise RuntimeError("Container not built. Call build() first.")
+        return self._path_provider
 
     @property
     def virtual_container(self) -> VirtualContainer:
@@ -727,6 +767,7 @@ class AppContainer:
             self._report("injection")
             self._inject_dependencies()
         except BaseException:
+            self._close_catalog()
             self._stop_services()
             raise
 
@@ -918,7 +959,64 @@ class AppContainer:
             "frontend": self._config.get("frontend", "pyqt"),
         }
         self._virtual_container._set_configuration(base_cfg)
+
+        # parsed before the extra is checked, so a malformed section is refused
+        # whether or not it is installed
+        self._storage = StorageConfig.from_mapping(self._config.get("storage"))
+        self._path_provider = SessionPathProvider(
+            base_dir=self._storage.base_dir,
+            session=base_cfg["name"],
+            max_digits=self._storage.max_digits,
+        )
+        if self._storage.catalog is not None:
+            _require_tiled()
+            self._catalog = self._start_catalog(self._storage.catalog)
         logger.debug("VirtualContainer created")
+
+    def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
+        """Start the session's catalog, or log why it could not.
+
+        It reads from the session's directory and every one *config* adds,
+        serves OME-Zarr images with their axis names, and has a ``TiledWriter``
+        in this process store them as their store holds them.
+        """
+        # imported here: the tiled extra is optional, and _require_tiled has
+        # already refused a session asking for a catalog without it
+        from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter
+        from ome_tiled.bluesky import register_consolidator
+        from tiled.server.simple import SimpleTiledServer
+
+        session_dir = self.path_provider.session_dir
+        server: SimpleTiledServer | None = None
+        try:
+            server = SimpleTiledServer(
+                directory=session_dir / "catalog",
+                readable_storage=[session_dir, *config.readable],
+            )
+            # TODO: let storage.catalog choose the adapters and consolidators
+            # installed here, rather than always installing ome-tiled's
+
+            # SimpleTiledServer takes no adapters; the first map holds the
+            # catalog's own, ahead of tiled's defaults
+            server.catalog.context.adapters_by_mimetype.maps[0][OME_ZARR_MIMETYPE] = (
+                OmeZarrAdapter
+            )
+            register_consolidator()
+            self.path_provider.lock_base_dir(
+                "the session's catalog reads files only from the readable "
+                "directories it started with; choose the root with "
+                "storage.base_dir before the session starts"
+            )
+            return server
+        except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
+            # a server that started and then failed to be set up is stopped,
+            # since nothing else holds it
+            if server is not None:
+                server.close()
+            # a dotted key: no declared component can have this name
+            self._failed["storage.catalog"] = e
+            logger.error(f"Failed to start the catalog: {e}")
+            return None
 
     def _build_devices(self) -> None:
         """Build every declared device, skipping those that fail."""
@@ -926,7 +1024,7 @@ class AppContainer:
         for name, device_comp in self._device_components.items():
             try:
                 built_devices[name] = self._built[device_comp] = device_comp.build(
-                    self._prefix_for(device_comp)
+                    self._prefix_for(device_comp), self.path_provider
                 )
                 logger.debug(f"Device '{name}' built")
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
@@ -1030,7 +1128,10 @@ class AppContainer:
                 logger.error(f"Failed to build view '{comp_name}': {e}")
 
     def _register_providers(self) -> None:
-        """Let each component providing dependencies register them."""
+        """Bind the session's path provider and catalog address, then each component's own."""
+        self.virtual_container.provide(PATH_PROVIDER, self.path_provider)
+        if self._catalog is not None:
+            self.virtual_container.provide(CATALOG, CatalogAddress(self._catalog.uri))
         for instance in self._built_of(self._components).values():
             if isinstance(instance, IsProvider):
                 instance.register_providers(self.virtual_container)
@@ -1039,9 +1140,19 @@ class AppContainer:
         """Publish the built components by name, then connect them.
 
         Names come first, since `wire` and the ``wiring`` section resolve
-        components by name.
+        components by name. The session's path provider is published beside
+        them as ``path_provider``, so a configuration file can feed it the
+        plan name.
         """
-        self.virtual_container._set_components(self._built_of(self._components))
+        components = self._built_of(self._components)
+        if PATH_PROVIDER_PORT in components:
+            raise WiringError(
+                f"component {PATH_PROVIDER_PORT!r} shadows the session path "
+                "provider, which is published under that name; rename it"
+            )
+        self.virtual_container._set_components(
+            {**components, PATH_PROVIDER_PORT: self.path_provider}
+        )
         self.wire()
         self._apply_wiring_config()
 
@@ -1086,9 +1197,10 @@ class AppContainer:
 
         1. ``_disconnect`` - undo the wiring.
         2. ``_shutdown_presenters`` - shut every presenter down.
-        3. ``_shutdown_hooks`` - undo what the hook providers installed.
-        4. ``_release_components`` - drop every built component.
-        5. ``_destroy`` - end what dropping a reference does not end.
+        3. ``_close_catalog`` - stop the session's catalog.
+        4. ``_shutdown_hooks`` - undo what the hook providers installed.
+        5. ``_release_components`` - drop every built component.
+        6. ``_destroy`` - end what dropping a reference does not end.
 
         Afterwards the container holds nothing it built, so ``devices``,
         ``presenters`` and ``views`` raise until the next ``build()``.
@@ -1100,6 +1212,8 @@ class AppContainer:
         if self._is_built:
             self._disconnect()
             self._shutdown_presenters()
+            # after the presenters, which may still be writing to it
+            self._close_catalog()
             # after the components, which may still be using what a hook installed
             self._shutdown_hooks()
             self._destroy(self._release_components())
@@ -1175,6 +1289,16 @@ class AppContainer:
                 except Exception as e:  # noqa: BLE001 - one failed shutdown must not block the rest
                     logger.error(f"Error shutting down presenter '{name}': {e}")
 
+    def _close_catalog(self) -> None:
+        """Stop the session's catalog, if one was started."""
+        if self._catalog is None:
+            return
+        try:
+            self._catalog.close()
+        except Exception as e:  # noqa: BLE001 - a failed close must not block the shutdown
+            logger.error(f"Error closing the catalog: {e}")
+        self._catalog = None
+
     def _release_components(self) -> Sequence[object]:
         """Drop every built component, and return what was dropped.
 
@@ -1247,6 +1371,8 @@ class AppContainer:
             frontend=frontend,
             log_level=log_level,
         )
+        if "storage" in config:
+            instance._config["storage"] = config["storage"]
         if "wiring" in config:
             instance._config["wiring"] = config["wiring"]
         if "hooks" in config:

@@ -63,6 +63,18 @@ def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[P
 
 
 @pytest.fixture(autouse=True)
+def data_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Put the default root of acquisition files and catalogs under *tmp_path*.
+
+    Without this, every test building a session with a catalog would start
+    one in the user's own data directory.
+    """
+    root = tmp_path / "data"
+    monkeypatch.setattr("redsun.path_provider.user_data_dir", lambda *a, **k: str(root))
+    return root
+
+
+@pytest.fixture(autouse=True)
 def empty_emission_queue() -> Iterator[None]:
     """Drop every psygnal emission a test left queued for a thread.
 

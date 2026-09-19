@@ -240,17 +240,16 @@ accept them. [`subscribe`][redsun.virtual.VirtualContainer.subscribe] does, with
 the same guarantees:
 
 ```python
-class StorageView(QtView):
+class TemperatureView(QtView):
     @slot
-    def update_base_dir(self, reading: dict[str, Reading[str]]) -> None:
-        self._edit.setText(next(iter(reading.values()))["value"])
+    def update_temperature(self, reading: dict[str, Reading[float]]) -> None:
+        self._label.setText(f"{next(iter(reading.values()))['value']:.1f} C")
 
 
 class MyApp(QtAppContainer):
     def wire(self) -> None:
-        provider = self.virtual_container.require(PATH_PROVIDER)
         self.virtual_container.subscribe(
-            provider.signals.base_dir, self.storage_widget.update_base_dir
+            self.detector.temperature, self.temperature_widget.update_temperature
         )
 ```
 
@@ -276,7 +275,7 @@ for record in app.virtual_container.subscriptions:
 ```
 det_ctrl.sig_new_data -> img_widget.update_layers  [thread=main]
 det_widget.sig_property_changed -> det_ctrl.configure
-base_dir ~> storage_widget.update_base_dir  [thread=main]
+temperature ~> temperature_widget.update_temperature  [thread=main]
 ```
 
 `->` is a signal connection, `~>` a device subscription.

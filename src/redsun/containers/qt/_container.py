@@ -13,15 +13,16 @@ from psygnal.qt import start_emitting_from_queue, stop_emitting_from_queue
 from qtpy.QtCore import QEvent
 from qtpy.QtWidgets import QApplication, QWidget
 
-from redsun._hooks import (
+from redsun.aio import set_async_backend
+from redsun.containers.container import AppContainer, _silent
+
+from ..._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,
     WrapsBuild,
 )
-from redsun.aio import set_async_backend
-from redsun.containers.container import AppContainer, _silent
-from redsun.containers.qt._mainview import QtMainView
+from ._mainview import QtMainView
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
