@@ -39,6 +39,7 @@ requires-python = ">=3.11"
 [dependency-groups]
 dev = [
     { include-group = "epics" },
+    { include-group = "pva" },
     { include-group = "pyqt" },
     { include-group = "tiled" },
     { include-group = "zarr" },
@@ -83,6 +84,10 @@ zarr = [
 tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
     "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+]
+pva = [
+    "ophyd-async[pva]>=0.21.2",
+    "p4p>=4.2.2",
 ]
 
 [project.optional-dependencies]
