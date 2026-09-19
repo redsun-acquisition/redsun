@@ -75,7 +75,7 @@ class Resettable(Protocol):
 
 
 class SessionPresenter:
-    def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+    def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None:
         self._resettable = resettable
 ```
 
@@ -93,7 +93,7 @@ RequiresOne: TypeAlias = Annotated[P, One()]
 
 ```python
 class RoiWidget:
-    def __init__(self, name: str, /, camera: RequiresOne[HasCamera]) -> None:
+    def __init__(self, name: str, *, camera: RequiresOne[HasCamera]) -> None:
         self._camera = camera
 ```
 
@@ -111,7 +111,7 @@ RequiresMaybe: TypeAlias = Annotated[P | None, Maybe()]
 
 ```python
 class MotorPresenter:
-    def __init__(self, name: str, /, roi: RequiresMaybe[HasRoi] = None) -> None:
+    def __init__(self, name: str, *, roi: RequiresMaybe[HasRoi] = None) -> None:
         self._roi = roi
 ```
 
@@ -129,7 +129,7 @@ class MotorProtocol(Protocol):
 
 
 class MotorPresenter:
-    def __init__(self, name: str, /, motors: DevicesOf[MotorProtocol]) -> None:
+    def __init__(self, name: str, *, motors: DevicesOf[MotorProtocol]) -> None:
         self._motors = motors
 ```
 

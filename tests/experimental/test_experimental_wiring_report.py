@@ -26,7 +26,7 @@ class Stage:
 
     sig_moved = Signal(float)
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @slot
@@ -37,7 +37,7 @@ class Stage:
 class Grouped:
     """Presenter whose ports arrive through a signal group."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.moves = Moves()
 
@@ -47,7 +47,7 @@ class Clashing:
 
     started = Signal(str)
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.moves = Moves()
 

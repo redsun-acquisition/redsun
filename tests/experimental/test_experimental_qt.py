@@ -53,7 +53,7 @@ pytestmark = pytest.mark.qt
 class Panel(QWidget):
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -61,7 +61,7 @@ class Panel(QWidget):
 class Canvas(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -69,7 +69,7 @@ class Canvas(QWidget):
 class Other(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -77,7 +77,7 @@ class Other(QWidget):
 class Save(QAction):
     placement: Placement = MenuItem("File")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__(name)
         self.name = name
 
@@ -85,7 +85,7 @@ class Save(QAction):
 class Open(QAction):
     placement: Placement = MenuItem("File")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__(name)
         self.name = name
 
@@ -93,7 +93,7 @@ class Open(QAction):
 class Acquire(QAction):
     placement: Placement = ToolBarItem("Plans")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__(name)
         self.name = name
 
@@ -101,7 +101,7 @@ class Acquire(QAction):
 class NotAWidget:
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
@@ -130,7 +130,7 @@ def _widget(dock: QDockWidget) -> QWidget:
 class Gain:
     """A presenter a command can be filled with."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.value = 3.0
 
@@ -149,7 +149,7 @@ from redsun.experimental.session.qt import Central, QtSession
 class Panel(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name, /):
+    def __init__(self, name):
         super().__init__()
         self.name = name
 
@@ -177,7 +177,7 @@ class Closing(QWidget):
 
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -209,7 +209,7 @@ def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
 class Tunable:
     """Presenter whose one setting is what a session has to offer to save."""
 
-    def __init__(self, name: str, /, step: float = 1.0) -> None:
+    def __init__(self, name: str, *, step: float = 1.0) -> None:
         self.name = name
         self.step = step
 

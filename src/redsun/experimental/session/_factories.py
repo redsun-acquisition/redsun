@@ -14,7 +14,6 @@ from typing_extensions import TypeForm
 
 from redsun.experimental.injection import Devices, Maybe, key_for, question_of
 
-from ._declarations import takes_name_by_keyword
 from ._protocols import HasSetup
 
 if TYPE_CHECKING:
@@ -249,9 +248,6 @@ def factory(
     """
     params = injectable(declaration.cls, declaration.cfg_kwargs)
     optional = defaulted(declaration.cls, params)
-    # a pydantic model exposes its fields as keyword-only, so the name cannot
-    # travel positionally to every component
-    by_keyword = takes_name_by_keyword(declaration.cls)
 
     def build(**deps: Any) -> Any:
         supplied = {
@@ -259,10 +255,8 @@ def factory(
             for pname, value in deps.items()
             if value is not None or pname not in optional
         }
-        named = {"name": declaration.name} if by_keyword else {}
-        positional = () if by_keyword else (declaration.name,)
         instance = declaration.cls(
-            *positional, **named, **declaration.cfg_kwargs, **supplied
+            name=declaration.name, **declaration.cfg_kwargs, **supplied
         )
         on_built(declaration, instance)
         return instance

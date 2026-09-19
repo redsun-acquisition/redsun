@@ -104,7 +104,7 @@ the readings it computes.
 
     ```python
     class MotorPresenter:
-        def __init__(self, name: str, /, devices: DeviceMapping, step: float = 1.0) -> None:
+        def __init__(self, name: str, *, devices: DeviceMapping, step: float = 1.0) -> None:
             self.name = name
             self.devices = devices
             self.step = step
@@ -159,7 +159,7 @@ session calls once every presenter and view has been constructed:
 
 ```python
 class MotorPresenter:
-    def __init__(self, name: str, /, step: float = 1.0) -> None:
+    def __init__(self, name: str, *, step: float = 1.0) -> None:
         self.name = name
         self.step = step
 
@@ -241,8 +241,8 @@ class MyApp(QtSession):
 ```
 
 And it is checked. A device has to be an `ophyd_async.core.Device` and a
-presenter or view has to take `name` first, so a mistake is reported where you
-made it rather than turning into a component of the wrong layer:
+presenter or view has to take a `name` parameter, so a mistake is reported
+where you made it rather than turning into a component of the wrong layer:
 
 ```text
 TypeError: MyApp.motor is declared as a presenter, but MyStage is an
@@ -253,7 +253,10 @@ This is what keeps devices buildable first. They are plain ophyd-async objects
 that depend on no other layer, so they are constructed before the graph runs,
 and the container knows which ones they are because you said so. A device gets
 its name as a keyword, `cls(name=<name>, **kwargs)`, which every `ophyd-async`
-device accepts, `EpicsDevice` included.
+device accepts, `EpicsDevice` included. A presenter or view is called the same
+way, so `name` may stand anywhere in its signature, but not after a `/`. A
+dataclass or a pydantic model therefore works as generated, including one that
+inherits fields from a base class, which puts those fields first.
 
 Components that appear only in the session file need no marker: the section they
 sit under (`devices:`, `presenters:`, `views:`) is their layer, and it is checked
@@ -367,7 +370,7 @@ value and shares it; the other asks for it by type:
 class ImageView(QWidget):
     placement = Central()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self._viewer = ViewerModel()
 
@@ -379,7 +382,7 @@ class ImageView(QWidget):
 class ROIView(QWidget):
     placement = Dock("right")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self._viewer: ViewerModel | None = None
 
@@ -758,7 +761,7 @@ slots as `path_provider`:
 
     ```python
     class MyController:
-        def __init__(self, name: str, /, provider: SessionPathProvider) -> None:
+        def __init__(self, name: str, *, provider: SessionPathProvider) -> None:
             self._provider = provider
     ```
 
@@ -777,7 +780,7 @@ the session has no catalog or it failed to start:
 
     ```python
     class MyRecorder:
-        def __init__(self, name: str, /, address: CatalogAddress | None = None) -> None:
+        def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None:
             self._address = address
     ```
 
@@ -812,7 +815,7 @@ from event_model import DocumentRouter
 
 
 class MyRouter(DocumentRouter):
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 ```
@@ -826,7 +829,7 @@ from redsun.experimental import CallbackType
 
 
 class MyPresenter:
-    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+    def __init__(self, name: str, *, callbacks: Mapping[str, CallbackType]) -> None:
         self.name = name
         self.callbacks = callbacks
 ```
@@ -924,7 +927,7 @@ class Linkable(Protocol):
 
 
 class ImageView:
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.linked_to: str | None = None
 
@@ -952,7 +955,7 @@ nobody wrote a list.
 container refuses outright:
 
 ```python
-def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None: ...
+def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None: ...
 ```
 
 ```text
@@ -1041,7 +1044,7 @@ asks it:
 
     ```python
     class MotorPresenter:
-        def __init__(self, name: str, /, motors: DevicesOf[MotorProtocol]) -> None:
+        def __init__(self, name: str, *, motors: DevicesOf[MotorProtocol]) -> None:
             self.motors = motors
     ```
 
@@ -1346,7 +1349,7 @@ This is the sharpest new rule, and it works against habit and against the ruff
 
 
     class MotorPresenter:
-        def __init__(self, name: str, /, calibration: Calibration) -> None: ...
+        def __init__(self, name: str, *, calibration: Calibration) -> None: ...
     ```
 
 === "Required here"
@@ -1356,7 +1359,7 @@ This is the sharpest new rule, and it works against habit and against the ruff
 
 
     class MotorPresenter:
-        def __init__(self, name: str, /, calibration: Calibration) -> None: ...
+        def __init__(self, name: str, *, calibration: Calibration) -> None: ...
     ```
 
 The container reads your annotations at run time to know what to hand you, so a

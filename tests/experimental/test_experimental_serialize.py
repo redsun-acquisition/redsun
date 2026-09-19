@@ -51,7 +51,7 @@ class Ctrl:
 class Quiet:
     """Presenter serializing nothing, so whatever the file said is kept."""
 
-    def __init__(self, name: str, /, gain: float = 1.0) -> None:
+    def __init__(self, name: str, *, gain: float = 1.0) -> None:
         self.name = name
         self.gain = gain
 
@@ -59,7 +59,7 @@ class Quiet:
 class Renamed:
     """Presenter asking to save a key its own constructor would refuse."""
 
-    def __init__(self, name: str, /, step: float = 1.0) -> None:
+    def __init__(self, name: str, *, step: float = 1.0) -> None:
         self.name = name
         self.step = step
 
@@ -70,7 +70,7 @@ class Renamed:
 class Anything:
     """Presenter whose constructor accepts every key, through ``**kwargs``."""
 
-    def __init__(self, name: str, /, **kwargs: object) -> None:
+    def __init__(self, name: str, **kwargs: object) -> None:
         self.name = name
         self.kwargs = kwargs
 

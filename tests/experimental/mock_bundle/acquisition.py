@@ -24,7 +24,7 @@ class MockAcquisitionPresenter:
     `HasPlans`, each carrying the callbacks it requires.
     """
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.engine = RunEngine()
         self.entries: dict[str, PlanEntry] = {"stream": {"plan": self.stream}}

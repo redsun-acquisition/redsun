@@ -29,7 +29,7 @@ listed in the [changelog](changelog.md).
 
   ```python
   class MyRecorder:
-      def __init__(self, name: str, /, address: CatalogAddress | None = None) -> None: ...
+      def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None: ...
   ```
 
   `None` without a catalog, or when it failed to start, which is logged.
@@ -58,10 +58,9 @@ listed in the [changelog](changelog.md).
   an annotation as a component, so a container class may hold ordinary
   attributes beside its components. A device must subclass
   `ophyd_async.core.Device`, and a class that subclasses it is refused in either
-  other layer. A presenter or view must take `name` as its first parameter,
-  positionally or as a keyword, so a pydantic model whose fields are all
-  keyword-only can be a presenter; a name that could only arrive inside `*args`
-  or `**kwargs` is refused. A component appearing only in the session file takes
+  other layer. A presenter or view is called with every argument by keyword,
+  `name` included, so it must take `name` as a parameter a keyword can fill;
+  a name that could only arrive inside `*args` or `**kwargs` is refused. A component appearing only in the session file takes
   its layer from the section it sits under, and is checked the same way. The
   three are also reachable as `redsun.experimental.session.components`. A built
   component is set on the session under its name, so a name the session never
@@ -242,7 +241,7 @@ listed in the [changelog](changelog.md).
 
   ```python
   class MotorPresenter:
-      def __init__(self, name: str, /, step: float = 5.0) -> None:
+      def __init__(self, name: str, *, step: float = 5.0) -> None:
           self.name = name
           self.step = step
 
@@ -553,6 +552,22 @@ listed in the [changelog](changelog.md).
   ```
 
 ### Changed
+
+- `AsPresenter` and `AsView` (`redsun.experimental`) build a presenter or
+  view with every argument passed by keyword, `name` included. A constructor
+  taking `name`, or any parameter without a default, only positionally is
+  refused at declaration. `name` may stand anywhere in the signature, so a
+  dataclass or pydantic model inheriting fields from a base class can be a
+  component as generated:
+
+  ```python
+  class MyController:
+      def __init__(self, name: str, *, step: float = 1.0) -> None: ...
+  ```
+
+- `accepts_name` (`redsun.experimental.session`) replaces `leads_with_name`,
+  and is true for a class taking `name` as a parameter a keyword can fill,
+  wherever it stands.
 
 - `Session.satisfying` and `satisfying` are typed by the protocol they are
   given: `session.satisfying(Resettable)` is a `dict[str, Resettable]` rather

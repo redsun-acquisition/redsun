@@ -37,7 +37,7 @@ class Movable(Protocol):
 
 
 class Census:
-    def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+    def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None:
         self.name = name
         self.resettable = resettable
 
@@ -49,7 +49,7 @@ class Census:
 
 
 class Single:
-    def __init__(self, name: str, /, camera: RequiresOne[HasCamera]) -> None:
+    def __init__(self, name: str, *, camera: RequiresOne[HasCamera]) -> None:
         self.name = name
         self.camera = camera
 
@@ -59,7 +59,7 @@ class Single:
 
 
 class Optional:
-    def __init__(self, name: str, /, camera: RequiresMaybe[HasCamera] = None) -> None:
+    def __init__(self, name: str, *, camera: RequiresMaybe[HasCamera] = None) -> None:
         self.name = name
         self.camera = camera
 
@@ -72,7 +72,7 @@ class Optional:
 
 
 class DeviceCensus:
-    def __init__(self, name: str, /, motors: DevicesOf[Movable]) -> None:
+    def __init__(self, name: str, *, motors: DevicesOf[Movable]) -> None:
         self.name = name
         self.motors = motors
 

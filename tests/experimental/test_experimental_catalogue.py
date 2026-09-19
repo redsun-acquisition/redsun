@@ -37,7 +37,7 @@ class Panel(Placement):
 class Listener:
     """Presenter asking for every router the session built."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.callbacks: Mapping[str, CallbackType] = {}
 
@@ -48,7 +48,7 @@ class Listener:
 class SpelledOutListener:
     """Presenter asking for the catalogue without importing `CallbackType`."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.callbacks: Mapping[str, SpelledOutCallback] = {}
 
@@ -59,7 +59,7 @@ class SpelledOutListener:
 class Plain(DocumentRouter):
     """Router asking for nothing and sharing nothing."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -67,7 +67,7 @@ class Plain(DocumentRouter):
 class Sharing(DocumentRouter):
     """Router sharing a value another router is built from."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -79,7 +79,7 @@ class Sharing(DocumentRouter):
 class Needing(DocumentRouter):
     """Router built from what `Sharing` shares."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
         self.gain = Gain(0.0)
@@ -91,7 +91,7 @@ class Needing(DocumentRouter):
 class Curious(DocumentRouter):
     """Router asking for the catalogue it is itself part of."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
         self.callbacks: Mapping[str, CallbackType] = {}
@@ -103,7 +103,7 @@ class Curious(DocumentRouter):
 class Broken(DocumentRouter):
     """Router whose constructor raises."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("unplugged")
 
 
@@ -112,7 +112,7 @@ class RoutingView(DocumentRouter):
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 

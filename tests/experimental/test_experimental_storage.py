@@ -30,14 +30,14 @@ class Announcer:
 
     sig_plan = Signal(str)
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Locating:
     """Presenter asking the session for its path provider by type."""
 
-    def __init__(self, name: str, /, provider: SessionPathProvider) -> None:
+    def __init__(self, name: str, *, provider: SessionPathProvider) -> None:
         self.name = name
         self.provider = provider
 

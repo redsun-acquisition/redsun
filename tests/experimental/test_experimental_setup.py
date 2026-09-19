@@ -34,7 +34,7 @@ class Somewhere(Placement):
 class Sharing:
     """Presenter sharing a value, declared below the one that wants it."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @provides
@@ -45,7 +45,7 @@ class Sharing:
 class Taking:
     """Presenter taking that value once every component exists."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.readings: Readings | None = None
 
@@ -99,7 +99,7 @@ class FrozenTaking:
 class Failing:
     """Its `setup` raises, so what it would have assigned is missing."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.ready = False
 
@@ -110,7 +110,7 @@ class Failing:
 class Unplugged:
     """Presenter that cannot be built, so what it shares never arrives."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("unplugged")
 
     @provides
@@ -121,7 +121,7 @@ class Unplugged:
 class Asking:
     """Its `setup` asks for something nothing in the session declares."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def setup(self, missing: Absent) -> None: ...
@@ -130,7 +130,7 @@ class Asking:
 class Awaiting:
     """Its `setup` is a coroutine, which the session would never await."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     async def setup(self, readings: Readings) -> None: ...
@@ -139,7 +139,7 @@ class Awaiting:
 class Listening:
     """Presenter a view may both hold and publish to."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.refreshed = 0.0
 
@@ -158,7 +158,7 @@ class Calling:
     sig_moved = Signal(float)
     placement: Placement = Somewhere()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.presenter: Listening | None = None
 

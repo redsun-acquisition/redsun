@@ -69,7 +69,7 @@ class Unchecked(Protocol):
 class Motor:
     """Presenter that can be reset."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.resets = 0
 
@@ -80,7 +80,7 @@ class Motor:
 class Detector:
     """Another one, so the answer has more than one entry."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.resets = 0
 
@@ -91,14 +91,14 @@ class Detector:
 class Readout:
     """Component that cannot be reset, so it stays out of the answer."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Resetter:
     """Presenter driving every resettable component in the session."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.resettable: Mapping[str, Resettable] = {}
 
@@ -113,14 +113,14 @@ class Resetter:
 class Eager:
     """Presenter asking the session a question in its constructor."""
 
-    def __init__(self, name: str, /, resettable: Requires[Resettable]) -> None:
+    def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None:
         self.name = name
 
 
 class Unsatisfiable:
     """Presenter asking about a protocol isinstance cannot check."""
 
-    def __init__(self, name: str, /, pingable: Requires[Unchecked]) -> None:
+    def __init__(self, name: str, *, pingable: Requires[Unchecked]) -> None:
         self.name = name
 
 
@@ -128,7 +128,7 @@ class Misshapen:
     """Presenter carrying the marker on the wrong shape."""
 
     def __init__(
-        self, name: str, /, wrong: Annotated[list[Resettable], Every()]
+        self, name: str, *, wrong: Annotated[list[Resettable], Every()]
     ) -> None:
         self.name = name
 
@@ -147,7 +147,7 @@ class ImageView:
 
     placement: Placement = Somewhere()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.peers: Mapping[str, Linkable] = {}
         self.zoom = 1.0
@@ -173,7 +173,7 @@ class ImageView:
 class Bookkeeper:
     """Presenter with a reset of its own, which it never meant to offer."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.resettable: Mapping[str, Resettable] = {}
         self.resets = 0
@@ -192,7 +192,7 @@ class Bookkeeper:
 class Loose:
     """Its reset takes an argument the protocol does not permit passing."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def reset(self, hard: bool) -> None: ...
@@ -201,7 +201,7 @@ class Loose:
 class Renamed:
     """Its parameter name differs, so a keyword call would fail."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def apply_camera(self, factor: float) -> None: ...
@@ -210,7 +210,7 @@ class Renamed:
 class Tolerant:
     """An extra defaulted parameter still accepts every permitted call."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.zoom = 1.0
 
@@ -221,7 +221,7 @@ class Tolerant:
 class RoiWidget:
     """Asks for the one camera in the session and drives it."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.camera: Linkable | None = None
 
@@ -236,7 +236,7 @@ class RoiWidget:
 class MaybeWidget:
     """Asks for a camera it can do without."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.camera: Linkable | None = None
 
@@ -247,7 +247,7 @@ class MaybeWidget:
 class ImageViewAsking:
     """Offers Linkable and asks for the one component offering it."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.peer: Linkable | None = None
 
@@ -260,7 +260,7 @@ class ImageViewAsking:
 class Camera:
     """The single component satisfying Linkable."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.zoom = 1.0
 
@@ -287,7 +287,7 @@ class Countable(Protocol):
 class Counter:
     """Its ``count`` exists only once constructed."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.count = 0
 
@@ -298,7 +298,7 @@ class Counter:
 class Forgetful:
     """Passes the class-level check but never assigns ``count``."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def bump(self) -> None: ...
@@ -307,7 +307,7 @@ class Forgetful:
 class NeedsCount:
     """Asks for the one countable component."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.counter: Countable | None = None
 
@@ -318,7 +318,7 @@ class NeedsCount:
 class AsksDataOnly:
     """Asks a single-answer question about a protocol with no method."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def setup(self, label: RequiresOne[DataOnly]) -> None: ...
@@ -356,7 +356,7 @@ class Shutter(StandardReadable):
 class MotorPresenter:
     """Presenter reading the device census while it is built."""
 
-    def __init__(self, name: str, /, motors: DevicesOf[Movable]) -> None:
+    def __init__(self, name: str, *, motors: DevicesOf[Movable]) -> None:
         self.name = name
         self.motors = motors
         self.names = sorted(motors)
@@ -365,7 +365,7 @@ class MotorPresenter:
 class AsksBoth:
     """Asks both censuses, which are answered over different populations."""
 
-    def __init__(self, name: str, /, motors: DevicesOf[Movable]) -> None:
+    def __init__(self, name: str, *, motors: DevicesOf[Movable]) -> None:
         self.name = name
         self.motors = motors
         self.resettable: Mapping[str, Resettable] = {}
@@ -377,7 +377,7 @@ class AsksBoth:
 class UnionCensus:
     """Presenter asking about a union, which no protocol class names."""
 
-    def __init__(self, name: str, /, either: Requires[Resettable | None]) -> None:
+    def __init__(self, name: str, *, either: Requires[Resettable | None]) -> None:
         self.name = name
 
 
@@ -390,7 +390,7 @@ class ConcreteReset(Resettable):
 class ConcreteCensus:
     """Presenter asking about a concrete class rather than a protocol."""
 
-    def __init__(self, name: str, /, every: Requires[ConcreteReset]) -> None:
+    def __init__(self, name: str, *, every: Requires[ConcreteReset]) -> None:
         self.name = name
 
 
@@ -398,7 +398,7 @@ class MisshapenDevices:
     """Presenter carrying the device marker on the wrong shape."""
 
     def __init__(
-        self, name: str, /, wrong: Annotated[list[Movable], Devices()]
+        self, name: str, *, wrong: Annotated[list[Movable], Devices()]
     ) -> None:
         self.name = name
 
@@ -545,7 +545,7 @@ class Canvas:
 
     placement: Placement = Somewhere()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def show(self) -> None: ...
@@ -554,7 +554,7 @@ class Canvas:
 class WantsTheCanvas:
     """A presenter asking for the one displayable, which is a view."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.canvas: Displayable | None = None
 
@@ -579,7 +579,7 @@ class PydanticSession(pydantic.BaseModel):
 class BrokenCamera:
     """The one component satisfying `Linkable`, which cannot be built."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("no camera")
 
     def apply_camera(self, zoom: float) -> None: ...
@@ -588,7 +588,7 @@ class BrokenCamera:
 class AsksAboutLinkables:
     """Holds the census of `Linkable`, so it can be read after the build."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.peers: Mapping[str, Linkable] = {}
 

@@ -45,8 +45,8 @@ __all__ = [
     "Layer",
     "Serves",
     "ServiceMark",
+    "accepts_name",
     "check",
-    "leads_with_name",
     "read",
     "read_hooks",
     "read_services",
@@ -304,10 +304,17 @@ def check(
             f"{where} is declared as a {layer}, but {target.__name__} is an "
             "'ophyd_async.core.Device'; declare it with 'AsDevice'"
         )
-    if not leads_with_name(target):
+    positional = positional_only(target)
+    if positional:
+        raise TypeError(
+            f"{where} is declared as a {layer}, but {target.__name__} takes "
+            f"{', '.join(map(repr, positional))} only positionally, and the "
+            "session passes every argument by keyword. Remove the '/'."
+        )
+    if not accepts_name(target):
         raise TypeError(
             f"{where} is declared as a {layer}, but {target.__name__} does "
-            "not take 'name' as its first parameter"
+            "not take 'name' as a keyword argument"
         )
     if inspect.iscoroutinefunction(inspect.getattr_static(target, "setup", None)):
         raise TypeError(
@@ -334,43 +341,39 @@ def check(
 
 
 NAME_KINDS: Final = frozenset(
-    {
-        inspect.Parameter.POSITIONAL_ONLY,
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        inspect.Parameter.KEYWORD_ONLY,
-    }
+    {inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 )
-"""The parameter kinds the framework can pass a component's name as."""
+"""The parameter kinds a keyword argument can fill."""
 
 
-def leads_with_name(cls: type) -> bool:
-    """Whether the framework can hand *cls* its name.
+def accepts_name(cls: type) -> bool:
+    """Whether *cls* takes a ``name`` parameter a keyword argument can fill.
 
-    True when the first parameter is called ``name`` and is of a kind that can
-    be passed one value. A variadic first parameter is refused: a name arriving
-    inside ``*args`` or ``**kwargs`` is not a name the component can be built
-    with.
-    """
-    first = first_parameter(cls)
-    return first is not None and first.name == "name" and first.kind in NAME_KINDS
-
-
-def takes_name_by_keyword(cls: type) -> bool:
-    """Whether *cls* wants its name as a keyword rather than positionally."""
-    first = first_parameter(cls)
-    return first is not None and first.kind is inspect.Parameter.KEYWORD_ONLY
-
-
-def first_parameter(cls: type) -> inspect.Parameter | None:
-    """Return the first parameter of *cls*, or ``None`` if it takes none.
-
-    A class whose signature cannot be read answers ``None`` as well.
+    A name arriving inside ``**kwargs`` does not count. A class whose
+    signature cannot be read does not accept one either.
     """
     try:
-        params = list(inspect.signature(cls).parameters.values())
+        param = inspect.signature(cls).parameters.get("name")
     except (TypeError, ValueError):
-        return None
-    return params[0] if params else None
+        return False
+    return param is not None and param.kind in NAME_KINDS
+
+
+def positional_only(cls: type) -> list[str]:
+    """Return the parameters of *cls* only a positional argument can fill.
+
+    One carrying a default is left out, since leaving it unfilled is legal.
+    """
+    try:
+        params = inspect.signature(cls).parameters.values()
+    except (TypeError, ValueError):
+        return []
+    return [
+        param.name
+        for param in params
+        if param.kind is inspect.Parameter.POSITIONAL_ONLY
+        and param.default is inspect.Parameter.empty
+    ]
 
 
 def read(
@@ -557,7 +560,7 @@ def warn_if_forgotten(cls: type, attr: str, target: object) -> None:
     """
     if not isinstance(target, type):
         return
-    if not issubclass(target, Device) and not leads_with_name(target):
+    if not issubclass(target, Device) and not accepts_name(target):
         return
     logger.warning(
         "%s.%s annotates %s but declares no layer, so it is an ordinary "

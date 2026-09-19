@@ -23,19 +23,19 @@ from redsun.experimental.session.qt import Central, Dock, QtSession
 
 
 class Ctrl:
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Panel:
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Canvas:
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @property

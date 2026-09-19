@@ -91,7 +91,7 @@ class DeviceWithServiceKeyword(Device):
 class ExitWatcher:
     """Presenter recording each service exit it hears, and the thread it ran on."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.exits: list[tuple[str, int, str]] = []
         self.heard = threading.Event()

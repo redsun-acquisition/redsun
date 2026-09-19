@@ -41,9 +41,9 @@ from redsun.experimental import (
 from redsun.experimental.ports import WiringError
 from redsun.experimental.session import (
     Layer,
+    accepts_name,
     check,
     injectable,
-    leads_with_name,
     optional_arg,
     synthesize,
 )
@@ -77,7 +77,7 @@ class Ctrl:
 
     sig_moved = Signal(str)
 
-    def __init__(self, name: str, /, devices: DeviceMapping, gain: float = 1.0) -> None:
+    def __init__(self, name: str, *, devices: DeviceMapping, gain: float = 1.0) -> None:
         self.name = name
         self.devices = devices
         self.gain = gain
@@ -122,7 +122,7 @@ class Attached(Attachable):
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
@@ -131,7 +131,7 @@ class Unattachable:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
@@ -149,7 +149,7 @@ class Widget:
     def __init__(
         self,
         name: str,
-        /,
+        *,
         label: str = "",
     ) -> None:
         self.name = name
@@ -176,7 +176,7 @@ class Widget:
 class Late:
     """Presenter asking for the callback catalogue."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.callbacks: Mapping[str, CallbackType] = {}
 
@@ -187,7 +187,7 @@ class Late:
 class Registrar(DocumentRouter):
     """Presenter that is a document router, and so a callback."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
         self.closed = False
@@ -199,7 +199,7 @@ class Registrar(DocumentRouter):
 class Tunable:
     """Presenter with a defaulted parameter and a defaulted `setup` value."""
 
-    def __init__(self, name: str, /, step: float = 1.5) -> None:
+    def __init__(self, name: str, *, step: float = 1.5) -> None:
         self.name = name
         self.step = step
         self.readings: Readings | None = None
@@ -214,7 +214,7 @@ teardown_order: list[str] = []
 class Recorder:
     """Presenter nothing depends on."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def shutdown(self) -> None:
@@ -224,7 +224,7 @@ class Recorder:
 class Dependent:
     """Presenter taking `Recorder` once every component exists."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.other: Recorder | None = None
 
@@ -259,7 +259,7 @@ class App(Session):
 class Nameless:
     """Presenter taking the name the framework hands it and dropping it."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.gain = 1.0
 
 
@@ -281,7 +281,7 @@ class NamelessViewApp(Session):
 class Deferred:
     """View answering its placement from a property rather than the class."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @property
@@ -311,7 +311,7 @@ def app() -> Any:
 
 
 class WantsTheSession:
-    def __init__(self, name: str, /, session: Session) -> None:
+    def __init__(self, name: str, *, session: Session) -> None:
         self.name = name
         self.session = session
 
@@ -321,7 +321,7 @@ class LocatorApp(Session):
 
 
 class Duplicated:
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @provides
@@ -342,7 +342,7 @@ class Displaying:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self._viewer = ViewerModel({})
 
@@ -356,7 +356,7 @@ class Controlling:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.viewer: ViewerModel | None = None
 
@@ -367,7 +367,7 @@ class Controlling:
 class WatchingAView:
     """A presenter naming the class of a view."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def setup(self, display: Displaying) -> None:
@@ -377,7 +377,7 @@ class WatchingAView:
 class WantingWhatAViewOwns:
     """A presenter asking for a type only a view shares."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def setup(self, viewer: ViewerModel) -> None: ...
@@ -388,7 +388,7 @@ class HoldingAPresenter:
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.ctrl: Recorder | None = None
 
@@ -419,7 +419,7 @@ class ViewOnAPresenter(Session):
 class TakingAComponent:
     """A presenter naming another component's class in its constructor."""
 
-    def __init__(self, name: str, /, other: Recorder) -> None:
+    def __init__(self, name: str, *, other: Recorder) -> None:
         self.name = name
         self.other = other
 
@@ -427,7 +427,7 @@ class TakingAComponent:
 class TakingASharedValue:
     """A presenter asking for what another component shares, too early."""
 
-    def __init__(self, name: str, /, viewer: ViewerModel) -> None:
+    def __init__(self, name: str, *, viewer: ViewerModel) -> None:
         self.name = name
         self.viewer = viewer
 
@@ -435,7 +435,7 @@ class TakingASharedValue:
 class TakingTheCatalogue:
     """A presenter asking for the callback catalogue in its constructor."""
 
-    def __init__(self, name: str, /, callbacks: Mapping[str, CallbackType]) -> None:
+    def __init__(self, name: str, *, callbacks: Mapping[str, CallbackType]) -> None:
         self.name = name
         self.callbacks = callbacks
 
@@ -460,7 +460,7 @@ Counted = NewType("Counted", int)
 class CountingCalls:
     """A presenter counting how often the session reads what it shares."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.calls = 0
 
@@ -473,7 +473,7 @@ class CountingCalls:
 class Counting:
     """A presenter holding the shared count it was set up with."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.counted: Counted | None = None
 
@@ -488,7 +488,7 @@ class CountingApp(Session):
 
 
 class Unannotated:
-    def __init__(self, name: str, /, thing) -> None:  # type: ignore[no-untyped-def]
+    def __init__(self, name: str, *, thing) -> None:  # type: ignore[no-untyped-def]
         self.name = name
 
 
@@ -507,7 +507,7 @@ class Stray:
 
     placement: Placement = Elsewhere()
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
@@ -532,6 +532,29 @@ class VariadicName:
 
 class KeywordName:
     def __init__(self, *, name: str) -> None: ...
+
+
+class PositionalName:
+    def __init__(self, name: str, /) -> None:
+        self.name = name
+
+
+class Tuned(pydantic.BaseModel):
+    gain: float = 1.0
+
+
+class TunedCtrl(Tuned):
+    """Presenter whose inherited field comes before ``name``."""
+
+    name: str
+
+
+class PositionalNameApp(Session):
+    ctrl: AsPresenter[PositionalName]
+
+
+class TunedApp(Session):
+    ctrl: Annotated[AsPresenter[TunedCtrl], Declare(gain=3.0)]
 
 
 @dataclass
@@ -612,7 +635,7 @@ class Diamond(Layered, Sideways):
 class Ping:
     """Presenter taking `Pong`, which takes this one."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.other: Pong | None = None
 
@@ -623,7 +646,7 @@ class Ping:
 class Pong:
     """The other half of what used to be a cycle."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.other: Ping | None = None
 
@@ -694,7 +717,7 @@ class Served:
     """Presenter taking one value from each shared service."""
 
     def __init__(
-        self, name: str, /, calibration: Calibration, offset: Offset, scale: Scale
+        self, name: str, *, calibration: Calibration, offset: Offset, scale: Scale
     ) -> None:
         self.name = name
         self.values = (calibration, offset, scale)
@@ -719,7 +742,7 @@ class NamedServicesApp(Session):
 class ScaleOwner:
     """Presenter sharing the type a shared service already shares."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
     @provides
@@ -736,7 +759,7 @@ class ProviderAndComponentApp(Session):
 class BrokenPresenter:
     """Presenter whose construction cannot succeed."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("no hardware")
 
 
@@ -745,14 +768,14 @@ class BrokenView(Attachable):
 
     placement: Placement = Panel("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("no widget")
 
 
 class NeedsBroken:
     """Presenter taking one that cannot be constructed."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.other: BrokenPresenter | None = None
 
@@ -781,7 +804,7 @@ STEP_ORDER: list[str] = []
 class Marker:
     """A presenter that records when the build reached its layer."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         STEP_ORDER.append("built the presenter")
 
@@ -801,7 +824,7 @@ class SteppedApp(Session):
 class Unmakeable:
     """A presenter whose constructor raises, so the build skips it."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         raise RuntimeError("this presenter cannot be made")
 
 
@@ -1219,8 +1242,20 @@ def test_the_two_constructor_shapes_are_read_alike() -> None:
     [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
 )
 def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> None:
-    """A name arriving inside ``*args`` is not a name the component can be built with."""
-    assert leads_with_name(cls) is accepted
+    """A name arriving inside ``*args`` is not one a keyword can fill."""
+    assert accepts_name(cls) is accepted
+
+
+def test_a_name_only_a_position_can_fill_is_refused() -> None:
+    with pytest.raises(TypeError, match="takes 'name' only positionally"):
+        PositionalNameApp().build()
+
+
+def test_the_name_may_follow_inherited_fields() -> None:
+    """A generated signature lists a base class's fields first."""
+    app = TunedApp().build()
+    assert app.ctrl.name == "ctrl"
+    assert app.ctrl.gain == 3.0
 
 
 @pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])

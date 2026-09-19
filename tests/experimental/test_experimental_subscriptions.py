@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Watcher:
     """Presenter whose slot records every reading it is handed."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.seen: list[float] = []
 
@@ -35,7 +35,7 @@ class Watcher:
 class Renamed:
     """Presenter whose port is addressed by a name of its own."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.seen: list[float] = []
 

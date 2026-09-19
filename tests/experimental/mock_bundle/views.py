@@ -40,7 +40,7 @@ class MockMotorView:
     def __init__(
         self,
         name: str,
-        /,
+        *,
         missing: Absent | None = None,
         title: str = "",
     ) -> None:
@@ -72,7 +72,7 @@ class MockAcquisitionView:
     def __init__(
         self,
         name: str,
-        /,
+        *,
         devices: DeviceMapping,
         settings: Settings,
     ) -> None:

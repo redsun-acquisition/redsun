@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Recorder:
     """A presenter, so a session has something to build."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 

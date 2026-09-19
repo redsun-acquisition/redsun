@@ -86,7 +86,7 @@ class NotAHook:
 class Counter:
     """The presenter a build needs for the presenters step to happen."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
@@ -95,7 +95,7 @@ class Panel(QWidget):
 
     placement = Dock("left")
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
 
@@ -107,7 +107,7 @@ class Unanswerable:
     build part way through takes a fault the session cannot go on without.
     """
 
-    def __init__(self, name: str, /, missing: QMainWindow) -> None:
+    def __init__(self, name: str, *, missing: QMainWindow) -> None:
         self.name = name
 
 

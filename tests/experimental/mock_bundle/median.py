@@ -15,7 +15,7 @@ from redsun.experimental import PlanEntry
 class MockMedianPresenter(DocumentRouter):
     """Presenter offering the plan it filters, and filtering it itself."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
         self.documents: list[str] = []

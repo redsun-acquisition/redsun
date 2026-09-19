@@ -32,7 +32,7 @@ def no_retries() -> Iterator[None]:
 class Recorder:
     """Presenter needing the catalog."""
 
-    def __init__(self, name: str, /, address: CatalogAddress) -> None:
+    def __init__(self, name: str, *, address: CatalogAddress) -> None:
         self.name = name
         self.address = address
 
@@ -40,7 +40,7 @@ class Recorder:
 class Optional:
     """Presenter using the catalog when the session has one."""
 
-    def __init__(self, name: str, /, address: CatalogAddress | None = None) -> None:
+    def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None:
         self.name = name
         self.address = address
 

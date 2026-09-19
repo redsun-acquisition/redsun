@@ -28,7 +28,7 @@ class MockMotorPresenter:
     def __init__(
         self,
         name: str,
-        /,
+        *,
         devices: DeviceMapping,
         calibration: Calibration,
         step: float = 1.0,
@@ -50,7 +50,7 @@ class MockMotorPresenter:
 class MockLatePresenter:
     """Presenter asking for the callback catalogue."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
         self.seen: dict[str, CallbackType] = {}
 
@@ -61,7 +61,7 @@ class MockLatePresenter:
 class MockRegistrar(DocumentRouter):
     """Presenter that is a document router, and so a callback."""
 
-    def __init__(self, name: str, /) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
         self.documents: list[str] = []
