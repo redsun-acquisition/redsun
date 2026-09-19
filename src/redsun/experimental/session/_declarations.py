@@ -17,6 +17,7 @@ from typing import (
 )
 
 from ophyd_async.core import Device
+from psygnal import Signal
 
 from redsun.experimental.view import Placement
 from redsun.services import Service
@@ -325,6 +326,18 @@ def check(
             f"{where} defines 'async def setup'; the session calls it without "
             "awaiting, so it must be synchronous"
         )
+    if owns_signal(target) and not target.__weakrefoffset__:
+        raise TypeError(
+            f"{where} owns a signal, but {target.__name__} has '__slots__' "
+            "without '__weakref__', so the signal would keep every instance "
+            "alive. Add '__weakref__' to its slots, or 'weakref_slot=True' to "
+            "its dataclass decorator."
+        )
+    if is_frozen(target) and inspect.getattr_static(target, "setup", None):
+        logger.warning(
+            "%s is frozen, so its 'setup' can only assign through 'object.__setattr__'",
+            where,
+        )
     declared = inspect.getattr_static(target, "placement", None)
     if layer is not Layer.VIEW:
         if declared is not None:
@@ -343,6 +356,24 @@ def check(
         frontend.check_placement(target, declared, where)
     frontend.check_view(target, where)
     return target
+
+
+def owns_signal(cls: type) -> bool:
+    """Whether *cls* or a base declares a psygnal ``Signal``."""
+    return any(
+        isinstance(member, Signal)
+        for klass in cls.__mro__
+        for member in vars(klass).values()
+    )
+
+
+def is_frozen(cls: type) -> bool:
+    """Whether *cls* is a frozen dataclass or a frozen pydantic model."""
+    params = getattr(cls, "__dataclass_params__", None)
+    config = getattr(cls, "model_config", None)
+    return bool(getattr(params, "frozen", False)) or (
+        isinstance(config, dict) and bool(config.get("frozen", False))
+    )
 
 
 def refusal(

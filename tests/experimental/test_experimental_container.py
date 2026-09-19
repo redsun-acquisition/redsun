@@ -599,6 +599,76 @@ class FrozenApp(Session):
     ctrl: Annotated[AsPresenter[FrozenCtrl], Declare(gain=7.5)]
 
 
+class SlottedSignal:
+    """Presenter with slots and a signal, and no slot for a weak reference."""
+
+    __slots__ = ("name",)
+
+    sig_done = Signal(str)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class WeaklySlottedSignal:
+    __slots__ = ("__weakref__", "name")
+
+    sig_done = Signal(str)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+@dataclass(slots=True, weakref_slot=True)
+class WeakDataclassSignal:
+    name: str
+    sig_done: ClassVar[Signal] = Signal(str)
+
+
+class SignalModel(pydantic.BaseModel):
+    name: str
+    sig_done: ClassVar[Signal] = Signal(str)
+
+
+@dataclass(frozen=True)
+class FrozenWithSetup:
+    name: str
+
+    def setup(self, config: SessionConfig) -> None: ...
+
+
+class FrozenModelWithSetup(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(frozen=True)
+
+    name: str
+
+    def setup(self, config: SessionConfig) -> None: ...
+
+
+class SlottedSignalApp(Session):
+    ctrl: AsPresenter[SlottedSignal]
+
+
+class WeaklySlottedSignalApp(Session):
+    ctrl: AsPresenter[WeaklySlottedSignal]
+
+
+class WeakDataclassSignalApp(Session):
+    ctrl: AsPresenter[WeakDataclassSignal]
+
+
+class SignalModelApp(Session):
+    ctrl: AsPresenter[SignalModel]
+
+
+class FrozenWithSetupApp(Session):
+    ctrl: AsPresenter[FrozenWithSetup]
+
+
+class FrozenModelWithSetupApp(Session):
+    ctrl: AsPresenter[FrozenModelWithSetup]
+
+
 class Shared(Session):
     """A base holding what every session of one instrument shares."""
 
@@ -1271,6 +1341,43 @@ def test_the_name_may_follow_inherited_fields() -> None:
     app = TunedApp().build()
     assert app.ctrl.name == "ctrl"
     assert app.ctrl.gain == 3.0
+
+
+@pytest.mark.parametrize(
+    ("app", "built"),
+    [
+        (SlottedSignalApp, False),
+        (WeaklySlottedSignalApp, True),
+        (WeakDataclassSignalApp, True),
+        (SignalModelApp, True),
+    ],
+    ids=["slots", "slots-with-weakref", "dataclass-weakref-slot", "pydantic"],
+)
+def test_a_component_owning_a_signal_needs_a_weak_reference(
+    app: type[Session],
+    built: bool,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Without one the signal holds every instance alive, and what it holds."""
+    session = build(app)
+
+    assert ("ctrl" in session.presenters) is built
+    assert ("without '__weakref__'" in caplog.text) is not built
+
+
+@pytest.mark.parametrize(
+    "frozen",
+    [FrozenWithSetupApp, FrozenModelWithSetupApp],
+    ids=["dataclass", "pydantic"],
+)
+def test_a_frozen_component_with_setup_is_built_and_warned_about(
+    frozen: type[Session], build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    app = build(frozen)
+
+    assert "ctrl" in app.presenters
+    assert "is frozen, so its 'setup' can only assign" in caplog.text
 
 
 @pytest.mark.parametrize("app", [DataclassApp, KwOnlyApp, FrozenApp])

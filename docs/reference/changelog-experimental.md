@@ -8,6 +8,12 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- A presenter or view whose class has `__slots__` without `__weakref__` and
+  owns a psygnal `Signal` is skipped at declaration, naming the fix:
+  `__weakref__` in its slots, or `weakref_slot=True` on its dataclass. A frozen
+  dataclass or pydantic model defining `setup` is built, with a warning that
+  `setup` can only assign through `object.__setattr__`.
+
 - `Frontend.check_view` and `Session.view_arguments`
   (`redsun.experimental`) - a frontend refuses a view class it cannot build where the view is
   declared, and a session passes every view's constructor what it returns, by
