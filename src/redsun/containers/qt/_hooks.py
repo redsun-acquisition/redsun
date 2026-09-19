@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from redsun.containers._hooks import (
+from .._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     CreatesApplication,

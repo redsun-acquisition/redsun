@@ -4,7 +4,9 @@ Date: 2026-07-24
 
 ## Status
 
-Accepted
+Superseded by
+[13. Acquisition storage belongs to the device](0013-acquisition-storage-belongs-to-the-device.md).
+The storage layer below was removed; the record is kept as its reasoning.
 
 ## Context
 

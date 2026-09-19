@@ -40,20 +40,20 @@ requires-python = ">=3.11"
 dev = [
     { include-group = "epics" },
     { include-group = "pyqt" },
+    { include-group = "tiled" },
     { include-group = "zarr" },
     "mypy>=2.3.1",
     "prek>=0.5.0",
     "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
     "pytest-env>=1.1.5",
     "types-pyyaml>=6.0.12.20250915",
     "ruff>=0.16.5",
     "griffe-fieldz>=0.4.0",
     "pytest-asyncio>=1.3.0",
     "tox-uv-bare>=1.36.0",
+    "coverage>=7.16.1",
 ]
 docs = [
-    "mike>=2.1.3",
     "mkdocstrings-python>=2.0.7",
     "zensical>=0.0.61",
 ]
@@ -73,18 +73,19 @@ pyside = [
     "pyside6>=6.11.0",
 ]
 
-zarr = [
-    "acquire-zarr>=0.10.0",
-]
 epics = [
     "caproto>=1.3.0",
     "ophyd-async[ca]>=0.21.2",
 ]
+zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
+]
+tiled = [
+    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
+    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+]
 
 [project.optional-dependencies]
-zarr = [
-    "acquire-zarr>=0.10.0",
-]
 qt-common = [
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
@@ -100,6 +101,13 @@ pyside = [
 epics = [
     "caproto>=1.3.0",
     "ophyd-async[ca]>=0.21.2",
+]
+zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
+]
+tiled = [
+    "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
+    "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
 ]
 
 [project.entry-points."redsun.plugins"]
@@ -119,7 +127,6 @@ packages = ["src/redsun"]
 [tool.hatch.build.targets.sdist]
 include = [
   "src/redsun/**",
-  "benchmarks/**",
 ]
 
 [tool.mypy]
@@ -147,9 +154,6 @@ omit = [
 # the repository under a different absolute path
 [tool.coverage.paths]
 source = ["src/", "*/src/"]
-
-[tool.ruff]
-fix = true
 
 [tool.ruff.format]
 docstring-code-format = true

@@ -83,29 +83,29 @@ type it identifies:
 ```python
 import dependency_injector.providers as dip
 
-PATH_PROVIDER = dip.Dependency(instance_of=SessionPathProvider)
+SHUTTER = dip.Dependency(instance_of=Shutter)
 ```
 
 The producer binds it and the consumer resolves it:
 
 ```python
-class StoragePresenter:
+class ShutterPresenter:
     def register_providers(self, container: VirtualContainer) -> None:
-        container.provide(PATH_PROVIDER, self._provider)
+        container.provide(SHUTTER, self._shutter)
 
 
-class StorageView:
+class ShutterView:
     def inject_dependencies(self, container: VirtualContainer) -> None:
         # required: raises KeyError if nothing provided it
-        provider = container.require(PATH_PROVIDER)
+        shutter = container.require(SHUTTER)
 
-        # optional: None when this application has no storage presenter
-        maybe = container.try_require(PATH_PROVIDER)
+        # optional: None when this application declares no shutter presenter
+        maybe = container.try_require(SHUTTER)
 ```
 
-Both sides are typed: to a type checker `require(PATH_PROVIDER)` is a
-`SessionPathProvider`, and `provide` rejects a wrong value both statically and
-through the key's `instance_of`.
+Both sides are typed: to a type checker `require(SHUTTER)` is a `Shutter`, and
+`provide` rejects a wrong value both statically and through the key's
+`instance_of`.
 
 A key names a binding but does not hold one. Each container keeps its own, so
 two applications in one process never see each other's objects.

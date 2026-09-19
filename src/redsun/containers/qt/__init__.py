@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from redsun.containers.qt._container import QtAppContainer
-from redsun.containers.qt._hooks import (
+from ._container import QtAppContainer
+from ._hooks import (
     QtConfiguresApplication,
     QtConfiguresMainView,
     QtCreatesApplication,

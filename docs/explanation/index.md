@@ -6,8 +6,8 @@
 
 - **[Container architecture](container-architecture.md)**
 - **[Component system](component-system.md)**
-- **[Session storage](storage.md)**
 - **[Services](services.md)**
+- **[The session catalog](catalog.md)**
 
 ## SDK
 
@@ -24,7 +24,7 @@ described in [Michael Nygard's blog](http://thinkrelevance.com/blog/2011/11/15/d
 Status, Context, Decision, Consequences.
 
 - **[1. Record architecture decisions](decisions/0001-record-architecture-decisions.md)**
-- **[2. Storage dual-context redesign](decisions/0002-storage-dual-context-redesign.md)**
+- **[2. Storage dual-context redesign](decisions/0002-storage-dual-context-redesign.md)** (superseded by 13)
 - **[3. Structural subtyping for presenters and views](decisions/0003-structural-subtyping-for-presenters-and-views.md)**
 - **[4. Owner-scoped signal lookup](decisions/0004-owner-scoped-signal-lookup.md)**
 - **[5. Culsans-backed psygnal async backend](decisions/0005-culsans-psygnal-async-backend.md)**
@@ -35,3 +35,4 @@ Status, Context, Decision, Consequences.
 - **[10. Toolkit hook points](decisions/0010-toolkit-hook-points.md)**
 - **[11. Tolerating a component that fails to build](decisions/0011-tolerating-a-component-that-fails-to-build.md)**
 - **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
+- **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**

@@ -91,24 +91,18 @@ between them.
 A `psygnal` signal a component emits. Every public signal attribute is a port,
 named `sig_snake_case`.
 
-### Sink
-
-The producer side of a storage queue. A device holding a
-[`FrameSink`][redsun.storage.FrameSink] can put frames and close it, nothing
-else.
-
 ### Slot
 
 A method marked with [`slot`][redsun.virtual.slot], which makes it
 connectable. Its name and signature become public API, since other components
 connect to them.
 
-### Storage backend
+### Path provider
 
-How one storage format is written, in two parts:
-[`StorageIO`][redsun.storage.StorageIO] opens and describes it, and
-[`OpenStore`][redsun.storage.OpenStore] is the handle that lives as long as it
-is open.
+The object giving a session's files their directory and name,
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider]. One per
+session, built by the container and passed to every device taking a
+`path_provider` keyword.
 
 ### Structural subtyping
 

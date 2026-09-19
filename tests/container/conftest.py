@@ -4,6 +4,7 @@ import contextlib
 import sys
 from collections.abc import Generator
 from importlib.metadata import EntryPoint
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -16,6 +17,9 @@ if _tests_dir not in sys.path:
     sys.path.insert(0, _tests_dir)
 
 _MOCK_PKG_DIR = Path(__file__).parent / "mock_pkg"
+
+# the module imports tiled, which the extra does not install on every Python
+collect_ignore = [] if find_spec("tiled") else ["test_catalog.py"]
 
 
 @pytest.fixture

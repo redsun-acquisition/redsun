@@ -4,7 +4,6 @@ import contextlib
 import heapq
 import logging
 import os
-import re
 import sys
 from collections import deque
 from datetime import datetime
@@ -15,6 +14,8 @@ from typing import TYPE_CHECKING, Final
 
 from platformdirs import user_log_dir
 from psygnal import Signal
+
+from .utils._paths import session_folder
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -239,9 +240,7 @@ class SessionFileHandler(RotatingFileHandler):
     def __init__(
         self, session: str, service: str | None = None, run: str | None = None
     ) -> None:
-        folder = Path(user_log_dir("redsun", appauthor=False)) / re.sub(
-            r"[^\w.-]+", "_", session
-        )
+        folder = Path(user_log_dir("redsun", appauthor=False)) / session_folder(session)
         folder.mkdir(parents=True, exist_ok=True)
         if run is None:
             started = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")

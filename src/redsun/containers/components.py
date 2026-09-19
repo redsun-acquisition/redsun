@@ -16,6 +16,8 @@ from ._structural import problems
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from ophyd_async.core import PathProvider
+
     from redsun.containers.container import AppContainer
 
 T = TypeVar("T")
@@ -360,13 +362,14 @@ class _DeviceComponent(_ComponentBase[Device]):
 
     The container keeps two keywords from the constructor: ``service``, naming
     the service whose prefix the device gets, and ``autoconnect``, true unless
-    given, whether the build connects it.
+    given, whether the build connects it. ``path_provider`` is reserved too:
+    a device taking one gets the session's, so a declaration cannot give it.
     """
 
     __slots__ = ("autoconnect", "service")
 
     def __init__(self, cls: Callable[..., Device], name: str, /, **kwargs: Any) -> None:
-        for reserved in ("service", "autoconnect"):
+        for reserved in ("service", "autoconnect", "path_provider"):
             if reserved in kwargs and _takes_keyword(cls, reserved):
                 raise TypeError(
                     f"{cls!r} (device {name!r}) takes a {reserved!r} keyword of "
@@ -388,12 +391,19 @@ class _DeviceComponent(_ComponentBase[Device]):
         self.service = service
         self.autoconnect = autoconnect
 
-    def build(self, prefix: str | None = None) -> Device:
+    def build(
+        self, prefix: str | None = None, path_provider: PathProvider | None = None
+    ) -> Device:
         """Build the device, checking it is an ``ophyd-async`` Device.
 
         *prefix*, the one the device's service gives, is passed as ``prefix``.
+        *path_provider*, the session's, is passed as ``path_provider`` to a
+        device whose constructor takes that keyword, and withheld from one
+        that does not.
         """
-        extra = {} if prefix is None else {"prefix": prefix}
+        extra: dict[str, Any] = {} if prefix is None else {"prefix": prefix}
+        if path_provider is not None and _takes_keyword(self.cls, "path_provider"):
+            extra["path_provider"] = path_provider
         instance = self.cls(name=self.name, **self.kwargs, **extra)
         if not isinstance(instance, Device):
             raise TypeError(

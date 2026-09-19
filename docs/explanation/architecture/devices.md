@@ -156,20 +156,27 @@ StandardDetector.__init__(det, name="det")
 
 ### Writing acquired data
 
-Detector logics reach `redsun`'s storage through
-[`BaseStorage`][redsun.storage.BaseStorage]. The trigger logic registers a
-[`StreamSpec`][redsun.storage.StreamSpec] when preparing; the data logic gets a
-[`FrameSink`][redsun.storage.FrameSink] and builds its
-`StreamResourceDataProvider` from `uri_for`, `resource_info_for` and
-`signal_for`; the acquire logic pushes frames with `await sink.put(...)` from
-kickoff on. Devices never see the path provider, only the storage instance,
-resolved through the [storage registry][redsun.storage.get_storage].
+A device owns what it writes. Its service or `ophyd-async` writer chooses the
+format, dimensions, chunking and when a file is complete; the device emits
+`StreamResource` and `StreamDatum` documents with a `mimetype` matching the
+bytes and `parameters["path"]` naming the array in the store. `redsun` writes
+no acquisition bytes.
 
-[Session storage](../storage.md) and
-[ADR 0002](../decisions/0002-storage-dual-context-redesign.md) describe the
-full contract, including when to open eagerly or lazily and how a live view
-streams frames without creating a store.
-`tests/sdk/storage/test_integration_plans.py` implements both patterns.
+A device whose constructor takes `path_provider` receives the session's
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider], an
+`ophyd-async` `PathProvider` giving
+`<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`:
+
+```python
+class Camera(Device):
+    def __init__(self, name: str, path_provider: PathProvider) -> None:
+        super().__init__(name=name)
+        self._path_provider = path_provider
+```
+
+Each data key gets its own directory and counter. A declaration cannot give
+`path_provider` itself; a device not taking it picks its own paths. Details:
+[the session's path provider](presenters.md#the-sessions-path-provider).
 
 ## Standby
 

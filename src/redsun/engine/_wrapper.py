@@ -36,8 +36,6 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
 
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
-REResultType = RunEngineResult | tuple[str, ...]
-
 R = TypeVar("R")
 
 
