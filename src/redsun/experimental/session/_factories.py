@@ -12,16 +12,13 @@ from typing import (
 
 from typing_extensions import TypeForm
 
-from redsun.experimental.injection import Devices, Maybe, key_for, question_of
-
-from ._protocols import HasSetup
+from redsun.experimental.injection import devices_protocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
-    from redsun.experimental.injection import Question
-
     from ._declarations import Declaration, Key
+    from ._protocols import HasSetup
 
 __all__ = [
     "constructor",
@@ -31,7 +28,6 @@ __all__ = [
     "injectable",
     "optional_arg",
     "provider",
-    "requirements",
     "resolved",
     "setup_call",
     "synthesize",
@@ -113,8 +109,8 @@ def injectable(
 
     A parameter carrying a default is widened to ``X | None``, so the session
     fills it when something provides ``X`` and leaves the default alone when
-    nothing does. A question at most one component may answer is widened the
-    same way, since nothing may answer it.
+    nothing does. A parameter asking for devices with ``DevicesOf`` is left
+    out, the session passing the devices itself.
 
     Annotations are read from the signature rather than from ``__init__``,
     because a class may synthesize one: a pydantic model's real ``__init__``
@@ -126,9 +122,7 @@ def injectable(
         If a remaining parameter carries no annotation.
     """
     bound = ("self", "name", *passed) if binds_name else ("self", *passed)
-    return wanted_from(
-        constructor(cls), cls.__name__, cfg_kwargs, bound, refuse_questions=True
-    )
+    return wanted_from(constructor(cls), cls.__name__, cfg_kwargs, bound)
 
 
 def get_setup_params(cls: type[HasSetup[...]]) -> dict[str, TypeForm[Any]]:
@@ -149,7 +143,6 @@ def wanted_from(
     owner: str,
     cfg_kwargs: Mapping[str, Any],
     bound: tuple[str, ...],
-    refuse_questions: bool = False,
 ) -> dict[str, TypeForm[Any]]:
     """Return the parameters of *signature* the session is responsible for."""
     wanted: dict[str, TypeForm[Any]] = {}
@@ -164,19 +157,7 @@ def wanted_from(
                 "cannot tell what to inject"
             )
         hint = param.annotation
-        question = question_of(hint)
-        if question is not None:
-            if isinstance(question.marker, Devices):
-                # the session passes the devices itself, the store is not asked
-                continue
-            if refuse_questions:
-                raise TypeError(
-                    f"{owner}.{pname} asks the session a question in its "
-                    f"constructor: {question}. Only the devices are known "
-                    "before the components are built; ask for this in 'setup'."
-                )
-            key = key_for(question)
-            wanted[pname] = key | None if isinstance(question.marker, Maybe) else key
+        if devices_protocol(hint) is not None:
             continue
         if param.default is not param.empty and not is_union(hint):
             hint = hint | None
@@ -193,41 +174,9 @@ def device_questions(cls: type, cfg_kwargs: Mapping[str, Any]) -> dict[str, type
     for pname, param in constructor(cls).parameters.items():
         if pname in cfg_kwargs:
             continue
-        question = question_of(param.annotation)
-        if question is not None and isinstance(question.marker, Devices):
-            found[pname] = question.protocol
-    return found
-
-
-def requirements(declarations: list[Declaration]) -> dict[Question, list[str]]:
-    """Return each question the declarations ask, and who asks it.
-
-    A question is asked in `setup`, where every component exists, except one
-    about the devices, which a constructor may ask because the devices are
-    built first.
-
-    One entry per question, not per component: the answer is the same for every
-    component that asks, and the names are what an unanswerable question is
-    reported against.
-    """
-    found: dict[Question, list[str]] = {}
-    for declaration in declarations:
-        asked = list(constructor(declaration.cls).parameters.items())
-        if issubclass(declaration.cls, HasSetup):
-            asked += list(
-                resolved(
-                    declaration.cls.setup, f"{declaration.cls.__qualname__}.setup"
-                ).parameters.items()
-            )
-        for pname, param in asked:
-            if pname in declaration.cfg_kwargs:
-                continue
-            question = question_of(param.annotation)
-            if question is None:
-                continue
-            askers = found.setdefault(question, [])
-            if declaration.name not in askers:
-                askers.append(declaration.name)
+        protocol = devices_protocol(param.annotation)
+        if protocol is not None:
+            found[pname] = protocol
     return found
 
 
@@ -293,10 +242,8 @@ def setup_call(
 ) -> Callable[..., Any]:
     """Return the callable the store fills and calls to set *instance* up.
 
-    The parameters are re-annotated with the keys the store answers, the way a
-    constructor's are, since a question is written as an ``Annotated`` alias
-    that the store does not key on. *answers* reach `setup` as they are, and
-    the store is not asked for them.
+    *answers* reach `setup` as they are, and the store is asked for the other
+    parameters only.
     """
     params = {
         pname: hint

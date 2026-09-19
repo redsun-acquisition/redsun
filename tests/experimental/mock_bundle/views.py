@@ -12,7 +12,6 @@ from redsun.experimental import (
     HasPlans,
     Placement,
     PlanEntry,
-    Requires,
     Settings,
     slot,
 )
@@ -84,7 +83,7 @@ class MockAcquisitionView:
         self.specs: dict[str, PlanSpec] = {}
 
     def setup(
-        self, sources: Requires[HasPlans], callbacks: Mapping[str, CallbackType]
+        self, sources: Mapping[str, HasPlans], callbacks: Mapping[str, CallbackType]
     ) -> None:
         """Take the plans and the callbacks, and describe each plan."""
         self.callbacks = callbacks

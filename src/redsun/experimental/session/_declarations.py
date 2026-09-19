@@ -19,15 +19,16 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
-from redsun.experimental.injection import shared_keys
+from redsun.experimental.injection import devices_protocol, shared_keys
 from redsun.experimental.view import Placement
 from redsun.services import Service
 
 from ..._hooks import HookError, known_points
+from ..._structural import protocol_of
 from ._factories import resolved
 from ._frontend import Frontend
 from ._plugins import META_KEYS, resolve, service_entry
-from ._questions import is_protocol_union, protocol_of, shape_of
+from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -379,11 +380,14 @@ def check_questions(cls: type, where: str) -> None:
     Raises
     ------
     TypeError
-        Naming the parameter or shared value and what to write instead.
+        Naming the parameter or shared value and what to write instead, or a
+        ``DevicesOf`` marker on the wrong shape.
     """
     label = f"the constructor of {cls.__qualname__}"
     for pname, param in resolved(cls, label).parameters.items():
-        if pname != "name" and shape_of(param.annotation) is not None:
+        if pname == "name" or devices_protocol(param.annotation) is not None:
+            continue
+        if shape_of(param.annotation) is not None:
             raise TypeError(
                 f"{where} asks about the session in its {pname!r} parameter, "
                 "and the other components do not exist while it is built; "

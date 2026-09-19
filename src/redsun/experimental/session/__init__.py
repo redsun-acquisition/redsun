@@ -39,7 +39,6 @@ from ._factories import (
     injectable,
     optional_arg,
     provider,
-    requirements,
     synthesize,
 )
 from ._frontend import Frontend
@@ -96,7 +95,6 @@ __all__ = [
     "provider",
     "read",
     "read_hooks",
-    "requirements",
     "resolve",
     "synthesize",
 ]

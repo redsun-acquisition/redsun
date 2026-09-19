@@ -31,11 +31,7 @@ from psygnal import SignalInstance
 from redsun.aio import run_coro
 from redsun.catalog import CatalogAddress
 from redsun.experimental.injection import (
-    Devices,
-    Maybe,
-    One,
     constant,
-    key_for,
     register_shared,
     rejected,
     satisfying,
@@ -83,7 +79,6 @@ from ._factories import (
     injectable,
     optional_arg,
     provider,
-    requirements,
     setup_call,
 )
 from ._frontend import Frontend
@@ -107,7 +102,6 @@ if TYPE_CHECKING:
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
-    from redsun.experimental.injection import Question
     from redsun.experimental.ports import SlotThread
     from redsun.services import Service
 
@@ -228,7 +222,6 @@ class Session(BuildableSession):
         "__dict__",
         "__weakref__",
         "_answered",
-        "_answers",
         "_baseline",
         "_built_components",
         "_callbacks",
@@ -308,7 +301,6 @@ class Session(BuildableSession):
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
-        self._answers: dict[Question, Declaration | None] = {}
         self._answered: set[str] = set()
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
@@ -685,11 +677,9 @@ class Session(BuildableSession):
         store.register_provider(constant(self._settings), type_hint=Settings)
         self._register_framework_values(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
-        self._answer(store, self._components())
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
-        self._verify_answers()
         self._set_components(
             {
                 declaration.name: declaration.instance
@@ -1260,7 +1250,6 @@ class Session(BuildableSession):
         if store is None:
             raise RuntimeError("The registry step has to run before a component is")
         components = self._components()
-        chosen_for = self._chosen_for(components)
         built = {d.name: d.instance for d in components if d.instance is not None}
         for declaration in components:
             instance = declaration.instance
@@ -1275,12 +1264,7 @@ class Session(BuildableSession):
             missing = unanswered(
                 store, {p: h for p, h in params.items() if p not in questions}
             )
-            absent = chosen_for.get(declaration.name, set()) & set(self._failed)
-            if absent:
-                self._not_set_up[declaration.name] = TypeError(
-                    f"{listed(sorted(absent))} was not built"
-                )
-            elif missing:
+            if missing:
                 absent = self._blamed(hint for _, hint in missing)
                 if not absent:
                     raise TypeError(
@@ -1346,7 +1330,7 @@ class Session(BuildableSession):
                     if d.name in self._failed and _structural.satisfies(d.cls, protocol)
                 ]
                 if not failed:
-                    raise TypeError(str(e)) from None
+                    raise TypeError(str(e) + near_misses(built, protocol)) from None
                 raise NoAnswer(f"{listed(failed)} was not built") from None
             if shape != "every":
                 for owner in owners:
@@ -1358,22 +1342,6 @@ class Session(BuildableSession):
             self._answered.update(owners)
             answers[pname] = value
         return answers
-
-    def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
-        """Return, by asker, the components chosen for the questions it asks.
-
-        Only a question demanding exactly one component is here. One that
-        allows none is answered with nothing when the component chosen for it
-        cannot be built, which is an answer the asker already accepts.
-        """
-        found: dict[str, set[str]] = {}
-        for question, askers in requirements(declarations).items():
-            chosen = self._answers.get(question)
-            if chosen is None or not isinstance(question.marker, One):
-                continue
-            for asker in askers:
-                found.setdefault(asker, set()).add(chosen.name)
-        return found
 
     def _construct(self, layer: Layer) -> None:
         """Build every component of *layer* and register what it shares.
@@ -1541,43 +1509,6 @@ class Session(BuildableSession):
                         "before its peers; ask for it in 'setup'."
                     )
 
-    def _answer(self, store: Store, declarations: list[Declaration]) -> None:
-        """Answer each question a component asks about the session.
-
-        One answer per question, not per component that asks. A census of the
-        components reads the components built so far, which by `setup` is every
-        one of them; one of the devices reads the devices, which exist before
-        any component and which a constructor may therefore ask about.
-        """
-        for question, askers in requirements(declarations).items():
-            if isinstance(question.marker, Devices):
-                continue
-            key = key_for(question)
-            if isinstance(question.marker, (One, Maybe)):
-                self._select(store, question, key, askers, declarations)
-                continue
-            store.register_provider(
-                self._census(question.protocol, self._constructed), type_hint=key
-            )
-
-    def _census(
-        self, protocol: type, population: Callable[[], Mapping[str, Any]]
-    ) -> Callable[[], Any]:
-        """Return a reader answering with the members of *population* matching."""
-
-        def read() -> Any:
-            return satisfying(population(), protocol)
-
-        return read
-
-    def _constructed(self) -> dict[str, Any]:
-        """Return every component built so far, by name."""
-        return {
-            declaration.name: declaration.instance
-            for declaration in self._components()
-            if declaration.instance is not None
-        }
-
     @overload
     def _built(self, layer: Literal[Layer.PRESENTER]) -> dict[str, NamedComponent]: ...
     @overload
@@ -1588,58 +1519,6 @@ class Session(BuildableSession):
             for d in self._declarations.values()
             if d.kind is layer and d.instance is not None
         }
-
-    def _select(
-        self,
-        store: Store,
-        question: Question,
-        key: Key,
-        askers: list[str],
-        declarations: list[Declaration],
-    ) -> None:
-        """Bind the one component answering *question*, or refuse to build.
-
-        Nothing exists yet, so the choice is made from the declared classes,
-        and the answer reads the instance when something asks for it. Ordering
-        puts the chosen component first, so by then there is one.
-        `_verify_answers` confirms the choice once the instance is there.
-
-        A question at most one component may answer, and none does, is left
-        unregistered: its key is widened, so the store fills it with ``None``.
-        """
-        protocol = question.protocol
-        matches = [d for d in declarations if _structural.satisfies(d.cls, protocol)]
-        asks = f"{listed(askers)} {'requires' if len(askers) == 1 else 'require'}"
-        wanted = "exactly one" if isinstance(question.marker, One) else "at most one"
-        if len(matches) > 1:
-            raise TypeError(
-                f"{asks} {wanted} component satisfying {protocol.__name__!r}, but "
-                f"{len(matches)} do: {listed([d.name for d in matches])}. Narrow "
-                f"the protocol, or ask with 'Requires[{protocol.__name__}]' for "
-                "all of them."
-            )
-        if not matches:
-            self._answers[question] = None
-            if isinstance(question.marker, One):
-                raise TypeError(
-                    f"{asks} exactly one component satisfying "
-                    f"{protocol.__name__!r}, and the session holds none."
-                    + near_misses(declarations, protocol)
-                )
-            return
-        chosen = matches[0]
-        for asker in askers:
-            origin = next(d for d in declarations if d.name == asker)
-            refuse_backwards(origin, chosen, f"the one {protocol.__name__!r}")
-        if chosen.name in askers:
-            raise TypeError(
-                f"{chosen.name!r} asks for the one component satisfying "
-                f"{protocol.__name__!r} and is the only one that does. A "
-                "component cannot depend on itself; ask with "
-                f"'Requires[{protocol.__name__}]', which may include the asker."
-            )
-        self._answers[question] = chosen
-        store.register_provider(instance_of(chosen), type_hint=key)
 
     def _verify(self, declaration: Declaration, instance: object) -> None:
         """Check a component just built against the protocol of its layer.
@@ -1667,23 +1546,6 @@ class Session(BuildableSession):
             self.frontend.check_placement(
                 attachable, attachable.placement, f"view {declaration.name!r}"
             )
-
-    def _verify_answers(self) -> None:
-        """Check every chosen component against the protocol it was chosen for.
-
-        The choice is made before anything is built, so a member assigned in
-        ``__init__`` is invisible then and can only be confirmed now.
-        """
-        for question, chosen in self._answers.items():
-            if chosen is None or chosen.instance is None:
-                continue
-            reasons = _structural.problems(chosen.instance, question.protocol)
-            if reasons:
-                raise TypeError(
-                    f"{chosen.name!r} was chosen as the one component satisfying "
-                    f"{question.protocol.__name__!r}, but does not: "
-                    + "; ".join(reasons)
-                )
 
     def _is_unique(self, declaration: Declaration) -> bool:
         others = [d for d in self._components() if d.cls is declaration.cls]
@@ -2006,21 +1868,12 @@ class Session(BuildableSession):
             names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
         names |= {c.consumer for c in self.connections}
         names |= {s.consumer for s in self.subscriptions}
-        names |= {
-            chosen.name for chosen in self._answers.values() if chosen is not None
-        }
         names |= self._answered
         names |= {
             declaration.name
             for declaration in declarations
             if declaration.key in wanted or declaration.cls in wanted
         }
-        for question in requirements(declarations):
-            names |= {
-                declaration.name
-                for declaration in declarations
-                if _structural.satisfies(declaration.cls, question.protocol)
-            }
         return names
 
 
@@ -2061,19 +1914,6 @@ def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> Non
     missing = unanswered(store, params)
     if missing:
         raise TypeError(unanswered_message(name, missing))
-
-
-def instance_of(declaration: Declaration) -> Callable[[], Any]:
-    """Return a callable answering with what *declaration* was built into.
-
-    Read at call time rather than captured, the declaration having no instance
-    yet when the store is filled.
-    """
-
-    def read() -> Any:
-        return declaration.instance
-
-    return read
 
 
 def owners(
@@ -2134,17 +1974,12 @@ def listed(names: Iterable[str], *, quote: bool = True) -> str:
     return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
-def near_misses(declarations: list[Declaration], protocol: type) -> str:
-    """Report the declared classes that carry some of *protocol*, and why not all."""
-    wanted = _structural.members(protocol)
-    lines = [
-        f"\n  {declaration.name!r}: "
-        + "; ".join(_structural.problems(declaration.cls, protocol))
-        for declaration in declarations
-        if any(hasattr(declaration.cls, member) for member in wanted)
-        and _structural.problems(declaration.cls, protocol)
-    ]
-    return "".join(lines)
+def near_misses(components: Mapping[str, object], protocol: type) -> str:
+    """Report the components that carry some of *protocol*, and why not all."""
+    return "".join(
+        f"\n  {name!r}: " + "; ".join(reasons)
+        for name, reasons in rejected(components, protocol).items()
+    )
 
 
 def base_for(cls: type[Session], frontend: object) -> type[Session]:

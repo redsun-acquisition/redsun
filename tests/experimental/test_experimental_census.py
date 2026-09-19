@@ -12,9 +12,8 @@ from collections.abc import (
     Mapping,
 )
 from dataclasses import dataclass
-from typing import Annotated, Any, Protocol, get_type_hints, runtime_checkable
+from typing import Annotated, Any, Protocol, runtime_checkable
 
-import pydantic
 import pytest
 from ophyd_async.core import (
     AsyncStatus,
@@ -29,23 +28,10 @@ from redsun.experimental import (
     AsPresenter,
     AsView,
     DevicesOf,
-    HasSetup,
     Placement,
-    Requires,
-    RequiresMaybe,
-    RequiresOne,
     Session,
 )
-from redsun.experimental.injection import (
-    Devices,
-    Every,
-    Maybe,
-    One,
-    Question,
-    key_for,
-    question_of,
-)
-from redsun.experimental.session import Declaration, Layer, requirements
+from redsun.experimental.injection import Devices
 
 
 @dataclass(frozen=True)
@@ -58,12 +44,6 @@ class Resettable(Protocol):
     """Anything the session can put back to its initial state."""
 
     def reset(self) -> None: ...
-
-
-class Unchecked(Protocol):
-    """Deliberately not runtime-checkable."""
-
-    def ping(self) -> None: ...
 
 
 class Motor:
@@ -102,35 +82,12 @@ class Resetter:
         self.name = name
         self.resettable: Mapping[str, Resettable] = {}
 
-    def setup(self, resettable: Requires[Resettable]) -> None:
+    def setup(self, resettable: Mapping[str, Resettable]) -> None:
         self.resettable = resettable
 
     def reset_all(self) -> None:
         for component in self.resettable.values():
             component.reset()
-
-
-class Eager:
-    """Presenter asking the session a question in its constructor."""
-
-    def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None:
-        self.name = name
-
-
-class Unsatisfiable:
-    """Presenter asking about a protocol isinstance cannot check."""
-
-    def __init__(self, name: str, *, pingable: Requires[Unchecked]) -> None:
-        self.name = name
-
-
-class Misshapen:
-    """Presenter carrying the marker on the wrong shape."""
-
-    def __init__(
-        self, name: str, *, wrong: Annotated[list[Resettable], Every()]
-    ) -> None:
-        self.name = name
 
 
 @runtime_checkable
@@ -153,7 +110,7 @@ class ImageView:
         self.zoom = 1.0
         self.linked_to: str | None = None
 
-    def setup(self, peers: Requires[Linkable]) -> None:
+    def setup(self, peers: Mapping[str, Linkable]) -> None:
         self.peers = peers
 
     def link_targets(self) -> list[str]:
@@ -178,7 +135,7 @@ class Bookkeeper:
         self.resettable: Mapping[str, Resettable] = {}
         self.resets = 0
 
-    def setup(self, resettable: Requires[Resettable]) -> None:
+    def setup(self, resettable: Mapping[str, Resettable]) -> None:
         self.resettable = resettable
 
     def reset(self) -> None:
@@ -225,7 +182,7 @@ class RoiWidget:
         self.name = name
         self.camera: Linkable | None = None
 
-    def setup(self, camera: RequiresOne[Linkable]) -> None:
+    def setup(self, camera: Linkable) -> None:
         self.camera = camera
 
     def zoom_to(self, zoom: float) -> None:
@@ -240,7 +197,7 @@ class MaybeWidget:
         self.name = name
         self.camera: Linkable | None = None
 
-    def setup(self, camera: RequiresMaybe[Linkable] = None) -> None:
+    def setup(self, camera: Linkable | None = None) -> None:
         self.camera = camera
 
 
@@ -251,7 +208,7 @@ class ImageViewAsking:
         self.name = name
         self.peer: Linkable | None = None
 
-    def setup(self, peer: RequiresOne[Linkable]) -> None:
+    def setup(self, peer: Linkable) -> None:
         self.peer = peer
 
     def apply_camera(self, zoom: float) -> None: ...
@@ -266,13 +223,6 @@ class Camera:
 
     def apply_camera(self, zoom: float) -> None:
         self.zoom = zoom
-
-
-@runtime_checkable
-class DataOnly(Protocol):
-    """Nothing callable, so no component can be chosen before the build."""
-
-    label: str
 
 
 @runtime_checkable
@@ -311,17 +261,8 @@ class NeedsCount:
         self.name = name
         self.counter: Countable | None = None
 
-    def setup(self, counter: RequiresOne[Countable]) -> None:
+    def setup(self, counter: Countable) -> None:
         self.counter = counter
-
-
-class AsksDataOnly:
-    """Asks a single-answer question about a protocol with no method."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def setup(self, label: RequiresOne[DataOnly]) -> None: ...
 
 
 @runtime_checkable
@@ -370,28 +311,8 @@ class AsksBoth:
         self.motors = motors
         self.resettable: Mapping[str, Resettable] = {}
 
-    def setup(self, resettable: Requires[Resettable]) -> None:
+    def setup(self, resettable: Mapping[str, Resettable]) -> None:
         self.resettable = resettable
-
-
-class UnionCensus:
-    """Presenter asking about a union, which no protocol class names."""
-
-    def __init__(self, name: str, *, either: Requires[Resettable | None]) -> None:
-        self.name = name
-
-
-class ConcreteReset(Resettable):
-    """A class inheriting a protocol, which makes it no protocol of its own."""
-
-    def reset(self) -> None: ...
-
-
-class ConcreteCensus:
-    """Presenter asking about a concrete class rather than a protocol."""
-
-    def __init__(self, name: str, *, every: Requires[ConcreteReset]) -> None:
-        self.name = name
 
 
 class MisshapenDevices:
@@ -424,19 +345,6 @@ class AccidentalApp(Session):
 class LooseApp(Session):
     session: AsPresenter[Resetter]
     loose: AsPresenter[Loose]
-
-
-class EagerApp(Session):
-    eager: AsPresenter[Eager]
-    motor: AsPresenter[Motor]
-
-
-class UnsatisfiableApp(Session):
-    broken: AsPresenter[Unsatisfiable]
-
-
-class MisshapenApp(Session):
-    broken: AsPresenter[Misshapen]
 
 
 class OneApp(Session):
@@ -493,10 +401,6 @@ class ForgetfulApp(Session):
     counter: AsPresenter[Forgetful]
 
 
-class DataOnlyApp(Session):
-    broken: AsPresenter[AsksDataOnly]
-
-
 class DeviceApp(Session):
     stage: Annotated[AsDevice[Stage], Alias("stage")]
     spare: Annotated[AsDevice[Stage], Alias("spare")]
@@ -512,14 +416,6 @@ class BothCensusApp(Session):
     stage: AsDevice[Stage]
     both: AsPresenter[AsksBoth]
     motor: AsPresenter[Motor]
-
-
-class UnionCensusApp(Session):
-    broken: AsPresenter[UnionCensus]
-
-
-class ConcreteCensusApp(Session):
-    broken: AsPresenter[ConcreteCensus]
 
 
 class MisshapenDevicesApp(Session):
@@ -558,22 +454,13 @@ class WantsTheCanvas:
         self.name = name
         self.canvas: Displayable | None = None
 
-    def setup(self, canvas: RequiresOne[Displayable]) -> None:
+    def setup(self, canvas: Displayable) -> None:
         self.canvas = canvas
 
 
 class BackwardsQuestionApp(Session):
     ctrl: AsPresenter[WantsTheCanvas]
     canvas: AsView[Canvas]
-
-
-class PydanticSession(pydantic.BaseModel):
-    """Presenter asking a question from a class that synthesizes its signature."""
-
-    name: str
-    resettable: Requires[Resettable]
-
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
 
 class BrokenCamera:
@@ -592,7 +479,7 @@ class AsksAboutLinkables:
         self.name = name
         self.peers: Mapping[str, Linkable] = {}
 
-    def setup(self, peers: Requires[Linkable]) -> None:
+    def setup(self, peers: Mapping[str, Linkable]) -> None:
         self.peers = peers
 
 
@@ -705,66 +592,30 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
     ("session", "error", "match"),
     [
         pytest.param(
-            EagerApp,
-            TypeError,
-            "asks the session a question in its constructor",
-            id="question-in-a-constructor",
-        ),
-        pytest.param(
-            UnsatisfiableApp,
-            TypeError,
-            "runtime_checkable",
-            id="protocol-not-runtime-checkable",
-        ),
-        pytest.param(
-            MisshapenApp,
-            TypeError,
-            r"not a 'Mapping\[str, P\]'",
-            id="census-on-the-wrong-shape",
-        ),
-        pytest.param(
-            UnionCensusApp,
-            TypeError,
-            "is not a protocol. Write 'Requires",
-            id="census-of-a-union",
-        ),
-        pytest.param(
-            ConcreteCensusApp,
-            TypeError,
-            "is not a protocol. Write 'Requires",
-            id="census-of-a-class-inheriting-a-protocol",
-        ),
-        pytest.param(
-            MisshapenDevicesApp,
-            TypeError,
-            r"Write 'DevicesOf\[P\]'",
-            id="device-census-on-the-wrong-shape",
-        ),
-        pytest.param(
-            NoneApp, TypeError, "the session holds none", id="one-answered-by-none"
+            NoneApp, TypeError, "nothing in the session does", id="one-answered-by-none"
         ),
         pytest.param(
             TwoApp,
             TypeError,
-            "but 2 do: 'camera' and 'spare'",
+            "but 2 do, from 'camera', 'spare'",
             id="one-answered-by-two",
         ),
         pytest.param(
             SelfApp,
             TypeError,
-            "is the only one that does",
+            "nothing in the session does",
             id="one-answered-by-the-asker",
         ),
         pytest.param(
             MaybeTwoApp,
             TypeError,
-            "at most one component",
+            "but 2 do, from 'camera', 'spare'",
             id="maybe-answered-by-two",
         ),
         pytest.param(
             RenamedApp,
             TypeError,
-            "the session holds none",
+            "nothing in the session does",
             id="renamed-parameter-does-not-answer",
         ),
         pytest.param(
@@ -776,14 +627,8 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
         pytest.param(
             ForgetfulApp,
             TypeError,
-            "but does not: 'count' is missing",
+            "'counter': 'count' is missing",
             id="data-member-never-assigned",
-        ),
-        pytest.param(
-            DataOnlyApp,
-            TypeError,
-            "declares no method",
-            id="one-about-a-protocol-with-no-method",
         ),
         pytest.param(
             BackwardsQuestionApp,
@@ -800,47 +645,8 @@ def test_the_session_refuses_to_build(
         session().build()
 
 
-def test_requires_expands_to_an_annotated_mapping() -> None:
-    """The spelling is short, but the type stays an ordinary Mapping."""
-    assert question_of(Requires[Resettable]) == Question(Resettable, Every())
-    assert question_of(Mapping[str, Resettable]) is None
-    assert question_of(int) is None
-
-
-@pytest.mark.parametrize(
-    ("cls", "param", "expected"),
-    [
-        (ImageView, "peers", Question(Linkable, Every())),
-        (RoiWidget, "camera", Question(Linkable, One())),
-        (MaybeWidget, "camera", Question(Linkable, Maybe())),
-    ],
-)
-def test_each_spelling_carries_its_cardinality(
-    cls: type[HasSetup[...]], param: str, expected: Question
-) -> None:
-    """Read from the annotation, which is where the container finds it."""
-    hint = get_type_hints(cls.setup, include_extras=True)[param]
-    assert question_of(hint) == expected
-
-
-def test_one_key_per_question() -> None:
-    """Two components asking the same question share one answer."""
-    census = Question(Resettable, Every())
-    assert key_for(census) is key_for(Question(Resettable, Every()))
-    assert key_for(census) is not key_for(Question(Resettable, One()))
-    assert key_for(census) is not key_for(Question(Unchecked, Every()))
-
-
-def test_requirements_are_collected_once_per_question() -> None:
-    declarations = [
-        Declaration(Resetter, "a", Layer.PRESENTER, {}),
-        Declaration(Resetter, "b", Layer.PRESENTER, {}),
-    ]
-    assert requirements(declarations) == {Question(Resettable, Every()): ["a", "b"]}
-
-
 def test_one_arrives_built(build: BuildSession) -> None:
-    """Unlike a census, a single answer is an ordinary dependency."""
+    """The one answer arrives built, ready to drive."""
     app = build(OneApp)
     assert app.roi.camera is app.camera
     app.roi.zoom_to(3.0)
@@ -870,7 +676,7 @@ def test_an_extra_defaulted_parameter_still_answers(
 def test_a_data_member_assigned_in_init_still_answers(
     build: BuildSession,
 ) -> None:
-    """The choice ignores what only an instance can show, then confirms it."""
+    """The match reads the instance, where ``__init__`` assigned the member."""
     app = build(CountApp)
     assert app.needs.counter is app.counter
 
@@ -921,28 +727,6 @@ def test_the_two_censuses_answer_over_different_populations(
     assert sorted(app.both.resettable) == ["motor"]
 
 
-def test_devices_of_expands_to_an_annotated_mapping() -> None:
-    assert question_of(DevicesOf[Movable]) == Question(Movable, Devices())
-
-
-def test_a_device_census_and_a_component_census_are_different_questions() -> None:
-    """Same protocol, different population, so they cannot share one answer."""
-    assert key_for(Question(Movable, Devices())) is not key_for(
-        Question(Movable, Every())
-    )
-
-
-def test_a_keyword_only_component_asks_the_same_question() -> None:
-    """The marker is read off the signature, which is where pydantic keeps it."""
-    declarations = [
-        Declaration(Resetter, "plain", Layer.PRESENTER, {}),
-        Declaration(PydanticSession, "pyd", Layer.PRESENTER, {}),
-    ]
-    assert requirements(declarations) == {
-        Question(Resettable, Every()): ["plain", "pyd"]
-    }
-
-
 def test_the_census_leaves_out_a_component_that_failed(
     build: BuildSession,
 ) -> None:
@@ -973,3 +757,12 @@ def test_an_optional_answer_failing_leaves_the_asker_without_one(
     app = build(BrokenMaybeApp)
     assert set(app.presenters) == {"widget"}
     assert app.widget.camera is None
+
+
+def test_a_device_census_on_the_wrong_shape_skips_the_component(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    app = build(MisshapenDevicesApp)
+
+    assert "broken" not in app.presenters
+    assert "Write 'DevicesOf[P]'" in caplog.text

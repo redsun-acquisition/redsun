@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 from bluesky.utils import MsgGenerator
 
 from redsun.engine import RunEngine
-from redsun.experimental import HasPlans, PlanEntry, Requires, slot
+from redsun.experimental import HasPlans, PlanEntry, slot
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
     from concurrent.futures import Future
 
     from redsun.experimental import CallbackType
@@ -33,7 +34,7 @@ class MockAcquisitionPresenter:
         self.run: Future[Any] | None = None
         self._tokens: list[int] = []
 
-    def setup(self, sources: Requires[HasPlans]) -> None:
+    def setup(self, sources: Mapping[str, HasPlans]) -> None:
         """Collect the plans every other component offering them holds."""
         for source in sources.values():
             if source is self:

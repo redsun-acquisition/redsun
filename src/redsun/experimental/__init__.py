@@ -28,9 +28,6 @@ Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 
 from redsun.experimental.injection import (
     DevicesOf,
-    Requires,
-    RequiresMaybe,
-    RequiresOne,
     provides,
     rejected,
     satisfying,
@@ -112,9 +109,6 @@ __all__ = [
     "Placement",
     "PlanEntry",
     "PluginError",
-    "Requires",
-    "RequiresMaybe",
-    "RequiresOne",
     "Serializable",
     "Serves",
     "Session",

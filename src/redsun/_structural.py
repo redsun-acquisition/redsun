@@ -9,21 +9,41 @@ from __future__ import annotations
 import inspect
 from functools import cache
 from itertools import product
-from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
 
-from typing_extensions import get_protocol_members
+from typing_extensions import get_protocol_members, is_protocol
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from typing_extensions import TypeForm, TypeIs
 
-__all__ = ["members", "methods", "problems", "satisfies"]
+__all__ = [
+    "is_protocol_class",
+    "members",
+    "methods",
+    "problems",
+    "protocol_of",
+    "satisfies",
+]
 
 P = TypeVar("P")
 
 _PROBE = object()
 _MISSING = object()
+
+
+def is_protocol_class(candidate: object) -> TypeIs[type]:
+    """Whether *candidate* is a protocol class, not a class inheriting one."""
+    return isinstance(candidate, type) and is_protocol(candidate)
+
+
+def protocol_of(hint: object) -> type | None:
+    """Return the protocol *hint* names, subscripted or not, or ``None``."""
+    if is_protocol_class(hint):
+        return hint
+    origin = get_origin(hint)
+    return origin if is_protocol_class(origin) else None
 
 
 @cache

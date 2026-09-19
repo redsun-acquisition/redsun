@@ -603,6 +603,9 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
+- `DevicesOf` on anything but `Mapping[str, P]` (`redsun.experimental`) skips
+  the component at declaration, where it raised when the store was filled.
+
 - A constructor taking what another component owns, and a `setup` reaching
   into a later layer (`redsun.experimental`), are refused when the session
   reads its declarations, before any service starts or device connects, where
@@ -738,6 +741,21 @@ listed in the [changelog](changelog.md).
   device mapping and the bluesky callback registry. `redsun.experimental`
   re-exports all three, and is still the import a component is written
   against.
+
+### Removed
+
+- `Requires`, `RequiresOne` and `RequiresMaybe` (`redsun.experimental`), and
+  `Every`, `One`, `Maybe`, `Question`, `key_for` and `question_of`
+  (`redsun.experimental.injection`), and `requirements`
+  (`redsun.experimental.session`). A `setup` parameter annotated `P`,
+  `P | None` or `Mapping[str, P]` asks the same questions:
+
+  ```python
+  def setup(self, camera: HasCamera, roi: HasRoi | None = None) -> None: ...
+  ```
+
+- The requirement that a protocol asked about is `runtime_checkable`, and that
+  one asked for a single answer declares a method.
 
 ### Fixed
 

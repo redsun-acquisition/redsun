@@ -4,43 +4,21 @@ from collections.abc import Mapping
 from types import UnionType
 from typing import TYPE_CHECKING, Any, Literal, Union, get_args, get_origin
 
-from typing_extensions import is_protocol
-
 from ... import _structural
+from ..._structural import protocol_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from typing_extensions import TypeForm, TypeIs
+    from typing_extensions import TypeForm
 
-__all__ = [
-    "NoAnswer",
-    "Shape",
-    "answer",
-    "is_protocol_class",
-    "is_protocol_union",
-    "protocol_of",
-    "shape_of",
-]
+__all__ = ["NoAnswer", "Shape", "answer", "is_protocol_union", "shape_of"]
 
 Shape = Literal["one", "maybe", "every"]
 
 
 class NoAnswer(LookupError):
     """Nothing in the session satisfies a protocol one answer was demanded for."""
-
-
-def is_protocol_class(candidate: object) -> TypeIs[type]:
-    """Whether *candidate* is a protocol class, not a class inheriting one."""
-    return isinstance(candidate, type) and is_protocol(candidate)
-
-
-def protocol_of(hint: object) -> type | None:
-    """Return the protocol *hint* names, subscripted or not, or ``None``."""
-    if is_protocol_class(hint):
-        return hint
-    origin = get_origin(hint)
-    return origin if is_protocol_class(origin) else None
 
 
 def is_protocol_union(hint: TypeForm[Any]) -> bool:
