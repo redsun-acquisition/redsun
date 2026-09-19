@@ -29,10 +29,7 @@ from ophyd_async.core import Device  # noqa: TC002
 from psygnal import SignalInstance
 
 from redsun import _structural
-from redsun._config import Source, as_sources, load
-from redsun._hooks import HookError, parse_hook_specs, resolve_hooks
 from redsun.aio import run_coro
-from redsun.experimental._settings import Settings
 from redsun.experimental.injection import (
     Devices,
     Maybe,
@@ -62,8 +59,11 @@ from redsun.experimental.registry import (
     DeviceMapping,
     SessionConfig,
 )
-from redsun.services._service import close_channel_access
 
+from ..._config import Source, as_sources, load
+from ..._hooks import HookError, parse_hook_specs, resolve_hooks
+from ...services._service import close_channel_access
+from .._settings import Settings
 from ._declarations import (
     Declaration,
     HookDeclaration,

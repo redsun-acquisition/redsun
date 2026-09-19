@@ -65,16 +65,16 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from redsun._hooks import (
+from redsun.aio import set_async_backend
+from redsun.experimental.view import Placement
+
+from ...._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     ConfirmsClose,
     CreatesApplication,
     WrapsBuild,
 )
-from redsun.aio import set_async_backend
-from redsun.experimental.view import Placement
-
 from .._base import ConfigurationInUse, Session
 from .._frontend import Frontend
 from .._protocols import DesktopSession
@@ -91,8 +91,7 @@ if TYPE_CHECKING:
 
     from in_n_out import Store
 
-    from redsun._config import Source
-
+    from ...._config import Source
     from .._protocols import AttachableComponent
 
 ASK_ON_CLOSE: Final[str] = "ask_on_close"

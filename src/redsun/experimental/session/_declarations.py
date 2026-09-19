@@ -18,10 +18,10 @@ from typing import (
 
 from ophyd_async.core import Device
 
-from redsun._hooks import HookError, known_points
 from redsun.experimental.view import Placement
 from redsun.services import Service
 
+from ..._hooks import HookError, known_points
 from ._frontend import Frontend
 from ._plugins import META_KEYS, resolve, service_entry
 

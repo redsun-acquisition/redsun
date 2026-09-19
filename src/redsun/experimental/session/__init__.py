@@ -6,6 +6,14 @@ and is the import a session is written against.
 
 from __future__ import annotations
 
+from redsun.experimental.session.components import (
+    AsDevice,
+    AsHook,
+    AsPresenter,
+    AsService,
+    AsView,
+)
+
 from ._base import BUILD_STEPS, ConfigurationInUse, Session
 from ._declarations import (
     Alias,
@@ -46,7 +54,6 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from .components import AsDevice, AsHook, AsPresenter, AsService, AsView
 
 __all__ = [
     "BUILD_STEPS",

@@ -26,9 +26,6 @@ class MyApp(QtSession):
 Requires the ``experimental`` extra (``pip install redsun[experimental]``).
 """
 
-from redsun._hooks import ConfirmsClose, HookError
-from redsun._structural import satisfies
-from redsun.experimental._settings import Settings
 from redsun.experimental.injection import (
     DevicesOf,
     Requires,
@@ -78,6 +75,10 @@ from redsun.experimental.session import (
     Session,
 )
 from redsun.experimental.view import Placement
+
+from .._hooks import ConfirmsClose, HookError
+from .._structural import satisfies
+from ._settings import Settings
 
 __all__ = [
     "Alias",

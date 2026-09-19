@@ -15,7 +15,7 @@ from typing import (
 
 from typing_extensions import is_protocol
 
-from redsun._structural import members, methods, problems, satisfies
+from ..._structural import members, methods, problems, satisfies
 
 if TYPE_CHECKING:
     from typing_extensions import TypeForm, TypeIs
