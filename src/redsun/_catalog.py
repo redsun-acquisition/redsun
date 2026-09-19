@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from redsun.path_provider import SessionPathProvider
 
-    from .containers._config import CatalogConfig
+    from ._config import CatalogConfig
 
 
 def require_tiled() -> None:

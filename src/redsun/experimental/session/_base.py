@@ -28,7 +28,6 @@ from in_n_out import Store
 from ophyd_async.core import Device  # noqa: TC002
 from psygnal import SignalInstance
 
-from redsun import _structural
 from redsun.aio import run_coro
 from redsun.experimental.injection import (
     Devices,
@@ -59,8 +58,10 @@ from redsun.experimental.registry import (
     DeviceMapping,
     SessionConfig,
 )
+from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
-from ..._config import Source, as_sources, load
+from ... import _structural
+from ..._config import Source, StorageConfig, as_sources, load
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
 from ...services._service import close_channel_access
 from .._settings import Settings
@@ -236,12 +237,14 @@ class Session(BuildableSession):
         "_merged",
         "_names",
         "_not_set_up",
+        "_path_provider",
         "_releases",
         "_report",
         "_services",
         "_session_config",
         "_settings",
         "_shared",
+        "_storage",
         "_store",
         "_subscription_records",
         "_subscriptions",
@@ -299,6 +302,8 @@ class Session(BuildableSession):
         self._answers: dict[Question, Declaration | None] = {}
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
+        self._storage: StorageConfig | None = None
+        self._path_provider: SessionPathProvider | None = None
         self._callbacks: dict[str, CallbackType] = {}
         self._built_components: dict[str, object] = {}
         # a component whose setup could not run: kept, and named in the report
@@ -483,6 +488,32 @@ class Session(BuildableSession):
             return declared
         return type(self).__name__
 
+    @property
+    def storage(self) -> StorageConfig:
+        """The session's storage configuration.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`.
+        """
+        if self._storage is None:
+            raise RuntimeError("Call build() before reading storage")
+        return self._storage
+
+    @property
+    def path_provider(self) -> SessionPathProvider:
+        """The session's path provider, shared by every device taking one.
+
+        Raises
+        ------
+        RuntimeError
+            If read before `build`.
+        """
+        if self._path_provider is None:
+            raise RuntimeError("Call build() before reading path_provider")
+        return self._path_provider
+
     def make_store(self) -> Store:
         """Return the registry this session builds its components out of.
 
@@ -596,6 +627,12 @@ class Session(BuildableSession):
             )
         for name, service in self._services.items():
             setattr(self, name, service)
+        self._storage = StorageConfig.from_mapping(config.get("storage"))
+        self._path_provider = SessionPathProvider(
+            base_dir=self._storage.base_dir,
+            session=self.name,
+            max_digits=self._storage.max_digits,
+        )
 
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.
@@ -858,6 +895,9 @@ class Session(BuildableSession):
         """
         store.register_provider(lambda: self._session_config, type_hint=SessionConfig)
         store.register_provider(devices, type_hint=DeviceMapping)
+        store.register_provider(
+            lambda: self._path_provider, type_hint=SessionPathProvider
+        )
         store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
 
     def _catalogue(self) -> dict[str, CallbackType]:
@@ -902,8 +942,9 @@ class Session(BuildableSession):
         return self._names.get(id(component), type(component).__name__)
 
     def _affinity(self, slot: Callable[..., Any], thread: SlotThread) -> SlotThread:
-        declaration = getattr(slot, SLOT_ATTR, None)
-        if not isinstance(declaration, Slot):
+        declaration: Slot | None = getattr(slot, SLOT_ATTR, None)
+        # a marker with a thread is a slot, whichever layer's decorator set it
+        if declaration is None or not hasattr(declaration, "thread"):
             name = getattr(slot, "__qualname__", repr(slot))
             raise WiringError(
                 f"{name} is not connectable; mark it with the 'slot' decorator"
@@ -1070,7 +1111,11 @@ class Session(BuildableSession):
         component_name, _, port = path.partition(".")
         if not component_name or not port or "." in port:
             raise WiringError(f"{path!r} is not a port path; expected 'component.port'")
-        component = self._built_components.get(component_name)
+        component = (
+            self._path_provider
+            if component_name == PATH_PROVIDER_PORT
+            else self._built_components.get(component_name)
+        )
         if component is None:
             known = ", ".join(sorted(self._built_components)) or "none"
             raise ComponentNotBuilt(
@@ -1597,6 +1642,7 @@ class Session(BuildableSession):
                     name=declaration.name,
                     **declaration.cfg_kwargs,
                     **self._prefix_for(declaration),
+                    **self._path_provider_for(declaration),
                 )
             except Exception as e:  # noqa: BLE001 - a missing device must not abort the app
                 self._failed[declaration.name] = e
@@ -1629,6 +1675,16 @@ class Session(BuildableSession):
         if not service.prefix:
             raise ValueError(f"service {declaration.service!r} gives no prefix")
         return {"prefix": service.prefix}
+
+    def _path_provider_for(self, declaration: Declaration) -> dict[str, object]:
+        """Return the ``path_provider`` keyword, for a device whose constructor takes it."""
+        parameter = inspect.signature(declaration.cls).parameters.get("path_provider")
+        if parameter is None or parameter.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            return {}
+        return {"path_provider": self.path_provider}
 
     def connect_built_devices(self) -> None:
         """Connect every autoconnect device at once.

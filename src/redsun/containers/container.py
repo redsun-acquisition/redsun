@@ -42,7 +42,7 @@ from redsun.containers.components import (
     expects_positionals,
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
-from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
+from redsun.path_provider import PATH_PROVIDER, PATH_PROVIDER_PORT, SessionPathProvider
 from redsun.presenter import PPresenter
 from redsun.view import PView
 from redsun.virtual import (
@@ -162,9 +162,6 @@ logger = logging.getLogger("redsun")
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
-
-PATH_PROVIDER_PORT: Final = "path_provider"
-"""Name the session's path provider is wired under."""
 
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})

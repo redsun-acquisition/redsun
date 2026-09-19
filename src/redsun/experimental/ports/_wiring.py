@@ -135,7 +135,8 @@ def ports(component: object) -> Ports:
 
     A signal is a public [`Signal`][psygnal.Signal] attribute, or a member of a
     [`SignalGroup`][psygnal.SignalGroup] the component holds, in which case the
-    member name is the port name. A slot is a method marked with `slot`.
+    member name is the port name. A slot is a method marked with `slot`, from
+    this layer or `redsun.virtual`.
 
     Parameters
     ----------
@@ -161,7 +162,8 @@ def ports(component: object) -> Ports:
         declared = getattr(cls, attr, None)
         if isinstance(declared, Signal) and not attr.startswith("_"):
             signals[attr] = getattr(component, attr)
-        elif isinstance(getattr(declared, SLOT_ATTR, None), Slot):
+        # a marker with a thread is a slot, whichever layer's decorator set it
+        elif hasattr(getattr(declared, SLOT_ATTR, None), "thread"):
             slots[port_name(getattr(component, attr))] = getattr(component, attr)
 
     for group_name, value in getattr(component, "__dict__", {}).items():

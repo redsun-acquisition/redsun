@@ -103,7 +103,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`AppContainer.path_provider`** (`redsun.containers.container`) - the
   session's provider, wired under **`PATH_PROVIDER_PORT`**
-  (`"path_provider"`), with `set_plan`, `reset_plan` and `set_base_dir` as
+  (`redsun.path_provider`, `"path_provider"`), with `set_plan`, `reset_plan` and `set_base_dir` as
   slots:
 
   ```yaml

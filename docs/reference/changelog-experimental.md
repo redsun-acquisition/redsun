@@ -8,6 +8,21 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- **`Session.storage`** and **`Session.path_provider`**
+  (`redsun.experimental`) - a session reads the `storage` section as
+  `redsun.containers` does, and builds one `SessionPathProvider` from it. A
+  device whose constructor takes `path_provider` gets it, and a declaration
+  giving one is refused. Components ask for it by type, and wiring reaches it
+  as `path_provider`:
+
+  ```yaml
+  wiring:
+    - from: acquisition.sig_pre_launch_notify
+      to: path_provider.set_plan
+  ```
+
+- Wiring accepts a method marked with `redsun.virtual.slot` as well as
+  `redsun.experimental.slot`.
 - `redsun.experimental` - a second container layer, behind the `experimental`
   extra, which carries `in-n-out`. **Not covered by any stability guarantee**:
   names and behaviour may change or be withdrawn in any release.

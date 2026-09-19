@@ -224,6 +224,8 @@ def take_device_keys(
 ) -> dict[str, Any]:
     """Move ``service`` and ``autoconnect`` from *kwargs* onto *declaration*.
 
+    ``path_provider`` is reserved too: a device taking one gets the session's.
+
     Returns the keywords left for the device's constructor.
 
     Raises
@@ -233,7 +235,7 @@ def take_device_keys(
         prefix are both given, or ``autoconnect`` is not a bool.
     """
     params = inspect.signature(declaration.cls).parameters
-    for key in ("service", "autoconnect"):
+    for key in ("service", "autoconnect", "path_provider"):
         if key in kwargs and key in params:
             raise TypeError(
                 f"{declaration.cls.__name__} (device {declaration.name!r}) takes "
