@@ -29,6 +29,7 @@ from ophyd_async.core import Device  # noqa: TC002
 from psygnal import SignalInstance
 
 from redsun.aio import run_coro
+from redsun.catalog import CatalogAddress
 from redsun.experimental.injection import (
     Devices,
     Maybe,
@@ -61,6 +62,7 @@ from redsun.experimental.registry import (
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
 from ... import _structural
+from ..._catalog import require_tiled, start_catalog
 from ..._config import Source, StorageConfig, as_sources, load
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
 from ...services._service import close_channel_access
@@ -100,6 +102,7 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
 
     from ophyd_async.core import SignalR
+    from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
     from redsun.experimental.injection import Question
@@ -225,6 +228,7 @@ class Session(BuildableSession):
         "_baseline",
         "_built_components",
         "_callbacks",
+        "_catalog",
         "_config",
         "_connections",
         "_declarations",
@@ -304,6 +308,7 @@ class Session(BuildableSession):
         self._session_config = SessionConfig()
         self._storage: StorageConfig | None = None
         self._path_provider: SessionPathProvider | None = None
+        self._catalog: SimpleTiledServer | None = None
         self._callbacks: dict[str, CallbackType] = {}
         self._built_components: dict[str, object] = {}
         # a component whose setup could not run: kept, and named in the report
@@ -628,6 +633,8 @@ class Session(BuildableSession):
         for name, service in self._services.items():
             setattr(self, name, service)
         self._storage = StorageConfig.from_mapping(config.get("storage"))
+        if self._storage.catalog is not None:
+            require_tiled()
         self._path_provider = SessionPathProvider(
             base_dir=self._storage.base_dir,
             session=self.name,
@@ -898,6 +905,9 @@ class Session(BuildableSession):
         store.register_provider(
             lambda: self._path_provider, type_hint=SessionPathProvider
         )
+        if self._catalog is not None:
+            address = CatalogAddress(self._catalog.uri)
+            store.register_provider(lambda: address, type_hint=CatalogAddress)
         store.register_provider(self._catalogue, type_hint=CallbackCatalogue)
 
     def _catalogue(self) -> dict[str, CallbackType]:
@@ -1603,6 +1613,7 @@ class Session(BuildableSession):
         reconnects at once.
         """
         self._failed_services = {}
+        self._start_catalog()
         if not self._services:
             return
         self.on_release(lambda: run_coro(close_channel_access()))
@@ -1625,6 +1636,27 @@ class Session(BuildableSession):
             logger.warning("%s\nNot started: %s", summary, failed)
         else:
             logger.info(summary)
+
+    def _start_catalog(self) -> None:
+        """Start the catalog the storage section asks for, or log why it could not.
+
+        It is stopped after every component and service, being released first.
+        """
+        catalog = self.storage.catalog
+        if catalog is None:
+            return
+        try:
+            self._catalog = start_catalog(catalog, self.path_provider)
+        except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
+            logger.error("Failed to start the catalog: %s", e)
+            return
+        self.on_release(self._close_catalog)
+
+    def _close_catalog(self) -> None:
+        """Stop the session's catalog."""
+        if self._catalog is not None:
+            self._catalog.close()
+            self._catalog = None
 
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component.

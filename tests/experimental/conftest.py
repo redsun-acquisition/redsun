@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import sys
 from importlib.metadata import EntryPoint
+from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, TypeVar
 from unittest import mock
@@ -11,6 +12,10 @@ import pytest
 
 from redsun._config import Source
 from redsun.experimental import Session
+
+# the module imports tiled, which the extra does not install on every Python
+collect_ignore = [] if find_spec("tiled") else ["test_experimental_catalog.py"]
+
 
 _TESTS_DIR = str(Path(__file__).parent)
 if _TESTS_DIR not in sys.path:

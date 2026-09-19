@@ -23,6 +23,16 @@ listed in the [changelog](changelog.md).
 
 - Wiring accepts a method marked with `redsun.virtual.slot` as well as
   `redsun.experimental.slot`.
+- A session whose `storage` section has a `catalog` key starts a `tiled`
+  server in the services step, as `redsun.containers` does, and stops it after
+  every component and service. A component asks for its address by type:
+
+  ```python
+  class MyRecorder:
+      def __init__(self, name: str, /, address: CatalogAddress | None = None) -> None: ...
+  ```
+
+  `None` without a catalog, or when it failed to start, which is logged.
 - `redsun.experimental` - a second container layer, behind the `experimental`
   extra, which carries `in-n-out`. **Not covered by any stability guarantee**:
   names and behaviour may change or be withdrawn in any release.

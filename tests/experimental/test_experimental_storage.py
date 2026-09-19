@@ -95,6 +95,15 @@ def test_a_malformed_storage_setting_is_refused(
         build(WriterApp, config)
 
 
+def test_a_catalog_is_refused_without_the_extra(
+    build: BuildSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+
+    with pytest.raises(RuntimeError, match=r"redsun\[tiled\]"):
+        build(WriterApp, {"storage": {"catalog": None}})
+
+
 def test_a_component_named_path_provider_is_refused(build: BuildSession) -> None:
     class Shadowing(Session):
         path_provider: AsPresenter[Announcer]  # type: ignore[assignment]
