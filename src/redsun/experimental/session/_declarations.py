@@ -398,6 +398,12 @@ def check_questions(cls: type, where: str) -> None:
         label = f"{cls.__qualname__}.setup"
         for pname, param in resolved(setup, label).parameters.items():
             hint = param.annotation
+            if devices_protocol(hint) is not None:
+                raise TypeError(
+                    f"{where} asks for devices in the {pname!r} parameter of "
+                    "'setup'; ask for them in the constructor, where they already "
+                    "exist"
+                )
             shape = shape_of(hint)
             if shape is not None and is_device_protocol(shape[1]):
                 asked = shape[1].__name__

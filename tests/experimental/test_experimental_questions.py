@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
 import pytest
 from bluesky.protocols import Movable
 
-from redsun.experimental import AsPresenter, AsView, Placement, Session, provides
+from redsun.experimental import (
+    AsPresenter,
+    AsView,
+    DevicesOf,
+    Placement,
+    Session,
+    provides,
+)
 
 if TYPE_CHECKING:
     from .conftest import BuildSession
@@ -208,6 +215,13 @@ class AsksForMyStage:
     def setup(self, stages: Mapping[str, MyStage]) -> None: ...
 
 
+class DevicesInSetup:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def setup(self, stages: DevicesOf[HasStage]) -> None: ...
+
+
 class AsksForUnion:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -234,6 +248,10 @@ class AsksForMovableApp(Session):
 
 class AsksForMyStageApp(Session):
     ctrl: AsPresenter[AsksForMyStage]
+
+
+class DevicesInSetupApp(Session):
+    ctrl: AsPresenter[DevicesInSetup]
 
 
 class AsksForUnionApp(Session):
@@ -319,6 +337,7 @@ def test_a_question_only_a_failed_component_answers_leaves_the_asker_not_set_up(
             "ask for devices in the constructor with 'DevicesOf[Movable]'",
         ),
         (AsksForMyStageApp, "with 'DevicesOf[MyStage]'"),
+        (DevicesInSetupApp, "asks for devices in the 'stages' parameter of 'setup'"),
         (AsksForUnionApp, "asks for a union of protocols in the 'either' parameter"),
         (SharesProtocolApp, "shares a 'HasLayers' from 'layers', a protocol"),
     ],
@@ -326,6 +345,7 @@ def test_a_question_only_a_failed_component_answers_leaves_the_asker_not_set_up(
         "constructor",
         "device-protocol",
         "extends-device-protocol",
+        "devices-of-in-setup",
         "union",
         "provides",
     ],
