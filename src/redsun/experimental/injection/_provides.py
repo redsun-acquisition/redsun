@@ -61,18 +61,20 @@ def shared_keys(cls: type) -> dict[str, Key]:
 
 def register_shared(
     store: Store, instance: object, cls: type, name: str, seen: dict[Key, str]
-) -> None:
+) -> list[object]:
     """Register what *instance* shares on *store*, under the annotated types.
 
     *seen* accumulates the types already claimed, so a clash names both
     components. The value is read once, here, so what a component shares comes
     from what its constructor made and cannot depend on its own `setup`.
+    Returns the values shared, in the order they were registered.
 
     Raises
     ------
     TypeError
         If two components share one type.
     """
+    values: list[object] = []
     for method_name, provided in shared_keys(cls).items():
         owner = seen.get(provided)
         if owner is not None:
@@ -85,6 +87,8 @@ def register_shared(
         member = getattr(instance, method_name)
         shared = member() if callable(member) else member
         store.register_provider(constant(shared), type_hint=provided)
+        values.append(shared)
+    return values
 
 
 def constant(value: T) -> Callable[[], T]:

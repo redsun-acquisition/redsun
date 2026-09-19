@@ -270,17 +270,24 @@ def factory(
     return synthesize(build, params, declaration.key, f"build_{declaration.name}")
 
 
-def setup_call(instance: HasSetup[...], name: str) -> Callable[..., Any]:
+def setup_call(
+    instance: HasSetup[...], name: str, answers: Mapping[str, object]
+) -> Callable[..., Any]:
     """Return the callable the store fills and calls to set *instance* up.
 
     The parameters are re-annotated with the keys the store answers, the way a
     constructor's are, since a question is written as an ``Annotated`` alias
-    that the store does not key on.
+    that the store does not key on. *answers* reach `setup` as they are, and
+    the store is not asked for them.
     """
-    params = get_setup_params(type(instance))
+    params = {
+        pname: hint
+        for pname, hint in get_setup_params(type(instance)).items()
+        if pname not in answers
+    }
 
     def run(**deps: Any) -> None:
-        instance.setup(**deps)
+        instance.setup(**answers, **deps)
 
     return synthesize(run, params, None, f"set_up_{name}")
 

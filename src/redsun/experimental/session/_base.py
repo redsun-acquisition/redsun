@@ -96,6 +96,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
+from ._questions import NoAnswer, answer, shape_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -110,6 +111,7 @@ if TYPE_CHECKING:
     from redsun.services import Service
 
     from ._declarations import Key
+    from ._questions import Shape
 
 __all__ = ["BUILD_STEPS", "ConfigurationInUse", "Session"]
 
@@ -224,6 +226,7 @@ class Session(BuildableSession):
     __slots__ = (
         "__dict__",
         "__weakref__",
+        "_answered",
         "_answers",
         "_baseline",
         "_built_components",
@@ -248,6 +251,7 @@ class Session(BuildableSession):
         "_session_config",
         "_settings",
         "_shared",
+        "_shared_values",
         "_storage",
         "_store",
         "_subscription_records",
@@ -304,6 +308,7 @@ class Session(BuildableSession):
         # component built from one of them is skipped rather than refused
         self._failed: dict[str, BaseException] = {}
         self._answers: dict[Question, Declaration | None] = {}
+        self._answered: set[str] = set()
         self._baseline: dict[str, Mapping[str, object]] = {}
         self._session_config = SessionConfig()
         self._storage: StorageConfig | None = None
@@ -327,6 +332,7 @@ class Session(BuildableSession):
         # the component sharing each key, carried across the layer steps so
         # that a presenter and a view offering one type still clash
         self._shared: dict[Key, str] = {}
+        self._shared_values: list[tuple[str, object]] = []
         self._is_built = False
 
     @classmethod
@@ -559,7 +565,8 @@ class Session(BuildableSession):
             params = injectable(cls, {}, binds_name=False)
             refuse_unanswered(store, name, params)
             instance = store.inject(provider(cls, name))()
-            register_shared(store, instance, cls, name, self._shared)
+            shared = register_shared(store, instance, cls, name, self._shared)
+            self._shared_values.extend((name, value) for value in shared)
 
     def build(self) -> Self:
         """Run each step of `BuildableSession` in turn, announcing all but two.
@@ -1253,12 +1260,20 @@ class Session(BuildableSession):
             raise RuntimeError("The registry step has to run before a component is")
         components = self._components()
         chosen_for = self._chosen_for(components)
+        built = {d.name: d.instance for d in components if d.instance is not None}
         for declaration in components:
             instance = declaration.instance
             if instance is None or not issubclass(declaration.cls, HasSetup):
                 continue
             params = get_setup_params(declaration.cls)
-            missing = unanswered(store, params)
+            questions = {
+                pname: shape
+                for pname, hint in params.items()
+                if (shape := shape_of(hint)) is not None
+            }
+            missing = unanswered(
+                store, {p: h for p, h in params.items() if p not in questions}
+            )
             absent = chosen_for.get(declaration.name, set()) & set(self._failed)
             if absent:
                 self._not_set_up[declaration.name] = TypeError(
@@ -1275,19 +1290,73 @@ class Session(BuildableSession):
                 )
             else:
                 try:
-                    # `as_protocol` cannot take the generic `HasSetup`, which
-                    # mypy refuses as a type form; the class was checked above
-                    ready = cast("HasSetup[...]", instance)
-                    store.inject(setup_call(ready, declaration.name))()
-                    continue
-                except Exception as e:  # noqa: BLE001 - a setup must not abort the app
-                    self._not_set_up[declaration.name] = e
+                    answers = self._answers_for(declaration, questions, built)
+                except NoAnswer as e:
+                    self._not_set_up[declaration.name] = TypeError(str(e))
+                else:
+                    try:
+                        # `as_protocol` cannot take the generic `HasSetup`, which
+                        # mypy refuses as a type form; the class was checked above
+                        ready = cast("HasSetup[...]", instance)
+                        store.inject(setup_call(ready, declaration.name, answers))()
+                        continue
+                    except Exception as e:  # noqa: BLE001 - a setup must not abort the app
+                        self._not_set_up[declaration.name] = e
             logger.warning(
                 "Failed to set up %s '%s': %s",
                 declaration.kind,
                 declaration.name,
                 self._not_set_up[declaration.name],
             )
+
+    def _answers_for(
+        self,
+        declaration: Declaration,
+        questions: Mapping[str, tuple[Shape, type]],
+        built: Mapping[str, object],
+    ) -> dict[str, object]:
+        """Answer the protocol questions *declaration*'s `setup` asks.
+
+        A census reads the components; one answer may also be a value a
+        component shares. A single answer from a later layer is refused, as a
+        value from one is.
+
+        Raises
+        ------
+        NoAnswer
+            Naming the components that failed to build, when exactly one
+            answer was demanded and only they could have given it.
+        TypeError
+            If several objects answer where one was asked for, none does and
+            nothing that failed would have, or the answer comes from a later
+            layer.
+        """
+        answers: dict[str, object] = {}
+        for pname, (shape, protocol) in questions.items():
+            where = f"{declaration.name!r} in its {pname!r} parameter"
+            try:
+                value, owners = answer(
+                    shape, protocol, declaration.name, built, self._shared_values, where
+                )
+            except NoAnswer as e:
+                failed = [
+                    d.name
+                    for d in self._declarations.values()
+                    if d.name in self._failed and _structural.satisfies(d.cls, protocol)
+                ]
+                if not failed:
+                    raise TypeError(str(e)) from None
+                raise NoAnswer(f"{listed(failed)} was not built") from None
+            if shape != "every":
+                for owner in owners:
+                    target = self._declarations.get(owner)
+                    if target is not None:
+                        refuse_backwards(
+                            declaration, target, f"its {pname!r} parameter"
+                        )
+            self._answered.update(owners)
+            answers[pname] = value
+        return answers
 
     def _chosen_for(self, declarations: list[Declaration]) -> dict[str, set[str]]:
         """Return, by asker, the components chosen for the questions it asks.
@@ -1339,9 +1408,10 @@ class Session(BuildableSession):
             store.register_provider(constant(instance), type_hint=declaration.key)
             if self._is_unique(declaration):
                 store.register_provider(constant(instance), type_hint=declaration.cls)
-            register_shared(
+            shared = register_shared(
                 store, instance, declaration.cls, declaration.name, self._shared
             )
+            self._shared_values.extend((declaration.name, value) for value in shared)
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
 
@@ -1931,6 +2001,7 @@ class Session(BuildableSession):
         names |= {
             chosen.name for chosen in self._answers.values() if chosen is not None
         }
+        names |= self._answered
         names |= {
             declaration.name
             for declaration in declarations
