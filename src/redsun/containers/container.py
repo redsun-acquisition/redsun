@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, unique
@@ -56,6 +55,7 @@ from redsun.virtual import (
     WiringError,
 )
 
+from .._catalog import require_tiled, start_catalog
 from .._config import COMPONENT_SECTIONS, load
 from .._hooks import (
     HookError,
@@ -165,24 +165,6 @@ CONNECT_TIMEOUT: Final = 10.0
 
 PATH_PROVIDER_PORT: Final = "path_provider"
 """Name the session's path provider is wired under."""
-
-
-def _require_tiled() -> None:
-    """Raise if a session asks for a catalog and the ``tiled`` extra is missing."""
-    missing = [
-        package
-        for package in ("tiled", "ome_tiled", "bluesky_tiled_plugins")
-        if importlib.util.find_spec(package) is None
-    ]
-    if not missing:
-        return
-    raise RuntimeError(
-        "this session's 'storage' section has a 'catalog' key and "
-        f"{', '.join(repr(package) for package in missing)} not installed. "
-        "Install them with 'pip install redsun[tiled]', or drop the key. "
-        "The extra installs nothing on Python 3.14, which tiled does not "
-        "support yet."
-    )
 
 
 _PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
@@ -969,50 +951,15 @@ class AppContainer:
             max_digits=self._storage.max_digits,
         )
         if self._storage.catalog is not None:
-            _require_tiled()
+            require_tiled()
             self._catalog = self._start_catalog(self._storage.catalog)
         logger.debug("VirtualContainer created")
 
     def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
-        """Start the session's catalog, or log why it could not.
-
-        It reads from the session's directory and every one *config* adds,
-        serves OME-Zarr images with their axis names, and has a ``TiledWriter``
-        in this process store them as their store holds them.
-        """
-        # imported here: the tiled extra is optional, and _require_tiled has
-        # already refused a session asking for a catalog without it
-        from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter
-        from ome_tiled.bluesky import register_consolidator
-        from tiled.server.simple import SimpleTiledServer
-
-        session_dir = self.path_provider.session_dir
-        server: SimpleTiledServer | None = None
+        """Start the session's catalog, or log why it could not."""
         try:
-            server = SimpleTiledServer(
-                directory=session_dir / "catalog",
-                readable_storage=[session_dir, *config.readable],
-            )
-            # TODO: let storage.catalog choose the adapters and consolidators
-            # installed here, rather than always installing ome-tiled's
-
-            # SimpleTiledServer takes no adapters; the first map holds the
-            # catalog's own, ahead of tiled's defaults
-            server.catalog.context.adapters_by_mimetype.maps[0][OME_ZARR_MIMETYPE] = (
-                OmeZarrAdapter
-            )
-            register_consolidator()
-            self.path_provider.lock_base_dir(
-                "the session's catalog reads files only from the readable "
-                "directories it started with; choose the root with "
-                "storage.base_dir before the session starts"
-            )
-            return server
+            return start_catalog(config, self.path_provider)
         except Exception as e:  # noqa: BLE001 - a catalog that fails must not abort the app
-            # a server that started and then failed to be set up is stopped,
-            # since nothing else holds it
-            if server is not None:
-                server.close()
             # a dotted key: no declared component can have this name
             self._failed["storage.catalog"] = e
             logger.error(f"Failed to start the catalog: {e}")

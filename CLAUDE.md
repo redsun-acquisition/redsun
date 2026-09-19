@@ -18,6 +18,7 @@ redsun/
 |   |-- presenter/             Presenter ABC, PPresenter, plan spec, built-ins
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
+|   |-- _catalog.py            require_tiled, start_catalog: the catalog both layers start
 |   |-- storage/               writers for derived products, by format
 |   |-- view/                  View ABC, PView
 |   |   `-- qt/                Qt widgets and the built-in LogView
