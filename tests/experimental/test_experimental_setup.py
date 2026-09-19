@@ -268,9 +268,13 @@ def test_a_setup_asking_for_what_nothing_declares_is_refused() -> None:
         AskingApp().build()
 
 
-def test_an_async_setup_is_refused_at_declaration() -> None:
-    with pytest.raises(TypeError, match="must be synchronous"):
-        AwaitingApp().build()
+def test_an_async_setup_is_skipped_at_declaration(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    app = build(AwaitingApp)
+
+    assert "awaiting" not in app.presenters
+    assert "must be synchronous" in caplog.text
 
 
 def test_a_component_reaching_another_two_ways_is_named(

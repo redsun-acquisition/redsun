@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
@@ -293,6 +294,27 @@ class GivenParentApp(QtSession):
     panel: AsView[Receiving]
 
 
+@dataclass(frozen=True)
+class Nowhere(Placement):
+    """A placement Qt does not attach."""
+
+
+class Misplaced(QWidget):
+    """A view whose placement only the built instance answers, wrongly."""
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @property
+    def placement(self) -> Placement:
+        return Nowhere()
+
+
+class MisplacedApp(QtSession):
+    panel: AsView[Misplaced]
+
+
 class BreakingApp(QtSession):
     helper: AsView[HelperKeeping]
     broken: AsView[Breaking]
@@ -484,16 +506,20 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused(window: QMainWindow) -> Non
         attach(window, {"stray": NotAWidget("stray")})
 
 
-def test_a_view_of_the_wrong_toolkit_type_is_refused_before_it_is_built() -> None:
+def test_a_view_of_the_wrong_toolkit_type_is_skipped_before_it_is_built(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
     """Qt's requirement table is read with the declarations, not at attach."""
 
     class Wrong(QtSession):
         stray: AsView[NotAWidget]
 
-    with pytest.raises(
-        TypeError, match=r"Wrong\.stray .* needs a QWidget, but NotAWidget is not one"
-    ):
-        Wrong().build()
+    app = build(Wrong)
+
+    assert "stray" not in app.views
+    assert re.search(
+        r"Wrong\.stray .* needs a QWidget, but NotAWidget is not one", caplog.text
+    )
 
 
 def test_a_command_is_filled_from_the_session() -> None:
@@ -607,9 +633,16 @@ def test_a_view_is_given_the_main_window_as_its_parent(build: BuildSession) -> N
         "name-not-str",
     ],
 )
-def test_a_view_not_shaped_for_qt_is_refused(app: type[QtSession], match: str) -> None:
-    with pytest.raises(TypeError, match=match):
-        app().build()
+def test_a_view_not_shaped_for_qt_is_skipped(
+    app: type[QtSession],
+    match: str,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    built = build(app)
+
+    assert "panel" not in built.views
+    assert re.search(match, caplog.text)
 
 
 def test_a_view_given_a_parent_by_its_configuration_is_skipped(
@@ -620,6 +653,18 @@ def test_a_view_given_a_parent_by_its_configuration_is_skipped(
 
     assert "panel" not in app.views
     assert "multiple values for keyword argument 'parent'" in caplog.text
+
+
+def test_a_view_refused_once_built_is_removed_from_the_window(
+    qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Its placement is read from the instance, after it joined the window."""
+    app = build(MisplacedApp)
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    assert "panel" not in app.views
+    assert app.main_window.findChildren(Misplaced) == []
+    assert "asks to be attached as 'Nowhere'" in caplog.text
 
 
 def test_a_view_failing_after_joining_the_window_leaves_nothing_in_it(

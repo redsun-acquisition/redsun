@@ -170,7 +170,7 @@ class MotorPresenter:
 Its parameters are filled by type, exactly as a constructor's are, and every
 component exists by then, so it does not matter which component is declared
 first. `setup` is optional, found by name, and must be synchronous: an
-`async def setup` is refused when the declarations are read, since the session
+`async def setup` is skipped when the declarations are read, since the session
 calls it without awaiting.
 
 A component whose constructor is generated, such as a pydantic model or a
@@ -241,12 +241,14 @@ class MyApp(QtSession):
 ```
 
 And it is checked. A device has to be an `ophyd_async.core.Device` and a
-presenter or view has to take a `name` parameter, so a mistake is reported
-where you made it rather than turning into a component of the wrong layer:
+presenter or view has to take a `name` parameter. A class breaking one of these
+rules is left out rather than built into the wrong layer, the log says where
+you made the mistake, and the session runs without that component
+([ADR 15](decisions/0015-a-component-refused-at-declaration-is-skipped.md)):
 
 ```text
-TypeError: MyApp.motor is declared as a presenter, but MyStage is an
-'ophyd_async.core.Device'; declare it with 'AsDevice'
+Failed to build presenter 'motor': MyApp.motor is declared as a presenter, but
+MyStage is an 'ophyd_async.core.Device'; declare it with 'AsDevice'
 ```
 
 This is what keeps devices buildable first. They are plain ophyd-async objects
@@ -483,28 +485,29 @@ class MotorView(QWidget):
 ```
 
 A view whose constructor does not start with the two, annotated exactly so,
-is refused where it is declared. A view that fails after passing the window to
+is skipped where it is declared. A view that fails after passing the window to
 `super().__init__` leaves nothing behind in it.
 
 This is also the whole of the difference between the two component layers. A
 view declares a placement; a presenter does not:
 
 ```text
-TypeError: MyApp.motor_ctrl is declared as a view, but MotorPresenter declares
-no 'placement'. A view says where it attaches; a component that attaches
-nowhere is a presenter.
+Failed to build view 'motor_ctrl': MyApp.motor_ctrl is declared as a view, but
+MotorPresenter declares no 'placement'. A view says where it attaches; a
+component that attaches nowhere is a presenter.
 ```
 
-Because the placement is a value on the class, an application can be refused
-before it builds anything:
+Because the placement is a value on the class, a view that cannot be attached
+is left out before anything is built:
 
 ```text
-TypeError: MyApp.stray asks to be attached as 'Route', which Qt does not
-attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
+Failed to build view 'stray': MyApp.stray asks to be attached as 'Route', which
+Qt does not attach. It attaches: Central, Dock, MenuItem, ToolBarItem.
 ```
 
 A view that answers `placement` from a property instead is still legal, and is
-checked once it exists, because only the instance can answer then.
+checked the moment its constructor returns, because only the instance can
+answer. One that cannot be attached is skipped then.
 
 Attaching is a separate step, so a container never touches a window:
 
@@ -1405,12 +1408,12 @@ dependency, so a presenter that talks to none never asks for the mapping, and
 there is no fixed constructor shape left to check beyond `name`.
 
 Both checks survive, and the view half is stronger than before: a view is
-refused at declaration time for a placement its frontend cannot attach and for
+skipped at declaration time for a placement its frontend cannot attach and for
 not being the type that placement demands, where today `view_position` is only
 read once the window is built. `NamedComponent` is what replaces `PPresenter`,
 carrying `name` alone, which is all the framework ever reads; a session may
 declare two components of one class, and the declared name is what tells them
-apart, so a component that drops the name it was constructed with is refused.
+apart, so a component that drops the name it was constructed with is skipped.
 
 So the layers are no longer symmetric. A view is defined by something the
 frontend can see and act on; a presenter is what is left over. That is the trade

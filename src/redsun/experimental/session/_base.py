@@ -632,6 +632,9 @@ class Session(BuildableSession):
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
+        for declaration in self._declarations.values():
+            if declaration.refusal is not None:
+                self._skip(declaration, declaration.refusal)
         self._services = read_services(type(self), config)
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
@@ -678,7 +681,6 @@ class Session(BuildableSession):
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
-        self._verify_components()
         self._verify_answers()
         self._set_components(
             {
@@ -1216,7 +1218,11 @@ class Session(BuildableSession):
         self._subscription_records.clear()
 
     def _components(self) -> list[Declaration]:
-        return [d for d in self._declarations.values() if d.kind is not Layer.DEVICE]
+        return [
+            d
+            for d in self._declarations.values()
+            if d.kind is not Layer.DEVICE and d.refusal is None
+        ]
 
     def build_presenters(self) -> None:
         """Construct the presenter layer, in the order it depends in."""
@@ -1558,32 +1564,32 @@ class Session(BuildableSession):
         self._answers[question] = chosen
         store.register_provider(instance_of(chosen), type_hint=key)
 
-    def _verify_components(self) -> None:
-        """Check every built component against the protocol of its layer.
+    def _verify(self, declaration: Declaration, instance: object) -> None:
+        """Check a component just built against the protocol of its layer.
 
         A member assigned in ``__init__`` is invisible on the class, so a view
         answering ``placement`` from anything but a class attribute is only
         checkable now.
+
+        Raises
+        ------
+        TypeError
+            If the instance does not satisfy its layer's protocol, or asks for
+            a placement the frontend cannot attach it to.
         """
-        frontend = self.frontend
-        for declaration in self._components():
-            instance = declaration.instance
-            if instance is None:
-                continue
-            view = declaration.kind is Layer.VIEW
-            protocol: type = AttachableComponent if view else NamedComponent
-            reasons = _structural.problems(instance, protocol)
-            if reasons:
-                raise TypeError(
-                    f"{declaration.name!r} is declared as a "
-                    f"{declaration.kind}, but does not satisfy "
-                    f"{protocol.__name__!r}: " + "; ".join(reasons)
-                )
-            attachable = as_protocol(instance, AttachableComponent) if view else None
-            if attachable is not None:
-                frontend.check_placement(
-                    attachable, attachable.placement, f"view {declaration.name!r}"
-                )
+        view = declaration.kind is Layer.VIEW
+        protocol: type = AttachableComponent if view else NamedComponent
+        reasons = _structural.problems(instance, protocol)
+        if reasons:
+            raise TypeError(
+                f"{declaration.name!r} is declared as a {declaration.kind}, but "
+                f"does not satisfy {protocol.__name__!r}: " + "; ".join(reasons)
+            )
+        attachable = as_protocol(instance, AttachableComponent) if view else None
+        if attachable is not None:
+            self.frontend.check_placement(
+                attachable, attachable.placement, f"view {declaration.name!r}"
+            )
 
     def _verify_answers(self) -> None:
         """Check every chosen component against the protocol it was chosen for.
@@ -1677,7 +1683,7 @@ class Session(BuildableSession):
         service is not declared, did not start, or gives no prefix.
         """
         for declaration in self._declarations.values():
-            if declaration.kind is not Layer.DEVICE:
+            if declaration.kind is not Layer.DEVICE or declaration.refusal is not None:
                 continue
             try:
                 device = declaration.cls(
@@ -1778,6 +1784,7 @@ class Session(BuildableSession):
         )
 
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
+        self._verify(declaration, instance)
         declaration.instance = instance
         setattr(self, declaration.name, instance)
         self._register_teardown(instance)

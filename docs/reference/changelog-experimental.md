@@ -571,6 +571,16 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
+- A presenter or view failing a declaration check (`redsun.experimental`) is
+  logged and skipped, and the session builds without it, where the check
+  raised from `Session.build` before. This covers the layer checks, the `name`
+  parameter, `async def setup`, the placement checks and `Frontend.check_view`.
+  `Declaration.refusal` (`redsun.experimental.session`) holds the reason. A
+  built instance is checked against
+  its layer's protocol and placement as soon as it is constructed, and skipped
+  on failure, where the check ran when the session was sealed and raised. See
+  [ADR 15](../explanation/decisions/0015-a-component-refused-at-declaration-is-skipped.md).
+
 - `AsPresenter` and `AsView` (`redsun.experimental`) build a presenter or
   view with every argument passed by keyword, `name` included. A constructor
   taking `name`, or any parameter without a default, only positionally is

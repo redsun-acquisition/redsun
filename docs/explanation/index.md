@@ -38,3 +38,4 @@ Status, Context, Decision, Consequences.
 - **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
 - **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**
 - **[14. Collaborators arrive in `setup`](decisions/0014-collaborators-arrive-in-setup.md)**
+- **[15. A component refused at declaration is skipped](decisions/0015-a-component-refused-at-declaration-is-skipped.md)**

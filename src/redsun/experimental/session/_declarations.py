@@ -181,6 +181,8 @@ class Declaration:
     ``key`` is a distinct type per component name, so two instances of one
     class stay separable in a type-keyed graph. A device's ``service`` and
     ``autoconnect`` keywords are kept here, not passed to its constructor.
+    ``refusal`` is why the class cannot be built in its layer, or ``None``; a
+    refused declaration is never built.
 
     Raises
     ------
@@ -197,6 +199,7 @@ class Declaration:
         "key",
         "kind",
         "name",
+        "refusal",
         "service",
     )
 
@@ -213,6 +216,7 @@ class Declaration:
         )
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
+        self.refusal: TypeError | None = None
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"
@@ -341,6 +345,25 @@ def check(
     return target
 
 
+def refusal(
+    target: object, layer: Layer, where: str, frontend: type[Frontend] = Frontend
+) -> TypeError | None:
+    """Return why the class *target* cannot be declared in *layer*, or ``None``.
+
+    Raises
+    ------
+    TypeError
+        If *target* is not a class, which names no component to go without.
+    """
+    try:
+        check(target, layer, where, frontend)
+    except TypeError as e:
+        if not isinstance(target, type):
+            raise
+        return e
+    return None
+
+
 NAME_KINDS: Final = frozenset(
     {inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
 )
@@ -407,7 +430,7 @@ def read(
         if kind is None:
             warn_if_forgotten(cls, attr, target)
             continue
-        check(target, kind, f"{cls.__qualname__}.{attr}", frontend)
+        refused = refusal(target, kind, f"{cls.__qualname__}.{attr}", frontend)
 
         inline: dict[str, Any] = {}
         cfg_key = attr
@@ -424,6 +447,7 @@ def read(
         declarations[name] = Declaration(
             target, name, kind, {**entry(section, cfg_key), **inline}
         )
+        declarations[name].refusal = refused
 
     declarations.update(from_config(config, declarations.keys(), frontend))
     refuse_shadowed(cls, declarations)
@@ -595,10 +619,11 @@ def from_config(
             target = resolve(entry, section_name)
             if target is None:
                 continue
-            check(
+            refused = refusal(
                 target, kind, f"configuration entry {section_name}.{cfg_key}", frontend
             )
             found[cfg_key] = Declaration(target, cfg_key, kind, without_meta(entry))
+            found[cfg_key].refusal = refused
     return found
 
 

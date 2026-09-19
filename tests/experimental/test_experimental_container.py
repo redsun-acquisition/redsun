@@ -1070,23 +1070,34 @@ def test_a_view_is_refused_at_declaration_for_its_placement(
     ("app", "protocol"),
     [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
 )
-def test_a_component_that_drops_its_name_is_refused(
-    app: type[Session], protocol: str
+def test_a_component_that_drops_its_name_is_skipped(
+    app: type[Session],
+    protocol: str,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """The constructor is made to take a name; keeping it is the other half."""
-    with pytest.raises(TypeError, match=f"does not satisfy {protocol!r}: 'name'"):
-        app().build()
+    built = build(app)
+
+    assert not built.presenters
+    assert not built.views
+    assert f"does not satisfy {protocol!r}: 'name'" in caplog.text
 
 
 def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
     assert check(Attached, Layer.VIEW, "somewhere", Toy) is Attached
 
 
-def test_a_view_answering_from_an_instance_is_checked_after_it_is_built() -> None:
+def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
     """A placement behind a property is invisible on the class, so build first."""
     assert check(Deferred, Layer.VIEW, "somewhere", Toy) is Deferred
-    with pytest.raises(TypeError, match="view 'stray' asks to be attached"):
-        DeferredApp().build()
+
+    app = build(DeferredApp)
+
+    assert "stray" not in app.views
+    assert "view 'stray' asks to be attached" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -1246,9 +1257,13 @@ def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> N
     assert accepts_name(cls) is accepted
 
 
-def test_a_name_only_a_position_can_fill_is_refused() -> None:
-    with pytest.raises(TypeError, match="takes 'name' only positionally"):
-        PositionalNameApp().build()
+def test_a_name_only_a_position_can_fill_is_skipped(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    app = build(PositionalNameApp)
+
+    assert "ctrl" not in app.presenters
+    assert "takes 'name' only positionally" in caplog.text
 
 
 def test_the_name_may_follow_inherited_fields() -> None:
@@ -1497,23 +1512,32 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
     assert released == ["presentation", "runtime"]
 
 
+@pytest.mark.parametrize(
+    "refused", [False, True], ids=["fails-to-build", "refused-at-declaration"]
+)
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
-    caplog: pytest.LogCaptureFixture, build: BuildSession
+    refused: bool, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """One component that could not be made must not keep the session down."""
+    rules = [{"from": "broken.sig_done", "to": "recorder.on_done"}]
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
         recorder: AsPresenter[Recorder]
 
-        config: ClassVar[Mapping[str, Any]] = {
-            "wiring": [{"from": "broken.sig_done", "to": "recorder.on_done"}]
-        }
+        config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
-    app = build(Half)
+    class Refused(Session):
+        broken: AsPresenter[PositionalName]
+        recorder: AsPresenter[Recorder]
+
+        config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
+
+    app = build(Refused if refused else Half)
     assert app.is_built
     assert set(app.presenters) == {"recorder"}
     assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
+    assert "Not built: broken (presenter)" in caplog.text
 
 
 @pytest.mark.parametrize(
