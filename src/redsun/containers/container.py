@@ -58,7 +58,7 @@ from redsun.virtual import (
     WiringError,
 )
 
-from ..services._service import close_channel_access
+from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._config import AppConfig, CatalogConfig, StorageConfig
 from ._hooks import (
     HookError,
@@ -1322,7 +1322,7 @@ class AppContainer:
         self._failed_services.clear()
         self._services_started = False
         if stopped:
-            run_coro(close_channel_access())
+            run_coro(TRANSPORTS[CHANNEL_ACCESS].release())
 
     def _open_session_log(self) -> None:
         """Start writing this run's records to the session's log files.

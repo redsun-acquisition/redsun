@@ -18,6 +18,7 @@ import pytest
 from redsun.log import GlobalFormatter
 from redsun.services import Service, _service
 from redsun.services._service import service_record
+from redsun.services._transports import CHANNEL_ACCESS, TRANSPORTS, ChannelAccess
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -54,7 +55,7 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
-    monkeypatch.setattr(_service, "ports", {})
+    monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
     def make(
