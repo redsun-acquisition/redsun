@@ -173,13 +173,6 @@ first. `setup` is optional, found by name, and must be synchronous: an
 `async def setup` is skipped when the declarations are read, since the session
 calls it without awaiting.
 
-A component whose constructor is generated, such as a pydantic model or a
-dataclass, keeps what `setup` assigns out of its fields: a field is a
-constructor parameter, and one naming what another component owns is refused.
-Use a `PrivateAttr` and a property on a model, and `field(init=False)` on a
-dataclass. A frozen dataclass writes through `object.__setattr__`, the declared
-field giving the slot to write to.
-
 A `setup` that raises, or that asks for a value belonging to a component which
 failed to build, is logged and changes nothing else. The component keeps its
 place in `presenters` and `views`, keeps its wiring, and keeps whatever its
@@ -193,6 +186,66 @@ Not set up: overlay (presenter)
 
 A `setup` asking for something nothing in the session declares is a mistake in
 the session, and still raises `TypeError`.
+
+### Dataclasses and pydantic models
+
+The session calls a presenter or view with every argument by keyword,
+`cls(name=<name>, **kwargs)`, so a constructor that a library generates works as
+it is. `name` may stand anywhere in the signature, which matters for a class
+inheriting fields: a dataclass or a pydantic model lists its base class's
+fields first. The one shape that cannot work is `name` after a `/`, which a
+keyword cannot fill, and a class written that way is skipped:
+
+```python
+class MyController:
+    def __init__(self, name: str, *, step: float = 1.0) -> None: ...
+
+
+@dataclass
+class MyDataclassController:
+    name: str
+    step: float = 1.0
+
+
+class MyModelController(BaseModel):
+    name: str
+    step: float = 1.0
+```
+
+A pydantic model validates the values the configuration file gives it. One it
+refuses raises `ValidationError` from the constructor, and the component is
+skipped like any other that fails to build.
+
+A field is a constructor parameter, so a component keeps what `setup` assigns
+out of its fields: a field naming what another component owns is refused. Use
+a `PrivateAttr` and a property on a model, and `field(init=False)` on a
+dataclass. A frozen dataclass or model can still assign through
+`object.__setattr__`, and the session warns when it declares a `setup`, since a
+plain assignment there fails.
+
+Signals need one change on a model. Pydantic refuses a class attribute without
+an annotation, and psygnal caches a signal on the instance the first time it is
+read, which a model refuses for a name that is not a field. Declare it as a
+`ClassVar`, on the model itself rather than on a base class it mixes in:
+
+```python
+class MyModelController(BaseModel):
+    name: str
+    sig_moved: ClassVar[Signal] = Signal(str)
+```
+
+A plain class and a dataclass keep `sig_moved = Signal(str)`: a dataclass does
+not make a field of an attribute without an annotation.
+
+A class with `__slots__` owning a signal needs a slot for a weak reference.
+psygnal refers to the instance weakly, and without `__weakref__` it keeps a
+reference that never goes away, so the instance is never collected. Such a
+class is skipped when it is declared, and the message names the fix:
+`__weakref__` in its slots, or `weakref_slot=True` on a dataclass.
+
+A view under Qt is a plain class. A pydantic model cannot also be a `QWidget`,
+their metaclasses conflicting, and a dataclass's generated constructor never
+calls `QWidget.__init__`, which Qt refuses the first time the widget is used.
 
 ## Assembling an application
 
@@ -256,9 +309,7 @@ that depend on no other layer, so they are constructed before the graph runs,
 and the container knows which ones they are because you said so. A device gets
 its name as a keyword, `cls(name=<name>, **kwargs)`, which every `ophyd-async`
 device accepts, `EpicsDevice` included. A presenter or view is called the same
-way, so `name` may stand anywhere in its signature, but not after a `/`. A
-dataclass or a pydantic model therefore works as generated, including one that
-inherits fields from a base class, which puts those fields first.
+way ([Dataclasses and pydantic models](#dataclasses-and-pydantic-models)).
 
 Components that appear only in the session file need no marker: the section they
 sit under (`devices:`, `presenters:`, `views:`) is their layer, and it is checked
