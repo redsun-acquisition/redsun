@@ -12,13 +12,13 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/architecture/qt-widgets/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0013-acquisition-storage-belongs-to-the-device/">
       
       
-        <link rel="prev" href="../presenters/">
+        <link rel="prev" href="../0012-services-and-two-connection-levels/">
       
       
-        <link rel="next" href="../virtual/">
+        <link rel="next" href="../../../how-to/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Qt widgets - Redsun</title>
+        <title>13. Acquisition storage belongs to the device - Redsun</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#qt-widgets" class="md-skip">
+        <a href="#13-acquisition-storage-belongs-to-the-device" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Qt widgets
+              13. Acquisition storage belongs to the device
             
           </span>
         </div>
@@ -671,12 +671,236 @@
                 
   
   
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Architecture
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/devices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Devices
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/plans/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Plans
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/presenters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Presenters
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/qt-widgets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Qt widgets
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Virtual container
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
   
     
     
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
       
         
       
@@ -704,17 +928,17 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" checked>
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
     
   
-  Architecture
+  Decisions
 
     
   </span>
@@ -724,12 +948,12 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
-  Architecture
+  Decisions
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
@@ -741,14 +965,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../devices/" class="md-nav__link">
+      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Devices
+  1. Record architecture decisions
 
     
   </span>
@@ -768,14 +992,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../plans/" class="md-nav__link">
+      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Plans
+  2. Storage dual-context redesign
 
     
   </span>
@@ -795,14 +1019,257 @@
   
   
     <li class="md-nav__item">
-      <a href="../presenters/" class="md-nav__link">
+      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  Presenters
+  3. Structural subtyping for presenters and views
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  4. Owner-scoped signal lookup
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  5. Culsans-backed psygnal async backend
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  6. Application-declared wiring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0007-typed-provider-keys/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  7. Typed provider keys
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  8. Container hooks and the build phase registry
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0009-inherited-component-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  9. Inherited and layered component configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  10. Toolkit hook points
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  11. Tolerating a component that fails to build
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  12. Services and two connection levels
 
     
   </span>
@@ -838,7 +1305,7 @@
   <span class="md-ellipsis">
     
   
-  Qt widgets
+  13. Acquisition storage belongs to the device
 
     
   </span>
@@ -855,7 +1322,7 @@
   <span class="md-ellipsis">
     
   
-  Qt widgets
+  13. Acquisition storage belongs to the device
 
     
   </span>
@@ -881,49 +1348,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#plan-widgets" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Plan widgets
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Plan widgets">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#runtime-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Runtime control
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reading-parameter-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Reading parameter values
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-widget-factory" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Parameter widget factory
+        Status
       </span>
     </span>
   </a>
@@ -931,10 +1359,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action-buttons" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Action buttons
+        Context
       </span>
     </span>
   </a>
@@ -942,10 +1370,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#descriptor-tree-view" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Descriptor tree view
+        Decision
       </span>
     </span>
   </a>
@@ -953,10 +1381,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        See also
+        Consequences
       </span>
     </span>
   </a>
@@ -967,473 +1395,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../virtual/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Virtual container
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
-        
-          
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Decisions
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-  Decisions
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0001-record-architecture-decisions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  1. Record architecture decisions
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  2. Storage dual-context redesign
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  3. Structural subtyping for presenters and views
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  4. Owner-scoped signal lookup
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  5. Culsans-backed psygnal async backend
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0006-application-declared-wiring/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  6. Application-declared wiring
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0007-typed-provider-keys/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  7. Typed provider keys
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  8. Container hooks and the build phase registry
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0009-inherited-component-configuration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  9. Inherited and layered component configuration
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0010-toolkit-hook-points/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  10. Toolkit hook points
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  11. Tolerating a component that fails to build
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  12. Services and two connection levels
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decisions/0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  13. Acquisition storage belongs to the device
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2406,49 +2367,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#plan-widgets" class="md-nav__link">
+  <a href="#status" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Plan widgets
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Plan widgets">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#runtime-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Runtime control
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reading-parameter-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Reading parameter values
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameter-widget-factory" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Parameter widget factory
+        Status
       </span>
     </span>
   </a>
@@ -2456,10 +2378,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action-buttons" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Action buttons
+        Context
       </span>
     </span>
   </a>
@@ -2467,10 +2389,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#descriptor-tree-view" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Descriptor tree view
+        Decision
       </span>
     </span>
   </a>
@@ -2478,10 +2400,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        See also
+        Consequences
       </span>
     </span>
   </a>
@@ -2506,154 +2428,65 @@
   
 
 
-<h1 id="qt-widgets">Qt widgets<a class="headerlink" href="#qt-widgets" title="Permanent link">&para;</a></h1>
-<p><code>redsun.view.qt</code> provides Qt widgets for interfaces that run plans.</p>
-<hr />
-<h2 id="plan-widgets">Plan widgets<a class="headerlink" href="#plan-widgets" title="Permanent link">&para;</a></h2>
-<p><code>create_plan_widget</code> builds a parameter form for a <code>PlanSpec</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_plan_widget</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">widget</span> <span class="o">=</span> <span class="n">create_plan_widget</span><span class="p">(</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">spec</span><span class="p">,</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">run_callback</span><span class="o">=</span><span class="n">on_run</span><span class="p">,</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">toggle_callback</span><span class="o">=</span><span class="n">on_toggle</span><span class="p">,</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">pause_callback</span><span class="o">=</span><span class="n">on_pause</span><span class="p">,</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">action_clicked_callback</span><span class="o">=</span><span class="n">on_action</span><span class="p">,</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">action_toggled_callback</span><span class="o">=</span><span class="n">on_action_toggled</span><span class="p">,</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">stack</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">group_box</span><span class="p">)</span>
-</span></code></pre></div>
-<p>It returns a <code>PlanWidget</code>, a frozen dataclass owning the widget tree:</p>
+<h1 id="13-acquisition-storage-belongs-to-the-device">13. Acquisition storage belongs to the device<a class="headerlink" href="#13-acquisition-storage-belongs-to-the-device" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-09-18</p>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted. Supersedes <a href="../0002-storage-dual-context-redesign/">2. Storage dual-context redesign</a>.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0002 put a storage layer inside <code>redsun</code>: <code>BaseStorage</code> with a format
+backend, <code>StreamSpec</code> declaring a stream, <code>FrameSink</code> carrying frames and
+<code>OpenStore</code> writing them. It assumes 2D frames entering the application one at
+a time, as from a camera driven by the session process.</p>
+<p><code>0.13.0rc0</code> added services. A service-backed device hands the application no
+frames: the service, or the <code>ophyd-async</code> writer beside it, writes a
+multidimensional acquisition, and the device emits <code>StreamResource</code> and
+<code>StreamDatum</code> documents pointing at it. Routing frames back through a sink
+costs a copy and a format the service did not choose.</p>
+<p><a href="https://github.com/redsun-acquisition/redsun/issues/116">redsun#116</a> tested
+that path and concluded, in its reporter's words, that "the rc0 release
+addresses the RedSun service-layer issue for my use case" and that no new
+<code>redsun</code> multidimensional storage API is wanted. Formats, OME-Zarr, OME-TIFF
+or a local one, are a service's decision, and a detector owning its store keeps
+buffers, completion and partial failure local to it.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><code>redsun</code> writes no acquisition bytes. The layers are:</p>
 <table>
 <thead>
 <tr>
-<th>Attribute</th>
-<th>Type</th>
-<th>Description</th>
+<th>Concern</th>
+<th>Owner</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>group_box</code></td>
-<td><code>QWidget</code></td>
-<td>top-level page for a <code>QStackedWidget</code></td>
+<td>format, dimensions, chunking, durability, completion</td>
+<td>the service and its device</td>
 </tr>
 <tr>
-<td><code>container</code></td>
-<td><code>mgw.Container</code></td>
-<td><code>magicgui</code> parameter form</td>
+<td><code>mimetype</code> and <code>parameters["path"]</code> on the emitted documents</td>
+<td>the device</td>
 </tr>
 <tr>
-<td><code>run_button</code></td>
-<td><code>QPushButton</code></td>
-<td>run / stop button</td>
-</tr>
-<tr>
-<td><code>pause_button</code></td>
-<td><code>QPushButton \| None</code></td>
-<td>pause / resume (pausable plans only)</td>
-</tr>
-<tr>
-<td><code>actions_group</code></td>
-<td><code>QGroupBox \| None</code></td>
-<td>action buttons (if any)</td>
-</tr>
-<tr>
-<td><code>action_buttons</code></td>
-<td><code>dict[str, ActionButton]</code></td>
-<td>per-action button access</td>
+<td>derived products, computed from documents after the fact</td>
+<td>a <code>redsun</code> presenter</td>
 </tr>
 </tbody>
 </table>
-<h3 id="runtime-control">Runtime control<a class="headerlink" href="#runtime-control" title="Permanent link">&para;</a></h3>
-<p>The presenter sets the widget's state through its methods:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">widget</span><span class="o">.</span><span class="n">toggle</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># plan started  -&gt; "Stop", enables actions</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">widget</span><span class="o">.</span><span class="n">toggle</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># plan stopped  -&gt; "Run", disables actions</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">widget</span><span class="o">.</span><span class="n">pause</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># paused        -&gt; "Resume", disables run button</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">widget</span><span class="o">.</span><span class="n">pause</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># resumed       -&gt; "Pause", enables run button</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">widget</span><span class="o">.</span><span class="n">setEnabled</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># disable whole widget during setup</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">widget</span><span class="o">.</span><span class="n">enable_actions</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># enable action buttons independently</span>
-</span></code></pre></div>
-<h3 id="reading-parameter-values">Reading parameter values<a class="headerlink" href="#reading-parameter-values" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">collect_arguments</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">widget</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
-</span></code></pre></div>
-<p><code>widget.parameters</code> returns <code>{name: value}</code> for every widget in the form.</p>
-<hr />
-<h2 id="parameter-widget-factory">Parameter widget factory<a class="headerlink" href="#parameter-widget-factory" title="Permanent link">&para;</a></h2>
-<p><code>create_param_widget</code> maps a <code>ParamDescription</code> to a <code>magicgui</code> widget:</p>
-<table>
-<thead>
-<tr>
-<th>Annotation</th>
-<th>Widget</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Literal["a", "b"]</code></td>
-<td><code>ComboBox</code></td>
-</tr>
-<tr>
-<td><code>MyDevice</code> (single)</td>
-<td><code>ComboBox</code></td>
-</tr>
-<tr>
-<td><code>Sequence[MyDevice]</code></td>
-<td><code>Select</code> (multi-select)</td>
-</tr>
-<tr>
-<td><code>Sequence[T]</code> (non-device)</td>
-<td><code>ListEdit</code></td>
-</tr>
-<tr>
-<td><code>Path</code></td>
-<td><code>FileEdit</code></td>
-</tr>
-<tr>
-<td><code>int</code>, <code>float</code>, <code>str</code>, ...</td>
-<td><code>create_widget</code> (<code>magicgui</code> default)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="action-buttons">Action buttons<a class="headerlink" href="#action-buttons" title="Permanent link">&para;</a></h2>
-<p><code>ActionButton</code> is a <code>QPushButton</code> carrying an <code>Action</code>. For a togglable action
-its label follows the toggle state:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActionButton</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.engine.actions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Action</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">action</span> <span class="o">=</span> <span class="n">Action</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"led"</span><span class="p">,</span> <span class="n">togglable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">toggle_states</span><span class="o">=</span><span class="p">(</span><span class="s2">"On"</span><span class="p">,</span> <span class="s2">"Off"</span><span class="p">))</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">btn</span> <span class="o">=</span> <span class="n">ActionButton</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># label shows "Led (On)" when checked, "Led (Off)" when unchecked</span>
-</span></code></pre></div>
-<hr />
-<h2 id="descriptor-tree-view">Descriptor tree view<a class="headerlink" href="#descriptor-tree-view" title="Permanent link">&para;</a></h2>
-<p><code>DescriptorTreeView</code> renders a device's <code>describe_configuration</code> /
-<code>read_configuration</code> output as an editable two-column tree:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.treeview</span><span class="w"> </span><span class="kn">import</span> <span class="n">DescriptorTreeView</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">tree</span> <span class="o">=</span> <span class="n">DescriptorTreeView</span><span class="p">(</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">device</span><span class="o">.</span><span class="n">describe_configuration</span><span class="p">(),</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">device</span><span class="o">.</span><span class="n">read_configuration</span><span class="p">(),</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">)</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">tree</span><span class="o">.</span><span class="n">sig_property_changed</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">on_property_changed</span><span class="p">)</span>
-</span></code></pre></div>
-<p>Properties are grouped by their <code>source</code> field. A property whose source ends
-in <code>:readonly</code> is shown as a greyed label.</p>
-<p>Update a value:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">tree</span><span class="o">.</span><span class="n">update_reading</span><span class="p">(</span><span class="s2">"stage-position"</span><span class="p">,</span> <span class="n">new_reading</span><span class="p">)</span>
-</span></code></pre></div>
-<p>Confirm or revert a pending edit:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">tree</span><span class="o">.</span><span class="n">confirm_change</span><span class="p">(</span><span class="s2">"stage-position"</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># keep new value</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">tree</span><span class="o">.</span><span class="n">confirm_change</span><span class="p">(</span><span class="s2">"stage-position"</span><span class="p">,</span> <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># revert</span>
-</span></code></pre></div>
-<hr />
-<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../../../reference/api/view/#qt-widgets">Qt widgets API reference</a></li>
-<li><a href="../plans/">Plans</a></li>
-</ul>
+<p><code>redsun.storage</code>'s shim is removed: <code>BaseStorage</code>, <code>StreamSpec</code>, <code>OpenStore</code>,
+<code>StorageIO</code>, <code>SinkFactory</code>, <code>FrameSink</code>, <code>FrameRouter</code>, the storage registry
+and the backends, with the <code>StoragePresenter</code> and <code>StorageView</code> built-ins.</p>
+<p>A session still decides where files go: <code>SessionPathProvider</code> moves to
+<code>redsun.path_provider</code>, and the container passes one per session to every
+device taking a <code>path_provider</code> keyword.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>A device that used <code>BaseStorage</code> writes its own data, through its service or
+an <code>ophyd-async</code> writer. A camera owning its writer is shaped differently from
+one feeding a sink, so there is no line-for-line substitution.</p>
+<p><code>StreamDatum</code> ranges are whatever the device emits. <code>FrameRouter</code> kept them
+contiguous and in arrival order; nothing replaces it, and <code>redsun</code> guarantees
+neither order nor completeness.</p>
+<p>A derived product, such as a median over a run, is written by the component
+computing it, against the store named in the <code>StreamResource</code> document.</p>
 
 
 
@@ -2693,7 +2526,7 @@ in <code>:readonly</code> is shown as a greyed label.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../presenters/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Presenters">
+          <a href="../0012-services-and-two-connection-levels/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 12. Services and two connection levels">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2703,20 +2536,20 @@ in <code>:readonly</code> is shown as a greyed label.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Presenters
+                12. Services and two connection levels
               </div>
             </div>
           </a>
         
         
           
-          <a href="../virtual/" class="md-footer__link md-footer__link--next" aria-label="Next: Virtual container">
+          <a href="../../../how-to/" class="md-footer__link md-footer__link--next" aria-label="Next: How-to guides">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Virtual container
+                How-to guides
               </div>
             </div>
             <div class="md-footer__button md-icon">

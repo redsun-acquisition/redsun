@@ -7,6 +7,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/catalog/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
       </url>
       <url>
@@ -17,9 +20,6 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/storage/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/devices/</loc>
@@ -73,6 +73,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0012-services-and-two-connection-levels/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0013-acquisition-storage-belongs-to-the-device/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
       </url>
       <url>
@@ -88,10 +91,16 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/keep-a-catalog/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/wire-components/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-derived-product/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-service/</loc>
@@ -109,6 +118,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/aio/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/catalog/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/container/</loc>
       </url>
       <url>
@@ -118,13 +130,13 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/log/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/path_provider/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/presenter/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/services/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/storage/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/utils/</loc>
@@ -137,8 +149,5 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/tutorials/custom-storage-backend/</loc>
       </url>
 </urlset>
