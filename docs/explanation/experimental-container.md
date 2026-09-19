@@ -33,7 +33,7 @@ The rest of this page is the reasoning. This section is the inventory.
 | Placing a view | `Placement` (the concrete ones belong to a frontend) |
 | Component shape | `NamedComponent`, `AttachableComponent` |
 | Sharing | `provides` |
-| Asking | `Requires`, `RequiresOne`, `RequiresMaybe`, `satisfies` |
+| Asking | a protocol-typed `setup` parameter, `DevicesOf`, `satisfies` |
 | Session | `DeviceMapping`, `CallbackType`, `slot` |
 | Offering plans | `PlanEntry`, `HasPlans` |
 
@@ -47,9 +47,9 @@ earlier:
 
 | Moment | What is confirmed |
 | --- | --- |
-| Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view leads with `name`; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands |
-| Before anything is built | Which component answers each `RequiresOne` or `RequiresMaybe`, from the declared classes; none or several is a failure that names the near misses; that no constructor takes something another component owns; that no `setup` takes something a later layer owns |
-| After the build | Every component against `NamedComponent`, and a view against `AttachableComponent`; a placement answered by a property rather than a class attribute; each chosen answer against the protocol it was chosen for |
+| Reading the declarations | A device subclasses `ophyd_async.core.Device`; a presenter or view takes a `name` a keyword can fill; a view declares a `placement` and a presenter does not; the container's frontend attaches that placement, and the view is the toolkit type that placement demands; each question is asked where it can be answered. A component failing one of these is skipped. No constructor takes something another component owns, and no `setup` takes something a later layer owns, or the session does not start |
+| As each component is built | The instance against `NamedComponent`, and a view against `AttachableComponent`, including a placement answered by a property; a failure skips the component |
+| When `setup` runs | Each question is answered from the built objects; none or several where one is asked for is a failure that names the near misses |
 | Applying the wiring | A rule naming a component the build skipped is warned about and skipped; a malformed rule, or one naming a component that was never declared, is refused |
 | After the wiring | Nothing new is refused, and two things are reported: a component that shares nothing, asks for nothing and is wired to nothing, and a shared value no component asks for |
 | Attaching | Nothing the declarations could settle; a view answering its placement from a property is checked once it exists |
@@ -457,8 +457,9 @@ value the other way, or move what they both need into an earlier layer.
 ```
 
 A view taking a presenter is the allowed direction and needs nothing special.
-`Requires[P]` is not a dependency at all: it is every component satisfying a
-protocol, read after everything exists, so it crosses layers freely.
+A question answered by every component, `Mapping[str, P]`, is not a dependency
+at all: it is every component satisfying a protocol, read after everything
+exists, so it crosses layers freely. A single answer follows the rule above.
 
 ### A view says where it attaches
 
@@ -935,11 +936,19 @@ on another having seen it first.
 
 Everything so far is a component saying "give me this thing". Sometimes what you
 want is not a thing but an answer: *which components in this session can be
-reset?* You cannot write that as a type, because the answer depends on what the
+reset?* You cannot name that as a value, because the answer depends on what the
 user put in the session file.
 
-`Requires[P]` asks that question. `P` is a protocol describing the capability,
-and you get back every component that has it, by name.
+Annotate a `setup` parameter with a protocol describing the capability, and the
+session answers with what has it. The shape of the annotation is how many
+answers you take
+([ADR 16](decisions/0016-questions-read-from-the-annotation.md)):
+
+| Annotation | Answer |
+| --- | --- |
+| `P` | the one object satisfying `P`: a component, or a value a component shares |
+| `P \| None = None` | at most one, `None` when nothing satisfies `P` |
+| `Mapping[str, P]` | every component satisfying `P`, by name |
 
 === "Today"
 
@@ -958,13 +967,12 @@ and you get back every component that has it, by name.
 === "Experimental"
 
     ```python
-    @runtime_checkable
     class Resettable(Protocol):
         def reset(self) -> None: ...
 
 
     class SessionPresenter:
-        def setup(self, resettable: Requires[Resettable]) -> None:
+        def setup(self, resettable: Mapping[str, Resettable]) -> None:
             self._resettable = resettable
 
         @slot
@@ -975,16 +983,19 @@ and you get back every component that has it, by name.
 
     Whatever the session contains, the answer matches it.
 
-`Requires[Resettable]` is short for
-`Annotated[Mapping[str, Resettable], Every()]`, so what you receive is an
-ordinary mapping of names to components. Your editor knows it, `for name, comp
-in ...items()` works, and you need no framework API to read it.
+What you receive is an ordinary mapping of names to components. Your editor
+knows it, `for name, comp in ...items()` works, and you need no framework API
+to read it.
+
+The session matches the built objects, comparing members and call signatures,
+so the protocol needs no `runtime_checkable`, may declare data members, and may
+be generic: `Reading[float]` is matched as `Reading`.
 
 A question is asked in `setup`, not in the constructor, because the answer
 depends on what the session holds and a component is constructed before its
-peers are. By `setup` every component exists, so the mapping arrives complete
-and you may read it straight away. A constructor asking one is refused, naming
-the parameter and telling you to ask in `setup`.
+peers are. By `setup` every component exists, so the answer arrives complete
+and you may read it straight away. A constructor asking one is skipped, and the
+log names the parameter and tells you to ask in `setup`.
 
 ### Components that answer their own question
 
@@ -993,7 +1004,6 @@ capability and all want to know about each other. Three image widgets, each able
 to link its camera to another one:
 
 ```python
-@runtime_checkable
 class Linkable(Protocol):
     name: str
 
@@ -1005,7 +1015,7 @@ class ImageView:
         self.name = name
         self.linked_to: str | None = None
 
-    def setup(self, peers: Requires[Linkable]) -> None:
+    def setup(self, peers: Mapping[str, Linkable]) -> None:
         self.peers = peers
 
     def link_targets(self) -> list[str]:
@@ -1025,17 +1035,17 @@ nobody wrote a list.
 
 ### Four things that can go wrong
 
-**You ask in the constructor.** The most likely mistake, so it is the one the
-container refuses outright:
+**You ask in the constructor.** The most likely mistake. The component is
+skipped, and the log says why:
 
 ```python
-def __init__(self, name: str, *, resettable: Requires[Resettable]) -> None: ...
+def __init__(self, name: str, *, resettable: Mapping[str, Resettable]) -> None: ...
 ```
 
 ```text
-TypeError: Resetter.resettable asks the session a question in its constructor:
-every 'Resettable'. Only the devices are known before the components are built;
-ask for this in 'setup'.
+Failed to build presenter 'resetter': MyApp.resetter asks about the session in
+its 'resettable' parameter, and the other components do not exist while it is
+built; ask for it in 'setup'
 ```
 
 Move the parameter to `setup`.
@@ -1076,10 +1086,10 @@ class Loose:
         ...
 ```
 
-This is not a match, and the container will tell you why if you ask:
+This is not a match, and the session will tell you why if you ask:
 
 ```python
->>> "loose" in session.resettable
+>>> "loose" in presenter.resettable
 False
 >>> session.rejected(Resettable)
 {'loose': ["reset(hard) cannot be called as reset(): missing a required argument: 'hard'"]}
@@ -1096,9 +1106,9 @@ near miss is not buried under every component that was never a candidate.
 
 ### The same question, asked of the devices
 
-`Requires[P]` answers over the presenters and views, never the devices. Asking
-which *devices* can do something is a separate question, and `DevicesOf[P]`
-asks it:
+A question in `setup` is answered by presenters, views and what they share,
+never by devices. Asking which *devices* can do something is a separate
+question, asked in the constructor with `DevicesOf[P]`:
 
 === "Today"
 
@@ -1122,9 +1132,11 @@ asks it:
             self.motors = motors
     ```
 
-The two censuses differ in one way that matters. Devices are built before
-anything else, so this one may be asked for in the constructor as well as in
-`setup`, which is exactly where the loop it replaces used to run.
+Devices are built before anything else, so the constructor is where this
+question belongs, which is exactly where the loop it replaces used to run. It
+is the one question that keeps a marker, because a device protocol reads the
+same as any other. A protocol devices implement, from `bluesky.protocols` or
+`ophyd_async` or extending one, is refused in `setup`, and so is `DevicesOf`.
 
 Ask for `DeviceMapping` when you want every device rather than a kind of them.
 
@@ -1138,7 +1150,7 @@ component itself, not a mapping you have to pick through.
 
     ```python
     class RoiWidget:
-        def setup(self, cameras: Requires[HasCamera]) -> None:
+        def setup(self, cameras: Mapping[str, HasCamera]) -> None:
             self._cameras = cameras
             # and now what? there should be one, but nothing says so
     ```
@@ -1147,24 +1159,27 @@ component itself, not a mapping you have to pick through.
 
     ```python
     class RoiWidget:
-        def setup(self, camera: RequiresOne[HasCamera]) -> None:
+        def setup(self, camera: HasCamera) -> None:
             self._camera = camera  # the component itself, already built
     ```
 
-`RequiresOne` hands you the component rather than a mapping to pick through.
-Everything the container does for a normal `setup` parameter, it does for this
-one.
+The answer may also be a value a component shares. A component sharing a
+`ViewerModel` answers both of these, with the same object:
 
-That works because the container settles who answers *before* it builds
-anything, by reading the declared classes. Two consequences follow, and both are
-useful:
+```python
+class Overlay:
+    def setup(self, viewer: ViewerModel, layers: HasLayers) -> None: ...
+```
+
+The component sharing it names neither consumer, and the consumer does not
+need to know which component made it.
 
 **A session that cannot answer does not start.** No guessing, no empty mapping
 to check for:
 
 ```text
-TypeError: 'roi' requires exactly one component satisfying 'HasCamera', and the
-session holds none.
+TypeError: 'roi' in its 'camera' parameter asks for the one object satisfying
+'HasCamera', and nothing in the session does
   'camera': apply_camera(factor) cannot be called as apply_camera(zoom):
   missing a required argument: 'factor'
 ```
@@ -1176,62 +1191,36 @@ reporting an absence and leaving you to find the typo.
 Too many answers is an error too, because the parameter has room for one:
 
 ```text
-TypeError: 'roi' requires exactly one component satisfying 'HasCamera', but 2
-do: 'camera' and 'spare'. Narrow the protocol, or ask with
-'Requires[HasCamera]' for all of them.
+TypeError: 'roi' in its 'camera' parameter asks for the one object satisfying
+'HasCamera', but 2 do, from 'camera', 'spare'. Narrow the protocol, or ask for
+'Mapping[str, HasCamera]'.
 ```
 
-**A component cannot answer its own question.** With a census that is fine, and
-sometimes the point. Here it would mean depending on yourself, so it is refused
-with an explanation rather than reported as a dependency cycle.
+Both are found when `setup` runs, once the devices have connected, since the
+answer is read from the built objects.
 
-Use `RequiresMaybe` when doing without is a real option:
+**A component never answers its own question.** With a census that is fine, and
+sometimes the point. For a single answer it would mean depending on yourself,
+so the asking component is left out, and if it was the only match the session
+holds none.
+
+**An answer that failed to build leaves you not set up.** If only a component
+that failed could have answered, the session runs without it, and your
+component is reported as not set up rather than stopping everything.
+
+Use `P | None = None` when doing without is a real option:
 
 ```python
-def setup(self, roi: RequiresMaybe[HasRoi] = None) -> None:
+def setup(self, roi: HasRoi | None = None) -> None:
     self._roi = roi  # None if the session has no ROI component
 ```
 
 An empty session answers `None`. Two answers is still an error.
 
-### The one limitation
-
-Deciding early means the container sees classes, not objects, and a value
-assigned in `__init__` does not exist on a class:
-
-```python
-@runtime_checkable
-class Countable(Protocol):
-    count: int  # invisible before the component is built
-
-    def bump(self) -> None: ...  # visible on the class
-```
-
-So the choice is made on the methods, and the rest is confirmed once the
-component exists:
-
-```text
-TypeError: 'counter' was chosen as the one component satisfying 'Countable',
-but does not: 'count' is missing
-```
-
-Two rules follow. A protocol used with `RequiresOne` or `RequiresMaybe` must
-declare at least one method, or there is nothing to choose on:
-
-```text
-TypeError: 'DataOnly' declares no method, so which component answers cannot be
-decided before they are built. Ask with 'Requires[DataOnly]', which is answered
-afterwards.
-```
-
-And methods are what should carry a capability anyway. `HasCamera` is a good
-protocol because `apply_camera` says what a component *does*; a protocol that is
-only fields describes a value, and a value is better asked for directly.
-
 ### When not to use any of it
 
-If you want one specific value rather than one component, ask for the value.
-These three are for finding components by what they can do.
+If you want one specific value rather than one component, ask for the value by
+its class. These questions are for finding components by what they can do.
 
 If components only need to be told when something happens, a signal is simpler:
 connect them in `wire` and skip the question entirely.
@@ -1246,9 +1235,9 @@ connect them in `wire` and skip the question entirely.
 | Asking for something | `container.require(KEY)` in a method | a constructor parameter |
 | Sharing something | `container.provide(KEY, value)` in a method | `@provides` on a method |
 | Optional collaborator | `container.try_require(KEY)` | `X \| None = None` |
-| Every component that can do X | a list written by hand | `Requires[P]` |
+| Every component that can do X | a list written by hand | `Mapping[str, P]` in `setup` |
 | Every device that can do X | an `isinstance` loop in `__init__` | `DevicesOf[P]` |
-| The one component that can do X | a key, agreed between both plugins | `RequiresOne[P]` |
+| The one component that can do X | a key, agreed between both plugins | `P` in `setup` |
 | Identity of a value | a key object you define and export | the type itself |
 | Two of one class | attribute name, agreed by convention | one key per declaration |
 | Missing dependency | `KeyError` inside the consumer | build fails, naming the type and who wanted it |
@@ -1345,9 +1334,9 @@ A value can enter in exactly three ways, and all of them happen before the
 application is running: it is a component, it is a `@provides` method on a
 component, or it comes from a `Provider` registered before the build.
 
-If something genuinely fills up over time, it has to be designed as a live view,
-the way `Requires[P]` is. That works, but it is a decision you make per case,
-not something you get for free.
+If something genuinely fills up over time, it has to be designed as an object
+that changes, shared once and read later. That works, but it is a decision you
+make per case, not something you get for free.
 
 ### Deciding at runtime whether to provide something
 
@@ -1481,8 +1470,8 @@ using them has to be rewritten rather than adapted.
 
 ## Still undecided
 
-- Whether `Requires` should offer a way to leave the asking component out,
-  rather than every peer writing the same one-line filter.
+- Whether `Mapping[str, P]` should offer a way to leave the asking component
+  out, rather than every peer writing the same one-line filter.
 - Whether a component should be able to *declare* which capabilities it offers,
   instead of being matched on shape alone. Matching on shape is what lets a
   plugin answer a question it has never heard of, and it is also what lets one

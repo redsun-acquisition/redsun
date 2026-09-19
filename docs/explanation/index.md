@@ -39,3 +39,4 @@ Status, Context, Decision, Consequences.
 - **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**
 - **[14. Collaborators arrive in `setup`](decisions/0014-collaborators-arrive-in-setup.md)**
 - **[15. A component refused at declaration is skipped](decisions/0015-a-component-refused-at-declaration-is-skipped.md)**
+- **[16. Questions read from the annotation](decisions/0016-questions-read-from-the-annotation.md)**

@@ -230,25 +230,10 @@ listed in the [changelog](changelog.md).
   action written both ways runs twice, and a bundle reaches a component one
   way, by calling it or by a signal.
 
-- `Requires[P]` - the components of the session that satisfy a protocol, spelled
-  `Annotated[Mapping[str, P], Every()]`. Asked for in `setup`, where every
-  component exists, so the mapping arrives complete; a component that failed to
-  build is absent, and a component satisfying *P* appears in its own answer.
-
-- `RequiresOne[P]` and `RequiresMaybe[P]` - the same question expecting a single
-  answer, and ordinary dependencies rather than live views: the component
-  arrives built, and whatever answers is constructed first. Which component
-  answers is settled before anything is built, so a session holding none
-  (`RequiresOne`) or more than one fails to build, naming the components that
-  nearly matched and why. `RequiresMaybe` answers `None` for an empty session
-  and for one whose answering component failed to build; an asker of
-  `RequiresOne` is skipped instead. Both require *P* to declare at least one
-  method.
-
-- `DevicesOf[P]` - the same question asked of the devices, which `Requires[P]`
-  never answers over, spelled `Annotated[Mapping[str, P], Devices()]`. It is not
-  a live view, so it may be read in `__init__`. Ask for `DeviceMapping` to
-  receive every device unfiltered.
+- `DevicesOf[P]` - every device of the session satisfying a protocol, by name,
+  spelled `Annotated[Mapping[str, P], Devices()]` and asked for in a
+  constructor, where the devices already exist, so it may be read in
+  `__init__`. Ask for `DeviceMapping` to receive every device unfiltered.
 
 - `satisfies`, `Session.satisfying` and `Session.rejected` - the membership
   check, the components matching a protocol, and why each near miss was left
@@ -256,7 +241,7 @@ listed in the [changelog](changelog.md).
   implementation must accept every call the protocol permits, so a renamed
   parameter or an extra required one is not a match, while an extra defaulted
   parameter is. Types are not compared, which a type checker does at the call
-  site. *P* must be `runtime_checkable`.
+  site.
 
 - `Placement`, `Frontend` and `Frontend.requires` - what a view asks the
   frontend to attach it at, the toolkit a container is built against, and the
@@ -545,8 +530,8 @@ listed in the [changelog](changelog.md).
 - A component that shares nothing, asks for nothing and is wired to nothing is
   named once the wiring is applied, as is a `provides` return type no component
   asks for. Both are warnings rather than failures. Being injected by another
-  component counts as being used, as does answering a `Requires`, `RequiresOne`
-  or `RequiresMaybe` question.
+  component counts as being used, as does answering a question another
+  component asks.
 
 - `AsService`, `Launch` and `Attach` declare a service on a session. `Launch`
   describes a service the session runs as `python -m <module>`, with `ready`,
@@ -656,11 +641,6 @@ listed in the [changelog](changelog.md).
 - `constant` (`redsun.experimental.injection`) returns a callable typed by the
   value it holds, `Callable[[], T]`, rather than `Callable[[], Any]`.
 
-- A question whose `P` is not a protocol class, such as a union or a class
-  inheriting a protocol, is refused saying `P` is not a protocol, for
-  `Requires`, `RequiresOne`, `RequiresMaybe` and `DevicesOf` alike. A class
-  inheriting a runtime-checkable protocol was accepted as the protocol.
-
 - A device is built as `cls(name=<name>, **kwargs)` rather than
   `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
   whose first parameter is `prefix`, can be declared. A device that takes `name`
@@ -673,11 +653,9 @@ listed in the [changelog](changelog.md).
   `@provides` method answers from what the constructor made.
 
 - A question about the session is asked in `setup` rather than in a
-  constructor: `Requires[P]`, `RequiresOne[P]` and `RequiresMaybe[P]` in a
-  constructor are refused, naming the parameter. `DevicesOf[P]` stays allowed
-  in both, since the devices exist before any component. Nothing is a live view
-  any more, so `Satisfying`, `SessionNotBuilt` and the seal that gated them are
-  gone, and `Session.satisfying` returns a plain mapping beside the new
+  constructor, and nothing is a live view any more, so `Satisfying`,
+  `SessionNotBuilt` and the seal that gated them are gone, and
+  `Session.satisfying` returns a plain mapping beside the new
   `Session.rejected`.
 
 - A component asking for a type shared by a component that failed to build is
@@ -755,7 +733,8 @@ listed in the [changelog](changelog.md).
   ```
 
 - The requirement that a protocol asked about is `runtime_checkable`, and that
-  one asked for a single answer declares a method.
+  one asked for a single answer declares a method. `DevicesOf` is no longer
+  accepted in `setup`.
 
 ### Fixed
 
