@@ -643,6 +643,9 @@ class Session(BuildableSession):
         for declaration in self._declarations.values():
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
+        # read only classes, so a mistake is reported before anything starts
+        self._refuse_component_values(self._components())
+        self._check_layers(self._components())
         self._services = read_services(type(self), config)
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
@@ -682,10 +685,7 @@ class Session(BuildableSession):
         store.register_provider(constant(self._settings), type_hint=Settings)
         self._register_framework_values(store, lambda: dict(self._devices))
         self._share(store, self._configuration())
-        declarations = self._components()
-        self._refuse_component_values(declarations)
-        self._check_layers(declarations)
-        self._answer(store, declarations)
+        self._answer(store, self._components())
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""

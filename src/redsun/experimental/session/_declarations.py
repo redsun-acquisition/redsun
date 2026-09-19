@@ -19,12 +19,15 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
+from redsun.experimental.injection import shared_keys
 from redsun.experimental.view import Placement
 from redsun.services import Service
 
 from ..._hooks import HookError, known_points
+from ._factories import resolved
 from ._frontend import Frontend
 from ._plugins import META_KEYS, resolve, service_entry
+from ._questions import is_protocol_union, protocol_of, shape_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -326,6 +329,7 @@ def check(
             f"{where} defines 'async def setup'; the session calls it without "
             "awaiting, so it must be synchronous"
         )
+    check_questions(target, where)
     if owns_signal(target) and not target.__weakrefoffset__:
         raise TypeError(
             f"{where} owns a signal, but {target.__name__} has '__slots__' "
@@ -356,6 +360,70 @@ def check(
         frontend.check_placement(target, declared, where)
     frontend.check_view(target, where)
     return target
+
+
+DEVICE_PROTOCOL_MODULES: Final = ("bluesky.protocols", "ophyd_async")
+"""Where the protocols a device implements come from."""
+
+
+def check_questions(cls: type, where: str) -> None:
+    """Refuse a question *cls* asks where the session cannot answer it.
+
+    A constructor runs before the other components exist, so it asks no
+    protocol question beyond the devices it takes with ``DevicesOf``. A
+    `setup` asks no question about a device protocol, the devices being
+    asked for in the constructor, and names one protocol per parameter. A
+    value shared with ``provides`` is a concrete object, so its type is not a
+    protocol.
+
+    Raises
+    ------
+    TypeError
+        Naming the parameter or shared value and what to write instead.
+    """
+    label = f"the constructor of {cls.__qualname__}"
+    for pname, param in resolved(cls, label).parameters.items():
+        if pname != "name" and shape_of(param.annotation) is not None:
+            raise TypeError(
+                f"{where} asks about the session in its {pname!r} parameter, "
+                "and the other components do not exist while it is built; "
+                "ask for it in 'setup'"
+            )
+    setup = inspect.getattr_static(cls, "setup", None)
+    if setup is not None:
+        label = f"{cls.__qualname__}.setup"
+        for pname, param in resolved(setup, label).parameters.items():
+            hint = param.annotation
+            shape = shape_of(hint)
+            if shape is not None and is_device_protocol(shape[1]):
+                asked = shape[1].__name__
+                raise TypeError(
+                    f"{where} asks for {asked!r} in the {pname!r} parameter of "
+                    "'setup', a protocol devices implement; ask for devices in "
+                    f"the constructor with 'DevicesOf[{asked}]'"
+                )
+            if is_protocol_union(hint):
+                raise TypeError(
+                    f"{where} asks for a union of protocols in the {pname!r} "
+                    "parameter of 'setup', which names no one answer; ask for "
+                    "each protocol in a parameter of its own"
+                )
+    for member, provided in shared_keys(cls).items():
+        protocol = protocol_of(provided)
+        if protocol is not None:
+            raise TypeError(
+                f"{where} shares a {protocol.__name__!r} from {member!r}, a "
+                "protocol; a shared value is a concrete object, so annotate "
+                "the method with its class"
+            )
+
+
+def is_device_protocol(protocol: type) -> bool:
+    """Whether *protocol* is, or extends, a protocol a device implements."""
+    return any(
+        klass.__module__.startswith(DEVICE_PROTOCOL_MODULES)
+        for klass in protocol.__mro__
+    )
 
 
 def owns_signal(cls: type) -> bool:

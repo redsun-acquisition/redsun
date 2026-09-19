@@ -13,7 +13,15 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeForm, TypeIs
 
-__all__ = ["NoAnswer", "Shape", "answer", "is_protocol_class", "shape_of"]
+__all__ = [
+    "NoAnswer",
+    "Shape",
+    "answer",
+    "is_protocol_class",
+    "is_protocol_union",
+    "protocol_of",
+    "shape_of",
+]
 
 Shape = Literal["one", "maybe", "every"]
 
@@ -27,28 +35,44 @@ def is_protocol_class(candidate: object) -> TypeIs[type]:
     return isinstance(candidate, type) and is_protocol(candidate)
 
 
+def protocol_of(hint: object) -> type | None:
+    """Return the protocol *hint* names, subscripted or not, or ``None``."""
+    if is_protocol_class(hint):
+        return hint
+    origin = get_origin(hint)
+    return origin if is_protocol_class(origin) else None
+
+
+def is_protocol_union(hint: TypeForm[Any]) -> bool:
+    """Whether *hint* is a union of more than one type, a protocol among them."""
+    if get_origin(hint) not in (Union, UnionType):
+        return False
+    options = [arg for arg in get_args(hint) if arg is not type(None)]
+    return len(options) > 1 and any(protocol_of(option) for option in options)
+
+
 def shape_of(hint: TypeForm[Any]) -> tuple[Shape, type] | None:
     """Return how many answers *hint* asks for, and about which protocol.
 
     A protocol ``P`` asks for exactly one object satisfying it, ``P | None``
     for at most one, and ``Mapping[str, P]`` for every component satisfying
-    it. ``None`` for any other hint, which names a value.
+    it. A subscripted generic protocol is matched as its unsubscripted class.
+    ``None`` for any other hint, which names a value.
     """
-    if is_protocol_class(hint):
-        return "one", hint
+    protocol = protocol_of(hint)
+    if protocol is not None:
+        return "one", protocol
     args = get_args(hint)
     if get_origin(hint) in (Union, UnionType):
         options = [arg for arg in args if arg is not type(None)]
-        if len(args) == 2 and len(options) == 1 and is_protocol_class(options[0]):
-            return "maybe", options[0]
+        protocol = protocol_of(options[0]) if len(options) == 1 else None
+        if len(args) == 2 and protocol is not None:
+            return "maybe", protocol
         return None
-    if (
-        get_origin(hint) is Mapping
-        and len(args) == 2
-        and args[0] is str
-        and is_protocol_class(args[1])
-    ):
-        return "every", args[1]
+    if get_origin(hint) is Mapping and len(args) == 2 and args[0] is str:
+        protocol = protocol_of(args[1])
+        if protocol is not None:
+            return "every", protocol
     return None
 
 

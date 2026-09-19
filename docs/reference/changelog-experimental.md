@@ -8,11 +8,21 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- A presenter or view asking a question the session cannot answer where it
+  asks is skipped at declaration (`redsun.experimental`): a protocol in its
+  constructor, which runs before the other components exist; a protocol
+  devices implement in `setup`, from `bluesky.protocols` or `ophyd_async` or
+  extending one, which is asked for with `DevicesOf[P]` in the constructor; a
+  union of protocols in `setup`; and a `provides` method annotated with a
+  protocol, a shared value being a concrete object.
+
 - A `setup` parameter annotated with a protocol (`redsun.experimental`) is
   answered by the one component or shared value satisfying it, with no marker.
   `P | None = None` takes at most one, and `Mapping[str, P]` every component
   satisfying `P`, the asker included. The check runs on built instances, so
-  `P` need not be `runtime_checkable` and may declare data members. Several
+  `P` need not be `runtime_checkable` and may declare data members, and a
+  subscripted generic protocol such as `Reading[float]` is matched as
+  `Reading`. Several
   answers where one is asked for, none, or one from a later layer raise; a
   question only a component that failed to build could answer leaves the
   asker not set up:
@@ -592,6 +602,11 @@ listed in the [changelog](changelog.md).
   ```
 
 ### Changed
+
+- A constructor taking what another component owns, and a `setup` reaching
+  into a later layer (`redsun.experimental`), are refused when the session
+  reads its declarations, before any service starts or device connects, where
+  they were refused when the store was filled.
 
 - `register_shared` (`redsun.experimental.injection`) returns the values it
   shared, in the order it registered them.
