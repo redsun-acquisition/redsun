@@ -728,6 +728,62 @@ A service behaves as it does in the supported container, described in
 experimental session opens no session log file, so a service's output reaches
 the `redsun.service.<name>` loggers but no file of its own.
 
+## Storage and the catalog
+
+The `storage` section means the same as in the supported container, and both
+layers read it the same way:
+
+```yaml
+storage:
+  base_dir: "D:/experiments/2026-09"   # optional
+  catalog:                             # optional, needs the tiled extra
+    readable: [/data/camera]           # optional
+```
+
+The session builds one
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider] from it. A
+device whose constructor takes `path_provider` gets it, and a declaration
+cannot give one. Anything else asks for it by type, and wiring reaches its
+slots as `path_provider`:
+
+=== "Today"
+
+    ```python
+    class MyController:
+        def inject_dependencies(self, container: VirtualContainer) -> None:
+            self._provider = container.require(PATH_PROVIDER)
+    ```
+
+=== "Experimental"
+
+    ```python
+    class MyController:
+        def __init__(self, name: str, /, provider: SessionPathProvider) -> None:
+            self._provider = provider
+    ```
+
+With a `catalog` key, `"services"` also starts a `tiled` server in
+`<base_dir>/<session>/catalog`, and the session stops it after every component
+and service. A component asks for its address by type, and gets `None` when
+the session has no catalog or it failed to start:
+
+=== "Today"
+
+    ```python
+    address = container.try_require(CATALOG)
+    ```
+
+=== "Experimental"
+
+    ```python
+    class MyRecorder:
+        def __init__(self, name: str, /, address: CatalogAddress | None = None) -> None:
+            self._address = address
+    ```
+
+[Keep a catalog of runs](../how-to/keep-a-catalog.md) covers the rest: what the
+catalog reads, recording runs with `TiledWriter`, and reading them back.
+
 ## Two components of the same class
 
 Two motor stages, or two copies of a plot widget, are normal. Each declaration
@@ -1109,6 +1165,7 @@ connect them in `wire` and skip the question entirely.
 | --- | --- | --- |
 | Declaring a component | `declare_presenter(Cls, ...)` | `name: AsPresenter[Cls]` |
 | Declaring a service | `declare_service(module=..., prefix=...)` | `name: Annotated[AsService, Launch(...)]` |
+| The path provider, the catalog | `container.require(PATH_PROVIDER)`, `container.try_require(CATALOG)` | a `SessionPathProvider` or `CatalogAddress \| None` parameter |
 | Asking for something | `container.require(KEY)` in a method | a constructor parameter |
 | Sharing something | `container.provide(KEY, value)` in a method | `@provides` on a method |
 | Optional collaborator | `container.try_require(KEY)` | `X \| None = None` |
