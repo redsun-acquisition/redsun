@@ -374,6 +374,15 @@ class Session(BuildableSession):
         return self._built(Layer.VIEW)
 
     @property
+    def view_arguments(self) -> Mapping[str, object]:
+        """What the session passes every view's constructor, besides its name.
+
+        Nothing here. A session bound to a toolkit passes what its views are
+        built with, by keyword.
+        """
+        return {}
+
+    @property
     def declarations(self) -> Mapping[str, Declaration]:
         """The declarations collected from the class."""
         return dict(self._declarations)
@@ -1311,12 +1320,13 @@ class Session(BuildableSession):
         if store is None:
             raise RuntimeError("The registry step has to run before a component is")
         declarations = [d for d in self._components() if d.kind is layer]
+        passed = self.view_arguments if layer is Layer.VIEW else {}
         for declaration in declarations:
-            params = injectable(declaration.cls, declaration.cfg_kwargs)
+            params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
             if self._refuse_or_skip(store, declaration, params):
                 continue
             try:
-                instance = store.inject(factory(declaration, self._on_built))()
+                instance = store.inject(factory(declaration, self._on_built, passed))()
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
                 self._skip(declaration, e)
                 continue

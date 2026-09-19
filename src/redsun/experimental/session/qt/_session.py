@@ -14,6 +14,9 @@ from redsun.experimental.session.qt import Dock, QtSession
 class ImageView(QWidget):
     placement = Dock("left")
 
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+
 
 class MyApp(QtSession):
     image: AsView[ImageView]
@@ -26,6 +29,7 @@ MyApp().run()
 from __future__ import annotations
 
 import base64
+import inspect
 import logging
 import sys
 import weakref
@@ -76,6 +80,8 @@ from ...._hooks import (
     WrapsBuild,
 )
 from .._base import ConfigurationInUse, Session
+from .._declarations import Layer
+from .._factories import resolved
 from .._frontend import Frontend
 from .._protocols import DesktopSession
 from ._actions import read_actions
@@ -92,7 +98,8 @@ if TYPE_CHECKING:
     from in_n_out import Store
 
     from ...._config import Source
-    from .._protocols import AttachableComponent
+    from .._declarations import Declaration
+    from .._protocols import AttachableComponent, NamedComponent
 
 ASK_ON_CLOSE: Final[str] = "ask_on_close"
 """The settings key holding whether the close prompt still appears."""
@@ -170,6 +177,35 @@ class Qt(Frontend):
         ToolBarItem: QAction,
     }
 
+    @classmethod
+    def check_view(cls, view: type, where: str) -> None:
+        """Refuse a view whose constructor does not start ``(name: str, parent: QWidget``.
+
+        The session passes both by keyword, so neither may sit after a ``/``,
+        and neither may sit after a ``*``, so a missing ``parent`` shows in the
+        first line of the signature.
+
+        Raises
+        ------
+        TypeError
+            If the constructor starts any other way.
+        """
+        params = resolved(view, f"the constructor of {view.__qualname__}").parameters
+        leading = [
+            (param.name, param.kind, param.annotation)
+            for param in list(params.values())[:2]
+        ]
+        if leading == [
+            ("name", inspect.Parameter.POSITIONAL_OR_KEYWORD, str),
+            ("parent", inspect.Parameter.POSITIONAL_OR_KEYWORD, QWidget),
+        ]:
+            return
+        raise TypeError(
+            f"{where} is declared as a view, but {view.__name__}'s constructor "
+            "does not start with '(name: str, parent: QWidget)', which the Qt "
+            "session passes to every view; neither may sit after a '/' or a '*'"
+        )
+
 
 class QtSession(DesktopSession[QMainWindow], Session):
     """Application container whose views are attached to a Qt main window.
@@ -192,7 +228,13 @@ class QtSession(DesktopSession[QMainWindow], Session):
     ```
     """
 
-    __slots__ = ("_close_guard", "_main_window", "_model", "_qt_app")
+    __slots__ = (
+        "_close_guard",
+        "_main_window",
+        "_model",
+        "_qt_app",
+        "_window_widgets",
+    )
 
     frontend = Qt
     hook_points: ClassVar[Mapping[str, type]] = {
@@ -210,6 +252,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
         self._qt_app: QApplication | None = None
+        self._window_widgets: set[QWidget] = set()
 
     @property
     def main_window(self) -> QModelMainWindow:
@@ -226,6 +269,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
         if self._main_window is None:
             raise RuntimeError("Call build() before reading the main window")
         return self._main_window
+
+    @property
+    def view_arguments(self) -> Mapping[str, object]:
+        """The main window, as every view's ``parent``."""
+        return {"parent": self.main_window}
 
     @property
     def app(self) -> QApplication:
@@ -266,7 +314,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         may supply the ``QApplication`` itself. The session's own application
         follows, because the components are built out of its store, and the
         ``actions`` section is registered on it at once, so a hook dressing the
-        window finds every command it may put in a menu. The colour scheme is
+        window finds every command it may put in a menu. The window comes next,
+        since every view is built as its child. The colour scheme is
         asked for before any widget exists to be painted in the wrong one, and
         a ``configure_application`` hook runs last, so one restyling the
         application does so over a scheme already in force. Each of them
@@ -293,6 +342,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.on_release(self._destroy_widgets)
         self._register_actions()
         self._register_save_action()
+        window = QModelMainWindow(self._model)
+        window.setWindowTitle(self.name)
+        self._main_window = window
 
         ColorSchemeMode.from_config(self._configuration()).apply()
 
@@ -309,6 +361,35 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Drop the toolkit application, which the session was holding up."""
         self._qt_app = None
 
+    def build_views(self) -> None:
+        """Build the views as children of the main window.
+
+        A view that fails after handing itself to the window as a child would
+        be shown with it, so what it left behind is deleted.
+        """
+        self._window_widgets = self._direct_widgets()
+        super().build_views()
+
+    def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
+        super()._on_built(declaration, instance)
+        if declaration.kind is Layer.VIEW:
+            self._window_widgets = self._direct_widgets()
+
+    def _skip(self, declaration: Declaration, reason: BaseException) -> None:
+        super()._skip(declaration, reason)
+        if declaration.kind is not Layer.VIEW or self._main_window is None:
+            return
+        for widget in self._direct_widgets() - self._window_widgets:
+            widget.hide()
+            widget.deleteLater()
+
+    def _direct_widgets(self) -> set[QWidget]:
+        return set(
+            self.main_window.findChildren(
+                QWidget, options=QtNamespace.FindChildOption.FindDirectChildrenOnly
+            )
+        )
+
     def present(self) -> None:
         """Make the window, put every view where it asks to be, and dress it.
 
@@ -316,9 +397,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         is added rather than set, so it neither replaces a menu bar nor takes
         a dock area a view asked for.
         """
-        window = QModelMainWindow(self.model)
-        window.setWindowTitle(self.name)
-        self._main_window = window
+        window = self.main_window
         # the guard outlives the window only if something holds it, and the
         # window holds an event filter weakly
         self._close_guard = CloseGuard(self)

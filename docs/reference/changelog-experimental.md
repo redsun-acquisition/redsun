@@ -8,6 +8,23 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- `Frontend.check_view` and `Session.view_arguments`
+  (`redsun.experimental`) - a frontend refuses a view class it cannot build where the view is
+  declared, and a session passes every view's constructor what it returns, by
+  keyword. Neither does anything by default. `Qt.check_view` refuses a view
+  whose constructor does not start with `(name: str, parent: QWidget)`, and
+  `QtSession` passes `main_window` as every view's parent, creating it at the
+  start of the build. A view that fails after passing the window to
+  `super().__init__` is removed from it:
+
+  ```python
+  class MotorView(QWidget):
+      placement: Placement = Dock("left")
+
+      def __init__(self, name: str, parent: QWidget) -> None:
+          super().__init__(parent)
+  ```
+
 - **`Session.storage`** and **`Session.path_provider`**
   (`redsun.experimental`) - a session reads the `storage` section as
   `redsun.containers` does, and builds one `SessionPathProvider` from it. A
@@ -60,8 +77,9 @@ listed in the [changelog](changelog.md).
   `ophyd_async.core.Device`, and a class that subclasses it is refused in either
   other layer. A presenter or view is called with every argument by keyword,
   `name` included, so it must take `name` as a parameter a keyword can fill;
-  a name that could only arrive inside `*args` or `**kwargs` is refused. A component appearing only in the session file takes
-  its layer from the section it sits under, and is checked the same way. The
+  a name that could only arrive inside `*args` or `**kwargs` is refused. A
+  component appearing only in the session file takes its layer from the
+  section it sits under, and is checked the same way. The
   three are also reachable as `redsun.experimental.session.components`. A built
   component is set on the session under its name, so a name the session never
   declared raises `AttributeError` and a type checker refuses it, and a

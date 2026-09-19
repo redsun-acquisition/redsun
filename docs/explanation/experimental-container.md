@@ -370,8 +370,8 @@ value and shares it; the other asks for it by type:
 class ImageView(QWidget):
     placement = Central()
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self._viewer = ViewerModel()
 
     @provides
@@ -382,8 +382,8 @@ class ImageView(QWidget):
 class ROIView(QWidget):
     placement = Dock("right")
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self._viewer: ViewerModel | None = None
 
     def setup(self, viewer: ViewerModel) -> None:
@@ -465,6 +465,26 @@ declared. A frontend whose demand is not a subclass relation overrides
 
 It also means frontend-specific detail stays inside the frontend. A dock that
 starts floating is a field on a Qt class, which is where Qt is allowed to be.
+
+How a view is constructed is the frontend's business too.
+`Frontend.check_view` refuses a view class the frontend cannot build, where the
+view is declared, and `Session.view_arguments` is what a session passes every
+view's constructor besides its name. Neither does anything in the core. Under
+Qt, a view's constructor starts with `name: str` and `parent: QWidget`, and
+`QtSession` passes its main window as the parent, so a view is part of the
+window from the moment it exists:
+
+```python
+class MotorView(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+```
+
+A view whose constructor does not start with the two, annotated exactly so,
+is refused where it is declared. A view that fails after passing the window to
+`super().__init__` leaves nothing behind in it.
 
 This is also the whole of the difference between the two component layers. A
 view declares a placement; a presenter does not:

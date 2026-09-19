@@ -27,6 +27,20 @@ class Frontend:
     requires: ClassVar[Mapping[type[Placement], type]] = {}
 
     @classmethod
+    def check_view(cls, view: type, where: str) -> None:
+        """Refuse a view class this frontend cannot build.
+
+        Runs where the view is declared, beside `check_placement`. Nothing is
+        refused here; a frontend constraining how its views are constructed
+        overrides it.
+
+        Raises
+        ------
+        TypeError
+            In an override, naming what *view* lacks.
+        """
+
+    @classmethod
     def check_placement(
         cls, view: type | object, placement: Placement, where: str
     ) -> None:

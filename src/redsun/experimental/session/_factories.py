@@ -100,13 +100,16 @@ def resolved(target: Any, label: str) -> inspect.Signature:
 
 
 def injectable(
-    cls: type, cfg_kwargs: Mapping[str, Any], binds_name: bool = True
+    cls: type,
+    cfg_kwargs: Mapping[str, Any],
+    binds_name: bool = True,
+    passed: Iterable[str] = (),
 ) -> dict[str, TypeForm[Any]]:
     """Return the constructor parameters the session is responsible for.
 
-    Excludes anything the configuration supplied and variadics, and ``name``
-    when the session binds it. A shared service is given no name, so every
-    parameter of one is the session's to answer.
+    Excludes anything the configuration supplied, variadics, *passed*, and
+    ``name`` when the session binds it. A shared service is given no name, so
+    every parameter of one is the session's to answer.
 
     A parameter carrying a default is widened to ``X | None``, so the session
     fills it when something provides ``X`` and leaves the default alone when
@@ -122,7 +125,7 @@ def injectable(
     TypeError
         If a remaining parameter carries no annotation.
     """
-    bound = ("self", "name") if binds_name else ("self",)
+    bound = ("self", "name", *passed) if binds_name else ("self", *passed)
     return wanted_from(
         constructor(cls), cls.__name__, cfg_kwargs, bound, refuse_questions=True
     )
@@ -234,7 +237,9 @@ def is_union(hint: TypeForm[Any]) -> bool:
 
 
 def factory(
-    declaration: Declaration, on_built: Callable[[Declaration, Any], None]
+    declaration: Declaration,
+    on_built: Callable[[Declaration, Any], None],
+    passed: Mapping[str, object],
 ) -> Callable[..., Any]:
     """Return the callable the store fills and calls for *declaration*.
 
@@ -244,9 +249,10 @@ def factory(
 
     Optional parameters stay in the signature: the store fills ``X | None``
     with ``None`` when nothing provides ``X``. A parameter answered that way is
-    left out of the call, so its own default applies.
+    left out of the call, so its own default applies. *passed* reaches the
+    constructor by keyword, untouched.
     """
-    params = injectable(declaration.cls, declaration.cfg_kwargs)
+    params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
     optional = defaulted(declaration.cls, params)
 
     def build(**deps: Any) -> Any:
@@ -256,7 +262,7 @@ def factory(
             if value is not None or pname not in optional
         }
         instance = declaration.cls(
-            name=declaration.name, **declaration.cfg_kwargs, **supplied
+            name=declaration.name, **passed, **declaration.cfg_kwargs, **supplied
         )
         on_built(declaration, instance)
         return instance

@@ -26,8 +26,8 @@ RIGHT = QtNamespace.DockWidgetArea.RightDockWidgetArea
 class Panel(QWidget):
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 

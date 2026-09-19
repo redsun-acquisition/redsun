@@ -337,6 +337,7 @@ def check(
         )
     if isinstance(declared, Placement):
         frontend.check_placement(target, declared, where)
+    frontend.check_view(target, where)
     return target
 
 

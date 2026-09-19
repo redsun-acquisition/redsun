@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -10,6 +11,7 @@ import pytest
 import yaml
 from app_model import Action, Application
 from app_model.types import MenuRule
+from qtpy.QtCore import QEvent
 from qtpy.QtGui import QAction, QCloseEvent
 from qtpy.QtWidgets import (
     QApplication,
@@ -53,48 +55,48 @@ pytestmark = pytest.mark.qt
 class Panel(QWidget):
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 
 class Canvas(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 
 class Other(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 
 class Save(QAction):
     placement: Placement = MenuItem("File")
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
         self.name = name
 
 
 class Open(QAction):
     placement: Placement = MenuItem("File")
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
         self.name = name
 
 
 class Acquire(QAction):
     placement: Placement = ToolBarItem("Plans")
 
-    def __init__(self, name: str) -> None:
-        super().__init__(name)
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(name, parent)
         self.name = name
 
 
@@ -149,8 +151,8 @@ from redsun.experimental.session.qt import Central, QtSession
 class Panel(QWidget):
     placement: Placement = Central()
 
-    def __init__(self, name):
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 
@@ -177,8 +179,8 @@ class Closing(QWidget):
 
     placement: Placement = Dock("left")
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
     def shutdown(self) -> None:
@@ -196,6 +198,104 @@ class ClosingApp(QtSession):
 
 class SaveApp(QtSession):
     config: ClassVar[dict[str, Any]] = {"name": "save-session"}
+
+
+class Receiving(QWidget):
+    """A view keeping the parent the session passed it."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.given = parent
+
+
+class Unparented(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self.name = name
+
+
+class OptionallyParented(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.name = name
+
+
+class KeywordParent(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, *, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+
+class ObjectNamed(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: object, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = str(name)
+
+
+class HelperKeeping(QWidget):
+    """A view parenting a helper widget to the window it was given."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.helper = QWidget(parent)
+
+
+class Breaking(QWidget):
+    """A view failing after it has joined the window."""
+
+    placement: Placement = Dock("right")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        raise RuntimeError(f"{name} fails after joining the window")
+
+
+STARTS_WITH = re.escape("does not start with '(name: str, parent: QWidget)'")
+
+
+class ReceivingApp(QtSession):
+    panel: AsView[Receiving]
+
+
+class UnparentedApp(QtSession):
+    panel: AsView[Unparented]
+
+
+class OptionallyParentedApp(QtSession):
+    panel: AsView[OptionallyParented]
+
+
+class KeywordParentApp(QtSession):
+    panel: AsView[KeywordParent]
+
+
+class ObjectNamedApp(QtSession):
+    panel: AsView[ObjectNamed]
+
+
+class GivenParentApp(QtSession):
+    config: ClassVar[dict[str, Any]] = {"views": {"panel": {"parent": None}}}
+
+    panel: AsView[Receiving]
+
+
+class BreakingApp(QtSession):
+    helper: AsView[HelperKeeping]
+    broken: AsView[Breaking]
 
 
 def _answer(monkeypatch: pytest.MonkeyPatch, path: str) -> None:
@@ -354,8 +454,8 @@ def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
     """The menu is created once and found again, not created per entry."""
     # a QAction is not reparented by addAction, so the caller keeps it alive
     views: dict[str, AttachableComponent] = {
-        "save": Save("save"),
-        "open": Open("open"),
+        "save": Save("save", parent=window),
+        "open": Open("open", parent=window),
     }
     attach(window, views)
 
@@ -365,7 +465,13 @@ def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
 
 
 def test_several_central_views_share_the_area_as_tabs(window: QMainWindow) -> None:
-    attach(window, {"canvas": Canvas("canvas"), "other": Other("other")})
+    attach(
+        window,
+        {
+            "canvas": Canvas("canvas", parent=window),
+            "other": Other("other", parent=window),
+        },
+    )
 
     tabs = window.centralWidget()
     assert isinstance(tabs, QTabWidget)
@@ -478,6 +584,53 @@ def test_shutdown_destroys_the_widgets_the_session_built() -> None:
         window.windowTitle()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = app.main_window
+
+
+def test_a_view_is_given_the_main_window_as_its_parent(build: BuildSession) -> None:
+    app = build(ReceivingApp)
+
+    assert app.panel.given is app.main_window
+
+
+@pytest.mark.parametrize(
+    ("app", "match"),
+    [
+        (UnparentedApp, STARTS_WITH),
+        (OptionallyParentedApp, STARTS_WITH),
+        (KeywordParentApp, STARTS_WITH),
+        (ObjectNamedApp, STARTS_WITH),
+    ],
+    ids=[
+        "no-parent",
+        "optional-parent",
+        "keyword-only-parent",
+        "name-not-str",
+    ],
+)
+def test_a_view_not_shaped_for_qt_is_refused(app: type[QtSession], match: str) -> None:
+    with pytest.raises(TypeError, match=match):
+        app().build()
+
+
+def test_a_view_given_a_parent_by_its_configuration_is_skipped(
+    build: BuildSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The configuration never replaces the window as the parent."""
+    app = build(GivenParentApp)
+
+    assert "panel" not in app.views
+    assert "multiple values for keyword argument 'parent'" in caplog.text
+
+
+def test_a_view_failing_after_joining_the_window_leaves_nothing_in_it(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """What another view parented to the window stays."""
+    app = build(BreakingApp)
+    qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    assert app.main_window.findChildren(Breaking) == []
+    assert app.helper.helper.parent() is app.main_window
 
 
 def test_a_view_is_shut_down_before_its_widget_is_destroyed() -> None:

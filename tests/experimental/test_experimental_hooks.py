@@ -95,8 +95,8 @@ class Panel(QWidget):
 
     placement = Dock("left")
 
-    def __init__(self, name: str) -> None:
-        super().__init__()
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
 
