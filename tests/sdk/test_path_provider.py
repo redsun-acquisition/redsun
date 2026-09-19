@@ -148,6 +148,31 @@ def test_a_locked_root_cannot_move(tmp_path: Path) -> None:
     assert provider.base_dir == tmp_path
 
 
+@pytest.mark.parametrize(
+    ("session", "folder"),
+    [
+        ("my-session.v2", "my-session.v2"),
+        ("Lab A: STED", "Lab_A_STED"),
+        ("a/b", "a_b"),
+        ("..", "_"),
+        (".hidden", "hidden"),
+        ("", "_"),
+    ],
+    ids=["plain", "spaces-and-colon", "slash", "parent", "leading-dot", "empty"],
+)
+def test_every_session_name_gives_a_directory_inside_the_root(
+    tmp_path: Path, session: str, folder: str
+) -> None:
+    provider = SessionPathProvider(base_dir=tmp_path, session=session)
+
+    directory = provider("det").directory_path
+
+    assert provider.session_dir == tmp_path / folder
+    assert directory.is_relative_to(provider.session_dir)
+    # PathInfo holds a PurePath, which cannot resolve ".."
+    assert Path(directory).resolve().is_relative_to(tmp_path.resolve())
+
+
 def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
     """A run's remaining files must not land somewhere else than its first ones."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")

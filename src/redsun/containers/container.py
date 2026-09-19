@@ -1048,14 +1048,10 @@ class AppContainer:
         )
         if self._storage.catalog is not None:
             _require_tiled()
-            self._catalog = self._start_catalog(
-                self._storage.catalog, base_cfg["session"]
-            )
+            self._catalog = self._start_catalog(self._storage.catalog)
         logger.debug("VirtualContainer created")
 
-    def _start_catalog(
-        self, config: CatalogConfig, session: str
-    ) -> SimpleTiledServer | None:
+    def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
         """Start the session's catalog, or log why it could not start.
 
         The catalog reads assets from the session's own directory under the
@@ -1069,7 +1065,7 @@ class AppContainer:
         from ome_tiled.bluesky import register_consolidator
         from tiled.server.simple import SimpleTiledServer
 
-        session_dir = self.path_provider.base_dir / session
+        session_dir = self.path_provider.session_dir
         server: SimpleTiledServer | None = None
         try:
             server = SimpleTiledServer(

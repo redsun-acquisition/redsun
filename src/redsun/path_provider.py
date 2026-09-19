@@ -18,6 +18,7 @@ import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
 
+from redsun.utils._paths import session_folder
 from redsun.virtual import slot
 
 if TYPE_CHECKING:
@@ -42,8 +43,12 @@ def _base_dir() -> Path:
 
 
 def session_directory(session: str) -> Path:
-    """Return the directory *session* owns, `<base_dir>/<session>`."""
-    return _base_dir() / session
+    """Return the directory *session* owns under the default root.
+
+    The folder is named after *session* with every character unsafe in a path
+    replaced, as in `SessionPathProvider.session_dir`.
+    """
+    return _base_dir() / session_folder(session)
 
 
 class PlanFilenameProvider(FilenameProvider):
@@ -172,6 +177,17 @@ class SessionPathProvider(PathProvider):
         """Root the session's files go under."""
         return self._base_dir
 
+    @property
+    def session_dir(self) -> Path:
+        """Directory the session's files go under, inside `base_dir`.
+
+        Named after the session, with every run of characters other than
+        letters, digits, `.`, `-` and `_` replaced by `_` and leading and
+        trailing dots removed, so any session name gives a valid directory
+        inside `base_dir`.
+        """
+        return self._base_dir / session_folder(self._session)
+
     @slot
     def set_base_dir(self, base_dir: str | Path) -> None:
         """Change the base directory, resetting and rescanning all counters.
@@ -222,7 +238,7 @@ class SessionPathProvider(PathProvider):
         Sets each `(plan, datakey)` counter one past the highest number found
         in any date directory, so new filenames never reuse a number on disk.
         """
-        directory = self._base_dir / self._session
+        directory = self.session_dir
         if not directory.exists():
             return
         for date_dir in directory.iterdir():
@@ -254,7 +270,7 @@ class SessionPathProvider(PathProvider):
         Each call returns a new path, since it increments that data key's
         counter for the active plan.
         """
-        directory = self._base_dir / self._session / self._now().strftime("%Y-%m-%d")
+        directory = self.session_dir / self._now().strftime("%Y-%m-%d")
         if datakey_name:
             directory = directory / datakey_name
         return PathInfo(

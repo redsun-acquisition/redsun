@@ -131,6 +131,8 @@ Dates are specified in the format `DD-MM-YYYY`.
   its `catalog` has no place for is refused, and so is a `catalog` in a session
   without the `tiled` extra installed.
 
+- **`SessionPathProvider.session_dir`** (`redsun.path_provider`) - the
+  directory a session's files and catalog go under, inside `base_dir`.
 - **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
   every later `set_base_dir` raise `RuntimeError` with the reason given. A
   session with a catalog locks its provider once the catalog starts.
@@ -203,6 +205,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- A session's data, catalog and log folders are named after the session with
+  every run of characters other than letters, digits, `.`, `-` and `_`
+  replaced by `_`, and leading and trailing dots removed: `Lab A: STED` writes
+  to `Lab_A_STED`. The data folder used the name unchanged. A session whose
+  name has such characters writes to the new folder, and its earlier files
+  stay where they are.
 - **`AppContainer.BUILD_STEPS`** (`redsun.containers.container`) starts with
   `"services"`, so a `during_build` hook reports services starting, and has
   `"connect"` after `"devices"`. A build that raises stops the services before

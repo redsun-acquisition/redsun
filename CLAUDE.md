@@ -23,7 +23,7 @@ redsun/
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   |-- virtual/               VirtualContainer, wiring, provider protocols
 |   |-- qt/                    public Qt entry point, re-exports
-|   `-- utils/                 find_signals, descriptor helpers
+|   `-- utils/                 find_signals, descriptor helpers, session_folder (_paths.py)
 |-- tests/
 |   |-- conftest.py            qt marker, qapp, log directory, psygnal queue
 |   |-- sdk/                   unit tests, mirroring src/redsun
@@ -48,6 +48,10 @@ redsun/
 
 - There is no device package: devices, `DeviceMap` included, come from
   ophyd-async.
+- `redsun.utils` imports nothing from `redsun` at runtime, only under
+  `TYPE_CHECKING`: `log.py` imports `redsun.utils._paths`, and
+  `redsun.virtual` imports `redsun.log`, so a runtime import there would be
+  circular.
 - `benchmarks/` are never collected by pytest. Run one with
   `uv run python benchmarks/bench_acquire_zarr.py`.
 

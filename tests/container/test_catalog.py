@@ -146,6 +146,16 @@ def test_the_catalog_starts_where_the_session_says(
     assert (tmp_path / where / "catalog.db").is_file()
 
 
+def test_the_catalog_lives_in_the_session_folder_whatever_its_name(
+    session: Callable[..., AppContainer], tmp_path: Path
+) -> None:
+    """A name unsafe in a path gives the same folder the files and logs use."""
+    app = session(session="Lab A: STED", storage={"catalog": None})
+
+    assert app.path_provider.session_dir == tmp_path / "data" / "Lab_A_STED"
+    assert (app.path_provider.session_dir / "catalog" / "catalog.db").is_file()
+
+
 async def test_assets_read_back_only_from_readable_directories(
     session: Callable[..., AppContainer], tmp_path: Path
 ) -> None:
@@ -153,7 +163,7 @@ async def test_assets_read_back_only_from_readable_directories(
     app = session(storage={"catalog": {"readable": [str(tmp_path / "extra")]}})
     client = client_of(app)
     for directory in (
-        app.path_provider.base_dir / SESSION / "acquired",
+        app.path_provider.session_dir / "acquired",
         tmp_path / "extra",
         tmp_path / "outside",
     ):
@@ -246,7 +256,7 @@ def test_an_ome_zarr_run_reads_back_with_its_axis_names(
 ) -> None:
     """A ``TiledWriter`` stores the image as the store holds it, not as the frames."""
     app = session(storage={"catalog": None})
-    store = write_stack(app.path_provider.base_dir / SESSION / "acquired")
+    store = write_stack(app.path_provider.session_dir / "acquired")
     client = client_of(app)
 
     det = client[write_frames(client, store.as_uri())]["primary"]["det"]
