@@ -48,29 +48,27 @@ A presenter processing acquisition data subscribes to the `RunEngine`'s
 documents, directly or through the callback registry of the
 [`VirtualContainer`][redsun.virtual.VirtualContainer]. Document callbacks run
 synchronously on the engine's event loop thread and cannot await. A presenter
-storing a derived result, such as a median image computed from Event documents,
-reads the `StreamResource` document for the store the device wrote and adds its
-product to it. The acquisition itself belongs to the device, as
-[ADR 0013](../decisions/0013-acquisition-storage-belongs-to-the-device.md)
-records.
+storing a derived result, such as a median over Event documents, adds it to the
+store named in the `StreamResource` document; the acquisition itself belongs
+to the device
+([ADR 0013](../decisions/0013-acquisition-storage-belongs-to-the-device.md)).
 
 ## The session's path provider
 
 The container builds one
 [`SessionPathProvider`][redsun.path_provider.SessionPathProvider] per session
-and hands it to every device taking a `path_provider` keyword, so every file a
-session writes lands under one root:
+and passes it to every device taking a `path_provider` keyword, so all of a
+session's files share one root:
 
 ```
 <base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
 ```
 
-The data key names the last directory, so each detector writes into one of its
-own. Counters belong to `(plan, datakey)`, so two detectors in one run are both
-`<plan>_00003`.
+Each data key gets its own directory and counter, so two detectors in one run
+are both `<plan>_00003`. The `<session>` folder is the session name with
+characters unsafe in a path replaced.
 
-The root comes from the session file, and defaults to the user data directory,
-beside the session's logs:
+The root comes from the session file, and defaults to the user data directory:
 
 ```yaml
 session: my-session
@@ -79,8 +77,7 @@ storage:
   max_digits: 5                        # optional, width of the counter
 ```
 
-The provider is published for wiring as `path_provider`, and a component
-resolves it through
+The provider is wired as `path_provider`, and resolved through
 [`PATH_PROVIDER`][redsun.path_provider.PATH_PROVIDER]:
 
 ```python
@@ -89,8 +86,7 @@ provider.base_dir  # where files go now
 provider.set_base_dir("E:/other-disk")  # where they go from the next run on
 ```
 
-A component named `path_provider` is refused, since it would shadow the
-provider in the wiring.
+A component named `path_provider` is refused: it would shadow the provider.
 
 ### The plan lifecycle
 
@@ -106,25 +102,22 @@ wiring:
     to: path_provider.set_base_dir
 ```
 
-`set_plan` names files after the upcoming run and `reset_plan` sets the name
-back to `unknown`, so files written after a run are not filed under it. Only
-the application knows which signals mean "a plan started", so nothing is
-connected until it says so.
+`set_plan` names files after the upcoming run; `reset_plan` sets the name back
+to `unknown`. Only the application knows which signals mark a run, so nothing
+is connected by default.
 
-`set_base_dir` raises `RuntimeError` while a plan is running, since the run's
-remaining files would land somewhere else than the ones already written. A GUI
-offering the root as an editable field catches it and says so. A session that
-does not wire `set_plan` and `reset_plan` cannot tell that a plan is running,
-so it does not raise.
+`set_base_dir` raises `RuntimeError` while a plan runs, and for good once the
+session's catalog has started, since the catalog reads only the directories it
+started with. A GUI offering the root catches the error. Without `set_plan`
+and `reset_plan` wired, a running plan goes unnoticed.
 
 ### What is not supported
 
-A device cannot be given a root of its own from configuration. `path_provider`
-is reserved, as `service` and `autoconnect` are, and there is no per-device
-`base_dir`. One root per session is what makes a session archivable as a unit
-and what keeps a catalog's readable roots correct. A device that has to write
-elsewhere, to a scratch disk or inside a container, does not take the keyword
-and owns its paths:
+A device cannot get a root of its own from configuration: `path_provider` is
+reserved, as `service` and `autoconnect` are. One root per session keeps a
+session archivable as a unit and its catalog's readable directories correct. A
+device writing elsewhere, to a scratch disk or inside a container, skips the
+keyword and owns its paths:
 
 ```python
 class FastCamera(Device):
@@ -133,15 +126,12 @@ class FastCamera(Device):
         self._provider = StaticPathProvider(UUIDFilenameProvider(), scratch)
 ```
 
-Two devices must not share a data key. The key is the directory and the
-counter, so both would write the same filenames into the same place, and the
-writer that closes last is the one whose data survives.
+Two devices must not share a data key: they would write the same filenames in
+one place, and the last writer to close wins.
 
-A device's own provider cannot be retargeted from outside.
-`ophyd-async`'s `PathProvider` is a protocol with one method, `__call__`, and
-no interface for changing where it points. `set_base_dir` exists because
-`redsun` built that provider itself. If `ophyd-async` grows a public
-interface, this is what follows it.
+A device's own provider cannot be retargeted from outside: `ophyd-async`'s
+`PathProvider` has only `__call__`. `set_base_dir` exists because `redsun`
+built its provider itself.
 
 [plans]: https://blueskyproject.io/bluesky/main/plans.html
 [documents]: https://blueskyproject.io/bluesky/main/documents.html

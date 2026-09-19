@@ -42,10 +42,10 @@ callback registries per instance. Bindings therefore cannot live on the key.
 
 ## Decision
 
-`PATH_PROVIDER` is the example throughout what follows and no longer exists:
-the session's path provider is handed to devices directly, as
-[ADR 0013](0013-acquisition-storage-belongs-to-the-device.md) records. The
-mechanism this record decided is unchanged.
+`PATH_PROVIDER`, the example below, now lives in `redsun.path_provider` and
+is bound by the container, which also passes the provider to devices directly
+([ADR 0013](0013-acquisition-storage-belongs-to-the-device.md)). The mechanism
+this record decided is unchanged.
 
 A shared object is identified by a **typed key**, a `providers.Dependency[T]`
 exported as `ProviderKey[T]`, and bound per container:

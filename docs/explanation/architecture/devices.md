@@ -156,14 +156,13 @@ StandardDetector.__init__(det, name="det")
 
 ### Writing acquired data
 
-A device owns what it writes. Its service or its `ophyd-async` writer chooses
-the format, the dimensions, the chunking and when the file is complete, and the
-device emits `StreamResource` and `StreamDatum` documents naming the result:
-`mimetype` matching the bytes on disk, and `parameters["path"]` naming the
-array inside the store. `redsun` writes no acquisition bytes.
+A device owns what it writes. Its service or `ophyd-async` writer chooses the
+format, dimensions, chunking and when a file is complete; the device emits
+`StreamResource` and `StreamDatum` documents with a `mimetype` matching the
+bytes and `parameters["path"]` naming the array in the store. `redsun` writes
+no acquisition bytes.
 
-Where the files go comes from the session. A device whose constructor takes a
-`path_provider` keyword receives the session's
+A device whose constructor takes `path_provider` receives the session's
 [`SessionPathProvider`][redsun.path_provider.SessionPathProvider], an
 `ophyd-async` `PathProvider` giving
 `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`:
@@ -175,13 +174,9 @@ class Camera(Device):
         self._path_provider = path_provider
 ```
 
-The data key the device asks with names the last directory, so each detector
-writes into one of its own and owns its store. Counters belong to
-`(plan, datakey)`, so two detectors in one run are both `<plan>_00003`.
-
-A declaration cannot give `path_provider` itself; the container reserves it,
-as it does `service` and `autoconnect`. A device not taking the keyword is
-built unchanged and picks its own paths.
+Each data key gets its own directory and counter. A declaration cannot give
+`path_provider` itself; a device not taking it picks its own paths. Details:
+[the session's path provider](presenters.md#the-sessions-path-provider).
 
 ## Standby
 
