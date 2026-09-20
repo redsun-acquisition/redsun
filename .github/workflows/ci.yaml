@@ -47,7 +47,9 @@ jobs:
   publish_docs:
     name: Publish Documentation
     needs: [code_analysis, tests, docs]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # main and final tags only: a release candidate publishes a package and
+    # leaves the site describing the last release
+    if: github.event_name == 'push' && !contains(github.ref_name, 'rc')
     uses: ./.github/workflows/publish-docs.yaml
     permissions:
       contents: write
