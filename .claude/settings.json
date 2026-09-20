@@ -28,7 +28,6 @@
       "Write"
     ],
     "deny": [
-      "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
