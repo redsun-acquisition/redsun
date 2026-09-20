@@ -300,6 +300,9 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) no longer refuses a
+  parameter whose default is an empty string, tuple or list as an action
+  list it is not annotated for.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter

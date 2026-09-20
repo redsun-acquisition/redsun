@@ -194,6 +194,18 @@ class TestCreatePlanSpec:
         assert p.device_proto is None
         assert not p.multiselect
 
+    @pytest.mark.parametrize("default", ["", (), []], ids=["str", "tuple", "list"])
+    def test_an_empty_sequence_default_is_not_an_action_list(
+        self, default: Any
+    ) -> None:
+        def plan(label: Sequence[str] = default) -> MsgGenerator[None]:
+            yield from ()
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].actions is None
+        assert spec.parameters[0].default == default
+
     def test_literal_with_int_values_stringified(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()

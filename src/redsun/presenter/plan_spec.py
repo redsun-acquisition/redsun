@@ -290,8 +290,10 @@ def _extract_action_meta(
         return None
     if isinstance(param.default, Action):
         actions_meta: Sequence[Action] | Action = param.default
-    elif isinstance(param.default, cabc.Sequence) and all(
-        isinstance(a, Action) for a in param.default
+    elif (
+        param.default
+        and isinstance(param.default, cabc.Sequence)
+        and all(isinstance(a, Action) for a in param.default)
     ):
         actions_meta = list(param.default)
     else:
