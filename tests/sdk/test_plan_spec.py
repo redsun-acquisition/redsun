@@ -206,6 +206,18 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].actions is None
         assert spec.parameters[0].default == default
 
+    def test_an_already_evaluated_annotation_is_taken_as_it_is(self) -> None:
+        """A module without the annotations future import evaluates them itself."""
+
+        def plan(n=1):  # type: ignore[no-untyped-def]
+            yield from ()
+
+        plan.__annotations__ = {"n": int, "return": MsgGenerator[None]}
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].annotation is int
+
     def test_literal_with_int_values_stringified(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()

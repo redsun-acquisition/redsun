@@ -404,15 +404,20 @@ def _resolve_annotations(
     namespace = getattr(func_obj, "__globals__", None)
     resolved: dict[str, Any] = {}
     unresolved: dict[str, str] = {}
-    for name, text in get_annotations(func_obj, format=Format.STRING).items():
-        try:
-            value = evaluate_forward_ref(ForwardRef(text), globals=namespace)
-        except NameError:
-            unresolved[name] = text
-        else:
-            # get_type_hints substitutes NoneType, which the return-type
-            # checks below rely on to tell "-> None" from "no annotation"
-            resolved[name] = type(None) if value is None else value
+    for name, value in get_annotations(func_obj, format=Format.FORWARDREF).items():
+        # a module without the annotations future import already evaluated
+        # its annotations; only what is still text needs the namespace
+        if isinstance(value, str):
+            value = ForwardRef(value)
+        if isinstance(value, ForwardRef):
+            try:
+                value = evaluate_forward_ref(value, globals=namespace)
+            except NameError:
+                unresolved[name] = value.__forward_arg__
+                continue
+        # get_type_hints substitutes NoneType, which the return-type
+        # checks below rely on to tell "-> None" from "no annotation"
+        resolved[name] = type(None) if value is None else value
     return resolved, unresolved
 
 
