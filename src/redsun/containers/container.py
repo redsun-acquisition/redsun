@@ -492,6 +492,18 @@ class AppContainer:
 
         namespace = vars(cls)
 
+        # a session file declares services the way it declares anything else,
+        # and the class body may add to or replace what it names
+        if cls._config_paths:
+            with suppress(Exception):
+                from_file = cls._services_of(
+                    _load_yaml(cls._config_paths), entry_points(group="redsun.plugins")
+                )
+                for name, declared_kwargs in from_file.items():
+                    declaration = _ServiceComponent(name, **declared_kwargs)
+                    declaration.create()
+                    services[name] = declaration
+
         for attr_name, attr_value in namespace.items():
             if attr_name.startswith("_"):
                 continue
@@ -1544,6 +1556,38 @@ class AppContainer:
         return instance
 
     @classmethod
+    def _services_of(
+        cls, config: dict[str, Any], manifests: Any
+    ) -> dict[str, dict[str, Any]]:
+        """Return the keyword arguments of every service a session file declares.
+
+        A service naming a plugin takes its module and readiness line from that
+        plugin's manifest, overridden by what the session file writes.
+        """
+        services: dict[str, dict[str, Any]] = {}
+        section: dict[str, Any] = dict(config.get("services") or {})
+        section.pop(TRANSPORT_KEY, None)
+        for name, entry in section.items():
+            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
+            if "plugin_name" in entry:
+                launched = cls._manifest_item(
+                    entry["plugin_name"], "services", entry["plugin_id"], manifests
+                )
+                if not isinstance(launched, dict):
+                    # _manifest_item already logged why it returned None
+                    if launched is not None:
+                        logger.error(
+                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
+                            entry["plugin_name"],
+                            entry["plugin_id"],
+                            launched,
+                        )
+                    continue
+                kwargs = {**launched, **kwargs}
+            services[name] = kwargs
+        return services
+
+    @classmethod
     def _load_configuration(
         cls, config_path: str
     ) -> tuple[dict[str, Any], _PluginTypeDict, dict[str, dict[str, Any]]]:
@@ -1559,30 +1603,7 @@ class AppContainer:
         plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
         available_manifests = entry_points(group="redsun.plugins")
 
-        services: dict[str, dict[str, Any]] = {}
-        section: dict[str, Any] = dict(config.get("services") or {})
-        section.pop(TRANSPORT_KEY, None)
-        for name, entry in section.items():
-            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
-            if "plugin_name" in entry:
-                launched = cls._manifest_item(
-                    entry["plugin_name"],
-                    "services",
-                    entry["plugin_id"],
-                    available_manifests,
-                )
-                if not isinstance(launched, dict):
-                    # _manifest_item already logged why it returned None
-                    if launched is not None:
-                        logger.error(
-                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
-                            entry["plugin_name"],
-                            entry["plugin_id"],
-                            launched,
-                        )
-                    continue
-                kwargs = {**launched, **kwargs}
-            services[name] = kwargs
+        services = cls._services_of(config, available_manifests)
 
         groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 

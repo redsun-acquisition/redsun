@@ -528,3 +528,47 @@ def test_a_component_named_transport_is_refused() -> None:
 
         class App(AppContainer):
             transport = declare_service(prefix="BL01:")  # type: ignore[assignment]
+
+
+def test_a_session_file_declares_a_service_for_a_container_class(
+    tmp_path: Path,
+) -> None:
+    """A class taking a session file gets the services that file declares.
+
+    The same file works through `from_config`, so a session written once must
+    not need its services repeated in the class body to reach a device.
+    """
+    config = tmp_path / "session.yaml"
+    config.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nsession: from-a-file\n"
+        'services:\n  beamline:\n    prefix: "BL01:"\n',
+        encoding="utf-8",
+    )
+
+    class App(AppContainer, config=config):
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert set(app.services) == {"beamline"}
+    stage = app.devices["stage"]
+    assert isinstance(stage, PrefixedDevice)
+    assert stage.prefix == "BL01:"
+
+
+def test_a_class_body_service_wins_over_the_session_file(tmp_path: Path) -> None:
+    """The class body is the later word on a service the file also declares."""
+    config = tmp_path / "session.yaml"
+    config.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nsession: overridden\n"
+        'services:\n  beamline:\n    prefix: "FILE:"\n',
+        encoding="utf-8",
+    )
+
+    class App(AppContainer, config=config):
+        beamline = declare_service(prefix="CLASS:")
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert app.devices["stage"].prefix == "CLASS:"  # type: ignore[attr-defined]

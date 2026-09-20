@@ -216,6 +216,19 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- A container class taking a session file gets the services that file
+  declares, as it already got its devices, presenters and views. A service
+  named in both the file and the class body is the class body's:
+
+  ```python
+  class MyApp(AppContainer, config="session.yaml"):
+      camera = declare_device(MyCamera, service="camera_ioc")  # declared in the file
+  ```
+
+  Before, only `AppContainer.from_config` read the `services` section, so a
+  class-based session had to repeat every service in its body or its devices
+  were skipped with `service '<name>' is not declared`.
+
 - A session's data, catalog and log folders take the session name with each
   run of characters other than letters, digits, `.`, `-` and `_` replaced by
   `_` and outer dots removed: `Lab A: STED` becomes `Lab_A_STED`. The data
