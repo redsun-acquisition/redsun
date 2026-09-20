@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
-import sys
 import threading
 import time
 import warnings
@@ -44,6 +43,22 @@ def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
             return True
         time.sleep(0.005)
     return predicate()
+
+
+def _drain_state(
+    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+) -> str:
+    """Describe a drain that did not do what a test waited for.
+
+    Named on the assertion so that a failure on a machine nobody can reach
+    says which stage stalled, rather than ``assert False``.
+    """
+    task = backend._run_task
+    return (
+        f"drain: cancelled={task.cancelled()} done={task.done()} "
+        f"running={backend.running.is_set()} draining={backend._draining} "
+        f"records={caplog.record_tuples}"
+    )
 
 
 class Emitter:
@@ -283,16 +298,21 @@ def test_queue_shutdown_is_not_an_error(
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin",
-    reason="randomly fails on macOS with 'Dispatch cancelled' not logged in time",
-)
 def test_drain_cancellation_is_not_an_error(
     backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """A cancelled drain unwinds and stops the backend, reporting no error.
+
+    The drain's state is what is asserted, not the line it logs: a message
+    written from the loop thread and read from this one adds a race to a test
+    about cancellation, and this one was skipped on macOS for exactly that.
+    """
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         assert backend._run_task.cancel()
-        assert wait_until(lambda: "Dispatch cancelled" in caplog.text)
+        assert wait_until(backend._run_task.cancelled), _drain_state(backend, caplog)
+        assert wait_until(lambda: not backend.running.is_set()), _drain_state(
+            backend, caplog
+        )
 
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
