@@ -26,6 +26,7 @@ from redsun.containers import container as container_module
 from redsun.log import SessionFileHandler, session_log
 from redsun.presenter import Presenter
 from redsun.qt import QtAppContainer
+from redsun.services._transports import PV_ACCESS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -102,8 +103,8 @@ class CameraPanel(QtAppContainer):
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a launched service import ``mock_pkg``, and restore the CA address list.
 
-    ``redsun.services._service.ports`` is left alone: libca reads the address list
-    once per process, so a service keeps the port it first got from test to test.
+    The transport's port map is left alone: libca reads the address list once per
+    process, so a service keeps the port it first got from test to test.
     """
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
@@ -116,6 +117,16 @@ def containers(launchable: None) -> Iterator[list[AppContainer]]:
     yield made
     for app in made:
         app.shutdown()
+
+
+def session_file(path: Path, services: str) -> Path:
+    """Write a session file at *path* whose ``services`` section is *services*."""
+    path.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nsession: transports\n"
+        f"services:\n{services}",
+        encoding="utf-8",
+    )
+    return path
 
 
 def open_log() -> SessionFileHandler:
@@ -472,3 +483,48 @@ def test_a_session_with_one_of_each_component_shuts_down_cleanly(
     assert "Service 'ioc_a' stopped with exit code 0" in messages
     warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
     assert warnings == []
+
+
+def test_a_session_file_names_what_its_services_speak(tmp_path: Path) -> None:
+    config = session_file(
+        tmp_path / "session.yaml",
+        "  transport: pv-access\n  beamline:\n    prefix: 'BL01:'\n",
+    )
+
+    app = AppContainer.from_config(str(config))
+
+    assert app.transport == PV_ACCESS
+    assert app.services["beamline"].transport == PV_ACCESS
+
+
+def test_a_transport_redsun_does_not_have_is_refused_in_a_session_file(
+    tmp_path: Path,
+) -> None:
+    config = session_file(tmp_path / "session.yaml", "  transport: carrier-pigeon\n")
+
+    with pytest.raises(TypeError, match="carrier-pigeon"):
+        AppContainer.from_config(str(config))
+
+
+def test_a_transport_redsun_does_not_have_is_refused_on_the_class() -> None:
+    with pytest.raises(TypeError, match="carrier-pigeon"):
+
+        class App(AppContainer):
+            transport = "carrier-pigeon"
+
+
+def test_layered_files_must_agree_on_the_transport(tmp_path: Path) -> None:
+    under = session_file(tmp_path / "under.yaml", "  transport: channel-access\n")
+    over = session_file(tmp_path / "over.yaml", "  transport: pv-access\n")
+
+    with pytest.raises(ValueError, match="contradicts"):
+
+        class App(AppContainer, config=[under, over]):
+            pass
+
+
+def test_a_component_named_transport_is_refused() -> None:
+    with pytest.raises(TypeError, match="names a component 'transport'"):
+
+        class App(AppContainer):
+            transport = declare_service(prefix="BL01:")  # type: ignore[assignment]
