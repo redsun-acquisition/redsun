@@ -43,7 +43,10 @@ A service declared with a `module` is **launched**: the container runs it as
 without one is **attached**: it already runs, in a container or on another
 host, and only lends its devices their prefix. Declare either with
 [`declare_service`][redsun.containers.declare_service] or in the `services`
-section of a session file; see [Write a service](../how-to/write-a-service.md).
+section of a session file, which works whether the session is built with
+`from_config` or from a container class taking that file. A service the class
+body declares replaces one the file names. See
+[Write a service](../how-to/write-a-service.md).
 
 The session owns a launched service from start to stop:
 
