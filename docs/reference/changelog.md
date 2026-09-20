@@ -298,6 +298,13 @@ Dates are specified in the format `DD-MM-YYYY`.
       def __init__(self, name: str, *, egu: str = "mm") -> None: ...
   ```
 
+### Fixed
+
+- **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
+  parameter's name once. `magicgui` gives the checkbox its name as text
+  and the form row carried it as the label too, so every such parameter
+  read "write forever [ ] write forever".
+
 ## [0.12.3] - 13-09-2026
 
 ### Added

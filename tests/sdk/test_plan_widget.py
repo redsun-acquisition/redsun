@@ -39,6 +39,15 @@ def _simple_spec() -> PlanSpec:
     return create_plan_spec(plan, {})
 
 
+def _bool_spec() -> PlanSpec:
+    """Build a plan spec with a bool parameter."""
+
+    def plan(write_forever: bool = False) -> MsgGenerator[None]:
+        yield from ()
+
+    return create_plan_spec(plan, {})
+
+
 def _literal_spec() -> PlanSpec:
     """Build a plan spec with a Literal parameter."""
 
@@ -243,6 +252,27 @@ class TestCreatePlanWidget:
     def test_literal_param_in_parameters(self) -> None:
         pw = _make_minimal_plan_widget(_literal_spec())
         assert "egu" in pw.parameters
+
+    def test_a_bool_parameter_shows_its_name_once(self) -> None:
+        """The form row carries the name; the checkbox itself carries none.
+
+        magicgui gives a CheckBox its name as text too, which rendered every
+        bool parameter as "write forever [ ] write forever".
+        """
+        pw = _make_minimal_plan_widget(_bool_spec())
+        group = pw.group_box.findChild(QtW.QGroupBox, "")
+        checkbox = pw.group_box.findChild(QtW.QCheckBox)
+
+        assert group is not None
+        assert checkbox is not None
+        assert checkbox.text() == ""
+        labels = [
+            label.text()
+            for label in pw.group_box.findChildren(QtW.QLabel)
+            if label.text() == "write forever"
+        ]
+        assert labels == ["write forever"]
+        assert pw.parameters["write_forever"] is False
 
     def test_get_action_button_returns_button(self) -> None:
         pw = _make_minimal_plan_widget(_action_spec())
