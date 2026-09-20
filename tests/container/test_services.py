@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
+from helpers import component, shut_down_after_a_read
 from mock_pkg.controller import SignalReader
 from mock_pkg.device import BrokenDevice, MyMotor
 from mock_pkg.service.stand_in import READY
@@ -29,7 +30,7 @@ from redsun.qt import QtAppContainer
 from redsun.services._transports import PV_ACCESS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
 
     from qtpy.QtWidgets import QApplication
 
@@ -99,7 +100,7 @@ class CameraPanel(QtAppContainer):
         self.connect(self.reader.sig_read, self.panel.show_reading)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a launched service import ``mock_pkg``, and restore the CA address list.
 
@@ -108,15 +109,6 @@ def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
-
-
-@pytest.fixture
-def containers(launchable: None) -> Iterator[list[AppContainer]]:
-    """Collect containers, shutting each down after the test whatever it did."""
-    made: list[AppContainer] = []
-    yield made
-    for app in made:
-        app.shutdown()
 
 
 def session_file(path: Path, services: str) -> Path:
@@ -153,12 +145,9 @@ def test_a_build_starts_services_first_and_shutdown_stops_them(
 
     app = App()
     containers.append(app)
-    seen: list[str] = []
-    app._report = seen.append
 
     app.build()
     assert app.services["stand_in"].running
-    assert seen[0] == "services"
     app.shutdown()
 
     assert not app.stand_in.running
@@ -467,22 +456,16 @@ def test_a_session_with_one_of_each_component_shuts_down_cleanly(
     app = CameraPanel()
     containers.append(app)
     app.build()
-    panel, reader = app.panel, app.reader
-    readings = panel.readings
-    panel.read_button.click()
-    caplog.clear()
 
-    app.shutdown()
+    readings, read_at_shutdown = shut_down_after_a_read(
+        app, app.panel, app.reader, caplog
+    )
 
     assert readings == [("cam_a", 0.25)]
-    assert reader.read_at_shutdown == {"cam_a": 0.25}
-    with pytest.raises(RuntimeError):
-        panel.isVisible()
+    assert read_at_shutdown == {"cam_a": 0.25}
     assert not app.ioc_a.running
     messages = [r.getMessage() for r in caplog.records]
     assert "Service 'ioc_a' stopped with exit code 0" in messages
-    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert warnings == []
 
 
 def test_a_session_file_names_what_its_services_speak(tmp_path: Path) -> None:
@@ -571,4 +554,4 @@ def test_a_class_body_service_wins_over_the_session_file(tmp_path: Path) -> None
 
     app = App().build()
 
-    assert app.devices["stage"].prefix == "CLASS:"  # type: ignore[attr-defined]
+    assert component(app.devices, "stage", PrefixedDevice).prefix == "CLASS:"

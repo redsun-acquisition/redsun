@@ -73,12 +73,12 @@ def test_disconnect_all_releases_the_subscription(
     """Teardown stops delivery and empties the record."""
     bus.subscribe(signal, consumer.absorb)
     put(signal, 1.0)
-    delivered = len(consumer.readings)
+    delivered = list(consumer.readings)
 
     bus.disconnect_all()
     put(signal, 2.0)
 
-    assert len(consumer.readings) == delivered
+    assert consumer.readings == delivered
     assert bus.subscriptions == []
 
 
@@ -95,7 +95,7 @@ def test_rebuilding_does_not_accumulate_subscribers(
     put(signal, 1.0)
 
     # one initial reading plus one for the set, not four of each
-    assert len(consumer.readings) == 2
+    assert [r["base_dir"]["value"] for r in consumer.readings] == [0.0, 1.0]
 
 
 @pytest.mark.parametrize("thread", ["current", "main"])

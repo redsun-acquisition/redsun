@@ -25,16 +25,16 @@ def _clear_open_spans() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _clear_stylesheet() -> None:
-    app = QApplication.instance()
-    if app is not None:
-        cast("QApplication", app).setStyleSheet("")
+def _clear_stylesheet(qapp: QApplication) -> None:
+    qapp.setStyleSheet("")
 
 
 class TestQtApplicationHook:
     """Tests for configuring the QApplication before the views exist."""
 
-    def test_the_stylesheet_is_on_the_application_before_a_view_is_built(self) -> None:
+    def test_the_stylesheet_is_on_the_application_before_a_view_is_built(
+        self, containers: list[AppContainer]
+    ) -> None:
         hook = mock_hooks.QtStyleHook()
 
         class TestApp(QtAppContainer):
@@ -43,14 +43,13 @@ class TestQtApplicationHook:
             widget = declare_view(StyleRecordingView)
 
         app = TestApp().build()
+        containers.append(app)
 
         # the view read the stylesheet in its own __init__, so this cannot pass
         # by the hook merely having been called at some point
         view = app.views["widget"]
         assert isinstance(view, StyleRecordingView)
         assert view.stylesheet_at_build == hook.stylesheet
-
-        app.shutdown()
 
     def test_a_qt_point_is_refused_by_a_headless_container(self) -> None:
         with pytest.raises(HookError, match="is not a hook point it calls"):
@@ -77,8 +76,11 @@ class TestQtApplicationHook:
 class TestQtHooksFromAFile:
     """Tests for a session assembled from a configuration file on disk."""
 
-    def test_from_config_installs_the_hooks_section(self, config_path: Path) -> None:
+    def test_from_config_installs_the_hooks_section(
+        self, config_path: Path, containers: list[AppContainer]
+    ) -> None:
         app = AppContainer.from_config(str(config_path / "mock_qt_hooks_config.yaml"))
+        containers.append(app)
 
         assert isinstance(app, QtAppContainer)
 
@@ -90,8 +92,6 @@ class TestQtHooksFromAFile:
         assert cast("QApplication", QApplication.instance()).styleSheet() == (
             hook.stylesheet
         )
-
-        app.shutdown()
 
     def test_from_config_shares_an_anchored_provider(self, config_path: Path) -> None:
         app = AppContainer.from_config(
@@ -120,7 +120,7 @@ class TestQtBuildSpan:
         assert mock_hooks.open_spans == []
 
     def test_a_declared_span_wraps_the_build_and_closes(
-        self, qapp: QApplication
+        self, qapp: QApplication, containers: list[AppContainer]
     ) -> None:
         span = mock_hooks.RecordingSpan()
 
@@ -128,6 +128,7 @@ class TestQtBuildSpan:
             during_build = declare_hook(span)
 
         app = TestApp()
+        containers.append(app)
 
         with app._during_build(qapp) as report:
             assert mock_hooks.open_spans == ["recorded"]
@@ -136,19 +137,7 @@ class TestQtBuildSpan:
 
         assert span.entries == 1
         assert mock_hooks.open_spans == []
-        assert span.steps == [
-            "services",
-            "virtual container",
-            "devices",
-            "connect",
-            "presenters",
-            "views",
-            "providers",
-            "wiring",
-            "injection",
-        ]
-
-        app.shutdown()
+        assert span.steps == list(AppContainer.BUILD_STEPS)
 
     def test_a_span_closes_when_the_build_raises(self, qapp: QApplication) -> None:
         span = mock_hooks.RecordingSpan()
@@ -174,13 +163,14 @@ class TestQtBuildSpan:
 class TestQtMainViewHook:
     """Tests for configuring the main window before it is shown."""
 
-    def test_a_hook_sees_the_window(self) -> None:
+    def test_a_hook_sees_the_window(self, containers: list[AppContainer]) -> None:
         hook = mock_hooks.QtStyleHook()
 
         class TestApp(QtAppContainer):
             configure_main_view = declare_hook(hook)
 
         app = TestApp().build()
+        containers.append(app)
         before = hook.window
 
         main_view = app._ensure_main_view()
@@ -188,9 +178,9 @@ class TestQtMainViewHook:
         assert before is None
         assert hook.window is main_view
 
-        app.shutdown()
-
-    def test_one_provider_serves_the_application_and_the_window(self) -> None:
+    def test_one_provider_serves_the_application_and_the_window(
+        self, containers: list[AppContainer]
+    ) -> None:
         hook = mock_hooks.QtStyleHook()
 
         class TestApp(QtAppContainer):
@@ -198,12 +188,11 @@ class TestQtMainViewHook:
             configure_main_view = declare_hook(hook)
 
         app = TestApp().build()
+        containers.append(app)
         main_view = app._ensure_main_view()
 
         assert hook.window is main_view
         assert hook._app is app._qt_app
-
-        app.shutdown()
 
     def test_the_window_is_built_once(self) -> None:
         class TestApp(QtAppContainer):
@@ -220,7 +209,10 @@ class TestQtApplicationFactory:
     """Tests for the hook that supplies the QApplication itself."""
 
     def test_a_claimant_supplies_the_application(
-        self, qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+        self,
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+        containers: list[AppContainer],
     ) -> None:
         # a process holding a QApplication cannot build a second one, so the
         # only way to reach the creation branch is to hide the one it has
@@ -231,14 +223,13 @@ class TestQtApplicationFactory:
             create_application = declare_hook(hook)
 
         app = TestApp().build()
+        containers.append(app)
 
         assert hook.calls == [sys.argv]
         assert app._qt_app is qapp
 
-        app.shutdown()
-
     def test_a_claimant_is_skipped_when_an_application_is_running(
-        self, qapp: QApplication
+        self, qapp: QApplication, containers: list[AppContainer]
     ) -> None:
         hook = mock_hooks.QtApplicationFactory(qapp)
 
@@ -246,11 +237,10 @@ class TestQtApplicationFactory:
             create_application = declare_hook(hook)
 
         app = TestApp().build()
+        containers.append(app)
 
         assert hook.calls == []
         assert app._qt_app is qapp
-
-        app.shutdown()
 
     def test_the_point_named_on_the_class_and_in_the_config_is_refused(
         self, qapp: QApplication
@@ -291,5 +281,5 @@ class TestQtShutdown:
         app.shutdown()
 
         assert len(QApplication.topLevelWidgets()) == before
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="deleted"):
             cast("StyleRecordingView", view).isVisible()

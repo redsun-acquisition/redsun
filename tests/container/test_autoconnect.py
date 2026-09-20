@@ -117,9 +117,8 @@ def test_a_device_that_does_not_connect_is_skipped_and_named(
     assert watcher.seen == {"motor": 1}
     messages = [r.getMessage() for r in caplog.records]
     assert "Failed to connect device 'camera': the camera did not answer" in messages
-    assert any(
-        m.endswith("Not built: camera (device, not connected)") for m in messages
-    )
+    (closing,) = [m for m in messages if "Not built:" in m]
+    assert closing.endswith("Not built: camera (device, not connected)")
 
 
 def test_a_device_whose_attached_service_does_not_answer_names_it(

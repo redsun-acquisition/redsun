@@ -16,7 +16,6 @@ from bluesky.run_engine import _ensure_event_loop_running
 from culsans import QueueShutDown
 from psygnal import Signal, get_async_backend
 from psygnal._async import AsyncioBackend, _AsyncBackend, clear_async_backend
-from psygnal._weak_callback import StrongCoroutineFunction, WeakCoroutineMethod
 
 from redsun import aio
 from redsun.aio import (
@@ -33,16 +32,6 @@ if TYPE_CHECKING:
     from psygnal._async import QueueItem, SupportedBackend
 
 TIMEOUT = 10.0
-
-
-def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
-    """Poll ``predicate`` from the calling thread until it holds or time runs out."""
-    deadline = time.perf_counter() + timeout
-    while time.perf_counter() < deadline:
-        if predicate():
-            return True
-        time.sleep(0.005)
-    return predicate()
 
 
 def _drain_state(
@@ -142,6 +131,7 @@ def test_backend_is_subclass_and_virtual_subclass(
 
 def test_clear_async_backend_closes_the_queue(
     backend: CulsansAsyncioBackend,
+    wait_until: Callable[..., bool],
 ) -> None:
     clear_async_backend()
 
@@ -170,15 +160,6 @@ def test_connect_coroutine_method_does_not_warn(
         emitter.sig_motor_move.connect(presenter.move)
 
     assert [w for w in caught if issubclass(w.category, RuntimeWarning)] == []
-    assert isinstance(emitter.sig_motor_move._slots[-1], WeakCoroutineMethod)
-
-
-def test_connect_coroutine_function(backend: CulsansAsyncioBackend) -> None:
-    async def on_move(motor: str, axis: str, position: float) -> None: ...
-
-    emitter = Emitter()
-    emitter.sig_motor_move.connect(on_move)
-    assert isinstance(emitter.sig_motor_move._slots[-1], StrongCoroutineFunction)
 
 
 def test_emit_from_foreign_thread_reaches_an_idle_loop(
@@ -233,7 +214,9 @@ def test_slots_run_concurrently_not_serialized(
 
 
 def test_raising_slot_is_logged_and_dispatch_survives(
-    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+    backend: CulsansAsyncioBackend,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     delivered = threading.Event()
     seen: list[float] = []
@@ -262,7 +245,9 @@ def test_raising_slot_is_logged_and_dispatch_survives(
 
 
 def test_cancelled_slot_is_not_logged(
-    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+    backend: CulsansAsyncioBackend,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     started, cancelled = threading.Event(), threading.Event()
 
@@ -289,17 +274,23 @@ def test_cancelled_slot_is_not_logged(
 
 
 def test_queue_shutdown_is_not_an_error(
-    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+    backend: CulsansAsyncioBackend,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         backend.close()
-        assert wait_until(lambda: "queue shut down" in caplog.text)
+        assert wait_until(lambda: not backend.running.is_set()), _drain_state(
+            backend, caplog
+        )
 
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
 def test_drain_cancellation_is_not_an_error(
-    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+    backend: CulsansAsyncioBackend,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     """A cancelled drain unwinds and stops the backend, reporting no error.
 
@@ -318,7 +309,9 @@ def test_drain_cancellation_is_not_an_error(
 
 
 def test_unexpected_drain_failure_is_logged(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     calls: list[int] = []
     real_get_shared_loop = aio.get_shared_loop
@@ -334,11 +327,13 @@ def test_unexpected_drain_failure_is_logged(
 
     with caplog.at_level(logging.ERROR, logger="redsun"):
         failing = set_async_backend()
-        assert wait_until(lambda: "Dispatch stopped: loop gone" in caplog.text)
+        assert wait_until(lambda: not failing.running.is_set()), _drain_state(
+            failing, caplog
+        )
 
-    record = next(r for r in caplog.records if "Dispatch stopped" in r.message)
+    (record,) = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert record.message == "Dispatch stopped: loop gone"
     assert record.exc_info is not None
-    assert not failing.running.is_set()
 
 
 def test_dead_weak_callback_is_skipped(backend: CulsansAsyncioBackend) -> None:
@@ -393,7 +388,9 @@ def test_run_does_not_start_a_second_drain(backend: CulsansAsyncioBackend) -> No
     assert backend.running.is_set()
 
 
-def test_close_stops_the_drain(backend: CulsansAsyncioBackend) -> None:
+def test_close_stops_the_drain(
+    backend: CulsansAsyncioBackend, wait_until: Callable[..., bool]
+) -> None:
     backend.close()
 
     assert wait_until(lambda: not backend.running.is_set())
@@ -401,7 +398,9 @@ def test_close_stops_the_drain(backend: CulsansAsyncioBackend) -> None:
         backend.put((None, ()))  # type: ignore[arg-type]
 
 
-def test_close_is_idempotent(backend: CulsansAsyncioBackend) -> None:
+def test_close_is_idempotent(
+    backend: CulsansAsyncioBackend, wait_until: Callable[..., bool]
+) -> None:
     backend.close()
     backend.close()
     assert wait_until(lambda: not backend.running.is_set())

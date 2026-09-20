@@ -11,6 +11,8 @@ from unittest import mock
 
 import pytest
 
+from redsun.containers import AppContainer
+
 # Add the test directory to sys.path so mock_pkg is importable
 _tests_dir = str(Path(__file__).parent)
 if _tests_dir not in sys.path:
@@ -20,6 +22,15 @@ _MOCK_PKG_DIR = Path(__file__).parent / "mock_pkg"
 
 # the module imports tiled, which the extra does not install on every Python
 collect_ignore = [] if find_spec("tiled") else ["test_catalog.py"]
+
+
+@pytest.fixture
+def containers() -> Generator[list[AppContainer], None, None]:
+    """Collect containers, shutting each down after the test whatever it did."""
+    made: list[AppContainer] = []
+    yield made
+    for app in made:
+        app.shutdown()
 
 
 @pytest.fixture

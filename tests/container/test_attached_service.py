@@ -6,13 +6,13 @@ Runs against the IOC in ``tests/compose/compose.yaml``, and is skipped unless
 
 from __future__ import annotations
 
-import logging
 import subprocess
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import pytest
+from helpers import component, shut_down_after_a_read
 from mock_pkg.controller import SignalReader
 from mock_pkg.view import ReadingView
 from ophyd_async.core import SignalRW
@@ -77,12 +77,12 @@ def read(device: SimpleIoc) -> int:
 
 
 def test_an_attached_service_that_stops_times_out_and_answers_once_back(
-    attachable: None,
+    attachable: None, containers: list[AppContainer]
 ) -> None:
     """Channels recover on their own: no reconnect is asked for."""
     app = Attached().build()
-    simple = app.devices["simple"]
-    assert isinstance(simple, SimpleIoc)
+    containers.append(app)
+    simple = component(app.devices, "simple", SimpleIoc)
     before = read(simple)
 
     compose("stop", "ioc")
@@ -100,14 +100,16 @@ def test_an_attached_service_that_stops_times_out_and_answers_once_back(
         except TimeoutError:
             if time.monotonic() > deadline:
                 raise
-    app.shutdown()
 
     assert after == before
 
 
 @pytest.mark.qt
 def test_a_session_attached_to_an_ioc_shuts_down_cleanly(
-    attachable: None, qapp: QApplication, caplog: pytest.LogCaptureFixture
+    attachable: None,
+    qapp: QApplication,
+    containers: list[AppContainer],
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """A view reads the IOC through a presenter, and shutdown ends each in turn.
 
@@ -115,17 +117,12 @@ def test_a_session_attached_to_an_ioc_shuts_down_cleanly(
     without a warning.
     """
     app = AttachedPanel()
+    containers.append(app)
     app.build()
-    panel, reader = app.panel, app.reader
-    readings = panel.readings
-    panel.read_button.click()
-    caplog.clear()
 
-    app.shutdown()
+    readings, read_at_shutdown = shut_down_after_a_read(
+        app, app.panel, app.reader, caplog
+    )
 
     assert readings == [("simple", 1)]
-    assert reader.read_at_shutdown == {"simple": 1}
-    with pytest.raises(RuntimeError):
-        panel.isVisible()
-    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert warnings == []
+    assert read_at_shutdown == {"simple": 1}

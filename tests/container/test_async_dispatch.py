@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import time
+import threading
 from typing import TYPE_CHECKING
 
 import pytest
@@ -28,16 +28,6 @@ pytestmark = pytest.mark.qt
 TIMEOUT = 10.0
 
 
-def wait_until(predicate: Callable[[], bool], timeout: float = TIMEOUT) -> bool:
-    """Poll ``predicate`` from the calling thread until it holds or time runs out."""
-    deadline = time.perf_counter() + timeout
-    while time.perf_counter() < deadline:
-        if predicate():
-            return True
-        time.sleep(0.005)
-    return predicate()
-
-
 @pytest.fixture
 def app(
     qapp: QApplication,
@@ -54,6 +44,14 @@ def app(
     finally:
         if container.is_built:
             container.shutdown()
+
+
+@pytest.fixture
+def moved(app: QtAppContainer) -> threading.Event:
+    """Set once the presenter has recorded a move and announced it."""
+    event = threading.Event()
+    _presenter(app).sig_motor_moved.connect(lambda *_: event.set())
+    return event
 
 
 def _view(app: QtAppContainer) -> MockMotorView:
@@ -77,25 +75,29 @@ def test_build_installs_the_async_backend(app: QtAppContainer) -> None:
     assert backend.running.is_set()
 
 
-def test_view_signal_reaches_the_presenter_coroutine(app: QtAppContainer) -> None:
+def test_view_signal_reaches_the_presenter_coroutine(
+    app: QtAppContainer, moved: threading.Event
+) -> None:
     view, presenter = _view(app), _presenter(app)
 
     view.move_button.click()
 
-    assert wait_until(lambda: len(presenter.moves) == 1)
+    assert moved.wait(TIMEOUT), presenter.moves
     assert presenter.moves == [("my_motor", 42.0)]
     # the slot ran on the shared loop, not on the Qt thread that emitted
     assert presenter.loops == [get_shared_loop()]
 
 
-def test_coroutine_slot_drives_the_device(app: QtAppContainer) -> None:
+def test_coroutine_slot_drives_the_device(
+    app: QtAppContainer, moved: threading.Event
+) -> None:
     view, presenter = _view(app), _presenter(app)
     motor = component(app.devices, "my_motor", MyMotor)
 
     view.position = 3.5
     view.move_button.click()
 
-    assert wait_until(lambda: len(presenter.moves) == 1)
+    assert moved.wait(TIMEOUT), presenter.moves
     assert run_coro(motor.floating.get_value()) == 3.5
 
 
@@ -104,27 +106,36 @@ def test_presenter_signal_travels_back_to_the_view_thread(
 ) -> None:
     view, presenter = _view(app), _presenter(app)
     received: list[tuple[str, float]] = []
+    delivered = threading.Event()
 
-    presenter.sig_motor_moved.connect(lambda m, p: received.append((m, p)))
+    def on_moved(motor: str, position: float) -> None:
+        received.append((motor, position))
+        delivered.set()
+
+    presenter.sig_motor_moved.connect(on_moved)
     view.move_button.click()
 
-    assert wait_until(lambda: len(received) == 1)
+    assert delivered.wait(TIMEOUT)
     assert received == [("my_motor", 42.0)]
 
 
-def test_repeated_emissions_are_all_delivered(app: QtAppContainer) -> None:
+def test_repeated_emissions_are_all_delivered(
+    app: QtAppContainer, wait_until: Callable[..., bool]
+) -> None:
     view, presenter = _view(app), _presenter(app)
 
     for position in (1.0, 2.0, 3.0):
         view.position = position
         view.move_button.click()
 
-    assert wait_until(lambda: len(presenter.moves) == 3)
+    assert wait_until(lambda: len(presenter.moves) == 3), presenter.moves
     assert sorted(p for _, p in presenter.moves) == [1.0, 2.0, 3.0]
 
 
 def test_failing_slot_is_logged_and_does_not_break_dispatch(
-    app: QtAppContainer, caplog: pytest.LogCaptureFixture
+    app: QtAppContainer,
+    caplog: pytest.LogCaptureFixture,
+    wait_until: Callable[..., bool],
 ) -> None:
     view, presenter = _view(app), _presenter(app)
 
@@ -140,7 +151,9 @@ def test_failing_slot_is_logged_and_does_not_break_dispatch(
     assert wait_until(lambda: presenter.moves == [("my_motor", 7.0)])
 
 
-def test_shutdown_tears_down_presenter_and_backend(app: QtAppContainer) -> None:
+def test_shutdown_tears_down_presenter_and_backend(
+    app: QtAppContainer, wait_until: Callable[..., bool]
+) -> None:
     presenter = _presenter(app)
     backend = get_async_backend()
     assert isinstance(backend, CulsansAsyncioBackend)

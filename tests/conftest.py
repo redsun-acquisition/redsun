@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -19,8 +20,27 @@ from qtpy.QtWidgets import QApplication
 from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
+
+
+@pytest.fixture
+def wait_until() -> Callable[..., bool]:
+    """Return a poll that holds until ``predicate`` is true or ``timeout`` runs out.
+
+    For a thread or a process that offers nothing to wait on. Where an event,
+    a future or a task exists, wait on that instead.
+    """
+
+    def poll(predicate: Callable[[], bool], timeout: float = 10.0) -> bool:
+        deadline = time.perf_counter() + timeout
+        while time.perf_counter() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.005)
+        return predicate()
+
+    return poll
 
 
 @pytest.fixture(scope="session")
