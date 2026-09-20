@@ -2552,7 +2552,10 @@ every connection stays up.</p>
 without one is <strong>attached</strong>: it already runs, in a container or on another
 host, and only lends its devices their prefix. Declare either with
 <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;declare_service&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.components.declare_service"><code>declare_service</code></a> or in the <code>services</code>
-section of a session file; see <a href="../../how-to/write-a-service/">Write a service</a>.</p>
+section of a session file, which works whether the session is built with
+<code>from_config</code> or from a container class taking that file. A service the class
+body declares replaces one the file names. See
+<a href="../../how-to/write-a-service/">Write a service</a>.</p>
 <p>The session owns a launched service from start to stop:</p>
 <ul>
 <li><strong>Starting</strong> is the first build step, before any device is built. The
