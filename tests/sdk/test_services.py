@@ -349,13 +349,14 @@ def test_a_rebuilt_record_names_its_service_and_no_location() -> None:
     )
 
 
-@pytest.mark.skip(
-    reason="flaky on CI: the record is sometimes missing, not yet understood"
-)
 def test_non_ascii_output_arrives_intact(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    """The child writes UTF-8 whatever the platform's console encoding."""
+    """The child writes UTF-8 whatever the platform's console encoding.
+
+    The stand-in prints this line before its readiness one, so ``start``
+    cannot return until the drain has logged it.
+    """
     message = "température 21 °C \u2713"
     line = json.dumps(
         {**json.loads(STDLIB_WARNING), "msg": message}, ensure_ascii=False

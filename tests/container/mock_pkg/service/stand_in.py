@@ -30,7 +30,7 @@ def main() -> int:
     parser.add_argument("--ignore-sigint", action="store_true")
     parser.add_argument("--exit", type=int, help="exit with this code once ready")
     parser.add_argument("--marker", type=Path, help="file written on clean exit")
-    parser.add_argument("--say", help="a line printed once ready")
+    parser.add_argument("--say", help="a line printed before the readiness one")
     options = parser.parse_args()
 
     if options.ignore_sigint:
@@ -44,10 +44,13 @@ def main() -> int:
         f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
         flush=True,
     )
-    if not options.no_ready:
-        print(READY, flush=True)
+    # before the readiness line, not after: a launcher returns from start()
+    # once it reads that line, so a line printed after it may not have been
+    # read yet when the caller looks
     if options.say is not None:
         print(options.say, flush=True)
+    if not options.no_ready:
+        print(READY, flush=True)
     if options.exit is not None:
         print("exiting on request", flush=True)
         return int(options.exit)
