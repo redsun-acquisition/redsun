@@ -712,10 +712,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#several-services-on-one-host" class="md-nav__link">
+  <a href="#one-transport-per-session" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Several services on one host
+        One transport per session
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-launched-service-is-told" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What a launched service is told
       </span>
     </span>
   </a>
@@ -2431,10 +2442,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#several-services-on-one-host" class="md-nav__link">
+  <a href="#one-transport-per-session" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Several services on one host
+        One transport per session
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-a-launched-service-is-told" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What a launched service is told
       </span>
     </span>
   </a>
@@ -2494,10 +2516,10 @@
 
 <h1 id="services">Services<a class="headerlink" href="#services" title="Permanent link">&para;</a></h1>
 <p>A service is a server devices talk to: an EPICS IOC, a camera server, a motion
-controller's gateway. <code>ophyd-async</code> devices talk to it over Channel Access;
-<code>redsun</code> does not. What <code>redsun</code> handles is the session's side: starting the
-service when the session owns it, noticing when it exits, stopping it cleanly,
-and giving its prefix to the devices that use it.</p>
+controller's gateway. <code>ophyd-async</code> devices talk to it over Channel Access or
+PVAccess; <code>redsun</code> does not. What <code>redsun</code> handles is the session's side:
+starting the service when the session owns it, noticing when it exits, stopping
+it cleanly, and giving its prefix and transport to the devices that use it.</p>
 <h2 id="two-connection-levels">Two connection levels<a class="headerlink" href="#two-connection-levels" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>flowchart LR
     subgraph app [session process]
@@ -2563,14 +2585,76 @@ when the session crashes: the operating system closes the pipe and the service
 reads end of input.</p>
 <p>A killed service may leave work unfinished, typically a large file being
 written. A service needing longer to close sets a longer <code>stop_timeout</code>.</p>
-<h2 id="several-services-on-one-host">Several services on one host<a class="headerlink" href="#several-services-on-one-host" title="Permanent link">&para;</a></h2>
-<p>Each launched service gets its own Channel Access server port, added to
-<code>EPICS_CA_ADDR_LIST</code> in the session process. Without it, two IOCs on the
-default port both answer on Linux, but on Windows the second is never found. A
-service keeps its port while the session process runs, so a container built
-again reaches it again. The note in
-<a href="../architecture/devices/#connecting">Connecting</a> describes the limit: libca
-reads the address list once per process.</p>
+<h2 id="one-transport-per-session">One transport per session<a class="headerlink" href="#one-transport-per-session" title="Permanent link">&para;</a></h2>
+<p>Every service of a session is reached over the same protocol, named once under
+the <code>services</code> section of its file or as the <code>transport</code> attribute of its
+container class:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">transport</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pv-access</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>protocol</th>
+<th>what a session does for it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>channel-access</code></td>
+<td>Channel Access</td>
+<td>gives each launched service a server port of its own and lists <code>127.0.0.1:&lt;port&gt;</code> in <code>EPICS_CA_ADDR_LIST</code></td>
+</tr>
+<tr>
+<td><code>pv-access</code></td>
+<td>PVAccess</td>
+<td>binds each launched service to <code>127.0.0.1</code> and puts that address in <code>EPICS_PVA_ADDR_LIST</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>channel-access</code> is what a session speaks unless it says otherwise, and a file
+layered over another cannot change it. The variables both protocols read hold
+one setting for the whole process, so two transports in one session would leave
+each unable to say which service a variable is for.</p>
+<p>Under Channel Access, two IOCs on the default port both answer on Linux, but on
+Windows the second is never found, which is why each gets a port. It keeps that
+port while the session process runs, so a container built again reaches it
+again. The note in <a href="../architecture/devices/#connecting">Connecting</a> describes
+the limit: libca reads the address list once per process. Under PVAccess a
+service picks its own ports, and <code>pvxs</code> takes a free one when the default is
+busy, so a session assigns nothing. A client does not search the loopback
+unless it is told to, which is what the address list is for.</p>
+<p><code>redsun</code> depends on <code>ophyd-async</code> and on nothing either protocol needs. A
+component brings what its own service speaks, <code>caproto</code> or <code>p4p</code> or <code>fastcs</code>,
+and <code>ophyd-async[ca]</code> or <code>ophyd-async[pva]</code> for the device side; see
+<a href="../../how-to/write-a-service/">Write a service</a>.</p>
+<h2 id="what-a-launched-service-is-told">What a launched service is told<a class="headerlink" href="#what-a-launched-service-is-told" title="Permanent link">&para;</a></h2>
+<p>Besides its transport's variables, a launched process reads its name and prefix
+from its environment:</p>
+<table>
+<thead>
+<tr>
+<th>variable</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REDSUN_SERVICE_NAME</code></td>
+<td>the name the service is declared under</td>
+</tr>
+<tr>
+<td><code>REDSUN_SERVICE_PREFIX</code></td>
+<td>the <code>prefix</code> of the declaration, empty when it has none</td>
+</tr>
+</tbody>
+</table>
+<p>A module serving several sessions names its channels from these rather than
+taking arguments for them.</p>
 <h2 id="a-service-exiting">A service exiting<a class="headerlink" href="#a-service-exiting" title="Permanent link">&para;</a></h2>
 <p>A launched service that exits unasked is logged at <code>ERROR</code> with its exit code
 and last lines of output, and emits
@@ -2583,7 +2667,7 @@ and last lines of output, and emits
   &lt;/span&gt;" href="../../reference/api/services/#redsun.services.Service.sig_exited"><code>sig_exited</code></a> with its name and code.
 Nothing restarts it. While it is down, reads and writes on its devices raise
 <code>TimeoutError</code> after ten seconds; once it is back they answer again without a
-reconnect, since Channel Access channels recover on their own.</p>
+reconnect, since both protocols reconnect on their own.</p>
 <p><code>sig_exited</code> is emitted from the thread reading the service's output. A slot
 connected to it in <code>wire</code> runs where its owner asks: a view's slots run on the
 main thread, and a presenter slot declared without a thread runs on the output
