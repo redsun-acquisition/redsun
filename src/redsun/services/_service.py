@@ -134,8 +134,11 @@ class Service:
         transport gives it the environment it is reached on and tells this
         process where to look, so devices find it among several local
         services. What a transport reserves lasts for every start in this
-        process. The process writes UTF-8, and each output line is logged as
-        `service_record` rebuilds it.
+        process. It also reads ``REDSUN_SERVICE_NAME`` and
+        ``REDSUN_SERVICE_PREFIX`` from its environment, so a module serving
+        several sessions needs no arguments to name its channels. The process
+        writes UTF-8, and each output line is logged as `service_record`
+        rebuilds it.
 
         Raises
         ------
@@ -150,7 +153,13 @@ class Service:
         transport = TRANSPORTS[self.transport]
         reserved = transport.reserve(self.name)
         transport.publish(self.name)
-        env = {**os.environ, **reserved, "PYTHONUTF8": "1"}
+        env = {
+            **os.environ,
+            **reserved,
+            "PYTHONUTF8": "1",
+            "REDSUN_SERVICE_NAME": self.name,
+            "REDSUN_SERVICE_PREFIX": self.prefix,
+        }
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one

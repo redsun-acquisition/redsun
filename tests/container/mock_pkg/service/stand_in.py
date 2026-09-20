@@ -39,6 +39,11 @@ def main() -> int:
         threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
 
     print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
+    print(
+        f"service {os.environ.get('REDSUN_SERVICE_NAME')} "
+        f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
+        flush=True,
+    )
     if not options.no_ready:
         print(READY, flush=True)
     if options.say is not None:

@@ -67,11 +67,15 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     made: list[Service] = []
 
     def make(
-        *options: str, stop_timeout: float = 0.5, name: str = "stand-in"
+        *options: str,
+        stop_timeout: float = 0.5,
+        name: str = "stand-in",
+        prefix: str = "",
     ) -> Service:
         made.append(
             Service(
                 name,
+                prefix=prefix,
                 module=STAND_IN,
                 args=options,
                 ready=READY,
@@ -426,3 +430,15 @@ def test_a_service_ends_when_the_process_that_launched_it_dies(
     while not marker.exists() and time.monotonic() < deadline:
         time.sleep(0.05)
     assert marker.read_text() == "cleaned up"
+
+
+def test_a_launched_service_reads_its_name_and_prefix_from_the_environment(
+    launch: Callable[..., Service],
+    service_log: pytest.LogCaptureFixture,
+) -> None:
+    stand_in = launch(name="camera", prefix="SIM:")
+
+    stand_in.start()
+    stand_in.stop()
+
+    assert "service camera prefix SIM:" in messages(service_log, logging.DEBUG)
