@@ -15,8 +15,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   container makes for each service it declares. A service with a module runs
   as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds
   for its readiness line, logs its output at `DEBUG` on
-  `redsun.service.<name>`, and gives it a Channel Access server port of its
-  own, appended to `EPICS_CA_ADDR_LIST`. `stop` closes the process's standard
+  `redsun.service.<name>`, launches it with `REDSUN_SERVICE_NAME` and
+  `REDSUN_SERVICE_PREFIX` in its environment, and arranges the session's
+  transport for it: a Channel Access server port of its own appended to
+  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` with that address
+  in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
   input, then sends `SIGINT` on POSIX, then kills it, each step waiting
   `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
@@ -60,9 +63,26 @@ Dates are specified in the format `DD-MM-YYYY`.
       prefix: "BL01:"
   ```
 
+- A `transport` key in the `services` section, and **`AppContainer.transport`**
+  beside it, naming what every service of the session speaks: `channel-access`,
+  the default, or `pv-access`. A transport `redsun` does not have, a component
+  named `transport`, and two layered files naming different transports are each
+  refused as the container class is created:
+
+  ```yaml
+  services:
+    transport: pv-access
+    camera_ioc:
+      plugin_name: mylab
+      plugin_id: camera-ioc
+  ```
+
 - The build summary names a service whose every device failed to build:
   `Unused: camera_ioc (no device built)`.
-- An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+- An `epics` dependency group, with `caproto` and `ophyd-async[ca]`, and a
+  `pva` one with `p4p` and `ophyd-async[pva]`. Both are for running the tests;
+  `redsun` requires `ophyd-async` alone and a component brings what its own
+  service speaks.
 - **`autoconnect`** keyword of a device declaration, true unless given - whether
   the build connects the device. The build connects every such device at once,
   in a `"connect"` step between devices and presenters, waiting up to

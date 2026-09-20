@@ -103,10 +103,6 @@ pyside = [
     "redsun[qt-common]",
     "pyside6>=6.11.0",
 ]
-epics = [
-    "caproto>=1.3.0",
-    "ophyd-async[ca]>=0.21.2",
-]
 zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]

@@ -294,7 +294,7 @@ def _transport_of(data: dict[str, Any]) -> str | None:
 
 
 def checked_transport(name: str, where: str) -> str:
-    """Return *name*, refusing one no transport answers to.
+    """Return *name*, refusing a transport ``redsun`` does not have.
 
     Raises
     ------

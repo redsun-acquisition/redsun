@@ -4651,10 +4651,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-epics = [
-    { name = "caproto" },
-    { name = "ophyd-async", extra = ["ca"] },
-]
 pyqt = [
     { name = "magicgui" },
     { name = "pyqt6" },
@@ -4736,7 +4732,6 @@ zarr = [
 [package.metadata]
 requires-dist = [
     { name = "bluesky", specifier = ">=1.15.1" },
-    { name = "caproto", marker = "extra == 'epics'", specifier = ">=1.3.0" },
     { name = "culsans", specifier = ">=0.11.0" },
     { name = "dependency-injector", specifier = ">=4.49.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
@@ -4745,7 +4740,6 @@ requires-dist = [
     { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.0" },
     { name = "ome-writers", extras = ["acquire-zarr"], marker = "extra == 'zarr'", specifier = ">=0.3.2" },
     { name = "ophyd-async", specifier = ">=0.21.2" },
-    { name = "ophyd-async", extras = ["ca"], marker = "extra == 'epics'", specifier = ">=0.21.2" },
     { name = "platformdirs", specifier = ">=4.11.0" },
     { name = "psygnal", specifier = ">=0.15.1" },
     { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.11.0" },
@@ -4757,7 +4751,7 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.18" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["epics", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
+provides-extras = ["pyqt", "pyside", "qt-common", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 dev = [

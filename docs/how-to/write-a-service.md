@@ -6,11 +6,16 @@ how the container handles it.
 
 ## Prerequisites
 
-The `epics` extra, with `caproto` and `ophyd-async`'s Channel Access support:
+`redsun` depends on `ophyd-async` and on nothing a control-system protocol
+needs, so a service brings its own. For a `caproto` IOC reached over Channel
+Access:
 
 ```bash
-uv add "redsun[epics]"
+uv add caproto "ophyd-async[ca]"
 ```
+
+For one reached over PVAccess, `p4p` or a library written on it, such as
+`fastcs`, and `ophyd-async[pva]` for the device side.
 
 ## Write the IOC
 
@@ -109,6 +114,45 @@ devices:
 
 `beamline` has no module, so it is attached to: nothing starts or stops, and
 its devices only receive its prefix.
+
+## Name the transport
+
+Every service of a session is reached over one protocol, `channel-access`
+unless the session says otherwise. A session file names it under `services`,
+beside the services themselves:
+
+```yaml
+services:
+  transport: pv-access
+  camera_ioc:
+    plugin_name: mylab
+    plugin_id: camera-ioc
+```
+
+A container declaring its services in Python names it as an attribute:
+
+```python
+class MyApp(AppContainer):
+    transport = "pv-access"
+
+    camera_ioc = declare_service(
+        module="mylab.iocs.camera", ready="serving", prefix="CAM:"
+    )
+```
+
+A transport `redsun` does not have, a component named `transport`, and two
+layered files naming different transports are each refused as the class is
+created.
+[Services](../explanation/services.md#one-transport-per-session) describes what
+a session does for each of them.
+
+The process is launched with two variables of its own, so a module serving
+several sessions names its channels without taking arguments for them:
+
+```python
+prefix = os.environ.get("REDSUN_SERVICE_PREFIX", "")
+name = os.environ.get("REDSUN_SERVICE_NAME", "")
+```
 
 ## React when it exits
 
