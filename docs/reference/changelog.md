@@ -311,6 +311,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   values as they are, so `Literal[1, 2, 3]` offers integers and the plan
   receives one. They were turned into strings, which refused the default in
   `create_plan_widget` and handed the plan `"1"`.
+- **`AppContainer.build`** (`redsun.containers`) survives a component whose
+  `register_providers` or `inject_dependencies` raises: the component is
+  logged and dropped, as one failing to build is, rather than ending the
+  build. A view asking for what a skipped presenter would have provided no
+  longer takes the session down with it.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter
