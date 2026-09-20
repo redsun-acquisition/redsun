@@ -307,6 +307,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   module without `from __future__ import annotations`. Its annotations are
   already evaluated, and were re-read as text naming what the module never
   imported, which skipped every plan in it.
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) keeps a `Literal`'s
+  values as they are, so `Literal[1, 2, 3]` offers integers and the plan
+  receives one. They were turned into strings, which refused the default in
+  `create_plan_widget` and handed the plan `"1"`.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter

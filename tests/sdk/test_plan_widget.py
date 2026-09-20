@@ -61,6 +61,15 @@ def _literal_spec() -> PlanSpec:
     return create_plan_spec(plan, {})
 
 
+def _int_literal_spec() -> PlanSpec:
+    """Build a plan spec with a Literal of integers."""
+
+    def plan(mode: Literal[1, 2, 3] = 2) -> MsgGenerator[None]:
+        yield from ()
+
+    return create_plan_spec(plan, {})
+
+
 def _togglable_spec() -> PlanSpec:
     """Build a togglable plan spec (no pause)."""
 
@@ -236,6 +245,9 @@ class TestCreatePlanWidget:
 
     def test_literal_param_in_parameters(self) -> None:
         assert create_plan_widget(_literal_spec()).parameters == {"egu": "um"}
+
+    def test_a_literal_of_integers_yields_an_integer(self) -> None:
+        assert create_plan_widget(_int_literal_spec()).parameters == {"mode": 2}
 
     def test_a_bool_parameter_shows_its_name_once(self) -> None:
         """The form row carries the name; the checkbox itself carries none.

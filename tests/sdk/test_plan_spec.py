@@ -218,12 +218,12 @@ class TestCreatePlanSpec:
 
         assert spec.parameters[0].annotation is int
 
-    def test_literal_with_int_values_stringified(self) -> None:
+    def test_literal_values_are_kept_as_they_are(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
-        assert spec.parameters[0].choices == ["1", "2", "3"]
+        assert spec.parameters[0].choices == [1, 2, 3]
 
     def test_single_device_param_populates_choices(
         self, one_motor: dict[str, MockMotorDevice]

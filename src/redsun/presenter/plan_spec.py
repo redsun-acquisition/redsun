@@ -112,8 +112,8 @@ class ParamDescription:
     default: Any
     """Default value of the parameter, or `inspect.Parameter.empty` if none."""
 
-    choices: list[str] | None = None
-    """Labels of selectable values, for `Literal` and device parameters."""
+    choices: list[Any] | None = None
+    """Selectable values: a `Literal`'s own values, or device names."""
 
     multiselect: bool = False
     """Whether several values can be selected, as for `Sequence[OADevice]`."""
@@ -159,7 +159,7 @@ class _FieldsFromAnnotation(NamedTuple):
     Fields irrelevant to an annotation keep their defaults (None / False).
     """
 
-    choices: list[str] | None = None
+    choices: list[Any] | None = None
     multiselect: bool = False
     device_proto: type[Any] | None = None
 
@@ -168,8 +168,7 @@ def _handle_literal(
     ann: Any,
     _: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    choices = [str(a) for a in get_args(ann)]
-    return _FieldsFromAnnotation(choices=choices)
+    return _FieldsFromAnnotation(choices=list(get_args(ann)))
 
 
 def _device_fields(
