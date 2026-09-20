@@ -316,6 +316,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   logged and dropped, as one failing to build is, rather than ending the
   build. A view asking for what a skipped presenter would have provided no
   longer takes the session down with it.
+- **`DescriptorTreeView`** (`redsun.view.qt`) sends a number once it is
+  entered, on Enter or focus out. Every keystroke sent a value before, so
+  typing `100` wrote 1, 10 and 100 to the device, and a failed write was
+  reverted to 10 rather than to the value before the edit.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter
