@@ -320,6 +320,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   entered, on Enter or focus out. Every keystroke sent a value before, so
   typing `100` wrote 1, 10 and 100 to the device, and a failed write was
   reverted to 10 rather than to the value before the edit.
+- **`Service.stop`** (`redsun.services`) on Windows kills a process still
+  running after `stop_timeout` at once, as documented, rather than waiting a
+  second `stop_timeout` for a signal it never sends.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter
