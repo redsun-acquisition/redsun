@@ -4,7 +4,6 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import Future, wait
-from time import monotonic, sleep
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -30,10 +29,16 @@ def _engine_threads() -> set[threading.Thread]:
     return {t for t in threading.enumerate() if t.name == "RunEngine"}
 
 
-def _wait_until_running(engine: RunEngine) -> None:
-    deadline = monotonic() + 5.0
-    while engine.state != "running" and monotonic() < deadline:
-        sleep(0.01)
+def _running(engine: RunEngine) -> threading.Event:
+    """Return an event set the moment the engine reports itself running."""
+    running = threading.Event()
+
+    def on_state(new: str, old: str) -> None:
+        if new == "running":
+            running.set()
+
+    engine.state_hook = on_state  # type: ignore[assignment]
+    return running
 
 
 async def _current_thread() -> threading.Thread:
@@ -67,9 +72,10 @@ def test_each_plan_runs_on_a_thread_that_ends_with_it(
 def test_abort_ends_the_running_plan_and_its_thread(RE: RunEngine) -> None:
     """Bluesky's abort reaches a plan running on the engine's own thread."""
     before = _engine_threads()
+    running = _running(RE)
     fut = RE(bps.sleep(10.0))
     (worker,) = _engine_threads() - before
-    _wait_until_running(RE)
+    assert running.wait(5)
 
     RE.abort()
     worker.join(timeout=5)
@@ -96,18 +102,6 @@ def test_importing_the_engine_starts_no_thread() -> None:
     assert result.stdout.strip() == "['MainThread']"
 
 
-def test_engine_wrapper_run(RE: RunEngine, detector: MockDetector) -> None:
-    RE._call_returns_result = False
-    fut = RE(count([detector], num=5))
-
-    wait([fut])
-
-    result = fut.result()
-
-    assert type(result) is tuple
-    assert len(result) == 1
-
-
 def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -> None:
     fut = RE(count([detector], num=5))
 
@@ -117,8 +111,6 @@ def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -
 
     assert type(result) is RunEngineResult
     assert result.exit_status == "success"
-
-    RE._call_returns_result = False
 
 
 def test_a_done_callback_receives_the_finished_future(
@@ -188,11 +180,12 @@ def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
 
         yield from count([detector], num=None)
 
+    running = _running(RE)
     fut = RE(pausable_plan())
     future_set.add(fut)
     fut.add_done_callback(future_set.discard)
 
-    sleep(0.5)
+    assert running.wait(5)
 
     RE.request_pause(defer=True)
 

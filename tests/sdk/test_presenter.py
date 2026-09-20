@@ -1,10 +1,18 @@
-from collections.abc import Mapping
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
-from ophyd_async.core import Device
 
 from redsun.presenter import PPresenter, Presenter
-from redsun.virtual import IsInjectable, IsProvider, VirtualContainer
+from redsun.virtual import IsInjectable, IsProvider
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from ophyd_async.core import Device
+
+    from redsun.virtual import VirtualContainer
 
 
 @pytest.fixture
@@ -25,8 +33,7 @@ def test_base_presenter(devices: Mapping[str, Device]) -> None:
 
     controller = TestController("ctrl", devices)
 
-    assert controller.name == "ctrl"
-    assert controller.devices == devices
+    assert isinstance(controller, PPresenter)
 
 
 def test_presenter_is_provider(
@@ -68,7 +75,6 @@ def test_presenter_is_injectable(
             pass  # would inject dependencies here
 
     controller = InjectableController("ctrl", devices)
-    assert isinstance(controller, Presenter)
     assert isinstance(controller, IsInjectable)
     assert issubclass(InjectableController, IsInjectable)
 

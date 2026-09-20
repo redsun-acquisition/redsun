@@ -22,8 +22,9 @@ class NotAView:
 class MockQtView(QtView):
     """Mock Qt view for testing."""
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
+    def __init__(self, name: str, /, *, label: str = "", **kwargs: Any) -> None:
         super().__init__(name, **kwargs)
+        self.label = label
 
     @property
     def view_position(self) -> ViewPosition:

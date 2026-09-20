@@ -1,5 +1,7 @@
 """ophyd-async mock devices for container integration tests."""
 
+from __future__ import annotations
+
 from ophyd_async.core import StandardReadable, soft_signal_rw
 
 

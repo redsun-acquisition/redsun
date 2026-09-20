@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import time
+import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from ophyd_async.core import soft_signal_rw
 from psygnal import SignalGroup
-
-# psygnal re-exports get/set_async_backend at the top level but not this one
 from psygnal._async import clear_async_backend
 
 from redsun.aio import set_async_backend
@@ -21,6 +19,8 @@ from redsun.virtual import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from redsun.virtual import VirtualContainer
 
 
@@ -74,15 +74,32 @@ class Consumer:
 class AsyncConsumer:
     def __init__(self) -> None:
         self.seen: list[FrameBatch] = []
+        self.absorbed = threading.Event()
 
     @slot
     async def absorb(self, batch: FrameBatch) -> None:
         self.seen.append(batch)
+        self.absorbed.set()
 
 
 @pytest.fixture
 def producer() -> Producer:
     return Producer()
+
+
+@pytest.fixture
+def async_backend(bus: VirtualContainer) -> Iterator[None]:
+    """Install the async backend for the test, and take it down after.
+
+    The bus is disconnected first: a coroutine slot cannot be looked up once
+    the backend is gone.
+    """
+    set_async_backend()
+    try:
+        yield
+    finally:
+        bus.disconnect_all()
+        clear_async_backend()
 
 
 @pytest.fixture
@@ -162,7 +179,7 @@ def test_disconnect_all_stops_delivery(
     bus.disconnect_all()
     producer.sig_new_data.emit(FrameBatch("cam", {"b": 2}))
 
-    assert len(consumer.seen) == 1
+    assert consumer.seen == [FrameBatch("cam", {"a": 1})]
     assert bus.connections == []
 
 
@@ -255,21 +272,13 @@ def test_a_group_member_clashing_with_a_signal_is_rejected() -> None:
 
 
 def test_a_coroutine_slot_is_connected_and_dispatched(
-    bus: VirtualContainer, producer: Producer
+    bus: VirtualContainer, producer: Producer, async_backend: None
 ) -> None:
     """An async method is a slot like any other; psygnal dispatches it."""
     consumer = AsyncConsumer()
-    set_async_backend()
-    try:
-        link = bus.connect(producer.sig_new_data, consumer.absorb)
-        producer.sig_new_data.emit(FrameBatch("cam", {"a": 1}))
+    link = bus.connect(producer.sig_new_data, consumer.absorb)
+    producer.sig_new_data.emit(FrameBatch("cam", {"a": 1}))
 
-        deadline = time.perf_counter() + 5.0
-        while not consumer.seen and time.perf_counter() < deadline:
-            time.sleep(0.005)
-    finally:
-        bus.disconnect_all()
-        clear_async_backend()
-
+    assert consumer.absorbed.wait(5.0)
     assert link.consumer_port == "absorb"
     assert consumer.seen == [FrameBatch("cam", {"a": 1})]

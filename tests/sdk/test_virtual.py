@@ -61,7 +61,7 @@ class MockNonCallable:
 
 def test_virtual_container_no_object(bus: VirtualContainer) -> None:
     """Test that accessing a non-existent signal key raises KeyError."""
-    with pytest.raises(KeyError):
+    with pytest.raises(KeyError, match="MockOwner"):
         bus.signals["MockOwner"]
 
 
@@ -74,12 +74,13 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
         def __init__(self, container: VirtualContainer) -> None:
             self.container = container
             self.name = "FirstMockOwner"
+            self.received: list[int] = []
 
         def register_providers(self, container: VirtualContainer) -> None:
             container.register_signals(self)
 
         def second_to_first(self, x: int) -> None:
-            assert x == 5
+            self.received.append(x)
 
     class SecondMockOwner(IsInjectable):
         sig_second_signal = Signal(int)
@@ -87,6 +88,7 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
         def __init__(self, container: VirtualContainer) -> None:
             self.container = container
             self.name = "SecondMockOwner"
+            self.received: list[int] = []
 
         def inject_dependencies(self, container: VirtualContainer) -> None:
             container.register_signals(self)
@@ -95,7 +97,7 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
             )
 
         def first_to_second(self, x: int) -> None:
-            assert x == 5
+            self.received.append(x)
 
     first_owner = FirstMockOwner(bus)
     second_owner = SecondMockOwner(bus)
@@ -114,14 +116,15 @@ def test_virtual_container_psygnal_connection(bus: VirtualContainer) -> None:
     assert "SecondMockOwner" in bus.signals
 
     first_owner.sig_first_signal.emit(5)
-    second_owner.sig_second_signal.emit(5)
+    second_owner.sig_second_signal.emit(7)
+
+    assert second_owner.received == [5]
+    assert first_owner.received == [7]
 
 
 def test_virtual_container_psygnal_connection_only(bus: VirtualContainer) -> None:
     """Test 'register_signals' using the 'only' parameter."""
-
-    def callback(x: int) -> None:
-        assert x == 5
+    received: list[int] = []
 
     class MockOwner:
         sig_signal_one = Signal(int)
@@ -140,8 +143,10 @@ def test_virtual_container_psygnal_connection_only(bus: VirtualContainer) -> Non
     assert "sig_signal_one" in bus.signals["MockOwner"]
     assert "sig_signal_two" not in bus.signals["MockOwner"]
 
-    bus.signals["MockOwner"]["sig_signal_one"].connect(callback)
+    bus.signals["MockOwner"]["sig_signal_one"].connect(received.append)
     owner.sig_signal_one.emit(5)
+
+    assert received == [5]
 
 
 def test_register_callbacks_document_router(bus: VirtualContainer) -> None:
@@ -198,7 +203,7 @@ def test_register_callbacks_callback_map_rejects_invalid(bus: VirtualContainer) 
     """callback_map validates each entry and raises TypeError on bad values."""
     router = MockRouter()
     callback_map: dict[str, Any] = {"good": router, "bad": MockBadCallable()}
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="not compatible"):
         bus.register_callbacks(router, callback_map=callback_map)
 
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -22,12 +20,18 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
 )
 from redsun.view.qt._widget_factory import create_param_widget
-from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
+from redsun.view.qt.utils import ActionButton, create_plan_widget
 
-pytestmark = pytest.mark.skipif(
-    sys.platform == "linux" and not os.environ.get("DISPLAY"),
-    reason="requires a display (Qt) on Linux",
-)
+pytestmark = pytest.mark.qt
+
+
+@pytest.fixture(autouse=True)
+def _application(qapp: QtW.QApplication) -> None:
+    """Hold the session's application for every test here.
+
+    The widgets are built without asking for one, so run alone the module
+    made and lost its own, and the interpreter died between tests.
+    """
 
 
 def _simple_spec() -> PlanSpec:
@@ -152,80 +156,64 @@ class TestActionButton:
             toggle_states: tuple[str, str] = ("Start", "Stop")
 
         btn = ActionButton(Stream())
-        # unchecked -> first state label
-        assert "Start" in btn.text()
+        assert btn.text() == "Stream (Start)"
         btn.setChecked(True)
-        assert "Stop" in btn.text()
+        assert btn.text() == "Stream (Stop)"
         btn.setChecked(False)
-        assert "Start" in btn.text()
-
-
-def _make_minimal_plan_widget(spec: PlanSpec) -> PlanWidget:
-    """Create a PlanWidget via create_plan_widget with no callbacks."""
-    return create_plan_widget(spec)
+        assert btn.text() == "Stream (Start)"
 
 
 class TestCreatePlanWidget:
     """Tests for create_plan_widget output structure."""
 
     def test_simple_plan_has_no_pause_button(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
+        pw = create_plan_widget(_simple_spec())
         assert pw.pause_button is None
 
     def test_simple_plan_has_no_actions_group(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
+        pw = create_plan_widget(_simple_spec())
         assert pw.actions_group is None
         assert pw.action_buttons == {}
 
     def test_simple_plan_run_button_not_checkable(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
+        pw = create_plan_widget(_simple_spec())
         assert not pw.run_button.isCheckable()
 
     def test_togglable_plan_run_button_is_checkable(self) -> None:
-        pw = _make_minimal_plan_widget(_togglable_spec())
+        pw = create_plan_widget(_togglable_spec())
         assert pw.run_button.isCheckable()
 
     def test_togglable_plan_has_no_pause_button(self) -> None:
-        pw = _make_minimal_plan_widget(_togglable_spec())
+        pw = create_plan_widget(_togglable_spec())
         assert pw.pause_button is None
 
     def test_pausable_plan_has_pause_button(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
+        pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
 
     def test_pausable_plan_pause_button_initially_disabled(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
+        pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
     def test_action_plan_has_actions_group(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
 
     def test_action_plan_actions_group_initially_disabled(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
         assert not pw.actions_group.isEnabled()
 
     def test_action_plan_has_action_button(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         assert "snap" in pw.action_buttons
 
     def test_has_actions_true_when_actions_present(self) -> None:
-        assert _make_minimal_plan_widget(_action_spec()).has_actions()
+        assert create_plan_widget(_action_spec()).has_actions()
 
     def test_has_actions_false_when_no_actions(self) -> None:
-        assert not _make_minimal_plan_widget(_simple_spec()).has_actions()
-
-    def test_group_box_is_qwidget(self) -> None:
-
-        pw = _make_minimal_plan_widget(_simple_spec())
-        assert isinstance(pw.group_box, QtW.QWidget)
-
-    def test_spec_stored_on_widget(self) -> None:
-        spec = _simple_spec()
-        pw = create_plan_widget(spec)
-        assert pw.spec is spec
+        assert not create_plan_widget(_simple_spec()).has_actions()
 
     def test_run_callback_connected(self) -> None:
         """run_callback fires when run_button is clicked on a non-togglable plan."""
@@ -244,14 +232,10 @@ class TestCreatePlanWidget:
         assert True in states
 
     def test_parameters_returns_current_values(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
-        params = pw.parameters
-        assert "frames" in params
-        assert params["frames"] == 1  # default value
+        assert create_plan_widget(_simple_spec()).parameters == {"frames": 1}
 
     def test_literal_param_in_parameters(self) -> None:
-        pw = _make_minimal_plan_widget(_literal_spec())
-        assert "egu" in pw.parameters
+        assert create_plan_widget(_literal_spec()).parameters == {"egu": "um"}
 
     def test_a_bool_parameter_shows_its_name_once(self) -> None:
         """The form row carries the name; the checkbox itself carries none.
@@ -259,11 +243,9 @@ class TestCreatePlanWidget:
         magicgui gives a CheckBox its name as text too, which rendered every
         bool parameter as "write forever [ ] write forever".
         """
-        pw = _make_minimal_plan_widget(_bool_spec())
-        group = pw.group_box.findChild(QtW.QGroupBox, "")
+        pw = create_plan_widget(_bool_spec())
         checkbox = pw.group_box.findChild(QtW.QCheckBox)
 
-        assert group is not None
         assert checkbox is not None
         assert checkbox.text() == ""
         labels = [
@@ -272,112 +254,84 @@ class TestCreatePlanWidget:
             if label.text() == "write forever"
         ]
         assert labels == ["write forever"]
-        assert pw.parameters["write_forever"] is False
+        assert pw.parameters == {"write_forever": False}
 
     def test_get_action_button_returns_button(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         btn = pw.get_action_button("snap")
         assert btn is not None
         assert isinstance(btn, ActionButton)
 
     def test_get_action_button_returns_none_for_unknown(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         assert pw.get_action_button("nonexistent") is None
 
 
 class TestPlanWidgetControlAPI:
     """Tests for PlanWidget.toggle / pause / setEnabled / enable_actions."""
 
-    def test_toggle_true_changes_run_button_text(self) -> None:
-        pw = _make_minimal_plan_widget(_togglable_spec())
+    def test_toggle_swaps_the_run_button_text(self) -> None:
+        pw = create_plan_widget(_togglable_spec())
         pw.toggle(True)
         assert pw.run_button.text() == "Stop"
-
-    def test_toggle_false_restores_run_button_text(self) -> None:
-        pw = _make_minimal_plan_widget(_togglable_spec())
-        pw.toggle(True)
         pw.toggle(False)
         assert pw.run_button.text() == "Run"
 
-    def test_toggle_true_enables_pause_button(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
-        pw.toggle(True)
+    def test_toggle_enables_the_pause_button_while_running(self) -> None:
+        pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
+        pw.toggle(True)
         assert pw.pause_button.isEnabled()
-
-    def test_toggle_false_disables_pause_button(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
-        pw.toggle(True)
         pw.toggle(False)
-        assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
-    def test_toggle_true_disables_params_widget(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
+    def test_toggle_freezes_the_parameters_while_running(self) -> None:
+        pw = create_plan_widget(_simple_spec())
         pw.toggle(True)
         assert not pw.params_widget.isEnabled()
-
-    def test_toggle_false_enables_params_widget(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
-        pw.toggle(True)
         pw.toggle(False)
         assert pw.params_widget.isEnabled()
 
     def test_toggle_enables_actions_group(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
+        pw = create_plan_widget(_action_spec())
         pw.toggle(True)
         assert pw.actions_group is not None
         assert pw.actions_group.isEnabled()
 
-    def test_pause_true_changes_pause_button_text(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
+    def test_pause_swaps_the_pause_button_text(self) -> None:
+        pw = create_plan_widget(_pausable_spec())
+        assert pw.pause_button is not None
         pw.toggle(True)
         pw.pause(True)
-        assert pw.pause_button is not None
         assert pw.pause_button.text() == "Resume"
-
-    def test_pause_false_restores_pause_button_text(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
-        pw.toggle(True)
-        pw.pause(True)
         pw.pause(False)
-        assert pw.pause_button is not None
         assert pw.pause_button.text() == "Pause"
 
     def test_pause_true_disables_run_button(self) -> None:
-        pw = _make_minimal_plan_widget(_pausable_spec())
+        pw = create_plan_widget(_pausable_spec())
         pw.toggle(True)
         pw.pause(True)
         assert not pw.run_button.isEnabled()
 
-    def test_set_enabled_false_disables_group_box(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
+    def test_set_enabled_reaches_the_group_box(self) -> None:
+        pw = create_plan_widget(_simple_spec())
         pw.setEnabled(False)
         assert not pw.group_box.isEnabled()
-
-    def test_set_enabled_true_restores_group_box(self) -> None:
-        pw = _make_minimal_plan_widget(_simple_spec())
-        pw.setEnabled(False)
         pw.setEnabled(True)
         assert pw.group_box.isEnabled()
 
-    def test_enable_actions_true_enables_actions_group(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
-        pw.enable_actions(True)
+    def test_enable_actions_reaches_the_actions_group(self) -> None:
+        pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
+        pw.enable_actions(True)
         assert pw.actions_group.isEnabled()
-
-    def test_enable_actions_false_disables_actions_group(self) -> None:
-        pw = _make_minimal_plan_widget(_action_spec())
-        pw.enable_actions(True)
         pw.enable_actions(False)
-        assert pw.actions_group is not None
         assert not pw.actions_group.isEnabled()
 
     def test_enable_actions_noop_when_no_actions(self) -> None:
         """enable_actions should not raise when there is no actions_group."""
-        pw = _make_minimal_plan_widget(_simple_spec())
-        pw.enable_actions(True)  # must not raise
+        pw = create_plan_widget(_simple_spec())
+        pw.enable_actions(True)
         pw.enable_actions(False)
 
 

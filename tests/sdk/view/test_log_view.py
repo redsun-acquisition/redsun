@@ -300,8 +300,7 @@ def test_save_writes_the_records_of_the_tab_shown(
     view.save(str(target))
 
     written = target.read_text(encoding="utf-8")
-    assert all(line in written for line in saved)
-    assert not any(line in written for line in left_out)
+    assert {line for line in saved + left_out if line in written} == set(saved)
 
 
 @pytest.mark.parametrize("shown", ["application", "services"])
