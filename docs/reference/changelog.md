@@ -173,30 +173,36 @@ Dates are specified in the format `DD-MM-YYYY`.
   provider = container.require(PATH_PROVIDER)
   ```
 
-- **`redsun.storage.writers`** - one module per format, each with
-  `write(uri, *, data_key, data, metadata=None) -> str`, adding a derived
-  product to an acquisition's store: `zarr` for `application/x-zarr`,
-  `ome_zarr` for `application/x-ome-zarr`:
+- **`Writer`** (`redsun.storage.writers`) - writes the products a component
+  computes against the stores a run names. A product is declared before the
+  run, `derive(data_key, source=)` to take its layout and store from the
+  `descriptor` and `stream_resource` naming *source*, or `declare(data_key,
+  shape=, dtype=, store=)` to give both; the component forwards every
+  document with `writer(name, doc)` and hands the data over with
+  `append(data_key, data)` per frame or `write(data_key, data, metadata=None)`
+  for the whole product, which returns the product's URI:
 
   ```python
-  from redsun.storage.writers import ome_zarr
-
-  product_uri = ome_zarr.write(
-      resource["uri"],
-      data_key="det_median",
-      data=median,
-      metadata={"derived_from": resource["data_key"]},
-  )
+  writer = Writer()
+  writer.derive("det_median", source="det")
+  ...
+  writer.write("det_median", median, metadata={"derived_from": "det"})
   ```
 
-  The returned URI is the argument when the product joined that store, and a
-  new one when it went beside it, as it does for a root carrying OME-Zarr
-  metadata (an image, a plate, a `bioformats2raw` layout), which `zarr.write`
-  refuses. A writer registers nothing.
-- **`WriterError`** (`redsun.storage.writers`) - raised for a store the
-  writer cannot take, or an array with too few or too many dimensions.
-  Importing a writer module without its package raises `ImportError`
-  naming the extra that installs it.
+  A product goes as a key of the store the acquisition wrote, or as a store of
+  its own beside a root carrying OME-Zarr metadata, named
+  `<store>_<data_key>.ome.zarr` and written whole. `stop` closes every stream
+  and writes two mappings on each product's group: *metadata* as given, and
+  `redsun` with `run_start`, `source`, `resource_uri` and `written`.
+  `shutdown` closes what a session ending mid-run left open.
+- **`ArrayShape`** (`redsun.storage.writers`) - the shape and dtype of one
+  frame of a product.
+- **`WriterError`** (`redsun.storage.writers`) - raised for a product not
+  declared, one without its layout or store yet, one declared after its
+  store's stream opened, a store the writer cannot take, or an array with too
+  few or too many dimensions. Importing the package without `acquire-zarr`
+  raises `ImportError` naming the extra that installs it; writing beside an
+  OME-Zarr image without `ome-writers` does the same on first use.
 - A `zarr` extra and dependency group, with `acquire-zarr`, and an
   `ome-zarr` one, with `ome-writers[acquire-zarr]`.
 - A `tiled` extra and dependency group, with `tiled[client,server]` and
