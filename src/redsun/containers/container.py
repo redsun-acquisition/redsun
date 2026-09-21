@@ -321,10 +321,9 @@ def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
         If the merged mapping is missing a key `AppConfig` requires.
     """
     if len(paths) > 1:
-        logger.debug(
-            f"Reading configuration from {len(paths)} files, in order: "
-            f"{', '.join(str(path) for path in paths)}"
-        )
+        logger.debug(f"Reading configuration from {len(paths)} files, in order:")
+        for position, path in enumerate(paths, 1):
+            logger.debug(f"  {position}. {path}")
     data: dict[str, Any] = {}
     for path in paths:
         overlay = _read_yaml(path)
