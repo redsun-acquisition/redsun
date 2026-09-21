@@ -1,4 +1,4 @@
-"""A writer that follows a run's documents to place the products a component computes."""
+"""Place a component's products by following the run's documents."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ Store = tuple[str, str]
 
 @dataclass(slots=True)
 class Product:
-    """One product: given whole by `declare`, or laid out and stored as a run's *source* is."""
+    """One product, given by `declare` or derived from a run's *source*."""
 
     data_key: str
     source: str | None = None
@@ -48,7 +48,7 @@ class Product:
 
 @dataclass(slots=True)
 class Open:
-    """A stream open on one store, and the products it was opened with."""
+    """A stream open on one store, with the products declared to it."""
 
     stream: Stream
     placement: Placement
@@ -57,11 +57,9 @@ class Open:
 
 @dataclass(slots=True)
 class Run:
-    """What a run's documents said so far, and the streams opened for it.
+    """What a run's documents said, keyed by source data key, and its open streams.
 
-    Keyed by source data key: the layout its `descriptor` gave and the store
-    its `stream_resource` named. ``uid`` is ``None`` for the streams opened
-    outside any run.
+    ``uid`` is ``None`` outside any run.
     """
 
     uid: str | None
@@ -72,21 +70,20 @@ class Run:
 
 
 class Writer(DocumentRouter):
-    """Write the products a component computes against the stores a run names.
+    """Write a component's products against the stores a run names.
 
-    A product is declared once, before the run: `declare` with a layout and a
-    store, or `derive` from a data key of the run, whose `descriptor` gives
-    the layout and whose `stream_resource` gives the store. The component
-    forwards every document it receives with ``writer(name, doc)`` and hands
-    the data over itself, `append` per frame or `write` for the whole
-    product. A run's `stop` closes the streams opened for it and writes each
-    product's metadata: the component's mapping as given, and a ``redsun``
-    mapping naming the run, the source, the store and the time.
+    Declare each product before the run: `declare` gives its layout and
+    store, `derive` takes both from the run's `descriptor` and
+    `stream_resource` naming a source data key. The component forwards every
+    document with ``writer(name, doc)`` and hands data over with `append`
+    per frame or `write` for the whole product. A run's `stop` closes its
+    streams and writes each product's metadata: the mapping given to `write`,
+    and a ``redsun`` mapping with the run, source, store and time.
 
-    A store's stream opens on the first `append` or `write` against it, with
-    every product of that store known by then. A product resolves against
-    the innermost open run whose documents named both its layout and its
-    store, so a nested run sees what the run around it declared.
+    A store's stream opens on the first `append` or `write`, with every
+    product of that store known by then. A product resolves against the
+    innermost open run naming both its layout and its store, so a nested run
+    sees what the run around it declared.
     """
 
     def __init__(self) -> None:
@@ -98,7 +95,7 @@ class Writer(DocumentRouter):
     def declare(
         self, data_key: str, *, shape: tuple[int, ...], dtype: DTypeLike, store: str
     ) -> None:
-        """Declare a product of frames shaped *shape*, written as a key of the Zarr store at *store*."""
+        """Declare a product of frames of *shape*, a key of the Zarr store at *store*."""
         self._products[data_key] = Product(
             data_key,
             layout=ArrayShape.of(shape, dtype),
@@ -106,7 +103,7 @@ class Writer(DocumentRouter):
         )
 
     def derive(self, data_key: str, *, source: str) -> None:
-        """Declare a product laid out and stored as the run's *source* data key is."""
+        """Declare a product laid out and stored as the run's *source* is."""
         self._products[data_key] = Product(data_key, source=source)
 
     def append(self, data_key: str, data: NDArray[Any]) -> None:
@@ -116,7 +113,7 @@ class Writer(DocumentRouter):
         ------
         WriterError
             If *data_key* was not declared, no open run named its layout and
-            store, or it goes to a store of its own, which is written whole.
+            store, or it goes to a store of its own, written whole.
         """
         opened = self._stream_for(data_key, whole=None)
         if opened is not None:
@@ -128,11 +125,10 @@ class Writer(DocumentRouter):
         data: NDArray[Any],
         metadata: Mapping[str, Any] | None = None,
     ) -> str:
-        """Write the whole of *data_key* and return the URI of where it went.
+        """Write the whole of *data_key* and return the URI it went to.
 
-        A product placed as a key of the run's store is appended to it and
-        finished at the run's `stop`; one placed as a store of its own is
-        finished at once, its layout taken from *data*.
+        A key of the run's store is finished at the run's `stop`; a store of
+        its own at once, with the layout of *data*.
 
         Raises
         ------
@@ -154,21 +150,21 @@ class Writer(DocumentRouter):
         return opened.placement.uri
 
     def close(self) -> None:
-        """Finish every open stream, write its metadata, and forget every run."""
+        """Finish every open stream and forget every run."""
         for run in (*self._runs, self._outside):
             self._close(run)
         self._runs.clear()
 
     def shutdown(self) -> None:
-        """Close, so a session ending mid-run leaves every store readable."""
+        """Close, so a session ending mid-run leaves its stores readable."""
         self.close()
 
     def start(self, doc: RunStart) -> None:
-        """Open a run; one started inside another is the innermost until its stop."""
+        """Open a run, the innermost until its stop."""
         self._runs.append(Run(uid=doc["uid"]))
 
     def descriptor(self, doc: EventDescriptor) -> None:
-        """Take the layout of every derived product's source this stream describes."""
+        """Record the layout of each derived source this stream describes."""
         run = self._find(doc["run_start"])
         for source in {product.source for product in self._products.values()}:
             key = doc["data_keys"].get(source or "")
@@ -185,18 +181,18 @@ class Writer(DocumentRouter):
             run.layouts[source] = ArrayShape.of(shape, dtype)
 
     def stream_resource(self, doc: StreamResource) -> None:
-        """Take the store of every derived product's source this resource names."""
+        """Record the store this resource names for its data key."""
         self._find(doc["run_start"]).stores[doc["data_key"]] = (
             doc["uri"],
             doc["mimetype"],
         )
 
     def event(self, doc: Event) -> Event:
-        """Pass an event through: data reaches the writer by `append` and `write`."""
+        """Pass an event through; data arrives by `append` and `write`."""
         return doc
 
     def stop(self, doc: RunStop) -> None:
-        """Close the streams opened for this run and forget what it said."""
+        """Close this run's streams and forget it."""
         run = self._find(doc["run_start"])
         self._close(run)
         if run is not self._outside:
@@ -212,7 +208,7 @@ class Writer(DocumentRouter):
             ) from None
 
     def _find(self, uid: str) -> Run:
-        """Return the open run *uid*, or the streams outside any run for one not open."""
+        """Return the open run *uid*, or the run outside any run when none matches."""
         for run in reversed(self._runs):
             if run.uid == uid:
                 return run
@@ -231,12 +227,12 @@ class Writer(DocumentRouter):
         return layout, store
 
     def _run_of(self, data_key: str) -> Run:
-        """Return the innermost open run that names the product's layout and store.
+        """Return the innermost open run naming the product's layout and store.
 
         Raises
         ------
         WriterError
-            Naming what no open run said.
+            Naming which of the two no open run said.
         """
         product = self._product(data_key)
         for run in (*reversed(self._runs), self._outside):
@@ -252,11 +248,11 @@ class Writer(DocumentRouter):
         )
 
     def _stream_for(self, data_key: str, *, whole: NDArray[Any] | None) -> Open | None:
-        """Return the stream *data_key* goes to, opening it on the first call.
+        """Return the stream *data_key* goes to, opened on the first call.
 
-        ``None`` when the run described the store with a mimetype no writer
-        knows, logged once per run. *whole* is the whole product when the
-        caller has it, which a store of its own needs.
+        ``None`` for a mimetype no writer knows, logged once per run. *whole*
+        is the whole product when the caller has it, as a store of its own
+        needs.
         """
         product = self._product(data_key)
         run = self._run_of(data_key)
@@ -299,7 +295,7 @@ class Writer(DocumentRouter):
         return opened
 
     def _close(self, run: Run) -> None:
-        """Finish every stream of *run* and forget what its documents said."""
+        """Finish every stream of *run* and forget its documents."""
         while run.open:
             self._finish(run.open.popitem()[1], run)
         run.layouts.clear()
@@ -307,7 +303,7 @@ class Writer(DocumentRouter):
         run.unplaced.clear()
 
     def _finish(self, opened: Open, run: Run) -> None:
-        """Close *opened* and write both metadata mappings on each of its products."""
+        """Close *opened* and write both metadata mappings on each product."""
         opened.stream.close()
         written = datetime.now(UTC).isoformat(timespec="seconds")
         for product in opened.products:

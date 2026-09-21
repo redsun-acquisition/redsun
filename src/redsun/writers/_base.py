@@ -25,27 +25,23 @@ class WriterError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class ArrayShape:
-    """The layout of one frame of a product.
-
-    A stream appends frames along an axis added in front of ``shape``.
-    """
+    """Shape and dtype of one frame; a stream appends frames along a leading axis."""
 
     shape: tuple[int, ...]
     dtype: np.dtype[Any]
 
     @classmethod
     def of(cls, shape: tuple[int, ...], dtype: DTypeLike) -> ArrayShape:
-        """Return the layout of frames shaped *shape* with *dtype*."""
+        """Return the layout with *shape* and *dtype* normalised."""
         return cls(tuple(int(size) for size in shape), np.dtype(dtype))
 
     def check(self, data_key: str, data: NDArray[Any]) -> NDArray[Any]:
-        """Return *data* as a contiguous array of one or more frames of this layout.
+        """Return *data* contiguous, as one frame or a stack of frames of this layout.
 
         Raises
         ------
         WriterError
-            If the trailing dimensions of *data* are not ``shape``, or its
-            dtype is not ``dtype``.
+            If the trailing dimensions or the dtype differ from this layout.
         """
         if data.dtype != self.dtype:
             raise WriterError(
@@ -61,16 +57,16 @@ class ArrayShape:
 
 
 class Stream(Protocol):
-    """A store open for appending frames to the arrays it was opened with."""
+    """A store open for appending to the arrays declared at open."""
 
     def append(self, data_key: str, data: NDArray[Any]) -> None:
         """Append one frame, or a stack of frames, to *data_key*."""
 
     def node(self, data_key: str) -> Path:
-        """Return the path of the group holding *data_key*."""
+        """Return the group holding *data_key*."""
 
     def close(self) -> None:
-        """Finish every array; nothing can be appended afterwards."""
+        """Finish every array; no append afterwards."""
 
 
 def store_path(uri: str) -> Path:

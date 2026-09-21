@@ -1,12 +1,12 @@
-"""Writers adding a derived product to an acquisition's store.
+"""Write a derived product against the store a run names.
 
-`Writer` follows a run's documents to learn where each product goes and
-writes it there, as a key of the store the acquisition wrote or as a store
-of its own beside it. It registers nothing in a catalog.
+`Writer` reads a run's documents for where each product goes: a key of the
+acquisition's store, or a store of its own beside it. Nothing is registered
+in a catalog.
 
-Importing this package raises `ImportError` naming the extra to install when
-`acquire-zarr` is missing, `redsun[zarr]`; writing beside an OME-Zarr image
-needs `redsun[ome-zarr]` as well, named the same way on first use.
+Without `acquire-zarr`, importing this package raises `ImportError` naming
+`redsun[zarr]`. Writing beside an OME-Zarr image needs `redsun[ome-zarr]`,
+named the same way on first use.
 """
 
 from ._base import ArrayShape, WriterError

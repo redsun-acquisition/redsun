@@ -22,11 +22,10 @@ if TYPE_CHECKING:
 
 
 class Stream:
-    """An OME-Zarr store of its own, holding one image.
+    """An OME-Zarr store holding one image.
 
     The layout is the whole image, not one frame: `ome-writers` allocates
-    every frame at open, so the stream is closed once that many were
-    appended.
+    every frame at open.
     """
 
     __slots__ = ("_data_key", "_layout", "_path", "_stream")
@@ -58,13 +57,12 @@ class Stream:
         self._stream = ow.create_stream(settings)
 
     def append(self, data_key: str, data: NDArray[Any]) -> None:
-        """Append the 2D frames of *data*, in order, to the image.
+        """Append the 2D frames of *data*, in order.
 
         Raises
         ------
         WriterError
-            If *data_key* is not the image, or *data* does not match its
-            layout.
+            If *data_key* is not the image, or *data* does not fit its layout.
         """
         if data_key != self._data_key:
             raise WriterError(
@@ -76,9 +74,9 @@ class Stream:
             self._stream.append(frame)
 
     def node(self, data_key: str) -> Path:
-        """Return the store's root, which is the image."""
+        """Return the root, which holds the image."""
         return self._path
 
     def close(self) -> None:
-        """Finish the image; nothing can be appended afterwards."""
+        """Finish the image; no append afterwards."""
         self._stream.close()

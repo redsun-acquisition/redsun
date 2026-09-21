@@ -26,10 +26,10 @@ _SPATIAL = frozenset({"z", "y", "x"})
 
 
 class Stream:
-    """A Zarr store open for appending frames to a set of keys.
+    """A Zarr store open for appending to keys declared at open.
 
-    Every key is declared at open, since `acquire-zarr` sizes a store's
-    arrays once. A key that exists in the store already is refused.
+    `acquire-zarr` sizes arrays once, so no key joins later. A key the store
+    already has is refused.
     """
 
     __slots__ = ("_arrays", "_path", "_stream")
@@ -54,8 +54,8 @@ class Stream:
         Raises
         ------
         WriterError
-            If the stream was not opened with *data_key*, or *data* does not
-            match its layout.
+            If *data_key* was not declared at open, or *data* does not fit
+            its layout.
         """
         layout = self._arrays.get(data_key)
         if layout is None:
@@ -66,20 +66,20 @@ class Stream:
         self._stream.append(layout.check(data_key, data), data_key)
 
     def node(self, data_key: str) -> Path:
-        """Return the path of the group holding *data_key*."""
+        """Return the group holding *data_key*."""
         return self._path / data_key
 
     def close(self) -> None:
-        """Finish every array; nothing can be appended afterwards."""
+        """Finish every array; no append afterwards."""
         self._stream.close()
 
 
 def array_settings(
     data_key: str, layout: ArrayShape, *, is_ngff: bool
 ) -> az.ArraySettings:
-    """Return the `acquire-zarr` settings of an array of frames shaped *layout*.
+    """Return `acquire-zarr` settings for frames of *layout* behind a growing leading axis.
 
-    The appended axis leads, sized as it grows and chunked one frame at a time.
+    That axis is chunked one frame at a time.
     """
     names = axis_names(len(layout.shape) + 1)
     array = az.ArraySettings()
@@ -102,7 +102,7 @@ def array_settings(
 
 
 def _kind(name: str) -> az.DimensionType:
-    """Return the `acquire-zarr` dimension type of the NGFF axis *name*."""
+    """Return the dimension type of NGFF axis *name*."""
     if name in _SPATIAL:
         return az.DimensionType.SPACE
     if name == "c":
@@ -111,7 +111,7 @@ def _kind(name: str) -> az.DimensionType:
 
 
 def _data_type(dtype: np.dtype[Any]) -> az.DataType:
-    """Return the `acquire-zarr` data type matching *dtype*."""
+    """Return the data type matching *dtype*."""
     match np.dtype(dtype).name:
         case "uint8":
             return az.DataType.UINT8

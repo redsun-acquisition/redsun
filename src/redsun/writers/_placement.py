@@ -25,11 +25,10 @@ OME_ZARR: Final = "application/x-ome-zarr"
 
 @dataclass(frozen=True, slots=True)
 class Placement:
-    """Where a product goes against a store, and how a stream is opened there.
+    """Where a product goes, and how to open a stream there.
 
-    ``streamed`` is whether frames can be appended over a run: an OME-Zarr
-    store of its own is written whole, since its frame count is fixed at
-    open.
+    ``streamed`` is false for an OME-Zarr store of its own: its frame count
+    is fixed at open, so it is written whole.
     """
 
     path: Path
@@ -39,19 +38,17 @@ class Placement:
 
 
 def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:
-    """Return where *data_key* goes against the store at *uri*, by *mimetype*.
+    """Return where *data_key* goes against the store at *uri*, or ``None`` for an unknown *mimetype*.
 
-    A plain Zarr store takes the product as a key. An OME-Zarr store does the
-    same while its root is a plain group; a root that is an image, a plate
-    or a ``bioformats2raw`` layout would lose that metadata to a new key, so
-    the product becomes a store beside it, named after both. A mimetype
-    neither writer knows gives ``None``.
+    A plain root takes the product as a key. A root carrying OME-Zarr
+    metadata (an image, a plate, a ``bioformats2raw`` layout) would lose it
+    to a new key, so the product becomes a store beside it, named after both.
 
     Raises
     ------
     WriterError
-        If a plain Zarr store carries OME-Zarr metadata at its root, which
-        a new key would drop.
+        If a store described as plain Zarr carries OME-Zarr metadata at its
+        root.
     """
     path = store_path(uri)
     ngff_root = carries_ngff(root_attributes(path))
@@ -81,7 +78,7 @@ def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:
 
 
 def open_sibling(path: Path, arrays: Mapping[str, ArrayShape]) -> Stream:
-    """Open an OME-Zarr store at *path*, importing its writer package on first use."""
+    """Open an OME-Zarr store at *path*; its package is imported here, on first use."""
     from ._ome_writers import Stream
 
     return Stream(path, arrays)
