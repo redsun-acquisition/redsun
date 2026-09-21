@@ -1,21 +1,76 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Protocol
 from urllib.parse import urlparse
 from urllib.request import url2pathname
+
+import numpy as np
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-__all__ = ["WriterError"]
+    from numpy.typing import DTypeLike, NDArray
+
+__all__ = ["ArrayShape", "Stream", "WriterError"]
 
 _AXIS_NAMES: Final = ("t", "c", "z", "y", "x")
 
 
 class WriterError(RuntimeError):
     """Raised when a product cannot be written against a store."""
+
+
+@dataclass(frozen=True, slots=True)
+class ArrayShape:
+    """The layout of one frame of a product.
+
+    A stream appends frames along an axis added in front of ``shape``.
+    """
+
+    shape: tuple[int, ...]
+    dtype: np.dtype[Any]
+
+    @classmethod
+    def of(cls, shape: tuple[int, ...], dtype: DTypeLike) -> ArrayShape:
+        """Return the layout of frames shaped *shape* with *dtype*."""
+        return cls(tuple(int(size) for size in shape), np.dtype(dtype))
+
+    def check(self, data_key: str, data: NDArray[Any]) -> NDArray[Any]:
+        """Return *data* as a contiguous array of one or more frames of this layout.
+
+        Raises
+        ------
+        WriterError
+            If the trailing dimensions of *data* are not ``shape``, or its
+            dtype is not ``dtype``.
+        """
+        if data.dtype != self.dtype:
+            raise WriterError(
+                f"{data_key!r} was declared as {self.dtype.name}; "
+                f"an array of {data.dtype.name} cannot be appended to it"
+            )
+        if data.ndim < len(self.shape) or data.shape[-len(self.shape) :] != self.shape:
+            raise WriterError(
+                f"{data_key!r} was declared with frames of shape {self.shape}; "
+                f"an array of shape {data.shape} cannot be appended to it"
+            )
+        return np.ascontiguousarray(data)
+
+
+class Stream(Protocol):
+    """A store open for appending frames to the arrays it was opened with."""
+
+    def append(self, data_key: str, data: NDArray[Any]) -> None:
+        """Append one frame, or a stack of frames, to *data_key*."""
+
+    def node(self, data_key: str) -> Path:
+        """Return the path of the group holding *data_key*."""
+
+    def close(self) -> None:
+        """Finish every array; nothing can be appended afterwards."""
 
 
 def store_path(uri: str) -> Path:

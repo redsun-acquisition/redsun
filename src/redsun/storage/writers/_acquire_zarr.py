@@ -15,48 +15,90 @@ except ImportError as error:
     ) from error
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from numpy.typing import NDArray
 
+    from ._base import ArrayShape
+
 _SPATIAL = frozenset({"z", "y", "x"})
 
 
-def append_key(path: Path, *, data_key: str, data: NDArray[Any], is_ngff: bool) -> None:
-    """Write *data* as a new key of the store at *path*, in one `acquire-zarr` append.
+class Stream:
+    """A Zarr store open for appending frames to a set of keys.
 
-    A 2D array gets a leading axis, the one a stream appends along.
+    Every key is declared at open, since `acquire-zarr` sizes a store's
+    arrays once. A key that exists in the store already is refused.
     """
-    if data.ndim == 2:
-        data = data[None]
-    names = axis_names(data.ndim)
 
+    __slots__ = ("_arrays", "_path", "_stream")
+
+    def __init__(
+        self, path: Path, arrays: Mapping[str, ArrayShape], *, is_ngff: bool
+    ) -> None:
+        settings = az.StreamSettings()
+        settings.store_path = str(path)
+        settings.overwrite = False
+        settings.arrays = [
+            array_settings(data_key, layout, is_ngff=is_ngff)
+            for data_key, layout in arrays.items()
+        ]
+        self._path = path
+        self._arrays = dict(arrays)
+        self._stream = az.ZarrStream(settings)
+
+    def append(self, data_key: str, data: NDArray[Any]) -> None:
+        """Append one frame, or a stack of frames, to *data_key*.
+
+        Raises
+        ------
+        WriterError
+            If the stream was not opened with *data_key*, or *data* does not
+            match its layout.
+        """
+        layout = self._arrays.get(data_key)
+        if layout is None:
+            raise WriterError(
+                f"{data_key!r} is not an array of the stream on {self._path}, "
+                f"which was opened with {sorted(self._arrays)}"
+            )
+        self._stream.append(layout.check(data_key, data), data_key)
+
+    def node(self, data_key: str) -> Path:
+        """Return the path of the group holding *data_key*."""
+        return self._path / data_key
+
+    def close(self) -> None:
+        """Finish every array; nothing can be appended afterwards."""
+        self._stream.close()
+
+
+def array_settings(
+    data_key: str, layout: ArrayShape, *, is_ngff: bool
+) -> az.ArraySettings:
+    """Return the `acquire-zarr` settings of an array of frames shaped *layout*.
+
+    The appended axis leads, sized as it grows and chunked one frame at a time.
+    """
+    names = axis_names(len(layout.shape) + 1)
     array = az.ArraySettings()
     array.output_key = data_key
     array.is_ngff = is_ngff
-    array.data_type = _data_type(data.dtype)
+    array.data_type = _data_type(layout.dtype)
     array.dimensions = [
         az.Dimension(
             name=name,
             kind=_kind(name),
-            # the first axis is the appended one, and is sized as it grows
             array_size_px=0 if index == 0 else size,
             chunk_size_px=1 if index == 0 else size,
             shard_size_chunks=1,
         )
-        for index, (name, size) in enumerate(zip(names, data.shape, strict=True))
+        for index, (name, size) in enumerate(
+            zip(names, (0, *layout.shape), strict=True)
+        )
     ]
-
-    settings = az.StreamSettings()
-    settings.store_path = str(path)
-    settings.overwrite = False
-    settings.arrays = [array]
-
-    stream = az.ZarrStream(settings)
-    try:
-        stream.append(data, data_key)
-    finally:
-        stream.close()
+    return array
 
 
 def _kind(name: str) -> az.DimensionType:

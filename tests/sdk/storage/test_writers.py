@@ -12,8 +12,13 @@ import numpy as np
 import ome_writers as ow
 import pytest
 
-from redsun.storage.writers import WriterError, ome_zarr, zarr
-from redsun.storage.writers._acquire_zarr import append_key
+from redsun.storage.writers import (
+    WriterError,
+    _acquire_zarr,
+    ome_zarr,
+    zarr,
+)
+from redsun.storage.writers._base import ArrayShape
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,13 +32,21 @@ def attributes(path: Path) -> dict[str, Any]:
     return node_attributes
 
 
+FRAME = ArrayShape.of((4, 4), np.uint16)
+
+
+def open_key(store: Path, data_key: str, *, is_ngff: bool) -> None:
+    """Write two zero frames under *data_key* in *store*, as a device would."""
+    stream = _acquire_zarr.Stream(store, {data_key: FRAME}, is_ngff=is_ngff)
+    stream.append(data_key, np.zeros((2, 4, 4), np.uint16))
+    stream.close()
+
+
 @pytest.fixture
 def plain_store(tmp_path: Path) -> Path:
     """Give a store whose root is a plain group, as `acquire-zarr` writes one."""
     store = tmp_path / "run.zarr"
-    append_key(
-        store, data_key="det", data=np.zeros((2, 4, 4), np.uint16), is_ngff=False
-    )
+    open_key(store, "det", is_ngff=False)
     return store
 
 
@@ -89,7 +102,7 @@ def test_an_image_root_is_refused_with_its_metadata_intact(image_store: Path) ->
 def test_ome_zarr_adds_a_named_image_to_a_plain_root(tmp_path: Path) -> None:
     """A plain root holds one image per key, so the product joins them."""
     store = tmp_path / "ngff.zarr"
-    append_key(store, data_key="det", data=np.zeros((2, 4, 4), np.uint16), is_ngff=True)
+    open_key(store, "det", is_ngff=True)
 
     product = ome_zarr.write(
         store.as_uri(),
@@ -125,9 +138,11 @@ def test_ome_zarr_writes_a_sibling_beside_an_image_root(image_store: Path) -> No
 def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
     """``c`` is a channel: two time axes would not be valid OME-Zarr."""
     store = tmp_path / "ngff.zarr"
-    data = np.zeros((1, 2, 1, 4, 4), np.uint16)
+    layout = ArrayShape.of((2, 1, 4, 4), np.uint16)
 
-    append_key(store, data_key="det", data=data, is_ngff=True)
+    stream = _acquire_zarr.Stream(store, {"det": layout}, is_ngff=True)
+    stream.append("det", np.zeros((2, 1, 4, 4), np.uint16))
+    stream.close()
 
     axes = attributes(store / "det")["ome"]["multiscales"][0]["axes"]
     assert [(axis["name"], axis["type"]) for axis in axes] == [

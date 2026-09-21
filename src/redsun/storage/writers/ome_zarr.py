@@ -9,23 +9,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ._acquire_zarr import append_key
+from . import _ome_writers
+from ._acquire_zarr import Stream
 from ._base import (
-    axis_names,
+    ArrayShape,
     carries_ngff,
     merge_attributes,
     root_attributes,
     sibling_uri,
     store_path,
 )
-
-try:
-    import ome_writers as ow
-except ImportError as error:
-    raise ImportError(
-        "ome-writers is needed to write an OME-Zarr product and is not "
-        "installed; install it with 'pip install redsun[ome-zarr]'"
-    ) from error
+from .zarr import frame_layout
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -58,7 +52,11 @@ def write(
         return _write_sibling(
             uri, path, data_key=data_key, data=data, metadata=metadata
         )
-    append_key(path, data_key=data_key, data=data, is_ngff=True)
+    stream = Stream(path, {data_key: frame_layout(data)}, is_ngff=True)
+    try:
+        stream.append(data_key, data)
+    finally:
+        stream.close()
     if metadata:
         merge_attributes(path / data_key, metadata)
     return uri
@@ -75,19 +73,13 @@ def _write_sibling(
     """Write *data* as an OME-Zarr store of its own, beside the one at *path*."""
     name = f"{path.name.split('.', 1)[0]}_{data_key}.ome.zarr"
 
-    settings = ow.AcquisitionSettings(
-        root_path=str(path.parent / name),
-        dimensions=tuple(
-            ow.dims_from_standard_axes(
-                dict(zip(axis_names(data.ndim), data.shape, strict=True))
-            )
-        ),
-        dtype=str(data.dtype),
-        format=ow.OmeZarrFormat(backend="acquire-zarr"),
+    stream = _ome_writers.Stream(
+        path.parent / name, {data_key: ArrayShape.of(data.shape, data.dtype)}
     )
-    with ow.create_stream(settings) as stream:
-        for frame in data.reshape(-1, *data.shape[-2:]):
-            stream.append(frame)
-        if metadata:
-            stream.set_global_metadata("redsun", dict(metadata))
+    try:
+        stream.append(data_key, data)
+    finally:
+        stream.close()
+    if metadata:
+        merge_attributes(path.parent / name, {"redsun": dict(metadata)})
     return sibling_uri(uri, name)
