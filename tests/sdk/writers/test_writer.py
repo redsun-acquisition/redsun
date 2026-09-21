@@ -261,16 +261,26 @@ def test_an_unknown_mimetype_is_logged_and_the_product_skipped(
     assert not (plain_store / "det_filtered").exists()
 
 
-def test_a_start_with_streams_open_closes_them_and_warns(
-    plain_store: Path, caplog: pytest.LogCaptureFixture
+def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
+    plain_store: Path,
 ) -> None:
+    """A product computed at a nested run's stop lands in the outer run's store."""
     writer = Writer()
-    writer.derive("det_filtered", source="det")
+    writer.derive("det_median", source="det")
     run(writer, plain_store, "application/x-zarr")
-    writer.append("det_filtered", np.ones((4, 4), np.uint16))
+    writer("start", {"uid": "run-2", "time": 1.0})
+    writer("event", {"uid": "ev-1", "descriptor": "desc-2", "time": 1.0, "data": {}})
 
-    with caplog.at_level(logging.WARNING, logger="redsun"):
-        writer("start", {"uid": "run-2", "time": 3.0})
+    product = writer.write("det_median", np.ones((4, 4), np.uint16))
+    writer(
+        "stop",
+        {"uid": "stop-2", "run_start": "run-2", "time": 2.0, "exit_status": "success"},
+    )
+    assert not (plain_store / "det_median" / "zarr.json").exists()
+    writer(
+        "stop",
+        {"uid": "stop-1", "run_start": "run-1", "time": 3.0, "exit_status": "success"},
+    )
 
-    assert "left 1 stream(s) open" in caplog.text
-    assert shape_of(plain_store / "det_filtered") == [1, 4, 4]
+    assert product == plain_store.as_uri()
+    assert attributes(plain_store / "det_median")["redsun"]["run_start"] == "run-1"

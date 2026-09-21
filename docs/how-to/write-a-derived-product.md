@@ -88,7 +88,10 @@ def shutdown(self) -> None:
 ```
 
 The store's stream opens on the first `append` or `write` against it, with
-every product of that store known by then, and closes at `stop`. A product
+every product of that store known by then, and closes at the `stop` of the
+run that named the store. A run nested inside another sees what the outer
+run declared, so a product computed at the nested run's stop can go to the
+outer run's store. A product
 declared after that is refused with a `WriterError` naming it. `shutdown`
 closes whatever a session ending mid-run left open, so the store stays
 readable.

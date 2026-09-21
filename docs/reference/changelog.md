@@ -191,8 +191,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
   A product goes as a key of the store the acquisition wrote, or as a store of
   its own beside a root carrying OME-Zarr metadata, named
-  `<store>_<data_key>.ome.zarr` and written whole. `stop` closes every stream
-  and writes two mappings on each product's group: *metadata* as given, and
+  `<store>_<data_key>.ome.zarr` and written whole. A run's `stop` closes the
+  streams opened for it and writes two mappings on each product's group: *metadata* as given, and
   `redsun` with `run_start`, `source`, `resource_uri` and `written`.
   `shutdown` closes what a session ending mid-run left open.
 - **`ArrayShape`** (`redsun.writers`) - the shape and dtype of one
