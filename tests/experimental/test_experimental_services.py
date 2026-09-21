@@ -510,6 +510,14 @@ def test_a_presenter_hears_a_service_exit_through_wire(
     assert app.watcher.exits == [("stand_in", 4, "service-stand_in")]
 
 
+def test_layered_sources_must_agree_on_the_transport() -> None:
+    under = {"services": {"transport": "channel-access"}}
+    over = {"services": {"transport": "pv-access"}}
+
+    with pytest.raises(ValueError, match="contradicts"):
+        Session([under, over]).build()
+
+
 def test_services_start_together(
     build: BuildSession,
     launchable: None,

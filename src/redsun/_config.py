@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 
 import yaml
 
+from redsun.services._transports import TRANSPORT_KEY, transport_of
+
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
 
@@ -133,6 +135,10 @@ def refuse_identity_conflict(
 ) -> None:
     """Refuse a source that contradicts what an earlier one said the session is.
 
+    The transport its services speak is part of that identity, although it
+    sits under ``services``: every service of a session speaks the one it
+    names.
+
     Raises
     ------
     ValueError
@@ -147,6 +153,14 @@ def refuse_identity_conflict(
                 f"{key} names what kind of session this is, so every source must "
                 f"agree on it."
             )
+    under, over = transport_of(data), transport_of(overlay)
+    if under is not None and over is not None and under != over:
+        raise ValueError(
+            f"Configuration source {label(source)} sets {TRANSPORT_KEY}={over!r} "
+            f"under services, which contradicts {under!r} from a source layered "
+            f"under it. Every service of a session speaks the same transport, so "
+            f"every source must agree on it."
+        )
 
 
 def load(
