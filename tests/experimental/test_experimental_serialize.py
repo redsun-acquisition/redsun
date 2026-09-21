@@ -227,6 +227,20 @@ def test_the_written_file_is_one_flat_session(
     assert yaml.safe_load(written.read_text())["presenters"]["ctrl"]["step"] == 1.5
 
 
+def test_the_written_file_keeps_the_transport(
+    tmp_path: Path, build: BuildSession
+) -> None:
+    """The key names no service, and is still what the file says they speak."""
+    source = {"services": {"transport": "pv-access", "beamline": {"prefix": "BL:"}}}
+
+    written = build(App, source).write(tmp_path / "out.yaml")
+    rebuilt = build(App, str(written))
+
+    assert yaml.safe_load(written.read_text())["services"]["transport"] == "pv-access"
+    assert rebuilt.transport == "pv-access"
+    assert rebuilt.services["beamline"].transport == "pv-access"
+
+
 def test_writing_over_a_source_is_refused(tmp_path: Path, build: BuildSession) -> None:
     """Overwriting one replaces what every session sharing it reads."""
     source = tmp_path / "shared.yaml"
