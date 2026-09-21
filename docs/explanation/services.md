@@ -1,10 +1,10 @@
 # Services
 
 A service is a server devices talk to: an EPICS IOC, a camera server, a motion
-controller's gateway. `ophyd-async` devices talk to it over Channel Access;
-`redsun` does not. What `redsun` handles is the session's side: starting the
-service when the session owns it, noticing when it exits, stopping it cleanly,
-and giving its prefix to the devices that use it.
+controller's gateway. `ophyd-async` devices talk to it over Channel Access or
+PVAccess; `redsun` does not. What `redsun` handles is the session's side:
+starting the service when the session owns it, noticing when it exits, stopping
+it cleanly, and giving its prefix and transport to the devices that use it.
 
 ## Two connection levels
 
@@ -43,7 +43,10 @@ A service declared with a `module` is **launched**: the container runs it as
 without one is **attached**: it already runs, in a container or on another
 host, and only lends its devices their prefix. Declare either with
 [`declare_service`][redsun.containers.declare_service] or in the `services`
-section of a session file; see [Write a service](../how-to/write-a-service.md).
+section of a session file, which works whether the session is built with
+`from_config` or from a container class taking that file. A service the class
+body declares replaces one the file names. See
+[Write a service](../how-to/write-a-service.md).
 
 The session owns a launched service from start to stop:
 
@@ -75,15 +78,56 @@ reads end of input.
 A killed service may leave work unfinished, typically a large file being
 written. A service needing longer to close sets a longer `stop_timeout`.
 
-## Several services on one host
+## One transport per session
 
-Each launched service gets its own Channel Access server port, added to
-`EPICS_CA_ADDR_LIST` in the session process. Without it, two IOCs on the
-default port both answer on Linux, but on Windows the second is never found. A
-service keeps its port while the session process runs, so a container built
-again reaches it again. The note in
-[Connecting](architecture/devices.md#connecting) describes the limit: libca
-reads the address list once per process.
+Every service of a session is reached over the same protocol, named once under
+the `services` section of its file or as the `transport` attribute of its
+container class:
+
+```yaml
+services:
+  transport: pv-access
+  camera_ioc:
+    plugin_name: mylab
+    plugin_id: camera-ioc
+```
+
+| name | protocol | what a session does for it |
+| --- | --- | --- |
+| `channel-access` | Channel Access | gives each launched service a server port of its own and lists `127.0.0.1:<port>` in `EPICS_CA_ADDR_LIST` |
+| `pv-access` | PVAccess | binds each launched service to `127.0.0.1` and puts that address in `EPICS_PVA_ADDR_LIST` |
+
+`channel-access` is what a session speaks unless it says otherwise, and a file
+layered over another cannot change it. The variables both protocols read hold
+one setting for the whole process, so two transports in one session would leave
+each unable to say which service a variable is for.
+
+Under Channel Access, two IOCs on the default port both answer on Linux, but on
+Windows the second is never found, which is why each gets a port. It keeps that
+port while the session process runs, so a container built again reaches it
+again. The note in [Connecting](architecture/devices.md#connecting) describes
+the limit: libca reads the address list once per process. Under PVAccess a
+service picks its own ports, and `pvxs` takes a free one when the default is
+busy, so a session assigns nothing. A client does not search the loopback
+unless it is told to, which is what the address list is for.
+
+`redsun` depends on `ophyd-async` and on nothing either protocol needs. A
+component brings what its own service speaks, `caproto` or `p4p` or `fastcs`,
+and `ophyd-async[ca]` or `ophyd-async[pva]` for the device side; see
+[Write a service](../how-to/write-a-service.md).
+
+## What a launched service is told
+
+Besides its transport's variables, a launched process reads its name and prefix
+from its environment:
+
+| variable | value |
+| --- | --- |
+| `REDSUN_SERVICE_NAME` | the name the service is declared under |
+| `REDSUN_SERVICE_PREFIX` | the `prefix` of the declaration, empty when it has none |
+
+A module serving several sessions names its channels from these rather than
+taking arguments for them.
 
 A port is free when it is chosen, and nothing holds it until the service binds
 it, so another program on the host can take it in between. The service then
@@ -97,7 +141,7 @@ and last lines of output, and emits
 [`sig_exited`][redsun.services.Service.sig_exited] with its name and code.
 Nothing restarts it. While it is down, reads and writes on its devices raise
 `TimeoutError` after ten seconds; once it is back they answer again without a
-reconnect, since Channel Access channels recover on their own.
+reconnect, since both protocols reconnect on their own.
 
 `sig_exited` is emitted from the thread reading the service's output. A slot
 connected to it in `wire` runs where its owner asks: a view's slots run on the

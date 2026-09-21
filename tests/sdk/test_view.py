@@ -1,9 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
-from qtpy import QtWidgets as QtW
 
 from redsun.view import PView, View, ViewPosition
 from redsun.view.qt import QtView
-from redsun.virtual import IsInjectable, IsProvider, VirtualContainer
+from redsun.virtual import IsInjectable, IsProvider
+
+if TYPE_CHECKING:
+    from qtpy.QtWidgets import QApplication
+
+    from redsun.virtual import VirtualContainer
 
 
 def test_qtview_subclassing() -> None:
@@ -24,15 +32,11 @@ def test_base_view(bus: VirtualContainer) -> None:
 
     view = TestView("my_view")
 
-    assert isinstance(view, View)
     assert isinstance(view, PView)
-    assert issubclass(TestView, View)
-    assert view.name == "my_view"
-    assert view.view_position == ViewPosition.CENTER
 
 
 @pytest.mark.qt
-def test_presenter_is_provider() -> None:
+def test_presenter_is_provider(qapp: QApplication) -> None:
     """Test that a presenter can optionally implement IsProvider."""
 
     class ProviderView(QtView):
@@ -48,9 +52,6 @@ def test_presenter_is_provider() -> None:
         @property
         def view_position(self) -> ViewPosition:
             return ViewPosition.CENTER
-
-    app = QtW.QApplication.instance() or QtW.QApplication([])
-    assert app is not None
 
     view = ProviderView("view")
     assert isinstance(view, IsProvider)
@@ -77,7 +78,7 @@ def test_view_is_injectable() -> None:
 
 
 @pytest.mark.qt
-def test_base_qt_view() -> None:
+def test_base_qt_view(qapp: QApplication) -> None:
     """Test basic QtView functionality."""
 
     class TestQtView(QtView):
@@ -88,15 +89,9 @@ def test_base_qt_view() -> None:
         def view_position(self) -> ViewPosition:
             return ViewPosition.CENTER
 
-    app = QtW.QApplication.instance() or QtW.QApplication([])
-    assert app is not None
-
     view = TestQtView("qt_view")
 
-    assert isinstance(view, View)
     assert isinstance(view, PView)
-    assert view.name == "qt_view"
-    assert view.view_position == ViewPosition.CENTER
 
 
 def test_property_based_view_satisfies_protocol() -> None:

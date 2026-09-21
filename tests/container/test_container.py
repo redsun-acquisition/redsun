@@ -8,6 +8,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import dependency_injector.providers as dip
 import pytest
 import yaml
 from helpers import component
@@ -23,6 +24,7 @@ from ophyd_async.core import Device, PathProvider
 from ophyd_async.epics.core import EpicsDevice
 from qtpy.QtWidgets import QApplication
 
+from redsun.aio import run_coro
 from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
@@ -42,15 +44,39 @@ from redsun.presenter import PPresenter
 from redsun.qt import QtAppContainer
 from redsun.view import PView, ViewPosition
 from redsun.view.qt.builtins import LogView
-from redsun.virtual import RedSunConfig, Signal, WiringError, ports
+from redsun.virtual import Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from redsun.virtual import VirtualContainer
 
 requires_tiled = pytest.mark.skipif(
     find_spec("tiled") is None,
     reason="the tiled extra installs nothing on this Python",
 )
+
+
+def motor_settings(app: AppContainer, name: str = "motor") -> dict[str, Any]:
+    """Read back what a built ``MyMotor`` was given, through its signals."""
+    motor = component(app.devices, name, MyMotor)
+    return {
+        "egu": run_coro(motor.step_size.describe())[f"{name}-step_size"]["units"],
+        "integer": run_coro(motor.integer.get_value()),
+        "floating": run_coro(motor.floating.get_value()),
+        "string": run_coro(motor.string.get_value()),
+    }
+
+
+def presenter_settings(app: AppContainer, name: str = "ctrl") -> dict[str, Any]:
+    """Read back what a built ``MockController`` was given."""
+    ctrl = component(app.presenters, name, MockController)
+    return {
+        "string": ctrl.string,
+        "integer": ctrl.integer,
+        "floating": ctrl.floating,
+        "boolean": ctrl.boolean,
+    }
 
 
 class TestComponentWrappers:
@@ -121,11 +147,6 @@ class TestComponentCollection:
         assert "ctrl" in TestApp._presenter_components
         assert len(TestApp._view_components) == 0
 
-    def test_base_container_has_empty_components(self) -> None:
-        assert len(AppContainer._device_components) == 0
-        assert len(AppContainer._presenter_components) == 0
-        assert len(AppContainer._view_components) == 0
-
     def test_inherits_components_from_base(self) -> None:
 
         class Base(AppContainer):
@@ -149,25 +170,6 @@ class TestComponentCollection:
 class TestAppContainerBuild:
     """Tests for the build lifecycle."""
 
-    def test_build_reports_every_step_in_order(self) -> None:
-        app = AppContainer()
-        seen: list[str] = []
-        app._report = seen.append
-
-        app.build()
-
-        assert seen == [
-            "services",
-            "virtual container",
-            "devices",
-            "connect",
-            "presenters",
-            "views",
-            "providers",
-            "wiring",
-            "injection",
-        ]
-
     def test_a_subclass_overriding_a_phase_is_the_one_that_runs(self) -> None:
         calls: list[str] = []
 
@@ -184,58 +186,25 @@ class TestAppContainerBuild:
 
         assert calls == ["devices", "wiring"]
 
-    def test_build_devices_and_presenters(self) -> None:
-
-        class TestApp(AppContainer):
-            motor = _DeviceComponent(
-                MyMotor,
-                "motor",
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=1,
-                floating=1.0,
-                string="s",
-            )
-            ctrl = _PresenterComponent(
-                MockController,
-                "ctrl",
-                string="s",
-                integer=1,
-                floating=0.0,
-                boolean=False,
-            )
-
-        app = TestApp()
-        assert not app.is_built
-
-        app = app.build()
-        assert app.is_built
-        assert "motor" in app.devices
-        assert "ctrl" in app.presenters
-
     def test_build_idempotent(self) -> None:
         class EmptyApp(AppContainer):
             pass
 
         app = EmptyApp()
         app.build()
-        app.build()  # should warn, not fail
+        app.build()
+
         assert app.is_built
 
-    def test_properties_raise_before_build(self) -> None:
+    @pytest.mark.parametrize(
+        "name", ["devices", "presenters", "views", "virtual_container"]
+    )
+    def test_properties_raise_before_build(self, name: str) -> None:
         class EmptyApp(AppContainer):
             pass
 
-        app = EmptyApp()
-        with pytest.raises(RuntimeError):
-            _ = app.devices
-        with pytest.raises(RuntimeError):
-            _ = app.presenters
-        with pytest.raises(RuntimeError):
-            _ = app.views
-        with pytest.raises(RuntimeError):
-            _ = app.virtual_container
+        with pytest.raises(RuntimeError, match="build"):
+            getattr(EmptyApp(), name)
 
     def test_config_defaults(self) -> None:
         """An unnamed session is named after its class, never a shared constant."""
@@ -292,7 +261,7 @@ class TestAppContainerBuild:
         assert set(app.views) == {"ui"}
         app.shutdown()
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="build"):
             _ = app.views
         assert len(QApplication.topLevelWidgets()) == before
 
@@ -373,6 +342,38 @@ class TestBuildTolerance:
 
         app.shutdown()
 
+    def test_a_component_failing_past_its_build_is_dropped_and_named(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """What a skipped component would have provided is missing downstream.
+
+        The component asking for it fails in its own phase, and the session
+        still starts with the rest.
+        """
+
+        class Needy:
+            def __init__(self, name: str, /) -> None:
+                self.name = name
+
+            @property
+            def view_position(self) -> ViewPosition:
+                return ViewPosition.CENTER
+
+            def inject_dependencies(self, container: VirtualContainer) -> None:
+                container.require(dip.Dependency(instance_of=int))
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            needy = declare_view(Needy)
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+        assert app.views == {}
+        assert "Failed to inject dependencies into 'needy'" in caplog.text
+        assert "Not built: needy (view)" in caplog.text
+
     @pytest.mark.parametrize(
         ("declare", "expected"),
         [
@@ -450,7 +451,7 @@ class TestFromConfig:
         assert container.config["frontend"] == "pyqt"
 
         container.build()
-        assert len(container.devices) == 2
+        assert set(container.devices) == {"Single axis motor", "Double axis motor"}
 
     def test_from_config_returns_qt_container(
         self, mock_entry_points: None, config_path: Path
@@ -468,7 +469,7 @@ class TestFromConfig:
             str(config_path / "mock_controller_config.yaml")
         )
         container.build()
-        assert len(container.presenters) == 1
+        assert set(container.presenters) == {"MockController"}
 
     def test_from_config_unknown_frontend_raises(
         self, mock_entry_points: None, config_path: Path, tmp_path: Path
@@ -499,45 +500,6 @@ class TestFromConfig:
 class TestComponentFieldSyntax:
     """Tests for the ``component()`` field-specifier syntax."""
 
-    def test_component_field_collects_device(self) -> None:
-
-        class TestApp(AppContainer):
-            motor = declare_device(
-                MyMotor,
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=1,
-                floating=1.0,
-                string="s",
-            )
-
-        assert "motor" in TestApp._device_components
-        assert isinstance(TestApp._device_components["motor"], _DeviceComponent)
-
-    def test_component_field_collects_presenter(self) -> None:
-
-        class TestApp(AppContainer):
-            ctrl = declare_presenter(
-                MockController,
-                string="s",
-                integer=1,
-                floating=0.0,
-                boolean=False,
-            )
-
-        assert "ctrl" in TestApp._presenter_components
-        assert isinstance(TestApp._presenter_components["ctrl"], _PresenterComponent)
-
-    @pytest.mark.qt
-    def test_component_field_collects_view(self, qapp: QApplication) -> None:
-
-        class TestApp(AppContainer):
-            v = declare_view(MockQtView)
-
-        assert "v" in TestApp._view_components
-        assert isinstance(TestApp._view_components["v"], _ViewComponent)
-
     def test_component_field_build_lifecycle(self) -> None:
 
         class TestApp(AppContainer):
@@ -567,35 +529,6 @@ class TestComponentFieldSyntax:
         assert app.devices["motor"].name == "motor"
         assert "ctrl" in app.presenters
 
-    def test_component_field_mixed_with_direct_wrapper(self) -> None:
-
-        class TestApp(AppContainer):
-            motor = declare_device(
-                MyMotor,
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=1,
-                floating=1.0,
-                string="s",
-            )
-            ctrl = _PresenterComponent(
-                MockController,
-                "ctrl",
-                string="s",
-                integer=1,
-                floating=0.0,
-                boolean=False,
-            )
-
-        assert "motor" in TestApp._device_components
-        assert "ctrl" in TestApp._presenter_components
-
-        app = TestApp()
-        app.build()
-        assert "motor" in app.devices
-        assert "ctrl" in app.presenters
-
     def test_component_field_inherits_from_base(self) -> None:
 
         class Base(AppContainer):
@@ -618,60 +551,47 @@ class TestComponentFieldSyntax:
                 boolean=False,
             )
 
-        assert "motor" in Child._device_components
-        assert "ctrl" in Child._presenter_components
+        app = Child().build()
+
+        assert set(app.devices) == {"motor"}
+        assert set(app.presenters) == {"ctrl"}
 
 
 class TestConfigField:
     """Tests for the ``config()`` field and ``from_config`` kwarg loading."""
 
     def test_from_config_loads_device_kwargs(self, config_path: Path) -> None:
-
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             motor = declare_device(MyMotor, from_config="motor")
 
-        comp = TestApp._device_components["motor"]
-        assert comp.kwargs["axis"] == ["X"]
-        assert comp.kwargs["egu"] == "mm"
-        assert comp.kwargs["integer"] == 42
-        assert comp.kwargs["string"] == "from config"
+        assert motor_settings(TestApp().build()) == {
+            "egu": "mm",
+            "integer": 42,
+            "floating": 3.14,
+            "string": "from config",
+        }
 
     def test_from_config_loads_presenter_kwargs(self, config_path: Path) -> None:
-
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             ctrl = declare_presenter(MockController, from_config="ctrl")
 
-        comp = TestApp._presenter_components["ctrl"]
-        assert comp.kwargs["string"] == "config ctrl"
-        assert comp.kwargs["integer"] == 10
-        assert comp.kwargs["boolean"] is True
+        assert presenter_settings(TestApp().build()) == {
+            "string": "config ctrl",
+            "integer": 10,
+            "floating": 2.0,
+            "boolean": True,
+        }
 
     def test_from_config_inline_overrides(self, config_path: Path) -> None:
-
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = declare_device(
-                MyMotor,
-                from_config="motor",
-                egu="um",
-            )
+            motor = declare_device(MyMotor, from_config="motor", egu="um")
 
-        comp = TestApp._device_components["motor"]
-        assert comp.kwargs["egu"] == "um"
-        assert comp.kwargs["axis"] == ["X"]
-        assert comp.kwargs["integer"] == 42
-
-    def test_from_config_build_lifecycle(self, config_path: Path) -> None:
-
-        class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
-            motor = declare_device(MyMotor, from_config="motor")
-            ctrl = declare_presenter(MockController, from_config="ctrl")
-
-        app = TestApp()
-        app.build()
-        assert app.is_built
-        assert "motor" in app.devices
-        assert app.devices["motor"].name == "motor"
-        assert "ctrl" in app.presenters
+        assert motor_settings(TestApp().build()) == {
+            "egu": "um",
+            "integer": 42,
+            "floating": 3.14,
+            "string": "from config",
+        }
 
     def test_from_config_without_config_field_raises_on_construction(self) -> None:
         # declaring is legal: a base exists to be subclassed, and the subclass
@@ -691,7 +611,7 @@ class TestConfigField:
         class Derived(Base, config=config_path / "mock_component_config.yaml"):
             pass
 
-        assert Derived._device_components["motor"].kwargs["string"] == "from config"
+        assert motor_settings(Derived().build())["string"] == "from config"
 
     def test_two_subclasses_read_their_own_configs(self, config_path: Path) -> None:
         class Base(AppContainer):
@@ -703,8 +623,8 @@ class TestConfigField:
         class Second(Base, config=config_path / "mock_component_alt_config.yaml"):
             pass
 
-        assert First._presenter_components["ctrl"].kwargs["string"] == "config ctrl"
-        assert Second._presenter_components["ctrl"].kwargs["string"] == "alt ctrl"
+        assert presenter_settings(First().build())["string"] == "config ctrl"
+        assert presenter_settings(Second().build())["string"] == "alt ctrl"
 
     def test_config_files_layer_in_order(self, config_path: Path) -> None:
         class TestApp(
@@ -716,9 +636,11 @@ class TestConfigField:
         ):
             ctrl = declare_presenter(MockController, from_config="ctrl")
 
+        app = TestApp().build()
+
         # the overlay adds a component and leaves the one it does not name
-        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert TestApp().config["name"] == "mock-overlay-session"
+        assert presenter_settings(app)["string"] == "common ctrl"
+        assert app.config["name"] == "mock-overlay-session"
 
     def test_a_subclass_layers_its_config_over_its_base(
         self, config_path: Path
@@ -729,9 +651,11 @@ class TestConfigField:
         class Derived(Base, config=config_path / "mock_overlay_config.yaml"):
             pass
 
-        assert Base._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert Derived._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert Derived().config["name"] == "mock-overlay-session"
+        derived = Derived().build()
+
+        assert presenter_settings(Base().build())["string"] == "common ctrl"
+        assert presenter_settings(derived)["string"] == "common ctrl"
+        assert derived.config["name"] == "mock-overlay-session"
 
     def test_required_keys_are_checked_on_the_merged_configuration(
         self, config_path: Path
@@ -783,7 +707,7 @@ class TestConfigField:
 
         # a component entry is a constructor call, so the later file owns it
         # whole rather than contributing keys to it
-        assert TestApp._presenter_components["ctrl"].kwargs == {
+        assert presenter_settings(TestApp().build()) == {
             "string": "config ctrl",
             "integer": 10,
             "floating": 2.0,
@@ -801,8 +725,10 @@ class TestConfigField:
             ctrl = declare_presenter(MockController, from_config="ctrl")
             other = declare_presenter(MockController, from_config="other")
 
-        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert TestApp._presenter_components["other"].kwargs["string"] == "overlay only"
+        app = TestApp().build()
+
+        assert presenter_settings(app)["string"] == "common ctrl"
+        assert presenter_settings(app, "other")["string"] == "overlay only"
 
     def test_config_files_come_from_every_base(self, config_path: Path) -> None:
         class First(AppContainer, config=config_path / "mock_common_config.yaml"):
@@ -815,9 +741,10 @@ class TestConfigField:
             ctrl = declare_presenter(MockController, from_config="ctrl")
             other = declare_presenter(MockController, from_config="other")
 
-        assert len(Both._config_paths) == 2
-        assert Both._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
-        assert Both._presenter_components["other"].kwargs["string"] == "overlay only"
+        app = Both().build()
+
+        assert presenter_settings(app)["string"] == "common ctrl"
+        assert presenter_settings(app, "other")["string"] == "overlay only"
 
     def test_a_file_reached_twice_is_read_once(self, config_path: Path) -> None:
         class Base(AppContainer, config=config_path / "mock_common_config.yaml"):
@@ -835,30 +762,37 @@ class TestConfigField:
         ):
             ctrl = declare_presenter(MockController, from_config="ctrl")
 
-        assert TestApp._presenter_components["ctrl"].kwargs == {}
+        assert presenter_settings(TestApp().build()) == {
+            "string": "",
+            "integer": 0,
+            "floating": 0.0,
+            "boolean": False,
+        }
 
+    @pytest.mark.qt
     @pytest.mark.parametrize(
-        ("declare", "registry", "expected"),
+        ("declare", "read", "expected"),
         [
             (
                 lambda: declare_device(MyMotor, from_config="motor"),
-                "_device_components",
-                {"egu": "um"},
+                lambda app: motor_settings(app, "component"),
+                {"egu": "um", "integer": 0, "floating": 0.0, "string": ""},
             ),
             (
                 lambda: declare_view(MockQtView, from_config="widget"),
-                "_view_components",
-                {"label": "overlay widget"},
+                lambda app: component(app.views, "component", MockQtView).label,
+                "overlay widget",
             ),
         ],
         ids=["device", "view"],
     )
     def test_every_layer_replaces_a_component_it_names(
         self,
+        qapp: QApplication,
         config_path: Path,
         declare: Callable[[], Any],
-        registry: str,
-        expected: dict[str, Any],
+        read: Callable[[AppContainer], Any],
+        expected: Any,
     ) -> None:
         # the same rule the presenter case pins, for the other two layers: the
         # later file owns the entry, so nothing from the file underneath leaks in
@@ -871,30 +805,29 @@ class TestConfigField:
         ):
             component = declare()
 
-        assert getattr(TestApp, registry)["component"].kwargs == expected
+        assert read(TestApp().build()) == expected
 
+    @pytest.mark.qt
     @pytest.mark.parametrize(
-        ("declare", "registry", "name"),
+        ("declare", "read"),
         [
             (
                 lambda: declare_device(MyMotor, from_config="other_motor"),
-                "_device_components",
-                "other_motor",
+                lambda app: motor_settings(app, "component")["string"],
             ),
             (
                 lambda: declare_view(MockQtView, from_config="other_widget"),
-                "_view_components",
-                "other_widget",
+                lambda app: component(app.views, "component", MockQtView).label,
             ),
         ],
         ids=["device", "view"],
     )
     def test_every_layer_adds_a_component_only_it_names(
         self,
+        qapp: QApplication,
         config_path: Path,
         declare: Callable[[], Any],
-        registry: str,
-        name: str,
+        read: Callable[[AppContainer], Any],
     ) -> None:
         class TestApp(
             AppContainer,
@@ -905,8 +838,7 @@ class TestConfigField:
         ):
             component = declare()
 
-        kwargs = getattr(TestApp, registry)["component"].kwargs
-        assert kwargs["string" if "motor" in name else "label"] == "overlay only"
+        assert read(TestApp().build()) == "overlay only"
 
     def test_a_component_only_the_lower_file_names_survives_in_every_layer(
         self, config_path: Path
@@ -921,9 +853,16 @@ class TestConfigField:
             motor = declare_device(MyMotor, from_config="motor")
             ctrl = declare_presenter(MockController, from_config="ctrl")
 
+        app = TestApp().build()
+
         # the overlay names `motor` and not `ctrl`
-        assert TestApp._device_components["motor"].kwargs == {"egu": "um"}
-        assert TestApp._presenter_components["ctrl"].kwargs["string"] == "common ctrl"
+        assert motor_settings(app) == {
+            "egu": "um",
+            "integer": 0,
+            "floating": 0.0,
+            "string": "",
+        }
+        assert presenter_settings(app)["string"] == "common ctrl"
 
     def test_the_layer_chain_is_logged(
         self, config_path: Path, caplog: pytest.LogCaptureFixture
@@ -966,7 +905,6 @@ class TestConfigField:
         config_path: Path,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-
         class TestApp(AppContainer, config=config_path / "mock_component_config.yaml"):
             missing = declare_device(
                 MyMotor,
@@ -980,18 +918,7 @@ class TestConfigField:
             )
 
         assert "No config section 'missing'" in caplog.text
-        comp = TestApp._device_components["missing"]
-        assert comp.kwargs["egu"] == "deg"
-
-
-class TestAppConfig:
-    """Tests for the boundary between the two configuration schemas."""
-
-    def test_redsun_config_no_component_fields(self) -> None:
-        """RedSunConfig must not expose devices/presenters/views."""
-        assert "devices" not in RedSunConfig.__annotations__
-        assert "presenters" not in RedSunConfig.__annotations__
-        assert "views" not in RedSunConfig.__annotations__
+        assert motor_settings(TestApp().build(), "missing")["egu"] == "deg"
 
 
 class TestLogLevel:
@@ -1052,47 +979,6 @@ class TestLogLevel:
         )
 
         assert logging.getLogger("redsun").level == logging.DEBUG
-
-
-@pytest.mark.qt
-class TestQtAppContainer:
-    """Tests for QtAppContainer lifecycle correctness."""
-
-    def test_build_before_run_creates_qapplication(self) -> None:
-
-        class _TestQtApp(QtAppContainer):
-            motor = declare_device(
-                MyMotor,
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=1,
-                floating=1.0,
-                string="s",
-            )
-            v = declare_view(MockQtView)
-
-        app = _TestQtApp()
-        assert app._qt_app is None
-
-        built = app.build()
-
-        assert built._qt_app is not None
-        assert QApplication.instance() is built._qt_app
-        assert built.is_built
-        assert "motor" in built.devices
-        assert "v" in built.views
-
-    def test_run_reuses_qapplication_created_by_build(self) -> None:
-
-        class _TestQtApp(QtAppContainer):
-            pass
-
-        app = _TestQtApp()
-        app.build()
-        first_instance = app._qt_app
-
-        assert QApplication.instance() is first_instance
 
 
 class TestComponentNaming:
@@ -1170,24 +1056,6 @@ class TestComponentNaming:
         assert "ctrl" not in app.presenters
         assert app.presenters["my_ctrl"].name == "my_ctrl"
 
-    def test_alias_baked_into_component_dict_key(self) -> None:
-        """Metaclass stores the component under the alias, not the attr name."""
-
-        class TestApp(AppContainer):
-            my_motor = declare_device(
-                MyMotor,
-                alias="detector",
-                axis=["X"],
-                step_size={"X": 0.1},
-                egu="mm",
-                integer=1,
-                floating=1.0,
-                string="s",
-            )
-
-        assert "detector" in TestApp._device_components
-        assert "my_motor" not in TestApp._device_components
-
 
 class TestChildDevices:
     """Tests for devices that host child sub-device attributes."""
@@ -1214,44 +1082,6 @@ class TestChildDevices:
         # the child device is accessible as an attribute of the parent
         assert hasattr(parent, "aux")
         assert parent.aux.name == "motor-aux"
-
-    async def test_child_device_signals_are_functional(self) -> None:
-        """Child device signals work independently from the parent."""
-
-        class MotorWithChild(MyMotor):
-            def __init__(self, name: str, **kwargs: Any) -> None:
-                super().__init__(name, **kwargs)
-                self.aux = MyMotor(f"{name}-aux", egu="deg")
-
-        class TestApp(AppContainer):
-            stage = declare_device(MotorWithChild, egu="mm")
-
-        app = TestApp()
-        app.build()
-        app.connect_devices(mock=True)
-        parent = app.devices["stage"]
-        assert isinstance(parent, MotorWithChild)
-        # parent step_size descriptor includes units from egu
-        parent_desc = await parent.step_size.describe()
-        assert "stage-step_size" in parent_desc
-        assert parent_desc["stage-step_size"]["units"] == "mm"
-        # child step_size descriptor has its own units
-        child_desc = await parent.aux.step_size.describe()
-        assert "stage-aux-step_size" in child_desc
-        assert child_desc["stage-aux-step_size"]["units"] == "deg"
-
-    def test_child_device_satisfies_device(self) -> None:
-        """A child Device instance on a parent satisfies ophyd-async Device."""
-        child = MyMotor(
-            "parent-child",
-            egu="um",
-            integer=0,
-            floating=0.0,
-            string="",
-        )
-        assert isinstance(child, Device)
-        assert child.parent is None
-        assert child.name == "parent-child"
 
 
 class TestOphyAsyncDevices:
@@ -1280,43 +1110,6 @@ class TestOphyAsyncDevices:
         app = TestApp().build()
 
         assert app.devices["cam"].name == "cam"
-
-    def test_oa_device_satisfies_device(self) -> None:
-        """An ophyd-async StandardReadable satisfies ophyd-async Device."""
-        m = MockOAMotor("oa_motor")
-        assert isinstance(m, Device)
-        assert m.name == "oa_motor"
-        assert m.parent is None
-
-    def test_oa_device_alias_in_container(self) -> None:
-        """The alias kwarg works for ophyd-async devices."""
-
-        class TestApp(AppContainer):
-            oa = declare_device(MockOAMotor, alias="oa_stage", units="um")
-
-        app = TestApp()
-        app.build()
-        assert "oa_stage" in app.devices
-        assert "oa" not in app.devices
-        assert app.devices["oa_stage"].name == "oa_stage"
-
-    def test_oa_device_units_in_descriptor(self) -> None:
-        """Units are embedded in the signal descriptor, not as a separate attribute."""
-        m = MockOAMotor("cam", units="nm")
-        # signals carry units in their descriptor source string prefix;
-        # actual unit metadata is readable once connected
-        assert hasattr(m, "x")
-        assert hasattr(m, "y")
-        # verify there is no top-level 'units' attribute leaking
-        assert not hasattr(m, "units")
-
-    async def test_oa_device_descriptor_contains_units(self) -> None:
-        """After connecting (mock), descriptor documents contain 'units'."""
-        m = MockOAMotor("stage", units="mm")
-        await m.connect(mock=True)
-        desc = await m.x.describe()
-        assert "stage-x" in desc
-        assert desc["stage-x"]["units"] == "mm"
 
 
 class TestDevicePathProvider:
@@ -1353,7 +1146,9 @@ class TestDevicePathProvider:
                 super().__init__(name=name)
 
         with pytest.raises(TypeError, match="reserves for the container"):
-            _DeviceComponent(Writer, "writer", path_provider="somewhere")
+
+            class TestApp(AppContainer):
+                writer = declare_device(Writer, path_provider="somewhere")
 
     def test_the_root_comes_from_the_storage_section(self, tmp_path: Path) -> None:
         config = {
@@ -1546,6 +1341,7 @@ class TestBuiltinPlugins:
     can reference ``plugin_name: redsun`` with zero extra setup.
     """
 
+    @pytest.mark.qt
     def test_from_config_builtin_log_view(
         self, qapp: QApplication, tmp_path: Path
     ) -> None:
@@ -1852,16 +1648,14 @@ class TestWiring:
 class TestYamlWiring:
     """Tests for the ``wiring`` section of a configuration file."""
 
-    def _build(self, config_path: Path, mock_entry_points: None) -> AppContainer:
+    @pytest.fixture
+    def app(self, mock_entry_points: None, config_path: Path) -> AppContainer:
         return AppContainer.from_config(
             str(config_path / "mock_wiring_config.yaml")
         ).build()
 
-    def test_declared_links_are_live(
-        self, mock_entry_points: None, config_path: Path
-    ) -> None:
+    def test_declared_links_are_live(self, app: AppContainer) -> None:
         """A rule in the file connects the same ports the Python form would."""
-        app = self._build(config_path, mock_entry_points)
         mover = component(app.presenters, "mover", AsyncMotorController)
         ctrl = component(app.presenters, "ctrl", MockController)
 
@@ -1870,10 +1664,9 @@ class TestYamlWiring:
         assert ctrl.moved == [("motor", 1.0)]
 
     def test_signal_group_members_are_addressed_by_member_name(
-        self, mock_entry_points: None, config_path: Path
+        self, app: AppContainer
     ) -> None:
         """``component.member`` reaches a signal declared inside a group."""
-        app = self._build(config_path, mock_entry_points)
         grouped = component(app.presenters, "grouped", GroupedController)
 
         grouped.frames.median.emit("a")
@@ -1881,12 +1674,8 @@ class TestYamlWiring:
 
         assert grouped.seen == ["a", "b"]
 
-    def test_the_whole_graph_is_recorded(
-        self, mock_entry_points: None, config_path: Path
-    ) -> None:
+    def test_the_whole_graph_is_recorded(self, app: AppContainer) -> None:
         """Every rule appears in the report, named by its port path."""
-        app = self._build(config_path, mock_entry_points)
-
         assert sorted(str(link) for link in app.virtual_container.connections) == [
             "grouped.filtered -> grouped.absorb",
             "grouped.median -> grouped.absorb",
@@ -1984,11 +1773,8 @@ class TestYamlWiring:
             "mover.sig_motor_moved -> ctrl.on_motor_moved",
         ]
 
-    def test_an_unmarked_method_is_not_a_slot_port(
-        self, mock_entry_points: None, config_path: Path
-    ) -> None:
+    def test_an_unmarked_method_is_not_a_slot_port(self, app: AppContainer) -> None:
         """A method exists but is not addressable until it is marked."""
-        app = self._build(config_path, mock_entry_points)
         surface = ports(app.presenters["ctrl"])
 
         assert "on_motor_moved" in surface.slots

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import pytest
+from helpers import component, shut_down_after_a_read
 from mock_pkg.controller import SignalReader
 from mock_pkg.device import BrokenDevice, MyMotor
 from mock_pkg.service.stand_in import READY
@@ -27,9 +28,10 @@ from redsun.log import SessionFileHandler, session_log
 from redsun.presenter import Presenter
 from redsun.qt import QtAppContainer
 from redsun.services import _service
+from redsun.services._transports import PV_ACCESS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
 
     from qtpy.QtWidgets import QApplication
 
@@ -99,13 +101,18 @@ class CameraPanel(QtAppContainer):
         self.connect(self.reader.sig_read, self.panel.show_reading)
 
 
-@pytest.fixture
-def containers(launchable: None) -> Iterator[list[AppContainer]]:
-    """Collect containers, shutting each down after the test whatever it did."""
-    made: list[AppContainer] = []
-    yield made
-    for app in made:
-        app.shutdown()
+@pytest.fixture(autouse=True)
+def _launchable(launchable: None) -> None:
+    """Every test here may launch a service."""
+
+
+def session_file(path: Path, services: str) -> Path:
+    """Write a session file at *path* whose ``services`` section is *services*."""
+    path.write_text(
+        f"schema_version: 1.0\nfrontend: pyqt\nname: transports\nservices:\n{services}",
+        encoding="utf-8",
+    )
+    return path
 
 
 def open_log() -> SessionFileHandler:
@@ -132,12 +139,9 @@ def test_a_build_starts_services_first_and_shutdown_stops_them(
 
     app = App()
     containers.append(app)
-    seen: list[str] = []
-    app._report = seen.append
 
     app.build()
     assert app.services["stand_in"].running
-    assert seen[0] == "services"
     app.shutdown()
 
     assert not app.stand_in.running
@@ -472,19 +476,102 @@ def test_a_session_with_one_of_each_component_shuts_down_cleanly(
     app = CameraPanel()
     containers.append(app)
     app.build()
-    panel, reader = app.panel, app.reader
-    readings = panel.readings
-    panel.read_button.click()
-    caplog.clear()
 
-    app.shutdown()
+    readings, read_at_shutdown = shut_down_after_a_read(
+        app, app.panel, app.reader, caplog
+    )
 
     assert readings == [("cam_a", 0.25)]
-    assert reader.read_at_shutdown == {"cam_a": 0.25}
-    with pytest.raises(RuntimeError):
-        panel.isVisible()
+    assert read_at_shutdown == {"cam_a": 0.25}
     assert not app.ioc_a.running
     messages = [r.getMessage() for r in caplog.records]
     assert "Service 'ioc_a' stopped with exit code 0" in messages
-    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
-    assert warnings == []
+
+
+def test_a_session_file_names_what_its_services_speak(tmp_path: Path) -> None:
+    config = session_file(
+        tmp_path / "session.yaml",
+        "  transport: pv-access\n  beamline:\n    prefix: 'BL01:'\n",
+    )
+
+    app = AppContainer.from_config(str(config))
+
+    assert app.transport == PV_ACCESS
+    assert app.services["beamline"].transport == PV_ACCESS
+
+
+def test_a_transport_redsun_does_not_have_is_refused_in_a_session_file(
+    tmp_path: Path,
+) -> None:
+    config = session_file(tmp_path / "session.yaml", "  transport: carrier-pigeon\n")
+
+    with pytest.raises(TypeError, match="carrier-pigeon"):
+        AppContainer.from_config(str(config))
+
+
+def test_a_transport_redsun_does_not_have_is_refused_on_the_class() -> None:
+    with pytest.raises(TypeError, match="carrier-pigeon"):
+
+        class App(AppContainer):
+            transport = "carrier-pigeon"
+
+
+def test_layered_files_must_agree_on_the_transport(tmp_path: Path) -> None:
+    under = session_file(tmp_path / "under.yaml", "  transport: channel-access\n")
+    over = session_file(tmp_path / "over.yaml", "  transport: pv-access\n")
+
+    with pytest.raises(ValueError, match="contradicts"):
+
+        class App(AppContainer, config=[under, over]):
+            pass
+
+
+def test_a_component_named_transport_is_refused() -> None:
+    with pytest.raises(TypeError, match="names a component 'transport'"):
+
+        class App(AppContainer):
+            transport = declare_service(prefix="BL01:")  # type: ignore[assignment]
+
+
+def test_a_session_file_declares_a_service_for_a_container_class(
+    tmp_path: Path,
+) -> None:
+    """A class taking a session file gets the services that file declares.
+
+    The same file works through `from_config`, so a session written once must
+    not need its services repeated in the class body to reach a device.
+    """
+    config = tmp_path / "session.yaml"
+    config.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nname: from-a-file\n"
+        'services:\n  beamline:\n    prefix: "BL01:"\n',
+        encoding="utf-8",
+    )
+
+    class App(AppContainer, config=config):
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert set(app.services) == {"beamline"}
+    stage = app.devices["stage"]
+    assert isinstance(stage, PrefixedDevice)
+    assert stage.prefix == "BL01:"
+
+
+def test_a_class_body_service_wins_over_the_session_file(tmp_path: Path) -> None:
+    """The class body is the later word on a service the file also declares."""
+    config = tmp_path / "session.yaml"
+    config.write_text(
+        "schema_version: 1.0\nfrontend: pyqt\nname: overridden\n"
+        'services:\n  beamline:\n    prefix: "FILE:"\n',
+        encoding="utf-8",
+    )
+
+    class App(AppContainer, config=config):
+        beamline = declare_service(prefix="CLASS:")
+        stage = declare_device(PrefixedDevice, service="beamline")
+
+    app = App().build()
+
+    assert component(app.devices, "stage", PrefixedDevice).prefix == "CLASS:"

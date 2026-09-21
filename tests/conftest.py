@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,7 +21,26 @@ from qtpy.QtWidgets import QApplication
 from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
+
+
+@pytest.fixture
+def wait_until() -> Callable[..., bool]:
+    """Return a poll that holds until ``predicate`` is true or ``timeout`` runs out.
+
+    For a thread or a process that offers nothing to wait on. Where an event,
+    a future or a task exists, wait on that instead.
+    """
+
+    def poll(predicate: Callable[[], bool], timeout: float = 10.0) -> bool:
+        deadline = time.perf_counter() + timeout
+        while time.perf_counter() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.005)
+        return predicate()
+
+    return poll
 
 
 @pytest.fixture(scope="session")
@@ -35,8 +55,8 @@ def qapp() -> QApplication:
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     """Let a launched service import ``mock_pkg``, and restore the CA address list.
 
-    ``redsun.services._service.ports`` is left alone: libca reads the address list
-    once per process, so a service keeps the port it first got from test to test.
+    The transport's port map is left alone: libca reads the address list once per
+    process, so a service keeps the port it first got from test to test.
     """
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent / "container"))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")

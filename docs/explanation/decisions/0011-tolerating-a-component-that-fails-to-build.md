@@ -57,6 +57,13 @@ do the provider, wiring, injection and presenter-shutdown phases. The three
 mappings can therefore be shorter than the declarations: `len(app.views)` is no
 longer the number of `declare_view` calls.
 
+**A component whose provider or injection phase fails is dropped there.**
+What a skipped component would have published is missing for the rest of the
+session, so a component asking for it in `register_providers` or
+`inject_dependencies` raises in its turn. That failure is recorded and logged
+under its own name, the component leaves the built mapping, and the phase goes
+on to the next one.
+
 **A `wire` body naming a component that failed does not end the wiring.**
 Reading a `declare_*` attribute of a component that failed gives a stand-in
 that answers any port with another stand-in, and `connect` returns `None`

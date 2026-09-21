@@ -34,6 +34,15 @@ Several questions had to be answered before anything could be built:
   answered on Linux; on Windows the second was never found. Giving each its own
   `EPICS_CA_SERVER_PORT` and listing `127.0.0.1:<port>` in the client's
   `EPICS_CA_ADDR_LIST` made both answer on both.
+- **Which protocol.** Channel Access was the only one a session could arrange,
+  and the arrangement was written into `Service.start`. A device served over
+  PVAccess connected only where `p4p`'s own defaults happened to suit: two
+  `p4p` servers on one host share their search port and take a free TCP port
+  each, so nothing had to be assigned, but a client does not search the
+  loopback unless it is told to.
+  Measured against a `p4p` stand-in: `EPICS_PVA_ADDR_LIST=127.0.0.1` in the
+  session process is all a client needs, and a restarted service answers the
+  same context after 0.02 s, where libca waits out a reconnect delay.
 - **What belongs in the framework.** An earlier plan also put an identity
   check, a heartbeat watch, a standby command and live-view resolution into
   the container. Each was built and then taken out: the identity check and the
@@ -63,6 +72,23 @@ Several questions had to be answered before anything could be built:
 - **Each launched service gets a Channel Access port of its own** for the life
   of the session process, and the container closes the process's Channel
   Access channels once it has stopped the services it launched.
+- **A session names one transport, and every service speaks it.** It is written
+  under `services` in the session file, or as the `transport` attribute of the
+  container class, and is `channel-access` unless named. `pv-access` is the
+  other one. The variables both protocols read hold one setting per process, so
+  a session mixing two would leave each unable to say which service a variable
+  is for; a file layered over another is refused for the same reason.
+- **What a protocol needs of the process on each side is an object**, private
+  to `redsun.services`, with `reserve` for the environment a service is
+  launched with, `publish` for what this process is told, and `release` for
+  what it caches. `redsun` names the transports it has; an application does not
+  add one.
+- **`redsun` depends on nothing either protocol needs.** A component brings
+  what its own service speaks, `caproto` or `p4p` or `fastcs`, and the matching
+  `ophyd-async` extra. `redsun` requires `ophyd-async` alone.
+- **A launched service is told its name and prefix** through
+  `REDSUN_SERVICE_NAME` and `REDSUN_SERVICE_PREFIX`, so a module serving
+  several sessions needs no arguments to name its channels.
 - **Identity checks, heartbeats, standby and live-view resolution stay out**
   until the container has a part in them that an application cannot play. For
   standby that part is dropping connections and stopping services, which waits
@@ -83,6 +109,10 @@ Several questions had to be answered before anything could be built:
 - Closing Channel Access channels after stopping services closes every channel
   in the process, not only those of the stopped services: libca offers nothing
   narrower.
+- A session reaching a service over another protocol, Tango for one, needs a
+  transport object written for it; nothing else in the container changes.
+- Under PVAccess a stopped service needs nothing released: a client reaches the
+  restarted one on the context it already holds.
 - An application wanting to know that its service is the intended one, or
   still alive while its process runs, reads or subscribes to the service's
   signals itself.

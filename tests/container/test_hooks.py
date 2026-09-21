@@ -77,9 +77,6 @@ def _clear_greeted() -> None:
 class TestPointsBelongToTheContainer:
     """Tests that a container answers only for the points it declares."""
 
-    def test_the_base_container_calls_no_hook_point(self) -> None:
-        assert AppContainer._hook_keys == {}
-
     def test_a_hooks_section_on_the_base_container_is_refused(self) -> None:
         app = AppContainer()
         app._config["hooks"] = {"greet": {"provider": _PROVIDER}}
@@ -170,7 +167,10 @@ class TestHookResolution:
         class Derived(Base):
             farewell = declare_hook(own_hook)
 
-        assert Derived._hook_providers == {"greet": base_hook, "farewell": own_hook}
+        Derived().build()
+
+        assert mock_hooks.greeted == ["base"]
+        assert own_hook.seen == ["farewell"]
 
     def test_a_subclass_replaces_a_point_its_base_declared(self) -> None:
         class Base(GreetingContainer):
@@ -476,13 +476,6 @@ class TestHookTeardown:
 
 class TestBuildProgress:
     """Tests for the step names the build reports to whatever is watching."""
-
-    def test_the_build_reports_nothing_by_default(self) -> None:
-        app = AppContainer()
-
-        app.build()
-
-        assert app._report is not None
 
     def test_a_reporter_sees_every_step(self) -> None:
         seen: list[str] = []

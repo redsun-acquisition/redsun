@@ -101,6 +101,9 @@ def _make_value_widget(
             sb.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             sb.setFrame(False)
             sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.ButtonSymbols.NoButtons)
+            # a value is sent once it is typed, on Enter or focus out, not
+            # on every keystroke on the way there
+            sb.setKeyboardTracking(False)
             if isinstance(initial_value, (int, float)):
                 sb.setValue(int(initial_value))
             sb.valueChanged.connect(lambda v: on_changed(key, v))
@@ -116,6 +119,7 @@ def _make_value_widget(
             dsb.setSingleStep(0.1)
             dsb.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             dsb.setFrame(False)
+            dsb.setKeyboardTracking(False)
             if isinstance(initial_value, (int, float)):
                 dsb.setValue(float(initial_value))
             dsb.valueChanged.connect(lambda v: on_changed(key, v))

@@ -39,6 +39,7 @@ requires-python = ">=3.11"
 [dependency-groups]
 dev = [
     { include-group = "epics" },
+    { include-group = "pva" },
     { include-group = "pyqt" },
     { include-group = "tiled" },
     { include-group = "zarr" },
@@ -87,6 +88,10 @@ tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
     "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
 ]
+pva = [
+    "ophyd-async[pva]>=0.21.2",
+    "p4p>=4.2.2",
+]
 
 experimental = [
     "in-n-out>=0.2.1",
@@ -108,10 +113,6 @@ pyqt = [
 pyside = [
     "redsun[qt-common]",
     "pyside6>=6.11.0",
-]
-epics = [
-    "caproto>=1.3.0",
-    "ophyd-async[ca]>=0.21.2",
 ]
 zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",

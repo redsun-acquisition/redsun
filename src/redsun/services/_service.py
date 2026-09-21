@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import signal
-import socket
 import subprocess
 import sys
 import threading
@@ -14,6 +13,8 @@ from typing import TYPE_CHECKING, Final
 from psygnal import Signal
 
 from redsun.log import SERVICE_LOGGER
+
+from ._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -30,19 +31,12 @@ STOP_TIMEOUT: Final = 10.0
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
-ports: dict[str, int] = {}
-"""Channel Access server port of each service, by name, for the whole process.
+launch_lock = threading.Lock()
+"""Held while a service reserves its transport and copies the environment.
 
-libca reads ``EPICS_CA_ADDR_LIST`` once, when the process first uses Channel
-Access, so a service restarted by a rebuilt container must answer on the port
-the list already holds.
-"""
-
-ports_lock = threading.Lock()
-"""Held while a service takes its port and copies the environment.
-
-Services started from several threads at once would otherwise lose an entry of
-``EPICS_CA_ADDR_LIST`` or copy the environment while another thread changes it.
+Services started from several threads at once would otherwise draw one port
+twice, lose an entry of an address list, or copy the environment while
+another thread changes it.
 """
 
 
@@ -70,6 +64,9 @@ class Service:
         ready once its process starts.
     stop_timeout : float
         Seconds each step of `stop` waits for the process to exit.
+    transport : str
+        Protocol the service is reached over, as `redsun.services._transports`
+        names them. The session settles it for every service it holds.
 
     Raises
     ------
@@ -91,6 +88,7 @@ class Service:
         "prefix",
         "ready",
         "stop_timeout",
+        "transport",
     )
 
     sig_exited = Signal(str, int)
@@ -104,6 +102,7 @@ class Service:
         args: Sequence[str] = (),
         ready: str | None = None,
         stop_timeout: float = STOP_TIMEOUT,
+        transport: str = CHANNEL_ACCESS,
     ) -> None:
         if args and module is None:
             raise TypeError(
@@ -116,6 +115,7 @@ class Service:
         self.args = list(args)
         self.ready = ready
         self.stop_timeout = stop_timeout
+        self.transport = transport
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
         self._process: subprocess.Popen[str] | None = None
         self._drain: threading.Thread | None = None
@@ -138,11 +138,15 @@ class Service:
     def start(self) -> None:
         """Launch the service and wait until it prints its readiness line.
 
-        The process runs without a console window on Windows and gets its own
-        Channel Access server port, added to ``EPICS_CA_ADDR_LIST`` here so
-        devices find it among several local services. The service keeps that
-        port for every start in this process. The process writes UTF-8, and
-        each output line is logged as `service_record` rebuilds it.
+        The process runs without a console window on Windows, and its
+        transport gives it the environment it is reached on and tells this
+        process where to look, so devices find it among several local
+        services. What a transport reserves lasts for every start in this
+        process. It also reads ``REDSUN_SERVICE_NAME`` and
+        ``REDSUN_SERVICE_PREFIX`` from its environment, so a module serving
+        several sessions needs no arguments to name its channels. The process
+        writes UTF-8, and each output line is logged as `service_record`
+        rebuilds it.
 
         Raises
         ------
@@ -154,21 +158,17 @@ class Service:
         """
         if self.module is None or self.running:
             return
-        with ports_lock:
-            port = ports.get(self.name)
-            if port is None:
-                # the system may hand out a port it already gave another service
-                port = free_udp_port()
-                while port in ports.values():
-                    port = free_udp_port()
-                ports[self.name] = port
-                os.environ["EPICS_CA_ADDR_LIST"] = " ".join(
-                    filter(
-                        None,
-                        [os.environ.get("EPICS_CA_ADDR_LIST"), f"127.0.0.1:{port}"],
-                    )
-                )
-            env = {**os.environ, "EPICS_CA_SERVER_PORT": str(port), "PYTHONUTF8": "1"}
+        transport = TRANSPORTS[self.transport]
+        with launch_lock:
+            reserved = transport.reserve(self.name)
+            transport.publish(self.name)
+            env = {
+                **os.environ,
+                **reserved,
+                "PYTHONUTF8": "1",
+                "REDSUN_SERVICE_NAME": self.name,
+                "REDSUN_SERVICE_PREFIX": self.prefix,
+            }
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
@@ -227,17 +227,18 @@ class Service:
             self._stopping = True
             if process.stdin is not None:
                 process.stdin.close()
-            if not exited(process, self.stop_timeout):
-                if sys.platform != "win32":
-                    process.send_signal(signal.SIGINT)
-                if not exited(process, self.stop_timeout):
-                    logger.warning(
-                        "Service '%s' did not stop within %g s, killing it",
-                        self.name,
-                        self.stop_timeout,
-                    )
-                    process.kill()
-                    process.wait()
+            stopped = exited(process, self.stop_timeout)
+            if not stopped and sys.platform != "win32":
+                process.send_signal(signal.SIGINT)
+                stopped = exited(process, self.stop_timeout)
+            if not stopped:
+                logger.warning(
+                    "Service '%s' did not stop within %g s, killing it",
+                    self.name,
+                    self.stop_timeout,
+                )
+                process.kill()
+                process.wait()
             logger.info(
                 "Service '%s' stopped with exit code %s", self.name, process.returncode
             )
@@ -326,22 +327,6 @@ def service_record(service: str, line: str) -> logging.LogRecord:
     return logging.makeLogRecord(fields)
 
 
-async def close_channel_access() -> None:
-    """Close every Channel Access channel this process holds, if it holds any.
-
-    Otherwise a channel to a stopped service waits out libca's reconnect delay,
-    about ten seconds, before a rebuilt device reaches the restarted service.
-    Every channel in the process is closed, since libca offers nothing
-    narrower.
-    """
-    try:
-        # the epics extra is optional, and a process without it holds no channel
-        from aioca import purge_channel_caches
-    except ImportError:
-        return
-    purge_channel_caches()
-
-
 def exited(process: subprocess.Popen[str], timeout: float) -> bool:
     """Return whether *process* exits within *timeout* seconds."""
     try:
@@ -349,15 +334,3 @@ def exited(process: subprocess.Popen[str], timeout: float) -> bool:
     except subprocess.TimeoutExpired:
         return False
     return True
-
-
-def free_udp_port() -> int:
-    """Return a UDP port on the loopback interface that nothing is bound to.
-
-    The port is free when read; nothing holds it for the caller, so another
-    program can bind it first, and a later call may return it again.
-    """
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        port: int = sock.getsockname()[1]
-    return port

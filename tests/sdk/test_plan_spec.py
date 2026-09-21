@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
 from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
@@ -28,8 +26,6 @@ from redsun.presenter.plan_spec import (
     ParamKind,
     PlanSpec,
     UnresolvableAnnotationError,
-    _dispatch_annotation,
-    _FieldsFromAnnotation,
     collect_arguments,
     create_plan_spec,
     resolve_arguments,
@@ -39,9 +35,13 @@ from redsun.view.qt._device_sequence_edit import DeviceSequenceEdit
 from redsun.view.qt._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     # deliberately never imported at runtime: a plan annotated with it
     # reproduces a plugin author hiding an import behind TYPE_CHECKING
     from decimal import Decimal
+
+    from qtpy.QtWidgets import QApplication
 
 
 @runtime_checkable
@@ -115,60 +115,50 @@ def one_motor(mock_motor: MockMotorDevice) -> dict[str, MockMotorDevice]:
     return {"stage": mock_motor}
 
 
-class TestTypePredicates:
-    """Unit tests for the annotation-classification helpers in ``utils``."""
+def _param(
+    name: str,
+    annotation: object = int,
+    kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
+    default: object = Parameter.empty,
+    **fields: Any,
+) -> ParamDescription:
+    return ParamDescription(
+        name=name, kind=kind, annotation=annotation, default=default, **fields
+    )
 
-    def test_isdevice_true_for_detector_protocol(self) -> None:
-        assert isdevice(_DetectorProtocol)
 
-    def test_isdevice_true_for_motor_protocol(self) -> None:
-        assert isdevice(_MotorProtocol)
+def _make_spec(*params: ParamDescription) -> PlanSpec:
+    return PlanSpec(name="plan", docs="", parameters=list(params))
 
-    def test_isdevice_false_for_primitive(self) -> None:
-        assert not isdevice(int)
-        assert not isdevice(str)
-        assert not isdevice(float)
 
-    def test_isdevice_false_for_instance(self) -> None:
-        assert not isdevice(42)
-        assert not isdevice("hello")
-
-    def test_isdevicesequence_true(self) -> None:
-        assert isdevicesequence(Sequence[_DetectorProtocol])
-        assert isdevicesequence(Sequence[_MotorProtocol])
-
-    def test_isdevicesequence_false_for_primitive_sequence(self) -> None:
-        assert not isdevicesequence(Sequence[int])
-        assert not isdevicesequence(Sequence[str])
-
-    def test_isdevicesequence_false_for_bare_type(self) -> None:
-        assert not isdevicesequence(_DetectorProtocol)
-
-    def test_isdeviceset_true(self) -> None:
-        assert isdeviceset(set[_DetectorProtocol])
-        assert isdeviceset(set[_MotorProtocol])
-        assert isdeviceset(AbstractSet[_DetectorProtocol])
-        assert isdeviceset(frozenset[_DetectorProtocol])
-
-    def test_isdeviceset_false_for_primitive_set(self) -> None:
-        assert not isdeviceset(set[int])
-        assert not isdeviceset(frozenset[str])
-
-    def test_isdeviceset_false_for_bare_type(self) -> None:
-        assert not isdeviceset(_DetectorProtocol)
-
-    def test_isdeviceset_false_for_sequence(self) -> None:
-        assert not isdeviceset(Sequence[_DetectorProtocol])
-
-    def test_issequence_true_for_generic_alias(self) -> None:
-        assert issequence(Sequence[int])
-        assert issequence(list[float])
-
-    def test_issequence_false_for_str(self) -> None:
-        assert not issequence(str)
-
-    def test_issequence_false_for_bare_class(self) -> None:
-        assert not issequence(int)
+@pytest.mark.parametrize(
+    ("predicate", "annotation", "expected"),
+    [
+        (isdevice, _DetectorProtocol, True),
+        (isdevice, _MotorProtocol, True),
+        (isdevice, int, False),
+        (isdevice, str, False),
+        (isdevice, 42, False),
+        (isdevicesequence, Sequence[_DetectorProtocol], True),
+        (isdevicesequence, Sequence[_MotorProtocol], True),
+        (isdevicesequence, Sequence[int], False),
+        (isdevicesequence, _DetectorProtocol, False),
+        (isdeviceset, set[_DetectorProtocol], True),
+        (isdeviceset, AbstractSet[_DetectorProtocol], True),
+        (isdeviceset, frozenset[_DetectorProtocol], True),
+        (isdeviceset, set[int], False),
+        (isdeviceset, _DetectorProtocol, False),
+        (isdeviceset, Sequence[_DetectorProtocol], False),
+        (issequence, Sequence[int], True),
+        (issequence, list[float], True),
+        (issequence, str, False),
+        (issequence, int, False),
+    ],
+)
+def test_the_annotation_predicates(
+    predicate: Callable[[object], bool], annotation: object, expected: bool
+) -> None:
+    assert predicate(annotation) is expected
 
 
 class TestCreatePlanSpec:
@@ -204,12 +194,36 @@ class TestCreatePlanSpec:
         assert p.device_proto is None
         assert not p.multiselect
 
-    def test_literal_with_int_values_stringified(self) -> None:
+    @pytest.mark.parametrize("default", ["", (), []], ids=["str", "tuple", "list"])
+    def test_an_empty_sequence_default_is_not_an_action_list(
+        self, default: Any
+    ) -> None:
+        def plan(label: Sequence[str] = default) -> MsgGenerator[None]:
+            yield from ()
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].actions is None
+        assert spec.parameters[0].default == default
+
+    def test_an_already_evaluated_annotation_is_taken_as_it_is(self) -> None:
+        """A module without the annotations future import evaluates them itself."""
+
+        def plan(n=1):  # type: ignore[no-untyped-def]
+            yield from ()
+
+        plan.__annotations__ = {"n": int, "return": MsgGenerator[None]}
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].annotation is int
+
+    def test_literal_values_are_kept_as_they_are(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
-        assert spec.parameters[0].choices == ["1", "2", "3"]
+        assert spec.parameters[0].choices == [1, 2, 3]
 
     def test_single_device_param_populates_choices(
         self, one_motor: dict[str, MockMotorDevice]
@@ -461,138 +475,60 @@ class TestTypeCheckingOnlyAnnotation:
             create_plan_spec(plan, {})
 
 
-class TestDispatchAnnotation:
-    """Direct unit tests for ``_dispatch_annotation``."""
-
-    def test_literal_dispatched(self) -> None:
-        fields = _dispatch_annotation(Literal["a", "b"], ParamKind.KEYWORD_ONLY, {})
-        assert fields.choices == ["a", "b"]
-        assert fields.device_proto is None
-
-    def test_device_sequence_dispatched(
-        self, one_detector: dict[str, _MockDetector]
-    ) -> None:
-        fields = _dispatch_annotation(
-            Sequence[_DetectorProtocol],
-            ParamKind.POSITIONAL_OR_KEYWORD,
-            one_detector,
-        )
-        assert fields.choices == ["cam"]
-        assert fields.multiselect is True
-        assert fields.device_proto is _DetectorProtocol
-
-    def test_device_set_dispatched(
-        self, one_detector: dict[str, _MockDetector]
-    ) -> None:
-        fields = _dispatch_annotation(
-            set[_DetectorProtocol],
-            ParamKind.POSITIONAL_OR_KEYWORD,
-            one_detector,
-        )
-        assert fields.choices == ["cam"]
-        assert fields.multiselect is True
-        assert fields.device_proto is _DetectorProtocol
-
-    def test_single_device_dispatched(
-        self, one_motor: dict[str, MockMotorDevice]
-    ) -> None:
-        fields = _dispatch_annotation(
-            _MotorProtocol, ParamKind.POSITIONAL_OR_KEYWORD, one_motor
-        )
-        assert fields.choices == ["stage"]
-        assert fields.multiselect is False
-
-    def test_var_positional_device_dispatched(
-        self, one_detector: dict[str, _MockDetector]
-    ) -> None:
-        fields = _dispatch_annotation(
-            _DetectorProtocol, ParamKind.VAR_POSITIONAL, one_detector
-        )
-        assert fields.multiselect is True
-        assert fields.choices == ["cam"]
-
-    def test_primitive_falls_through_to_empty(self) -> None:
-        fields = _dispatch_annotation(int, ParamKind.POSITIONAL_OR_KEYWORD, {})
-        assert fields == _FieldsFromAnnotation()
-
-    def test_empty_registry_gives_no_choices_for_device(self) -> None:
-        fields = _dispatch_annotation(
-            _MotorProtocol, ParamKind.POSITIONAL_OR_KEYWORD, {}
-        )
-        assert fields.choices is None
-
-
 class TestCollectArguments:
     """Tests for ``collect_arguments``."""
 
-    def _make_spec(self, *params: ParamDescription) -> PlanSpec:
-        return PlanSpec(name="plan", docs="", parameters=list(params))
-
-    def _param(
-        self,
-        name: str,
-        kind: ParamKind,
-        annotation: object = int,
-        default: object = Parameter.empty,
-    ) -> ParamDescription:
-        return ParamDescription(
-            name=name,
-            kind=kind,
-            annotation=annotation,
-            default=default,
-        )
-
     def test_positional_only(self) -> None:
-        spec = self._make_spec(self._param("x", ParamKind.POSITIONAL_ONLY))
+        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_ONLY))
         args, kwargs = collect_arguments(spec, {"x": 42})
         assert args == (42,)
         assert kwargs == {}
 
     def test_positional_or_keyword(self) -> None:
-        spec = self._make_spec(self._param("x", ParamKind.POSITIONAL_OR_KEYWORD))
+        spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
         args, kwargs = collect_arguments(spec, {"x": 7})
         assert args == (7,)
         assert kwargs == {}
 
     def test_keyword_only(self) -> None:
-        spec = self._make_spec(self._param("n", ParamKind.KEYWORD_ONLY))
+        spec = _make_spec(_param("n", kind=ParamKind.KEYWORD_ONLY))
         args, kwargs = collect_arguments(spec, {"n": 3})
         assert args == ()
         assert kwargs == {"n": 3}
 
     def test_var_positional_sequence_expanded(self) -> None:
-        spec = self._make_spec(self._param("vals", ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
         assert args == (1, 2, 3)
 
     def test_var_positional_single_value_wrapped(self) -> None:
-        spec = self._make_spec(self._param("vals", ParamKind.VAR_POSITIONAL))
+        spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": 99})
         assert args == (99,)
 
     def test_var_keyword_mapping_merged(self) -> None:
-        spec = self._make_spec(self._param("kw", ParamKind.VAR_KEYWORD))
+        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
         _args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
         assert kwargs == {"a": 1, "b": 2}
 
     def test_var_keyword_non_mapping_raises(self) -> None:
-        spec = self._make_spec(self._param("kw", ParamKind.VAR_KEYWORD))
+        spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
         with pytest.raises(TypeError, match="Mapping"):
             collect_arguments(spec, {"kw": "not_a_mapping"})
 
     def test_missing_param_skipped(self) -> None:
-        spec = self._make_spec(
-            self._param("x", ParamKind.POSITIONAL_OR_KEYWORD),
-            self._param("y", ParamKind.POSITIONAL_OR_KEYWORD),
+        spec = _make_spec(
+            _param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            _param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
         args, _kwargs = collect_arguments(spec, {"x": 1})
         assert args == (1,)
 
     def test_ordering_preserved(self) -> None:
-        spec = self._make_spec(
-            self._param("a", ParamKind.POSITIONAL_OR_KEYWORD),
-            self._param("b", ParamKind.POSITIONAL_OR_KEYWORD),
-            self._param("c", ParamKind.POSITIONAL_OR_KEYWORD),
+        spec = _make_spec(
+            _param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            _param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
+            _param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
         args, _ = collect_arguments(spec, {"a": 1, "b": 2, "c": 3})
         assert args == (1, 2, 3)
@@ -601,11 +537,8 @@ class TestCollectArguments:
 class TestResolveArguments:
     """Tests for ``resolve_arguments``."""
 
-    def _make_spec(self, *params: ParamDescription) -> PlanSpec:
-        return PlanSpec(name="plan", docs="", parameters=list(params))
-
     def test_non_device_param_passed_through(self) -> None:
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="frames",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
@@ -622,7 +555,7 @@ class TestResolveArguments:
             name: str = "go"
 
         action_instance = MyAction()
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="go",
                 kind=ParamKind.POSITIONAL_ONLY,
@@ -641,7 +574,7 @@ class TestResolveArguments:
 
         a1 = MyAction()
         a2 = MyAction()
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="go",
                 kind=ParamKind.POSITIONAL_ONLY,
@@ -656,7 +589,7 @@ class TestResolveArguments:
     def test_single_device_label_resolved(
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
@@ -672,7 +605,7 @@ class TestResolveArguments:
     def test_device_sequence_labels_resolved(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
@@ -689,7 +622,7 @@ class TestResolveArguments:
     def test_device_set_labels_resolved(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="dets",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
@@ -706,7 +639,7 @@ class TestResolveArguments:
     def test_unknown_label_resolves_to_none_for_single(
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
-        spec = self._make_spec(
+        spec = _make_spec(
             ParamDescription(
                 name="motor",
                 kind=ParamKind.POSITIONAL_OR_KEYWORD,
@@ -720,56 +653,33 @@ class TestResolveArguments:
         assert resolved["motor"] is None
 
 
-@pytest.mark.skipif(
-    sys.platform == "linux" and not os.environ.get("DISPLAY"),
-    reason="requires a display (Qt) on Linux",
-)
+@pytest.mark.qt
 class TestCreateParamWidget:
-    """Tests for ``create_param_widget`` - requires a Qt platform."""
+    """Tests for ``create_param_widget``, which builds Qt widgets."""
 
-    def _param(
-        self,
-        name: str,
-        annotation: object,
-        kind: ParamKind = ParamKind.POSITIONAL_OR_KEYWORD,
-        default: object = Parameter.empty,
-        choices: list[str] | None = None,
-        multiselect: bool = False,
-        device_proto: type[Any] | None = None,
-        actions: Sequence[Action] | Action | None = None,
-        hidden: bool = False,
-    ) -> ParamDescription:
-        return ParamDescription(
-            name=name,
-            kind=kind,
-            annotation=annotation,
-            default=default,
-            choices=choices,
-            multiselect=multiselect,
-            device_proto=device_proto,
-            actions=actions,
-            hidden=hidden,
-        )
+    @pytest.fixture(autouse=True)
+    def _application(self, qapp: QApplication) -> None:
+        """Hold the session's application, so magicgui makes none of its own."""
 
     def test_int_creates_spinbox(self) -> None:
-        w = create_param_widget(self._param("n", int))
+        w = create_param_widget(_param("n", int))
         assert isinstance(w, mgw.SpinBox)
 
     def test_float_creates_float_spinbox(self) -> None:
-        w = create_param_widget(self._param("x", float))
+        w = create_param_widget(_param("x", float))
         assert isinstance(w, mgw.FloatSpinBox)
 
     def test_bool_creates_checkbox(self) -> None:
-        w = create_param_widget(self._param("flag", bool, default=False))
+        w = create_param_widget(_param("flag", bool, default=False))
         assert isinstance(w, mgw.CheckBox)
 
     def test_literal_creates_combobox(self) -> None:
-        p = self._param("egu", Literal["um", "mm"], choices=["um", "mm"])
+        p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
         w = create_param_widget(p)
         assert isinstance(w, mgw.ComboBox)
 
     def test_single_device_creates_combobox(self) -> None:
-        p = self._param(
+        p = _param(
             "motor",
             _MotorProtocol,
             choices=["stage"],
@@ -779,7 +689,7 @@ class TestCreateParamWidget:
         assert isinstance(w, mgw.ComboBox)
 
     def test_multiselect_device_creates_device_sequence_edit(self) -> None:
-        p = self._param(
+        p = _param(
             "dets",
             Sequence[_DetectorProtocol],
             choices=["cam"],
@@ -790,15 +700,15 @@ class TestCreateParamWidget:
         assert isinstance(w, DeviceSequenceEdit)
 
     def test_path_creates_file_edit(self) -> None:
-        w = create_param_widget(self._param("output", Path))
+        w = create_param_widget(_param("output", Path))
         assert isinstance(w, mgw.FileEdit)
 
     def test_sequence_int_creates_list_edit(self) -> None:
-        w = create_param_widget(self._param("vals", Sequence[int]))
+        w = create_param_widget(_param("vals", Sequence[int]))
         assert isinstance(w, mgw.ListEdit)
 
     def test_hidden_param_creates_line_edit_placeholder(self) -> None:
-        p = self._param("secret", int, hidden=True)
+        p = _param("secret", int, hidden=True)
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
 
@@ -808,20 +718,6 @@ class TestCreateParamWidget:
             name: str = "snap"
 
         snap = Snap()
-        p = self._param("snap", Action, actions=snap)
+        p = _param("snap", Action, actions=snap)
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
-
-    def test_unresolvable_annotation_raises_not_lineedit(self) -> None:
-        """create_param_widget raises RuntimeError for truly exotic annotations.
-
-        This should never happen in normal operation (create_plan_spec guards
-        against it), but we verify the contract here explicitly.
-        """
-
-        class Exotic:
-            pass
-
-        p = self._param("thing", Exotic)
-        with pytest.raises((TypeError, ValueError, RuntimeError)):
-            create_param_widget(p)

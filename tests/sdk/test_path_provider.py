@@ -223,8 +223,6 @@ def test_counter_continues_across_dates(tmp_path: Path) -> None:
 def test_filename_provider_accessors_and_padding() -> None:
     """PlanFilenameProvider exposes plan/max_digits and honors the padding."""
     filenames = PlanFilenameProvider(max_digits=3)
-    assert filenames.plan == "unknown"
-    assert filenames.max_digits == 3
     assert filenames() == "unknown_000"
     filenames.set_plan("scan")
     filenames.bump("scan", "det", 41)

@@ -61,7 +61,7 @@ from ... import _structural
 from ..._catalog import require_tiled, start_catalog
 from ..._config import Source, StorageConfig, as_sources, load
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
-from ...services._service import close_channel_access
+from ...services._transports import CHANNEL_ACCESS, TRANSPORTS
 from .._settings import Settings
 from ._declarations import (
     Declaration,
@@ -1571,7 +1571,7 @@ class Session(BuildableSession):
         self._start_catalog()
         if not self._services:
             return
-        self.on_release(lambda: run_coro(close_channel_access()))
+        self.on_release(lambda: run_coro(TRANSPORTS[CHANNEL_ACCESS].release()))
         with ThreadPoolExecutor(len(self._services), "service-start") as pool:
             starts = {
                 name: pool.submit(service.start)

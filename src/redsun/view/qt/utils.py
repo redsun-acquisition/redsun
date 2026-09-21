@@ -316,6 +316,10 @@ def _build_params_group(
     for w in param_widgets:
         native: QtW.QWidget = w.native
         label_text: str = getattr(w, "label", w.name)
+        # magicgui gives a CheckBox its name as text too, and the form row
+        # already carries it as the label
+        if isinstance(w, mgw.CheckBox):
+            w.text = ""
         params_form.addRow(label_text, native)
 
     return params_group

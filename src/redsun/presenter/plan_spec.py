@@ -112,8 +112,8 @@ class ParamDescription:
     default: Any
     """Default value of the parameter, or `inspect.Parameter.empty` if none."""
 
-    choices: list[str] | None = None
-    """Labels of selectable values, for `Literal` and device parameters."""
+    choices: list[Any] | None = None
+    """Selectable values: a `Literal`'s own values, or device names."""
 
     multiselect: bool = False
     """Whether several values can be selected, as for `Sequence[OADevice]`."""
@@ -159,7 +159,7 @@ class _FieldsFromAnnotation(NamedTuple):
     Fields irrelevant to an annotation keep their defaults (None / False).
     """
 
-    choices: list[str] | None = None
+    choices: list[Any] | None = None
     multiselect: bool = False
     device_proto: type[Any] | None = None
 
@@ -168,8 +168,7 @@ def _handle_literal(
     ann: Any,
     _: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    choices = [str(a) for a in get_args(ann)]
-    return _FieldsFromAnnotation(choices=choices)
+    return _FieldsFromAnnotation(choices=list(get_args(ann)))
 
 
 def _device_fields(
@@ -290,8 +289,10 @@ def _extract_action_meta(
         return None
     if isinstance(param.default, Action):
         actions_meta: Sequence[Action] | Action = param.default
-    elif isinstance(param.default, cabc.Sequence) and all(
-        isinstance(a, Action) for a in param.default
+    elif (
+        param.default
+        and isinstance(param.default, cabc.Sequence)
+        and all(isinstance(a, Action) for a in param.default)
     ):
         actions_meta = list(param.default)
     else:
@@ -402,15 +403,20 @@ def _resolve_annotations(
     namespace = getattr(func_obj, "__globals__", None)
     resolved: dict[str, Any] = {}
     unresolved: dict[str, str] = {}
-    for name, text in get_annotations(func_obj, format=Format.STRING).items():
-        try:
-            value = evaluate_forward_ref(ForwardRef(text), globals=namespace)
-        except NameError:
-            unresolved[name] = text
-        else:
-            # get_type_hints substitutes NoneType, which the return-type
-            # checks below rely on to tell "-> None" from "no annotation"
-            resolved[name] = type(None) if value is None else value
+    for name, value in get_annotations(func_obj, format=Format.FORWARDREF).items():
+        # a module without the annotations future import already evaluated
+        # its annotations; only what is still text needs the namespace
+        if isinstance(value, str):
+            value = ForwardRef(value)
+        if isinstance(value, ForwardRef):
+            try:
+                value = evaluate_forward_ref(value, globals=namespace)
+            except NameError:
+                unresolved[name] = value.__forward_arg__
+                continue
+        # get_type_hints substitutes NoneType, which the return-type
+        # checks below rely on to tell "-> None" from "no annotation"
+        resolved[name] = type(None) if value is None else value
     return resolved, unresolved
 
 

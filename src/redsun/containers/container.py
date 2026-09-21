@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from enum import Enum, unique
 from importlib import import_module
 from importlib.metadata import EntryPoints, entry_points
@@ -56,7 +57,7 @@ from redsun.virtual import (
 )
 
 from .._catalog import require_tiled, start_catalog
-from .._config import COMPONENT_SECTIONS, load
+from .._config import COMPONENT_SECTIONS, load, read
 from .._hooks import (
     HookError,
     distinct,
@@ -64,7 +65,7 @@ from .._hooks import (
     parse_hook_specs,
     resolve_hooks,
 )
-from ..services._service import close_channel_access
+from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._config import AppConfig, CatalogConfig, StorageConfig
 
 if TYPE_CHECKING:
@@ -183,6 +184,9 @@ def _silent(step: str) -> None:
     """
 
 
+TRANSPORT_KEY: Final[str] = "transport"
+"""The key of the ``services`` section naming what its services speak."""
+
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
@@ -206,6 +210,26 @@ def _named(config: Mapping[str, Any]) -> str:
             "identifies the session, and two that both went unnamed could not "
             "be told apart."
         )
+    return name
+
+
+def _transport_of(data: dict[str, Any]) -> str | None:
+    """Return the transport a configuration names, or ``None`` for none."""
+    services = data.get("services") or {}
+    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
+
+
+def checked_transport(name: str, where: str) -> str:
+    """Return *name*, refusing a transport ``redsun`` does not have.
+
+    Raises
+    ------
+    TypeError
+        Naming what was read and the transports there are.
+    """
+    if name not in TRANSPORTS:
+        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
+        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
     return name
 
 
@@ -257,6 +281,12 @@ class AppContainer:
         "_storage",
         "_virtual_container",
     )
+
+    transport: str = CHANNEL_ACCESS
+    """What the session's services speak, one for all of them.
+
+    A session file names it under ``services``, which wins over this.
+    """
 
     _service_components: ClassVar[dict[str, _ServiceComponent]] = {}
     _device_components: ClassVar[dict[str, _DeviceComponent]] = {}
@@ -356,9 +386,37 @@ class AppContainer:
 
         namespace = vars(cls)
 
+        # a session file declares services the way it declares anything else,
+        # and the class body may add to or replace what it names
+        if cls._config_paths:
+            with suppress(Exception):
+                from_file = cls._services_of(
+                    load(cls._config_paths, AppConfig.__required_keys__),
+                    entry_points(group="redsun.plugins"),
+                )
+                for name, declared_kwargs in from_file.items():
+                    declaration = _ServiceComponent(name, **declared_kwargs)
+                    declaration.create()
+                    services[name] = declaration
+
         for attr_name, attr_value in namespace.items():
             if attr_name.startswith("_"):
                 continue
+
+            if attr_name == TRANSPORT_KEY and isinstance(
+                attr_value,
+                (
+                    _ServiceComponent,
+                    _DeviceComponent,
+                    _PresenterComponent,
+                    _ViewComponent,
+                ),
+            ):
+                raise TypeError(
+                    f"{cls.__name__} names a component {TRANSPORT_KEY!r}, which is "
+                    f"what the services of a session say they speak. Name it "
+                    f"something else."
+                )
 
             if isinstance(attr_value, _ServiceComponent):
                 # made once here so that keywords a Service refuses are refused
@@ -372,6 +430,10 @@ class AppContainer:
                 presenters[attr_value.name] = attr_value
             elif isinstance(attr_value, _ViewComponent):
                 views[attr_value.name] = attr_value
+
+        cls.transport = checked_transport(
+            cls._declared_transport(), f"{cls.__name__}'s services"
+        )
 
         component_fields: dict[str, _ComponentField] = {}
         for base in cls.__bases__:
@@ -499,7 +561,7 @@ class AppContainer:
         # a container launches and stops processes of its own, so each one
         # makes its services from the declarations the class shares
         self._services: dict[str, Service] = {
-            name: declaration.create()
+            name: declaration.create(self.transport)
             for name, declaration in self._service_components.items()
         }
         self._failed_services: dict[str, BaseException] = {}
@@ -525,6 +587,34 @@ class AppContainer:
         self._session_log: SessionFileHandler | None = None
         self._service_logs: dict[str, SessionFileHandler] = {}
         self._open_session_log()
+
+    @classmethod
+    def _declared_transport(cls) -> str:
+        """Return the transport the class's configuration names, or the class's own.
+
+        Raises
+        ------
+        ValueError
+            If two of its files name a different one. Every service of a session
+            speaks the same transport, so a file layered over another cannot
+            change what a file under it named.
+        """
+        named: dict[str, Path] = {}
+        for path in cls._config_paths:
+            # a file that cannot be read is reported where the rest of it is read
+            with suppress(Exception):
+                transport = _transport_of(read(path))
+                if transport is not None:
+                    named.setdefault(transport, path)
+        if len(named) > 1:
+            (first, under), (second, over) = list(named.items())[:2]
+            raise ValueError(
+                f"Configuration file {over} sets {TRANSPORT_KEY}={second!r} under "
+                f"services, which contradicts {first!r} from {under}. Every service "
+                f"of a session speaks the same transport, so every file must agree "
+                f"on it."
+            )
+        return next(iter(named), cls.transport)
 
     @classmethod
     def _refuse_unresolved_fields(cls) -> None:
@@ -1076,9 +1166,23 @@ class AppContainer:
         self.virtual_container.provide(PATH_PROVIDER, self.path_provider)
         if self._catalog is not None:
             self.virtual_container.provide(CATALOG, CatalogAddress(self._catalog.uri))
-        for instance in self._built_of(self._components).values():
+        for name, instance in self._built_of(self._components).items():
             if isinstance(instance, IsProvider):
-                instance.register_providers(self.virtual_container)
+                try:
+                    instance.register_providers(self.virtual_container)
+                except Exception as e:  # noqa: BLE001 - one component must not abort the app
+                    self._drop(name, "register the providers of", e)
+
+    def _drop(self, name: str, step: str, error: Exception) -> None:
+        """Forget a built component whose *step* failed, and log why.
+
+        What it was meant to publish or receive is missing for the rest of
+        the session; the components relying on it fail in turn, each logged
+        under its own name.
+        """
+        self._failed[name] = error
+        del self._built[self._components[name]]
+        logger.error(f"Failed to {step} '{name}': {error}")
 
     def _apply_wiring(self) -> None:
         """Publish the built components by name, then connect them.
@@ -1102,9 +1206,12 @@ class AppContainer:
 
     def _inject_dependencies(self) -> None:
         """Let each component taking dependencies receive them."""
-        for instance in self._built_of(self._components).values():
+        for name, instance in self._built_of(self._components).items():
             if isinstance(instance, IsInjectable):
-                instance.inject_dependencies(self.virtual_container)
+                try:
+                    instance.inject_dependencies(self.virtual_container)
+                except Exception as e:  # noqa: BLE001 - one component must not abort the app
+                    self._drop(name, "inject dependencies into", e)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect every device through ``ophyd-async``.
@@ -1186,7 +1293,7 @@ class AppContainer:
         self._failed_services.clear()
         self._services_started = False
         if stopped:
-            run_coro(close_channel_access())
+            run_coro(TRANSPORTS[self.transport].release())
 
     def _open_session_log(self) -> None:
         """Start writing this run's records to the session's log files.
@@ -1290,6 +1397,12 @@ class AppContainer:
             name: _ServiceComponent(name, **kwargs) for name, kwargs in services.items()
         }
 
+        named = _transport_of(config)
+        if named is not None:
+            namespace[TRANSPORT_KEY] = checked_transport(
+                named, f"the services section of {config_path}"
+            )
+
         declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
             ("devices", _DeviceComponent),
             ("presenters", _PresenterComponent),
@@ -1325,6 +1438,38 @@ class AppContainer:
         return instance
 
     @classmethod
+    def _services_of(
+        cls, config: dict[str, Any], manifests: Any
+    ) -> dict[str, dict[str, Any]]:
+        """Return the keyword arguments of every service a session file declares.
+
+        A service naming a plugin takes its module and readiness line from that
+        plugin's manifest, overridden by what the session file writes.
+        """
+        services: dict[str, dict[str, Any]] = {}
+        section: dict[str, Any] = dict(config.get("services") or {})
+        section.pop(TRANSPORT_KEY, None)
+        for name, entry in section.items():
+            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
+            if "plugin_name" in entry:
+                launched = cls._manifest_item(
+                    entry["plugin_name"], "services", entry["plugin_id"], manifests
+                )
+                if not isinstance(launched, dict):
+                    # _manifest_item already logged why it returned None
+                    if launched is not None:
+                        logger.error(
+                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
+                            entry["plugin_name"],
+                            entry["plugin_id"],
+                            launched,
+                        )
+                    continue
+                kwargs = {**launched, **kwargs}
+            services[name] = kwargs
+        return services
+
+    @classmethod
     def _load_configuration(
         cls, config_path: str
     ) -> tuple[dict[str, Any], _PluginTypeDict, dict[str, dict[str, Any]]]:
@@ -1340,28 +1485,7 @@ class AppContainer:
         plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
         available_manifests = entry_points(group="redsun.plugins")
 
-        services: dict[str, dict[str, Any]] = {}
-        for name, entry in (config.get("services") or {}).items():
-            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
-            if "plugin_name" in entry:
-                launched = cls._manifest_item(
-                    entry["plugin_name"],
-                    "services",
-                    entry["plugin_id"],
-                    available_manifests,
-                )
-                if not isinstance(launched, dict):
-                    # _manifest_item already logged why it returned None
-                    if launched is not None:
-                        logger.error(
-                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
-                            entry["plugin_name"],
-                            entry["plugin_id"],
-                            launched,
-                        )
-                    continue
-                kwargs = {**launched, **kwargs}
-            services[name] = kwargs
+        services = cls._services_of(config, available_manifests)
 
         groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 

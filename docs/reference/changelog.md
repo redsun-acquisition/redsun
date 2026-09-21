@@ -17,8 +17,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   container makes for each service it declares. A service with a module runs
   as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds
   for its readiness line, logs its output at `DEBUG` on
-  `redsun.service.<name>`, and gives it a Channel Access server port of its
-  own, appended to `EPICS_CA_ADDR_LIST`. `stop` closes the process's standard
+  `redsun.service.<name>`, launches it with `REDSUN_SERVICE_NAME` and
+  `REDSUN_SERVICE_PREFIX` in its environment, and arranges the session's
+  transport for it: a Channel Access server port of its own appended to
+  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` with that address
+  in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
   input, then sends `SIGINT` on POSIX, then kills it, each step waiting
   `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
@@ -62,9 +65,26 @@ Dates are specified in the format `DD-MM-YYYY`.
       prefix: "BL01:"
   ```
 
+- A `transport` key in the `services` section, and **`AppContainer.transport`**
+  beside it, naming what every service of the session speaks: `channel-access`,
+  the default, or `pv-access`. A transport `redsun` does not have, a component
+  named `transport`, and two layered files naming different transports are each
+  refused as the container class is created:
+
+  ```yaml
+  services:
+    transport: pv-access
+    camera_ioc:
+      plugin_name: mylab
+      plugin_id: camera-ioc
+  ```
+
 - The build summary names a service whose every device failed to build:
   `Unused: camera_ioc (no device built)`.
-- An `epics` extra and dependency group, with `caproto` and `ophyd-async[ca]`.
+- An `epics` dependency group, with `caproto` and `ophyd-async[ca]`, and a
+  `pva` one with `p4p` and `ophyd-async[pva]`. Both are for running the tests;
+  `redsun` requires `ophyd-async` alone and a component brings what its own
+  service speaks.
 - **`autoconnect`** keyword of a device declaration, true unless given - whether
   the build connects the device. The build connects every such device at once,
   in a `"connect"` step between devices and presenters, waiting up to
@@ -198,6 +218,19 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- A container class taking a session file gets the services that file
+  declares, as it already got its devices, presenters and views. A service
+  named in both the file and the class body is the class body's:
+
+  ```python
+  class MyApp(AppContainer, config="session.yaml"):
+      camera = declare_device(MyCamera, service="camera_ioc")  # declared in the file
+  ```
+
+  Before, only `AppContainer.from_config` read the `services` section, so a
+  class-based session had to repeat every service in its body or its devices
+  were skipped with `service '<name>' is not declared`.
+
 - A session's data, catalog and log folders take the session name with each
   run of characters other than letters, digits, `.`, `-` and `_` replaced by
   `_` and outer dots removed: `Lab A: STED` becomes `Lab_A_STED`. The data
@@ -266,6 +299,36 @@ Dates are specified in the format `DD-MM-YYYY`.
   class MyMotor(StandardReadable):
       def __init__(self, name: str, *, egu: str = "mm") -> None: ...
   ```
+
+### Fixed
+
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) no longer refuses a
+  parameter whose default is an empty string, tuple or list as an action
+  list it is not annotated for.
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) accepts a plan from a
+  module without `from __future__ import annotations`. Its annotations are
+  already evaluated, and were re-read as text naming what the module never
+  imported, which skipped every plan in it.
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) keeps a `Literal`'s
+  values as they are, so `Literal[1, 2, 3]` offers integers and the plan
+  receives one. They were turned into strings, which refused the default in
+  `create_plan_widget` and handed the plan `"1"`.
+- **`AppContainer.build`** (`redsun.containers`) survives a component whose
+  `register_providers` or `inject_dependencies` raises: the component is
+  logged and dropped, as one failing to build is, rather than ending the
+  build. A view asking for what a skipped presenter would have provided no
+  longer takes the session down with it.
+- **`DescriptorTreeView`** (`redsun.view.qt`) sends a number once it is
+  entered, on Enter or focus out. Every keystroke sent a value before, so
+  typing `100` wrote 1, 10 and 100 to the device, and a failed write was
+  reverted to 10 rather than to the value before the edit.
+- **`Service.stop`** (`redsun.services`) on Windows kills a process still
+  running after `stop_timeout` at once, as documented, rather than waiting a
+  second `stop_timeout` for a signal it never sends.
+- **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
+  parameter's name once. `magicgui` gives the checkbox its name as text
+  and the form row carried it as the label too, so every such parameter
+  read "write forever [ ] write forever".
 
 ## [0.12.3] - 13-09-2026
 

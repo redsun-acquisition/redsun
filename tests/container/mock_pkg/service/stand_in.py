@@ -33,7 +33,7 @@ def main() -> int:
         "--exit-when", type=Path, help="exit with --exit's code once this file exists"
     )
     parser.add_argument("--marker", type=Path, help="file written on clean exit")
-    parser.add_argument("--say", help="a line printed once ready")
+    parser.add_argument("--say", help="a line printed before the readiness one")
     parser.add_argument("--touch", type=Path, help="file created as soon as it runs")
     parser.add_argument(
         "--ready-when", type=Path, help="print READY only once this file exists"
@@ -46,14 +46,22 @@ def main() -> int:
         threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
 
     print(f"port {os.environ.get('EPICS_CA_SERVER_PORT')}", flush=True)
+    print(
+        f"service {os.environ.get('REDSUN_SERVICE_NAME')} "
+        f"prefix {os.environ.get('REDSUN_SERVICE_PREFIX')}",
+        flush=True,
+    )
     if options.touch is not None:
         options.touch.touch()
     while options.ready_when is not None and not options.ready_when.exists():
         time.sleep(0.05)
-    if not options.no_ready:
-        print(READY, flush=True)
+    # before the readiness line, not after: a launcher returns from start()
+    # once it reads that line, so a line printed after it may not have been
+    # read yet when the caller looks
     if options.say is not None:
         print(options.say, flush=True)
+    if not options.no_ready:
+        print(READY, flush=True)
     if options.exit is not None and options.exit_when is None:
         print("exiting on request", flush=True)
         return int(options.exit)

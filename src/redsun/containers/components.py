@@ -12,6 +12,7 @@ from redsun.services import STOP_TIMEOUT, Service
 from redsun.view import PView
 
 from .._structural import problems
+from ..services._transports import CHANNEL_ACCESS
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -277,9 +278,9 @@ class _ServiceComponent:
     def __set_name__(self, owner: type, attr: str) -> None:
         self.name = self.name or attr
 
-    def create(self) -> Service:
-        """Return a new `Service` for this declaration."""
-        return Service(self.name, **self.kwargs)
+    def create(self, transport: str = CHANNEL_ACCESS) -> Service:
+        """Return a new `Service` for this declaration, over *transport*."""
+        return Service(self.name, transport=transport, **self.kwargs)
 
     def __get__(self, obj: object, objtype: type | None = None) -> Any:
         """Resolve to the container's own `Service` when read from a container."""

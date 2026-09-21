@@ -16,13 +16,22 @@ from typing import TYPE_CHECKING
 import pytest
 
 from redsun.log import GlobalFormatter
-from redsun.services import Service, _service
+from redsun.services import Service, _service, _transports
 from redsun.services._service import service_record
+from redsun.services._transports import (
+    CHANNEL_ACCESS,
+    PV_ACCESS,
+    TRANSPORTS,
+    ChannelAccess,
+    PVAccess,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
 STAND_IN = "mock_pkg.service.stand_in"
+PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
+PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
 MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
 STDLIB_WARNING = json.dumps(
@@ -54,19 +63,49 @@ def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
-    monkeypatch.setattr(_service, "ports", {})
+    monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, ChannelAccess())
     made: list[Service] = []
 
     def make(
-        *options: str, stop_timeout: float = 0.5, name: str = "stand-in"
+        *options: str,
+        stop_timeout: float = 0.5,
+        name: str = "stand-in",
+        prefix: str = "",
     ) -> Service:
         made.append(
             Service(
                 name,
+                prefix=prefix,
                 module=STAND_IN,
                 args=options,
                 ready=READY,
                 stop_timeout=stop_timeout,
+            )
+        )
+        return made[-1]
+
+    yield make
+    for launched in made:
+        launched.stop()
+
+
+@pytest.fixture
+def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
+    """Make stand-in PVA services, restoring the address list and stopping them after."""
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+    made: list[Service] = []
+
+    def make(name: str, pv: str, value: float) -> Service:
+        made.append(
+            Service(
+                name,
+                module=PVA_STAND_IN,
+                args=("--pv", pv, "--value", str(value)),
+                ready=PVA_READY,
+                stop_timeout=0.5,
+                transport=PV_ACCESS,
             )
         )
         return made[-1]
@@ -221,7 +260,7 @@ def test_a_port_another_service_holds_is_not_given_again(
 ) -> None:
     """The system may hand out one port twice; the second service draws again."""
     drawn = iter([40001, 40001, 40002])
-    monkeypatch.setattr(_service, "free_udp_port", lambda: next(drawn))
+    monkeypatch.setattr(_transports, "free_udp_port", lambda: next(drawn))
     first, second = launch(name="first"), launch(name="second")
 
     first.start()
@@ -243,6 +282,24 @@ def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     assert os.environ["EPICS_CA_ADDR_LIST"].split() == [
         f"127.0.0.1:{port}" for port in ports
     ]
+
+
+def test_two_pva_services_answer_on_the_loopback(
+    launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Both are kept local, and a client is told where to find them."""
+    p4p = pytest.importorskip("p4p.client.thread")
+
+    first = launch_pva("first", "SIM:FIRST", 1.0)
+    second = launch_pva("second", "SIM:SECOND", 2.0)
+    first.start()
+    second.start()
+
+    assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
+    assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
+    with p4p.Context("pva") as client:
+        assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
+        assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 
 
 @pytest.mark.parametrize(
@@ -311,7 +368,11 @@ def test_a_rebuilt_record_names_its_service_and_no_location() -> None:
 def test_non_ascii_output_arrives_intact(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    """The child writes UTF-8 whatever the platform's console encoding."""
+    """The child writes UTF-8 whatever the platform's console encoding.
+
+    The stand-in prints this line before its readiness one, so ``start``
+    cannot return until the drain has logged it.
+    """
     message = "température 21 °C \u2713"
     line = json.dumps(
         {**json.loads(STDLIB_WARNING), "msg": message}, ensure_ascii=False
@@ -386,3 +447,15 @@ def test_a_service_ends_when_the_process_that_launched_it_dies(
     while not marker.exists() and time.monotonic() < deadline:
         time.sleep(0.05)
     assert marker.read_text() == "cleaned up"
+
+
+def test_a_launched_service_reads_its_name_and_prefix_from_the_environment(
+    launch: Callable[..., Service],
+    service_log: pytest.LogCaptureFixture,
+) -> None:
+    stand_in = launch(name="camera", prefix="SIM:")
+
+    stand_in.start()
+    stand_in.stop()
+
+    assert "service camera prefix SIM:" in messages(service_log, logging.DEBUG)
