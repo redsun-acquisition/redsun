@@ -9,8 +9,8 @@ import numpy as np
 import ome_writers as ow
 import pytest
 
-from redsun.storage.writers import _acquire_zarr
-from redsun.storage.writers._base import ArrayShape
+from redsun.writers import _acquire_zarr
+from redsun.writers._base import ArrayShape
 
 if TYPE_CHECKING:
     from pathlib import Path

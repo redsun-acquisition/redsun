@@ -14,7 +14,7 @@ has the same shape and a different job. The documents say where the
 acquisition went and what its arrays look like; the product itself is
 computed by a component after the fact, and no document carries it.
 
-So [`Writer`][redsun.storage.writers.Writer] takes the two apart. The
+So [`Writer`][redsun.writers.Writer] takes the two apart. The
 documents go in through `__call__`, as with any callback, and tell the
 writer the layout and the store of each product. The data goes in through
 `append` and `write`, from the component that computed it. The container

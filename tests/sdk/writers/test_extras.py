@@ -11,8 +11,8 @@ import pytest
 @pytest.mark.parametrize(
     ("package", "module", "extra"),
     [
-        ("acquire_zarr", "redsun.storage.writers", "redsun[zarr]"),
-        ("ome_writers", "redsun.storage.writers._ome_writers", "redsun[ome-zarr]"),
+        ("acquire_zarr", "redsun.writers", "redsun[zarr]"),
+        ("ome_writers", "redsun.writers._ome_writers", "redsun[ome-zarr]"),
     ],
 )
 def test_a_missing_package_names_the_extra(

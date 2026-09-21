@@ -6,7 +6,7 @@
 - **[Engine](api/engine.md)** - `RunEngine`, `Status`, actions, plan stubs
 - **[Presenter](api/presenter.md)** - `Presenter`, `PPresenter`, plan spec, built-ins
 - **[Path provider](api/path_provider.md)** - `SessionPathProvider`, `PlanFilenameProvider`, `session_directory`
-- **[Storage](api/storage.md)** - `Writer`, `ArrayShape`, `WriterError`
+- **[Writers](api/writers.md)** - `Writer`, `ArrayShape`, `WriterError`
 - **[View](api/view.md)** - `View`, `PView`, Qt plan widgets, `DescriptorTreeView`
 - **[Virtual container](api/virtual.md)** - `VirtualContainer`, `slot`, `ports`, provider protocols
 - **[Utilities](api/utils.md)** - `find_signals`

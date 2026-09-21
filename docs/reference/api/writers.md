@@ -1,6 +1,6 @@
-# Storage
+# Writers
 
-::: redsun.storage.writers
+::: redsun.writers
     options:
       members:
         - Writer

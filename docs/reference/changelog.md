@@ -173,7 +173,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   provider = container.require(PATH_PROVIDER)
   ```
 
-- **`Writer`** (`redsun.storage.writers`) - writes the products a component
+- **`Writer`** (`redsun.writers`) - writes the products a component
   computes against the stores a run names. A product is declared before the
   run, `derive(data_key, source=)` to take its layout and store from the
   `descriptor` and `stream_resource` naming *source*, or `declare(data_key,
@@ -195,9 +195,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   and writes two mappings on each product's group: *metadata* as given, and
   `redsun` with `run_start`, `source`, `resource_uri` and `written`.
   `shutdown` closes what a session ending mid-run left open.
-- **`ArrayShape`** (`redsun.storage.writers`) - the shape and dtype of one
+- **`ArrayShape`** (`redsun.writers`) - the shape and dtype of one
   frame of a product.
-- **`WriterError`** (`redsun.storage.writers`) - raised for a product not
+- **`WriterError`** (`redsun.writers`) - raised for a product not
   declared, one without its layout or store yet, one declared after its
   store's stream opened, a store the writer cannot take, or an array with too
   few or too many dimensions. Importing the package without `acquire-zarr`
@@ -299,6 +299,7 @@ Dates are specified in the format `DD-MM-YYYY`.
   (`redsun.view.qt.builtins`), with their manifest entries. A session
   declaring them drops both and gives `base_dir` in the `storage` section.
   `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
+- The `redsun.storage` package. `Writer` lives in `redsun.writers`.
 - The `zarr` extra and dependency group require `acquire-zarr` 0.10.0 or
   later, the first release whose arrays take `is_ngff`.
 

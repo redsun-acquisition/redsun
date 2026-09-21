@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pytest
 
-from redsun.storage.writers import Writer, WriterError
-from redsun.storage.writers._base import root_attributes as attributes
+from redsun.writers import Writer, WriterError
+from redsun.writers._base import root_attributes as attributes
 
 if TYPE_CHECKING:
     from pathlib import Path

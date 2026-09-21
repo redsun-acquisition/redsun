@@ -19,18 +19,18 @@ pip install redsun[zarr]
 pip install redsun[ome-zarr]
 ```
 
-Without `acquire-zarr`, importing `redsun.storage.writers` raises
+Without `acquire-zarr`, importing `redsun.writers` raises
 `ImportError` naming the extra. Without `ome-writers`, the first product
 placed beside an image does.
 
 ## Declare each product before the run
 
-A [`Writer`][redsun.storage.writers.Writer] holds every product a component
+A [`Writer`][redsun.writers.Writer] holds every product a component
 writes. Declare them in the constructor, since a store's arrays are all sized
 when its stream opens:
 
 ```python
-from redsun.storage.writers import Writer
+from redsun.writers import Writer
 
 
 class MyPresenter(Presenter, DocumentRouter):

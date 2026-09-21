@@ -18,7 +18,7 @@ redsun/
 |   |-- presenter/             Presenter ABC, PPresenter, plan spec, built-ins
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
-|   |-- storage/               writers for derived products, by format
+|   |-- writers/               Writer for derived products, one stream per format
 |   |-- view/                  View ABC, PView
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   |-- virtual/               VirtualContainer, wiring, provider protocols
@@ -155,7 +155,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   every device whose constructor takes a `path_provider` keyword. A
   declaration giving that keyword is refused, as with `service` and
   `autoconnect`.
-- `redsun.storage` holds per-format writers for derived products only: a
+- `redsun.writers` holds the `Writer` for derived products only: a
   component computing one writes it against the store named in the
   `StreamResource` document.
 - Rationale: `docs/explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md`.
