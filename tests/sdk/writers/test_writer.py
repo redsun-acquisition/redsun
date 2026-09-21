@@ -285,3 +285,25 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
 
     assert product == plain_store.as_uri()
     assert attributes(plain_store / "det_median")["redsun"]["run_start"] == "run-1"
+
+
+def test_a_second_store_for_a_source_leaves_the_first_stream_open(
+    tmp_path: Path,
+) -> None:
+    """A stream closes at its run's stop, so a run naming two stores holds both open."""
+    writer = Writer()
+    writer.derive("det_filtered", source="det")
+    first, second = tmp_path / "first.zarr", tmp_path / "second.zarr"
+
+    run(writer, first, "application/x-zarr")
+    writer.append("det_filtered", np.ones((4, 4), np.uint16))
+    run(writer, second, "application/x-zarr", start=False)
+    writer.append("det_filtered", np.ones((4, 4), np.uint16))
+
+    assert not (first / "det_filtered" / "zarr.json").exists()
+    writer(
+        "stop",
+        {"uid": "stop-1", "run_start": "run-1", "time": 1.0, "exit_status": "success"},
+    )
+    assert shape_of(first / "det_filtered") == [1, 4, 4]
+    assert shape_of(second / "det_filtered") == [1, 4, 4]
