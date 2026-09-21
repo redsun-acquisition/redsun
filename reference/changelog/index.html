@@ -4266,8 +4266,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>redsun.service.&lt;name&gt;</code>, launches it with <code>REDSUN_SERVICE_NAME</code> and
   <code>REDSUN_SERVICE_PREFIX</code> in its environment, and arranges the session's
   transport for it: a Channel Access server port of its own appended to
-  <code>EPICS_CA_ADDR_LIST</code>, or a PVAccess server on <code>127.0.0.1</code> with that address
-  in <code>EPICS_PVA_ADDR_LIST</code>. <code>stop</code> closes the process's standard
+  <code>EPICS_CA_ADDR_LIST</code>, or a PVAccess server on <code>127.0.0.1</code> and a free TCP
+  port with that address in <code>EPICS_PVA_ADDR_LIST</code>. <code>stop</code> closes the process's standard
   input, then sends <code>SIGINT</code> on POSIX, then kills it, each step waiting
   <code>stop_timeout</code> seconds, <code>STOP_TIMEOUT</code> (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at <code>ERROR</code> and emits <code>sig_exited(name, code)</code>. A
@@ -4348,7 +4348,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>remove_handler</code> and <code>session_log</code> take a <code>service</code>.</li>
 <li>A line of a service's output that is a JSON log record, written by a stdlib
   formatter or by <code>loguru</code> with <code>serialize=True</code>, is logged with its own level,
-  time and traceback under <code>redsun.service.&lt;service&gt;.&lt;logger&gt;</code>.</li>
+  time and traceback under <code>redsun.service.&lt;service&gt;.&lt;logger&gt;</code>; so is a line
+  <code>pvxs</code> writes, <code>&lt;time&gt; &lt;LEVEL&gt; &lt;logger&gt; &lt;message&gt;</code>, with its level, time
+  and logger.</li>
 <li><strong><code>LogView</code></strong> (<code>redsun.view.qt.builtins</code>) shows services' records on a
   Services tab, with a selector for one service or all of them.</li>
 <li><strong><code>SessionPathProvider</code></strong>, <strong><code>PlanFilenameProvider</code></strong> and
