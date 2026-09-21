@@ -233,6 +233,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- **`DescriptorTreeView`** (`redsun.view.qt`) groups rows by their
+  `name-property` key rather than by the descriptor's `source`: one header
+  per device name, and one under it per group a property names with a dash of
+  its own, `cam-properties-Binning` as `Binning` under `properties` under
+  `cam`. A source ending in `:readonly` still greys the row.
+
 - A container class taking a session file gets the services that file
   declares, as it already got its devices, presenters and views. A service
   named in both the file and the class body is the class body's:

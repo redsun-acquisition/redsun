@@ -10,7 +10,7 @@ from qtpy import QtWidgets
 from redsun.view.qt.treeview import DescriptorTreeView
 
 if TYPE_CHECKING:
-    from event_model import Dtype
+    from event_model import DataKey, Dtype
     from qtpy.QtWidgets import QApplication
 
 pytestmark = pytest.mark.qt
@@ -46,3 +46,36 @@ def test_a_typed_number_is_sent_once_it_is_entered(
     spinbox.interpretText()
 
     assert sent == [("cam", "gain", expected)]
+
+
+def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
+    """Return the first-column text of *item*'s children, in order."""
+    children = (item.child(i) for i in range(item.childCount()))
+    return [child.text(0) for child in children if child is not None]
+
+
+def test_rows_are_grouped_by_device_and_by_a_property_group(
+    qapp: QApplication,
+) -> None:
+    """``cam-properties-Binning`` sits under ``properties`` under ``cam``."""
+    descriptor: DataKey = {"dtype": "string", "source": "pva://x", "shape": []}
+    view = DescriptorTreeView(
+        {
+            "cam-exposure": descriptor,
+            "cam-properties-Binning": descriptor,
+            "cam-properties-Gain": descriptor,
+        },
+        {
+            "cam-exposure": {"value": "1", "timestamp": 0.0},
+            "cam-properties-Binning": {"value": "1", "timestamp": 0.0},
+            "cam-properties-Gain": {"value": "0", "timestamp": 0.0},
+        },
+    )
+
+    assert view.topLevelItemCount() == 1
+    cam = view.topLevelItem(0)
+    assert cam is not None and cam.text(0) == "cam"
+    assert labels(cam) == ["exposure", "properties"]
+    properties = cam.child(1)
+    assert properties is not None
+    assert labels(properties) == ["Binning", "Gain"]

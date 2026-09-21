@@ -220,8 +220,10 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 class DescriptorTreeView(QtWidgets.QTreeWidget):
     """Two-column property tree for browsing and editing device settings.
 
-    Rows are grouped by each descriptor's ``source`` field: one header per
-    device, with the device name dropped from leaf labels.
+    Rows are grouped by their ``name-property`` key: one header per device
+    name, and under it a header per group a property names with a dash of its
+    own, so ``cam-properties-Binning`` is ``Binning`` under ``properties``
+    under ``cam``.
 
     Parameters
     ----------
@@ -356,37 +358,44 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.setItemWidget(child, 1, widget)
         self._widgets[full_key] = widget
 
-    def _make_group_item(self, label: str) -> QtWidgets.QTreeWidgetItem:
-        """Create and register a bold top-level group header."""
+    def _make_group_item(
+        self, label: str, parent: QtWidgets.QTreeWidgetItem | None = None
+    ) -> QtWidgets.QTreeWidgetItem:
+        """Create a bold group header, top-level or under *parent*."""
         item = QtWidgets.QTreeWidgetItem([label])
         item.setFirstColumnSpanned(True)
         font = item.font(0)
         font.setBold(True)
         item.setFont(0, font)
         item.setExpanded(True)
-        self.addTopLevelItem(item)
+        if parent is None:
+            self.addTopLevelItem(item)
+        else:
+            parent.addChild(item)
         return item
 
     def _build(self) -> None:
         """Populate the tree."""
         self.clear()
         self._widgets.clear()
-        self._build_from_sources()
+        self._build_from_keys()
         self.expandAll()
         self.resizeColumnToContents(0)
 
-    def _build_from_sources(self) -> None:
-        """Build the tree grouped by each descriptor's ``source`` prefix."""
-        groups: dict[str, list[tuple[str, str, Descriptor, bool]]] = {}
+    def _build_from_keys(self) -> None:
+        """Build the tree from each key's device name and property path."""
+        owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
+        groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
         for full_key, desc in self._descriptors.items():
-            prop = full_key.split("-", 1)[-1] if "-" in full_key else full_key
-            source_raw = desc.get("source", "unknown")
-            parts = source_raw.split("://", 1)
-            source = parts[0]
-            readonly = len(parts) > 1 and parts[1] == "readonly"
-            groups.setdefault(source, []).append((full_key, prop, desc, readonly))
-
-        for source, leaves in groups.items():
-            group_item = self._make_group_item(source)
-            for full_key, prop, desc, readonly in leaves:
-                self._add_leaf(group_item, full_key, prop, desc, readonly)
+            owner, prop = full_key.split("-", 1) if "-" in full_key else ("", full_key)
+            source = desc.get("source", "")
+            readonly = source.split("://", 1)[-1] == "readonly"
+            if owner not in owners:
+                owners[owner] = self._make_group_item(owner or "settings")
+            parent = owners[owner]
+            if "-" in prop:
+                group, prop = prop.split("-", 1)
+                if (owner, group) not in groups:
+                    groups[(owner, group)] = self._make_group_item(group, parent)
+                parent = groups[(owner, group)]
+            self._add_leaf(parent, full_key, prop, desc, readonly)
