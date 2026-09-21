@@ -96,3 +96,19 @@ def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
         ("y", "space"),
         ("x", "space"),
     ]
+
+
+def test_two_streams_open_on_one_store_at_once_keep_both_keys(tmp_path: Path) -> None:
+    """A product written while the acquisition's stream is still open survives its close."""
+    store = tmp_path / "run.zarr"
+    acquisition = _acquire_zarr.Stream(store, {"cam": FRAME}, is_ngff=False)
+    product = _acquire_zarr.Stream(store, {"cam_median": FRAME}, is_ngff=False)
+    acquisition.append("cam", np.zeros((2, 4, 4), np.uint16))
+    product.append("cam_median", np.ones((4, 4), np.uint16))
+    product.close()
+    acquisition.append("cam", np.zeros((4, 4), np.uint16))
+    acquisition.close()
+
+    assert read(store, "cam").shape == (3, 4, 4)
+    assert read(store, "cam_median").shape == (1, 4, 4)
+    assert attributes(store) == {}
