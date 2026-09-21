@@ -6,64 +6,20 @@ import inspect
 import json
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
-import ome_writers as ow
 import pytest
 
 from redsun.storage.writers import (
     WriterError,
-    _acquire_zarr,
     ome_zarr,
     zarr,
 )
-from redsun.storage.writers._base import ArrayShape
+from redsun.storage.writers._base import root_attributes as attributes
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-def attributes(path: Path) -> dict[str, Any]:
-    document: dict[str, Any] = json.loads(
-        (path / "zarr.json").read_text(encoding="utf-8")
-    )
-    node_attributes: dict[str, Any] = document["attributes"]
-    return node_attributes
-
-
-FRAME = ArrayShape.of((4, 4), np.uint16)
-
-
-def open_key(store: Path, data_key: str, *, is_ngff: bool) -> None:
-    """Write two zero frames under *data_key* in *store*, as a device would."""
-    stream = _acquire_zarr.Stream(store, {data_key: FRAME}, is_ngff=is_ngff)
-    stream.append(data_key, np.zeros((2, 4, 4), np.uint16))
-    stream.close()
-
-
-@pytest.fixture
-def plain_store(tmp_path: Path) -> Path:
-    """Give a store whose root is a plain group, as `acquire-zarr` writes one."""
-    store = tmp_path / "run.zarr"
-    open_key(store, "det", is_ngff=False)
-    return store
-
-
-@pytest.fixture
-def image_store(tmp_path: Path) -> Path:
-    """Give a store whose root is the image, as `ome-writers` writes one."""
-    store = tmp_path / "run42.ome.zarr"
-    settings = ow.AcquisitionSettings(
-        root_path=str(store),
-        dimensions=tuple(ow.dims_from_standard_axes({"t": 2, "y": 4, "x": 4})),
-        dtype="uint16",
-        format=ow.OmeZarrFormat(backend="acquire-zarr"),
-    )
-    with ow.create_stream(settings) as stream:
-        for frame in np.zeros((2, 4, 4), np.uint16):
-            stream.append(frame)
-    return store
 
 
 def test_a_key_is_added_to_a_plain_root(plain_store: Path) -> None:
@@ -99,10 +55,9 @@ def test_an_image_root_is_refused_with_its_metadata_intact(image_store: Path) ->
     assert "ome" in before
 
 
-def test_ome_zarr_adds_a_named_image_to_a_plain_root(tmp_path: Path) -> None:
+def test_ome_zarr_adds_a_named_image_to_a_plain_root(ngff_store: Path) -> None:
     """A plain root holds one image per key, so the product joins them."""
-    store = tmp_path / "ngff.zarr"
-    open_key(store, "det", is_ngff=True)
+    store = ngff_store
 
     product = ome_zarr.write(
         store.as_uri(),
@@ -133,25 +88,6 @@ def test_ome_zarr_writes_a_sibling_beside_an_image_root(image_store: Path) -> No
     assert [
         axis["name"] for axis in attributes(sibling)["ome"]["multiscales"][0]["axes"]
     ] == ["y", "x"]
-
-
-def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
-    """``c`` is a channel: two time axes would not be valid OME-Zarr."""
-    store = tmp_path / "ngff.zarr"
-    layout = ArrayShape.of((2, 1, 4, 4), np.uint16)
-
-    stream = _acquire_zarr.Stream(store, {"det": layout}, is_ngff=True)
-    stream.append("det", np.zeros((2, 1, 4, 4), np.uint16))
-    stream.close()
-
-    axes = attributes(store / "det")["ome"]["multiscales"][0]["axes"]
-    assert [(axis["name"], axis["type"]) for axis in axes] == [
-        ("t", "time"),
-        ("c", "channel"),
-        ("z", "space"),
-        ("y", "space"),
-        ("x", "space"),
-    ]
 
 
 def test_ome_zarr_writes_a_sibling_beside_a_plate(tmp_path: Path) -> None:

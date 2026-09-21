@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +10,7 @@ import pytest
 
 from redsun.storage.writers import WriterError, _acquire_zarr, _ome_writers
 from redsun.storage.writers._base import ArrayShape
+from redsun.storage.writers._base import root_attributes as attributes
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,14 +23,6 @@ FRAME = ArrayShape.of((4, 4), np.uint16)
 def read(store: Path, key: str) -> np.ndarray[Any, Any]:
     """Return the whole array stored under *key* in *store*."""
     return np.asarray(zarr_python.open_array(store, path=key, mode="r")[:])
-
-
-def attributes(path: Path) -> dict[str, Any]:
-    document: dict[str, Any] = json.loads(
-        (path / "zarr.json").read_text(encoding="utf-8")
-    )
-    node_attributes: dict[str, Any] = document["attributes"]
-    return node_attributes
 
 
 def test_a_stream_appends_to_each_of_its_keys_in_turn(tmp_path: Path) -> None:
@@ -85,3 +77,22 @@ def test_an_ome_stream_holds_the_frames_it_was_told(tmp_path: Path) -> None:
     assert [
         axis["name"] for axis in attributes(store)["ome"]["multiscales"][0]["axes"]
     ] == ["z", "y", "x"]
+
+
+def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
+    """``c`` is a channel: two time axes would not be valid OME-Zarr."""
+    store = tmp_path / "ngff.zarr"
+    layout = ArrayShape.of((2, 1, 4, 4), np.uint16)
+
+    stream = _acquire_zarr.Stream(store, {"det": layout}, is_ngff=True)
+    stream.append("det", np.zeros((2, 1, 4, 4), np.uint16))
+    stream.close()
+
+    axes = attributes(store / "det")["ome"]["multiscales"][0]["axes"]
+    assert [(axis["name"], axis["type"]) for axis in axes] == [
+        ("t", "time"),
+        ("c", "channel"),
+        ("z", "space"),
+        ("y", "space"),
+        ("x", "space"),
+    ]
