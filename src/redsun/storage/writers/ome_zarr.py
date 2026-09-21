@@ -14,11 +14,18 @@ from ._base import (
     axis_names,
     carries_ngff,
     merge_attributes,
-    require,
     root_attributes,
     sibling_uri,
     store_path,
 )
+
+try:
+    import ome_writers as ow
+except ImportError as error:
+    raise ImportError(
+        "ome-writers is needed to write an OME-Zarr product and is not "
+        "installed; install it with 'pip install redsun[ome-zarr]'"
+    ) from error
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -44,8 +51,7 @@ def write(
     Raises
     ------
     WriterError
-        If the package the store needs is not installed, or the array has too
-        few or too many dimensions.
+        If the array has too few or too many dimensions.
     """
     path = store_path(uri)
     if carries_ngff(root_attributes(path)):
@@ -67,13 +73,14 @@ def _write_sibling(
     metadata: Mapping[str, Any] | None,
 ) -> str:
     """Write *data* as an OME-Zarr store of its own, beside the one at *path*."""
-    ow = require("ome_writers", extra="zarr")
     name = f"{path.name.split('.', 1)[0]}_{data_key}.ome.zarr"
 
     settings = ow.AcquisitionSettings(
         root_path=str(path.parent / name),
-        dimensions=ow.dims_from_standard_axes(
-            dict(zip(axis_names(data.ndim), data.shape, strict=True))
+        dimensions=tuple(
+            ow.dims_from_standard_axes(
+                dict(zip(axis_names(data.ndim), data.shape, strict=True))
+            )
         ),
         dtype=str(data.dtype),
         format=ow.OmeZarrFormat(backend="acquire-zarr"),

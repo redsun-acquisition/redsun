@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlparse
@@ -17,17 +16,6 @@ _AXIS_NAMES: Final = ("t", "c", "z", "y", "x")
 
 class WriterError(RuntimeError):
     """Raised when a product cannot be written against a store."""
-
-
-def require(package: str, extra: str) -> Any:
-    """Import *package*, naming the extra that installs it when it is absent."""
-    try:
-        return import_module(package)
-    except ImportError as e:
-        raise WriterError(
-            f"{package!r} is needed to write this product and is not installed. "
-            f"Install it with 'pip install redsun[{extra}]'."
-        ) from e
 
 
 def store_path(uri: str) -> Path:
