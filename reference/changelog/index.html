@@ -297,6 +297,8 @@
       
         
       
+        
+      
     
     
     
@@ -1342,6 +1344,8 @@
       
         
       
+        
+      
     
     
     
@@ -1409,6 +1413,33 @@
     
   
   Build documentation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/change-a-setting-while-a-plan-runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Change a setting while a plan runs
 
     
   </span>
@@ -4259,7 +4290,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased">[Unreleased]<a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>Service</code></strong>, <strong><code>STARTUP_TIMEOUT</code></strong> and <strong><code>STOP_TIMEOUT</code></strong> (<code>redsun.services</code>) - the handle a
+<li>
+<p><strong><code>Deferrals</code></strong> and <strong><code>DEFERRALS</code></strong> (<code>redsun.engine</code>) - a change to apply
+  between two messages of a running plan. <code>Deferrals(engine)</code> installs a
+  suspender; <code>request(apply)</code> queues a coroutine function, applied on the
+  engine's loop once the message under way completes, or at once when no
+  plan runs. A change that raises is logged and the rest still run. The
+  engine's owner provides it under <code>DEFERRALS</code>.</p>
+</li>
+<li>
+<p><strong><code>Service</code></strong>, <strong><code>STARTUP_TIMEOUT</code></strong> and <strong><code>STOP_TIMEOUT</code></strong> (<code>redsun.services</code>) - the handle a
   container makes for each service it declares. A service with a module runs
   as <code>python -m &lt;module&gt; &lt;args&gt;</code>: <code>start</code> waits up to <code>STARTUP_TIMEOUT</code> seconds
   for its readiness line, logs its output at <code>DEBUG</code> on
@@ -4271,7 +4311,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   input, then sends <code>SIGINT</code> on POSIX, then kills it, each step waiting
   <code>stop_timeout</code> seconds, <code>STOP_TIMEOUT</code> (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at <code>ERROR</code> and emits <code>sig_exited(name, code)</code>. A
-  service without a module is attached to and has nothing to start or stop.</li>
+  service without a module is attached to and has nothing to start or stop.</p>
+</li>
 <li><strong><code>declare_service</code></strong> (<code>redsun.containers</code>, <code>redsun</code>) - declares a service on
   a container. One with a <code>module</code> is launched as <code>python -m &lt;module&gt; &lt;args&gt;</code>;
   one without only lends its <code>prefix</code>:</li>
