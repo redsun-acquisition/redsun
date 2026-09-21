@@ -8,6 +8,14 @@ listed in the [changelog](changelog.md).
 
 ### Added
 
+- `Session.transport` (`redsun.experimental`): what the session's services
+  speak, read once from `services.transport` in the configuration and given
+  to every `Service` the session makes, `channel-access` when the key is
+  absent. A transport `redsun` does not have is refused when the
+  configuration is read, and `transport` cannot name a service, from the
+  section or from an annotation. `shutdown` releases what that transport
+  caches, so a rebuilt session reaches its restarted services at once.
+
 - A presenter or view asking a question the session cannot answer where it
   asks is skipped at declaration (`redsun.experimental`): a protocol in its
   constructor, which runs before the other components exist; a protocol
@@ -587,6 +595,11 @@ listed in the [changelog](changelog.md).
   ```
 
 ### Changed
+
+- Layered configuration sources must agree on `services.transport`
+  (`redsun._config.load`): a source naming a different transport from one
+  layered under it is refused as the sources are merged, beside
+  `schema_version` and `frontend`.
 
 - `DevicesOf` on anything but `Mapping[str, P]` (`redsun.experimental`) skips
   the component at declaration, where it raised when the store was filled.

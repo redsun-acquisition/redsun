@@ -813,6 +813,38 @@ A service behaves as it does in the supported container, described in
 experimental session opens no session log file, so a service's output reaches
 the `redsun.service.<name>` loggers but no file of its own.
 
+Every service of a session speaks one transport, `channel-access` unless the
+session says otherwise. A session file names it under `services`, beside the
+services themselves, and both layers read that key. In Python the supported
+container takes an attribute, and an experimental session carries it in its
+`config`, as it carries everything a file could say:
+
+=== "Today"
+
+    ```python
+    class MyApp(AppContainer):
+        transport = "pv-access"
+
+        camera_ioc = declare_service(module="mylab.iocs.camera", ready="serving")
+    ```
+
+=== "Experimental"
+
+    ```python
+    class MyApp(QtSession):
+        config: ClassVar[dict[str, Any]] = {"services": {"transport": "pv-access"}}
+
+        camera_ioc: Annotated[AsService, Launch("mylab.iocs.camera", ready="serving")]
+    ```
+
+`Session.transport` reports what was settled. A transport `redsun` does not
+have is refused when the configuration is read, two sources naming different
+ones are refused as they are merged, and `transport` cannot name a service,
+from the section or from an annotation. A launched process reads
+`REDSUN_SERVICE_NAME` and `REDSUN_SERVICE_PREFIX` from its environment on
+either layer. [Services](services.md#one-transport-per-session) says what a
+transport does for the process on each side, and why a session has one.
+
 ## Storage and the catalog
 
 The `storage` section means the same as in the supported container, and both

@@ -73,8 +73,8 @@ Several questions had to be answered before anything could be built:
   of the session process, and the container closes the process's Channel
   Access channels once it has stopped the services it launched.
 - **A session names one transport, and every service speaks it.** It is written
-  under `services` in the session file, or as the `transport` attribute of the
-  container class, and is `channel-access` unless named. `pv-access` is the
+  under `services` in the session file, which both layers read, or as the
+  `transport` attribute of the container class, and is `channel-access` unless named. `pv-access` is the
   other one. The variables both protocols read hold one setting per process, so
   a session mixing two would leave each unable to say which service a variable
   is for; a file layered over another is refused for the same reason.
