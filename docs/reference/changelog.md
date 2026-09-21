@@ -11,6 +11,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`Deferrals`** and **`DEFERRALS`** (`redsun.engine`) - a change to apply
+  between two messages of a running plan. `Deferrals(engine)` installs a
+  suspender; `request(apply)` queues a coroutine function, applied on the
+  engine's loop once the message under way completes, or at once when no
+  plan runs. A change that raises is logged and the rest still run. The
+  engine's owner provides it under `DEFERRALS`.
+
 - **`Service`**, **`STARTUP_TIMEOUT`** and **`STOP_TIMEOUT`** (`redsun.services`) - the handle a
   container makes for each service it declares. A service with a module runs
   as `python -m <module> <args>`: `start` waits up to `STARTUP_TIMEOUT` seconds

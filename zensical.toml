@@ -63,6 +63,7 @@ nav = [
         { "Configure logging" = "how-to/configure-logging.md" },
         { "Write a service" = "how-to/write-a-service.md" },
         { "Write a derived product" = "how-to/write-a-derived-product.md" },
+        { "Change a setting while a plan runs" = "how-to/change-a-setting-while-a-plan-runs.md" },
         { "Keep a catalog of runs" = "how-to/keep-a-catalog.md" },
     ]},
     { "Reference" = [
