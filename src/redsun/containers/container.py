@@ -65,7 +65,13 @@ from .._hooks import (
     parse_hook_specs,
     resolve_hooks,
 )
-from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
+from ..services._transports import (
+    CHANNEL_ACCESS,
+    TRANSPORT_KEY,
+    TRANSPORTS,
+    checked_transport,
+    transport_of,
+)
 from ._config import AppConfig, CatalogConfig, StorageConfig
 
 if TYPE_CHECKING:
@@ -184,9 +190,6 @@ def _silent(step: str) -> None:
     """
 
 
-TRANSPORT_KEY: Final[str] = "transport"
-"""The key of the ``services`` section naming what its services speak."""
-
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
@@ -210,26 +213,6 @@ def _named(config: Mapping[str, Any]) -> str:
             "identifies the session, and two that both went unnamed could not "
             "be told apart."
         )
-    return name
-
-
-def _transport_of(data: dict[str, Any]) -> str | None:
-    """Return the transport a configuration names, or ``None`` for none."""
-    services = data.get("services") or {}
-    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
-
-
-def checked_transport(name: str, where: str) -> str:
-    """Return *name*, refusing a transport ``redsun`` does not have.
-
-    Raises
-    ------
-    TypeError
-        Naming what was read and the transports there are.
-    """
-    if name not in TRANSPORTS:
-        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
-        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
     return name
 
 
@@ -603,7 +586,7 @@ class AppContainer:
         for path in cls._config_paths:
             # a file that cannot be read is reported where the rest of it is read
             with suppress(Exception):
-                transport = _transport_of(read(path))
+                transport = transport_of(read(path))
                 if transport is not None:
                     named.setdefault(transport, path)
         if len(named) > 1:
@@ -1397,7 +1380,7 @@ class AppContainer:
             name: _ServiceComponent(name, **kwargs) for name, kwargs in services.items()
         }
 
-        named = _transport_of(config)
+        named = transport_of(config)
         if named is not None:
             namespace[TRANSPORT_KEY] = checked_transport(
                 named, f"the services section of {config_path}"

@@ -6,14 +6,26 @@ from typing import TYPE_CHECKING, Final, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any
 
-__all__ = ["CHANNEL_ACCESS", "PV_ACCESS", "TRANSPORTS", "Transport"]
+__all__ = [
+    "CHANNEL_ACCESS",
+    "PV_ACCESS",
+    "TRANSPORTS",
+    "TRANSPORT_KEY",
+    "Transport",
+    "checked_transport",
+    "transport_of",
+]
 
 CHANNEL_ACCESS: Final = "channel-access"
 """The protocol a session's services speak unless it says otherwise."""
 
 PV_ACCESS: Final = "pv-access"
 """The other protocol a session may name."""
+
+TRANSPORT_KEY: Final = "transport"
+"""The key of the ``services`` section naming what its services speak."""
 
 LOOPBACK: Final = "127.0.0.1"
 """Where a launched service listens, and where this process looks for it."""
@@ -139,6 +151,26 @@ TRANSPORTS: dict[str, Transport] = {
     PV_ACCESS: PVAccess(),
 }
 """The transports a session may name, by the name a session file writes."""
+
+
+def transport_of(config: Mapping[str, Any]) -> str | None:
+    """Return the transport a configuration names, or ``None`` for none."""
+    services = config.get("services") or {}
+    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
+
+
+def checked_transport(name: str, where: str) -> str:
+    """Return *name*, refusing a transport ``redsun`` does not have.
+
+    Raises
+    ------
+    TypeError
+        Naming what was read and the transports there are.
+    """
+    if name not in TRANSPORTS:
+        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
+        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
+    return name
 
 
 def add_to_env(name: str, value: str) -> None:
