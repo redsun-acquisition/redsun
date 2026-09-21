@@ -300,6 +300,29 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) no longer refuses a
+  parameter whose default is an empty string, tuple or list as an action
+  list it is not annotated for.
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) accepts a plan from a
+  module without `from __future__ import annotations`. Its annotations are
+  already evaluated, and were re-read as text naming what the module never
+  imported, which skipped every plan in it.
+- **`create_plan_spec`** (`redsun.presenter.plan_spec`) keeps a `Literal`'s
+  values as they are, so `Literal[1, 2, 3]` offers integers and the plan
+  receives one. They were turned into strings, which refused the default in
+  `create_plan_widget` and handed the plan `"1"`.
+- **`AppContainer.build`** (`redsun.containers`) survives a component whose
+  `register_providers` or `inject_dependencies` raises: the component is
+  logged and dropped, as one failing to build is, rather than ending the
+  build. A view asking for what a skipped presenter would have provided no
+  longer takes the session down with it.
+- **`DescriptorTreeView`** (`redsun.view.qt`) sends a number once it is
+  entered, on Enter or focus out. Every keystroke sent a value before, so
+  typing `100` wrote 1, 10 and 100 to the device, and a failed write was
+  reverted to 10 rather than to the value before the edit.
+- **`Service.stop`** (`redsun.services`) on Windows kills a process still
+  running after `stop_timeout` at once, as documented, rather than waiting a
+  second `stop_timeout` for a signal it never sends.
 - **`create_plan_widget`** (`redsun.view.qt.utils`) shows a `bool`
   parameter's name once. `magicgui` gives the checkbox its name as text
   and the form row carried it as the label too, so every such parameter

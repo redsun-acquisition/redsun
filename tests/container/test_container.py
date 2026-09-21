@@ -8,6 +8,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import dependency_injector.providers as dip
 import pytest
 import yaml
 from helpers import component
@@ -47,6 +48,8 @@ from redsun.virtual import Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from redsun.virtual import VirtualContainer
 
 requires_tiled = pytest.mark.skipif(
     find_spec("tiled") is None,
@@ -326,6 +329,38 @@ class TestBuildTolerance:
         assert len(QApplication.topLevelWidgets()) == before + 1
 
         app.shutdown()
+
+    def test_a_component_failing_past_its_build_is_dropped_and_named(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """What a skipped component would have provided is missing downstream.
+
+        The component asking for it fails in its own phase, and the session
+        still starts with the rest.
+        """
+
+        class Needy:
+            def __init__(self, name: str, /) -> None:
+                self.name = name
+
+            @property
+            def view_position(self) -> ViewPosition:
+                return ViewPosition.CENTER
+
+            def inject_dependencies(self, container: VirtualContainer) -> None:
+                container.require(dip.Dependency(instance_of=int))
+
+        class TestApp(AppContainer):
+            ok = declare_presenter(MockController)
+            needy = declare_view(Needy)
+
+        app = TestApp().build()
+
+        assert app.is_built
+        assert set(app.presenters) == {"ok"}
+        assert app.views == {}
+        assert "Failed to inject dependencies into 'needy'" in caplog.text
+        assert "Not built: needy (view)" in caplog.text
 
     @pytest.mark.parametrize(
         ("declare", "expected"),

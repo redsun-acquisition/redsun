@@ -194,12 +194,36 @@ class TestCreatePlanSpec:
         assert p.device_proto is None
         assert not p.multiselect
 
-    def test_literal_with_int_values_stringified(self) -> None:
+    @pytest.mark.parametrize("default", ["", (), []], ids=["str", "tuple", "list"])
+    def test_an_empty_sequence_default_is_not_an_action_list(
+        self, default: Any
+    ) -> None:
+        def plan(label: Sequence[str] = default) -> MsgGenerator[None]:
+            yield from ()
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].actions is None
+        assert spec.parameters[0].default == default
+
+    def test_an_already_evaluated_annotation_is_taken_as_it_is(self) -> None:
+        """A module without the annotations future import evaluates them itself."""
+
+        def plan(n=1):  # type: ignore[no-untyped-def]
+            yield from ()
+
+        plan.__annotations__ = {"n": int, "return": MsgGenerator[None]}
+
+        spec = create_plan_spec(plan, {})
+
+        assert spec.parameters[0].annotation is int
+
+    def test_literal_values_are_kept_as_they_are(self) -> None:
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
-        assert spec.parameters[0].choices == ["1", "2", "3"]
+        assert spec.parameters[0].choices == [1, 2, 3]
 
     def test_single_device_param_populates_choices(
         self, one_motor: dict[str, MockMotorDevice]

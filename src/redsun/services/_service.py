@@ -218,17 +218,18 @@ class Service:
             self._stopping = True
             if process.stdin is not None:
                 process.stdin.close()
-            if not exited(process, self.stop_timeout):
-                if sys.platform != "win32":
-                    process.send_signal(signal.SIGINT)
-                if not exited(process, self.stop_timeout):
-                    logger.warning(
-                        "Service '%s' did not stop within %g s, killing it",
-                        self.name,
-                        self.stop_timeout,
-                    )
-                    process.kill()
-                    process.wait()
+            stopped = exited(process, self.stop_timeout)
+            if not stopped and sys.platform != "win32":
+                process.send_signal(signal.SIGINT)
+                stopped = exited(process, self.stop_timeout)
+            if not stopped:
+                logger.warning(
+                    "Service '%s' did not stop within %g s, killing it",
+                    self.name,
+                    self.stop_timeout,
+                )
+                process.kill()
+                process.wait()
             logger.info(
                 "Service '%s' stopped with exit code %s", self.name, process.returncode
             )

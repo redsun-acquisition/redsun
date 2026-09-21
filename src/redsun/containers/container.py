@@ -1301,9 +1301,23 @@ class AppContainer:
         self.virtual_container.provide(PATH_PROVIDER, self.path_provider)
         if self._catalog is not None:
             self.virtual_container.provide(CATALOG, CatalogAddress(self._catalog.uri))
-        for instance in self._built_of(self._components).values():
+        for name, instance in self._built_of(self._components).items():
             if isinstance(instance, IsProvider):
-                instance.register_providers(self.virtual_container)
+                try:
+                    instance.register_providers(self.virtual_container)
+                except Exception as e:  # noqa: BLE001 - one component must not abort the app
+                    self._drop(name, "register the providers of", e)
+
+    def _drop(self, name: str, step: str, error: Exception) -> None:
+        """Forget a built component whose *step* failed, and log why.
+
+        What it was meant to publish or receive is missing for the rest of
+        the session; the components relying on it fail in turn, each logged
+        under its own name.
+        """
+        self._failed[name] = error
+        del self._built[self._components[name]]
+        logger.error(f"Failed to {step} '{name}': {error}")
 
     def _apply_wiring(self) -> None:
         """Publish the built components by name, then connect them.
@@ -1327,9 +1341,12 @@ class AppContainer:
 
     def _inject_dependencies(self) -> None:
         """Let each component taking dependencies receive them."""
-        for instance in self._built_of(self._components).values():
+        for name, instance in self._built_of(self._components).items():
             if isinstance(instance, IsInjectable):
-                instance.inject_dependencies(self.virtual_container)
+                try:
+                    instance.inject_dependencies(self.virtual_container)
+                except Exception as e:  # noqa: BLE001 - one component must not abort the app
+                    self._drop(name, "inject dependencies into", e)
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect every device through ``ophyd-async``.
