@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
 import threading
 from collections import deque
+from datetime import datetime
 from typing import TYPE_CHECKING, Final
 
 from psygnal import Signal
@@ -30,6 +32,24 @@ STOP_TIMEOUT: Final = 10.0
 
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
+
+PVXS_LINE: Final = re.compile(
+    r"^(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\.(?P<fraction>\d+) "
+    r"(?P<level>CRIT|ERR|WARN|INFO|DEBUG) (?P<name>pvxs(?:\.\w+)*) (?P<message>.*)$"
+)
+"""A line ``pvxs``, the library under a PVAccess server, writes to standard error.
+
+It bypasses Python logging, so the level, time and logger name are read
+back from the text.
+"""
+
+PVXS_LEVELS: Final = {
+    "CRIT": logging.CRITICAL,
+    "ERR": logging.ERROR,
+    "WARN": logging.WARNING,
+    "INFO": logging.INFO,
+    "DEBUG": logging.DEBUG,
+}
 
 
 class Service:
@@ -274,8 +294,10 @@ def service_record(service: str, line: str) -> logging.LogRecord:
     Two JSON layouts are read: ``loguru``'s with ``serialize=True``, and an
     object with a `logging.LogRecord`'s ``name``, ``levelno``, ``created``,
     ``msg`` and ``exc_text``. Such a record keeps its level, time and traceback,
-    under ``redsun.service.<service>.<its logger>``. Any other line, such as a
-    ``print``, becomes a ``DEBUG`` record under ``redsun.service.<service>``.
+    under ``redsun.service.<service>.<its logger>``. A line ``pvxs`` writes,
+    ``<time> <LEVEL> <logger> <message>``, keeps its level, time and logger
+    the same way. Any other line, such as a ``print``, becomes a ``DEBUG``
+    record under ``redsun.service.<service>``.
     """
     base = f"{SERVICE_LOGGER}.{service}"
     fields: dict[str, Any] = {
@@ -285,6 +307,19 @@ def service_record(service: str, line: str) -> logging.LogRecord:
         "msg": line,
         "clsname": service,
     }
+    pvxs = PVXS_LINE.match(line)
+    if pvxs is not None:
+        # pvxs writes nanoseconds; fromisoformat reads at most microseconds
+        stamp = datetime.fromisoformat(f"{pvxs['time']}.{pvxs['fraction'][:6]}")
+        fields.update(
+            name=f"{base}.{pvxs['name']}",
+            levelno=PVXS_LEVELS[pvxs["level"]],
+            levelname=logging.getLevelName(PVXS_LEVELS[pvxs["level"]]),
+            msg=pvxs["message"],
+            created=stamp.timestamp(),
+            uid=pvxs["name"],
+        )
+        return logging.makeLogRecord(fields)
     try:
         data = json.loads(line)
         if "record" in data:

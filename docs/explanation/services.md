@@ -95,7 +95,7 @@ services:
 | name | protocol | what a session does for it |
 | --- | --- | --- |
 | `channel-access` | Channel Access | gives each launched service a server port of its own and lists `127.0.0.1:<port>` in `EPICS_CA_ADDR_LIST` |
-| `pv-access` | PVAccess | binds each launched service to `127.0.0.1` and puts that address in `EPICS_PVA_ADDR_LIST` |
+| `pv-access` | PVAccess | binds each launched service to `127.0.0.1` on a free TCP port and puts that address in `EPICS_PVA_ADDR_LIST` |
 
 `channel-access` is what a session speaks unless it says otherwise, and a file
 layered over another cannot change it. The variables both protocols read hold

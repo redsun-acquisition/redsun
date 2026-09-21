@@ -18,8 +18,8 @@ Dates are specified in the format `DD-MM-YYYY`.
   `redsun.service.<name>`, launches it with `REDSUN_SERVICE_NAME` and
   `REDSUN_SERVICE_PREFIX` in its environment, and arranges the session's
   transport for it: a Channel Access server port of its own appended to
-  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` with that address
-  in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
+  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` and a free TCP
+  port with that address in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
   input, then sends `SIGINT` on POSIX, then kills it, each step waiting
   `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
@@ -103,7 +103,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   `remove_handler` and `session_log` take a `service`.
 - A line of a service's output that is a JSON log record, written by a stdlib
   formatter or by `loguru` with `serialize=True`, is logged with its own level,
-  time and traceback under `redsun.service.<service>.<logger>`.
+  time and traceback under `redsun.service.<service>.<logger>`; so is a line
+  `pvxs` writes, `<time> <LEVEL> <logger> <message>`, with its level, time
+  and logger.
 - **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
   Services tab, with a selector for one service or all of them.
 - **`SessionPathProvider`**, **`PlanFilenameProvider`** and
