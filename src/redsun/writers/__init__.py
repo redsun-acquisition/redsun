@@ -10,6 +10,6 @@ needs `redsun[ome-zarr]` as well, named the same way on first use.
 """
 
 from ._base import ArrayShape, WriterError
-from .writer import Writer
+from ._writer import Writer
 
 __all__ = ["ArrayShape", "Writer", "WriterError"]
