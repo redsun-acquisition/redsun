@@ -162,8 +162,9 @@ class SessionPathProvider(PathProvider):
         legacy = Path.home() / _LEGACY_DIR
         if legacy.is_dir():
             logger.warning(
-                f"Earlier sessions wrote to {legacy}. New files go to "
-                f"{self._base_dir}; nothing was moved."
+                f"Earlier sessions wrote to {legacy}\n"
+                f"New files go to {self._base_dir}\n"
+                "Nothing was moved."
             )
         self._scan_existing()
 
