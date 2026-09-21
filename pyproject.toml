@@ -43,6 +43,7 @@ dev = [
     { include-group = "pyqt" },
     { include-group = "tiled" },
     { include-group = "zarr" },
+    { include-group = "ome-zarr" },
     "mypy>=2.3.1",
     "prek>=0.5.0",
     "pytest>=9.0.2",
@@ -79,7 +80,7 @@ epics = [
     "ophyd-async[ca]>=0.21.2",
 ]
 zarr = [
-    "ome-writers[acquire-zarr]>=0.3.2",
+    "acquire-zarr>=0.10.0",
 ]
 tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
@@ -88,6 +89,9 @@ tiled = [
 pva = [
     "ophyd-async[pva]>=0.21.2",
     "p4p>=4.2.2",
+]
+ome-zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
 ]
 
 [project.optional-dependencies]
@@ -104,11 +108,14 @@ pyside = [
     "pyside6>=6.11.0",
 ]
 zarr = [
-    "ome-writers[acquire-zarr]>=0.3.2",
+    "acquire-zarr>=0.10.0",
 ]
 tiled = [
     "ome-tiled[bluesky]>=0.2.0 ; python_full_version < '3.14'",
     "tiled[client,server]>=0.2.18 ; python_full_version < '3.14'",
+]
+ome-zarr = [
+    "ome-writers[acquire-zarr]>=0.3.2",
 ]
 
 [project.entry-points."redsun.plugins"]

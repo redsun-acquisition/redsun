@@ -39,8 +39,7 @@ def write(
     ------
     WriterError
         If the root carries OME-Zarr metadata, which a new key would drop (use
-        `ome_zarr`), `acquire-zarr` is missing, or the array has too few or too
-        many dimensions.
+        `ome_zarr`), or the array has too few or too many dimensions.
     """
     path = store_path(uri)
     if carries_ngff(root_attributes(path)):

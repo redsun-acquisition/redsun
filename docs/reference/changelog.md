@@ -187,9 +187,11 @@ Dates are specified in the format `DD-MM-YYYY`.
   metadata (an image, a plate, a `bioformats2raw` layout), which `zarr.write`
   refuses. A writer registers nothing.
 - **`WriterError`** (`redsun.storage.writers`) - raised for a store the
-  writer cannot take, an array with too few or too many dimensions, or a
-  missing package, naming the extra that installs it.
-- A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
+  writer cannot take, or an array with too few or too many dimensions.
+  Importing a writer module without its package raises `ImportError`
+  naming the extra that installs it.
+- A `zarr` extra and dependency group, with `acquire-zarr`, and an
+  `ome-zarr` one, with `ome-writers[acquire-zarr]`.
 - A `tiled` extra and dependency group, with `tiled[client,server]` and
   `ome-tiled[bluesky]`. It installs nothing on Python 3.14.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
@@ -284,8 +286,8 @@ Dates are specified in the format `DD-MM-YYYY`.
   (`redsun.view.qt.builtins`), with their manifest entries. A session
   declaring them drops both and gives `base_dir` in the `storage` section.
   `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
-- The `zarr` extra and dependency group install
-  `ome-writers[acquire-zarr]` instead of `acquire-zarr`.
+- The `zarr` extra and dependency group require `acquire-zarr` 0.10.0 or
+  later, the first release whose arrays take `is_ngff`.
 
 ### Changed (breaking)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import subprocess
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -163,14 +164,27 @@ def test_both_writers_take_the_same_arguments() -> None:
     assert inspect.signature(zarr.write) == inspect.signature(ome_zarr.write)
 
 
+@pytest.mark.parametrize(
+    ("package", "module", "extra"),
+    [
+        ("acquire_zarr", "zarr", "redsun[zarr]"),
+        ("ome_writers", "ome_zarr", "redsun[ome-zarr]"),
+    ],
+)
 def test_a_missing_package_names_the_extra(
-    plain_store: Path, monkeypatch: pytest.MonkeyPatch
+    package: str, module: str, extra: str
 ) -> None:
-    """The caller is told what to install, not given an ImportError."""
+    """Importing the writer says what to install, in a process without the package."""
     # None in sys.modules makes any import of the package raise ImportError
-    monkeypatch.setitem(sys.modules, "acquire_zarr", None)
+    code = (
+        f"import sys; sys.modules[{package!r}] = None; "
+        f"import redsun.storage.writers.{module}"
+    )
 
-    with pytest.raises(WriterError, match=r"redsun\[zarr\]"):
-        zarr.write(
-            plain_store.as_uri(), data_key="det_median", data=np.ones((4, 4), np.uint16)
-        )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode != 0
+    assert f"ImportError: {package.replace('_', '-')}" in result.stderr
+    assert f"pip install {extra}" in result.stderr

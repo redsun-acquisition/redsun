@@ -4651,6 +4651,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+ome-zarr = [
+    { name = "ome-writers", extra = ["acquire-zarr"] },
+]
 pyqt = [
     { name = "magicgui" },
     { name = "pyqt6" },
@@ -4670,11 +4673,12 @@ tiled = [
     { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
 ]
 zarr = [
-    { name = "ome-writers", extra = ["acquire-zarr"] },
+    { name = "acquire-zarr" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "acquire-zarr" },
     { name = "caproto" },
     { name = "coverage" },
     { name = "griffe-fieldz" },
@@ -4703,6 +4707,9 @@ epics = [
     { name = "caproto" },
     { name = "ophyd-async", extra = ["ca"] },
 ]
+ome-zarr = [
+    { name = "ome-writers", extra = ["acquire-zarr"] },
+]
 pva = [
     { name = "ophyd-async", extra = ["pva"] },
     { name = "p4p" },
@@ -4726,11 +4733,12 @@ tiled = [
     { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
 ]
 zarr = [
-    { name = "ome-writers", extra = ["acquire-zarr"] },
+    { name = "acquire-zarr" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.10.0" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
     { name = "dependency-injector", specifier = ">=4.49.1" },
@@ -4738,7 +4746,7 @@ requires-dist = [
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
     { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.0" },
-    { name = "ome-writers", extras = ["acquire-zarr"], marker = "extra == 'zarr'", specifier = ">=0.3.2" },
+    { name = "ome-writers", extras = ["acquire-zarr"], marker = "extra == 'ome-zarr'", specifier = ">=0.3.2" },
     { name = "ophyd-async", specifier = ">=0.21.2" },
     { name = "platformdirs", specifier = ">=4.11.0" },
     { name = "psygnal", specifier = ">=0.15.1" },
@@ -4751,10 +4759,11 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.18" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["pyqt", "pyside", "qt-common", "tiled", "zarr"]
+provides-extras = ["ome-zarr", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "acquire-zarr", specifier = ">=0.10.0" },
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "coverage", specifier = ">=7.16.1" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
@@ -4784,6 +4793,7 @@ epics = [
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "ophyd-async", extras = ["ca"], specifier = ">=0.21.2" },
 ]
+ome-zarr = [{ name = "ome-writers", extras = ["acquire-zarr"], specifier = ">=0.3.2" }]
 pva = [
     { name = "ophyd-async", extras = ["pva"], specifier = ">=0.21.2" },
     { name = "p4p", specifier = ">=4.2.2" },
@@ -4806,7 +4816,7 @@ tiled = [
     { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14'", specifier = ">=0.2.0" },
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14'", specifier = ">=0.2.18" },
 ]
-zarr = [{ name = "ome-writers", extras = ["acquire-zarr"], specifier = ">=0.3.2" }]
+zarr = [{ name = "acquire-zarr", specifier = ">=0.10.0" }]
 
 [[package]]
 name = "referencing"

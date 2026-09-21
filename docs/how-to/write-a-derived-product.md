@@ -8,11 +8,16 @@ a derived product is the one thing `redsun` writes.
 
 ## Install the extra
 
+One per format: `zarr` brings `acquire-zarr`, `ome-zarr` brings
+`ome-writers[acquire-zarr]`, which is more than a plain Zarr product needs.
+
 ```bash
-pip install redsun[zarr]
+pip install redsun[zarr]      # redsun.storage.writers.zarr
+pip install redsun[ome-zarr]  # redsun.storage.writers.ome_zarr
 ```
 
-Without it, a writer raises `WriterError` naming the extra.
+Without it, importing the writer module raises `ImportError` naming the
+extra.
 
 ## Pick the writer by mimetype
 
