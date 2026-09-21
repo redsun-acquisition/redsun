@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, TypeAlias
@@ -34,6 +35,7 @@ from redsun.experimental import (
 )
 from redsun.experimental.session import _base as session_base
 from redsun.services import _service
+from redsun.services._transports import PV_ACCESS, TRANSPORTS, PVAccess
 
 if TYPE_CHECKING:
     from .conftest import BuildSession
@@ -41,6 +43,8 @@ if TYPE_CHECKING:
 
 STAND_IN = "mock_pkg.service.stand_in"
 READY = "stand-in ready"
+PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
+PVA_READY = "pva stand-in ready"
 
 
 CameraIoc: TypeAlias = Annotated[
@@ -508,6 +512,68 @@ def test_a_presenter_hears_a_service_exit_through_wire(
 
     assert app.watcher.heard.wait(10)
     assert app.watcher.exits == [("stand_in", 4, "service-stand_in")]
+
+
+def test_a_session_names_what_its_services_speak(build: BuildSession) -> None:
+    """Named once, it reaches every service, annotated or listed only.
+
+    A fragment layered under the source naming it needs no key of its own.
+    """
+    named = {"services": {"transport": "pv-access"}}
+    fragment = {"services": {"beamline": {"prefix": "BL01:"}}}
+
+    class App(Session):
+        camera: Annotated[AsService, Attach("CAM:")]
+
+    app = build(App, [named, fragment])
+
+    assert app.transport == PV_ACCESS
+    assert {s.transport for s in app.services.values()} == {PV_ACCESS}
+    assert set(app.services) == {"camera", "beamline"}
+
+
+def test_a_transport_redsun_does_not_have_is_refused() -> None:
+    with pytest.raises(TypeError, match="carrier-pigeon"):
+        Session({"services": {"transport": "carrier-pigeon"}}).build()
+
+
+def test_a_service_named_transport_is_refused() -> None:
+    """From the section, where the key is reserved, and from an annotation."""
+    with pytest.raises(TypeError, match="reserved"):
+        Session({"services": {"transport": {"prefix": "BL01:"}}}).build()
+
+    class App(Session):
+        transport: Annotated[AsService, Attach("BL01:")]  # type: ignore[assignment]
+
+    with pytest.raises(TypeError, match="already an attribute"):
+        App().build()
+
+
+def test_two_pva_services_answer_on_the_loopback(
+    build: BuildSession, launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Both are kept local, and this process is told where to find them."""
+    p4p = pytest.importorskip("p4p.client.thread")
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {
+                "transport": "pv-access",
+                "first": {"args": ["--pv", "SIM:FIRST", "--value", "1.0"]},
+                "second": {"args": ["--pv", "SIM:SECOND", "--value", "2.0"]},
+            }
+        }
+        first: Annotated[AsService, Launch(PVA_STAND_IN, ready=PVA_READY)]
+        second: Annotated[AsService, Launch(PVA_STAND_IN, ready=PVA_READY)]
+
+    build(App)
+
+    assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
+    with p4p.Context("pva") as client:
+        assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
+        assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
 
 
 def test_layered_sources_must_agree_on_the_transport() -> None:

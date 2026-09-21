@@ -61,7 +61,13 @@ from ... import _structural
 from ..._catalog import require_tiled, start_catalog
 from ..._config import Source, StorageConfig, as_sources, load
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
-from ...services._transports import CHANNEL_ACCESS, TRANSPORTS
+from ...services._transports import (
+    CHANNEL_ACCESS,
+    TRANSPORT_KEY,
+    TRANSPORTS,
+    checked_transport,
+    transport_of,
+)
 from .._settings import Settings
 from ._declarations import (
     Declaration,
@@ -250,6 +256,7 @@ class Session(BuildableSession):
         "_store",
         "_subscription_records",
         "_subscriptions",
+        "_transport",
     )
 
     config: ClassVar[Source | Sequence[Source] | None] = None
@@ -297,6 +304,7 @@ class Session(BuildableSession):
         self._declarations: dict[str, Declaration] = {}
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
+        self._transport = CHANNEL_ACCESS
         self._devices: dict[str, Device] = {}
         # what the build could not make, by component name, so that a
         # component built from one of them is skipped rather than refused
@@ -356,6 +364,15 @@ class Session(BuildableSession):
     def services(self) -> Mapping[str, Service]:
         """The session's services, started or not."""
         return dict(self._services)
+
+    @property
+    def transport(self) -> str:
+        """What the session's services speak, one for all of them.
+
+        Named once under ``services`` in the configuration; ``channel-access``
+        when it names nothing.
+        """
+        return self._transport
 
     @property
     def devices(self) -> Mapping[str, Device]:
@@ -638,7 +655,8 @@ class Session(BuildableSession):
         # read only classes, so a mistake is reported before anything starts
         self._refuse_component_values(self._components())
         self._check_layers(self._components())
-        self._services = read_services(type(self), config)
+        self._transport = self._read_transport(config)
+        self._services = read_services(type(self), config, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
             raise TypeError(
@@ -1558,20 +1576,38 @@ class Session(BuildableSession):
         )
         return False
 
+    def _read_transport(self, config: Mapping[str, Any]) -> str:
+        """Return the transport *config* names under ``services``, checked.
+
+        Raises
+        ------
+        TypeError
+            If it is not one ``redsun`` has, or the key holds a service entry.
+        """
+        named = transport_of(config)
+        if named is None:
+            return CHANNEL_ACCESS
+        if not isinstance(named, str):
+            raise TypeError(
+                f"{TRANSPORT_KEY!r} is reserved in the services section for what "
+                f"the services speak and cannot name a service"
+            )
+        return checked_transport(named, f"{type(self).__qualname__}'s services")
+
     def start_services(self) -> None:
         """Start the launched services together, and attach to the rest.
 
         The step takes as long as the slowest service. A service that does not
         start is logged, and devices naming it are skipped. Each stop is a
         release, so `shutdown` stops services after every component, the last
-        declared first, then closes Channel Access channels so a rebuilt session
-        reconnects at once.
+        declared first, then drops what the transport caches about them so a
+        rebuilt session reconnects at once.
         """
         self._failed_services = {}
         self._start_catalog()
         if not self._services:
             return
-        self.on_release(lambda: run_coro(TRANSPORTS[CHANNEL_ACCESS].release()))
+        self.on_release(lambda: run_coro(TRANSPORTS[self._transport].release()))
         with ThreadPoolExecutor(len(self._services), "service-start") as pool:
             starts = {
                 name: pool.submit(service.start)

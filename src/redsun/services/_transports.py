@@ -153,8 +153,12 @@ TRANSPORTS: dict[str, Transport] = {
 """The transports a session may name, by the name a session file writes."""
 
 
-def transport_of(config: Mapping[str, Any]) -> str | None:
-    """Return the transport a configuration names, or ``None`` for none."""
+def transport_of(config: Mapping[str, Any]) -> Any:
+    """Return what a configuration names under ``services.transport``.
+
+    ``None`` when it names nothing. Whatever it wrote otherwise, a string
+    or not: the caller says what a mapping there means.
+    """
     services = config.get("services") or {}
     return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
 

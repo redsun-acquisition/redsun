@@ -25,6 +25,7 @@ from redsun.services import Service
 
 from ..._hooks import HookError, known_points
 from ..._structural import protocol_of
+from ...services._transports import CHANNEL_ACCESS, TRANSPORT_KEY
 from ._factories import resolved
 from ._frontend import Frontend
 from ._plugins import META_KEYS, resolve, service_entry
@@ -563,13 +564,16 @@ def read(
     return declarations
 
 
-def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
+def read_services(
+    cls: type, config: Mapping[str, Any], transport: str = CHANNEL_ACCESS
+) -> dict[str, Service]:
     """Make the services *cls* annotates and the ``services`` section lists.
 
     A `Launch` or `Attach` marker overrides the section's entry, and the last
     marker wins, so one written where an alias is used replaces the alias's.
     `FromConfig` names the entry and `Alias` the service. An entry no annotation
-    reads is a service too.
+    reads is a service too, except the section's ``transport`` key, which is
+    what every service made here speaks: *transport*, settled by the caller.
 
     Raises
     ------
@@ -580,7 +584,9 @@ def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
     PluginError
         If an entry names a plugin that does not resolve.
     """
-    section: Mapping[str, Any] = config.get("services") or {}
+    section: Mapping[str, Any] = {
+        k: v for k, v in (config.get("services") or {}).items() if k != TRANSPORT_KEY
+    }
     found: dict[str, Service] = {}
     read_keys: set[str] = set()
     for attr, hint in hints(cls).items():
@@ -613,10 +619,12 @@ def read_services(cls: type, config: Mapping[str, Any]) -> dict[str, Service]:
             )
         if given is not None:
             from_file.update((k, v) for k, v in vars(given).items() if v is not None)
-        found[name] = Service(name, **from_file)
+        found[name] = Service(name, transport=transport, **from_file)
     for cfg_key, listed in section.items():
         if cfg_key not in read_keys and isinstance(listed, dict):
-            found[cfg_key] = Service(cfg_key, **service_entry(listed))
+            found[cfg_key] = Service(
+                cfg_key, transport=transport, **service_entry(listed)
+            )
     refuse_shadowed(cls, found, "service")
     return found
 
