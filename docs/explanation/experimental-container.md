@@ -184,6 +184,13 @@ Container built: 0/0 devices, 2/2 presenters, 1/1 views
 Not set up: overlay (presenter)
 ```
 
+The supported container does the opposite: a component whose
+`register_providers` or `inject_dependencies` raises is dropped, since what it
+failed to publish is what other components were going to receive. Here a
+component shares at the `"registry"` step, before any `setup` runs, so a `setup`
+that fails can only be missing what it was going to receive, and nothing another
+component asked for went unpublished.
+
 A `setup` asking for something nothing in the session declares is a mistake in
 the session, and still raises `TypeError`.
 

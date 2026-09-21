@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, Any, ClassVar, NewType, Protocol
 
 import pydantic
 import pytest
@@ -99,12 +100,40 @@ class FrozenTaking:
 class Failing:
     """Its `setup` raises, so what it would have assigned is missing."""
 
+    sig_done = Signal(str)
+
     def __init__(self, name: str) -> None:
         self.name = name
         self.ready = False
 
     def setup(self, readings: Readings) -> None:
         raise RuntimeError("no readings")
+
+    def report(self) -> str:
+        return f"{self.name}: ready={self.ready}"
+
+
+class Reporting(Protocol):
+    def report(self) -> str: ...
+
+
+class Counting:
+    """Presenter listing the reporting presenters, and hearing one not set up."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.seen: list[str] = []
+        self.heard: list[str] = []
+
+    def setup(self, reporting: Mapping[str, Reporting]) -> None:
+        self.seen = sorted(reporting)
+
+    def report(self) -> str:
+        return self.name
+
+    @slot
+    def on_done(self, who: str) -> None:
+        self.heard.append(who)
 
 
 class Unplugged:
@@ -196,6 +225,16 @@ class FailingApp(Session):
     sharing: AsPresenter[Sharing]
 
 
+class CountedFailingApp(Session):
+    failing: AsPresenter[Failing]
+    sharing: AsPresenter[Sharing]
+    counting: AsPresenter[Counting]
+
+    config: ClassVar[dict[str, Any]] = {
+        "wiring": [{"from": "failing.sig_done", "to": "counting.on_done"}]
+    }
+
+
 class UnpluggedApp(Session):
     taking: AsPresenter[Taking]
     broken: AsPresenter[Unplugged]
@@ -251,6 +290,18 @@ def test_a_setup_that_raises_leaves_the_component_in_place(
     assert app.failing.ready is False
     assert "Failed to set up presenter 'failing': no readings" in caplog.text
     assert "Not set up: failing (presenter)" in caplog.text
+
+
+def test_a_component_not_set_up_is_still_wired_and_counted(
+    build: BuildSession,
+) -> None:
+    """It keeps its place: a rule naming it connects, and a census lists it."""
+    app = build(CountedFailingApp)
+
+    app.failing.sig_done.emit("failing")
+
+    assert app.counting.heard == ["failing"]
+    assert app.counting.seen == ["counting", "failing"]
 
 
 def test_a_setup_wanting_a_component_that_failed_is_not_called(
