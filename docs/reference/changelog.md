@@ -324,6 +324,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`DescriptorTreeView`** (`redsun.view.qt`) greys a row whose source ends
+  in `:readonly` whatever comes before it, `pva://cam:readonly` included, as
+  the docs said; only `soft://readonly` did before.
+
 - **`create_plan_spec`** (`redsun.presenter.plan_spec`) no longer refuses a
   parameter whose default is an empty string, tuple or list as an action
   list it is not annotated for.

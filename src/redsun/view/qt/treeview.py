@@ -389,7 +389,9 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         for full_key, desc in self._descriptors.items():
             owner, prop = full_key.split("-", 1) if "-" in full_key else ("", full_key)
             source = desc.get("source", "")
-            readonly = source.split("://", 1)[-1] == "readonly"
+            readonly = source.split("://", 1)[-1] == "readonly" or source.endswith(
+                ":readonly"
+            )
             if owner not in owners:
                 owners[owner] = self._make_group_item(owner or "settings")
             parent = owners[owner]

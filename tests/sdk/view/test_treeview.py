@@ -79,3 +79,17 @@ def test_rows_are_grouped_by_device_and_by_a_property_group(
     properties = cam.child(1)
     assert properties is not None
     assert labels(properties) == ["Binning", "Gain"]
+
+
+@pytest.mark.parametrize("source", ["soft://readonly", "pva://cam:readonly"])
+def test_a_read_only_source_gives_a_label_not_an_editor(
+    qapp: QApplication, source: str
+) -> None:
+    view = DescriptorTreeView(
+        {"cam-dtype": {"dtype": "string", "source": source, "shape": []}},
+        {"cam-dtype": {"value": "uint8", "timestamp": 0.0}},
+    )
+
+    assert view.findChild(QtWidgets.QLineEdit) is None
+    label = view.findChild(QtWidgets.QLabel)
+    assert label is not None and label.text() == "uint8"
