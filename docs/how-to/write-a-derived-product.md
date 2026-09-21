@@ -44,7 +44,8 @@ class MyPresenter(Presenter, DocumentRouter):
 
 `derive` takes the layout and the store from the run: the `descriptor`
 naming `source` gives the frame shape and dtype, the `stream_resource`
-naming it gives the store. `declare` gives both up front, for a product the
+naming it gives the store. A key described as `external: STREAM:` leads
+its shape with the frames per event, which is dropped. `declare` gives both up front, for a product the
 run says nothing about:
 
 ```python

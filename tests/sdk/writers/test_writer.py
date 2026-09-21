@@ -43,7 +43,7 @@ def run(writer: Writer, store: Path, mimetype: str, *, start: bool = True) -> st
                     "source": "det",
                     "dtype": "array",
                     "dtype_numpy": "<u2",
-                    "shape": [4, 4],
+                    "shape": [1, 4, 4],
                     "external": "STREAM:",
                 }
             },
@@ -181,7 +181,8 @@ def test_a_product_without_its_layout_or_store_is_refused_naming_what_is_missing
                         "source": "det",
                         "dtype": "array",
                         "dtype_numpy": "<u2",
-                        "shape": [4, 4],
+                        "shape": [1, 4, 4],
+                        "external": "STREAM:",
                     }
                 },
             },

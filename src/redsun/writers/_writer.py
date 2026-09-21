@@ -172,7 +172,11 @@ class Writer(DocumentRouter):
                 continue
             dtype = key.get("dtype_numpy")
             shape = tuple(size for size in key["shape"] if size is not None)
-            if dtype is None or len(shape) != len(key["shape"]):
+            # a streamed key's shape leads with its frames per event
+            streamed = key.get("external") == "STREAM:"
+            if streamed:
+                shape = shape[1:]
+            if dtype is None or len(shape) != len(key["shape"]) - streamed:
                 logger.warning(
                     f"{source!r} is described without dtype_numpy or with a "
                     "size left open; nothing derived from it has a layout."
