@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 import bluesky.plan_stubs as bps
 import pytest
 
+from redsun.aio import run_coro
 from redsun.engine import Deferrals, RunEngine
 
 if TYPE_CHECKING:
@@ -77,6 +78,21 @@ def test_a_change_while_no_plan_runs_is_applied_at_once(RE: RunEngine) -> None:
     deferrals.request(recorder.apply)
 
     assert recorder.order == ["applied"]
+
+
+def test_a_change_asked_for_from_a_loop_does_not_block_it(
+    RE: RunEngine, wait_until: Callable[..., bool]
+) -> None:
+    """An async slot on the shared loop asks too; waiting there would deadlock."""
+    deferrals = Deferrals(RE)
+    recorder = Recorder()
+
+    async def ask() -> None:
+        deferrals.request(recorder.apply)
+
+    run_coro(ask())
+
+    assert wait_until(recorder.applied.is_set, timeout=2.0)
 
 
 def test_a_change_that_fails_is_logged_and_the_next_still_applied(

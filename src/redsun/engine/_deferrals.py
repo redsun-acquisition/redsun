@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import deque
 from typing import TYPE_CHECKING, Any
@@ -60,8 +61,10 @@ class Deferrals:
     A change asked for while a plan runs waits: the engine suspends the plan
     once the message under way completes, applies every change queued by
     then on its own loop, and resumes. One asked for while no plan runs is
-    applied at once, on the shared loop, before `request` returns. A change
-    that raises is logged, and the ones after it still run.
+    applied at once: before `request` returns when called from a thread
+    without an event loop, as a task on the calling loop otherwise, since
+    waiting there would block the loop the change runs on. A change that
+    raises is logged, and the ones after it still run.
     """
 
     def __init__(self, engine: RunEngine) -> None:
@@ -73,7 +76,12 @@ class Deferrals:
     def request(self, apply: Callable[[], Awaitable[None]]) -> None:
         """Queue *apply*, or run it now when no plan is running."""
         if self._engine.state != "running":
-            run_coro(self._apply(apply))
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                run_coro(self._apply(apply))
+            else:
+                loop.create_task(self._apply(apply))
             return
         self._queue.append(apply)
         self._pending.set(True)
