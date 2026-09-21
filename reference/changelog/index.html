@@ -4425,9 +4425,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   metadata (an image, a plate, a <code>bioformats2raw</code> layout), which <code>zarr.write</code>
   refuses. A writer registers nothing.
 - <strong><code>WriterError</code></strong> (<code>redsun.storage.writers</code>) - raised for a store the
-  writer cannot take, an array with too few or too many dimensions, or a
-  missing package, naming the extra that installs it.
-- A <code>zarr</code> extra and dependency group, with <code>ome-writers[acquire-zarr]</code>.
+  writer cannot take, or an array with too few or too many dimensions.
+  Importing a writer module without its package raises <code>ImportError</code>
+  naming the extra that installs it.
+- A <code>zarr</code> extra and dependency group, with <code>acquire-zarr</code>, and an
+  <code>ome-zarr</code> one, with <code>ome-writers[acquire-zarr]</code>.
 - A <code>tiled</code> extra and dependency group, with <code>tiled[client,server]</code> and
   <code>ome-tiled[bluesky]</code>. It installs nothing on Python 3.14.
 - <strong><code>CatalogAddress</code></strong> and <strong><code>CATALOG</code></strong> (<code>redsun.catalog</code>) - where a
@@ -4517,8 +4519,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   (<code>redsun.view.qt.builtins</code>), with their manifest entries. A session
   declaring them drops both and gives <code>base_dir</code> in the <code>storage</code> section.
   <code>redsun.storage.PATH_PROVIDER</code> moves to <code>redsun.path_provider</code>.</li>
-<li>The <code>zarr</code> extra and dependency group install
-  <code>ome-writers[acquire-zarr]</code> instead of <code>acquire-zarr</code>.</li>
+<li>The <code>zarr</code> extra and dependency group require <code>acquire-zarr</code> 0.10.0 or
+  later, the first release whose arrays take <code>is_ngff</code>.</li>
 </ul>
 <h3 id="changed-breaking">Changed (breaking)<a class="headerlink" href="#changed-breaking" title="Permanent link">&para;</a></h3>
 <ul>

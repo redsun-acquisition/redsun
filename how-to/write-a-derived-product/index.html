@@ -2427,9 +2427,13 @@ belongs to the service and its device
 (<a href="../../explanation/decisions/0013-acquisition-storage-belongs-to-the-device/"><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> 0013</a>);
 a derived product is the one thing <code>redsun</code> writes.</p>
 <h2 id="install-the-extra">Install the extra<a class="headerlink" href="#install-the-extra" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>redsun<span class="o">[</span>zarr<span class="o">]</span>
+<p>One per format: <code>zarr</code> brings <code>acquire-zarr</code>, <code>ome-zarr</code> brings
+<code>ome-writers[acquire-zarr]</code>, which is more than a plain Zarr product needs.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>redsun<span class="o">[</span>zarr<span class="o">]</span><span class="w">      </span><span class="c1"># redsun.storage.writers.zarr</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span>redsun<span class="o">[</span>ome-zarr<span class="o">]</span><span class="w">  </span><span class="c1"># redsun.storage.writers.ome_zarr</span>
 </span></code></pre></div>
-<p>Without it, a writer raises <code>WriterError</code> naming the extra.</p>
+<p>Without it, importing the writer module raises <code>ImportError</code> naming the
+extra.</p>
 <h2 id="pick-the-writer-by-mimetype">Pick the writer by mimetype<a class="headerlink" href="#pick-the-writer-by-mimetype" title="Permanent link">&para;</a></h2>
 <p>The <code>StreamResource</code> document names the format and the store:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.storage.writers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ome_zarr</span>
