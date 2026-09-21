@@ -289,7 +289,7 @@ class Writer(DocumentRouter):
             else:
                 arrays = {data_key: ArrayShape.of(whole.shape, whole.dtype)}  # type: ignore[union-attr]
             products = [self._products[key] for key in arrays]
-            opened = Open(placed.open(arrays), placed, products)
+            opened = Open(placed.open_stream(arrays), placed, products)
             run.open[placed.path] = opened
         elif product not in opened.products:
             raise WriterError(

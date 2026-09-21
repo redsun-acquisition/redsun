@@ -35,7 +35,7 @@ class Placement:
     path: Path
     uri: str
     streamed: bool
-    open: Callable[[Mapping[str, ArrayShape]], Stream]
+    open_stream: Callable[[Mapping[str, ArrayShape]], Stream]
 
 
 def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:
