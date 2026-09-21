@@ -1,14 +1,15 @@
 """Writers adding a derived product to an acquisition's store.
 
-One module per format, each with a `write` taking the fields of the
-`StreamResource` document. A writer reads the store, decides where the product
-goes and returns its URI. It registers nothing in a catalog.
+`Writer` follows a run's documents to learn where each product goes and
+writes it there, as a key of the store the acquisition wrote or as a store
+of its own beside it. It registers nothing in a catalog.
 
-Importing a writer module raises `ImportError` naming the extra to install
-when its package is missing: `redsun[zarr]` for `zarr`, `redsun[ome-zarr]`
-for `ome_zarr`.
+Importing this package raises `ImportError` naming the extra to install when
+`acquire-zarr` is missing, `redsun[zarr]`; writing beside an OME-Zarr image
+needs `redsun[ome-zarr]` as well, named the same way on first use.
 """
 
-from ._base import WriterError
+from ._base import ArrayShape, WriterError
+from .writer import Writer
 
-__all__ = ["WriterError"]
+__all__ = ["ArrayShape", "Writer", "WriterError"]

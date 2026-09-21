@@ -9,9 +9,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pytest
 
-from redsun.storage.writers import WriterError
+from redsun.storage.writers import Writer, WriterError
 from redsun.storage.writers._base import root_attributes as attributes
-from redsun.storage.writers.writer import Writer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -116,6 +115,24 @@ def test_a_declared_product_needs_no_documents(tmp_path: Path) -> None:
     assert product == store.as_uri()
     assert shape_of(store / "mask") == [1, 4, 4]
     assert attributes(store / "mask")["redsun"]["run_start"] is None
+
+
+def test_an_ome_zarr_store_with_a_plain_root_takes_the_product_as_an_image(
+    ngff_store: Path,
+) -> None:
+    """A plain root holds one image per key, so the product joins them as one."""
+    writer = Writer()
+    writer.derive("det_median", source="det")
+    run(writer, ngff_store, "application/x-ome-zarr")
+
+    product = writer.write(
+        "det_median", np.ones((4, 4), np.uint16), metadata={"derived_from": "det"}
+    )
+    writer.close()
+
+    assert product == ngff_store.as_uri()
+    assert "ome" in attributes(ngff_store / "det_median")
+    assert attributes(ngff_store / "det_median")["derived_from"] == "det"
 
 
 def test_an_image_root_gets_a_sibling_written_whole(image_store: Path) -> None:
