@@ -66,22 +66,22 @@ unknown name raises `ValueError`.
 ## Find a session's log file
 
 A container also writes a run's records to a file, opened when the container
-is constructed and closed by `shutdown()`. It sits under `logs/app` in the
-user's data directory, as `platformdirs` reports it, the same root the
-session's data goes under, in a folder named after the session:
+is constructed and closed by `shutdown()`. It sits under `logs` in the user's
+data directory, as `platformdirs` reports it, the same root the session's data
+goes under, in a folder named after the session, then `app`:
 
 | Platform | Folder |
 | --- | --- |
-| Windows | `%LOCALAPPDATA%\redsun\logs\app\<session>\` |
-| macOS | `~/Library/Application Support/redsun/logs/app/<session>/` |
-| Linux | `~/.local/share/redsun/logs/app/<session>/` |
+| Windows | `%LOCALAPPDATA%\redsun\logs\<session>\app\` |
+| macOS | `~/Library/Application Support/redsun/logs/<session>/app/` |
+| Linux | `~/.local/share/redsun/logs/<session>/app/` |
 
 Each run has its own file, named after its start time and process id, such as
 `2026-09-13T14-02-46_8120.log`. At 10 MB a file rotates to `.log.1`, `.log.2`
 and so on, keeping 5 older files. Starting a run deletes the files of all but
 the session's 20 most recent runs.
 
-Each launched service writes its own file under `logs/services/<session>/`,
+Each launched service writes its own file under `logs/<session>/services/`,
 named after the run and the service, such as
 `2026-09-13T14-02-46_8120.camera_ioc.log`, rotated the same way and deleted
 with the run's application file. The application's file holds no service

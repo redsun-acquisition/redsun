@@ -237,7 +237,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the user
   data directory instead of the platform's log directory: the application's
-  file in `logs/app/<session>/`, a service's in `logs/services/<session>/`.
+  file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
   Opening a run prunes both folders.
 
 - **`DescriptorTreeView`** (`redsun.view.qt`) groups rows by their

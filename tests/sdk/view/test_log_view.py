@@ -411,7 +411,7 @@ def test_the_folder_button_opens_the_session_log_folder(
         handler.close()
 
     assert [Path(url.toLocalFile()) for url in opened] == [
-        log_directory / "app" / "browsed"
+        log_directory / "browsed" / "app"
     ]
 
 

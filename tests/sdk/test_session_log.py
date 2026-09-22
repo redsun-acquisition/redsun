@@ -52,7 +52,7 @@ def test_a_run_is_written_to_a_file_in_the_session_folder(
     redsun_logger.warning("stage homed")
     close_handler(handler)
 
-    (run,) = (log_directory / "app" / "my_lab_day_1").iterdir()
+    (run,) = (log_directory / "my_lab_day_1" / "app").iterdir()
     assert RUN_NAME.match(run.name)
     assert "stage homed" in run.read_text(encoding="utf-8")
 
@@ -64,7 +64,7 @@ def test_a_session_name_cannot_climb_out_of_the_log_directory(
     handler = open_handler(session)
     close_handler(handler)
 
-    assert (log_directory / "app" / folder).is_dir()
+    assert (log_directory / folder / "app").is_dir()
 
 
 def test_a_rotated_run_lists_its_files_oldest_first(
@@ -94,8 +94,8 @@ def test_opening_a_run_deletes_all_but_the_most_recent_runs(
     log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(log, "LOG_RUNS_KEPT", 3)
-    app_folder = log_directory / "app" / "pruned"
-    services_folder = log_directory / "services" / "pruned"
+    app_folder = log_directory / "pruned" / "app"
+    services_folder = log_directory / "pruned" / "services"
     app_folder.mkdir(parents=True)
     services_folder.mkdir(parents=True)
     for day in range(1, 6):
@@ -142,11 +142,11 @@ def test_a_service_writes_a_file_of_its_own_under_services(
     files = {
         path.name: path.read_text(encoding="utf-8")
         for folder in ("app", "services")
-        for path in (log_directory / folder / "lab").iterdir()
+        for path in (log_directory / "lab" / folder).iterdir()
     }
     assert set(files) == {f"{application.run}.log", f"{application.run}.cam.log"}
-    assert (log_directory / "app" / "lab" / f"{application.run}.log").is_file()
-    assert (log_directory / "services" / "lab" / f"{application.run}.cam.log").is_file()
+    assert (log_directory / "lab" / "app" / f"{application.run}.log").is_file()
+    assert (log_directory / "lab" / "services" / f"{application.run}.cam.log").is_file()
     assert "stage homed" in files[f"{application.run}.log"]
     assert "frame dropped" not in files[f"{application.run}.log"]
     assert "frame dropped" in files[f"{application.run}.cam.log"]
@@ -157,7 +157,7 @@ def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -
     app = Empty(session="lab")
     handler = session_log()
     assert handler is not None
-    assert (log_directory / "app" / "lab").is_dir()
+    assert (log_directory / "lab" / "app").is_dir()
 
     app.shutdown()
     assert session_log() is None

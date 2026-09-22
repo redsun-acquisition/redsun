@@ -216,10 +216,10 @@ class BufferHandler(logging.Handler):
 class SessionFileHandler(RotatingFileHandler):
     """Write the records of one run of a session to a file of its own.
 
-    The file is under ``logs`` in the user's data directory, in ``app`` for the
-    application and ``services`` for a service, then in a folder named after
-    the session, and named after the run: its start time and process. It
-    rotates at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files.
+    The file is under ``logs`` in the user's data directory, in a folder named
+    after the session, then in ``app`` for the application or ``services`` for
+    a service, and named after the run: its start time and process. It rotates
+    at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files.
 
     The application's file, ``<run>.log``, takes no service records, and
     opening it deletes the files of all but the session's `LOG_RUNS_KEPT` most
@@ -241,17 +241,19 @@ class SessionFileHandler(RotatingFileHandler):
     def __init__(
         self, session: str, service: str | None = None, run: str | None = None
     ) -> None:
-        logs = Path(user_data_dir("redsun", appauthor=False)) / "logs"
-        folder = (
-            logs / ("app" if service is None else "services") / session_folder(session)
+        session_logs = (
+            Path(user_data_dir("redsun", appauthor=False))
+            / "logs"
+            / session_folder(session)
         )
+        folder = session_logs / ("app" if service is None else "services")
         folder.mkdir(parents=True, exist_ok=True)
         if run is None:
             started = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
             run = f"{started}_{os.getpid()}"
         if service is None:
             _delete_old_runs(folder, keep=LOG_RUNS_KEPT - 1)
-            _delete_old_runs(logs / "services" / folder.name, keep=LOG_RUNS_KEPT - 1)
+            _delete_old_runs(session_logs / "services", keep=LOG_RUNS_KEPT - 1)
         self.run = run
         super().__init__(
             folder / (f"{run}.log" if service is None else f"{run}.{service}.log"),
