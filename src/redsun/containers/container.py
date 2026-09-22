@@ -1136,6 +1136,9 @@ class AppContainer:
             session=base_cfg["session"],
             max_digits=self._storage.max_digits,
         )
+        # the log opened at construction, before the root was known
+        self._move_session_log(self._path_provider.base_dir)
+        self._path_provider.sig_base_dir_changed.connect(self._move_session_log)
         if self._storage.catalog is not None:
             _require_tiled()
             self._catalog = self._start_catalog(self._storage.catalog)
@@ -1445,6 +1448,12 @@ class AppContainer:
                 handler = SessionFileHandler(session, name, self._session_log.run)
                 add_handler(handler, name)
                 self._service_logs[name] = handler
+
+    def _move_session_log(self, root: Path) -> None:
+        """Carry this run's log files under *root*, the session's new root."""
+        for handler in (self._session_log, *self._service_logs.values()):
+            if handler is not None:
+                handler.move(root)
 
     def _close_session_log(self) -> None:
         """Stop writing to the session's log files, and close them."""

@@ -204,6 +204,21 @@ def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
     assert provider.base_dir == tmp_path / "elsewhere"
 
 
+def test_set_base_dir_announces_the_root_it_accepted(tmp_path: Path) -> None:
+    """A refused change announces nothing, so a listener never moves too early."""
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+    announced: list[Path] = []
+    provider.sig_base_dir_changed.connect(announced.append)
+
+    provider.set_plan("scan")
+    with pytest.raises(RuntimeError):
+        provider.set_base_dir(tmp_path / "refused")
+    provider.reset_plan()
+    provider.set_base_dir(tmp_path / "accepted")
+
+    assert announced == [tmp_path / "accepted"]
+
+
 def test_set_base_dir_rescans_new_location(tmp_path: Path) -> None:
     """Changing base_dir resets counters and adopts the new location's state."""
     base_a = tmp_path / "a"

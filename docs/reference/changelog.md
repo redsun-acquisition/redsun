@@ -11,6 +11,14 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`SessionPathProvider.sig_base_dir_changed`** (`redsun.path_provider`) -
+  emitted with the new root once `set_base_dir` accepted it.
+
+- **`SessionFileHandler.move`** and **`SessionFileHandler.root`**
+  (`redsun.log`) - `move(root)` carries the run's files under another root and
+  keeps writing there; `root` is the one they are under. The constructor takes
+  a `root` keyword, the user data directory by default.
+
 - **`Deferrals`** and **`DEFERRALS`** (`redsun.engine`) - a change to apply
   between two messages of a running plan. `Deferrals(engine)` installs a
   suspender; `request(apply)` hands over a coroutine function, applied on
@@ -235,10 +243,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the user
-  data directory instead of the platform's log directory: the application's
+- **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
+  session's root instead of the platform's log directory: the application's
   file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
-  Opening a run prunes both folders.
+  Opening a run prunes both folders. The container moves the run's files when
+  the root changes, at build from `storage.base_dir` and later from
+  `set_base_dir`.
 
 - **`DescriptorTreeView`** (`redsun.view.qt`) groups rows by their
   `name-property` key rather than by the descriptor's `source`: one header

@@ -4,6 +4,7 @@ import contextlib
 import heapq
 import logging
 import os
+import shutil
 import sys
 from collections import deque
 from datetime import datetime
@@ -216,10 +217,11 @@ class BufferHandler(logging.Handler):
 class SessionFileHandler(RotatingFileHandler):
     """Write the records of one run of a session to a file of its own.
 
-    The file is under ``logs`` in the user's data directory, in a folder named
-    after the session, then in ``app`` for the application or ``services`` for
-    a service, and named after the run: its start time and process. It rotates
-    at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files.
+    The file is under ``logs`` in the session's root, in a folder named after
+    the session, then in ``app`` for the application or ``services`` for a
+    service, and named after the run: its start time and process. It rotates
+    at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files. `move` carries the
+    run's files to another root and keeps writing there.
 
     The application's file, ``<run>.log``, takes no service records, and
     opening it deletes the files of all but the session's `LOG_RUNS_KEPT` most
@@ -236,24 +238,30 @@ class SessionFileHandler(RotatingFileHandler):
     run : str | None
         The run, as the application handler's `run`. ``None`` starts a new
         run.
+    root : Path | None
+        Root the session writes under, as the path provider's `base_dir`.
+        ``None`` is the user data directory.
     """
 
     def __init__(
-        self, session: str, service: str | None = None, run: str | None = None
+        self,
+        session: str,
+        service: str | None = None,
+        run: str | None = None,
+        *,
+        root: Path | None = None,
     ) -> None:
-        session_logs = (
-            Path(user_data_dir("redsun", appauthor=False))
-            / "logs"
-            / session_folder(session)
-        )
-        folder = session_logs / ("app" if service is None else "services")
+        self._session = session
+        self._service = service
+        self._root = root or Path(user_data_dir("redsun", appauthor=False))
+        folder = self._folder(self._root)
         folder.mkdir(parents=True, exist_ok=True)
         if run is None:
             started = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
             run = f"{started}_{os.getpid()}"
         if service is None:
             _delete_old_runs(folder, keep=LOG_RUNS_KEPT - 1)
-            _delete_old_runs(session_logs / "services", keep=LOG_RUNS_KEPT - 1)
+            _delete_old_runs(folder.with_name("services"), keep=LOG_RUNS_KEPT - 1)
         self.run = run
         super().__init__(
             folder / (f"{run}.log" if service is None else f"{run}.{service}.log"),
@@ -264,6 +272,44 @@ class SessionFileHandler(RotatingFileHandler):
         )
         if service is None:
             self.addFilter(lambda record: service_of(record) is None)
+
+    def _folder(self, root: Path) -> Path:
+        return (
+            root
+            / "logs"
+            / session_folder(self._session)
+            / ("app" if self._service is None else "services")
+        )
+
+    @property
+    def root(self) -> Path:
+        """Root the run's files are under."""
+        return self._root
+
+    def move(self, root: Path) -> None:
+        """Carry the run's files under *root* and keep writing there.
+
+        Nothing happens when *root* is the current one.
+        """
+        root = Path(root).expanduser()
+        if root == self._root:
+            return
+        self.acquire()
+        try:
+            was_open = self.stream is not None
+            if self.stream is not None:
+                self.stream.close()
+                self.stream = None
+            folder = self._folder(root)
+            folder.mkdir(parents=True, exist_ok=True)
+            for path in self.files:
+                shutil.move(path, folder / path.name)
+            self.baseFilename = str(folder / Path(self.baseFilename).name)
+            self._root = root
+            if was_open:
+                self.stream = self._open()
+        finally:
+            self.release()
 
     @property
     def files(self) -> list[Path]:

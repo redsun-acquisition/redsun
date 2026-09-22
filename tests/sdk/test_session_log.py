@@ -7,6 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 import pytest
+import yaml
 
 from redsun import log
 from redsun.containers import AppContainer
@@ -166,3 +167,80 @@ def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -
     assert session_log() is not None
     app.shutdown()
     assert session_log() is None
+
+
+def test_a_run_moves_with_the_root(
+    tmp_path: Path, redsun_logger: logging.Logger
+) -> None:
+    """Records before and after the move end in one file under the new root."""
+    application = SessionFileHandler("lab", root=tmp_path / "a")
+    camera = SessionFileHandler("lab", "cam", application.run, root=tmp_path / "a")
+    silent = SessionFileHandler("lab", "stage", application.run, root=tmp_path / "a")
+    add_handler(application)
+    add_handler(camera, "cam")
+    add_handler(silent, "stage")
+    redsun_logger.warning("before the move")
+    logging.getLogger("redsun.service.cam").warning("cam before")
+
+    for handler in (application, camera, silent):
+        handler.move(tmp_path / "b")
+    redsun_logger.warning("after the move")
+    logging.getLogger("redsun.service.stage").warning("stage after")
+
+    close_handler(application)
+    for name, handler in (("cam", camera), ("stage", silent)):
+        remove_handler(handler, name)
+        handler.close()
+
+    assert application.root == tmp_path / "b"
+    assert not any((tmp_path / "a" / "logs" / "lab").rglob("*.log*"))
+    (app_file,) = (tmp_path / "b" / "logs" / "lab" / "app").iterdir()
+    assert app_file.name == f"{application.run}.log"
+    lines = app_file.read_text("utf-8").splitlines()
+    assert len(lines) == 2
+    assert "before the move" in lines[0]
+    assert "after the move" in lines[1]
+    services = {
+        path.name: path.read_text("utf-8")
+        for path in (tmp_path / "b" / "logs" / "lab" / "services").iterdir()
+    }
+    assert set(services) == {
+        f"{application.run}.cam.log",
+        f"{application.run}.stage.log",
+    }
+    assert "cam before" in services[f"{application.run}.cam.log"]
+    assert "stage after" in services[f"{application.run}.stage.log"]
+
+
+def test_a_container_moves_the_log_when_the_root_changes(
+    log_directory: Path, tmp_path: Path
+) -> None:
+    """The log follows storage.base_dir at build and set_base_dir afterwards."""
+    cfg_file = tmp_path / "session.yaml"
+    cfg_file.write_text(
+        yaml.dump(
+            {
+                "schema_version": 1.0,
+                "frontend": "pyqt",
+                "session": "lab",
+                "storage": {"base_dir": str(tmp_path / "root")},
+            }
+        )
+    )
+    app = AppContainer.from_config(str(cfg_file))
+    handler = session_log()
+    assert handler is not None
+    assert handler.root == log_directory.parent
+
+    app.build()
+    assert (tmp_path / "root" / "logs" / "lab" / "app" / f"{handler.run}.log").is_file()
+
+    app.path_provider.set_base_dir(tmp_path / "other")
+    app.shutdown()
+
+    assert not (
+        tmp_path / "root" / "logs" / "lab" / "app" / f"{handler.run}.log"
+    ).exists()
+    assert (
+        tmp_path / "other" / "logs" / "lab" / "app" / f"{handler.run}.log"
+    ).is_file()

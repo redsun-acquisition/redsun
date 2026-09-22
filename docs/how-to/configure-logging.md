@@ -66,15 +66,20 @@ unknown name raises `ValueError`.
 ## Find a session's log file
 
 A container also writes a run's records to a file, opened when the container
-is constructed and closed by `shutdown()`. It sits under `logs` in the user's
-data directory, as `platformdirs` reports it, the same root the session's data
-goes under, in a folder named after the session, then `app`:
+is constructed and closed by `shutdown()`. It sits under `logs` in the
+session's root, `storage.base_dir` in the session file, in a folder named after
+the session, then `app`. Without a `storage.base_dir` the root is the user's
+data directory, as `platformdirs` reports it:
 
 | Platform | Folder |
 | --- | --- |
 | Windows | `%LOCALAPPDATA%\redsun\logs\<session>\app\` |
 | macOS | `~/Library/Application Support/redsun/logs/<session>/app/` |
 | Linux | `~/.local/share/redsun/logs/<session>/app/` |
+
+When the root changes during a run, through the path provider's
+`set_base_dir`, the run's files move along and writing continues under the new
+root.
 
 Each run has its own file, named after its start time and process id, such as
 `2026-09-13T14-02-46_8120.log`. At 10 MB a file rotates to `.log.1`, `.log.2`
