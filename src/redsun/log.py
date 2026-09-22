@@ -12,7 +12,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-from platformdirs import user_log_dir
+from platformdirs import user_data_dir
 from psygnal import Signal
 
 from .utils._paths import session_folder
@@ -240,7 +240,11 @@ class SessionFileHandler(RotatingFileHandler):
     def __init__(
         self, session: str, service: str | None = None, run: str | None = None
     ) -> None:
-        folder = Path(user_log_dir("redsun", appauthor=False)) / session_folder(session)
+        folder = (
+            Path(user_data_dir("redsun", appauthor=False))
+            / "service_logs"
+            / session_folder(session)
+        )
         folder.mkdir(parents=True, exist_ok=True)
         if run is None:
             started = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
