@@ -2663,8 +2663,10 @@ script or notebook without a container:</p>
 unknown name raises <code>ValueError</code>.</p>
 <h2 id="find-a-sessions-log-file">Find a session's log file<a class="headerlink" href="#find-a-sessions-log-file" title="Permanent link">&para;</a></h2>
 <p>A container also writes a run's records to a file, opened when the container
-is constructed and closed by <code>shutdown()</code>. It sits in the user's log directory,
-as <code>platformdirs</code> reports it, in a folder named after the session:</p>
+is constructed and closed by <code>shutdown()</code>. It sits under <code>logs</code> in the
+session's root, <code>storage.base_dir</code> in the session file, in a folder named after
+the session, then <code>app</code>. Without a <code>storage.base_dir</code> the root is the user's
+data directory, as <code>platformdirs</code> reports it:</p>
 <table>
 <thead>
 <tr>
@@ -2675,27 +2677,31 @@ as <code>platformdirs</code> reports it, in a folder named after the session:</p
 <tbody>
 <tr>
 <td>Windows</td>
-<td><code>%LOCALAPPDATA%\redsun\Logs\&lt;session&gt;\</code></td>
+<td><code>%LOCALAPPDATA%\redsun\logs\&lt;session&gt;\app\</code></td>
 </tr>
 <tr>
 <td>macOS</td>
-<td><code>~/Library/Logs/redsun/&lt;session&gt;/</code></td>
+<td><code>~/Library/Application Support/redsun/logs/&lt;session&gt;/app/</code></td>
 </tr>
 <tr>
 <td>Linux</td>
-<td><code>~/.local/state/redsun/log/&lt;session&gt;/</code></td>
+<td><code>~/.local/share/redsun/logs/&lt;session&gt;/app/</code></td>
 </tr>
 </tbody>
 </table>
+<p>When the root changes during a run, through the path provider's
+<code>set_base_dir</code>, the run's files move along and writing continues under the new
+root.</p>
 <p>Each run has its own file, named after its start time and process id, such as
 <code>2026-09-13T14-02-46_8120.log</code>. At 10 MB a file rotates to <code>.log.1</code>, <code>.log.2</code>
 and so on, keeping 5 older files. Starting a run deletes the files of all but
 the session's 20 most recent runs.</p>
-<p>Each launched service writes its own file beside it, named after the run and
-the service, such as <code>2026-09-13T14-02-46_8120.camera_ioc.log</code>, rotated the same
-way. The application's file holds no service records, so a service logging
-heavily rotates only its own file. The file is created when the service first
-logs something.</p>
+<p>Each launched service writes its own file under <code>logs/&lt;session&gt;/services/</code>,
+named after the run and the service, such as
+<code>2026-09-13T14-02-46_8120.camera_ioc.log</code>, rotated the same way and deleted
+with the run's application file. The application's file holds no service
+records, so a service logging heavily rotates only its own file. The file is
+created when the service first logs something.</p>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;session_log&lt;/span&gt;" href="../../reference/api/log/#redsun.log.session_log"><code>session_log</code></a> returns the handler writing the current
 run, and <code>session_log("camera_ioc")</code> the one writing that service's file. A
 handler's <code>files</code> property lists its files with the oldest records first.</p>

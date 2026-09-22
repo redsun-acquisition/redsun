@@ -4351,6 +4351,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><strong><code>SessionPathProvider.sig_base_dir_changed</code></strong> (<code>redsun.path_provider</code>) -
+  emitted with the new root once <code>set_base_dir</code> accepted it.</p>
+</li>
+<li>
+<p><strong><code>SessionFileHandler.move</code></strong> and <strong><code>SessionFileHandler.root</code></strong>
+  (<code>redsun.log</code>) - <code>move(root)</code> carries the run's files under another root and
+  keeps writing there; <code>root</code> is the one they are under. The constructor takes
+  a <code>root</code> keyword, the user data directory by default.</p>
+</li>
+<li>
 <p><strong><code>Deferrals</code></strong> and <strong><code>DEFERRALS</code></strong> (<code>redsun.engine</code>) - a change to apply
   between two messages of a running plan. <code>Deferrals(engine)</code> installs a
   suspender; <code>request(apply)</code> hands over a coroutine function, applied on
@@ -4564,6 +4574,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><strong><code>SessionFileHandler</code></strong> (<code>redsun.log</code>) writes under <code>logs</code> in the
+  session's root instead of the platform's log directory: the application's
+  file in <code>logs/&lt;session&gt;/app/</code>, a service's in <code>logs/&lt;session&gt;/services/</code>.
+  Opening a run prunes both folders. The container moves the run's files when
+  the root changes, at build from <code>storage.base_dir</code> and later from
+  <code>set_base_dir</code>.</p>
+</li>
 <li>
 <p><strong><code>DescriptorTreeView</code></strong> (<code>redsun.view.qt</code>) groups rows by their
   <code>name-property</code> key rather than by the descriptor's <code>source</code>: one header
