@@ -9,8 +9,6 @@ import bluesky.plan_stubs as bps
 import dependency_injector.providers as dip
 from bluesky.suspenders import SuspendBoolHigh
 
-from redsun.aio import run_coro
-
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
@@ -61,27 +59,30 @@ class Deferrals:
     A change asked for while a plan runs waits: the engine suspends the plan
     once the message under way completes, applies every change queued by
     then on its own loop, and resumes. One asked for while no plan runs is
-    applied at once: before `request` returns when called from a thread
-    without an event loop, as a task on the calling loop otherwise, since
-    waiting there would block the loop the change runs on. A change that
-    raises is logged, and the ones after it still run.
+    applied on that loop at once: before `request` returns when called from
+    a thread without an event loop, without waiting otherwise, since waiting
+    on a loop would block it. A change that raises is logged, and the ones
+    after it still run.
     """
 
     def __init__(self, engine: RunEngine) -> None:
         self._engine = engine
         self._queue: deque[Callable[[], Awaitable[None]]] = deque()
         self._pending = Flag("deferrals")
-        engine.install_suspender(SuspendBoolHigh(self._pending, pre_plan=self._drain))
+        self._engine.install_suspender(
+            SuspendBoolHigh(self._pending, pre_plan=self._drain)
+        )
 
     def request(self, apply: Callable[[], Awaitable[None]]) -> None:
         """Queue *apply*, or run it now when no plan is running."""
         if self._engine.state != "running":
+            applied = asyncio.run_coroutine_threadsafe(
+                self._apply(apply), self._engine.loop
+            )
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
             except RuntimeError:
-                run_coro(self._apply(apply))
-            else:
-                loop.create_task(self._apply(apply))
+                applied.result()
             return
         self._queue.append(apply)
         # raised on the engine's loop: tripped from another thread, the
