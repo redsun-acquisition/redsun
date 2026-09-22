@@ -244,9 +244,6 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   close) write one happy-path test driving the whole sequence and asserting the
   observable end state, then small focused tests for unhappy paths.
 - Parametrize normal and edge cases together in one `@pytest.mark.parametrize`.
-- **Falsify a test before trusting it.** Remove the thing it pins, watch it
-  fail, put it back. A test that still passes with its subject broken pins
-  nothing.
 - `src/redsun/view/**` is omitted from coverage; don't chase coverage there.
 - **A property only a type checker can observe is tested in `tests/typing/`**,
   with `typing.assert_type`, not with runtime asserts. Those modules are never
