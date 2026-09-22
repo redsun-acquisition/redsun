@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
 
+    from redsun.containers.components import _HookField as HookField
+
 __all__ = [
     "ConfiguresApplication",
     "ConfiguresMainView",
@@ -268,3 +270,40 @@ def distinct(objects: Iterable[object]) -> tuple[object, ...]:
     for obj in objects:
         seen.setdefault(id(obj), obj)
     return tuple(seen.values())
+
+
+def build_hook_provider(
+    owner: str, hook_keys: Mapping[str, type], moment: str, field: HookField
+) -> object:
+    """Construct the provider the container *owner* declares at *moment*.
+
+    Raises
+    ------
+    HookError
+        If *moment* is not among *hook_keys*, the provider
+        rejects the keys given, or it does not implement the point's
+        protocol.
+    """
+    if moment not in hook_keys:
+        raise HookError(
+            f"{owner} declares a hook at {moment!r}, which is not a "
+            f"hook point it calls; {known_points(hook_keys)}"
+        )
+    declared = field.provider
+    if isinstance(declared, type):
+        try:
+            provider: object = declared(**field.kwargs)
+        except TypeError as e:
+            raise HookError(
+                f"cannot construct hook provider {declared.__name__!r} "
+                f"declared at {moment!r} with {sorted(field.kwargs)}: {e}"
+            ) from e
+    else:
+        provider = declared
+    protocol = hook_keys[moment]
+    if not isinstance(provider, protocol):
+        raise HookError(
+            f"hook provider {type(provider).__name__!r} declared at "
+            f"{moment!r} does not implement {protocol.__name__}"
+        )
+    return provider
