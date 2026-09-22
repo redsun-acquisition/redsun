@@ -84,7 +84,10 @@ class Deferrals:
                 loop.create_task(self._apply(apply))
             return
         self._queue.append(apply)
-        self._pending.set(True)
+        # raised on the engine's loop: tripped from another thread, the
+        # suspender waits 0.1 s for that loop to make its event, and raises
+        # when a busy machine takes longer
+        self._engine.loop.call_soon_threadsafe(self._pending.set, True)
 
     def _drain(self) -> MsgGenerator[None]:
         """Apply every queued change on the engine's loop, then let the plan resume."""

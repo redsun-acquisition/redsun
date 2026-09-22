@@ -324,6 +324,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`Deferrals.request`** (`redsun.engine`) raises its flag on the engine's
+  loop. Raised from the caller's thread, the suspender gave that loop 0.1 s
+  to make its event and raised `Could not create the suspender event` on a
+  busy machine.
+
 - **`DescriptorTreeView`** (`redsun.view.qt`) greys a row whose source ends
   in `:readonly` whatever comes before it, `pva://cam:readonly` included, as
   the docs said; only `soft://readonly` did before.
