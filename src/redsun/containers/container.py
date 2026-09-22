@@ -383,7 +383,6 @@ class AppContainer:
         "_services",
         "_services_started",
         "_session_log",
-        "_storage",
         "_virtual_container",
     )
 
@@ -642,7 +641,6 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._path_provider: SessionPathProvider | None = None
-        self._storage: StorageConfig | None = None
         self._catalog: SimpleTiledServer | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
@@ -788,13 +786,6 @@ class AppContainer:
     def services(self) -> dict[str, Service]:
         """Return the container's services, started or not."""
         return dict(self._services)
-
-    @property
-    def storage(self) -> StorageConfig:
-        """Return the session's storage configuration."""
-        if self._storage is None:
-            raise RuntimeError("Container not built. Call build() first.")
-        return self._storage
 
     @property
     def path_provider(self) -> SessionPathProvider:
@@ -1130,18 +1121,18 @@ class AppContainer:
 
         # parsed before the extra is checked, so a malformed section is refused
         # whether or not it is installed
-        self._storage = StorageConfig.from_mapping(self._config.get("storage"))
+        storage = StorageConfig.from_mapping(self._config.get("storage"))
         self._path_provider = SessionPathProvider(
-            base_dir=self._storage.base_dir,
+            base_dir=storage.base_dir,
             session=base_cfg["session"],
-            max_digits=self._storage.max_digits,
+            max_digits=storage.max_digits,
         )
         # the log opened at construction, before the root was known
         self._move_session_log(self._path_provider.base_dir)
         self._path_provider.sig_base_dir_changed.connect(self._move_session_log)
-        if self._storage.catalog is not None:
+        if storage.catalog is not None:
             _require_tiled()
-            self._catalog = self._start_catalog(self._storage.catalog)
+            self._catalog = self._start_catalog(storage.catalog)
         logger.debug("VirtualContainer created")
 
     def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:

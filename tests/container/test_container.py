@@ -28,8 +28,6 @@ from redsun.aio import run_coro
 from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
-    CatalogConfig,
-    StorageConfig,
     declare_device,
     declare_presenter,
     declare_view,
@@ -1199,10 +1197,10 @@ class TestStorageSection:
         app = AppContainer.from_config(
             str(config_path / "mock_catalog_config.yaml")
         ).build()
-        storage = app.storage
+        catalog = app.virtual_container.try_require(CATALOG)
         app.shutdown()
 
-        assert storage == StorageConfig(catalog=CatalogConfig())
+        assert catalog is not None
 
     @requires_tiled
     def test_every_key_reaches_the_container(self, tmp_path: Path) -> None:
@@ -1222,14 +1220,16 @@ class TestStorageSection:
         cfg_file.write_text(yaml.dump(config))
 
         app = AppContainer.from_config(str(cfg_file)).build()
-        storage = app.storage
+        base_dir = app.path_provider.base_dir
+        filename = app.path_provider("det").filename
+        catalog = app.virtual_container.try_require(CATALOG)
         app.shutdown()
 
-        assert storage == StorageConfig(
-            base_dir=tmp_path / "root",
-            max_digits=3,
-            catalog=CatalogConfig(readable=(tmp_path / "aht", tmp_path / "scratch")),
-        )
+        # the readable directories are checked by what the catalog serves,
+        # in test_catalog.py
+        assert base_dir == tmp_path / "root"
+        assert len(filename.rsplit("_", 1)[1]) == 3
+        assert catalog is not None
 
     def test_a_session_without_the_section_has_no_catalog(self) -> None:
         class TestApp(AppContainer):
@@ -1237,7 +1237,6 @@ class TestStorageSection:
 
         app = TestApp().build()
 
-        assert app.storage == StorageConfig()
         assert app.virtual_container.try_require(CATALOG) is None
 
     @pytest.mark.parametrize(

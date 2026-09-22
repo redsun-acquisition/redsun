@@ -308,6 +308,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Removed
 
+- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`), no longer
+  exported or documented; the `storage` section of a session file is
+  unchanged.
+- **`AppContainer.storage`** (`redsun.containers`). The storage root is
+  `AppContainer.path_provider.base_dir`.
 - **`DescriptorTreeView.get_keys`** (`redsun.view.qt`), which nothing called.
 - **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
   else. No container ever called `shutdown` on a device.
