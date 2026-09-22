@@ -125,6 +125,21 @@ def test_scan_existing_resumes_counters(tmp_path: Path) -> None:
     assert provider().filename == "other_00005"
 
 
+def test_reset_plan_returns_an_unwritten_filename(tmp_path: Path) -> None:
+    """A filename a plan requested and never wrote is handed out again."""
+    provider = SessionPathProvider(
+        base_dir=tmp_path, session="s", now=lambda: datetime(2026, 7, 20)
+    )
+    provider.set_plan("scan")
+    info = provider("det")
+    Path(info.directory_path, f"{info.filename}.zarr").mkdir(parents=True)
+    assert provider("det").filename == "scan_00001"
+    provider.reset_plan()
+
+    provider.set_plan("scan")
+    assert provider("det").filename == "scan_00001"
+
+
 @pytest.mark.parametrize(
     "stored", ["scan_00004", "scan_00004.zarr", "scan_00004.ome.zarr"]
 )

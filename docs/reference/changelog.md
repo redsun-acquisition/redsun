@@ -326,6 +326,11 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`SessionPathProvider.reset_plan`** (`redsun.path_provider`) rescans the
+  counters from disk, so a filename a plan requested and never wrote is
+  handed out again by the next plan instead of leaving a hole in the
+  numbering.
+
 - **`Deferrals.request`** (`redsun.engine`) does everything on the engine's
   loop: the check for a running plan, the flag, and a change applied at
   once. Raised from the caller's thread, the suspender gave the engine's
