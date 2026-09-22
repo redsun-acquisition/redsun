@@ -215,8 +215,14 @@ class SessionPathProvider(PathProvider):
 
     @slot
     def reset_plan(self) -> None:
-        """Set the plan name back to its placeholder."""
+        """Set the plan name back to its placeholder, rescanning counters.
+
+        A filename requested by the plan and never written returns to the
+        pool, so the next plan continues from what is on disk.
+        """
         self._filenames.set_plan(_RESET_PLAN)
+        self._filenames.reset({})
+        self._scan_existing()
 
     def _scan_existing(self) -> None:
         """Set each `(plan, datakey)` counter one past the highest number on disk."""
