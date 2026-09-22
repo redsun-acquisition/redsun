@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -477,6 +479,8 @@
       
         
       
+        
+      
     
     
     
@@ -617,6 +621,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/derived-products/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Derived products
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/services/" class="md-nav__link">
         
   
@@ -696,10 +727,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
             
   
   
@@ -716,8 +747,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -917,10 +948,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
             
   
   
@@ -937,8 +968,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1916,6 +1947,8 @@
       
         
       
+        
+      
     
     
     
@@ -2256,6 +2289,33 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/writers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2479,8 +2539,10 @@ hands the write over as a coroutine function:</p>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_deferrals</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="n">apply</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>request</code> returns at once. While a plan runs, the change waits for the next
-message boundary; while none runs, it is applied before <code>request</code> returns.
+<p><code>request</code> returns at once, with a future done once the change ran on the
+engine's loop. While a plan runs, the change waits for the next message
+boundary; while none runs, it is applied straight away. A thread may wait on
+the future; a coroutine must not block on it.
 Several changes asked for during one message are applied together, in the
 order asked. A change that raises is logged under <code>redsun</code> and the ones after
 it still run.</p>

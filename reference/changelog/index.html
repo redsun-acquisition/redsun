@@ -251,6 +251,8 @@
       
         
       
+        
+      
     
     
     
@@ -477,6 +479,8 @@
       
         
       
+        
+      
     
     
     
@@ -617,6 +621,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/derived-products/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Derived products
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/services/" class="md-nav__link">
         
   
@@ -696,10 +727,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
             
   
   
@@ -716,8 +747,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -917,10 +948,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
             
   
   
@@ -937,8 +968,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2841,6 +2872,8 @@
       
         
       
+        
+      
     
     
     
@@ -3172,6 +3205,33 @@
     
   
   Virtual container
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/writers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Writers
 
     
   </span>
@@ -4293,10 +4353,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p><strong><code>Deferrals</code></strong> and <strong><code>DEFERRALS</code></strong> (<code>redsun.engine</code>) - a change to apply
   between two messages of a running plan. <code>Deferrals(engine)</code> installs a
-  suspender; <code>request(apply)</code> queues a coroutine function, applied on the
-  engine's loop once the message under way completes, or at once when no
-  plan runs. A change that raises is logged and the rest still run. The
-  engine's owner provides it under <code>DEFERRALS</code>.</p>
+  suspender; <code>request(apply)</code> hands over a coroutine function, applied on
+  the engine's loop once the message under way completes, or at once when
+  no plan runs, and returns a <code>concurrent.futures.Future</code> done once it was.
+  Safe from any thread; a caller on a loop must not block on the future. A
+  change that raises is logged and the rest still run. The engine's owner
+  provides it under <code>DEFERRALS</code>.</p>
 </li>
 <li>
 <p><strong><code>Service</code></strong>, <strong><code>STARTUP_TIMEOUT</code></strong> and <strong><code>STOP_TIMEOUT</code></strong> (<code>redsun.services</code>) - the handle a
@@ -4447,28 +4509,34 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">provider</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">require</span><span class="p">(</span><span class="n">PATH_PROVIDER</span><span class="p">)</span>
 </span></code></pre></div>
 <ul>
-<li><strong><code>redsun.storage.writers</code></strong> - one module per format, each with
-  <code>write(uri, *, data_key, data, metadata=None) -&gt; str</code>, adding a derived
-  product to an acquisition's store: <code>zarr</code> for <code>application/x-zarr</code>,
-  <code>ome_zarr</code> for <code>application/x-ome-zarr</code>:</li>
+<li><strong><code>Writer</code></strong> (<code>redsun.writers</code>) - writes the products a component
+  computes against the stores a run names. A product is declared before the
+  run, <code>derive(data_key, source=)</code> to take its layout and store from the
+  <code>descriptor</code> and <code>stream_resource</code> naming <em>source</em>, or <code>declare(data_key,
+  shape=, dtype=, store=)</code> to give both; the component forwards every
+  document with <code>writer(name, doc)</code> and hands the data over with
+  <code>append(data_key, data)</code> per frame or <code>write(data_key, data, metadata=None)</code>
+  for the whole product, which returns the product's URI:</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.storage.writers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ome_zarr</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">product_uri</span> <span class="o">=</span> <span class="n">ome_zarr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">resource</span><span class="p">[</span><span class="s2">"uri"</span><span class="p">],</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">data_key</span><span class="o">=</span><span class="s2">"det_median"</span><span class="p">,</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">data</span><span class="o">=</span><span class="n">median</span><span class="p">,</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"derived_from"</span><span class="p">:</span> <span class="n">resource</span><span class="p">[</span><span class="s2">"data_key"</span><span class="p">]},</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">()</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">writer</span><span class="o">.</span><span class="n">derive</span><span class="p">(</span><span class="s2">"det_median"</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">"det"</span><span class="p">)</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="o">...</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"det_median"</span><span class="p">,</span> <span class="n">median</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"derived_from"</span><span class="p">:</span> <span class="s2">"det"</span><span class="p">})</span>
 </span></code></pre></div>
-<p>The returned URI is the argument when the product joined that store, and a
-  new one when it went beside it, as it does for a root carrying OME-Zarr
-  metadata (an image, a plate, a <code>bioformats2raw</code> layout), which <code>zarr.write</code>
-  refuses. A writer registers nothing.
-- <strong><code>WriterError</code></strong> (<code>redsun.storage.writers</code>) - raised for a store the
-  writer cannot take, or an array with too few or too many dimensions.
-  Importing a writer module without its package raises <code>ImportError</code>
-  naming the extra that installs it.
+<p>A product goes as a key of the store the acquisition wrote, or as a store of
+  its own beside a root carrying OME-Zarr metadata, named
+  <code>&lt;store&gt;_&lt;data_key&gt;.ome.zarr</code> and written whole. A run's <code>stop</code> closes the
+  streams opened for it and writes two mappings on each product's group: <em>metadata</em> as given, and
+  <code>redsun</code> with <code>run_start</code>, <code>source</code>, <code>resource_uri</code> and <code>written</code>.
+  <code>shutdown</code> closes what a session ending mid-run left open.
+- <strong><code>ArrayShape</code></strong> (<code>redsun.writers</code>) - the shape and dtype of one
+  frame of a product.
+- <strong><code>WriterError</code></strong> (<code>redsun.writers</code>) - raised for a product not
+  declared, one without its layout or store yet, one declared after its
+  store's stream opened, a store the writer cannot take, or an array with too
+  few or too many dimensions. Importing the package without <code>acquire-zarr</code>
+  raises <code>ImportError</code> naming the extra that installs it; writing beside an
+  OME-Zarr image without <code>ome-writers</code> does the same on first use.
 - A <code>zarr</code> extra and dependency group, with <code>acquire-zarr</code>, and an
   <code>ome-zarr</code> one, with <code>ome-writers[acquire-zarr]</code>.
 - A <code>tiled</code> extra and dependency group, with <code>tiled[client,server]</code> and
@@ -4496,9 +4564,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>A container class taking a session file gets the services that file
+<li>
+<p><strong><code>DescriptorTreeView</code></strong> (<code>redsun.view.qt</code>) groups rows by their
+  <code>name-property</code> key rather than by the descriptor's <code>source</code>: one header
+  per device name, and one under it per group a property names with a dash of
+  its own, <code>cam-properties-Binning</code> as <code>Binning</code> under <code>properties</code> under
+  <code>cam</code>. A source ending in <code>:readonly</code> still greys the row.</p>
+</li>
+<li>
+<p>A container class taking a session file gets the services that file
   declares, as it already got its devices, presenters and views. A service
-  named in both the file and the class body is the class body's:</li>
+  named in both the file and the class body is the class body's:</p>
+</li>
 </ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="s2">"session.yaml"</span><span class="p">):</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">camera</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="s2">"camera_ioc"</span><span class="p">)</span>  <span class="c1"># declared in the file</span>
@@ -4560,6 +4637,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   (<code>redsun.view.qt.builtins</code>), with their manifest entries. A session
   declaring them drops both and gives <code>base_dir</code> in the <code>storage</code> section.
   <code>redsun.storage.PATH_PROVIDER</code> moves to <code>redsun.path_provider</code>.</li>
+<li>The <code>redsun.storage</code> package. <code>Writer</code> lives in <code>redsun.writers</code>.</li>
 <li>The <code>zarr</code> extra and dependency group require <code>acquire-zarr</code> 0.10.0 or
   later, the first release whose arrays take <code>is_ngff</code>.</li>
 </ul>
@@ -4576,9 +4654,24 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </span></code></pre></div>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>create_plan_spec</code></strong> (<code>redsun.presenter.plan_spec</code>) no longer refuses a
+<li>
+<p><strong><code>Deferrals.request</code></strong> (<code>redsun.engine</code>) does everything on the engine's
+  loop: the check for a running plan, the flag, and a change applied at
+  once. Raised from the caller's thread, the suspender gave the engine's
+  loop 0.1 s to make its event and raised <code>Could not create the suspender
+  event</code> on a busy machine; a change applied at once ran on the caller's
+  loop.</p>
+</li>
+<li>
+<p><strong><code>DescriptorTreeView</code></strong> (<code>redsun.view.qt</code>) greys a row whose source ends
+  in <code>:readonly</code> whatever comes before it, <code>pva://cam:readonly</code> included, as
+  the docs said; only <code>soft://readonly</code> did before.</p>
+</li>
+<li>
+<p><strong><code>create_plan_spec</code></strong> (<code>redsun.presenter.plan_spec</code>) no longer refuses a
   parameter whose default is an empty string, tuple or list as an action
-  list it is not annotated for.</li>
+  list it is not annotated for.</p>
+</li>
 <li><strong><code>create_plan_spec</code></strong> (<code>redsun.presenter.plan_spec</code>) accepts a plan from a
   module without <code>from __future__ import annotations</code>. Its annotations are
   already evaluated, and were re-read as text naming what the module never

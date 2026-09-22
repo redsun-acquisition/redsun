@@ -16,6 +16,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/services/</loc>
       </url>
       <url>
@@ -149,6 +152,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/virtual/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/writers/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
