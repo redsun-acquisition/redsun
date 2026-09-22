@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0001-record-architecture-decisions/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/run-commit-checks/">
       
       
-        <link rel="prev" href="../../architecture/virtual/">
+        <link rel="prev" href="../keep-a-catalog/">
       
       
-        <link rel="next" href="../0002-storage-dual-context-redesign/">
+        <link rel="next" href="../run-tests/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.62">
     
     
       
-        <title>1. Record architecture decisions - Redsun</title>
+        <title>Run the commit checks - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.ce62732f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.ce62732f.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/custom.css">
+      <link rel="stylesheet" href="../../stylesheets/custom.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#1-record-architecture-decisions" class="md-skip">
+        <a href="#run-the-commit-checks" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              1. Record architecture decisions
+              Run the commit checks
             
           </span>
         </div>
@@ -215,7 +215,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   redsun
@@ -229,64 +229,12 @@
   
   
   
-    
-  
   
     
       
       
         
           
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
-          
-  
-  Explanation
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-      
-      
-        
-          
-        
-      
-        
-      
-        
-      
         
       
         
@@ -310,7 +258,59 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../how-to/" class="md-tabs__link">
+        <a href="../../explanation/" class="md-tabs__link">
+          
+  
+  Explanation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   How to
@@ -344,7 +344,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -372,7 +372,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../tutorials/" class="md-tabs__link">
+        <a href="../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -405,7 +405,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 5v16M20.001 19A2 2 0 0 0 22 17V5a2 2 0 0 0-1.999-2L16 3.002A5 5 0 0 0 12 5a5 5 0 0 0-4-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 1.999 2H8a5 5 0 0 1 4 2 5 5 0 0 1 4-2z"/></svg>
@@ -435,7 +435,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -458,8 +458,6 @@
       
   
   
-    
-  
   
   
     
@@ -489,23 +487,20 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../" class="md-nav__link ">
+            <a href="../../explanation/" class="md-nav__link ">
               
   
   
@@ -522,13 +517,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -547,7 +542,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../catalog/" class="md-nav__link">
+      <a href="../../explanation/catalog/" class="md-nav__link">
         
   
   
@@ -574,7 +569,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../component-system/" class="md-nav__link">
+      <a href="../../explanation/component-system/" class="md-nav__link">
         
   
   
@@ -601,7 +596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../container-architecture/" class="md-nav__link">
+      <a href="../../explanation/container-architecture/" class="md-nav__link">
         
   
   
@@ -628,7 +623,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../derived-products/" class="md-nav__link">
+      <a href="../../explanation/derived-products/" class="md-nav__link">
         
   
   
@@ -655,7 +650,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../services/" class="md-nav__link">
+      <a href="../../explanation/services/" class="md-nav__link">
         
   
   
@@ -682,7 +677,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../statement/" class="md-nav__link">
+      <a href="../../explanation/statement/" class="md-nav__link">
         
   
   
@@ -727,20 +722,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
         
           
-          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_8" id="__nav_2_8_label" tabindex="0">
             
   
   
@@ -774,7 +766,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/devices/" class="md-nav__link">
+      <a href="../../explanation/architecture/devices/" class="md-nav__link">
         
   
   
@@ -801,7 +793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/plans/" class="md-nav__link">
+      <a href="../../explanation/architecture/plans/" class="md-nav__link">
         
   
   
@@ -828,7 +820,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/presenters/" class="md-nav__link">
+      <a href="../../explanation/architecture/presenters/" class="md-nav__link">
         
   
   
@@ -855,7 +847,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/qt-widgets/" class="md-nav__link">
+      <a href="../../explanation/architecture/qt-widgets/" class="md-nav__link">
         
   
   
@@ -882,7 +874,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/virtual/" class="md-nav__link">
+      <a href="../../explanation/architecture/virtual/" class="md-nav__link">
         
   
   
@@ -914,10 +906,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -952,21 +942,18 @@
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
             
   
   
@@ -983,7 +970,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -997,36 +984,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  1. Record architecture decisions
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -1041,71 +1002,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Status
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Context
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Decision
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Consequences
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1118,7 +1014,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../../explanation/decisions/0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -1145,7 +1041,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../../explanation/decisions/0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -1172,7 +1068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../../explanation/decisions/0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -1199,7 +1095,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../../explanation/decisions/0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -1226,7 +1122,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../../explanation/decisions/0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -1253,7 +1149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../../explanation/decisions/0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -1280,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../../explanation/decisions/0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -1307,7 +1203,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0009-inherited-component-configuration/" class="md-nav__link">
+      <a href="../../explanation/decisions/0009-inherited-component-configuration/" class="md-nav__link">
         
   
   
@@ -1334,7 +1230,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
+      <a href="../../explanation/decisions/0010-toolkit-hook-points/" class="md-nav__link">
         
   
   
@@ -1361,7 +1257,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+      <a href="../../explanation/decisions/0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
         
   
   
@@ -1388,7 +1284,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
+      <a href="../../explanation/decisions/0012-services-and-two-connection-levels/" class="md-nav__link">
         
   
   
@@ -1415,7 +1311,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
+      <a href="../../explanation/decisions/0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
         
   
   
@@ -1454,6 +1350,8 @@
       
   
   
+    
+  
   
   
     
@@ -1489,20 +1387,23 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../how-to/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1519,13 +1420,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1544,7 +1445,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/build-docs/" class="md-nav__link">
+      <a href="../build-docs/" class="md-nav__link">
         
   
   
@@ -1571,7 +1472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/change-a-setting-while-a-plan-runs/" class="md-nav__link">
+      <a href="../change-a-setting-while-a-plan-runs/" class="md-nav__link">
         
   
   
@@ -1598,7 +1499,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/configure-logging/" class="md-nav__link">
+      <a href="../configure-logging/" class="md-nav__link">
         
   
   
@@ -1625,7 +1526,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/install-hooks/" class="md-nav__link">
+      <a href="../install-hooks/" class="md-nav__link">
         
   
   
@@ -1652,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -1679,7 +1580,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/keep-a-catalog/" class="md-nav__link">
+      <a href="../keep-a-catalog/" class="md-nav__link">
         
   
   
@@ -1703,10 +1604,36 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../how-to/run-commit-checks/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Run the commit checks
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1721,6 +1648,104 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-the-git-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Install the git hook
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-the-hooks-by-hand" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Run the hooks by hand
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-hooks-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What the hooks check
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-hook-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        When a hook fails
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-ruff-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Which <code>ruff</code> runs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Next steps
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1733,7 +1758,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/run-tests/" class="md-nav__link">
+      <a href="../run-tests/" class="md-nav__link">
         
   
   
@@ -1760,7 +1785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/wire-components/" class="md-nav__link">
+      <a href="../wire-components/" class="md-nav__link">
         
   
   
@@ -1787,7 +1812,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/write-a-derived-product/" class="md-nav__link">
+      <a href="../write-a-derived-product/" class="md-nav__link">
         
   
   
@@ -1814,7 +1839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../how-to/write-a-service/" class="md-nav__link">
+      <a href="../write-a-service/" class="md-nav__link">
         
   
   
@@ -1877,7 +1902,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../reference/" class="md-nav__link ">
+            <a href="../../reference/" class="md-nav__link ">
               
   
   
@@ -1919,7 +1944,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/changelog/" class="md-nav__link">
+      <a href="../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -1946,7 +1971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/glossary/" class="md-nav__link">
+      <a href="../../reference/glossary/" class="md-nav__link">
         
   
   
@@ -2049,7 +2074,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/aio/" class="md-nav__link">
+      <a href="../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -2076,7 +2101,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/catalog/" class="md-nav__link">
+      <a href="../../reference/api/catalog/" class="md-nav__link">
         
   
   
@@ -2103,7 +2128,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/container/" class="md-nav__link">
+      <a href="../../reference/api/container/" class="md-nav__link">
         
   
   
@@ -2130,7 +2155,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/engine/" class="md-nav__link">
+      <a href="../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -2157,7 +2182,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/log/" class="md-nav__link">
+      <a href="../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -2184,7 +2209,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/path_provider/" class="md-nav__link">
+      <a href="../../reference/api/path_provider/" class="md-nav__link">
         
   
   
@@ -2211,7 +2236,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -2238,7 +2263,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/services/" class="md-nav__link">
+      <a href="../../reference/api/services/" class="md-nav__link">
         
   
   
@@ -2265,7 +2290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/utils/" class="md-nav__link">
+      <a href="../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -2292,7 +2317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/view/" class="md-nav__link">
+      <a href="../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -2319,7 +2344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/virtual/" class="md-nav__link">
+      <a href="../../reference/api/virtual/" class="md-nav__link">
         
   
   
@@ -2346,7 +2371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/api/writers/" class="md-nav__link">
+      <a href="../../reference/api/writers/" class="md-nav__link">
         
   
   
@@ -2411,7 +2436,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../../tutorials/" class="md-nav__link ">
+            <a href="../../tutorials/" class="md-nav__link ">
               
   
   
@@ -2489,10 +2514,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Status
+        Prerequisites
       </span>
     </span>
   </a>
@@ -2500,10 +2525,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#install-the-git-hook" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Context
+        Install the git hook
       </span>
     </span>
   </a>
@@ -2511,10 +2536,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#run-the-hooks-by-hand" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Decision
+        Run the hooks by hand
       </span>
     </span>
   </a>
@@ -2522,10 +2547,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
+  <a href="#what-the-hooks-check" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Consequences
+        What the hooks check
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-hook-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        When a hook fails
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-ruff-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Which <code>ruff</code> runs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Next steps
       </span>
     </span>
   </a>
@@ -2550,31 +2608,80 @@
   
 
 
-<h1 id="1-record-architecture-decisions">1. Record architecture decisions<a class="headerlink" href="#1-record-architecture-decisions" title="Permanent link">&para;</a></h1>
-<p>Date: 2026-07-24</p>
-<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p>Accepted</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Architectural decisions in <code>redsun</code> (storage lifecycle, container build phases,
-device/presenter wiring) have so far lived in chat transcripts, agent memos
-under <code>.claude/agents/</code>, and code comments. Contributors and agents need a
-public, durable record of <em>why</em> the architecture is shaped the way it is,
-especially across breaking rewrites.</p>
-<p><code>ophyd-async</code> - whose device model <code>redsun</code> builds on - keeps Architecture
-Decision Records under <code>docs/explanations/decisions/</code>, following the format
-described in <a href="http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions">Michael Nygard's blog</a>.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p>We will keep ADRs in <code>docs/explanation/decisions/</code>, numbered sequentially,
-using the same lightweight format as <code>ophyd-async</code> (see <code>COPYME</code>): Status,
-Context, Decision, Consequences. New architectural changes get a new <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr>;
-superseded ADRs are marked as such rather than edited.</p>
-<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h1 id="run-the-commit-checks">Run the commit checks<a class="headerlink" href="#run-the-commit-checks" title="Permanent link">&para;</a></h1>
+<p><code>redsun</code> checks formatting and lint with <a href="https://prek.j178.dev"><code>prek</code></a>, which
+runs the hooks listed in <code>prek.toml</code> at the project root. The same hooks run on
+every commit once installed, in <code>uv run tox -e lint</code>, and in CI.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p><a href="../installation/#install-development-dependencies">Install <code>redsun</code> with development dependencies</a>.
+<code>prek</code> and <code>ruff</code> live in the <code>lint</code> dependency group, which <code>dev</code> includes.</p>
+<h2 id="install-the-git-hook">Install the git hook<a class="headerlink" href="#install-the-git-hook" title="Permanent link">&para;</a></h2>
+<p>Once per clone, from the project root:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>install
+</span></code></pre></div>
+<p>This writes <code>.git/hooks/pre-commit</code>. From then on, <code>git commit</code> runs the hooks
+on the staged files and stops the commit if one fails.</p>
+<h2 id="run-the-hooks-by-hand">Run the hooks by hand<a class="headerlink" href="#run-the-hooks-by-hand" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w">                         </span><span class="c1"># staged files only</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>--all-files<span class="w">             </span><span class="c1"># every tracked file, as CI does</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>run<span class="w"> </span>ruff-check<span class="w"> </span>--all-files<span class="w">  </span><span class="c1"># a single hook</span>
+</span></code></pre></div>
+<h2 id="what-the-hooks-check">What the hooks check<a class="headerlink" href="#what-the-hooks-check" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>hook</th>
+<th>what it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>end-of-file-fixer</code></td>
+<td>ends every file with exactly one newline</td>
+</tr>
+<tr>
+<td><code>trailing-whitespace</code></td>
+<td>strips spaces at the end of lines</td>
+</tr>
+<tr>
+<td><code>check-yaml</code>, <code>check-toml</code></td>
+<td>fails on files that do not parse</td>
+</tr>
+<tr>
+<td><code>check-added-large-files</code></td>
+<td>fails on large files added to the index</td>
+</tr>
+<tr>
+<td><code>check-merge-conflict</code></td>
+<td>fails on leftover conflict markers</td>
+</tr>
+<tr>
+<td><code>ruff-check</code></td>
+<td><code>ruff check --fix</code></td>
+</tr>
+<tr>
+<td><code>ruff-format</code></td>
+<td><code>ruff format</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-a-hook-fails">When a hook fails<a class="headerlink" href="#when-a-hook-fails" title="Permanent link">&para;</a></h2>
+<p>A hook that can fix what it found rewrites the file and still reports a
+failure, so the commit stops with the fix unstaged. Review the change, stage it
+with <code>git add</code>, and commit again. A <code>ruff</code> violation that <code>--fix</code> cannot repair
+is printed with its rule code and has to be fixed by hand.</p>
+<p>CI runs <code>prek run --all-files --show-diff-on-failure</code>. Any file a hook rewrites
+fails the build there, and the log shows the diff.</p>
+<h2 id="which-ruff-runs">Which <code>ruff</code> runs<a class="headerlink" href="#which-ruff-runs" title="Permanent link">&para;</a></h2>
+<p>The <code>ruff</code> hooks run <code>uv run --locked --only-group lint ruff</code>, so they use the
+version pinned in <code>uv.lock</code>, the same one <code>tox</code> and CI use. Updating <code>ruff</code> in
+the lock file updates the hooks too, and <code>prek.toml</code> holds no separate version
+for it. <code>--only-group lint</code> makes a fresh clone install only <code>prek</code> and <code>ruff</code>
+before the hooks run. It adds to the project environment and removes nothing
+from it.</p>
+<h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Design work that changes architecture lands as an <abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> before (or with) the
-  implementation.</li>
-<li><code>.claude/agents/</code> memos and CLAUDE.md summarise and link to ADRs instead of
-  being the primary record.</li>
-<li><abbr title="Architecture Decision Record. A numbered document recording one decision and the reasoning behind it.">ADR</abbr> pages are wired into the <code>zensical</code> nav under Explanation -&gt; Decisions.</li>
+<li><a href="../run-tests/">Run tests</a></li>
 </ul>
 
 
@@ -2615,7 +2722,7 @@ superseded ADRs are marked as such rather than edited.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../architecture/virtual/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Virtual container">
+          <a href="../keep-a-catalog/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Keep a catalog of runs">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -2625,20 +2732,20 @@ superseded ADRs are marked as such rather than edited.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Virtual container
+                Keep a catalog of runs
               </div>
             </div>
           </a>
         
         
           
-          <a href="../0002-storage-dual-context-redesign/" class="md-footer__link md-footer__link--next" aria-label="Next: 2. Storage dual-context redesign">
+          <a href="../run-tests/" class="md-footer__link md-footer__link--next" aria-label="Next: Run tests">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                2. Storage dual-context redesign
+                Run tests
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2706,10 +2813,10 @@ superseded ADRs are marked as such rather than edited.</p>
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.top","navigation.footer","search.suggest","search.highlight","search.share","content.code.copy","content.code.annotate","content.tabs.link","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.8dcc8e9c.min.js"></script>
+      <script src="../../assets/javascripts/bundle.8dcc8e9c.min.js"></script>
       
     
   </body>

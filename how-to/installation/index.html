@@ -303,6 +303,8 @@
       
         
       
+        
+      
     
     
     
@@ -1379,6 +1381,8 @@
       
         
       
+        
+      
     
     
     
@@ -1681,6 +1685,33 @@
     
   
   Keep a catalog of runs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run-commit-checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Run the commit checks
 
     
   </span>
@@ -2618,7 +2649,10 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w">           </span><span class="c1"># lint, both Qt type-checking legs, tests, docs</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>uv<span class="w"> </span>run<span class="w"> </span>tox<span class="w"> </span>-e<span class="w"> </span>tests
 </span></code></pre></div>
-<p><a href="../run-tests/">Run tests</a> lists what each environment covers.</p>
+<p><a href="../run-tests/">Run tests</a> lists what each environment covers. To run the
+formatting and lint checks on every commit, <a href="../run-commit-checks/#install-the-git-hook">install the git hook</a>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>prek<span class="w"> </span>install
+</span></code></pre></div>
 
 
 
