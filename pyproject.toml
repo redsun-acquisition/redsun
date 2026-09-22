@@ -38,6 +38,7 @@ requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
+    { include-group = "lint" },
     { include-group = "epics" },
     { include-group = "pva" },
     { include-group = "pyqt" },
@@ -45,11 +46,9 @@ dev = [
     { include-group = "zarr" },
     { include-group = "ome-zarr" },
     "mypy>=2.3.1",
-    "prek>=0.5.0",
     "pytest>=9.0.2",
     "pytest-env>=1.1.5",
     "types-pyyaml>=6.0.12.20250915",
-    "ruff>=0.16.5",
     "griffe-fieldz>=0.4.0",
     "pytest-asyncio>=1.3.0",
     "tox-uv-bare>=1.36.0",
@@ -92,6 +91,10 @@ pva = [
 ]
 ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
+]
+lint = [
+    "prek>=0.5.0",
+    "ruff>=0.16.5",
 ]
 
 [project.optional-dependencies]
@@ -172,7 +175,7 @@ extend-select = [
     "I", # enable imports checks
     "TC", # enable type check imports
     "FA102", # force __future__ imports
-] 
+]
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.per-file-ignores]
@@ -203,10 +206,8 @@ runner = "uv-venv-lock-runner"
 dependency_groups = ["dev"]
 
 [tool.tox.env.lint]
-commands = [
-    ["ruff", "check", "--fix", "."],
-    ["ruff", "format", "."],
-]
+dependency_groups = ["lint"]
+commands = [["prek", "run", "--all-files", "--show-diff-on-failure"]]
 
 [tool.tox.env.mypy-pyqt]
 dependency_groups = ["dev", "pyqt"]

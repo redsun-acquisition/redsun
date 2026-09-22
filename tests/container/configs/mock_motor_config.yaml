@@ -6,7 +6,7 @@ devices:
     plugin_name: mock-pkg
     plugin_id: my_motor
     axis: ["X"]
-    step_size: 
+    step_size:
       X: 0.1
     egu: mm
     integer: 42
@@ -16,7 +16,7 @@ devices:
     plugin_name: mock-pkg
     plugin_id: my_other_motor
     axis: ["X", "Y"]
-    step_size: 
+    step_size:
       X: 0.1
       Y: 0.2
     egu: mm

@@ -6,16 +6,18 @@
 repo = "builtin"
 hooks = [
   { id = "end-of-file-fixer" },
+  { id = "trailing-whitespace" },
   { id = "check-yaml" },
   { id = "check-toml" },
   { id = "check-added-large-files" },
   { id = "check-merge-conflict" },
 ]
 
+# ruff runs from uv.lock rather than a pinned hook repo, so the hook, tox and
+# CI all run the same ruff version; --only-group keeps the sync to prek and ruff
 [[repos]]
-repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.16.5"
+repo = "local"
 hooks = [
-  { id = "ruff-check", args = ["--fix"] },
-  { id = "ruff-format" },
+  { id = "ruff-check", name = "ruff check", language = "system", entry = "uv run --locked --only-group lint ruff check --fix --force-exclude", types_or = ["python", "pyi"], require_serial = true },
+  { id = "ruff-format", name = "ruff format", language = "system", entry = "uv run --locked --only-group lint ruff format --force-exclude", types_or = ["python", "pyi"], require_serial = true },
 ]

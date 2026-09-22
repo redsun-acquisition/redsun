@@ -65,6 +65,7 @@ it drives is the one on `PATH`: `tox-uv` depends on the `uv` package, which puts
 a second `uv.exe` in the project `.venv` and shadows the installed one:
 
 ```bash
+uv run prek install              # once: run the prek.toml hooks on every commit
 uv run tox                       # lint, both mypy legs, tests, docs
 uv run tox -e tests              # one environment
 uv run tox -e tests -- tests/sdk -x              # posargs reach pytest
@@ -73,7 +74,7 @@ uv run tox -e mypy-pyqt,mypy-pyside
 
 | environment | what it runs |
 | --- | --- |
-| `lint` | `ruff check --fix` then `ruff format` |
+| `lint` | `prek run --all-files`: the commit hooks, ruff included |
 | `mypy-pyqt` / `mypy-pyside` | mypy against that binding |
 | `tests` | `pytest -q` |
 | `docs` | `zensical build` then `scripts/check_xrefs.py` |

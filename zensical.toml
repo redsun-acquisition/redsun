@@ -58,6 +58,7 @@ nav = [
         { "Installation" = "how-to/installation.md" },
         { "Build documentation" = "how-to/build-docs.md" },
         { "Run tests" = "how-to/run-tests.md" },
+        { "Run the commit checks" = "how-to/run-commit-checks.md" },
         { "Wire components together" = "how-to/wire-components.md" },
         { "Install container hooks" = "how-to/install-hooks.md" },
         { "Configure logging" = "how-to/configure-logging.md" },
