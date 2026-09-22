@@ -72,10 +72,11 @@ def test_a_change_during_a_plan_lands_between_two_messages(
 
 
 def test_a_change_while_no_plan_runs_is_applied_at_once(RE: RunEngine) -> None:
+    """The future is done once the change ran on the engine's loop."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
 
-    deferrals.request(recorder.apply)
+    deferrals.request(recorder.apply).result(timeout=5)
 
     assert recorder.order == ["applied"]
 

@@ -13,10 +13,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - **`Deferrals`** and **`DEFERRALS`** (`redsun.engine`) - a change to apply
   between two messages of a running plan. `Deferrals(engine)` installs a
-  suspender; `request(apply)` queues a coroutine function, applied on the
-  engine's loop once the message under way completes, or at once when no
-  plan runs. A change that raises is logged and the rest still run. The
-  engine's owner provides it under `DEFERRALS`.
+  suspender; `request(apply)` hands over a coroutine function, applied on
+  the engine's loop once the message under way completes, or at once when
+  no plan runs, and returns a `concurrent.futures.Future` done once it was.
+  Safe from any thread; a caller on a loop must not block on the future. A
+  change that raises is logged and the rest still run. The engine's owner
+  provides it under `DEFERRALS`.
 
 - **`Service`**, **`STARTUP_TIMEOUT`** and **`STOP_TIMEOUT`** (`redsun.services`) - the handle a
   container makes for each service it declares. A service with a module runs
@@ -324,11 +326,12 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
-- **`Deferrals.request`** (`redsun.engine`) raises its flag on the engine's
-  loop, and applies a change asked for while no plan runs on that loop too,
-  rather than on the caller's. Raised from the caller's thread, the
-  suspender gave the engine's loop 0.1 s to make its event and raised
-  `Could not create the suspender event` on a busy machine.
+- **`Deferrals.request`** (`redsun.engine`) does everything on the engine's
+  loop: the check for a running plan, the flag, and a change applied at
+  once. Raised from the caller's thread, the suspender gave the engine's
+  loop 0.1 s to make its event and raised `Could not create the suspender
+  event` on a busy machine; a change applied at once ran on the caller's
+  loop.
 
 - **`DescriptorTreeView`** (`redsun.view.qt`) greys a row whose source ends
   in `:readonly` whatever comes before it, `pva://cam:readonly` included, as
