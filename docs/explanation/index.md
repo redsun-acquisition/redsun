@@ -8,6 +8,7 @@
 - **[Component system](component-system.md)**
 - **[Services](services.md)**
 - **[The session catalog](catalog.md)**
+- **[Derived products](derived-products.md)**
 
 ## SDK
 

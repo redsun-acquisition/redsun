@@ -103,8 +103,10 @@ tree = DescriptorTreeView(
 tree.sig_property_changed.connect(on_property_changed)
 ```
 
-Properties are grouped by their `source` field. A property whose source ends
-in `:readonly` is shown as a greyed label.
+Rows are grouped by their `name-property` key: one header per device name,
+and a header under it for a property naming a group with a dash of its own,
+so `cam-properties-Binning` is `Binning` under `properties` under `cam`. A
+property whose source ends in `:readonly` is shown as a greyed label.
 
 Update a value:
 

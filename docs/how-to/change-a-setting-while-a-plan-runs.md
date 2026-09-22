@@ -54,8 +54,10 @@ class DetectorPresenter(Presenter):
         self._deferrals.request(apply)
 ```
 
-`request` returns at once. While a plan runs, the change waits for the next
-message boundary; while none runs, it is applied before `request` returns.
+`request` returns at once, with a future done once the change ran on the
+engine's loop. While a plan runs, the change waits for the next message
+boundary; while none runs, it is applied straight away. A thread may wait on
+the future; a coroutine must not block on it.
 Several changes asked for during one message are applied together, in the
 order asked. A change that raises is logged under `redsun` and the ones after
 it still run.

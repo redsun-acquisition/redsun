@@ -9,10 +9,9 @@ import bluesky.plan_stubs as bps
 import dependency_injector.providers as dip
 from bluesky.suspenders import SuspendBoolHigh
 
-from redsun.aio import run_coro
-
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from concurrent.futures import Future
 
     from bluesky.utils import MsgGenerator
 
@@ -58,33 +57,41 @@ class Flag:
 class Deferrals:
     """Changes to apply the next time the engine is between two messages.
 
-    A change asked for while a plan runs waits: the engine suspends the plan
-    once the message under way completes, applies every change queued by
-    then on its own loop, and resumes. One asked for while no plan runs is
-    applied at once: before `request` returns when called from a thread
-    without an event loop, as a task on the calling loop otherwise, since
-    waiting there would block the loop the change runs on. A change that
-    raises is logged, and the ones after it still run.
+    Every change runs on the engine's loop. One asked for while a plan runs
+    waits: the engine suspends the plan once the message under way completes,
+    applies every change queued by then, and resumes. One asked for while no
+    plan runs is applied at once. A change that raises is logged, and the
+    ones after it still run.
     """
 
     def __init__(self, engine: RunEngine) -> None:
         self._engine = engine
-        self._queue: deque[Callable[[], Awaitable[None]]] = deque()
+        self._queue: deque[
+            tuple[Callable[[], Awaitable[None]], asyncio.Future[None]]
+        ] = deque()
         self._pending = Flag("deferrals")
-        engine.install_suspender(SuspendBoolHigh(self._pending, pre_plan=self._drain))
+        self._engine.install_suspender(
+            SuspendBoolHigh(self._pending, pre_plan=self._drain)
+        )
 
-    def request(self, apply: Callable[[], Awaitable[None]]) -> None:
-        """Queue *apply*, or run it now when no plan is running."""
+    def request(self, apply: Callable[[], Awaitable[None]]) -> Future[None]:
+        """Ask for *apply* to run, and return a future done once it did.
+
+        Safe from any thread. A caller on a loop must not block on the future.
+        """
+        return asyncio.run_coroutine_threadsafe(
+            self._schedule(apply), self._engine.loop
+        )
+
+    async def _schedule(self, apply: Callable[[], Awaitable[None]]) -> None:
+        """Apply now, or queue and raise the flag; done once applied either way."""
         if self._engine.state != "running":
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                run_coro(self._apply(apply))
-            else:
-                loop.create_task(self._apply(apply))
+            await self._apply(apply)
             return
-        self._queue.append(apply)
+        done = asyncio.get_running_loop().create_future()
+        self._queue.append((apply, done))
         self._pending.set(True)
+        await done
 
     def _drain(self) -> MsgGenerator[None]:
         """Apply every queued change on the engine's loop, then let the plan resume."""
@@ -97,7 +104,9 @@ class Deferrals:
 
     async def _apply_queued(self) -> None:
         while self._queue:
-            await self._apply(self._queue.popleft())
+            apply, done = self._queue.popleft()
+            await self._apply(apply)
+            done.set_result(None)
 
     async def _apply(self, apply: Callable[[], Awaitable[None]]) -> None:
         try:
