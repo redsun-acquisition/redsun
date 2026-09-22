@@ -11,8 +11,6 @@ from contextlib import suppress
 # runtime-evaluated rules and by anything calling get_type_hints on a subclass
 from enum import Enum, unique
 from importlib import import_module
-from importlib.metadata import EntryPoints, entry_points
-from importlib.resources import as_file, files
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -68,6 +66,7 @@ from ._hooks import (
     parse_hook_specs,
     resolve_hooks,
 )
+from ._manifest import PluginManifest, ServiceEntry, discover
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -84,7 +83,6 @@ if TYPE_CHECKING:
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
 
-ManifestItems = dict[str, Any]
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
@@ -494,9 +492,7 @@ class AppContainer:
         # and the class body may add to or replace what it names
         if cls._config_paths:
             with suppress(Exception):
-                from_file = cls._services_of(
-                    _load_yaml(cls._config_paths), entry_points(group="redsun.plugins")
-                )
+                from_file = cls._services_of(_load_yaml(cls._config_paths), discover())
                 for name, declared_kwargs in from_file.items():
                     declaration = _ServiceComponent(name, **declared_kwargs)
                     declaration.create()
@@ -1573,7 +1569,7 @@ class AppContainer:
 
     @classmethod
     def _services_of(
-        cls, config: dict[str, Any], manifests: Any
+        cls, config: dict[str, Any], manifests: dict[str, PluginManifest]
     ) -> dict[str, dict[str, Any]]:
         """Return the keyword arguments of every service a session file declares.
 
@@ -1589,17 +1585,10 @@ class AppContainer:
                 launched = cls._manifest_item(
                     entry["plugin_name"], "services", entry["plugin_id"], manifests
                 )
-                if not isinstance(launched, dict):
+                if not isinstance(launched, ServiceEntry):
                     # _manifest_item already logged why it returned None
-                    if launched is not None:
-                        logger.error(
-                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
-                            entry["plugin_name"],
-                            entry["plugin_id"],
-                            launched,
-                        )
                     continue
-                kwargs = {**launched, **kwargs}
+                kwargs = {**launched.model_dump(exclude_unset=True), **kwargs}
             services[name] = kwargs
         return services
 
@@ -1617,7 +1606,7 @@ class AppContainer:
             config: dict[str, Any] = yaml.safe_load(f)
 
         plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
-        available_manifests = entry_points(group="redsun.plugins")
+        available_manifests = discover()
 
         services = cls._services_of(config, available_manifests)
 
@@ -1643,32 +1632,25 @@ class AppContainer:
     def _manifest_item(
         cls,
         plugin_name: str,
-        group: str,
+        group: PLUGIN_GROUPS | Literal["services"],
         plugin_id: str,
-        available_manifests: EntryPoints,
-    ) -> Any:
+        available_manifests: dict[str, PluginManifest],
+    ) -> str | ServiceEntry | None:
         """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
 
-        ``None``, with the reason logged, if the plugin is not installed or
-        lacks the entry.
+        ``None``, with the reason logged, if the plugin is not installed, its
+        manifest was left out as invalid, or it lacks the entry.
         """
-        plugin = next(
-            (entry for entry in available_manifests if entry.name == plugin_name), None
-        )
-        if plugin is None:
-            logger.error('Plugin "%s" not found in the installed plugins.', plugin_name)
-            return None
-
-        pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-        with as_file(pkg_manifest) as manifest_path, open(manifest_path) as f:
-            manifest: dict[str, ManifestItems] = yaml.safe_load(f)
-
-        if group not in manifest:
+        manifest = available_manifests.get(plugin_name)
+        if manifest is None:
             logger.error(
-                'Plugin "%s" manifest does not contain group "%s".', plugin_name, group
+                'Plugin "%s" is not installed, or its manifest was left out as '
+                "invalid.",
+                plugin_name,
             )
             return None
-        items = manifest[group]
+
+        items: dict[str, str] | dict[str, ServiceEntry] = getattr(manifest, group)
         if plugin_id not in items:
             logger.error(
                 'Plugin "%s" does not contain the id "%s".', plugin_name, plugin_id
@@ -1682,7 +1664,7 @@ class AppContainer:
         *,
         group_cfg: dict[str, Any],
         group: PLUGIN_GROUPS,
-        available_manifests: EntryPoints,
+        available_manifests: dict[str, PluginManifest],
     ) -> list[tuple[str, PluginType]]:
         """Load a group's plugin classes from their manifests."""
         plugins: list[tuple[str, PluginType]] = []
@@ -1692,7 +1674,7 @@ class AppContainer:
             class_path = cls._manifest_item(
                 info["plugin_name"], group, plugin_id, available_manifests
             )
-            if class_path is None:
+            if not isinstance(class_path, str):
                 continue
             try:
                 class_item_module, class_item_type = class_path.split(":")

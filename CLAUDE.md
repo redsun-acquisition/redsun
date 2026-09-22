@@ -184,6 +184,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's autocomplete
   key on the name. So `_hooks.py` holds `parse_hook_specs`, while
   `AppContainer._build_devices` stays underscored.
+  **A class no `__all__` re-exports is private as a whole**, so its members
+  drop the underscore too: the session-file and manifest models in `_config`
+  and `_manifest` name their validators `group_hooks`, not `_group_hooks`. The
+  class-member rule above is for classes a user can reach.
   Two consequences: ruff `D103` treats a non-underscore function as public, so
   helpers in a private module need docstrings; and a reference page targeting a
   *module* needs an explicit `members:` list, mkdocstrings selecting `__all__`
@@ -225,6 +229,18 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   meaning the name and type already carry. A `Parameters`, `Returns` or
   `Raises` section earns its place when it says something the signature cannot:
   units, accepted values, what `None` means, which exception and when.
+- **Attributes are documented where they are declared**, by a docstring on the
+  line after each one, never by a `Parameters` or `Attributes` section in the
+  class docstring. This holds for everything declared as fields: dataclasses,
+  `pydantic` models, `TypedDict`s, `NamedTuple`s.
+
+  ```python
+  class ServiceEntry(BaseModel):
+      """How a manifest launches a service."""
+
+      module: str
+      """Module run as ``python -m <module>``."""
+  ```
 - No section-divider or banner comments, and no comment blocks describing the
   code that follows. A comment earns its place only by explaining why a
   specific statement is the way it is.

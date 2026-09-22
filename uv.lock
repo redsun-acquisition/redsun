@@ -4646,6 +4646,7 @@ dependencies = [
     { name = "ophyd-async" },
     { name = "platformdirs" },
     { name = "psygnal" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "typing-extensions" },
 ]
@@ -4754,6 +4755,7 @@ requires-dist = [
     { name = "ophyd-async", specifier = ">=0.21.2" },
     { name = "platformdirs", specifier = ">=4.11.0" },
     { name = "psygnal", specifier = ">=0.15.1" },
+    { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.11.0" },
     { name = "pyside6", marker = "extra == 'pyside'", specifier = ">=6.11.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },

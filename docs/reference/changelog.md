@@ -243,6 +243,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- **Plugin manifests** (`redsun.plugins` entry point group) are validated when
+  a session looks up its plugins. A manifest with an unknown group or key, a
+  class path not written as `module:ClassName`, or a service entry that is not
+  a mapping with a `module` is left out whole, and one error names its file
+  and every problem. A manifest's optional `name` must equal its entry point's
+  name. A service entry takes `module`, `args`, `ready` and `stop_timeout`.
+
 - **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
   session's root instead of the platform's log directory: the application's
   file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.

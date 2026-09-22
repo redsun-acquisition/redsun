@@ -46,6 +46,7 @@ from redsun.virtual import Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from contextlib import AbstractContextManager
 
     from redsun.virtual import VirtualContainer
 
@@ -481,6 +482,62 @@ class TestFromConfig:
         assert "bad_view" not in container._view_components
         assert "cannot be loaded as a plugin in group 'views'" in caplog.text
         assert "must accept exactly ('name',)" in caplog.text
+
+    def test_an_invalid_manifest_is_left_out_whole_with_every_error(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        (tmp_path / "redsun.yaml").write_text(
+            "devices:\n  motor: mock_pkg.device.MyMotor\n"
+            "services:\n  ioc: mock_pkg.service.stand_in\n"
+            "widgets: {}\n",
+            encoding="utf-8",
+        )
+        plugins = {"mock-pkg": config_path.parent / "mock_pkg", "broken-pkg": tmp_path}
+
+        with install_plugins(plugins):
+            container = AppContainer.from_config(
+                str(config_path / "mock_motor_config.yaml")
+            )
+        container.build()
+
+        assert set(container.devices) == {"Single axis motor", "Double axis motor"}
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert errors[0].startswith(
+            f'Plugin "broken-pkg" manifest {tmp_path / "redsun.yaml"} is invalid'
+        )
+        for location in ("devices.motor:", "services.ioc:", "widgets:"):
+            assert f"\n  {location}" in errors[0]
+
+    def test_a_manifest_naming_another_plugin_is_left_out(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        manifest_dir = tmp_path / "renamed"
+        manifest_dir.mkdir()
+        (manifest_dir / "redsun.yaml").write_text(
+            "name: other-pkg\ndevices:\n  motor: mock_pkg.device:MyMotor\n",
+            encoding="utf-8",
+        )
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nsession: renamed\n"
+            "devices:\n  motor:\n    plugin_name: renamed-pkg\n"
+            "    plugin_id: motor\n",
+            encoding="utf-8",
+        )
+
+        with install_plugins({"renamed-pkg": manifest_dir}):
+            container = AppContainer.from_config(str(config))
+
+        assert "motor" not in container._device_components
+        assert 'names itself "other-pkg" and was skipped' in caplog.text
 
 
 class TestComponentFieldSyntax:
