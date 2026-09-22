@@ -1610,11 +1610,14 @@ class TestWiring:
         self, qapp: QApplication
     ) -> None:
         """A build that returns instead of raising keeps what it made."""
-        before = len(QApplication.topLevelWidgets())
+        # widgets earlier tests left unreferenced may be collected during the
+        # build, so the count before is no baseline; only new widgets count
+        before = QApplication.topLevelWidgets()
 
         app = _PartlyBuiltViewApp().build()
 
-        assert len(QApplication.topLevelWidgets()) == before + 1
+        added = [w for w in QApplication.topLevelWidgets() if w not in before]
+        assert len(added) == 1
         assert [str(link) for link in app.virtual_container.connections] == [
             "mover.sig_motor_moved -> ok.note_position  [thread=main]"
         ]
