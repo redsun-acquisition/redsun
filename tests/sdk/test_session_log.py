@@ -52,7 +52,7 @@ def test_a_run_is_written_to_a_file_in_the_session_folder(
     redsun_logger.warning("stage homed")
     close_handler(handler)
 
-    (run,) = (log_directory / "my_lab_day_1").iterdir()
+    (run,) = (log_directory / "app" / "my_lab_day_1").iterdir()
     assert RUN_NAME.match(run.name)
     assert "stage homed" in run.read_text(encoding="utf-8")
 
@@ -64,7 +64,7 @@ def test_a_session_name_cannot_climb_out_of_the_log_directory(
     handler = open_handler(session)
     close_handler(handler)
 
-    assert (log_directory / folder).is_dir()
+    assert (log_directory / "app" / folder).is_dir()
 
 
 def test_a_rotated_run_lists_its_files_oldest_first(
@@ -94,26 +94,35 @@ def test_opening_a_run_deletes_all_but_the_most_recent_runs(
     log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(log, "LOG_RUNS_KEPT", 3)
-    folder = log_directory / "pruned"
-    folder.mkdir()
+    app_folder = log_directory / "app" / "pruned"
+    services_folder = log_directory / "services" / "pruned"
+    app_folder.mkdir(parents=True)
+    services_folder.mkdir(parents=True)
     for day in range(1, 6):
         run = f"2026-09-0{day}T10-00-00_1"
-        for name in (".log", ".log.1", ".cam.log", ".cam.log.1"):
-            (folder / f"{run}{name}").write_text("run")
+        for name in (".log", ".log.1"):
+            (app_folder / f"{run}{name}").write_text("run")
+        for name in (".cam.log", ".cam.log.1"):
+            (services_folder / f"{run}{name}").write_text("run")
 
     handler = open_handler("pruned")
     close_handler(handler)
 
-    kept = sorted(path.name for path in folder.iterdir())
-    assert kept[:8] == [
+    kept = sorted(path.name for path in app_folder.iterdir())
+    assert kept[:4] == [
         f"2026-09-0{day}T10-00-00_1{name}"
         for day in (4, 5)
-        for name in (".cam.log", ".cam.log.1", ".log", ".log.1")
+        for name in (".log", ".log.1")
     ]
-    assert len(kept) == 9
+    assert len(kept) == 5
+    assert sorted(path.name for path in services_folder.iterdir()) == [
+        f"2026-09-0{day}T10-00-00_1{name}"
+        for day in (4, 5)
+        for name in (".cam.log", ".cam.log.1")
+    ]
 
 
-def test_a_service_writes_a_file_of_its_own_beside_the_application(
+def test_a_service_writes_a_file_of_its_own_under_services(
     log_directory: Path, redsun_logger: logging.Logger
 ) -> None:
     """The application's file takes no service record; a silent service has no file."""
@@ -132,9 +141,12 @@ def test_a_service_writes_a_file_of_its_own_beside_the_application(
 
     files = {
         path.name: path.read_text(encoding="utf-8")
-        for path in (log_directory / "lab").iterdir()
+        for folder in ("app", "services")
+        for path in (log_directory / folder / "lab").iterdir()
     }
     assert set(files) == {f"{application.run}.log", f"{application.run}.cam.log"}
+    assert (log_directory / "app" / "lab" / f"{application.run}.log").is_file()
+    assert (log_directory / "services" / "lab" / f"{application.run}.cam.log").is_file()
     assert "stage homed" in files[f"{application.run}.log"]
     assert "frame dropped" not in files[f"{application.run}.log"]
     assert "frame dropped" in files[f"{application.run}.cam.log"]
@@ -145,7 +157,7 @@ def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -
     app = Empty(session="lab")
     handler = session_log()
     assert handler is not None
-    assert (log_directory / "lab").is_dir()
+    assert (log_directory / "app" / "lab").is_dir()
 
     app.shutdown()
     assert session_log() is None

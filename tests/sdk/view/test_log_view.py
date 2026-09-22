@@ -410,7 +410,9 @@ def test_the_folder_button_opens_the_session_log_folder(
         remove_handler(handler)
         handler.close()
 
-    assert [Path(url.toLocalFile()) for url in opened] == [log_directory / "browsed"]
+    assert [Path(url.toLocalFile()) for url in opened] == [
+        log_directory / "app" / "browsed"
+    ]
 
 
 def test_the_level_selector_follows_the_displayed_level(
