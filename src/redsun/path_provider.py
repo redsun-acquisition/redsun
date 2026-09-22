@@ -18,7 +18,7 @@ import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
 
-from redsun.virtual import slot
+from redsun.virtual import Signal, slot
 
 from .utils._paths import session_folder
 
@@ -132,6 +132,9 @@ class SessionPathProvider(PathProvider):
         Clock giving the date directory, for tests. Defaults to `datetime.now`.
     """
 
+    sig_base_dir_changed = Signal(Path)
+    """Emitted with the new root once `set_base_dir` accepted it."""
+
     __slots__ = (
         "_base_dir",
         "_base_dir_lock",
@@ -203,6 +206,7 @@ class SessionPathProvider(PathProvider):
         self._base_dir = Path(base_dir).expanduser()
         self._filenames.reset({})
         self._scan_existing()
+        self.sig_base_dir_changed.emit(self._base_dir)
 
     def lock_base_dir(self, reason: str) -> None:
         """Refuse every later `set_base_dir`, giving *reason* in the error."""
