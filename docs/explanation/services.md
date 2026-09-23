@@ -10,6 +10,87 @@ PVAccess; `redsun` does not. What `redsun` handles is the session's side:
 starting the service when the session launches it, noticing when it exits, stopping
 it cleanly, and giving its prefix and transport to the devices that use it.
 
+## Devices model the setup, services drive the hardware
+
+A session splits a setup into two parts that know as little about each other as
+possible.
+
+The devices are the model. Together they describe what the setup contains: a
+stage with an X and a Y position, a camera with an exposure time and a region
+of interest. Each is a set of signals the session reads and sets. A device says
+what can be controlled, not how the hardware is reached.
+
+The services are the implementation. A service owns the hardware: it opens the
+serial port or the camera, speaks the vendor's protocol or runs the vendor's
+library, and offers the result as process variables. It says how, and nothing
+about the setup around it.
+
+The two meet at the prefix. A device declared with `service="stage_ioc"`
+reaches its signals under that service's prefix, and that is all it knows
+about it.
+
+```mermaid
+flowchart LR
+    subgraph model [the setup, as devices]
+        ST[stage: x, y]
+        CA[camera: exposure, roi]
+    end
+    subgraph impl [the hardware, as services]
+        SS[stage service]
+        CS[camera service]
+    end
+    ST -- "prefix ST:" --> SS
+    CA -- "prefix CAM:" --> CS
+    SS --> H1[(motor controller)]
+    CS --> H2[(camera)]
+```
+
+Because the model does not depend on the implementation, one can change while
+the other stays put:
+
+- The same devices, presenters and views run against the real services in
+  the lab and against simulated ones on a laptop. Only the services change:
+
+    ```yaml
+    # common.yaml: what the setup is
+    devices:
+      stage:
+        plugin_name: mylab
+        plugin_id: stage
+        service: stage_ioc
+    ```
+
+    ```yaml
+    # lab.yaml: how it is reached in the lab
+    services:
+      stage_ioc:
+        plugin_name: mylab
+        plugin_id: stage-ioc
+        prefix: "ST:"
+    ```
+
+    ```yaml
+    # simulation.yaml: how it is reached without hardware
+    services:
+      stage_ioc:
+        plugin_name: mylab
+        plugin_id: stage-sim
+        prefix: "ST:"
+    ```
+
+    A session lists `common.yaml` and one of the other two in its `config`.
+
+- A vendor library that crashes takes its service process down, not the
+  session. The session logs the exit, and the devices of that service time out
+  until it is back.
+- A service can lend its hardware to another program while every device stays
+  connected, and take it back later; see [Standby](components.md#standby).
+- An attached service runs wherever the hardware is plugged in, even on
+  another machine, and the devices only need its prefix.
+
+A device that needs no hardware at all, such as the soft stage in the
+[tutorial](../tutorials/first-session.md), needs no service either.
+
 ## Two connection levels
 
 ```mermaid

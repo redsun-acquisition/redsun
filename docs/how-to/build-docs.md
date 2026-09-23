@@ -36,6 +36,24 @@ uv run --group docs zensical serve
 
 The server listens on `http://localhost:8000` and rebuilds on every change.
 
+## Pictures of example windows
+
+A tutorial's code lives in a script next to its page, such as
+`docs/tutorials/first_session.py`, and the page pulls each step from it. The
+build runs the script and saves a picture of the window it opens:
+
+```bash
+uv run --group docs python scripts/screenshots.py
+```
+
+`uv run tox -e docs` runs this first. When serving the site with `zensical
+serve`, run it once yourself, or the tutorial shows a missing image. The
+pictures are generated, so they are not in git. The window opens on screen
+for a moment, and needs a display: CI starts a virtual one.
+
+To add a picture, add the script and the image's path to `SCREENSHOTS` in
+`scripts/screenshots.py`.
+
 ## Troubleshooting
 
 ### `zensical` is not found

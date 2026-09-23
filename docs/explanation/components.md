@@ -87,6 +87,11 @@ subclass of `ophyd_async.core.Device`. `redsun` adds nothing to the device
 layer, so see the `ophyd-async` documentation for signals, detectors and
 the base classes.
 
+The devices of a session model the setup: what it contains and what can be
+controlled. Reaching the hardware is a service's job, and
+[Devices model the setup, services drive the hardware](services.md#devices-model-the-setup-services-drive-the-hardware)
+explains why the two are kept apart.
+
 A session makes a device as `cls(name=<name>, **kwargs)`, so every
 `ophyd-async` device works, including one whose first parameter is `prefix`.
 A device taking `name` only by position (after a `/`) cannot be made, and is

@@ -14,33 +14,49 @@ You will write the three kinds of
 
 ## Before you start
 
-Install `redsun` with a Qt binding:
+Make an empty file called `first_session.py`. If you run scripts with
+[`uv`](https://docs.astral.sh/uv/), start it with these lines, which tell `uv`
+what the script needs so it installs them itself
+([PEP 723](https://peps.python.org/pep-0723/)):
+
+```python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["redsun[pyqt]>=0.14"]
+# ///
+```
+
+Without `uv`, install `redsun` with a Qt binding instead:
 
 ```bash
 pip install "redsun[pyqt]"
 ```
 
-Make an empty file called `first_session.py`. Everything below goes in it.
-
-## 1. The device
-
-A [device](../reference/glossary.md#device) talks to hardware. You have no
-hardware, so this one keeps its position in memory, using a "soft" signal from
-`ophyd-async`:
+Everything below goes in the file, after these imports:
 
 ```python
 from ophyd_async.core import StandardReadable, soft_signal_rw
+from psygnal import Signal
+from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
-
-class MyStage(StandardReadable):
-    def __init__(self, name: str = "", *, units: str = "mm") -> None:
-        with self.add_children_as_readables():
-            self.position = soft_signal_rw(float, units=units)
-        super().__init__(name=name)
+from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Placement, slot
+from redsun.qt import Dock, QtSession
 ```
 
-A real stage would replace `soft_signal_rw` with signals that reach the
-hardware. Nothing else in this tutorial would change.
+## 1. The device
+
+A [device](../reference/glossary.md#device) describes one part of your setup:
+here, a stage with a position. In a lab, a
+[service](../reference/glossary.md#service) would reach the real hardware for
+it. You have no hardware, so this one keeps its position in memory, using a
+"soft" signal from `ophyd-async`:
+
+```python
+--8<-- "docs/tutorials/first_session.py:device"
+```
+
+A real stage would replace `soft_signal_rw` with signals a service provides.
+Nothing else in this tutorial would change.
 
 ## 2. The presenter
 
@@ -48,24 +64,7 @@ A [presenter](../reference/glossary.md#presenter) holds the behaviour. This
 one moves the stage by one step, and announces where it went:
 
 ```python
-from psygnal import Signal
-
-from redsun import DeviceMapping, slot
-
-
-class StagePresenter:
-    sig_moved = Signal(float)
-
-    def __init__(self, name: str, *, devices: DeviceMapping, step: float = 1.0) -> None:
-        self.name = name
-        self.stage = devices["stage"]
-        self.step = step
-
-    @slot
-    async def nudge(self) -> None:
-        position = await self.stage.position.get_value()
-        await self.stage.position.set(position + self.step)
-        self.sig_moved.emit(position + self.step)
+--8<-- "docs/tutorials/first_session.py:presenter"
 ```
 
 Look at the constructor. You never call it yourself: the session does. It
@@ -86,29 +85,7 @@ A [view](../reference/glossary.md#view) is what the user sees. This one is a
 button and a label:
 
 ```python
-from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
-
-from redsun import Placement
-from redsun.qt import Dock
-
-
-class StageView(QWidget):
-    placement: Placement = Dock("left")
-    sig_nudge = Signal()
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-        button = QPushButton("Nudge")
-        button.clicked.connect(self.sig_nudge.emit)
-        self.label = QLabel("position: 0.0")
-        layout = QVBoxLayout(self)
-        layout.addWidget(button)
-        layout.addWidget(self.label)
-
-    @slot
-    def show_position(self, position: float) -> None:
-        self.label.setText(f"position: {position}")
+--8<-- "docs/tutorials/first_session.py:view"
 ```
 
 `placement` says where the view goes: docked on the left of the window. The
@@ -122,22 +99,7 @@ knows nothing about the view. Each only has signals and slots.
 Now put the three together:
 
 ```python
-from redsun import AsDevice, AsPresenter, AsView
-from redsun.qt import QtSession
-
-
-class FirstSession(QtSession):
-    stage: AsDevice[MyStage]
-    stage_ctrl: AsPresenter[StagePresenter]
-    stage_view: AsView[StageView]
-
-    def wire(self) -> None:
-        self.connect(self.stage_view.sig_nudge, self.stage_ctrl.nudge)
-        self.connect(self.stage_ctrl.sig_moved, self.stage_view.show_position)
-
-
-if __name__ == "__main__":
-    FirstSession().run()
+--8<-- "docs/tutorials/first_session.py:session"
 ```
 
 Each line in the class body is a component. The name on the left, `stage`, is
@@ -150,12 +112,29 @@ stage's new position reaches the label.
 
 ## 5. Run it
 
-```bash
-python first_session.py
-```
+=== "uv"
 
-A window opens with the button on the left. Press it: the label counts up by
-one each time.
+    ```bash
+    uv run first_session.py
+    ```
+
+=== "pip"
+
+    ```bash
+    python first_session.py
+    ```
+
+A window opens with the view docked on the left:
+
+![The first session's window, with a Nudge button and a position label](images/first-session.png)
+
+Press **Nudge**: the label counts up by one each time.
+
+??? example "The whole script"
+
+    ```python
+    --8<-- "docs/tutorials/first_session.py"
+    ```
 
 ## 6. Change a setting without touching the code
 

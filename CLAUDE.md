@@ -43,7 +43,8 @@ redsun/
 |   `-- reference/             api/ pages, glossary, changelog (generated)
 |-- benchmarks/                performance scripts, not tests, sdist only
 |-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
-|                              release_notes.py (changelog sections)
+|                              release_notes.py (changelog sections),
+|                              screenshots.py (tutorial window pictures, docs build)
 |-- .github/workflows/         CI, changelog label check, prepare-release
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox

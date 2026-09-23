@@ -20,12 +20,16 @@ hide:
 
 It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
 
+<div style="display: flex; justify-content: center" markdown>
+
 | What | Where |
 | --- | --- |
 | Source | <https://github.com/redsun-acquisition/redsun> |
 | PyPI | `pip install redsun` |
 | Documentation | <https://redsun-acquisition.github.io/redsun> |
 | Releases | <https://github.com/redsun-acquisition/redsun/releases> |
+
+</div>
 
 ## How the documentation is structured
 

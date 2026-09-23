@@ -53,8 +53,10 @@ A line in a session class saying which component to make, such as
 
 ### Device
 
-A piece of hardware, or a stand-in for one, written as an `ophyd-async`
-device. Devices are the first layer to be built.
+One part of the setup as the session sees it: the values it can read and
+set, written as an `ophyd-async` device. Together the devices model the
+setup; the hardware itself is reached through a service. Devices are the
+first layer to be built.
 
 ### DVP
 
@@ -133,8 +135,9 @@ registered.
 
 ### Service
 
-A separate process, or a server already running elsewhere, that some devices
-talk to. A session starts the ones it launches and stops them at shutdown.
+A separate process, or a server already running elsewhere, that owns a piece
+of hardware and offers it to devices under a prefix. A session starts the
+ones it launches and stops them at shutdown.
 
 ### Session
 
