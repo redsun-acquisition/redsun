@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,14 +15,13 @@ from typing import (
     overload,
 )
 
-import yaml
 from ophyd_async.core import Device
 
 from redsun.containers.components import expects_positionals
 from redsun.presenter import PPresenter
 from redsun.view import PView
 
-from ._config import TRANSPORT_KEY
+from ._config import TRANSPORT_KEY, load_yaml
 from ._manifest import ServiceEntry, discover
 
 if TYPE_CHECKING:
@@ -114,8 +114,7 @@ def load_configuration(
     service naming a plugin takes its module and readiness line from the
     plugin's manifest, overridden by the session file.
     """
-    with open(config_path, "r") as f:
-        config: dict[str, Any] = yaml.safe_load(f)
+    config = load_yaml([Path(config_path)])
 
     plugin_types: PluginTypes = {"devices": {}, "presenters": {}, "views": {}}
     available_manifests = discover()

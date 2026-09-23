@@ -55,9 +55,10 @@ from ._config import (
     StorageConfig,
     checked_transport,
     declared_transport,
-    load_yaml,
+    merge_files,
     refuse_unresolved_fields,
     transport_of,
+    validate_session,
 )
 from ._hooks import (
     HookError,
@@ -196,6 +197,7 @@ class AppContainer:
     """
 
     _config_paths: ClassVar[tuple[Path, ...]] = ()
+    _config_data: ClassVar[dict[str, Any]] = {}
     """The configuration files this container reads, in layering order.
 
     A subclass's ``config`` is appended to its bases' files, so a file shared
@@ -267,6 +269,9 @@ class AppContainer:
         for path in (*inherited, *(Path(entry) for entry in declared)):
             seen.setdefault(path, None)
         cls._config_paths = tuple(seen)
+        # merged here, validated where a whole session is needed: a class
+        # may name a fragment another base completes
+        cls._config_data = merge_files(cls._config_paths) if cls._config_paths else {}
 
         services: dict[str, _ServiceComponent] = {}
         devices: dict[str, _DeviceComponent] = {}
@@ -286,7 +291,7 @@ class AppContainer:
         # and the class body may add to or replace what it names
         if cls._config_paths:
             with suppress(Exception):
-                from_file = services_of(load_yaml(cls._config_paths), discover())
+                from_file = services_of(cls._config_data, discover())
                 for name, declared_kwargs in from_file.items():
                     declaration = _ServiceComponent(name, **declared_kwargs)
                     declaration.create()
@@ -343,9 +348,9 @@ class AppContainer:
         cls._component_fields = component_fields
 
         if component_fields:
-            config_data: dict[str, Any] = {}
             if cls._config_paths:
-                config_data = load_yaml(cls._config_paths)
+                validate_session(cls._config_paths, cls._config_data)
+            config_data = cls._config_data
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -466,22 +471,13 @@ class AppContainer:
         self._failed_services: dict[str, BaseException] = {}
         self._services_started: bool = False
 
-        # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
-        # the metaclass loads the YAML only to resolve component kwargs and never
-        # populates _config with top-level sections such as 'storage', 'session',
-        # or 'schema_version'.  We read those here so that build() sees the same
-        # state as the from_config() path, which sets them explicitly.
-        config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
-        if config_paths:
-            try:
-                yaml_data = load_yaml(config_paths)
-            except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
-                named = ", ".join(str(path) for path in config_paths)
-                logger.warning(f"Could not read config file(s) {named}: {e}")
-                yaml_data = {}
-            for key, value in yaml_data.items():
-                if key not in COMPONENT_SECTIONS:
-                    self._config[key] = value  # type: ignore[literal-required]
+        if type(self)._config_paths:
+            validate_session(type(self)._config_paths, type(self)._config_data)
+        # the class body's components already took their sections; the rest
+        # of the file is the session's, as from_config gives it
+        for key, value in type(self)._config_data.items():
+            if key not in COMPONENT_SECTIONS:
+                self._config[key] = value  # type: ignore[literal-required]
 
         self._session_log: SessionFileHandler | None = None
         self._service_logs: dict[str, SessionFileHandler] = {}

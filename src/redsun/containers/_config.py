@@ -14,6 +14,7 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -28,7 +29,20 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("redsun")
 
-__all__ = ["AppConfig", "Frontend"]
+__all__ = ["AppConfig", "ConfigurationError", "Frontend"]
+
+
+class ConfigurationError(ValueError):
+    """A session file, once its layers are merged, says what a session cannot."""
+
+    def __init__(self, paths: Sequence[Path], error: ValidationError) -> None:
+        named = ", ".join(str(path) for path in paths)
+        lines = [
+            f"  {'.'.join(str(part) for part in problem['loc']) or '(top level)'}: "
+            f"{problem['msg']}"
+            for problem in error.errors()
+        ]
+        super().__init__(f"Configuration ({named}) is invalid:\n" + "\n".join(lines))
 
 
 @unique
@@ -246,15 +260,29 @@ def checked_transport(name: str, where: str) -> str:
 def load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
     """Read *paths* in order, merge each over the previous, and validate the result.
 
-    Required keys are checked on the merged mapping, not per file, so a layered
-    file may hold a fragment.
+    The merged mapping is validated as a whole, not per file, so a layered file
+    may hold a fragment. It is returned as read: entries a YAML anchor shares
+    stay one object.
 
     Raises
     ------
     ValueError
         If two files disagree about the session's schema version or frontend.
-    KeyError
-        If the merged mapping is missing a key `AppConfig` requires.
+    ConfigurationError
+        Listing every problem of the merged mapping.
+    """
+    data = merge_files(paths)
+    validate_session(paths, data)
+    return data
+
+
+def merge_files(paths: Sequence[Path]) -> dict[str, Any]:
+    """Read *paths* in order and merge each over the previous, unvalidated.
+
+    Raises
+    ------
+    ValueError
+        If two files disagree about the session's schema version or frontend.
     """
     if len(paths) > 1:
         logger.debug(f"Reading configuration from {len(paths)} files, in order:")
@@ -265,14 +293,21 @@ def load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
         overlay = read_yaml(path)
         refuse_identity_conflict(data, overlay, path)
         data = merge_config(data, overlay)
-    missing = AppConfig.__required_keys__ - data.keys()
-    if missing:
-        named = ", ".join(str(path) for path in paths)
-        raise KeyError(
-            f"Configuration ({named}) is missing required keys: "
-            f"{', '.join(sorted(missing))}"
-        )
     return data
+
+
+def validate_session(paths: Sequence[Path], data: Mapping[str, Any]) -> None:
+    """Validate *data*, the merged content of *paths*, as a session file.
+
+    Raises
+    ------
+    ConfigurationError
+        Listing every problem, and naming *paths*.
+    """
+    try:
+        SessionFile.model_validate(data)
+    except ValidationError as e:
+        raise ConfigurationError(paths, e) from None
 
 
 def declared_transport(paths: Sequence[Path], default: str) -> str:
@@ -466,6 +501,15 @@ class SessionFile(BaseModel, extra="forbid"):
         elif isinstance(hooks, Mapping):
             data["hooks"] = group_hook_entries(hooks)
         return data
+
+    @field_validator("frontend", mode="before")
+    @classmethod
+    def known_frontend(cls, value: Any) -> Any:
+        """Refuse a frontend no container runs on."""
+        known = [frontend.value for frontend in Frontend]
+        if value not in known:
+            raise ValueError(f"Unknown frontend {value!r}. Supported: {known}")
+        return value
 
     @field_validator("schema_version")
     @classmethod

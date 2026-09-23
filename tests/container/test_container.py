@@ -29,6 +29,7 @@ from redsun.aio import run_coro
 from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
+    ConfigurationError,
     declare_device,
     declare_presenter,
     declare_view,
@@ -706,10 +707,25 @@ class TestConfigField:
         self, config_path: Path
     ) -> None:
         # the overlay alone carries neither schema_version nor frontend
-        with pytest.raises(KeyError, match="missing required keys"):
+        with pytest.raises(ConfigurationError, match="schema_version: Field required"):
 
             class Alone(AppContainer, config=config_path / "mock_overlay_config.yaml"):
                 ctrl = declare_presenter(MockController, from_config="ctrl")
+
+    def test_a_bad_file_fails_the_container_rather_than_defaulting(
+        self, tmp_path: Path
+    ) -> None:
+        bad = tmp_path / "session.yaml"
+        bad.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nstorage:\n  base_dirs: x\n",
+            encoding="utf-8",
+        )
+
+        class TestApp(AppContainer, config=bad):
+            pass
+
+        with pytest.raises(ConfigurationError, match="storage.base_dirs"):
+            TestApp()
 
     def test_layered_files_must_agree_on_the_frontend(self, config_path: Path) -> None:
         with pytest.raises(ValueError, match="contradicts"):
@@ -1301,9 +1317,9 @@ class TestStorageSection:
     @pytest.mark.parametrize(
         ("section", "named"),
         [
-            ({"base_dirs": "x"}, "'base_dirs'"),
-            ({"catalog": {"events": False}}, "'events'"),
-            ({"catalog": {"directory": "x"}}, "'directory'"),
+            ({"base_dirs": "x"}, "storage.base_dirs"),
+            ({"catalog": {"events": False}}, "storage.catalog.events"),
+            ({"catalog": {"directory": "x"}}, "storage.catalog.directory"),
         ],
         ids=["storage", "catalog", "catalog-directory"],
     )
@@ -1320,8 +1336,8 @@ class TestStorageSection:
         cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
-        with pytest.raises(ValueError, match=named):
-            AppContainer.from_config(str(cfg_file)).build()
+        with pytest.raises(ConfigurationError, match=named):
+            AppContainer.from_config(str(cfg_file))
 
     def test_readable_must_be_a_list(self, tmp_path: Path) -> None:
         """A single path must not be read one character at a time."""
@@ -1334,8 +1350,8 @@ class TestStorageSection:
         cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
-        with pytest.raises(TypeError, match="must be a list"):
-            AppContainer.from_config(str(cfg_file)).build()
+        with pytest.raises(ConfigurationError, match="storage.catalog.readable"):
+            AppContainer.from_config(str(cfg_file))
 
     @pytest.mark.parametrize("absent", ["tiled", "ome_tiled", "bluesky_tiled_plugins"])
     def test_a_catalog_needs_every_package_of_the_extra(
@@ -1764,7 +1780,6 @@ class TestYamlWiring:
                 "exposes no slot",
             ),
             ({"from": "mover", "to": "ctrl.on_motor_moved"}, "is not a port path"),
-            ({"from": "mover.sig_motor_moved"}, "keys 'from' and 'to'"),
         ],
     )
     def test_a_bad_rule_fails_the_build(
@@ -1783,6 +1798,17 @@ class TestYamlWiring:
 
         with pytest.raises(WiringError, match=expected):
             AppContainer.from_config(str(broken)).build()
+
+    def test_a_rule_without_a_slot_is_refused_at_load(
+        self, mock_entry_points: None, config_path: Path, tmp_path: Path
+    ) -> None:
+        source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
+        source["wiring"] = [{"from": "mover.sig_motor_moved"}]
+        broken = tmp_path / "broken_wiring.yaml"
+        broken.write_text(yaml.safe_dump(source))
+
+        with pytest.raises(ConfigurationError, match="wiring.0.to: Field required"):
+            AppContainer.from_config(str(broken))
 
     def test_a_rule_naming_a_component_that_failed_is_skipped(
         self,
