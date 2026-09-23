@@ -69,7 +69,7 @@ from .._config import (
     storage_of,
     validate_session,
 )
-from .._hooks import HookError, parse_hook_specs, resolve_hooks
+from .._hooks import HookError, distinct, parse_hook_specs, resolve_hooks
 from .._settings import Settings
 from ..services._transports import (
     CHANNEL_ACCESS,
@@ -480,7 +480,9 @@ class Session(BuildableSession):
         """The hook provider this session installs at each point, built once.
 
         A subclass firing a point calls this rather than resolving again, so
-        that every point of one build acts on one set of providers.
+        that every point of one build acts on one set of providers. A provider
+        with a ``shutdown`` method is shut down with the session, once however
+        many points it serves, the last built first.
 
         Raises
         ------
@@ -703,6 +705,9 @@ class Session(BuildableSession):
             max_digits=self._storage.max_digits,
         )
         self._open_logs(self._path_provider)
+        # registered after the logs, so a provider's teardown is still logged
+        for hook in distinct(self.hooks.values()):
+            self._register_teardown(hook)
 
     def _open_logs(self, path_provider: SessionPathProvider) -> None:
         """Write this run's records to the session's log files, under its root.
@@ -869,6 +874,7 @@ class Session(BuildableSession):
         self._is_built = False
         self.disconnect_all()
         self._releases.close()
+        self._hooks = None
         self._callbacks.clear()
         self._not_set_up.clear()
         self._built_components.clear()

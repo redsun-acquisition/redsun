@@ -83,6 +83,24 @@ class NotAHook:
     """Declares none of the methods any point calls."""
 
 
+CLOSED: list[str] = []
+"""The hook providers shut down, in order."""
+
+
+class ClosingPair(Both):
+    """Serves two points, and records its shutdown."""
+
+    def shutdown(self) -> None:
+        CLOSED.append("pair")
+
+
+class ClosingSplash(Splash):
+    """Serves ``during_build``, and records its shutdown."""
+
+    def shutdown(self) -> None:
+        CLOSED.append("splash")
+
+
 class Counter:
     """The presenter a build needs for the presenters step to happen."""
 
@@ -118,6 +136,7 @@ def _reset() -> Iterator[None]:
     Splash.exited = 0
     Splash.steps = []
     Founder.seen = []
+    CLOSED.clear()
     yield
 
 
@@ -175,6 +194,23 @@ def test_one_annotation_serves_several_points(
     hooks = app.hooks
     assert hooks[QtHook.CONFIGURE_APPLICATION] is hooks[QtHook.CONFIGURE_MAIN_VIEW]
     assert app.main_window.windowTitle() == "branded"
+
+
+def test_shutdown_reaches_each_provider_once_the_last_built_first(
+    qapp: QApplication,
+    build: Callable[..., QtSession],
+) -> None:
+    class App(QtSession):
+        pair: Annotated[
+            AsHook[ClosingPair],
+            Serves(QtHook.CONFIGURE_APPLICATION, QtHook.CONFIGURE_MAIN_VIEW),
+        ]
+        during_build: AsHook[ClosingSplash]
+
+    app = build(App)
+    app.shutdown()
+
+    assert CLOSED == ["splash", "pair"]
 
 
 def test_two_declarations_may_not_claim_one_point() -> None:
