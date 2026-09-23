@@ -275,16 +275,28 @@ def merge_files(paths: Sequence[Path]) -> dict[str, Any]:
     Raises
     ------
     ValueError
-        If two files disagree about the session's schema version or frontend.
+        If two files disagree about the session's schema version, frontend or
+        transport.
     """
     if len(paths) > 1:
         logger.debug(f"Reading configuration from {len(paths)} files, in order:")
         for position, path in enumerate(paths, 1):
             logger.debug(f"  {position}. {path}")
     data: dict[str, Any] = {}
+    transport: tuple[str, Path] | None = None
     for path in paths:
         overlay = read_yaml(path)
         refuse_identity_conflict(data, overlay, path)
+        named = transport_of(overlay)
+        if named is not None and transport is not None and named != transport[0]:
+            raise ValueError(
+                f"Configuration file {path} sets {TRANSPORT_KEY}={named!r} under "
+                f"services, which contradicts {transport[0]!r} from {transport[1]}. "
+                "Every service of a session speaks the same transport, so every "
+                "file must agree on it."
+            )
+        if named is not None and transport is None:
+            transport = (named, path)
         data = merge_config(data, overlay)
     return data
 
@@ -301,34 +313,6 @@ def validate_session(paths: Sequence[Path], data: Mapping[str, Any]) -> None:
         SessionFile.model_validate(data)
     except ValidationError as e:
         raise ConfigurationError(paths, problems_of(e, data)) from None
-
-
-def declared_transport(paths: Sequence[Path], default: str) -> str:
-    """Return the transport *paths* name, or *default* when none does.
-
-    Raises
-    ------
-    ValueError
-        If two of its files name a different one. Every service of a session
-        speaks the same transport, so a file layered over another cannot
-        change what a file under it named.
-    """
-    named: dict[str, Path] = {}
-    for path in paths:
-        # a file that cannot be read is reported where the rest of it is read
-        with suppress(Exception):
-            transport = transport_of(read_yaml(path))
-            if transport is not None:
-                named.setdefault(transport, path)
-    if len(named) > 1:
-        (first, under), (second, over) = list(named.items())[:2]
-        raise ValueError(
-            f"Configuration file {over} sets {TRANSPORT_KEY}={second!r} under "
-            f"services, which contradicts {first!r} from {under}. Every service "
-            f"of a session speaks the same transport, so every file must agree "
-            f"on it."
-        )
-    return next(iter(named), default)
 
 
 def refuse_unresolved_fields(
@@ -533,15 +517,7 @@ def session_file_schema() -> dict[str, Any]:
         "type": "object",
         "additionalProperties": {"$ref": "#/$defs/HookEntry"},
     }
-    for section in (
-        "metadata",
-        "services",
-        "devices",
-        "presenters",
-        "views",
-        "hooks",
-        "wiring",
-    ):
+    for section in (*EMPTY_AS_MAPPING, "hooks", "wiring"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
     return schema
 

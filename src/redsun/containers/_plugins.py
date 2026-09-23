@@ -21,7 +21,7 @@ from redsun.containers.components import expects_positionals
 from redsun.presenter import PPresenter
 from redsun.view import PView
 
-from ._config import TRANSPORT_KEY, ConfigurationError, load_yaml
+from ._config import PLUGIN_KEYS, TRANSPORT_KEY, ConfigurationError, load_yaml
 from ._manifest import ServiceEntry, discover
 
 if TYPE_CHECKING:
@@ -31,8 +31,6 @@ logger = logging.getLogger("redsun")
 
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
-
-PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
 
 PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
     "devices": "must subclass ophyd_async.core.Device",
@@ -168,7 +166,7 @@ def services_of(
     section: dict[str, Any] = dict(config.get("services") or {})
     section.pop(TRANSPORT_KEY, None)
     for name, entry in section.items():
-        kwargs = {k: v for k, v in entry.items() if k not in PLUGIN_META_KEYS}
+        kwargs = {k: v for k, v in entry.items() if k not in PLUGIN_KEYS}
         if "plugin_name" in entry:
             launched = manifest_item(
                 entry["plugin_name"], "services", entry["plugin_id"], manifests
@@ -228,12 +226,14 @@ def load_plugins(
         try:
             class_item_module, class_item_type = class_path.split(":")
             imported_class = getattr(import_module(class_item_module), class_item_type)
-        except (KeyError, ValueError):
+        except (ImportError, AttributeError) as e:
             logger.error(
-                'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
+                'Plugin id "%s" of "%s" names "%s", which cannot be imported: %s. '
+                "Skipping.",
                 plugin_id,
                 name,
                 class_path,
+                e,
             )
             continue
 

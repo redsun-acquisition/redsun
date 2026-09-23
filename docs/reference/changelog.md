@@ -367,7 +367,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 ### Fixed
 
 - **`AppContainer.from_config`** (`redsun.containers.container`) builds a
-  file whose `devices`, `presenters` or `views` section is written empty.
+  file whose `devices`, `presenters` or `views` section is written empty, and
+  logs and skips a component whose class cannot be imported.
 
 - **`SessionPathProvider.reset_plan`** (`redsun.path_provider`) rescans the
   counters from disk, so a filename a plan requested and never wrote is

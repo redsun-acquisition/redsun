@@ -165,9 +165,7 @@ def refuse_ambiguous(specs: Iterable[HookGroup]) -> None:
     seen: list[HookGroup] = []
     for spec in specs:
         for other in seen:
-            if spec.provider == other.provider and dict(spec.kwargs) == dict(
-                other.kwargs
-            ):
+            if spec.provider == other.provider and spec.kwargs == other.kwargs:
                 first = ", ".join(repr(moment) for moment in other.moments)
                 second = ", ".join(repr(moment) for moment in spec.moments)
                 raise HookError(

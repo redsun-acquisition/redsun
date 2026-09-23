@@ -554,6 +554,32 @@ class TestFromConfig:
         assert len(errors) == 1
         assert errors[0].startswith(f'Plugin "broken-pkg" manifest redsun.yaml {says}')
 
+    def test_a_class_that_does_not_import_is_skipped_with_an_error(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        manifest_dir = tmp_path / "missing"
+        manifest_dir.mkdir()
+        (manifest_dir / "redsun.yaml").write_text(
+            "devices:\n  motor: nowhere.at_all:Motor\n", encoding="utf-8"
+        )
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\n"
+            "devices:\n  motor:\n    plugin_name: missing-pkg\n"
+            "    plugin_id: motor\n",
+            encoding="utf-8",
+        )
+
+        with install_plugins({"missing-pkg": manifest_dir}):
+            container = AppContainer.from_config(str(config))
+        container.build()
+
+        assert container.devices == {}
+        assert 'names "nowhere.at_all:Motor", which cannot be imported' in caplog.text
+
     def test_a_section_written_empty_builds_from_a_file(self, tmp_path: Path) -> None:
         config = tmp_path / "session.yaml"
         config.write_text(

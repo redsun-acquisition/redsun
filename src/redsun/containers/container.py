@@ -48,12 +48,12 @@ from redsun.virtual import (
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._config import (
     COMPONENT_SECTIONS,
+    PLUGIN_KEYS,
     TRANSPORT_KEY,
     AppConfig,
     CatalogConfig,
     Frontend,
     checked_transport,
-    declared_transport,
     merge_files,
     refuse_unresolved_fields,
     storage_of,
@@ -68,7 +68,7 @@ from ._hooks import (
     resolve_hooks,
 )
 from ._manifest import discover
-from ._plugins import PLUGIN_GROUPS, PLUGIN_META_KEYS, load_configuration, services_of
+from ._plugins import PLUGIN_GROUPS, load_configuration, services_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -204,7 +204,10 @@ class AppContainer:
     """
 
     _config_data: ClassVar[dict[str, Any]] = {}
-    """The merged, unvalidated content of `_config_paths`."""
+    """The merged content of `_config_paths`."""
+
+    _config_validated: ClassVar[bool] = False
+    """Whether `_config_data` passed validation, set on each class it passed for."""
 
     BUILD_STEPS: ClassVar[tuple[str, ...]] = (
         "services",
@@ -332,7 +335,7 @@ class AppContainer:
                 views[attr_value.name] = attr_value
 
         cls.transport = checked_transport(
-            declared_transport(cls._config_paths, cls.transport),
+            transport_of(cls._config_data) or cls.transport,
             f"{cls.__name__}'s services",
         )
 
@@ -352,6 +355,7 @@ class AppContainer:
         if component_fields:
             if cls._config_paths:
                 validate_session(cls._config_paths, cls._config_data)
+                cls._config_validated = True
             config_data = cls._config_data
 
             _section_key: dict[type, str] = {
@@ -473,8 +477,11 @@ class AppContainer:
         self._failed_services: dict[str, BaseException] = {}
         self._services_started: bool = False
 
-        if type(self)._config_paths:
+        # read from the class's own namespace: a base validated its own files,
+        # not the ones this class adds over them
+        if type(self)._config_paths and not vars(type(self)).get("_config_validated"):
             validate_session(type(self)._config_paths, type(self)._config_data)
+            type(self)._config_validated = True
         # the class body's components already took their sections; the rest
         # of the file is the session's, as from_config gives it
         for key, value in type(self)._config_data.items():
@@ -1252,11 +1259,11 @@ class AppContainer:
                 cfg_kwargs = {
                     k: v
                     for k, v in section.get(name, {}).items()
-                    if k not in PLUGIN_META_KEYS
+                    if k not in PLUGIN_KEYS
                 }
                 namespace[name] = component(plugin_class, name, **cfg_kwargs)
 
-        frontend = config.get("frontend", "pyqt")
+        frontend = config["frontend"]
         base_class = _resolve_frontend_container(frontend)
 
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
