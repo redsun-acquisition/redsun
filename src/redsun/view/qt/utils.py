@@ -28,8 +28,8 @@ from ._widget_factory import create_param_widget
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from redsun.experimental.registry import CallbackType
     from redsun.presenter.plan_spec import PlanSpec
+    from redsun.registry import CallbackType
 
 __all__ = [
     "ActionButton",

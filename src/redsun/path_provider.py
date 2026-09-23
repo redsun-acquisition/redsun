@@ -17,7 +17,7 @@ from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
 from psygnal import Signal
 
-from redsun.experimental.ports import slot
+from redsun.ports import slot
 
 from .utils._paths import session_folder
 

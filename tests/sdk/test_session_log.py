@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 import yaml
 
-from redsun import log
-from redsun.experimental import Session
+from redsun import Session, log
 from redsun.log import SessionFileHandler, add_handler, remove_handler, session_log
 
 if TYPE_CHECKING:

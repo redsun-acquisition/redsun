@@ -4644,6 +4644,7 @@ source = { editable = "." }
 dependencies = [
     { name = "bluesky" },
     { name = "culsans" },
+    { name = "in-n-out" },
     { name = "ophyd-async" },
     { name = "platformdirs" },
     { name = "psygnal" },
@@ -4653,9 +4654,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-experimental = [
-    { name = "in-n-out" },
-]
 ome-zarr = [
     { name = "ome-writers", extra = ["acquire-zarr"] },
 ]
@@ -4694,7 +4692,6 @@ dev = [
     { name = "caproto" },
     { name = "coverage" },
     { name = "griffe-fieldz" },
-    { name = "in-n-out" },
     { name = "jsonschema" },
     { name = "magicgui" },
     { name = "mypy" },
@@ -4720,9 +4717,6 @@ docs = [
 epics = [
     { name = "caproto" },
     { name = "ophyd-async", extra = ["ca"] },
-]
-experimental = [
-    { name = "in-n-out" },
 ]
 lint = [
     { name = "prek" },
@@ -4771,7 +4765,7 @@ requires-dist = [
     { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
-    { name = "in-n-out", marker = "extra == 'experimental'", specifier = ">=0.2.1" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
@@ -4790,7 +4784,7 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.18" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["experimental", "ome-zarr", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
+provides-extras = ["ome-zarr", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 coverage = [{ name = "coverage", specifier = ">=7.16.1" }]
@@ -4800,7 +4794,6 @@ dev = [
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "coverage", specifier = ">=7.16.1" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
-    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "mypy", specifier = ">=2.3.1" },
@@ -4828,7 +4821,6 @@ epics = [
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "ophyd-async", extras = ["ca"], specifier = ">=0.21.2" },
 ]
-experimental = [{ name = "in-n-out", specifier = ">=0.2.1" }]
 lint = [
     { name = "prek", specifier = ">=0.5.0" },
     { name = "ruff", specifier = ">=0.16.5" },
