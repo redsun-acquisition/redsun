@@ -34,3 +34,6 @@
         - clear_cache
         - describe
         - describe_collect
+        - lock
+        - unlock
+        - lock_wrapper
