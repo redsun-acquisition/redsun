@@ -94,6 +94,9 @@ class PluginManifest(BaseModel, extra="forbid", use_attribute_docstrings=True):
     views: dict[str, ClassPath] = {}
     """View classes by id."""
 
+    providers: dict[str, ClassPath] = {}
+    """Classes registering shared values, by id."""
+
     services: dict[str, ServiceEntry] = {}
     """Services by id."""
 

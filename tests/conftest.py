@@ -236,11 +236,11 @@ def mock_plugin() -> Generator[None, None, None]:
         yield path if isinstance(path, Path) else Path(path)
 
     with (
-        mock.patch("redsun.session._plugins.entry_points", return_value=[entry]),
+        mock.patch("redsun._manifest.entry_points", return_value=[entry]),
         mock.patch(
-            "redsun.session._plugins.files",
+            "redsun._manifest.files",
             side_effect=lambda _: _MOCK_PKG_DIR,
         ),
-        mock.patch("redsun.session._plugins.as_file", side_effect=as_file),
+        mock.patch("redsun._manifest.as_file", side_effect=as_file),
     ):
         yield

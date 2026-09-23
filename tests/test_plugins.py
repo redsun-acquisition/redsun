@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from importlib.metadata import EntryPoint
 from typing import TYPE_CHECKING, Annotated, ClassVar, TypeVar
 from unittest import mock
 
@@ -19,12 +21,12 @@ from mock_bundle.views import MockMotorView
 from redsun import (
     AsPresenter,
     AsView,
+    ConfigurationError,
     Declare,
-    PluginError,
     Session,
+    _manifest,
 )
 from redsun.aio import run_coro
-from redsun.session import _plugins
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -146,31 +148,24 @@ def test_configured_component_receives_the_catalogue(
     [
         ({"plugin_name": "absent-pkg", "plugin_id": "x"}, "is not installed"),
         ({"plugin_name": "mock-bundle", "plugin_id": "absent"}, "declares no"),
+        ({"step": "2.0"}, "names no plugin"),
     ],
 )
-def test_unresolvable_entries_are_reported(
-    mock_plugin: None, entry: dict[str, str], match: str, tmp_path: Path
+def test_an_entry_that_does_not_resolve_is_left_out_with_an_error(
+    mock_plugin: None,
+    entry: dict[str, str],
+    match: str,
+    caplog: pytest.LogCaptureFixture,
+    build: BuildSession,
 ) -> None:
-    path = tmp_path / "broken.yaml"
-    path.write_text(yaml.safe_dump({"presenters": {"ctrl": entry}}))
-
     class BrokenApp(Session):
-        config: ClassVar[str] = str(path)
+        config: ClassVar[dict[str, object]] = {"presenters": {"ctrl": entry}}
 
-    with pytest.raises(PluginError, match=match):
-        BrokenApp().build()
+    app = build(BrokenApp)
 
-
-def test_entry_without_plugin_metadata_is_not_a_component(
-    mock_plugin: None, tmp_path: Path, build: BuildSession
-) -> None:
-    path = tmp_path / "plain.yaml"
-    path.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 2.0}}}))
-
-    class PlainApp(Session):
-        config: ClassVar[str] = str(path)
-
-    assert dict(build(PlainApp).declarations) == {}
+    assert app.is_built
+    assert dict(app.presenters) == {}
+    assert re.search(f"Failed to build presenter 'ctrl': .*{match}", caplog.text)
 
 
 def test_a_session_needs_no_container_class(
@@ -191,6 +186,7 @@ def test_from_config_takes_the_configuration_itself(
     app = build(
         Session.from_config(
             {
+                "session": "lab",
                 "presenters": {
                     "motor_ctrl": {
                         "plugin_name": "mock-bundle",
@@ -229,9 +225,38 @@ def test_the_configuration_is_the_instance_alone(
     app.shutdown()
 
 
+def test_a_plugin_whose_manifest_is_invalid_is_left_out(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
+    entry = mock.Mock(spec=EntryPoint)
+    entry.name = "bad-bundle"
+    entry.value = "redsun.yaml"
+
+    class BadApp(Session):
+        config: ClassVar[dict[str, object]] = {
+            "presenters": {"ctrl": {"plugin_name": "bad-bundle", "plugin_id": "x"}}
+        }
+
+    with (
+        mock.patch("redsun._manifest.entry_points", return_value=[entry]),
+        mock.patch("redsun._manifest.files", return_value=tmp_path),
+    ):
+        app = build(BadApp)
+
+    assert dict(app.presenters) == {}
+    assert 'Plugin "bad-bundle" manifest' in caplog.text
+    assert "widgets: Extra inputs are not permitted" in caplog.text
+
+
+def test_from_config_refuses_a_session_that_names_itself_nothing() -> None:
+    with pytest.raises(ConfigurationError, match="must name itself"):
+        Session.from_config({"presenters": {}})
+
+
 def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "curses.yaml"
-    path.write_text(yaml.safe_dump({"frontend": "curses"}))
+    path.write_text(yaml.safe_dump({"session": "lab", "frontend": "curses"}))
 
     with pytest.raises(ValueError, match="no session is built against"):
         Session.from_config(str(path))
@@ -239,7 +264,7 @@ def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
 
 def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "qt.yaml"
-    path.write_text(yaml.safe_dump({"frontend": "pyqt"}))
+    path.write_text(yaml.safe_dump({"session": "lab", "frontend": "pyqt"}))
 
     with pytest.raises(TypeError, match="which is not one of those"):
         HeadlessApp.from_config(str(path))
@@ -249,7 +274,7 @@ def test_a_build_looks_each_plugin_up_once(
     mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
 ) -> None:
     """Five entries name one plugin; a second build looks it up again."""
-    lookups = vars(_plugins)["entry_points"]
+    lookups = vars(_manifest)["entry_points"]
     assert isinstance(lookups, mock.Mock)
 
     build(ConfiguredApp, str(config_path / SESSION))

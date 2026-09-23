@@ -62,6 +62,7 @@ from redsun.registry import (
 from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
+    ConfigurationError,
     Source,
     StorageConfig,
     as_sources,
@@ -96,7 +97,7 @@ from ._factories import (
     setup_call,
 )
 from ._frontend import Frontend
-from ._plugins import load_providers, manifest
+from ._plugins import installed, load_providers
 from ._protocols import (
     AttachableComponent,
     BuildableSession,
@@ -398,6 +399,9 @@ class Session(BuildableSession):
 
         Raises
         ------
+        ConfigurationError
+            If the configuration does not name the session: with no class of
+            its own, it has no class name to fall back on.
         ValueError
             If the configuration names a frontend no session is built
             against.
@@ -405,6 +409,11 @@ class Session(BuildableSession):
             If it names one this session is not built against.
         """
         config = load(source)
+        if not config.get("session"):
+            raise ConfigurationError(
+                as_sources(source),
+                ["session: a session built with from_config must name itself"],
+            )
         session = base_for(cls, config.get("frontend"))(config, log_level=log_level)
         return cast("Self", session)
 
@@ -701,7 +710,7 @@ class Session(BuildableSession):
 
     def read_configuration(self) -> None:
         """Merge the sources, install the hooks, read the declarations, open the logs."""
-        manifest.cache_clear()
+        installed.cache_clear()
         config = self._configuration()
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
         self._set_configuration(config, self.name)

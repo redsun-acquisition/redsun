@@ -113,7 +113,9 @@ def test_a_session_from_a_file_carries_it_too(
     build: Callable[..., QtSession],
 ) -> None:
     """The mode is an ordinary configuration key, so a file may set it."""
-    unbuilt = Session.from_config({"frontend": "pyqt", "color_scheme": "light"})
+    unbuilt = Session.from_config(
+        {"session": "lab", "frontend": "pyqt", "color_scheme": "light"}
+    )
     assert isinstance(unbuilt, QtSession)
 
     assert _control(build(unbuilt)).mode is ColorSchemeMode.LIGHT

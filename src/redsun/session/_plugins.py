@@ -3,23 +3,25 @@ from __future__ import annotations
 import logging
 from functools import cache
 from importlib import import_module
-from importlib.metadata import entry_points
-from importlib.resources import as_file, files
 from typing import TYPE_CHECKING, Any
 
-import yaml
+from .._manifest import PluginManifest, ServiceEntry, discover
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from importlib.metadata import EntryPoints
 
-__all__ = ["PluginError", "load_providers", "manifest", "resolve", "service_entry"]
+__all__ = [
+    "PluginError",
+    "installed",
+    "load_providers",
+    "manifest",
+    "resolve",
+    "service_entry",
+]
 
 logger = logging.getLogger("redsun")
 
 META_KEYS = frozenset({"plugin_name", "plugin_id"})
-
-PLUGIN_GROUP = "redsun.plugins"
 
 
 class PluginError(RuntimeError):
@@ -29,9 +31,7 @@ class PluginError(RuntimeError):
 def resolve(entry: Mapping[str, Any], group: str) -> type | None:
     """Return the class a configuration entry names, or ``None``.
 
-    An entry naming no plugin is not a plugin entry and yields ``None``; an
-    entry naming one that cannot be resolved raises, because the alternative
-    is an application that silently comes up missing a component.
+    An entry naming no plugin is not a plugin entry and yields ``None``.
 
     Parameters
     ----------
@@ -61,23 +61,19 @@ def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
     the way a component's is, and every method it marks with ``provides``
     registers a value under the type that method returns.
 
-    Raises
-    ------
-    PluginError
-        If an entry does not resolve, or names something that is not a class.
+    An entry that does not resolve is logged and left out.
     """
     found: dict[str, type] = {}
     for name, entry in config.get("providers", {}).items():
         if not isinstance(entry, dict):
             continue
-        cls = resolve(entry, "providers")
-        if cls is None:
+        try:
+            cls = resolve(entry, "providers")
+        except PluginError as e:
+            logger.error("Failed to load provider '%s': %s", name, e)
             continue
-        if not isinstance(cls, type):
-            raise PluginError(
-                f"provider {name!r} resolves to {cls!r}, which is not a class"
-            )
-        found[name] = cls
+        if cls is not None:
+            found[name] = cls
     return found
 
 
@@ -90,48 +86,47 @@ def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
     Raises
     ------
     PluginError
-        If the plugin does not resolve, or its entry is not a mapping.
+        If the plugin does not resolve.
     """
     own = {k: v for k, v in entry.items() if k not in META_KEYS}
     if not META_KEYS <= entry.keys():
         return own
     listed = manifest_item(entry["plugin_name"], entry["plugin_id"], "services")
-    if not isinstance(listed, dict):
-        raise PluginError(
-            f"plugin {entry['plugin_name']!r} lists service "
-            f"{entry['plugin_id']!r} as {listed!r}, not a mapping"
-        )
-    return {**listed, **own}
+    assert isinstance(listed, ServiceEntry)
+    return {**listed.model_dump(exclude_none=True), **own}
 
 
 @cache
-def manifest(plugin_name: str) -> dict[str, dict[str, Any]]:
-    """Return *plugin_name*'s parsed manifest, read once until the cache is cleared.
+def installed() -> dict[str, PluginManifest]:
+    """Return every installed manifest that validates, read once until cleared.
 
-    Looking a plugin up scans every installed distribution, so a session reading
-    many entries of one plugin reads its manifest once. `Session.build` clears
-    the cache before it reads the configuration, so a build sees plugins
-    installed since the last one.
+    Reading them scans every installed distribution, so a session reading
+    many entries reads the manifests once. `Session.build` clears the cache
+    before it reads the configuration, so a build sees plugins installed since
+    the last one. A manifest that does not validate is logged and left out.
+    """
+    return discover()
+
+
+def manifest(plugin_name: str) -> PluginManifest:
+    """Return *plugin_name*'s manifest.
 
     Raises
     ------
     PluginError
-        If the plugin is not installed.
+        If the plugin is not installed, or its manifest was left out.
     """
-    manifests: EntryPoints = entry_points(group=PLUGIN_GROUP)
-    plugin = next((e for e in manifests if e.name == plugin_name), None)
-    if plugin is None:
-        known = ", ".join(sorted(e.name for e in manifests)) or "none"
+    found = installed()
+    if plugin_name not in found:
+        known = ", ".join(sorted(found)) or "none"
         raise PluginError(
-            f"plugin {plugin_name!r} is not installed. Installed: {known}"
+            f"plugin {plugin_name!r} is not installed, or its manifest is invalid. "
+            f"Installed: {known}"
         )
-    resource = files(plugin.name.replace("-", "_")) / plugin.value
-    with as_file(resource) as path, open(path) as fh:
-        found: dict[str, dict[str, Any]] = yaml.safe_load(fh) or {}
-    return found
+    return found[plugin_name]
 
 
-def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
+def manifest_item(plugin_name: str, plugin_id: str, group: str) -> str | ServiceEntry:
     """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
 
     Raises
@@ -139,14 +134,7 @@ def manifest_item(plugin_name: str, plugin_id: str, group: str) -> Any:
     PluginError
         If the plugin is not installed, or its manifest has no such entry.
     """
-    listed = manifest(plugin_name)
-    if group not in listed:
-        known = ", ".join(sorted(listed)) or "none"
-        raise PluginError(
-            f"plugin {plugin_name!r} declares no {group!r} section. "
-            f"Its sections: {known}"
-        )
-    items = listed[group]
+    items: dict[str, str | ServiceEntry] = getattr(manifest(plugin_name), group)
     if plugin_id not in items:
         known = ", ".join(sorted(items)) or "none"
         raise PluginError(

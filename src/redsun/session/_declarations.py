@@ -28,7 +28,7 @@ from .._structural import protocol_of
 from ..services._transports import CHANNEL_ACCESS, TRANSPORT_KEY
 from ._factories import resolved
 from ._frontend import Frontend
-from ._plugins import META_KEYS, resolve, service_entry
+from ._plugins import META_KEYS, PluginError, resolve, service_entry
 from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:
@@ -222,7 +222,7 @@ class Declaration:
         )
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
-        self.refusal: TypeError | None = None
+        self.refusal: Exception | None = None
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"
@@ -581,8 +581,8 @@ def read_services(
         If an annotation carries `Declare`, one declared with `Attach` has an
         entry giving a module, a service is given a keyword `Service` does not
         take, or it shares its name with an attribute of the session.
-    PluginError
-        If an entry names a plugin that does not resolve.
+
+    An entry naming a plugin that does not resolve is logged and left out.
     """
     section: Mapping[str, Any] = {
         k: v for k, v in (config.get("services") or {}).items() if k != TRANSPORT_KEY
@@ -611,7 +611,11 @@ def read_services(
                 )
         read_keys.add(cfg_key)
         listed = section.get(cfg_key)
-        from_file = service_entry(listed) if isinstance(listed, dict) else {}
+        try:
+            from_file = service_entry(listed) if isinstance(listed, dict) else {}
+        except PluginError as e:
+            logger.error("Failed to read service '%s': %s", name, e)
+            continue
         if isinstance(given, Attach) and "module" in from_file:
             raise TypeError(
                 f"{where} is declared with Attach, but its services entry "
@@ -621,10 +625,14 @@ def read_services(
             from_file.update((k, v) for k, v in vars(given).items() if v is not None)
         found[name] = Service(name, transport=transport, **from_file)
     for cfg_key, listed in section.items():
-        if cfg_key not in read_keys and isinstance(listed, dict):
+        if cfg_key in read_keys or not isinstance(listed, dict):
+            continue
+        try:
             found[cfg_key] = Service(
                 cfg_key, transport=transport, **service_entry(listed)
             )
+        except PluginError as e:
+            logger.error("Failed to read service '%s': %s", cfg_key, e)
     refuse_shadowed(cls, found, "service")
     return found
 
@@ -722,7 +730,9 @@ def from_config(
     A configuration entry carrying ``plugin_name`` and ``plugin_id`` is a
     component even when the session class never annotates it; the annotation
     only adds a typed attribute to reach it by. An entry already declared is
-    left alone, so a class-body declaration wins.
+    left alone, so a class-body declaration wins. An entry whose plugin does
+    not resolve, or that names no plugin and no declared component, is
+    refused, so the session is built without it.
 
     The section an entry appears under is its layer, so nothing here has to be
     marked; it is checked against that layer all the same.
@@ -733,12 +743,23 @@ def from_config(
         for cfg_key, entry in config.get(section_name, {}).items():
             if cfg_key in declared or not isinstance(entry, dict):
                 continue
-            target = resolve(entry, section_name)
-            if target is None:
-                continue
-            refused = refusal(
-                target, kind, f"configuration entry {section_name}.{cfg_key}", frontend
-            )
+            where = f"configuration entry {section_name}.{cfg_key}"
+            refused: Exception | None
+            try:
+                target = resolve(entry, section_name)
+            except PluginError as e:
+                target, refused = object, e
+            else:
+                if target is None:
+                    target, refused = (
+                        object,
+                        PluginError(
+                            f"{where} names no plugin, and the session declares no "
+                            f"component {cfg_key!r}"
+                        ),
+                    )
+                else:
+                    refused = refusal(target, kind, where, frontend)
             found[cfg_key] = Declaration(target, cfg_key, kind, without_meta(entry))
             found[cfg_key].refusal = refused
     return found
