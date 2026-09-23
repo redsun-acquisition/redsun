@@ -47,7 +47,7 @@ class SessionConfig:
     """The configuration an application was built from."""
 
     schema_version: float = 1.0
-    frontend: str = "pyqt"
+    frontend: str | None = None
     session: str = "Redsun"
     metadata: dict[str, object] = field(default_factory=dict)
 

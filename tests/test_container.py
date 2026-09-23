@@ -1464,7 +1464,7 @@ def test_sources_must_agree_on_what_the_session_is() -> None:
     """A later source says more about a session, never that it is another."""
 
     class Contradiction(Session):
-        config: ClassVar[list[Any]] = [{"frontend": "pyqt"}, {"frontend": "pyside"}]
+        config: ClassVar[list[Any]] = [{"frontend": "qt"}, {"frontend": "web"}]
 
     with pytest.raises(ValueError, match="frontend"):
         Contradiction().build()

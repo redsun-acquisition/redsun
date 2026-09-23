@@ -24,9 +24,11 @@ from redsun import (
     ConfigurationError,
     Declare,
     Session,
+    SessionConfig,
     _manifest,
 )
 from redsun.aio import run_coro
+from redsun.qt import QtSession
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,6 +41,18 @@ SESSION = "mock_session.yaml"
 
 class ConfiguredApp(Session):
     """Every component comes from the file; the class declares none."""
+
+
+class CustomSession(Session):
+    """A session a third-party package registers as a frontend."""
+
+
+class FrontendReader:
+    """A presenter recording the frontend its session reports."""
+
+    def __init__(self, name: str, config: SessionConfig) -> None:
+        self.name = name
+        self.frontend = config.frontend
 
 
 class HeadlessApp(Session):
@@ -264,10 +278,35 @@ def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
 
 def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "qt.yaml"
-    path.write_text(yaml.safe_dump({"session": "lab", "frontend": "pyqt"}))
+    path.write_text(yaml.safe_dump({"session": "lab", "frontend": "qt"}))
 
     with pytest.raises(TypeError, match="which is not one of those"):
         HeadlessApp.from_config(str(path))
+
+
+def test_a_frontend_another_package_registers_is_built_on() -> None:
+    entry = EntryPoint(
+        "custom", f"{CustomSession.__module__}:CustomSession", "redsun.frontends"
+    )
+
+    with mock.patch("redsun._config.entry_points", return_value=[entry]):
+        unbuilt = Session.from_config({"session": "lab", "frontend": "custom"})
+
+    assert type(unbuilt) is CustomSession
+
+
+@pytest.mark.parametrize(("base", "frontend"), [(Session, None), (QtSession, "qt")])
+def test_a_session_reports_the_frontend_it_is_built_on(
+    base: type[Session], frontend: str | None, qapp: object, build: BuildSession
+) -> None:
+    """The file need not say it: the class does."""
+
+    class App(base):  # type: ignore[valid-type,misc]
+        reader: AsPresenter[FrontendReader]
+
+    app = build(App, {"session": "lab"})
+
+    assert built(app, "reader", FrontendReader).frontend == frontend
 
 
 def test_a_build_looks_each_plugin_up_once(

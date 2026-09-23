@@ -114,7 +114,7 @@ def test_a_session_from_a_file_carries_it_too(
 ) -> None:
     """The mode is an ordinary configuration key, so a file may set it."""
     unbuilt = Session.from_config(
-        {"session": "lab", "frontend": "pyqt", "color_scheme": "light"}
+        {"session": "lab", "frontend": "qt", "color_scheme": "light"}
     )
     assert isinstance(unbuilt, QtSession)
 

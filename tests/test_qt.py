@@ -479,7 +479,7 @@ def test_no_toolkit_object_exists_before_the_build() -> None:
 
 def test_the_configuration_names_the_container() -> None:
     """A session naming Qt comes up on the Qt container without a class."""
-    app = Session.from_config({"frontend": "pyqt", "session": "from-file"})
+    app = Session.from_config({"frontend": "qt", "session": "from-file"})
     assert isinstance(app, QtSession)
     assert app.frontend is Qt
     try:

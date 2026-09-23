@@ -6,7 +6,7 @@ import logging
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from difflib import get_close_matches
-from enum import Enum, unique
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Final, TypeAlias, cast
 
@@ -30,6 +30,7 @@ from ._manifest import problem_lines
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from importlib.metadata import EntryPoint
 
     from pydantic_core import InitErrorDetails
 
@@ -48,7 +49,6 @@ __all__ = [
     "ComponentEntry",
     "ConfigurationError",
     "DeviceEntry",
-    "Frontend",
     "SessionFile",
     "Source",
     "StorageConfig",
@@ -84,10 +84,18 @@ IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
 """Keys naming what kind of session this is, which every layered source must agree on.
 
 Everything else describes the session's content, where a later source
-legitimately overrides an earlier one. ``name`` is content by this rule: a
+legitimately overrides an earlier one. ``session`` is content by this rule: a
 caller laying ``{"session": "run-2"}`` over a shared file is renaming that
 session, not contradicting it.
 """
+
+FRONTEND_GROUP: Final = "redsun.frontends"
+"""The entry point group naming the session class of each frontend."""
+
+
+def frontends() -> dict[str, EntryPoint]:
+    """Return the registered frontends, by the name a session file gives."""
+    return {entry.name: entry for entry in entry_points(group=FRONTEND_GROUP)}
 
 
 def as_sources(declared: Source | Sequence[Source] | None) -> list[Source]:
@@ -263,14 +271,6 @@ def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
     return problem_lines(error, by_hook_points)
 
 
-@unique
-class Frontend(str, Enum):
-    """Supported frontend types."""
-
-    PYQT = "pyqt"
-    PYSIDE = "pyside"
-
-
 def nonempty_path(value: Any) -> Any:
     """Refuse an empty path, which would mean the working directory."""
     if value == "":
@@ -400,8 +400,8 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     schema_version: float = Field(1.0, strict=True)
     """The schema the file is written for, one of `SCHEMA_VERSIONS`."""
 
-    frontend: Frontend = Frontend.PYQT
-    """The toolkit the session runs on."""
+    frontend: str | None = None
+    """The registered frontend the session builds on; the calling class if unset."""
 
     session: str | None = None
     """The session's name, which also names its application; its class's name if unset."""
@@ -477,13 +477,15 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
             raise ValueError(f"asks for transport {value!r}; redsun has {known}")
         return value
 
-    @field_validator("frontend", mode="before")
+    @field_validator("frontend")
     @classmethod
-    def known_frontend(cls, value: Any) -> Any:
-        """Refuse a frontend no container runs on."""
-        known = [frontend.value for frontend in Frontend]
-        if value not in known:
-            raise ValueError(f"Unknown frontend {value!r}. Supported: {known}")
+    def registered_frontend(cls, value: str | None) -> str | None:
+        """Refuse a frontend no installed package registers."""
+        known = frontends()
+        if value is not None and value not in known:
+            listed = ", ".join(repr(name) for name in sorted(known)) or "none"
+            # a ValueError, since pydantic reports no other at the key's location
+            raise ValueError(f"asks for frontend {value!r}; registered: {listed}")
         return value
 
     @field_validator("schema_version")
@@ -510,6 +512,7 @@ def session_file_schema() -> dict[str, Any]:
     properties = schema["properties"]
     del properties["transport"]
     properties["schema_version"]["enum"] = list(SCHEMA_VERSIONS)
+    properties["frontend"]["anyOf"][0]["enum"] = sorted(frontends())
     properties["services"] = {
         "type": "object",
         "properties": {TRANSPORT_KEY: {"enum": sorted(TRANSPORTS)}},

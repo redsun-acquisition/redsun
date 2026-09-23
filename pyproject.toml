@@ -134,6 +134,9 @@ ome-zarr = [
 [project.entry-points."redsun.plugins"]
 redsun = "plugins.yaml"
 
+[project.entry-points."redsun.frontends"]
+qt = "redsun.qt:QtSession"
+
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
 changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"

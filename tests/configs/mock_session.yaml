@@ -1,6 +1,6 @@
 schema_version: 1.0
 session: mock-session
-frontend: pyqt
+frontend: qt
 
 providers:
   services:

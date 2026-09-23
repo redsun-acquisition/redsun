@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import sys
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
 from dataclasses import dataclass
-from importlib import import_module
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -66,6 +66,7 @@ from .._config import (
     Source,
     StorageConfig,
     as_sources,
+    frontends,
     label,
     load,
     storage_of,
@@ -204,12 +205,6 @@ exists.
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
-
-FRONTENDS: Final[dict[str, str]] = {
-    "pyqt": "redsun.qt:QtSession",
-    "pyside": "redsun.qt:QtSession",
-}
-"""The session class a configuration's frontend name builds on."""
 
 
 @dataclass(frozen=True)
@@ -1079,7 +1074,7 @@ class Session(BuildableSession):
         """
         self._session_config = SessionConfig(
             schema_version=config.get("schema_version", 1.0),
-            frontend=config.get("frontend", "pyqt"),
+            frontend=frontend_of(type(self)),
             session=config.get("session", name),
             metadata=dict(config.get("metadata", {})),
         )
@@ -2153,6 +2148,23 @@ def skipped(*ends: object) -> bool:
     return True
 
 
+def frontend_of(cls: type) -> str | None:
+    """Return the registered name of the frontend *cls* builds on, ``None`` for none.
+
+    Only a frontend whose module is already imported is looked at: a class
+    built on it has imported it, so nothing else needs loading.
+    """
+    nearest: tuple[int, str] | None = None
+    for name, entry in frontends().items():
+        module = sys.modules.get(entry.module)
+        registered = getattr(module, entry.attr, None)
+        if isinstance(registered, type) and registered in cls.__mro__:
+            depth = cls.__mro__.index(registered)
+            if nearest is None or depth < nearest[0]:
+                nearest = (depth, name)
+    return None if nearest is None else nearest[1]
+
+
 def base_for(cls: type[Session], frontend: object) -> type[Session]:
     """Return the class a session naming *frontend* is built on.
 
@@ -2161,14 +2173,14 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
     """
     if frontend is None:
         return cls
-    dotted = FRONTENDS.get(str(frontend))
-    if dotted is None:
+    registered = frontends()
+    entry = registered.get(str(frontend))
+    if entry is None:
         raise ValueError(
             f"the configuration names frontend {frontend!r}, which no session "
-            f"is built against. Known: {', '.join(sorted(FRONTENDS))}."
+            f"is built against. Known: {', '.join(sorted(registered))}."
         )
-    module_name, _, class_name = dotted.partition(":")
-    resolved: type[Session] = getattr(import_module(module_name), class_name)
+    resolved: type[Session] = entry.load()
     if issubclass(cls, resolved):
         return cls
     if cls is not Session:
