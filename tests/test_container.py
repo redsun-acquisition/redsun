@@ -899,6 +899,34 @@ class Unmakeable:
         raise RuntimeError("this presenter cannot be made")
 
 
+class Talker:
+    """A presenter with one signal."""
+
+    sig_said = Signal(str)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class BrokenTalker(Talker):
+    """A talker whose constructor raises, so the build skips it."""
+
+    def __init__(self, name: str) -> None:
+        raise RuntimeError("this presenter cannot be made")
+
+
+class Listener:
+    """A presenter recording what it hears."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.heard: list[str] = []
+
+    @slot
+    def hear(self, text: str) -> None:
+        self.heard.append(text)
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Components come up, typed attributes reach them, devices are built."""
     assert app.is_built
@@ -1646,6 +1674,31 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
     assert set(app.presenters) == {"recorder"}
     assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
     assert "Not built: broken (presenter)" in caplog.text
+
+
+def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """The other links are still made, and the failed name reads as absent after."""
+
+    class Chatty(Session):
+        broken: AsPresenter[BrokenTalker]
+        talker: AsPresenter[Talker]
+        listener: AsPresenter[Listener]
+
+        def wire(self) -> None:
+            self.connect(self.broken.sig_said, self.listener.hear)
+            self.connect(self.talker.sig_said, self.listener.hear)
+
+    app = build(Chatty)
+    app.talker.sig_said.emit("hi")
+
+    assert app.listener.heard == ["hi"]
+    assert "Not connecting broken.sig_said: component 'broken' was not built" in (
+        caplog.text
+    )
+    with pytest.raises(AttributeError):
+        app.broken  # noqa: B018
 
 
 @pytest.mark.parametrize(

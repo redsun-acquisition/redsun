@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
 from copy import deepcopy
+from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from typing import (
@@ -206,6 +207,29 @@ FRONTENDS: Final[dict[str, str]] = {
 """The session class a configuration's frontend name builds on."""
 
 
+@dataclass(frozen=True)
+class NotBuilt:
+    """Stands in for a component that failed to build, while `Session.wire` runs.
+
+    Any attribute read on it is another stand-in for the same component, so
+    ``self.stage.readback`` reaches `Session.connect`, which skips the link.
+    """
+
+    component: str
+    """The component that failed to build."""
+
+    port: str = ""
+    """The attribute read on it, empty for the component itself."""
+
+    def __getattr__(self, name: str) -> NotBuilt:
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return NotBuilt(self.component, name)
+
+    def __str__(self) -> str:
+        return f"{self.component}.{self.port}" if self.port else self.component
+
+
 class Session(BuildableSession):
     """One running application, whose components are declared as annotations.
 
@@ -228,7 +252,9 @@ class Session(BuildableSession):
     instance, typed by its annotation.
 
     A component that failed to build is set on nothing, so reading its name
-    raises ``AttributeError`` rather than answering ``None``.
+    raises ``AttributeError`` rather than answering ``None``. Inside `wire` it
+    reads as a stand-in instead, and a link naming it is skipped with a
+    warning.
     """
 
     __slots__ = (
@@ -776,7 +802,14 @@ class Session(BuildableSession):
 
     def apply_wiring(self) -> None:
         """Connect the ports the class declares, then those the file names."""
-        self.wire()
+        stand_ins = [name for name in self._failed if name in self._declarations]
+        for name in stand_ins:
+            setattr(self, name, NotBuilt(name))
+        try:
+            self.wire()
+        finally:
+            for name in stand_ins:
+                delattr(self, name)
         self._apply_wiring_config(self._configuration())
         self._warn_unused()
 
@@ -834,8 +867,9 @@ class Session(BuildableSession):
     def wire(self) -> None:
         """Connect the signals and slots of built components.
 
-        Every component exists by the time this runs. Connects nothing by
-        default.
+        Every component that built exists by the time this runs; one that
+        failed reads as a stand-in, and `connect` or `subscribe` skips a link
+        naming it. Connects nothing by default.
         """
 
     def connect_devices(self, mock: bool = False) -> None:
@@ -1076,7 +1110,7 @@ class Session(BuildableSession):
         slot: Callable[..., Any],
         *,
         thread: SlotThread = None,
-    ) -> Connection:
+    ) -> Connection | None:
         """Connect a signal to a slot and record the link.
 
         Parameters
@@ -1093,8 +1127,9 @@ class Session(BuildableSession):
 
         Returns
         -------
-        Connection
-            The recorded link.
+        Connection | None
+            The recorded link, ``None`` when either end belongs to a component
+            that failed to build.
 
         Raises
         ------
@@ -1102,6 +1137,8 @@ class Session(BuildableSession):
             If *slot* is not marked as connectable, or if psygnal rejects the
             two signatures.
         """
+        if skipped(signal, slot):
+            return None
         thread = self._affinity(slot, thread)
         link = Connection(
             publisher=self._label(owner_of(signal)),
@@ -1126,7 +1163,7 @@ class Session(BuildableSession):
         slot: Callable[..., Any],
         *,
         thread: SlotThread = None,
-    ) -> Subscription:
+    ) -> Subscription | None:
         """Subscribe a slot to an ophyd-async device signal and record it.
 
         Delivery is marshalled through a psygnal signal, so *thread* behaves as
@@ -1147,14 +1184,17 @@ class Session(BuildableSession):
 
         Returns
         -------
-        Subscription
-            The recorded subscription.
+        Subscription | None
+            The recorded subscription, ``None`` when either end belongs to a
+            component that failed to build.
 
         Raises
         ------
         WiringError
             If *slot* is not marked as connectable.
         """
+        if skipped(signal, slot):
+            return None
         thread = self._affinity(slot, thread)
         relay = SignalInstance((object,), name=signal.name)
         relay.connect(slot, thread=thread)
@@ -1215,11 +1255,14 @@ class Session(BuildableSession):
         """
         signal = self._resolve_port(source, "signal")
         slot = self._resolve_port(target, "slot")
-        return self.connect(
+        link = self.connect(
             cast("SignalInstance", signal),
             cast("Callable[..., Any]", slot),
             thread=thread,
         )
+        # a path resolves to a built component or raises, so nothing is skipped
+        assert link is not None
+        return link
 
     def _resolve_port(self, path: str, kind: str) -> object:
         """Look up the signal or slot a ``component.port`` path names."""
@@ -2071,6 +2114,17 @@ def near_misses(components: Mapping[str, object], protocol: type) -> str:
         f"\n  {name!r}: " + "; ".join(reasons)
         for name, reasons in rejected(components, protocol).items()
     )
+
+
+def skipped(*ends: object) -> bool:
+    """Warn and return true when an end of a link stands in for a failed component."""
+    failed = next((end for end in ends if isinstance(end, NotBuilt)), None)
+    if failed is None:
+        return False
+    logger.warning(
+        "Not connecting %s: component %r was not built", failed, failed.component
+    )
+    return True
 
 
 def base_for(cls: type[Session], frontend: object) -> type[Session]:

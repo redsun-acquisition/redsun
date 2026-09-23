@@ -85,6 +85,7 @@ def test_the_subscription_is_recorded_by_both_ends(
 
     record = session.subscribe(signal, session.watcher.on_reading)
 
+    assert record is not None
     assert (record.source, record.consumer, record.consumer_port) == (
         "counter",
         "watcher",
@@ -103,6 +104,7 @@ def test_the_record_uses_the_port_name_the_slot_declares(
 
     record = session.subscribe(signal, session.renamed.on_reading)
 
+    assert record is not None
     assert record.consumer_port == "readings"
 
 
