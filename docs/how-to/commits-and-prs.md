@@ -31,6 +31,13 @@ refactor(session): read each session file once
 Write what changed in plain words, so someone who has not seen the diff
 understands it.
 
+## Issues
+
+An issue title follows the same form as a commit's first line, naming the
+change it asks for: `fix: log files stay open after shutdown`,
+`feat: add a toolbar placement`. The issue templates start the title for
+you.
+
 ## Pull requests
 
 Open the pull request against `main`. The title follows the same rules as a

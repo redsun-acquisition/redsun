@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: Suggest an idea for Redsun
-title: "[ENH] Feature request"
+title: "feat: <what you want to do>"
 labels: enhancement
 assignees: ''
 

@@ -1,7 +1,7 @@
 ---
 name: Feedback requested
 about: Request feedback for something
-title: "[FB] Feedback requested"
+title: "<type>(<scope>): <what you want an opinion on>"
 labels: feedback-requested
 assignees: ''
 
