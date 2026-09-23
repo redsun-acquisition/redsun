@@ -14,7 +14,7 @@ from redsun.session.components import (
     AsView,
 )
 
-from ._base import BUILD_STEPS, ConfigurationInUse, Session
+from ._base import BUILD_STEPS, BuildError, ConfigurationInUse, Session
 from ._declarations import (
     Alias,
     Attach,
@@ -64,6 +64,7 @@ __all__ = [
     "AsView",
     "Attach",
     "AttachableComponent",
+    "BuildError",
     "BuildableSession",
     "ConfigurationInUse",
     "Declaration",

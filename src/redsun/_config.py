@@ -409,6 +409,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     metadata: dict[str, Any] = {}
     """Metadata of the session."""
 
+    strict: bool = False
+    """Whether a component that fails to build or set up stops the session."""
+
     transport: str | None = None
     """What the session's services speak, from the ``services`` section."""
 

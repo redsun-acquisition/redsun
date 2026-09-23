@@ -26,6 +26,7 @@ from redsun import (
     AsPresenter,
     AsView,
     BuildableSession,
+    BuildError,
     CallbackType,
     ConfigurationError,
     Declare,
@@ -1674,6 +1675,22 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
     assert set(app.presenters) == {"recorder"}
     assert "Not connecting broken.sig_done -> recorder.on_done" in caplog.text
     assert "Not built: broken (presenter)" in caplog.text
+
+
+def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
+    """What the build took is given back before the error leaves it."""
+    released: list[str] = []
+
+    class Half(Session):
+        broken: AsPresenter[Unmakeable]
+        recorder: AsPresenter[Recorder]
+
+        def start_runtime(self) -> None:
+            self.on_release(lambda: released.append("runtime"))
+
+    with pytest.raises(BuildError, match="broken: this presenter cannot be made"):
+        Half({"strict": True}).build()
+    assert released == ["runtime"]
 
 
 def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(

@@ -123,12 +123,16 @@ if TYPE_CHECKING:
     from ._declarations import Key
     from ._questions import Shape
 
-__all__ = ["BUILD_STEPS", "ConfigurationInUse", "Session"]
+__all__ = ["BUILD_STEPS", "BuildError", "ConfigurationInUse", "Session"]
 
 P = TypeVar("P")
 
 CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
 """The key a component asks for to receive every document router the session built."""
+
+
+class BuildError(RuntimeError):
+    """Raised when a strict session could not build or set up a component."""
 
 
 class ConfigurationInUse(OSError):
@@ -831,12 +835,25 @@ class Session(BuildableSession):
         """
 
     def log_summary(self) -> None:
-        """Log what the build made, counted against what was declared."""
+        """Log what the build made, counted against what was declared.
+
+        Raises
+        ------
+        BuildError
+            If the configuration sets ``strict`` and a component could not be
+            built or set up, naming each one and why.
+        """
         summary = self._summarise_build()
-        if self._failed or self._not_set_up:
-            logger.warning(summary)
-        else:
+        if not (self._failed or self._not_set_up):
             logger.info(summary)
+            return
+        logger.warning(summary)
+        if self._configuration().get("strict", False):
+            reasons = "\n".join(
+                f"  {name}: {reason}"
+                for name, reason in {**self._failed, **self._not_set_up}.items()
+            )
+            raise BuildError(f"A strict session is missing components:\n{reasons}")
 
     def _summarise_build(self) -> str:
         """Return what the build made, counted against what was declared.
