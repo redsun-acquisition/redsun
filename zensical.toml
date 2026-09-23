@@ -79,6 +79,7 @@ nav = [
         { "Commits and pull requests" = "contributing/commits-and-prs.md" },
         { "Write documentation" = "contributing/write-docs.md" },
         { "Record a decision" = "contributing/decisions.md" },
+        { "Make a release" = "contributing/release.md" },
     ]},
     { "Reference" = [
         "reference/index.md",
@@ -101,6 +102,7 @@ nav = [
         ]},
         { "Glossary" = "reference/glossary.md" },
         { "Changelog" = "reference/changelog.md" },
+        { "Previous changelog" = "reference/previous-changelog.md" },
     ]},
     { "Migration" = [
         "migration/index.md",

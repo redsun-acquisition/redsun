@@ -40,10 +40,13 @@ redsun/
 |   |-- tutorials/
 |   |-- how-to/
 |   |-- explanation/           architecture pages and decisions/ (ADRs)
-|   `-- reference/             api/ pages and changelog.md
+|   |-- contributing/          setup, checks, commits, docs style, releases
+|   |-- migration/             one page per breaking release
+|   `-- reference/             api/ pages, glossary, changelog (generated)
 |-- benchmarks/                performance scripts, not tests, sdist only
-|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs)
-|-- .github/workflows/         CI: code analysis, tests, docs check and publish
+|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
+|                              release_notes.py (changelog sections)
+|-- .github/workflows/         CI, changelog label check, prepare-release
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
 |-- zensical.toml              docs site and navigation
@@ -112,7 +115,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 - mypy is `strict = true` with `warn_unreachable`; `files = "."` with only
   `docs/` excluded, so **tests are strictly type-checked too**. `mypy_path`
-  (`src`, `tests/container`) + `explicit_package_bases` make `mock_pkg`
+  (`src`, `tests/launchable`) + `explicit_package_bases` make `mock_pkg`
   resolve; don't pass mypy an explicit path or tests fall out of scope. Only
   `import-untyped` and `no-untyped-call` are globally disabled; do not widen
   that list to silence a real error.
@@ -225,8 +228,11 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   and not to explain a `# noqa`. The suppression code already names the rule.
   If a runtime import is surprising, say why at the annotation that needs it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
-- Public API change -> docstring + `docs/reference/changelog.md` entry. The root
-  `CHANGELOG.md` is only a redirect to it; never add entries there.
+- Public API change -> docstring, and a changelog label on the pull request.
+  The changelog is written from the labels at release time
+  (`docs/contributing/release.md`); never edit `docs/reference/changelog.md` by
+  hand. A change that breaks existing code also gets the `breaking` label and a
+  line on the current `docs/migration/` page.
 
 ### Docstrings and comments
 

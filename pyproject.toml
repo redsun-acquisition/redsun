@@ -271,6 +271,7 @@ minversion = "6.0"
 testpaths = [
     "tests",
 ]
+pythonpath = ["."]
 addopts = "-p no:warnings"
 asyncio_mode = "auto"
 markers = [

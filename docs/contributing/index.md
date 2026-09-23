@@ -30,3 +30,5 @@ session or a plugin that uses `redsun`, start with the
 - [Write documentation](write-docs.md): the writing style.
 - [Record a decision](decisions.md): when and how to write an
   [ADR](../reference/glossary.md#adr).
+- [Make a release](release.md): how the changelog is written and a version
+  published.

@@ -96,3 +96,22 @@ jobs:
             path: dist/
         - name: Publish distribution 📦 to PyPI
           uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Publish the GitHub release
+    needs: publish-to-pypi
+    # final tags only: a release candidate's pull requests are listed in the
+    # final release's section
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create the release from its changelog section
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/release_notes.py extract "${GITHUB_REF_NAME#v}" > notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
