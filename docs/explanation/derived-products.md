@@ -17,7 +17,7 @@ computed by a component after the fact, and no document carries it.
 So [`Writer`][redsun.writers.Writer] takes the two apart. The
 documents go in through `__call__`, as with any callback, and tell the
 writer the layout and the store of each product. The data goes in through
-`append` and `write`, from the component that computed it. The container
+`append` and `write`, from the component that computed it. The session
 registers no writer as a callback: the component forwards the documents
 itself, which keeps the order in its hands, so `stop` reaches the writer
 after the component wrote its result there.

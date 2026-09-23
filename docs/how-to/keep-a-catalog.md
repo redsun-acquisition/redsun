@@ -46,34 +46,28 @@ the root with `storage.base_dir` before starting.
 ## Record runs
 
 Nothing enters the catalog unless a component puts it there.
-`bluesky-tiled-plugins`' `TiledWriter` writes whole runs; a presenter can
-register one as a document callback:
+`bluesky-tiled-plugins`' `TiledWriter` writes whole runs. The presenter owning
+the `RunEngine` asks for the catalog's address and subscribes a writer:
 
 ```python
 from bluesky_tiled_plugins import TiledWriter
 from tiled.client import from_uri
 
-from redsun.catalog import CATALOG
-from redsun.presenter import Presenter
+from redsun.catalog import CatalogAddress
+from redsun.engine import RunEngine
 
 
-class MyRecorder(Presenter):
-    def __init__(self, name, devices, /, **kwargs):
-        super().__init__(name, devices, **kwargs)
-
-    def register_providers(self, container):
-        address = container.try_require(CATALOG)
-        if address is None:
-            return
-        container.register_callbacks(
-            self, callback_map={self.name: TiledWriter(from_uri(address.uri))}
-        )
+class AcquisitionPresenter:
+    def __init__(self, name: str, *, address: CatalogAddress | None = None) -> None:
+        self.name = name
+        self.engine = RunEngine()
+        if address is not None:
+            self.engine.subscribe(TiledWriter(from_uri(address.uri)))
 ```
 
-[`CATALOG`][redsun.catalog.CATALOG] gives a
-[`CatalogAddress`][redsun.catalog.CatalogAddress], or `None` without a
-catalog. The presenter owning the `RunEngine` subscribes registered callbacks,
-as [the virtual container page](../explanation/architecture/virtual.md) shows.
+A parameter typed [`CatalogAddress`][redsun.catalog.CatalogAddress] receives
+the catalog's address, or `None` when the session has no catalog or it failed
+to start.
 
 ## What a device has to emit
 
@@ -90,12 +84,11 @@ consolidator for `TiledWriter`.
 
 ## Read a run back
 
-Any component can open its own client:
+Any component can open its own client, from the same address:
 
 ```python
 from tiled.client import from_uri
 
-address = container.try_require(CATALOG)
 client = from_uri(address.uri)
 image = client[run_uid]["primary"]["det"].read()
 ```

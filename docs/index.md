@@ -61,9 +61,11 @@ It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so
 ## Quick links
 
 - **[Installation guide](how-to/installation.md)**
+- **[Your first session](tutorials/first-session.md)**
 - **[Statement of need](explanation/statement.md)**
-- **[API reference](reference/api/container.md)**
+- **[API reference](reference/api/session.md)**
 - **[Changelog](reference/changelog.md)**
+- **[Contributing](contributing/index.md)**
 
 ## About the documentation
 
@@ -73,6 +75,8 @@ The pages follow the [Diataxis](https://diataxis.fr/) layout:
 - **How-to guides** solve one task
 - **Reference** describes the API
 - **Explanation** discusses concepts and decisions
+
+Technical words are defined once, in the [glossary](reference/glossary.md).
 
 ## Project links
 
