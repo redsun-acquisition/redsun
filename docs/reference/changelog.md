@@ -9,6 +9,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+## [0.13.0] - 23-09-2026
+
 ### Added
 
 - **`ConfigurationError`** (`redsun.containers`) - raised when a session
@@ -1290,6 +1292,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.13.0]: https://github.com/redsun-acquisition/redsun/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1
