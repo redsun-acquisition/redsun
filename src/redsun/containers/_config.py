@@ -6,7 +6,7 @@ from contextlib import suppress
 from difflib import get_close_matches
 from enum import Enum, unique
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Final, NotRequired
+from typing import TYPE_CHECKING, Annotated, Any, Final, NotRequired, cast
 
 import yaml
 from pydantic import (
@@ -14,10 +14,12 @@ from pydantic import (
     BaseModel,
     BeforeValidator,
     Field,
+    ModelWrapValidatorHandler,
     ValidationError,
     field_validator,
     model_validator,
 )
+from pydantic_core import PydanticCustomError
 
 from redsun.virtual import RedSunConfig
 
@@ -26,9 +28,37 @@ from ._hooks import HookGroup, group_hook_entries
 from ._manifest import problem_lines
 
 if TYPE_CHECKING:
+    from pydantic_core import InitErrorDetails
+
     from redsun.containers.components import _ComponentField as ComponentField
 
 logger = logging.getLogger("redsun")
+
+TRANSPORT_KEY: Final = "transport"
+"""The key of the ``services`` section naming what its services speak."""
+
+COMPONENT_SECTIONS: frozenset[str] = frozenset(
+    {"services", "devices", "presenters", "views"}
+)
+"""The configuration sections whose entries are a component's constructor call."""
+
+IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
+"""Keys saying what kind of session this is, on which layered files must agree.
+
+Every other key describes the session's content, which a later file may
+override.
+"""
+
+SCHEMA_VERSIONS: Final = (1.0,)
+"""The session file schema versions this redsun reads."""
+
+PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
+"""The keys naming the plugin a component comes from."""
+
+EMPTY_AS_MAPPING: Final = frozenset(
+    {"metadata", "services", "devices", "presenters", "views"}
+)
+"""Sections a file may write empty, read as an empty mapping."""
 
 __all__ = ["AppConfig", "ConfigurationError", "Frontend"]
 
@@ -138,22 +168,6 @@ class AppConfig(RedSunConfig, total=False):
     storage: NotRequired[dict[str, Any] | None]
     wiring: NotRequired[list[dict[str, str]]]
     hooks: NotRequired[dict[str, dict[str, Any]]]
-
-
-COMPONENT_SECTIONS: frozenset[str] = frozenset(
-    {"services", "devices", "presenters", "views"}
-)
-"""The configuration sections whose entries are a component's constructor call."""
-
-TRANSPORT_KEY: Final = "transport"
-"""The key of the ``services`` section naming what its services speak."""
-
-IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
-"""Keys saying what kind of session this is, on which layered files must agree.
-
-Every other key describes the session's content, which a later file may
-override.
-"""
 
 
 def read_yaml(path: Path) -> dict[str, Any]:
@@ -345,13 +359,6 @@ def refuse_unresolved_fields(
         )
 
 
-SCHEMA_VERSIONS: Final = (1.0,)
-"""The session file schema versions this redsun reads."""
-
-PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
-"""The keys naming the plugin a component comes from."""
-
-
 class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):
     """A component's entry: the plugin it comes from, and its constructor keywords.
 
@@ -447,44 +454,27 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
 
-    @model_validator(mode="before")
+    @model_validator(mode="wrap")
     @classmethod
-    def normalize_sections(cls, data: Any) -> Any:
-        """Read empty sections as empty, lift the transport, and group hook entries.
+    def normalize_sections(
+        cls, data: Any, handler: ModelWrapValidatorHandler[SessionFile]
+    ) -> SessionFile:
+        """Validate the file as the model holds it, reporting every problem at once.
 
-        An empty ``storage.catalog`` key is a catalog with every default.
-
-        Hook entries are grouped here, before anything is copied, since the
-        entries a YAML anchor shares are known only by being one object.
+        What preparing the file finds wrong is reported beside what the fields
+        find wrong, rather than instead of it.
         """
         if not isinstance(data, Mapping):
-            return data
-        if TRANSPORT_KEY in data:
-            raise ValueError(
-                f"{TRANSPORT_KEY!r} goes under 'services', where every service "
-                "of the session reads it"
-            )
-        data = dict(data)
-        for section in ("metadata", "services", "devices", "presenters", "views"):
-            if section in data and data[section] is None:
-                data[section] = {}
-        if "wiring" in data and data["wiring"] is None:
-            data["wiring"] = []
-        services = data.get("services")
-        if isinstance(services, Mapping) and TRANSPORT_KEY in services:
-            services = dict(services)
-            data["transport"] = services.pop(TRANSPORT_KEY)
-            data["services"] = services
-        if isinstance(data.get("storage"), Mapping):
-            data["storage"] = with_empty_catalog(data["storage"])
-        hooks = data.get("hooks")
-        if hooks is None and "hooks" in data:
-            data["hooks"] = []
-        elif isinstance(hooks, Mapping):
-            data["hooks"] = group_hook_entries(hooks)
-        elif hooks is not None:
-            raise ValueError("'hooks' must be a mapping of hook points to entries")
-        return data
+            return handler(data)
+        data, problems = prepared(data)
+        try:
+            session = handler(data)
+        except ValidationError as e:
+            problems.extend(cast("list[InitErrorDetails]", e.errors()))
+            raise ValidationError.from_exception_data(cls.__name__, problems) from None
+        if problems:
+            raise ValidationError.from_exception_data(cls.__name__, problems)
+        return session
 
     @field_validator("transport")
     @classmethod
@@ -554,3 +544,63 @@ def session_file_schema() -> dict[str, Any]:
     ):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
     return schema
+
+
+def refusal(loc: tuple[str, ...], message: str) -> InitErrorDetails:
+    """Return a problem found while preparing a file, at *loc*."""
+    return {
+        "type": PydanticCustomError("session_file", message),
+        "loc": loc,
+        "input": None,
+    }
+
+
+def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDetails]]:
+    """Return a session file shaped as `SessionFile` holds it, and what stops that.
+
+    Empty sections are read as empty, ``services.transport`` is lifted beside
+    the sections, and hook entries are grouped. A problem found on the way is
+    returned rather than raised, and the part it concerns left out, so the
+    rest of the file is still validated.
+
+    Hook entries are grouped here, before anything is copied, since the
+    entries a YAML anchor shares are known only by being one object.
+    """
+    data = {
+        key: {} if value is None and key in EMPTY_AS_MAPPING else value
+        for key, value in data.items()
+    }
+    problems: list[InitErrorDetails] = []
+    if TRANSPORT_KEY in data:
+        del data[TRANSPORT_KEY]
+        problems.append(
+            refusal(
+                (TRANSPORT_KEY,),
+                f"{TRANSPORT_KEY!r} goes under 'services', where every service "
+                "of the session reads it",
+            )
+        )
+    if "wiring" in data and data["wiring"] is None:
+        data["wiring"] = []
+    services = data.get("services")
+    if isinstance(services, Mapping) and TRANSPORT_KEY in services:
+        services = dict(services)
+        data["transport"] = services.pop(TRANSPORT_KEY)
+        data["services"] = services
+    if isinstance(data.get("storage"), Mapping):
+        data["storage"] = with_empty_catalog(data["storage"])
+    hooks = data.get("hooks")
+    if hooks is None:
+        data["hooks"] = []
+    elif not isinstance(hooks, Mapping):
+        data["hooks"] = []
+        problems.append(
+            refusal(("hooks",), "'hooks' must be a mapping of hook points to entries")
+        )
+    else:
+        try:
+            data["hooks"] = group_hook_entries(hooks)
+        except ValueError as e:
+            data["hooks"] = []
+            problems.append(refusal(("hooks",), str(e)))
+    return data, problems

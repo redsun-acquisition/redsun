@@ -32,6 +32,16 @@ logger = logging.getLogger("redsun")
 PluginType = type[Device] | type[PPresenter] | type[PView]
 PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
 
+PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
+
+PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
+    "devices": "must subclass ophyd_async.core.Device",
+    "presenters": (
+        "must accept exactly ('name', 'devices') as its leading positional parameters"
+    ),
+    "views": "must accept exactly ('name',) as its leading positional parameter",
+}
+
 
 class PluginTypes(TypedDict):
     """Discovered plugin classes, by group."""
@@ -92,17 +102,6 @@ def check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
             return check_view_protocol(imported_class)
         case _:
             assert_never(group)
-
-
-PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
-
-PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
-    "devices": "must subclass ophyd_async.core.Device",
-    "presenters": (
-        "must accept exactly ('name', 'devices') as its leading positional parameters"
-    ),
-    "views": "must accept exactly ('name',) as its leading positional parameter",
-}
 
 
 def load_configuration(

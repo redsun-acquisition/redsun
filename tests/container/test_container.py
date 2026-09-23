@@ -566,6 +566,25 @@ class TestFromConfig:
 
         assert container.devices == {}
 
+    def test_every_mistake_of_a_file_is_reported_in_one_error(
+        self, tmp_path: Path
+    ) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\ntransport: pv-access\n"
+            "devices:\n  m:\n    plugin_name: p\n    plugin_idd: m\n"
+            "hooks:\n  greet:\n    provider: nocolon\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError) as refused:
+            AppContainer.from_config(str(config))
+
+        message = str(refused.value)
+        assert "\n  transport: 'transport' goes under 'services'" in message
+        assert "\n  devices.m: 'plugin_idd' is not a plugin key" in message
+        assert "\n  hooks.greet.provider: 'nocolon' is not a class path" in message
+
     def test_a_component_without_its_plugin_is_refused_by_from_config(
         self, tmp_path: Path
     ) -> None:
@@ -1980,6 +1999,23 @@ class TestSessionFile:
             ("other",),
         ]
 
+    def test_a_file_with_several_mistakes_reports_every_one(self) -> None:
+        with pytest.raises(ValidationError) as refused:
+            SessionFile.model_validate(
+                {
+                    **_SESSION,
+                    "transport": "pv-access",
+                    "devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}},
+                    "hooks": {"greet": {"provider": "nocolon"}},
+                }
+            )
+
+        assert {error["loc"] for error in refused.value.errors()} == {
+            ("transport",),
+            ("devices", "m"),
+            ("hooks", 0, "provider"),
+        }
+
     @pytest.mark.parametrize(
         ("storage", "catalog"),
         [
@@ -2004,7 +2040,7 @@ class TestSessionFile:
             ({"schema_version": "1.0"}, ("schema_version",), "valid number"),
             ({"frontend": "tk"}, ("frontend",), "pyqt"),
             ({"sesion": "typo"}, ("sesion",), "Extra inputs"),
-            ({"transport": "pv-access"}, (), "goes under 'services'"),
+            ({"transport": "pv-access"}, ("transport",), "goes under 'services'"),
             (
                 {"devices": {"m": {"plugin_name": "p"}}},
                 ("devices", "m"),
@@ -2032,8 +2068,8 @@ class TestSessionFile:
                 "tuple",
             ),
             ({"wiring": [{"from": "a.sig"}]}, ("wiring", 0, "to"), "required"),
-            ({"hooks": {"greet": "a string"}}, (), "must be a mapping"),
-            ({"hooks": [{"provider": "a:B"}]}, (), "'hooks' must be a mapping"),
+            ({"hooks": {"greet": "a string"}}, ("hooks",), "must be a mapping"),
+            ({"hooks": [{"provider": "a:B"}]}, ("hooks",), "'hooks' must be a mapping"),
             (
                 {"hooks": {"greet": {"provider": "no-colon"}}},
                 ("hooks", 0, "provider"),
