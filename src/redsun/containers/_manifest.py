@@ -27,7 +27,7 @@ ClassPath = Annotated[str, AfterValidator(class_path)]
 """A class named as ``module:ClassName``, imported only when a session uses it."""
 
 
-class ServiceEntry(BaseModel, extra="forbid"):
+class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """How a manifest launches a service; a session file may override any of it."""
 
     module: str
@@ -43,7 +43,7 @@ class ServiceEntry(BaseModel, extra="forbid"):
     """Seconds each stop step waits; the service's own default if unset."""
 
 
-class PluginManifest(BaseModel, extra="forbid"):
+class PluginManifest(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """What a bundle ships, by group, each entry under the id a session names."""
 
     name: str | None = None

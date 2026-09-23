@@ -19,6 +19,10 @@
     options:
       show_root_heading: true
 
+::: redsun.containers.ConfigurationError
+    options:
+      show_root_heading: true
+
 ::: redsun.containers.HookError
     options:
       show_root_heading: true

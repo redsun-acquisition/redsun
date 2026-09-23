@@ -11,6 +11,30 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`ConfigurationError`** (`redsun.containers`) - raised when a session
+  file, its layers merged, does not describe a session. A `ValueError`
+  naming the files and listing every problem as `section.key: what`, a hook
+  entry located by its hook points (`hooks.greet.provider`).
+
+- A `storage` section in a session file: `base_dir`, the root a session writes
+  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
+  the width of the file counter, and `catalog`, which, even empty, gives the
+  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
+  extra. `catalog.readable` adds directories the catalog may read from:
+
+  ```yaml
+  storage:
+    base_dir: "D:/experiments/2026-09"
+    catalog:
+      readable:
+        - /data/aht
+  ```
+
+- JSON schemas of a session file and a plugin manifest, published with the
+  documentation under `reference/schemas/`. A first line
+  `# yaml-language-server: $schema=<url>` has an editor check a file against
+  one.
+
 - **`SessionPathProvider.sig_base_dir_changed`** (`redsun.path_provider`) -
   emitted with the new root once `set_base_dir` accepted it.
 
@@ -224,6 +248,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- Plugin manifests are validated when a session looks up its plugins. A
+  manifest with an unknown group or key, a class path not written as
+  `module:ClassName`, a service entry without `module`, or a `name` other
+  than its entry point's is left out whole, with one error naming its file
+  and every problem. A service entry takes `module`, `args`, `ready` and
+  `stop_timeout`.
+
 - **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
   session's root instead of the platform's log directory: the application's
   file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
@@ -308,6 +339,18 @@ Dates are specified in the format `DD-MM-YYYY`.
   later, the first release whose arrays take `is_ngff`.
 
 ### Changed (breaking)
+
+- Session files (`AppContainer.from_config`, a container class's `config=`)
+  are validated once their layers are merged, before anything is built, and
+  raise `ConfigurationError` for an unknown key in any section, a
+  `schema_version` other than `1.0` or written as a string, an unknown
+  `frontend` or `services.transport`, a `transport` outside `services`,
+  `plugin_name` without `plugin_id` or the reverse, a misspelled `plugin_*`
+  key, a non-boolean device `autoconnect`, an empty `storage.base_dir`, a
+  `storage.catalog.readable` that is not a list, and a hook entry or wiring
+  rule missing a key, in place of `TypeError`, `KeyError`, `WiringError` and
+  `HookError`. A container class naming a file validates it when
+  constructed, or when created if it declares `from_config` fields.
 
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device
   as `cls(name=<name>, **kwargs)` rather than `cls(<name>, **kwargs)`. A device

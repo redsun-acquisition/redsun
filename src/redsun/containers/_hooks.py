@@ -272,7 +272,7 @@ def build_hook_provider(
     return provider
 
 
-class HookGroup(BaseModel, extra="forbid", frozen=True):
+class HookGroup(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
     """One provider of the ``hooks`` section, and every hook point it serves."""
 
     moments: tuple[str, ...]

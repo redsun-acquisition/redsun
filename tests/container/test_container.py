@@ -718,6 +718,21 @@ class TestConfigField:
             class Alone(AppContainer, config=config_path / "mock_overlay_config.yaml"):
                 ctrl = declare_presenter(MockController, from_config="ctrl")
 
+    def test_a_bad_hook_entry_is_located_by_its_hook_points(
+        self, tmp_path: Path
+    ) -> None:
+        bad = tmp_path / "session.yaml"
+        bad.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nhooks:\n"
+            "  greet: &shared\n    provider: no-colon\n  farewell: *shared\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(
+            ConfigurationError, match=r"hooks\.greet\+farewell\.provider: "
+        ):
+            AppContainer.from_config(str(bad))
+
     def test_a_bad_file_fails_the_container_rather_than_defaulting(
         self, tmp_path: Path
     ) -> None:
@@ -2010,6 +2025,21 @@ class TestSchemas:
         }
 
         assert {name: found for name, found in problems.items() if found} == {}
+
+    def test_a_field_is_described_by_its_docstring(self) -> None:
+        schema = session_file_schema()
+
+        assert schema["properties"]["session"]["description"] == (
+            "The session's display name."
+        )
+        assert (
+            "Root the session writes under"
+            in (
+                schema["$defs"]["StorageConfig"]["properties"]["base_dir"][
+                    "description"
+                ]
+            )
+        )
 
     def test_a_manifest_meets_the_schema(self, config_path: Path) -> None:
         manifest = yaml.safe_load(

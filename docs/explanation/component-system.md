@@ -45,6 +45,13 @@ views:
   my_ui: "my_plugin.views:MyView"
 ```
 
+A manifest may also have a `services` group, each entry giving the `module`
+to run and optionally its `args`, its `ready` line and its `stop_timeout`
+([Write a service](../how-to/write-a-service.md)), and a `name`, which must
+equal the entry point's. A manifest with an unknown group or key, or a class
+path not written as `module:ClassName`, is left out whole, with one error
+naming its file and every problem.
+
 Register the manifest as a [Python entry point] in the package's `pyproject.toml`:
 
 ```toml
@@ -99,12 +106,26 @@ views:
 
 The top-level keys describe the application:
 
-- `schema_version` is the component system's version, kept for compatibility;
+- `schema_version` is the version of this format; `1.0` is the only one read;
 - `session` is the application's display name;
-- `frontend` is the UI toolkit, which picks the `AppContainer` subclass;
+- `frontend` is the UI toolkit, `pyqt` or `pyside`, which picks the
+  `AppContainer` subclass;
 - `metadata` holds application-level context.
 
 `plugin_name` and `plugin_id` resolve the plugin and are not passed to the constructor. Every other key becomes a keyword argument of the component.
+
+The other sections are `services`, with the session's `transport`
+([Write a service](../how-to/write-a-service.md)); `devices`, `presenters`
+and `views`; `storage` ([Keep a catalog of runs](../how-to/keep-a-catalog.md));
+`wiring` ([Wire components together](../how-to/wire-components.md)); and
+`hooks` ([Install container hooks](../how-to/install-hooks.md)). A section
+may be written empty.
+
+The container reads the files, merges them, and checks the result before it
+builds anything. A key no section has, a value of the wrong type, or a
+misspelled `plugin_` key raises
+[`ConfigurationError`][redsun.containers.ConfigurationError], which lists every
+problem as `section.key: what`.
 
 A first line naming the published schema lets an editor check the file as it
 is written:

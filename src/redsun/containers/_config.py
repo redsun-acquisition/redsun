@@ -35,14 +35,31 @@ __all__ = ["AppConfig", "ConfigurationError", "Frontend"]
 class ConfigurationError(ValueError):
     """A session file, once its layers are merged, says what a session cannot."""
 
-    def __init__(self, paths: Sequence[Path], error: ValidationError) -> None:
+    def __init__(self, paths: Sequence[Path], problems: Sequence[str]) -> None:
         named = ", ".join(str(path) for path in paths)
-        lines = [
-            f"  {'.'.join(str(part) for part in problem['loc']) or '(top level)'}: "
-            f"{problem['msg']}"
-            for problem in error.errors()
-        ]
-        super().__init__(f"Configuration ({named}) is invalid:\n" + "\n".join(lines))
+        lines = "\n".join(f"  {problem}" for problem in problems)
+        super().__init__(f"Configuration ({named}) is invalid:\n{lines}")
+
+
+def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
+    """Say each problem as ``section.key: what``, a hook entry by its hook points.
+
+    The model holds hook entries as a list of groups, so a problem in one is
+    located by its position there, which the file does not show.
+    """
+    groups: list[dict[str, Any]] = []
+    # an entry that is not a mapping is itself the problem, reported unlocated
+    with suppress(ValueError):
+        if isinstance(data.get("hooks"), Mapping):
+            groups = group_hook_entries(data["hooks"])
+    lines = []
+    for problem in error.errors():
+        loc = list(problem["loc"])
+        if loc[:1] == ["hooks"] and len(loc) > 1 and isinstance(loc[1], int) and groups:
+            loc[1] = "+".join(groups[loc[1]]["moments"])
+        where = ".".join(str(part) for part in loc) or "(top level)"
+        lines.append(f"{where}: {problem['msg']}")
+    return lines
 
 
 @unique
@@ -66,7 +83,9 @@ UserPath = Annotated[
 """A path as a session file writes it, with ``~`` expanded."""
 
 
-class CatalogConfig(BaseModel, extra="forbid", frozen=True):
+class CatalogConfig(
+    BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True
+):
     """The catalog a session keeps in `<base_dir>/<session>/catalog`."""
 
     readable: tuple[UserPath, ...] = ()
@@ -89,7 +108,9 @@ def storage_of(section: Mapping[str, Any] | None) -> StorageConfig:
     return StorageConfig.model_validate(with_empty_catalog(section or {}))
 
 
-class StorageConfig(BaseModel, extra="forbid", frozen=True):
+class StorageConfig(
+    BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True
+):
     """Where a session writes, and whether it keeps a catalog of its runs."""
 
     base_dir: UserPath | None = None
@@ -264,7 +285,7 @@ def validate_session(paths: Sequence[Path], data: Mapping[str, Any]) -> None:
     try:
         SessionFile.model_validate(data)
     except ValidationError as e:
-        raise ConfigurationError(paths, e) from None
+        raise ConfigurationError(paths, problems_of(e, data)) from None
 
 
 def declared_transport(paths: Sequence[Path], default: str) -> str:
@@ -330,7 +351,7 @@ PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
 """The keys naming the plugin a component comes from."""
 
 
-class ComponentEntry(BaseModel, extra="allow"):
+class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):
     """A component's entry: the plugin it comes from, and its constructor keywords.
 
     Every key besides the plugin keys is a keyword for the component's
@@ -375,7 +396,7 @@ class DeviceEntry(ComponentEntry):
     """Whether the build connects the device."""
 
 
-class WiringRule(BaseModel, extra="forbid"):
+class WiringRule(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """One connection a session file declares, from a signal to a slot."""
 
     from_: str = Field(alias="from")
@@ -385,7 +406,7 @@ class WiringRule(BaseModel, extra="forbid"):
     """The slot, as ``component.slot``."""
 
 
-class SessionFile(BaseModel, extra="forbid"):
+class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
     schema_version: float = Field(strict=True)
