@@ -34,7 +34,7 @@ STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
+MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 STDLIB_WARNING = json.dumps(
     {
         "name": "caproto.ioc.camera",

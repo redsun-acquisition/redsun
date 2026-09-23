@@ -1,8 +1,4 @@
-"""Signal and slot wiring primitives for the experimental layer.
-
-A copy rather than a re-export: this package is kept separable from
-`redsun.virtual`, so the two are free to diverge.
-"""
+"""Signal and slot wiring primitives."""
 
 from __future__ import annotations
 
@@ -69,7 +65,7 @@ class ComponentNotBuilt(WiringError):
 
 
 class Slot:
-    """What [`slot`][redsun.virtual.slot] records on a method."""
+    """What `slot` records on a method."""
 
     __slots__ = ("name", "thread")
 
@@ -115,7 +111,7 @@ def slot(
 
 
 def port_name(bound_slot: Callable[..., Any]) -> str:
-    """Return the port name of a method marked with [`slot`][redsun.virtual.slot]."""
+    """Return the port name of a method marked with `slot`."""
     declaration: Slot | None = getattr(bound_slot, SLOT_ATTR, None)
     if declaration is not None and declaration.name is not None:
         return declaration.name
@@ -135,8 +131,7 @@ def ports(component: object) -> Ports:
 
     A signal is a public [`Signal`][psygnal.Signal] attribute, or a member of a
     [`SignalGroup`][psygnal.SignalGroup] the component holds, in which case the
-    member name is the port name. A slot is a method marked with `slot`, from
-    this layer or `redsun.virtual`.
+    member name is the port name. A slot is a method marked with `slot`.
 
     Parameters
     ----------

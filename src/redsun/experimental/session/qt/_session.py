@@ -559,8 +559,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _register_actions(self) -> None:
         """Register what the ``actions`` section declares on the application.
 
-        The disposer goes on the virtual container, which is released before
-        the application is destroyed, so a second session under the same name
+        The disposer is registered with ``on_release``, which runs before the
+        application is destroyed, so a second session under the same name
         starts against a registry holding nothing of the first.
 
         Raises

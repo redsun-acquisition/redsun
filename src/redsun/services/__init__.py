@@ -1,8 +1,7 @@
 """Servers a session's devices talk to, and the processes behind them.
 
-A container declares services with
-[`declare_service`][redsun.containers.declare_service] and makes a `Service` for
-each. A launched service is a child process the container starts and stops; an
+A session declares services with `AsService` and makes a `Service` for
+each. A launched service is a child process the session starts and stops; an
 attached one already runs elsewhere and only lends its devices their prefix.
 """
 

@@ -1020,7 +1020,7 @@ class Session(BuildableSession):
         signal : SignalInstance
             The emitting signal.
         slot : Callable[..., Any]
-            A bound method marked with [`slot`][redsun.virtual.slot]. May be a
+            A bound method marked with `slot`. May be a
             coroutine function.
         thread : SlotThread
             Delivery thread. Defaults to the affinity the slot declares, then
@@ -1074,7 +1074,7 @@ class Session(BuildableSession):
         signal : SignalR[Any]
             The device signal to observe.
         slot : Callable[..., Any]
-            A bound method marked with [`slot`][redsun.virtual.slot], called
+            A bound method marked with `slot`, called
             with the reading dictionary.
         thread : SlotThread
             Delivery thread. Defaults to the affinity the slot declares, then

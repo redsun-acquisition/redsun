@@ -58,7 +58,7 @@ def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     The transport's port map is left alone: libca reads the address list once per
     process, so a service keeps the port it first got from test to test.
     """
-    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent / "container"))
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent / "launchable"))
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
 
 

@@ -6,7 +6,6 @@ import pytest
 
 from redsun.aio import run_coro
 from redsun.engine import RunEngine
-from redsun.virtual import VirtualContainer
 
 from .mocks import MockDetector
 
@@ -31,11 +30,3 @@ def detector() -> MockDetector:
     device = MockDetector("det1")
     run_coro(device.connect())
     return device
-
-
-@pytest.fixture
-def bus() -> Iterator[VirtualContainer]:
-    """Yield a container, and undo every connection and subscription it made."""
-    container = VirtualContainer()
-    yield container
-    container.disconnect_all()

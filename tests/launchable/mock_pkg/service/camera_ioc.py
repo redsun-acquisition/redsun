@@ -8,6 +8,7 @@ from __future__ import annotations
 import threading
 
 from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
+
 from mock_pkg.service.stand_in import stop_when_stdin_closes
 
 

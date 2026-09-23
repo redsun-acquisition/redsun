@@ -1,9 +1,5 @@
 """Experimental session layer.
 
-Not covered by any stability guarantee: names and behaviour here may change or
-be withdrawn in any release. The supported container layer is
-[`redsun.containers`][redsun.containers].
-
 Components are declared as annotations on a session class, each naming the
 layer it belongs to, and their dependencies are constructor parameters resolved
 by type:

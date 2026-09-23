@@ -12,10 +12,11 @@ import os
 import sys
 import threading
 
-from mock_pkg.service.stand_in import stop_when_stdin_closes
 from p4p.nt import NTScalar
 from p4p.server import Server
 from p4p.server.thread import SharedPV
+
+from mock_pkg.service.stand_in import stop_when_stdin_closes
 
 READY = "pva stand-in ready"
 

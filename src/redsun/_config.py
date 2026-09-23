@@ -1,8 +1,4 @@
-"""Configuration sources, and the rules for laying one over another.
-
-Lives at the package root because `redsun.containers` and `redsun.experimental`
-both need it and neither may import the other's private modules.
-"""
+"""Configuration sources, and the rules for laying one over another."""
 
 from __future__ import annotations
 

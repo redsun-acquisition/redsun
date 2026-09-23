@@ -9,8 +9,6 @@ from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
 from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
-from redsun.view import ViewPosition
-from redsun.view.qt import QtView
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -62,7 +60,7 @@ _ALL_SERVICES = "All services"
 """Selector entry showing the records of every service."""
 
 
-class LogView(QtView):
+class LogView(QtW.QWidget):
     """Read-only console of the running session's log records.
 
     Records logged before the view existed are shown too, read from the session
@@ -92,13 +90,9 @@ class LogView(QtView):
         Additional keyword arguments (unused).
     """
 
-    @property
-    def view_position(self) -> ViewPosition:
-        """Position in the main window."""
-        return ViewPosition.BOTTOM
-
     def __init__(self, name: str, /, **kwargs: Any) -> None:
-        super().__init__(name, **kwargs)
+        super().__init__()
+        self.name = name
 
         self._formatter = GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")
         self._level = logging.INFO

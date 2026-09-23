@@ -13,11 +13,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
-import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
+from psygnal import Signal
 
-from redsun.virtual import Signal, slot
+from redsun.experimental.ports import slot
 
 from .utils._paths import session_folder
 
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 __all__ = [
-    "PATH_PROVIDER",
     "PATH_PROVIDER_PORT",
     "PlanFilenameProvider",
     "SessionPathProvider",
@@ -260,11 +259,6 @@ class SessionPathProvider(PathProvider):
             directory_path=directory, filename=self._filenames(datakey_name)
         )
 
-
-PATH_PROVIDER: dip.Dependency[SessionPathProvider] = dip.Dependency(
-    instance_of=SessionPathProvider
-)
-"""Key for the session's path provider, bound by the container."""
 
 PATH_PROVIDER_PORT: Final = "path_provider"
 """Name the session's path provider is wired under."""

@@ -1,8 +1,4 @@
-"""Runtime protocol checking, shared by both container layers.
-
-Lives at the package root because `redsun.containers` and `redsun.experimental`
-both need it and neither may import the other's private modules.
-"""
+"""Runtime protocol checking."""
 
 from __future__ import annotations
 

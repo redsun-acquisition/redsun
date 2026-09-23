@@ -17,7 +17,6 @@ from redsun.log import (
     remove_handler,
     set_level,
 )
-from redsun.view import ViewPosition
 from redsun.view.qt import _log_view
 from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
 from redsun.view.qt.builtins import LogView
@@ -105,12 +104,6 @@ def test_records_logged_before_the_view_existed_are_shown(
     view = make_view()
 
     assert "built before the view" in view._console.toPlainText()
-
-
-def test_the_view_sits_at_the_bottom(
-    make_view: Callable[[], LogView], logs: logging.Logger
-) -> None:
-    assert make_view().view_position is ViewPosition.BOTTOM
 
 
 def test_a_later_record_is_drawn_after_the_logging_call(
