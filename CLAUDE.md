@@ -165,6 +165,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 - Python >=3.11, `from __future__ import annotations` everywhere (ruff
   `FA102`).
+- **Module-level names come first, after the imports:** constants, type
+  aliases, `TypeVar`s and `ParamSpec`s, before any function or class. A
+  reader finds every name the module is built on in one place. The one
+  exception is a name built from something the module defines, such as
+  `ClassPath = Annotated[str, AfterValidator(class_path)]`: it goes directly
+  after that definition.
 - Ruff lint has `D` (numpy docstring convention) and `TC` (type-check imports)
   enabled: runtime-unneeded imports go under `if TYPE_CHECKING:`. Public
   symbols need docstrings; `D100`/`D104` are ignored.
