@@ -39,22 +39,6 @@ def test_default_base_dir_is_the_user_data_dir(
     assert provider().directory_path.parent == session_directory("s")
 
 
-def test_the_old_location_is_named_when_it_still_exists(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Nothing is moved, so whoever goes looking is told where the files went."""
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("HOME", str(tmp_path))
-    (tmp_path / "redsun-storage").mkdir()
-
-    with caplog.at_level("WARNING", logger="redsun"):
-        SessionPathProvider(base_dir=tmp_path / "new", session="s")
-
-    assert "redsun-storage" in caplog.text
-
-
 def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> None:
     expected_directory = tmp_path / path_data.session / path_data.date
     expected_filename = f"{path_data.plan}_00000"

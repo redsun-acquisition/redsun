@@ -315,8 +315,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   and **`PlanFilenameProvider.reset`** takes `(plan, datakey)` keys.
 - **`SessionPathProvider`** writes under
   `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`.
-  Nothing is moved; a provider built while `~/redsun-storage` exists logs a
-  `WARNING` naming both locations.
 
 ### Removed
 
