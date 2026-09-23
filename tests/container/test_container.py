@@ -1048,23 +1048,32 @@ class TestConfigField:
         }
         assert presenter_settings(app)["string"] == "common ctrl"
 
-    def test_the_layer_chain_is_logged(
+    def test_the_layer_chain_is_logged_once_the_container_sets_a_level(
         self, config_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        with caplog.at_level(logging.DEBUG, logger="redsun"):
+        files = [
+            config_path / "mock_common_config.yaml",
+            config_path / "mock_overlay_config.yaml",
+        ]
+        redsun_logger = logging.getLogger("redsun")
+        before = redsun_logger.level
+        # as in an application that sets its level only when it builds one
+        redsun_logger.setLevel(logging.WARNING)
+        try:
 
-            class TestApp(
-                AppContainer,
-                config=[
-                    config_path / "mock_common_config.yaml",
-                    config_path / "mock_overlay_config.yaml",
-                ],
-            ):
+            class TestApp(AppContainer, config=files):
                 motor = declare_device(MyMotor, from_config="motor")
 
-        assert "Reading configuration from 2 files" in caplog.text
-        assert "mock_common_config.yaml" in caplog.text
-        assert "mock_overlay_config.yaml" in caplog.text
+            TestApp(log_level=logging.DEBUG)
+        finally:
+            redsun_logger.setLevel(before)
+
+        messages = [
+            r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG
+        ]
+        assert "Configuration read from 2 files, in order:" in messages
+        assert f"  1. {files[0]}" in messages
+        assert f"  2. {files[1]}" in messages
 
     def test_a_shadowed_component_is_logged(
         self, config_path: Path, caplog: pytest.LogCaptureFixture

@@ -278,10 +278,6 @@ def merge_files(paths: Sequence[Path]) -> dict[str, Any]:
         If two files disagree about the session's schema version, frontend or
         transport.
     """
-    if len(paths) > 1:
-        logger.debug(f"Reading configuration from {len(paths)} files, in order:")
-        for position, path in enumerate(paths, 1):
-            logger.debug(f"  {position}. {path}")
     data: dict[str, Any] = {}
     transport: tuple[str, Path] | None = None
     for path in paths:

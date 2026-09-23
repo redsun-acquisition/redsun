@@ -442,6 +442,13 @@ class AppContainer:
         )
         if log_level is not None:
             set_level(log_level)
+        # the files were read as the class was created, before the application
+        # could set a level; they are named now, once it has
+        paths = type(self)._config_paths
+        if len(paths) > 1:
+            logger.debug(f"Configuration read from {len(paths)} files, in order:")
+            for position, path in enumerate(paths, 1):
+                logger.debug(f"  {position}. {path}")
         self._config: AppConfig = {
             "schema_version": 1.0,
             "session": session,
