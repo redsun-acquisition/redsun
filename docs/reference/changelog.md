@@ -149,25 +149,6 @@ Dates are specified in the format `DD-MM-YYYY`.
       to: path_provider.set_plan
   ```
 
-- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`) and a
-  `storage` section in a session file: `base_dir`, the root a session writes
-  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
-  the width of the file counter, and `catalog`, which, even empty, gives the
-  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
-  extra:
-
-  ```yaml
-  storage:
-    base_dir: "D:/experiments/2026-09"   # optional
-    catalog:                             # optional
-      readable:                          # optional, added to <base_dir>/<session>
-        - /data/aht
-  ```
-
-  `AppContainer.storage` gives the section after the build. `readable` adds
-  directories the catalog may read from. Unknown keys are refused, and so is a
-  `catalog` without the `tiled` extra.
-
 - **`SessionPathProvider.session_dir`** (`redsun.path_provider`) - the
   session's directory inside `base_dir`, holding its files and catalog.
 - **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
@@ -243,13 +224,6 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
-- **Plugin manifests** (`redsun.plugins` entry point group) are validated when
-  a session looks up its plugins. A manifest with an unknown group or key, a
-  class path not written as `module:ClassName`, or a service entry that is not
-  a mapping with a `module` is left out whole, and one error names its file
-  and every problem. A manifest's optional `name` must equal its entry point's
-  name. A service entry takes `module`, `args`, `ready` and `stop_timeout`.
-
 - **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
   session's root instead of the platform's log directory: the application's
   file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
@@ -315,11 +289,6 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Removed
 
-- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`), no longer
-  exported or documented; the `storage` section of a session file is
-  unchanged.
-- **`AppContainer.storage`** (`redsun.containers`). The storage root is
-  `AppContainer.path_provider.base_dir`.
 - **`DescriptorTreeView.get_keys`** (`redsun.view.qt`), which nothing called.
 - **`HasAsyncShutdown`** and the `redsun.device` package, which held nothing
   else. No container ever called `shutdown` on a device.
