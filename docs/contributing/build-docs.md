@@ -14,36 +14,41 @@ uv run tox -e docs
 
 This builds the site, then runs `scripts/check_xrefs.py`, which reports every
 cross-reference that resolves to nothing. `zensical build` alone passes with
-such references, so prefer the `tox` environment:
+such references, so prefer the `tox` environment. It installs what the docs
+need by itself, from `uv.lock`.
+
+Zensical lives in the `docs` dependency group, which `dev` does not include,
+so a command running it directly names the group:
 
 ```bash
-uv run zensical build          # build only, no cross-reference check
+uv run --group docs zensical build     # build only, no cross-reference check
 ```
 
 The site lands in `site/`. Serve it locally with:
 
 ```bash
-uv run zensical serve
+uv run --group docs zensical serve
 ```
 
 The server listens on `http://localhost:8000` and rebuilds on every change.
 
 ## Troubleshooting
 
-### Missing dependencies
+### `zensical` is not found
+
+`uv run zensical` without `--group docs` fails with
+`Failed to spawn: zensical`. Add the flag, or install the group once:
 
 ```bash
-uv sync --group docs
+uv sync --group dev --group docs
 ```
-
-`uv run tox -e docs` installs them itself, from `uv.lock`.
 
 ### Port already in use
 
 Pick another port:
 
 ```bash
-uv run zensical serve --dev-addr localhost:8080
+uv run --group docs zensical serve --dev-addr localhost:8080
 ```
 
 ## Next steps

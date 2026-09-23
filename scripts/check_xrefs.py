@@ -22,7 +22,7 @@ UNRESOLVED = re.compile(r"\]\[([^\]\s<]*)\]")
 def main() -> int:
     """Report every unresolved reference and return the exit status."""
     if not SITE.is_dir():
-        print(f"{SITE} does not exist; run `uv run zensical build` first")
+        print(f"{SITE} does not exist; run `uv run --group docs zensical build` first")
         return 1
 
     found = 0

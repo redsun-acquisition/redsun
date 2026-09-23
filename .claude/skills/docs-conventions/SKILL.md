@@ -22,7 +22,7 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
   build. Run the guard after every build:
 
   ```bash
-  uv run zensical build
+  uv run --group docs zensical build
   uv run python scripts/check_xrefs.py
   ```
 

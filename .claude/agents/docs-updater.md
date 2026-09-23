@@ -16,5 +16,5 @@ Rules:
 - numpy docstring convention (ruff pydocstyle).
 - One authoritative source per fact; cross-link rather than restate.
 
-Verify with `uv run zensical build`.
+Verify with `uv run tox -e docs`.
 Report only: files changed.
