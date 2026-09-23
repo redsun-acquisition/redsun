@@ -1057,9 +1057,18 @@ class Session(BuildableSession):
         if thread is not None:
             return thread
         consumer = getattr(slot, "__self__", None)
-        return declaration.thread or cast(
-            "SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None)
+        return (
+            declaration.thread
+            or cast("SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None))
+            or self._default_thread(consumer)
         )
+
+    def _default_thread(self, consumer: object) -> SlotThread:
+        """Return where a slot of *consumer* runs when nothing else says.
+
+        ``None`` here: the slot runs on the thread that emits.
+        """
+        return None
 
     def connect(
         self,
@@ -1079,7 +1088,8 @@ class Session(BuildableSession):
             coroutine function.
         thread : SlotThread
             Delivery thread. Defaults to the affinity the slot declares, then
-            to the one its class declares.
+            to the one its class declares, then to the session's default for
+            the consumer.
 
         Returns
         -------

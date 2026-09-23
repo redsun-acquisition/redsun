@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -12,11 +13,13 @@ import pytest
 import yaml
 from app_model import Action, Application
 from app_model.types import MenuRule
+from psygnal import Signal, emit_queued
 from qtpy.QtCore import QEvent
 from qtpy.QtGui import QAction, QCloseEvent
 from qtpy.QtWidgets import (
     QApplication,
     QDockWidget,
+    QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -37,6 +40,7 @@ from redsun import (
     AttachableComponent,
     Placement,
     Session,
+    slot,
 )
 from redsun.qt import (
     ASK_ON_CLOSE,
@@ -51,6 +55,41 @@ from redsun.qt import (
 )
 
 pytestmark = pytest.mark.qt
+
+
+class Mover:
+    """A presenter reporting where a motor went."""
+
+    sig_moved = Signal(str, float)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class Readout(QWidget):
+    """A view writing each reading into a child widget, as a real view does."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.label = QLabel(self)
+        self.texts: list[str] = []
+
+    @slot
+    def note(self, motor: str, position: float) -> None:
+        self.label.setText(f"{motor} {position}")
+        self.texts.append(self.label.text())
+
+
+class Wired(QtSession):
+    config: ClassVar[dict[str, Any]] = {
+        "wiring": [{"from": "mover.sig_moved", "to": "readout.note"}]
+    }
+
+    mover: AsPresenter[Mover]
+    readout: AsView[Readout]
 
 
 class Panel(QWidget):
@@ -871,3 +910,29 @@ def test_a_refused_close_leaves_the_window_open(
 
     assert not session.main_window.close()
     assert session.main_window.isVisible() is False
+
+
+def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    session = build(Wired)
+
+    assert [link.thread for link in session.connections] == ["main"]
+
+
+def test_a_queued_emission_is_delivered_before_the_widgets_are_destroyed(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    session = build(Wired)
+    readout = session.readout
+
+    # emitted from a worker, the reading waits in the queue for the main
+    # thread, and nothing runs the event loop before the shutdown
+    worker = threading.Thread(target=lambda: session.mover.sig_moved.emit("x", 1.0))
+    worker.start()
+    worker.join()
+    session.shutdown()
+
+    assert readout.texts == ["x 1.0"]
+    emit_queued()
+    assert readout.texts == ["x 1.0"]

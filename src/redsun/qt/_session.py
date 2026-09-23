@@ -51,6 +51,7 @@ from app_model import Action, Application
 from app_model.backends.qt import QModelMainWindow
 from app_model.types import MenuRule
 from platformdirs import user_documents_dir
+from psygnal import emit_queued
 from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QByteArray, QEvent, QObject
@@ -98,6 +99,7 @@ if TYPE_CHECKING:
     from in_n_out import Store
 
     from .._config import Source
+    from ..ports import SlotThread
     from ..session._declarations import Declaration
     from ..session._protocols import AttachableComponent, NamedComponent
 
@@ -443,6 +445,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", encoded(self._main_window.saveState()))
 
+    def _default_thread(self, consumer: object) -> SlotThread:
+        """Run a widget's slots on the main thread, the only one it may be used from."""
+        return "main" if isinstance(consumer, QWidget) else None
+
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
 
@@ -460,7 +466,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
         reports an unbuilt session rather than handing back a wrapper whose
         widget is gone. A reference taken before the shutdown is left wrapping
         a destroyed widget, and using it raises ``RuntimeError``.
+
+        Emissions still queued for a slot on the main thread are delivered
+        first, while the widgets can receive them.
         """
+        try:
+            emit_queued()
+        except Exception:
+            logger.exception("Failed to deliver the queued emissions")
         for view in reversed(list(self.views.values())):
             if isinstance(view, QWidget):
                 view.close()
