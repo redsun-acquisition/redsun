@@ -115,6 +115,7 @@ test_configs/*
 
 # MkDocs build output
 site/
+docs/reference/schemas/
 
 # claude
 .claude/settings.local.json

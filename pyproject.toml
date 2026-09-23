@@ -54,6 +54,7 @@ dev = [
     "pytest-asyncio>=1.3.0",
     "tox-uv-bare>=1.36.0",
     "coverage>=7.16.1",
+    "jsonschema>=4.26.0",
 ]
 docs = [
     "mkdocstrings-python>=2.0.7",
@@ -230,6 +231,7 @@ commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
 [tool.tox.env.docs]
 dependency_groups = ["dev", "docs"]
 commands = [
+    ["python", "scripts/export_schemas.py"],
     ["zensical", "build"],
     ["python", "scripts/check_xrefs.py"],
 ]

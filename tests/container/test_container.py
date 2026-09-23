@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import dependency_injector.providers as dip
+import jsonschema
 import pytest
 import yaml
 from helpers import component
@@ -34,7 +35,12 @@ from redsun.containers import (
     declare_presenter,
     declare_view,
 )
-from redsun.containers._config import CatalogConfig, SessionFile
+from redsun.containers._config import (
+    CatalogConfig,
+    SessionFile,
+    session_file_schema,
+)
+from redsun.containers._manifest import PluginManifest
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
@@ -1926,6 +1932,7 @@ class TestSessionFile:
             ({"schema_version": "1.0"}, ("schema_version",), "valid number"),
             ({"frontend": "tk"}, ("frontend",), "pyqt"),
             ({"sesion": "typo"}, ("sesion",), "Extra inputs"),
+            ({"transport": "pv-access"}, (), "goes under 'services'"),
             (
                 {"devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}}},
                 ("devices", "m"),
@@ -1960,6 +1967,7 @@ class TestSessionFile:
             "quoted-version",
             "unknown-frontend",
             "unknown-key",
+            "top-level-transport",
             "unpaired-plugin-key",
             "misspelled-plugin-key",
             "non-bool-autoconnect",
@@ -1979,3 +1987,52 @@ class TestSessionFile:
         (error,) = refused.value.errors()
         assert error["loc"] == location
         assert says in error["msg"]
+
+
+class TestSchemas:
+    """Tests for the JSON schemas an editor checks a file against."""
+
+    def test_every_session_file_the_container_reads_meets_the_schema(
+        self, config_path: Path
+    ) -> None:
+        validator = jsonschema.Draft202012Validator(session_file_schema())
+        # the overlay is a fragment, valid only over the file under it
+        files = sorted(
+            set(config_path.glob("*.yaml")) - {config_path / "mock_overlay_config.yaml"}
+        )
+
+        problems = {
+            path.name: [
+                error.message
+                for error in validator.iter_errors(yaml.safe_load(path.read_text()))
+            ]
+            for path in files
+        }
+
+        assert {name: found for name, found in problems.items() if found} == {}
+
+    def test_a_manifest_meets_the_schema(self, config_path: Path) -> None:
+        manifest = yaml.safe_load(
+            (config_path.parent / "mock_pkg" / "redsun.yaml").read_text()
+        )
+
+        jsonschema.validate(manifest, PluginManifest.model_json_schema())
+
+    @pytest.mark.parametrize(
+        "overlay",
+        [
+            {"sesion": "typo"},
+            {"services": {"transport": "carrier-pigeon"}},
+            {"hooks": {"greet": {"provider": "x:Y", "name": "n"}}},
+            {"devices": {"m": {"autoconnect": "yes"}}},
+        ],
+        ids=["unknown-key", "unknown-transport", "hook-key", "non-bool-autoconnect"],
+    )
+    def test_the_schema_flags_what_the_model_refuses(
+        self, overlay: dict[str, Any]
+    ) -> None:
+        validator = jsonschema.Draft202012Validator(session_file_schema())
+
+        assert list(validator.iter_errors({**_SESSION, **overlay}))
+        with pytest.raises(ValidationError):
+            SessionFile.model_validate({**_SESSION, **overlay})

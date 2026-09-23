@@ -58,6 +58,13 @@ my-plugin = "redsun.yaml"
 
     Check that your packaging tool includes `redsun.yaml` in the built package, or the components cannot be discovered.
 
+An editor with a YAML language server checks a manifest as it is written when
+its first line names the schema:
+
+```yaml
+# yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/plugin-manifest.schema.json
+```
+
 ## Configuration file format
 
 An application configuration file names plugins by name and ID:
@@ -98,6 +105,17 @@ The top-level keys describe the application:
 - `metadata` holds application-level context.
 
 `plugin_name` and `plugin_id` resolve the plugin and are not passed to the constructor. Every other key becomes a keyword argument of the component.
+
+A first line naming the published schema lets an editor check the file as it
+is written:
+
+```yaml
+# yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/session-file.schema.json
+```
+
+A file layered over another may hold a fragment, which the schema flags as
+missing `schema_version` and `frontend`; the container checks the merged
+files instead.
 
 ## Protocol validation
 

@@ -436,6 +436,11 @@ class SessionFile(BaseModel, extra="forbid"):
         """
         if not isinstance(data, Mapping):
             return data
+        if TRANSPORT_KEY in data:
+            raise ValueError(
+                f"{TRANSPORT_KEY!r} goes under 'services', where every service "
+                "of the session reads it"
+            )
         data = dict(data)
         for section in ("metadata", "services", "devices", "presenters", "views"):
             if section in data and data[section] is None:
@@ -460,7 +465,11 @@ class SessionFile(BaseModel, extra="forbid"):
     @classmethod
     def known_transport(cls, value: str | None) -> str | None:
         """Refuse a transport redsun does not have."""
-        return None if value is None else checked_transport(value, "the file")
+        if value is not None and value not in TRANSPORTS:
+            known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
+            # a ValueError, since pydantic reports no other at the key's location
+            raise ValueError(f"asks for transport {value!r}; redsun has {known}")
+        return value
 
     @field_validator("frontend", mode="before")
     @classmethod
@@ -482,3 +491,41 @@ class SessionFile(BaseModel, extra="forbid"):
                 f"upgrade redsun or write the file for {SCHEMA_VERSIONS[-1]}"
             )
         return value
+
+
+def session_file_schema() -> dict[str, Any]:
+    """Return the JSON schema of a session file as written, not as `SessionFile` holds it.
+
+    The model lifts ``services.transport`` out of the ``services`` section and
+    groups hook entries into a list; a file keeps both where it wrote them,
+    and may leave a section empty.
+    """
+    schema = SessionFile.model_json_schema(by_alias=True)
+    properties = schema["properties"]
+    del properties["transport"]
+    properties["schema_version"]["enum"] = list(SCHEMA_VERSIONS)
+    properties["services"] = {
+        "type": "object",
+        "properties": {TRANSPORT_KEY: {"enum": sorted(TRANSPORTS)}},
+        "additionalProperties": {"$ref": "#/$defs/ComponentEntry"},
+    }
+    groups = schema["$defs"].pop("HookGroup")
+    del groups["properties"]["moments"]
+    groups["required"].remove("moments")
+    groups["title"] = "HookEntry"
+    schema["$defs"]["HookEntry"] = groups
+    properties["hooks"] = {
+        "type": "object",
+        "additionalProperties": {"$ref": "#/$defs/HookEntry"},
+    }
+    for section in (
+        "metadata",
+        "services",
+        "devices",
+        "presenters",
+        "views",
+        "hooks",
+        "wiring",
+    ):
+        properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
+    return schema

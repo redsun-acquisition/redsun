@@ -18,6 +18,7 @@ from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from redsun.aio import run_coro
 from redsun.containers import (
     AppContainer,
+    ConfigurationError,
     declare_device,
     declare_presenter,
     declare_service,
@@ -469,7 +470,7 @@ def test_a_transport_redsun_does_not_have_is_refused_in_a_session_file(
 ) -> None:
     config = session_file(tmp_path / "session.yaml", "  transport: carrier-pigeon\n")
 
-    with pytest.raises(TypeError, match="carrier-pigeon"):
+    with pytest.raises(ConfigurationError, match="carrier-pigeon"):
         AppContainer.from_config(str(config))
 
 
