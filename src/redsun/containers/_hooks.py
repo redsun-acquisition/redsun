@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from ._manifest import ClassPath
+from ._manifest import ClassPath, message_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -149,7 +149,7 @@ def hook_problems(entries: list[dict[str, Any]], error: ValidationError) -> str:
                 "under 'kwargs'"
             )
         else:
-            lines.append(f"hooks entry {named}: {key}: {problem['msg']}")
+            lines.append(f"hooks entry {named}: {key}: {message_of(problem)}")
     return "\n".join(lines)
 
 

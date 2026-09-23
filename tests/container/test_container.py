@@ -600,8 +600,9 @@ class TestFromConfig:
 
         with install_plugins({"renamed-pkg": manifest_dir}):
             container = AppContainer.from_config(str(config))
+        container.build()
 
-        assert "motor" not in container._device_components
+        assert "motor" not in container.devices
         assert 'names itself "other-pkg" and was skipped' in caplog.text
 
 
@@ -2005,9 +2006,14 @@ class TestSessionFile:
             ({"sesion": "typo"}, ("sesion",), "Extra inputs"),
             ({"transport": "pv-access"}, (), "goes under 'services'"),
             (
-                {"devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}}},
+                {"devices": {"m": {"plugin_name": "p"}}},
                 ("devices", "m"),
                 "plugin_name is given without plugin_id",
+            ),
+            (
+                {"devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}}},
+                ("devices", "m"),
+                "did you mean 'plugin_id'",
             ),
             (
                 {"devices": {"m": {"plugin_idd": "m"}}},
@@ -2027,6 +2033,7 @@ class TestSessionFile:
             ),
             ({"wiring": [{"from": "a.sig"}]}, ("wiring", 0, "to"), "required"),
             ({"hooks": {"greet": "a string"}}, (), "must be a mapping"),
+            ({"hooks": [{"provider": "a:B"}]}, (), "'hooks' must be a mapping"),
             (
                 {"hooks": {"greet": {"provider": "no-colon"}}},
                 ("hooks", 0, "provider"),
@@ -2040,12 +2047,14 @@ class TestSessionFile:
             "unknown-key",
             "top-level-transport",
             "unpaired-plugin-key",
+            "misspelled-beside-plugin-name",
             "misspelled-plugin-key",
             "non-bool-autoconnect",
             "empty-base-dir",
             "readable-not-a-list",
             "rule-without-slot",
             "hook-entry-not-a-mapping",
+            "hooks-not-a-mapping",
             "provider-not-a-class-path",
         ],
     )

@@ -415,7 +415,7 @@ file is read instead, and raised as
     | `hooks key 'x' is not a hook point AppContainer calls; expected one of: ...` | the key is not a point this container calls |
     | `hooks.x.name: Extra inputs are not permitted` | a constructor argument was written beside `provider` instead of under `kwargs` |
     | `hooks.x.provider: Field required` | `provider` is missing |
-    | `hooks.x.provider: Value error, 'p' is not a class path; expected 'module:ClassName'` | the path is not `module:ClassName` |
+    | `hooks.x.provider: 'p' is not a class path; expected 'module:ClassName'` | the path is not `module:ClassName` |
     | `cannot import hook provider 'p'` | the module or the attribute does not exist |
     | `hook provider 'p' names ..., which is not a class` | the path names a value, not a class |
     | `cannot construct hook provider 'p' with [...]` | the constructor rejected the `kwargs` |

@@ -23,6 +23,7 @@ from redsun.virtual import RedSunConfig
 
 from ..services._transports import TRANSPORTS
 from ._hooks import HookGroup, group_hook_entries
+from ._manifest import problem_lines
 
 if TYPE_CHECKING:
     from redsun.containers.components import _ComponentField as ComponentField
@@ -48,18 +49,18 @@ def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
     located by its position there, which the file does not show.
     """
     groups: list[dict[str, Any]] = []
-    # an entry that is not a mapping is itself the problem, reported unlocated
+    # grouping fails on an entry that is not a mapping; that entry is then the
+    # problem reported, and has no hook points to be named by
     with suppress(ValueError):
         if isinstance(data.get("hooks"), Mapping):
             groups = group_hook_entries(data["hooks"])
-    lines = []
-    for problem in error.errors():
-        loc = list(problem["loc"])
+
+    def by_hook_points(loc: list[str | int]) -> list[str | int]:
         if loc[:1] == ["hooks"] and len(loc) > 1 and isinstance(loc[1], int) and groups:
             loc[1] = "+".join(groups[loc[1]]["moments"])
-        where = ".".join(str(part) for part in loc) or "(top level)"
-        lines.append(f"{where}: {problem['msg']}")
-    return lines
+        return loc
+
+    return problem_lines(error, by_hook_points)
 
 
 @unique
@@ -366,7 +367,15 @@ class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):
 
     @model_validator(mode="after")
     def pair_plugin_keys(self) -> ComponentEntry:
-        """Refuse one plugin key without the other, and a misspelled one."""
+        """Refuse a misspelled plugin key, and one plugin key without the other."""
+        # the misspelling first: it is why the other key looks missing
+        for key in self.model_extra or {}:
+            if key.startswith("plugin_"):
+                close = get_close_matches(key, PLUGIN_KEYS, n=1)
+                hint = f"; did you mean {close[0]!r}?" if close else ""
+                raise ValueError(
+                    f"{key!r} is not a plugin key, which are {PLUGIN_KEYS}{hint}"
+                )
         if (self.plugin_name is None) != (self.plugin_id is None):
             given, missing = (
                 ("plugin_name", "plugin_id")
@@ -376,13 +385,6 @@ class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):
             raise ValueError(
                 f"{given} is given without {missing}; give both or neither"
             )
-        for key in self.model_extra or {}:
-            if key.startswith("plugin_"):
-                close = get_close_matches(key, PLUGIN_KEYS, n=1)
-                hint = f"; did you mean {close[0]!r}?" if close else ""
-                raise ValueError(
-                    f"{key!r} is not a plugin key, which are {PLUGIN_KEYS}{hint}"
-                )
         return self
 
 
@@ -480,6 +482,8 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
             data["hooks"] = []
         elif isinstance(hooks, Mapping):
             data["hooks"] = group_hook_entries(hooks)
+        elif hooks is not None:
+            raise ValueError("'hooks' must be a mapping of hook points to entries")
         return data
 
     @field_validator("transport")

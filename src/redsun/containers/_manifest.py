@@ -6,10 +6,17 @@ import logging
 import re
 from importlib.metadata import entry_points
 from importlib.resources import as_file, files
-from typing import Annotated, Final
+from typing import TYPE_CHECKING, Annotated, Final
 
 import yaml
 from pydantic import AfterValidator, BaseModel, ValidationError
+
+from redsun.services import STOP_TIMEOUT
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from pydantic_core import ErrorDetails
 
 logger = logging.getLogger("redsun")
 
@@ -27,6 +34,32 @@ ClassPath = Annotated[str, AfterValidator(class_path)]
 """A class named as ``module:ClassName``, imported only when a session uses it."""
 
 
+def message_of(problem: ErrorDetails) -> str:
+    """Return what a problem says, without the prefix pydantic puts on a raised error."""
+    if problem["type"] == "value_error":
+        return str(problem["ctx"]["error"])
+    return problem["msg"]
+
+
+def problem_lines(
+    error: ValidationError,
+    locate: Callable[[list[str | int]], list[str | int]] | None = None,
+) -> list[str]:
+    """Say each problem of *error* as ``section.key: what``.
+
+    *locate* rewrites a problem's location first, for a model that holds
+    something differently from the file it was read from.
+    """
+    lines = []
+    for problem in error.errors():
+        loc = list(problem["loc"])
+        if locate is not None:
+            loc = locate(loc)
+        where = ".".join(str(part) for part in loc) or "(top level)"
+        lines.append(f"{where}: {message_of(problem)}")
+    return lines
+
+
 class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """How a manifest launches a service; a session file may override any of it."""
 
@@ -39,8 +72,8 @@ class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     ready: str | None = None
     """Line the service prints once it serves."""
 
-    stop_timeout: float | None = None
-    """Seconds each stop step waits; the service's own default if unset."""
+    stop_timeout: float = STOP_TIMEOUT
+    """Seconds each stop step waits."""
 
 
 class PluginManifest(BaseModel, extra="forbid", use_attribute_docstrings=True):
@@ -91,10 +124,7 @@ def discover() -> dict[str, PluginManifest]:
                 'Plugin "%s" manifest %s is invalid and was skipped:\n%s',
                 plugin.name,
                 path,
-                "\n".join(
-                    f"  {'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
-                    for error in e.errors()
-                ),
+                "\n".join(f"  {line}" for line in problem_lines(e)),
             )
             continue
         if manifest.name is not None and manifest.name != plugin.name:
