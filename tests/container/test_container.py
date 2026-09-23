@@ -22,6 +22,7 @@ from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
 from mock_pkg.view import BrokenView, MockMotorView, MockQtView
 from ophyd_async.core import Device, PathProvider
 from ophyd_async.epics.core import EpicsDevice
+from pydantic import ValidationError
 from qtpy.QtWidgets import QApplication
 
 from redsun.aio import run_coro
@@ -32,6 +33,7 @@ from redsun.containers import (
     declare_presenter,
     declare_view,
 )
+from redsun.containers._config import CatalogConfig, SessionFile
 from redsun.containers.components import (
     _DeviceComponent,
     _PresenterComponent,
@@ -1826,3 +1828,128 @@ class TestYamlWiring:
 
         assert "on_motor_moved" in surface.slots
         assert "not_connectable" not in surface.slots
+
+
+_SESSION = {"schema_version": 1.0, "frontend": "pyqt"}
+
+
+class TestSessionFile:
+    """Tests for what a session file, merged, may and may not say."""
+
+    def test_a_merged_file_reads_as_its_sections(self, tmp_path: Path) -> None:
+        text = """
+        schema_version: 1
+        frontend: pyqt
+        presenters:
+        services:
+          transport: pv-access
+          ioc:
+            plugin_name: mock-pkg
+            plugin_id: stand_in
+        devices:
+          motor:
+            service: ioc
+            axis: [X]
+        storage:
+          base_dir: ~/data
+          catalog:
+        hooks:
+          greet: &shared
+            provider: mock_pkg.hooks:BothPointsHook
+          farewell: *shared
+          other:
+            provider: mock_pkg.hooks:BothPointsHook
+        """
+        session = SessionFile.model_validate(yaml.safe_load(text))
+
+        assert session.schema_version == 1.0
+        assert session.presenters == {}
+        assert session.transport == "pv-access"
+        assert list(session.services) == ["ioc"]
+        assert session.devices["motor"].service == "ioc"
+        assert session.devices["motor"].model_extra == {"axis": ["X"]}
+        assert session.storage is not None
+        assert session.storage.base_dir == Path("~/data").expanduser()
+        assert session.storage.catalog == CatalogConfig()
+        assert [group.moments for group in session.hooks] == [
+            ("greet", "farewell"),
+            ("other",),
+        ]
+
+    @pytest.mark.parametrize(
+        ("storage", "catalog"),
+        [
+            ({}, None),
+            ({"catalog": None}, CatalogConfig()),
+            ({"catalog": {}}, CatalogConfig()),
+        ],
+        ids=["absent", "empty", "mapping"],
+    )
+    def test_only_a_catalog_key_asks_for_a_catalog(
+        self, storage: dict[str, Any], catalog: CatalogConfig | None
+    ) -> None:
+        session = SessionFile.model_validate({**_SESSION, "storage": storage})
+
+        assert session.storage is not None
+        assert session.storage.catalog == catalog
+
+    @pytest.mark.parametrize(
+        ("overlay", "location", "says"),
+        [
+            ({"schema_version": 2.0}, ("schema_version",), "reads (1.0)"),
+            ({"schema_version": "1.0"}, ("schema_version",), "valid number"),
+            ({"frontend": "tk"}, ("frontend",), "pyqt"),
+            ({"sesion": "typo"}, ("sesion",), "Extra inputs"),
+            (
+                {"devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}}},
+                ("devices", "m"),
+                "plugin_name is given without plugin_id",
+            ),
+            (
+                {"devices": {"m": {"plugin_idd": "m"}}},
+                ("devices", "m"),
+                "did you mean 'plugin_id'",
+            ),
+            (
+                {"devices": {"m": {"autoconnect": "yes"}}},
+                ("devices", "m", "autoconnect"),
+                "boolean",
+            ),
+            ({"storage": {"base_dir": ""}}, ("storage", "base_dir"), "empty path"),
+            (
+                {"storage": {"catalog": {"readable": "/data"}}},
+                ("storage", "catalog", "readable"),
+                "tuple",
+            ),
+            ({"wiring": [{"from": "a.sig"}]}, ("wiring", 0, "to"), "required"),
+            ({"hooks": {"greet": "a string"}}, (), "must be a mapping"),
+            (
+                {"hooks": {"greet": {"provider": "no-colon"}}},
+                ("hooks", 0, "provider"),
+                "pattern",
+            ),
+        ],
+        ids=[
+            "unread-version",
+            "quoted-version",
+            "unknown-frontend",
+            "unknown-key",
+            "unpaired-plugin-key",
+            "misspelled-plugin-key",
+            "non-bool-autoconnect",
+            "empty-base-dir",
+            "readable-not-a-list",
+            "rule-without-slot",
+            "hook-entry-not-a-mapping",
+            "provider-not-a-class-path",
+        ],
+    )
+    def test_a_file_saying_what_a_session_cannot_is_refused_where_it_says_it(
+        self, overlay: dict[str, Any], location: tuple[str | int, ...], says: str
+    ) -> None:
+        with pytest.raises(ValidationError) as refused:
+            SessionFile.model_validate({**_SESSION, **overlay})
+
+        (error,) = refused.value.errors()
+        assert error["loc"] == location
+        assert says in error["msg"]

@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
+from pydantic import BaseModel
+
+from ._manifest import ClassPath
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
@@ -307,3 +311,39 @@ def build_hook_provider(
             f"{moment!r} does not implement {protocol.__name__}"
         )
     return provider
+
+
+class HookGroup(BaseModel, extra="forbid", frozen=True):
+    """One provider of the ``hooks`` section, and every hook point it serves."""
+
+    moments: tuple[str, ...]
+    """The hook points the entry appeared under."""
+
+    provider: ClassPath
+    """The provider's class, as ``module:ClassName``."""
+
+    kwargs: dict[str, Any] = {}
+    """Keywords the provider is constructed with."""
+
+
+def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return one entry per distinct object in *raw*, with the hook points naming it.
+
+    Raises
+    ------
+    ValueError
+        If an entry is not a mapping.
+    """
+    grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
+    for moment, entry in raw.items():
+        if not isinstance(entry, Mapping):
+            # pydantic turns a ValueError raised in a validator into a
+            # ValidationError at the entry's location; a TypeError escapes
+            raise ValueError(  # noqa: TRY004
+                f"hooks entry {moment!r} must be a mapping, got {type(entry).__name__}"
+            )
+        # a YAML anchor and its alias resolve to one object; once validated
+        # they would be two equal copies, so sharing is read here or never
+        served, _ = grouped.setdefault(id(entry), ([], entry))
+        served.append(moment)
+    return [{"moments": tuple(served), **entry} for served, entry in grouped.values()]

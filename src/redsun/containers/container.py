@@ -9,7 +9,6 @@ from contextlib import suppress
 
 # resolved at runtime: the ClassVar annotation below is evaluated by ruff's
 # runtime-evaluated rules and by anything calling get_type_hints on a subclass
-from enum import Enum, unique
 from importlib import import_module
 from pathlib import Path
 from typing import (
@@ -52,6 +51,7 @@ from ._config import (
     TRANSPORT_KEY,
     AppConfig,
     CatalogConfig,
+    Frontend,
     StorageConfig,
     checked_transport,
     declared_transport,
@@ -86,14 +86,6 @@ if TYPE_CHECKING:
     from ..virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
-
-
-@unique
-class Frontend(str, Enum):
-    """Supported frontend types."""
-
-    PYQT = "pyqt"
-    PYSIDE = "pyside"
 
 
 T = TypeVar("T")

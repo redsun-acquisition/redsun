@@ -3,54 +3,73 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
-from dataclasses import dataclass, field
+from difflib import get_close_matches
+from enum import Enum, unique
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, NotRequired
+from typing import TYPE_CHECKING, Annotated, Any, Final, NotRequired
 
 import yaml
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from redsun.virtual import RedSunConfig
 
 from ..services._transports import TRANSPORTS
+from ._hooks import HookGroup, group_hook_entries
 
 if TYPE_CHECKING:
     from redsun.containers.components import _ComponentField as ComponentField
 
 logger = logging.getLogger("redsun")
 
-__all__ = ["AppConfig", "CatalogConfig", "StorageConfig"]
+__all__ = ["AppConfig", "Frontend"]
 
 
-@dataclass(frozen=True, slots=True)
-class CatalogConfig:
-    """The catalog a session keeps in `<base_dir>/<session>/catalog`.
+@unique
+class Frontend(str, Enum):
+    """Supported frontend types."""
 
-    Parameters
-    ----------
-    readable : tuple[Path, ...]
-        Directories the catalog may read from besides the session's own.
-    """
-
-    readable: tuple[Path, ...] = field(default_factory=tuple)
+    PYQT = "pyqt"
+    PYSIDE = "pyside"
 
 
-@dataclass(frozen=True, slots=True)
-class StorageConfig:
-    """Where a session writes, and whether it keeps a catalog of its runs.
+def nonempty_path(value: Any) -> Any:
+    """Refuse an empty path, which would mean the working directory."""
+    if value == "":
+        raise ValueError("an empty path; leave the key out for the default")
+    return value
 
-    Parameters
-    ----------
-    base_dir : Path | None
-        Root the session writes under. `None` is the user data directory.
-    max_digits : int
-        Width of the counter in file names.
-    catalog : CatalogConfig | None
-        The session's catalog, needing the ``tiled`` extra; `None` for none.
-    """
 
-    base_dir: Path | None = None
+UserPath = Annotated[
+    Path, BeforeValidator(nonempty_path), AfterValidator(Path.expanduser)
+]
+"""A path as a session file writes it, with ``~`` expanded."""
+
+
+class CatalogConfig(BaseModel, extra="forbid", frozen=True):
+    """The catalog a session keeps in `<base_dir>/<session>/catalog`."""
+
+    readable: tuple[UserPath, ...] = ()
+    """Directories the catalog may read from besides the session's own."""
+
+
+class StorageConfig(BaseModel, extra="forbid", frozen=True):
+    """Where a session writes, and whether it keeps a catalog of its runs."""
+
+    base_dir: UserPath | None = None
+    """Root the session writes under; `None` is the user data directory."""
+
     max_digits: int = 5
+    """Width of the counter in file names."""
+
     catalog: CatalogConfig | None = None
+    """The session's catalog, needing the ``tiled`` extra; `None` for none."""
 
     @classmethod
     def from_mapping(cls, section: Mapping[str, Any] | None) -> StorageConfig:
@@ -310,3 +329,152 @@ def refuse_unresolved_fields(
             f"from_config set but no config path was provided to the container "
             f"class"
         )
+
+
+SCHEMA_VERSIONS: Final = (1.0,)
+"""The session file schema versions this redsun reads."""
+
+PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
+"""The keys naming the plugin a component comes from."""
+
+
+class ComponentEntry(BaseModel, extra="allow"):
+    """A component's entry: the plugin it comes from, and its constructor keywords.
+
+    Every key besides the plugin keys is a keyword for the component's
+    constructor, which checks them when the component is built.
+    """
+
+    plugin_name: str | None = None
+    """The plugin whose manifest lists the component."""
+
+    plugin_id: str | None = None
+    """The component's id in that manifest."""
+
+    @model_validator(mode="after")
+    def pair_plugin_keys(self) -> ComponentEntry:
+        """Refuse one plugin key without the other, and a misspelled one."""
+        if (self.plugin_name is None) != (self.plugin_id is None):
+            given, missing = (
+                ("plugin_name", "plugin_id")
+                if self.plugin_id is None
+                else ("plugin_id", "plugin_name")
+            )
+            raise ValueError(
+                f"{given} is given without {missing}; give both or neither"
+            )
+        for key in self.model_extra or {}:
+            if key.startswith("plugin_"):
+                close = get_close_matches(key, PLUGIN_KEYS, n=1)
+                hint = f"; did you mean {close[0]!r}?" if close else ""
+                raise ValueError(
+                    f"{key!r} is not a plugin key, which are {PLUGIN_KEYS}{hint}"
+                )
+        return self
+
+
+class DeviceEntry(ComponentEntry):
+    """A device's entry, with the keys the container keeps from its constructor."""
+
+    service: str | None = None
+    """The service whose prefix the device gets."""
+
+    autoconnect: bool = Field(default=True, strict=True)
+    """Whether the build connects the device."""
+
+
+class WiringRule(BaseModel, extra="forbid"):
+    """One connection a session file declares, from a signal to a slot."""
+
+    from_: str = Field(alias="from")
+    """The signal, as ``component.signal``."""
+
+    to: str
+    """The slot, as ``component.slot``."""
+
+
+class SessionFile(BaseModel, extra="forbid"):
+    """A session file, after its layers are merged."""
+
+    schema_version: float = Field(strict=True)
+    """The schema the file is written for, one of `SCHEMA_VERSIONS`."""
+
+    frontend: Frontend
+    """The toolkit the session runs on."""
+
+    session: str = "Redsun"
+    """The session's display name."""
+
+    metadata: dict[str, Any] = {}
+    """Metadata of the session."""
+
+    transport: str | None = None
+    """What the session's services speak, from the ``services`` section."""
+
+    services: dict[str, ComponentEntry] = {}
+    """Services by name."""
+
+    devices: dict[str, DeviceEntry] = {}
+    """Devices by name."""
+
+    presenters: dict[str, ComponentEntry] = {}
+    """Presenters by name."""
+
+    views: dict[str, ComponentEntry] = {}
+    """Views by name."""
+
+    storage: StorageConfig | None = None
+    """Where the session writes; the defaults when absent."""
+
+    wiring: list[WiringRule] = []
+    """Connections the session declares."""
+
+    hooks: list[HookGroup] = []
+    """Hook providers, one group per distinct entry."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_sections(cls, data: Any) -> Any:
+        """Read empty sections as empty, lift the transport, and group hook entries.
+
+        An empty ``storage.catalog`` key is a catalog with every default.
+
+        Hook entries are grouped here, before anything is copied, since the
+        entries a YAML anchor shares are known only by being one object.
+        """
+        if not isinstance(data, Mapping):
+            return data
+        data = dict(data)
+        for section in ("metadata", "services", "devices", "presenters", "views"):
+            if section in data and data[section] is None:
+                data[section] = {}
+        if "wiring" in data and data["wiring"] is None:
+            data["wiring"] = []
+        services = data.get("services")
+        if isinstance(services, Mapping) and TRANSPORT_KEY in services:
+            services = dict(services)
+            data["transport"] = services.pop(TRANSPORT_KEY)
+            data["services"] = services
+        storage = data.get("storage")
+        if isinstance(storage, Mapping) and storage.get("catalog", {}) is None:
+            # a present but empty key asks for a catalog with every default,
+            # which only the raw file can tell apart from an absent one
+            data["storage"] = {**storage, "catalog": {}}
+        hooks = data.get("hooks")
+        if hooks is None and "hooks" in data:
+            data["hooks"] = []
+        elif isinstance(hooks, Mapping):
+            data["hooks"] = group_hook_entries(hooks)
+        return data
+
+    @field_validator("schema_version")
+    @classmethod
+    def supported_schema_version(cls, value: float) -> float:
+        """Refuse a schema version this redsun does not read."""
+        if value not in SCHEMA_VERSIONS:
+            known = ", ".join(str(version) for version in SCHEMA_VERSIONS)
+            raise ValueError(
+                f"schema_version {value} is not one this redsun reads ({known}); "
+                f"upgrade redsun or write the file for {SCHEMA_VERSIONS[-1]}"
+            )
+        return value
