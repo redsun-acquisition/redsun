@@ -18,7 +18,7 @@ jobs:
           python-version: "3.11"
 
       - name: Build docs and check cross-references
-        run: uv run tox -e docs
+        run: uv run --locked --only-group tox tox -e docs
 
       # the publish job deploys this artifact rather than building again,
       # so what reaches Pages is what was checked

@@ -14,12 +14,12 @@ from __future__ import annotations
 import subprocess
 import sys
 
+from qtpy import API_NAME
+from qtpy.cli import generate_mypy_args
+
 
 def main() -> int:
     """Print the binding in use, then run mypy against it."""
-    from qtpy import API_NAME
-    from qtpy.cli import generate_mypy_args
-
     print(f"mypy against {API_NAME}", flush=True)
     return subprocess.call(
         [sys.executable, "-m", "mypy", *generate_mypy_args().split(), *sys.argv[1:]]
