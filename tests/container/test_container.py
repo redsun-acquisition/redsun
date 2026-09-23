@@ -522,6 +522,62 @@ class TestFromConfig:
         for location in ("devices.motor:", "services.ioc:", "widgets:"):
             assert f"\n  {location}" in errors[0]
 
+    @pytest.mark.parametrize(
+        ("manifest", "says"),
+        [
+            ("devices: [unclosed\n", "could not be read"),
+            (None, "could not be read"),
+        ],
+        ids=["not-yaml", "missing"],
+    )
+    def test_a_manifest_that_cannot_be_read_is_left_out_alone(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        manifest: str | None,
+        says: str,
+    ) -> None:
+        if manifest is not None:
+            (tmp_path / "redsun.yaml").write_text(manifest, encoding="utf-8")
+        plugins = {"mock-pkg": config_path.parent / "mock_pkg", "broken-pkg": tmp_path}
+
+        with install_plugins(plugins):
+            container = AppContainer.from_config(
+                str(config_path / "mock_motor_config.yaml")
+            )
+        container.build()
+
+        assert set(container.devices) == {"Single axis motor", "Double axis motor"}
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert errors[0].startswith(f'Plugin "broken-pkg" manifest redsun.yaml {says}')
+
+    def test_a_section_written_empty_builds_from_a_file(self, tmp_path: Path) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\ndevices:\npresenters:\nviews:\n",
+            encoding="utf-8",
+        )
+
+        container = AppContainer.from_config(str(config))
+        container.build()
+
+        assert container.devices == {}
+
+    def test_a_component_without_its_plugin_is_refused_by_from_config(
+        self, tmp_path: Path
+    ) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\ndevices:\n  m:\n    axis: [X]\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError, match="devices.m: names no plugin"):
+            AppContainer.from_config(str(config))
+
     def test_a_manifest_naming_another_plugin_is_left_out(
         self,
         install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],

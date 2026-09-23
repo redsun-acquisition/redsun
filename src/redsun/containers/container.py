@@ -197,12 +197,14 @@ class AppContainer:
     """
 
     _config_paths: ClassVar[tuple[Path, ...]] = ()
-    _config_data: ClassVar[dict[str, Any]] = {}
     """The configuration files this container reads, in layering order.
 
     A subclass's ``config`` is appended to its bases' files, so a file shared
     by several sessions sits under each session's own.
     """
+
+    _config_data: ClassVar[dict[str, Any]] = {}
+    """The merged, unvalidated content of `_config_paths`."""
 
     BUILD_STEPS: ClassVar[tuple[str, ...]] = (
         "services",
@@ -1245,7 +1247,7 @@ class AppContainer:
             ("views", _ViewComponent),
         )
         for group, component in declared:
-            section: dict[str, Any] = config.get(group, {})
+            section: dict[str, Any] = config.get(group) or {}
             for name, plugin_class in plugin_types[group].items():
                 cfg_kwargs = {
                     k: v

@@ -68,27 +68,35 @@ class PluginManifest(BaseModel, extra="forbid", use_attribute_docstrings=True):
 def discover() -> dict[str, PluginManifest]:
     """Read every installed manifest, by entry point name.
 
-    A manifest that does not validate is logged with its file and every error,
-    and left out whole.
+    A manifest that cannot be read, or does not validate, is logged with its
+    file and every error, and left out whole: one bundle's mistake must not
+    fail the sessions that do not use it.
     """
     manifests: dict[str, PluginManifest] = {}
     for plugin in entry_points(group=ENTRY_POINT_GROUP):
-        resource = files(plugin.name.replace("-", "_")) / plugin.value
-        with as_file(resource) as path, open(path) as f:
-            try:
+        try:
+            resource = files(plugin.name.replace("-", "_")) / plugin.value
+            with as_file(resource) as path, open(path) as f:
                 manifest = PluginManifest.model_validate(yaml.safe_load(f) or {})
-            except ValidationError as e:
-                logger.error(
-                    'Plugin "%s" manifest %s is invalid and was skipped:\n%s',
-                    plugin.name,
-                    path,
-                    "\n".join(
-                        f"  {'.'.join(str(part) for part in error['loc'])}: "
-                        f"{error['msg']}"
-                        for error in e.errors()
-                    ),
-                )
-                continue
+        except (ImportError, OSError, yaml.YAMLError) as e:
+            logger.error(
+                'Plugin "%s" manifest %s could not be read and was skipped: %s',
+                plugin.name,
+                plugin.value,
+                e,
+            )
+            continue
+        except ValidationError as e:
+            logger.error(
+                'Plugin "%s" manifest %s is invalid and was skipped:\n%s',
+                plugin.name,
+                path,
+                "\n".join(
+                    f"  {'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                    for error in e.errors()
+                ),
+            )
+            continue
         if manifest.name is not None and manifest.name != plugin.name:
             logger.error(
                 'Plugin "%s" manifest %s names itself "%s" and was skipped.',

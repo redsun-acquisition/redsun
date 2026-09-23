@@ -249,7 +249,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 ### Changed
 
 - Plugin manifests are validated when a session looks up its plugins. A
-  manifest with an unknown group or key, a class path not written as
+  manifest that cannot be read or parsed, one with an unknown group or key, a class path not written as
   `module:ClassName`, a service entry without `module`, or a `name` other
   than its entry point's is left out whole, with one error naming its file
   and every problem. A service entry takes `module`, `args`, `ready` and
@@ -347,8 +347,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   `frontend` or `services.transport`, a `transport` outside `services`,
   `plugin_name` without `plugin_id` or the reverse, a misspelled `plugin_*`
   key, a non-boolean device `autoconnect`, an empty `storage.base_dir`, a
-  `storage.catalog.readable` that is not a list, and a hook entry or wiring
-  rule missing a key, in place of `TypeError`, `KeyError`, `WiringError` and
+  `storage.catalog.readable` that is not a list, a hook entry or wiring
+  rule missing a key, and, in a file given to `from_config`, a device,
+  presenter or view without `plugin_name` and `plugin_id`, in place of `TypeError`, `KeyError`, `WiringError` and
   `HookError`. A container class naming a file validates it when
   constructed, or when created if it declares `from_config` fields.
 
@@ -364,6 +365,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 ### Fixed
+
+- **`AppContainer.from_config`** (`redsun.containers.container`) builds a
+  file whose `devices`, `presenters` or `views` section is written empty.
 
 - **`SessionPathProvider.reset_plan`** (`redsun.path_provider`) rescans the
   counters from disk, so a filename a plan requested and never wrote is

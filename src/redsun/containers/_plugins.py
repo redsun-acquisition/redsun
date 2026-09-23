@@ -21,7 +21,7 @@ from redsun.containers.components import expects_positionals
 from redsun.presenter import PPresenter
 from redsun.view import PView
 
-from ._config import TRANSPORT_KEY, load_yaml
+from ._config import TRANSPORT_KEY, ConfigurationError, load_yaml
 from ._manifest import ServiceEntry, discover
 
 if TYPE_CHECKING:
@@ -113,8 +113,24 @@ def load_configuration(
     Services are returned as each declaration's keyword arguments. A
     service naming a plugin takes its module and readiness line from the
     plugin's manifest, overridden by the session file.
+
+    Raises
+    ------
+    ConfigurationError
+        If the file does not validate, or names a device, presenter or view
+        without the plugin it comes from.
     """
-    config = load_yaml([Path(config_path)])
+    paths = [Path(config_path)]
+    config = load_yaml(paths)
+    unnamed = [
+        f"{group}.{name}: names no plugin; a component in a file built with "
+        "from_config takes plugin_name and plugin_id"
+        for group in ("devices", "presenters", "views")
+        for name, entry in (config.get(group) or {}).items()
+        if not {"plugin_name", "plugin_id"} <= entry.keys()
+    ]
+    if unnamed:
+        raise ConfigurationError(paths, unnamed)
 
     plugin_types: PluginTypes = {"devices": {}, "presenters": {}, "views": {}}
     available_manifests = discover()
@@ -124,7 +140,8 @@ def load_configuration(
     groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
 
     for group in groups:
-        if group not in config:
+        # a section written with nothing under it parses as None
+        if not config.get(group):
             logger.debug(
                 "Group %s not found in the configuration file. Skipping", group
             )
