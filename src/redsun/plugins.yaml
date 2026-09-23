@@ -1,1 +1,2 @@
-views: {}
+views:
+  logs: "redsun.view.qt.builtins:LogView"

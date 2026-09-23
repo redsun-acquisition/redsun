@@ -9,10 +9,12 @@ from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
 from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
+from redsun.qt import Dock
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Any
+
+    from redsun.view import Placement
 
 __all__ = ["LogView"]
 
@@ -82,16 +84,12 @@ class LogView(QtW.QWidget):
     shown and ``Open log folder`` opens their folder in the file browser;
     without them the folder button is disabled.
 
-    Parameters
-    ----------
-    name : str
-        Identity key of the view, positional-only.
-    kwargs : Any, optional
-        Additional keyword arguments (unused).
     """
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
-        super().__init__()
+    placement: Placement = Dock("bottom")
+
+    def __init__(self, name: str, parent: QtW.QWidget) -> None:
+        super().__init__(parent)
         self.name = name
 
         self._formatter = GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from qtpy import QtCore, QtGui
+from qtpy.QtWidgets import QDockWidget, QWidget
 
 from redsun.log import (
     BufferHandler,
@@ -17,6 +18,7 @@ from redsun.log import (
     remove_handler,
     set_level,
 )
+from redsun.qt import QtSession
 from redsun.view.qt import _log_view
 from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
 from redsun.view.qt.builtins import LogView
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from qtpy.QtWidgets import QApplication
+
+    from ...conftest import BuildSession
 
 pytestmark = pytest.mark.qt
 
@@ -45,16 +49,19 @@ def logs() -> Iterator[logging.Logger]:
 @pytest.fixture
 def make_view(qapp: QApplication) -> Iterator[Callable[[], LogView]]:
     """Build views and take them down again, detaching each from the buffer."""
-    built: list[LogView] = []
+    built: list[tuple[LogView, QWidget]] = []
 
     def build() -> LogView:
-        view = LogView("logs")
-        built.append(view)
+        parent = QWidget()
+        view = LogView("logs", parent)
+        built.append((view, parent))
         return view
 
     yield build
-    for view in built:
+    # closing the parent sends no closeEvent to its children
+    for view, parent in built:
         view.close()
+        parent.close()
 
 
 @pytest.fixture
@@ -482,3 +489,17 @@ def test_a_palette_change_redraws_what_is_on_screen(
     html = _rendered(view)
     assert _ON_DARK[logging.ERROR] in html
     assert _ON_LIGHT[logging.ERROR] not in html
+
+
+def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    views = {"logs": {"plugin_name": "redsun", "plugin_id": "logs"}}
+    session = build(QtSession.from_config({"session": "lab", "views": views}))
+
+    view = session.views["logs"]
+    assert isinstance(view, LogView)
+    dock = view.parentWidget()
+    assert isinstance(dock, QDockWidget)
+    area = session.main_window.dockWidgetArea(dock)
+    assert area == QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
