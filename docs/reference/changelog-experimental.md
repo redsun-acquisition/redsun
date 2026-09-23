@@ -11,18 +11,18 @@ listed in the [changelog](changelog.md).
 - `Session.transport` (`redsun.experimental`): what the session's services
   speak, read once from `services.transport` in the configuration and given
   to every `Service` the session makes, `channel-access` when the key is
-  absent. A transport `redsun` does not have is refused when the
-  configuration is read, and `transport` cannot name a service, from the
-  section or from an annotation. `shutdown` releases what that transport
-  caches, so a rebuilt session reaches its restarted services at once.
+  absent. A transport `redsun` does not have, or a mapping under
+  `services.transport`, raises `ConfigurationError` when the configuration is
+  read, and an annotation named `transport` raises `TypeError`. `shutdown`
+  releases what that transport caches, so a rebuilt session reaches its
+  restarted services at once.
 
 - A presenter or view asking a question the session cannot answer where it
   asks is skipped at declaration (`redsun.experimental`): a protocol in its
-  constructor, which runs before the other components exist; a protocol
-  devices implement in `setup`, from `bluesky.protocols` or `ophyd_async` or
-  extending one, which is asked for with `DevicesOf[P]` in the constructor; a
-  union of protocols in `setup`; and a `provides` method annotated with a
-  protocol, a shared value being a concrete object.
+  constructor; a protocol devices implement in `setup`, from
+  `bluesky.protocols` or `ophyd_async` or extending one, which is asked for
+  with `DevicesOf[P]` in the constructor; a union of protocols in `setup`; and
+  a `provides` method annotated with a protocol.
 
 - A `setup` parameter annotated with a protocol (`redsun.experimental`) is
   answered by the one component or shared value satisfying it, with no marker.
@@ -30,10 +30,9 @@ listed in the [changelog](changelog.md).
   satisfying `P`, the asker included. The check runs on built instances, so
   `P` need not be `runtime_checkable` and may declare data members, and a
   subscripted generic protocol such as `Reading[float]` is matched as
-  `Reading`. Several
-  answers where one is asked for, none, or one from a later layer raise; a
-  question only a component that failed to build could answer leaves the
-  asker not set up:
+  `Reading`. Several answers where one is asked for, none, or one from a later
+  layer raise; a question only a component that failed to build could answer
+  leaves the asker not set up:
 
   ```python
   class MyView:
@@ -49,13 +48,13 @@ listed in the [changelog](changelog.md).
   `setup` can only assign through `object.__setattr__`.
 
 - `Frontend.check_view` and `Session.view_arguments`
-  (`redsun.experimental`) - a frontend refuses a view class it cannot build where the view is
-  declared, and a session passes every view's constructor what it returns, by
-  keyword. Neither does anything by default. `Qt.check_view` refuses a view
-  whose constructor does not start with `(name: str, parent: QWidget)`, and
-  `QtSession` passes `main_window` as every view's parent, creating it at the
-  start of the build. A view that fails after passing the window to
-  `super().__init__` is removed from it:
+  (`redsun.experimental`) - a frontend refuses a view class it cannot build
+  where the view is declared, and a session passes every view's constructor
+  what it returns, by keyword. Neither does anything by default.
+  `Qt.check_view` refuses a view whose constructor does not start with
+  `(name: str, parent: QWidget)`, and `QtSession` passes `main_window` as every
+  view's parent, creating it at the start of the build. A view that fails after
+  passing the window to `super().__init__` is removed from it:
 
   ```python
   class MotorView(QWidget):
@@ -65,12 +64,11 @@ listed in the [changelog](changelog.md).
           super().__init__(parent)
   ```
 
-- **`Session.storage`** and **`Session.path_provider`**
-  (`redsun.experimental`) - a session reads the `storage` section as
-  `redsun.containers` does, and builds one `SessionPathProvider` from it. A
-  device whose constructor takes `path_provider` gets it, and a declaration
-  giving one is refused. Components ask for it by type, and wiring reaches it
-  as `path_provider`:
+- `Session.storage` and `Session.path_provider` (`redsun.experimental`) - a
+  session reads the `storage` section as `redsun.containers` does, and builds
+  one `SessionPathProvider` from it. A device whose constructor takes
+  `path_provider` gets it, and a declaration giving one is refused. Components
+  ask for it by type, and wiring reaches it as `path_provider`:
 
   ```yaml
   wiring:
@@ -95,7 +93,7 @@ listed in the [changelog](changelog.md).
   names and behaviour may change or be withdrawn in any release.
   `redsun.containers` remains the supported layer. See
   [The experimental container](../explanation/experimental-container.md) for the
-  architecture, what it lifts off component authors, and what it gives up.
+  architecture.
 
   Components are declared as annotations rather than `declare_*` calls, each
   naming the layer it belongs to, and a component's collaborators are
@@ -110,20 +108,44 @@ listed in the [changelog](changelog.md).
       motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
   ```
 
+  The public surface is split into `redsun.experimental.session`, the
+  container and its Qt frontend in `.session.qt`; `.ports`, the connectors a
+  session binds; `.injection`, what a component asks the session for and
+  offers back; and `.registry`, the framework's own values: the session
+  configuration as `SessionConfig`, the device mapping and the bluesky
+  callback registry. `redsun.experimental` re-exports all of them.
+
 - `AsDevice`, `AsPresenter` and `AsView` wrap the component's own type without
   replacing it, so the attribute stays typed as what it holds. One of them marks
   an annotation as a component, so a container class may hold ordinary
   attributes beside its components. A device must subclass
   `ophyd_async.core.Device`, and a class that subclasses it is refused in either
-  other layer. A presenter or view is called with every argument by keyword,
-  `name` included, so it must take `name` as a parameter a keyword can fill;
-  a name that could only arrive inside `*args` or `**kwargs` is refused. A
+  other layer. A device is built as `cls(name=<name>, **kwargs)`, so a subclass
+  of `ophyd_async.epics.core.EpicsDevice` can be declared, and a device taking
+  `name` positional-only is logged and skipped. A presenter or view is called
+  with every argument by keyword, `name` included, so it must take `name` as a
+  parameter a keyword can fill, anywhere in the signature; a constructor taking
+  `name`, or any parameter without a default, only positionally is refused. A
   component appearing only in the session file takes its layer from the
-  section it sits under, and is checked the same way. The
-  three are also reachable as `redsun.experimental.session.components`. A built
-  component is set on the session under its name, so a name the session never
-  declared raises `AttributeError` and a type checker refuses it, and a
-  component that failed to build raises rather than reading as `None`.
+  section it sits under, and is checked the same way. The three are also
+  reachable as `redsun.experimental.session.components`. A built component is
+  set on the session under its name, so a name the session never declared
+  raises `AttributeError` and a type checker refuses it, and a component that
+  failed to build raises rather than reading as `None`.
+
+- `accepts_name` (`redsun.experimental.session`) - true for a class taking
+  `name` as a parameter a keyword can fill, wherever it stands.
+
+- A presenter or view failing a declaration check (`redsun.experimental`) is
+  logged and skipped, and the session builds without it. This covers the layer
+  checks, the `name` parameter, `async def setup`, the placement checks and
+  `Frontend.check_view`. `Declaration.refusal` (`redsun.experimental.session`)
+  holds the reason. A built instance is checked against its layer's protocol
+  and placement as soon as it is constructed, and skipped on failure. See
+  [ADR 16](../explanation/decisions/0016-a-component-refused-at-declaration-is-skipped.md).
+
+- `Declaration.instance` (`redsun.experimental.session`) is typed
+  `Device | NamedComponent | None`.
 
 - `Declare`, `FromConfig` and `Alias` - inline keyword arguments, the
   configuration key an entry is read from, and the name a component is declared
@@ -137,6 +159,10 @@ listed in the [changelog](changelog.md).
   entry. `IsProvider`, `IsInjectable`, `ProviderKey` and the `provide`/`require`
   pair have no equivalent, and `VirtualContainer` is not among the types a
   component may ask for.
+
+- `register_shared` (`redsun.experimental.injection`) returns the values it
+  shared, in the order it registered them. `constant` returns a callable typed
+  by the value it holds, `Callable[[], T]`.
 
 - `Session.providers` - a list of ordinary classes, one of which a
   `providers:` manifest entry resolves to. A provider's constructor is filled
@@ -155,19 +181,21 @@ listed in the [changelog](changelog.md).
 
   A provider may be a plain class, a dataclass (frozen and slotted included) or
   a pydantic model. It is given no name, so a parameter called `name` is one the
-  session must answer like any other.
+  session must answer like any other. `Session.build` raises `TypeError` naming
+  both when a provider and a component share one type.
 
 - Components are built in layer order, and within a layer in the order they
   are declared. A `setup` may take what its own layer or an earlier one owns and
   never what a later one owns, so a presenter naming a view, or a type only a
-  view shares, is refused before anything is constructed, naming both components
-  and both layers. Two views sharing a value needs no publish-then-resolve pass:
-  one shares it with `provides`, the other takes it in `setup`.
+  view shares, is refused when the session reads its declarations, before any
+  service starts or device connects, naming both components and both layers.
+  One view shares a value with `provides`, and another takes it in `setup`.
 
 - `Session.build` logs a component that fails to build and carries on, in
   every layer. The component is absent from `presenters` or `views`, and so is
-  one built from it. The closing line counts what was built against what was
-  declared and is logged at `WARNING` when anything failed:
+  one built from it or asking for a type it shares. The closing line counts what
+  was built against what was declared and is logged at `WARNING` when anything
+  failed:
 
   ```
   Container built: 1/2 devices, 1/3 presenters, 0/0 views
@@ -214,10 +242,10 @@ listed in the [changelog](changelog.md).
 
 - `setup` and `HasSetup` - an optional method a component defines to take what
   another component owns, and the protocol naming it. `HasShutdown` and
-  `HasAsyncShutdown` name the teardown the session already registered by
-  looking for a `shutdown` method. The session calls it once every presenter and view has been
-  constructed, in a build step of its own, announced as `"setup"` between
-  `"views"` and `"seal"`. Its parameters are filled by type, the way a
+  `HasAsyncShutdown` name the teardown the session registers by looking for a
+  `shutdown` method. The session calls `setup` once every presenter and view
+  has been constructed, in a build step of its own, announced as `"setup"`
+  between `"views"` and `"seal"`. Its parameters are filled by type, the way a
   constructor's are, so declaration order does not matter:
 
   ```python
@@ -225,6 +253,11 @@ listed in the [changelog](changelog.md).
       def setup(self, readings: MotorReadings) -> None:
           self.readings = readings
   ```
+
+  A constructor naming a component, its class, a type a component shares with
+  `provides`, or the callback catalogue is refused, naming the parameter. A
+  shared value is read once, right after its owner is constructed, so a
+  `@provides` method answers from what the constructor made.
 
   An `async def setup` is refused when the declarations are read. A `setup`
   that raises, or that asks for a value of a component that failed to build, is
@@ -234,22 +267,25 @@ listed in the [changelog](changelog.md).
   something nothing in the session declares raises `TypeError`.
 
 - A component that both takes another component and publishes a signal to it is
-  named once the wiring is applied, beside the other reports of this kind. An
-  action written both ways runs twice, and a bundle reaches a component one
-  way, by calling it or by a signal.
+  named once the wiring is applied, beside the other reports of this kind.
 
 - `DevicesOf[P]` - every device of the session satisfying a protocol, by name,
   spelled `Annotated[Mapping[str, P], Devices()]` and asked for in a
   constructor, where the devices already exist, so it may be read in
-  `__init__`. Ask for `DeviceMapping` to receive every device unfiltered.
+  `__init__`. `DevicesOf` on anything but `Mapping[str, P]` skips the component
+  at declaration, and `DevicesOf` in `setup` is refused. Ask for
+  `DeviceMapping` to receive every device unfiltered.
 
 - `satisfies`, `Session.satisfying` and `Session.rejected` - the membership
-  check, the components matching a protocol, and why each near miss was left
-  out. Membership is structural rather than `isinstance`: an
+  check, the components matching a protocol as a plain mapping, and why each
+  near miss was left out. Membership is structural rather than `isinstance`: an
   implementation must accept every call the protocol permits, so a renamed
   parameter or an extra required one is not a match, while an extra defaulted
   parameter is. Types are not compared, which a type checker does at the call
-  site.
+  site. `Session.satisfying` and `satisfying` are typed by the protocol they
+  are given, so `session.satisfying(Resettable)` is a
+  `dict[str, Resettable]`, and `satisfies` narrows an instance it accepts to
+  the protocol for a type checker and leaves a class as `type`.
 
 - `Placement`, `Frontend` and `Frontend.requires` - what a view asks the
   frontend to attach it at, the toolkit a container is built against, and the
@@ -303,18 +339,16 @@ listed in the [changelog](changelog.md).
   whole entry rather than only itself.
 
   `Session.write` writes that configuration to a path as YAML and returns
-  it, one flat file whatever the session was built from, so it opens on its own
-  with nothing to assemble first. Keys come out in the order the merged
-  configuration holds them, and comments do not survive. A path the session was
-  built from raises `ConfigurationInUse`: overwriting one replaces what every
-  other session reading it gets.
+  it, one flat file whatever the session was built from. Keys come out in the
+  order the merged configuration holds them, and comments do not survive. A
+  path the session was built from raises `ConfigurationInUse`.
 
   Every Qt session registers a `Save configuration as...` action under the
   command id `<name>.save_configuration`, joining the menu
   `redsun.experimental.session.qt.SAVE_MENU`, which a window offers by
   passing that id to `setModelMenuBar`. It asks for a path, says in the dialog
   that comments are not kept, writes nothing when the dialog is cancelled, and
-  reports a refused path in a warning box rather than failing silently.
+  reports a refused path in a warning box.
 
   `Session.has_changes` reports whether any component now asks to be
   written differently than it did at the end of the build. The comparison is
@@ -332,7 +366,8 @@ listed in the [changelog](changelog.md).
   ```
 
   `Session.settings` opens it in the `registry` step and registers it, so
-  an action asks for it by type. A value is written as it is set. A file that is
+  an action asks for it by type. A value is written as it is set. `Settings.set`
+  takes a `JsonValue`, and `Settings.get` returns `Any`. A file that is
   missing, unreadable, or not an object leaves the session on the defaults its
   callers ask for, and says so at `WARNING`.
 
@@ -366,7 +401,7 @@ listed in the [changelog](changelog.md).
   `shutdown`, sync or async, and nothing else. A build that raises runs the
   releases its finished steps earned before the exception leaves. `shutdown` may
   be called twice, or on a session that was never built, and runs nothing the
-  second time.
+  second time. A session that was shut down can be built again.
 
 - `Session.from_config` - a container for a session described by a file or
   a mapping, for a session with no class of its own. The `frontend:` key picks
@@ -382,18 +417,24 @@ listed in the [changelog](changelog.md).
 
   ```python
   class MyApp(Session):
-      config = ["instrument.yaml", {"name": "morning-run"}]
+      config = ["instrument.yaml", {"session": "morning-run"}]
   ```
 
   A subclass's sources layer over its bases', in the order the method resolution
   order gives, and the sources passed to the constructor layer over the class's
   rather than replacing them. `from_config` accepts the same. Sources must agree
-  on `schema_version` and `frontend`, and `ValueError` names the source that
-  disagrees; every other key, `name` included, is taken from the last source
-  setting it. A component entry under `devices`, `presenters` or `views` is
-  replaced whole rather than merged.
+  on `schema_version`, `frontend` and `services.transport`, and `ValueError`
+  names the source that disagrees; every other key, `session` included, is taken
+  from the last source setting it. A component entry under `devices`,
+  `presenters` or `views` is replaced whole rather than merged.
 
-- `Session.name` - what the session is called, readable before `build`.
+- `ConfigurationError` (`redsun.experimental`) - `Session` checks its merged
+  configuration against the session file format and raises it, listing every
+  problem as `section.key: what`. An unknown top-level key, a value of the
+  wrong type and a malformed `wiring` rule are among them.
+
+- `Session.name` - what the session is called, readable before `build`: the
+  configuration's `session`, or the session's own class name.
   `Layer.section` - the configuration section a layer's components are declared
   under, the member's own name pluralised, so `Layer.DEVICE.section` is
   `"devices"`.
@@ -412,8 +453,9 @@ listed in the [changelog](changelog.md).
   instance serves them all. `Declare`, `FromConfig` and `Alias` work as they do
   on a component. `QtHook` names the four points `QtSession` calls:
   `create_application`, which supplies the `QApplication`,
-  `configure_application`, `during_build` and `configure_main_view`. `Session.hook_points` is empty, so a hook declared
-  on a container bound to no toolkit is refused.
+  `configure_application`, `during_build` and `configure_main_view`.
+  `Session.hook_points` is empty, so a hook declared on a container bound to
+  no toolkit is refused.
 
   The `hooks:` section takes the same points as keys, each entry carrying
   `provider` and `kwargs`; a YAML anchor aliased under two keys gives one
@@ -423,8 +465,9 @@ listed in the [changelog](changelog.md).
   and a provider that does not implement the protocol its point calls.
 
   A `during_build` hook is told `services`, `devices`, `connect`, `registry`,
-  `presenters`, `views`, `setup`, `seal`, `wiring`, `presentation` and `report`. `read_configuration` and
-  `start_runtime` run before the span it opens and are not announced to it.
+  `presenters`, `views`, `setup`, `seal`, `wiring`, `presentation` and
+  `report`. `read_configuration` and `start_runtime` run before the span it
+  opens and are not announced to it.
 
 - An `actions:` section in the configuration of a Qt session, read at build and
   registered on the `Application` the session owns. An entry is the keyword
@@ -448,8 +491,7 @@ listed in the [changelog](changelog.md).
   carrying a key an action does not take, or one app-model refuses.
 
 - `redsun.experimental.ConfirmsClose` and the `confirm_close` hook point. The
-  session acts on this point's answer, where it only tells the others what
-  happened, and `False` leaves the session running:
+  session acts on the point's answer, and `False` leaves the session running:
 
   ```python
   class KeepOpenWhileRunning:
@@ -486,7 +528,7 @@ listed in the [changelog](changelog.md).
 
 - `Session` carries `__weakref__` among its slots, so a session can be
   referred to weakly, as `aboutToQuit.connect(session.shutdown)` needs.
-  Instances still carry no `__dict__`.
+  Instances carry no `__dict__`.
 
 - A colour-scheme control on every Qt session, pinned to the right of a toolbar
   of its own behind an expanding spacer. That toolbar is added rather than set
@@ -520,8 +562,8 @@ listed in the [changelog](changelog.md).
   `shutdown` and before the application is destroyed. Each view is closed and
   then deleted, and the window goes after the views it docks, leaving
   `main_window` reporting an unbuilt session again. A view is closed before it
-  is deleted, so its `closeEvent` runs. A reference held across the shutdown is left wrapping a destroyed widget, and using it raises
-  `RuntimeError`.
+  is deleted, so its `closeEvent` runs. A reference held across the shutdown
+  is left wrapping a destroyed widget, and using it raises `RuntimeError`.
 
 - `ComponentNotBuilt`, a `WiringError` carrying the `component` a port path
   named. A `wiring:` rule naming a component the build failed on is skipped with
@@ -531,9 +573,9 @@ listed in the [changelog](changelog.md).
   Not connecting stage.readback -> panel.on_moved: component 'stage' was not built
   ```
 
-  Every other way of getting a rule wrong stays fatal, a name that was never
-  declared included, and a rule that is not a mapping of exactly `from` and `to`
-  raises `WiringError` naming the entry's position.
+  A rule naming a component that was never declared raises `WiringError`, and
+  a rule that is not a mapping of exactly `from` and `to` raises
+  `ConfigurationError`.
 
 - A component that shares nothing, asks for nothing and is wired to nothing is
   named once the wiring is applied, as is a `provides` return type no component
@@ -596,173 +638,17 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
-- `Session` (`redsun.experimental`) checks its merged configuration
-  against the session file model and raises `ConfigurationError`, now
-  exported from `redsun.experimental`, listing every problem as
-  `section.key: what`. An unknown top-level key, a malformed `wiring`
-  rule and an unknown or non-string `services.transport` raise it, where
-  the last two raised `WiringError` and `TypeError`.
+- `AppContainer` (`redsun.containers`) reads `schema_version` and `frontend`
+  as `1.0` and `pyqt` when a session file leaves them out, and accepts the
+  `providers`, `actions` and `color_scheme` sections.
 
-- `schema_version` and `frontend` (`redsun._config.SessionFile`) are
-  optional, `1.0` and `pyqt` when absent. A session file may hold
-  `providers`, `actions` and `color_scheme`.
+- `AppContainer` (`redsun.containers`) refuses layered session files naming
+  different `services.transport` values, raising `ValueError` naming the file
+  that disagrees.
 
-- Layered configuration sources must agree on `services.transport`
-  (`redsun._config.load`): a source naming a different transport from one
-  layered under it is refused as the sources are merged, beside
-  `schema_version` and `frontend`.
-
-- `DevicesOf` on anything but `Mapping[str, P]` (`redsun.experimental`) skips
-  the component at declaration, where it raised when the store was filled.
-
-- A constructor taking what another component owns, and a `setup` reaching
-  into a later layer (`redsun.experimental`), are refused when the session
-  reads its declarations, before any service starts or device connects, where
-  they were refused when the store was filled.
-
-- `register_shared` (`redsun.experimental.injection`) returns the values it
-  shared, in the order it registered them.
-
-- A presenter or view failing a declaration check (`redsun.experimental`) is
-  logged and skipped, and the session builds without it, where the check
-  raised from `Session.build` before. This covers the layer checks, the `name`
-  parameter, `async def setup`, the placement checks and `Frontend.check_view`.
-  `Declaration.refusal` (`redsun.experimental.session`) holds the reason. A
-  built instance is checked against
-  its layer's protocol and placement as soon as it is constructed, and skipped
-  on failure, where the check ran when the session was sealed and raised. See
-  [ADR 16](../explanation/decisions/0016-a-component-refused-at-declaration-is-skipped.md).
-
-- `AsPresenter` and `AsView` (`redsun.experimental`) build a presenter or
-  view with every argument passed by keyword, `name` included. A constructor
-  taking `name`, or any parameter without a default, only positionally is
-  refused at declaration. `name` may stand anywhere in the signature, so a
-  dataclass or pydantic model inheriting fields from a base class can be a
-  component as generated:
-
-  ```python
-  class MyController:
-      def __init__(self, name: str, *, step: float = 1.0) -> None: ...
-  ```
-
-- `accepts_name` (`redsun.experimental.session`) replaces `leads_with_name`,
-  and is true for a class taking `name` as a parameter a keyword can fill,
-  wherever it stands.
-
-- `Session.satisfying` and `satisfying` are typed by the protocol they are
-  given: `session.satisfying(Resettable)` is a `dict[str, Resettable]` rather
-  than a `dict[str, Any]`. `satisfies` narrows an instance it accepts to the
-  protocol for a type checker, and leaves a class as `type`.
-
-- `Settings.set` (`redsun.experimental`) takes a `JsonValue`, a value the
-  settings file can hold, so a type checker refuses one it cannot write.
-  `Settings.get` still returns `Any`.
-
-- `Declaration.instance` (`redsun.experimental.session`) is typed
-  `Device | NamedComponent | None` rather than `Any`, so reading a component's
-  own attribute through it needs an `isinstance` check first.
-
-- `constant` (`redsun.experimental.injection`) returns a callable typed by the
-  value it holds, `Callable[[], T]`, rather than `Callable[[], Any]`.
-
-- A device is built as `cls(name=<name>, **kwargs)` rather than
-  `cls(<name>, **kwargs)`, so a subclass of `ophyd_async.epics.core.EpicsDevice`,
-  whose first parameter is `prefix`, can be declared. A device that takes `name`
-  positional-only no longer builds, and is logged and skipped.
-
-- What another component owns arrives in `setup` rather than in a constructor:
-  a constructor naming a component, its class, a type a component shares with
-  `provides`, or the callback catalogue is refused, naming the parameter. A
-  shared value is read once, right after its owner is constructed, so a
-  `@provides` method answers from what the constructor made.
-
-- A question about the session is asked in `setup` rather than in a
-  constructor, and nothing is a live view any more, so `Satisfying`,
-  `SessionNotBuilt` and the seal that gated them are gone, and
-  `Session.satisfying` returns a plain mapping beside the new
-  `Session.rejected`.
-
-- A component asking for a type shared by a component that failed to build is
-  skipped and logged, as one asking for the failed component itself already
-  was, rather than raising `TypeError` and ending the build.
-
-- The session configuration key `session` is now `name`, in both container
-  layers, and identifies the session rather than titling its window. It names
-  the session's application, so two sessions in one process must not share it:
-
-  ```yaml
-  name: my-session
-  frontend: pyqt
-  ```
-
-  A container that declares no name is named after its own class, so
-  `class Instrument(Session)` builds a session called `Instrument`, and the
-  same holds for `AppContainer` in the supported layer.
-  `from_config` refuses a file that omits the key, a session built from a
-  configuration alone having no class of its own. `RedSunConfig.session` is
-  `RedSunConfig.name`, both containers take `name` in place of `session` at
-  construction, and `VirtualContainer.session` is `VirtualContainer.name`.
+- `AppContainer` (`redsun.containers`) is named after its own class when the
+  configuration gives no `session`, and `AppContainer.from_config` raises
+  `ConfigurationError` for a file without `session`.
 
 - `app-model` is a dependency of the `qt-common` extra, beside `qtpy` and
   `magicgui`.
-
-- `redsun.experimental.VirtualContainer` is gone, and so is
-  `Session.virtual_container`. Its jobs are the session's own:
-
-  | was | is |
-  | --- | --- |
-  | `virtual_container.connect`, `.connect_paths`, `.connections`, `.unconnected`, `.disconnect_all` | the same names on `Session` |
-  | `virtual_container.subscribe`, `.subscriptions` | the same names on `Session` |
-  | `virtual_container.satisfying` | `Session.satisfying` |
-  | `virtual_container.name`, `.schema_version`, `.frontend`, `.metadata` | ask for `SessionConfig` by type |
-  | `virtual_container.register_callbacks`, `.callbacks` | subclass `DocumentRouter`; ask for `Mapping[str, CallbackType]` |
-  | `virtual_container.on_release`, `.release` | `Session.on_release` and `Session.shutdown` |
-  | `virtual_container.register_signals`, `.signals` | removed |
-
-  One teardown runs where there were two. `Session.shutdown` drops the
-  connections first, then the releases in the reverse of the order taken, so a
-  component is finalized before whatever it was built on.
-
-- The experimental layer's container is a session. The old names are gone, with
-  no aliases:
-
-  | was | is |
-  | --- | --- |
-  | `redsun.experimental.containers` | `redsun.experimental.session` |
-  | `redsun.experimental.containers.qt` | `redsun.experimental.session.qt` |
-  | `redsun.experimental.containers.container` | `redsun.experimental.session`, the module behind it being private |
-  | `redsun.experimental.virtual` | `redsun.experimental.ports`, `.injection` and `.registry` |
-  | `AppContainer` | `Session` |
-  | `QtAppContainer` | `QtSession` |
-
-  `redsun.containers` and its `AppContainer` are unchanged.
-
-  Each package carries its own public surface: `ports` the connectors a session
-  binds, `injection` what a component asks the session for and offers back, and
-  `registry` the framework's own values, being the session configuration, the
-  device mapping and the bluesky callback registry. `redsun.experimental`
-  re-exports all three, and is still the import a component is written
-  against.
-
-### Removed
-
-- `Requires`, `RequiresOne` and `RequiresMaybe` (`redsun.experimental`), and
-  `Every`, `One`, `Maybe`, `Question`, `key_for` and `question_of`
-  (`redsun.experimental.injection`), and `requirements`
-  (`redsun.experimental.session`). A `setup` parameter annotated `P`,
-  `P | None` or `Mapping[str, P]` asks the same questions:
-
-  ```python
-  def setup(self, camera: HasCamera, roi: HasRoi | None = None) -> None: ...
-  ```
-
-- The requirement that a protocol asked about is `runtime_checkable`, and that
-  one asked for a single answer declares a method. `DevicesOf` is no longer
-  accepted in `setup`.
-
-### Fixed
-
-- `Session.build` on a session that was built and shut down no longer raises
-  `TypeError` saying a component shares a type with itself.
-- `Session.build` raises `TypeError` naming both when a session provider and a
-  component share one type.
