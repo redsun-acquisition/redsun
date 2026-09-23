@@ -41,4 +41,4 @@ jobs:
       # the environment, the binding and the flags all come from
       # [tool.tox] in pyproject.toml, so this runs what a contributor runs
       - name: Run mypy
-        run: uv run tox -e mypy-${{ matrix.frontend }}
+        run: uv run --locked --only-group tox tox -e mypy-${{ matrix.frontend }}
