@@ -1,6 +1,7 @@
 # Utilities
 
-::: redsun.utils
+::: redsun.utils.descriptors
     options:
       members:
-        - find_signals
+        - parse_key
+        - parse_map_key

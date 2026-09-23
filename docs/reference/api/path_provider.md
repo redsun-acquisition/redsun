@@ -6,5 +6,4 @@
         - SessionPathProvider
         - PlanFilenameProvider
         - session_directory
-        - PATH_PROVIDER
         - PATH_PROVIDER_PORT

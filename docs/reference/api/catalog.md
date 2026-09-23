@@ -4,4 +4,3 @@
     options:
       members:
         - CatalogAddress
-        - CATALOG

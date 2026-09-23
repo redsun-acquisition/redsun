@@ -1,11 +1,5 @@
 # Presenter
 
-## Base classes
-
-::: redsun.presenter.Presenter
-
-::: redsun.presenter.PPresenter
-
 ## Plan specification
 
 ::: redsun.presenter.plan_spec
