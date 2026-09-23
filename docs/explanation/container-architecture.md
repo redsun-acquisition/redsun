@@ -220,7 +220,7 @@ key, and nested mappings merge in turn, with two exceptions:
   constructor call's keyword arguments, so one file owns all of them.
 - **`schema_version` and `frontend` must agree.** They say what kind of session
   this is, so a later file with a different value raises instead of
-  overriding. `name` overrides normally.
+  overriding. `session` overrides normally.
 
 Only the merged result must satisfy [`AppConfig`][redsun.containers.AppConfig],
 so a layered file may hold a fragment, such as a `presenters` section alone.

@@ -824,15 +824,6 @@ class TestConfigField:
         assert presenter_settings(derived)["string"] == "common ctrl"
         assert derived.config["session"] == "mock-overlay-session"
 
-    def test_required_keys_are_checked_on_the_merged_configuration(
-        self, config_path: Path
-    ) -> None:
-        # the overlay alone carries neither schema_version nor frontend
-        with pytest.raises(ConfigurationError, match="schema_version: Field required"):
-
-            class Alone(AppContainer, config=config_path / "mock_overlay_config.yaml"):
-                ctrl = declare_presenter(MockController, from_config="ctrl")
-
     def test_a_bad_hook_entry_is_located_by_its_hook_points(
         self, tmp_path: Path
     ) -> None:

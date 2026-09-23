@@ -401,10 +401,10 @@ class WiringRule(BaseModel, extra="forbid", use_attribute_docstrings=True):
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
-    schema_version: float = Field(strict=True)
+    schema_version: float = Field(1.0, strict=True)
     """The schema the file is written for, one of `SCHEMA_VERSIONS`."""
 
-    frontend: Frontend
+    frontend: Frontend = Frontend.PYQT
     """The toolkit the session runs on."""
 
     session: str | None = None
@@ -436,6 +436,15 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
+
+    providers: dict[str, Any] = {}
+    """Classes registering values the session hands to components, by name."""
+
+    actions: Any = None
+    """Menu actions the Qt session registers, checked when it reads them."""
+
+    color_scheme: Any = None
+    """The Qt session's color scheme, checked when it reads it."""
 
     @model_validator(mode="wrap")
     @classmethod

@@ -28,6 +28,7 @@ from redsun.experimental import (
     AsPresenter,
     AsService,
     Attach,
+    ConfigurationError,
     Declare,
     Launch,
     Session,
@@ -533,13 +534,15 @@ def test_a_session_names_what_its_services_speak(build: BuildSession) -> None:
 
 
 def test_a_transport_redsun_does_not_have_is_refused() -> None:
-    with pytest.raises(TypeError, match="carrier-pigeon"):
+    with pytest.raises(ConfigurationError, match="carrier-pigeon"):
         Session({"services": {"transport": "carrier-pigeon"}}).build()
 
 
 def test_a_service_named_transport_is_refused() -> None:
     """From the section, where the key is reserved, and from an annotation."""
-    with pytest.raises(TypeError, match="reserved"):
+    with pytest.raises(
+        ConfigurationError, match="transport: Input should be a valid string"
+    ):
         Session({"services": {"transport": {"prefix": "BL01:"}}}).build()
 
     class App(Session):

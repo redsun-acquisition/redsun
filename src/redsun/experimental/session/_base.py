@@ -66,13 +66,12 @@ from ..._config import (
     label,
     load,
     storage_of,
+    validate_session,
 )
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
 from ...services._transports import (
     CHANNEL_ACCESS,
-    TRANSPORT_KEY,
     TRANSPORTS,
-    checked_transport,
     transport_of,
 )
 from .._settings import Settings
@@ -457,6 +456,7 @@ class Session(BuildableSession):
                     f"{', '.join(label(source) for source in sources)}"
                 )
             self._merged = load(sources)
+            validate_session(sources, self._merged)
         return self._merged
 
     @property
@@ -668,7 +668,7 @@ class Session(BuildableSession):
         # read only classes, so a mistake is reported before anything starts
         self._refuse_component_values(self._components())
         self._check_layers(self._components())
-        self._transport = self._read_transport(config)
+        self._transport = transport_of(config) or CHANNEL_ACCESS
         self._services = read_services(type(self), config, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
@@ -1589,24 +1589,6 @@ class Session(BuildableSession):
         )
         return False
 
-    def _read_transport(self, config: Mapping[str, Any]) -> str:
-        """Return the transport *config* names under ``services``, checked.
-
-        Raises
-        ------
-        TypeError
-            If it is not one ``redsun`` has, or the key holds a service entry.
-        """
-        named = transport_of(config)
-        if named is None:
-            return CHANNEL_ACCESS
-        if not isinstance(named, str):
-            raise TypeError(
-                f"{TRANSPORT_KEY!r} is reserved in the services section for what "
-                f"the services speak and cannot name a service"
-            )
-        return checked_transport(named, f"{type(self).__qualname__}'s services")
-
     def start_services(self) -> None:
         """Start the launched services together, and attach to the rest.
 
@@ -1809,15 +1791,10 @@ class Session(BuildableSession):
         Raises
         ------
         WiringError
-            If a rule is not a mapping of exactly ``from`` and ``to``, or
-            names a port that cannot be resolved for any other reason.
+            If a rule names a port that cannot be resolved for any other
+            reason.
         """
-        for index, rule in enumerate(config.get("wiring", [])):
-            if not isinstance(rule, dict) or rule.keys() != {"from", "to"}:
-                raise WiringError(
-                    f"wiring entry {index} must be a mapping with exactly the "
-                    f"keys 'from' and 'to', got {rule!r}"
-                )
+        for rule in config.get("wiring", []):
             try:
                 self.connect_paths(rule["from"], rule["to"])
             except ComponentNotBuilt as e:

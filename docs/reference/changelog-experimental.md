@@ -596,6 +596,17 @@ listed in the [changelog](changelog.md).
 
 ### Changed
 
+- `Session` (`redsun.experimental`) checks its merged configuration
+  against the session file model and raises `ConfigurationError`, now
+  exported from `redsun.experimental`, listing every problem as
+  `section.key: what`. An unknown top-level key, a malformed `wiring`
+  rule and an unknown or non-string `services.transport` raise it, where
+  the last two raised `WiringError` and `TypeError`.
+
+- `schema_version` and `frontend` (`redsun._config.SessionFile`) are
+  optional, `1.0` and `pyqt` when absent. A session file may hold
+  `providers`, `actions` and `color_scheme`.
+
 - Layered configuration sources must agree on `services.transport`
   (`redsun._config.load`): a source naming a different transport from one
   layered under it is refused as the sources are merged, beside

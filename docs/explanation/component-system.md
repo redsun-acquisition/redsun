@@ -106,12 +106,13 @@ views:
 
 The top-level keys describe the application:
 
-- `schema_version` is the version of this format; `1.0` is the only one read;
+- `schema_version` is the version of this format; `1.0`, the only one
+  read, when absent;
 - `session` names the session and the application its commands and menus are
   registered on. It defaults to the container class's own name; a file given
   to `from_config` has no class of its own, so there it is required;
 - `frontend` is the UI toolkit, `pyqt` or `pyside`, which picks the
-  `AppContainer` subclass;
+  `AppContainer` subclass; `pyqt` when absent;
 - `metadata` holds application-level context.
 
 `plugin_name` and `plugin_id` resolve the plugin and are not passed to the constructor. Every other key becomes a keyword argument of the component.
@@ -136,9 +137,8 @@ is written:
 # yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/session-file.schema.json
 ```
 
-A file layered over another may hold a fragment, which the schema flags as
-missing `schema_version` and `frontend`; the container checks the merged
-files instead.
+A file layered over another may hold a fragment, such as a `presenters`
+section alone. The container checks the merged files.
 
 ## Protocol validation
 

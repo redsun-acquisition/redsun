@@ -73,6 +73,7 @@ from redsun.experimental.session import (
 )
 from redsun.experimental.view import Placement
 
+from .._config import ConfigurationError
 from .._hooks import ConfirmsClose, HookError
 from .._structural import satisfies
 from ._settings import Settings
@@ -89,6 +90,7 @@ __all__ = [
     "BuildableSession",
     "CallbackType",
     "ComponentNotBuilt",
+    "ConfigurationError",
     "ConfigurationInUse",
     "ConfirmsClose",
     "Connection",

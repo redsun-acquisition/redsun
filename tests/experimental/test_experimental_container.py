@@ -28,6 +28,7 @@ from redsun.experimental import (
     AsView,
     BuildableSession,
     CallbackType,
+    ConfigurationError,
     Declare,
     DeviceMapping,
     FromConfig,
@@ -1417,7 +1418,7 @@ def test_the_constructor_layers_over_the_class() -> None:
 def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     """A string is a path, not the sequence of characters it also is."""
     shared = tmp_path / "shared.yaml"
-    shared.write_text("name: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
+    shared.write_text("session: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
 
     class Mixed(Session):
         config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
@@ -1648,27 +1649,30 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
 
 
 @pytest.mark.parametrize(
-    ("rules", "message"),
+    ("rules", "error", "message"),
     [
         pytest.param(
             [{"from": "absent.sig_done", "to": "recorder.on_done"}],
+            WiringError,
             "names component 'absent', which was not built",
             id="never-declared",
         ),
         pytest.param(
             [{"from": "recorder.sig_done"}],
-            "must be a mapping with exactly the keys",
+            ConfigurationError,
+            "wiring.0.to: Field required",
             id="missing-key",
         ),
         pytest.param(
             ["recorder.sig_done -> recorder.on_done"],
-            "must be a mapping with exactly the keys",
+            ConfigurationError,
+            "wiring.0: Input should be a valid dictionary",
             id="not-a-mapping",
         ),
     ],
 )
 def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
-    rules: list[Any], message: str
+    rules: list[Any], error: type[Exception], message: str
 ) -> None:
     """Only a component the build skipped is forgiven, not a typo."""
 
@@ -1677,7 +1681,7 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
 
         config: ClassVar[Mapping[str, Any]] = {"wiring": rules}
 
-    with pytest.raises(WiringError, match=message):
+    with pytest.raises(error, match=message):
         Wrong().build()
 
 
