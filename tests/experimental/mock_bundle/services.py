@@ -14,4 +14,4 @@ class MockServices:
     @provides
     def calibration(self) -> Calibration:
         """Derive a calibration from the session the bundle was installed into."""
-        return Calibration(len(self._config.name) / 10)
+        return Calibration(len(self._config.session) / 10)

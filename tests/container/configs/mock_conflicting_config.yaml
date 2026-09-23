@@ -1,3 +1,3 @@
 schema_version: 1.0
 frontend: pyside
-name: mock-conflicting-session
+session: mock-conflicting-session

@@ -128,8 +128,13 @@ class PVAccess:
         self._published = False
 
     def reserve(self, service: str) -> Mapping[str, str]:
-        """Keep the service on the loopback, as a Channel Access one is."""
-        return {"EPICS_PVAS_INTF_ADDR_LIST": LOOPBACK}
+        """Keep the service on the loopback, on any free TCP port.
+
+        Told no port, a server tries the default one first, which the second
+        server of a session is refused and warns about before it falls back
+        to a free one. Told port 0, it takes a free one at once.
+        """
+        return {"EPICS_PVAS_INTF_ADDR_LIST": LOOPBACK, "EPICS_PVAS_SERVER_PORT": "0"}
 
     def publish(self, service: str) -> None:
         """Add the loopback to this process's address list, once for them all.

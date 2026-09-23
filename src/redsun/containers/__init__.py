@@ -11,16 +11,16 @@ from redsun.containers.components import (
 )
 from redsun.containers.container import AppContainer, Frontend
 
+from .._config import ConfigurationError
 from .._hooks import HookError
-from ._config import AppConfig, CatalogConfig, StorageConfig
+from ._config import AppConfig
 
 __all__ = [
     "AppConfig",
     "AppContainer",
-    "CatalogConfig",
+    "ConfigurationError",
     "Frontend",
     "HookError",
-    "StorageConfig",
     "declare_device",
     "declare_hook",
     "declare_presenter",

@@ -1,4 +1,4 @@
-# 14. Collaborators arrive in `setup`
+# 15. Collaborators arrive in `setup`
 
 Date: 2026-09-12
 

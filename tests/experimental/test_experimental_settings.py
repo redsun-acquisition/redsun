@@ -25,13 +25,13 @@ class Recorder:
 
 
 class App(Session):
-    config: ClassVar[dict[str, Any]] = {"name": "settings-session"}
+    config: ClassVar[dict[str, Any]] = {"session": "settings-session"}
 
     recorder: AsPresenter[Recorder]
 
 
 class QtApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"name": "settings-qt-session"}
+    config: ClassVar[dict[str, Any]] = {"session": "settings-qt-session"}
 
 
 def test_reading_a_session_that_has_written_nothing_gives_the_default(

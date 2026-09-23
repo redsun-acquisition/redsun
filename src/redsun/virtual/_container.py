@@ -64,7 +64,7 @@ class _FrozenConfig:
 
     schema_version: float
     frontend: str
-    name: str
+    session: str
     metadata: dict[str, object]
 
 
@@ -145,9 +145,9 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         return self._config().frontend
 
     @property
-    def name(self) -> str:
-        """The session identity specified in the configuration."""
-        return self._config().name
+    def session(self) -> str:
+        """The session's name, as the configuration gives it."""
+        return self._config().session
 
     @property
     def metadata(self) -> dict[str, object]:
@@ -165,7 +165,7 @@ class VirtualContainer(dic.DynamicContainer, Loggable):
         self._config.set_kwargs(
             schema_version=config["schema_version"],
             frontend=config["frontend"],
-            name=config["name"],
+            session=config.get("session", "redsun"),
             metadata=config.get("metadata", {}),
         )
 

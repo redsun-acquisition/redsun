@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import dependency_injector.providers as dip
+import jsonschema
 import pytest
 import yaml
 from helpers import component
@@ -22,14 +23,20 @@ from mock_pkg.device import BrokenDevice, MockOAMotor, MyMotor
 from mock_pkg.view import BrokenView, MockMotorView, MockQtView
 from ophyd_async.core import Device, PathProvider
 from ophyd_async.epics.core import EpicsDevice
+from pydantic import ValidationError
 from qtpy.QtWidgets import QApplication
 
+from redsun._config import (
+    CatalogConfig,
+    SessionFile,
+    session_file_schema,
+)
+from redsun._manifest import PluginManifest
 from redsun.aio import run_coro
 from redsun.catalog import CATALOG
 from redsun.containers import (
     AppContainer,
-    CatalogConfig,
-    StorageConfig,
+    ConfigurationError,
     declare_device,
     declare_presenter,
     declare_view,
@@ -48,6 +55,7 @@ from redsun.virtual import Signal, WiringError, ports
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from contextlib import AbstractContextManager
 
     from redsun.virtual import VirtualContainer
 
@@ -212,8 +220,8 @@ class TestAppContainerBuild:
         class Instrument(AppContainer):
             pass
 
-        assert AppContainer().config["name"] == "AppContainer"
-        assert Instrument().config["name"] == "Instrument"
+        assert AppContainer().config["session"] == "AppContainer"
+        assert Instrument().config["session"] == "Instrument"
         assert AppContainer().config["frontend"] == "pyqt"
         assert AppContainer().config["schema_version"] == 1.0
 
@@ -221,12 +229,12 @@ class TestAppContainerBuild:
         """It has no class of its own to be named after."""
         config = tmp_path / "unnamed.yaml"
         config.write_text("schema_version: 1.0\nfrontend: pyqt\n")
-        with pytest.raises(KeyError, match="must declare 'name'"):
+        with pytest.raises(ConfigurationError, match="session: a session built"):
             AppContainer.from_config(str(config))
 
     def test_config_override(self) -> None:
-        app = AppContainer(name="MySession", frontend="pyside")
-        assert app.config["name"] == "MySession"
+        app = AppContainer(session="MySession", frontend="pyside")
+        assert app.config["session"] == "MySession"
         assert app.config["frontend"] == "pyside"
 
     def test_shutdown(self) -> None:
@@ -289,9 +297,9 @@ class TestAppContainerBuild:
         class EmptyApp(AppContainer):
             pass
 
-        app = EmptyApp(name="TestSession", frontend="pyqt")
+        app = EmptyApp(session="TestSession", frontend="pyqt")
         app.build()
-        assert app.virtual_container.name == "TestSession"
+        assert app.virtual_container.session == "TestSession"
         assert app.virtual_container.frontend == "pyqt"
         assert app.virtual_container.schema_version == 1.0
 
@@ -496,6 +504,165 @@ class TestFromConfig:
         assert "cannot be loaded as a plugin in group 'views'" in caplog.text
         assert "must accept exactly ('name',)" in caplog.text
 
+    def test_an_invalid_manifest_is_left_out_whole_with_every_error(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        (tmp_path / "redsun.yaml").write_text(
+            "devices:\n  motor: mock_pkg.device.MyMotor\n"
+            "services:\n  ioc: mock_pkg.service.stand_in\n"
+            "widgets: {}\n",
+            encoding="utf-8",
+        )
+        plugins = {"mock-pkg": config_path.parent / "mock_pkg", "broken-pkg": tmp_path}
+
+        with install_plugins(plugins):
+            container = AppContainer.from_config(
+                str(config_path / "mock_motor_config.yaml")
+            )
+        container.build()
+
+        assert set(container.devices) == {"Single axis motor", "Double axis motor"}
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert errors[0].startswith(
+            f'Plugin "broken-pkg" manifest {tmp_path / "redsun.yaml"} is invalid'
+        )
+        for location in ("devices.motor:", "services.ioc:", "widgets:"):
+            assert f"\n  {location}" in errors[0]
+
+    @pytest.mark.parametrize(
+        ("manifest", "says"),
+        [
+            ("devices: [unclosed\n", "could not be read"),
+            (None, "could not be read"),
+        ],
+        ids=["not-yaml", "missing"],
+    )
+    def test_a_manifest_that_cannot_be_read_is_left_out_alone(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        config_path: Path,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+        manifest: str | None,
+        says: str,
+    ) -> None:
+        if manifest is not None:
+            (tmp_path / "redsun.yaml").write_text(manifest, encoding="utf-8")
+        plugins = {"mock-pkg": config_path.parent / "mock_pkg", "broken-pkg": tmp_path}
+
+        with install_plugins(plugins):
+            container = AppContainer.from_config(
+                str(config_path / "mock_motor_config.yaml")
+            )
+        container.build()
+
+        assert set(container.devices) == {"Single axis motor", "Double axis motor"}
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len(errors) == 1
+        assert errors[0].startswith(f'Plugin "broken-pkg" manifest redsun.yaml {says}')
+
+    def test_a_class_that_does_not_import_is_skipped_with_an_error(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        manifest_dir = tmp_path / "missing"
+        manifest_dir.mkdir()
+        (manifest_dir / "redsun.yaml").write_text(
+            "devices:\n  motor: nowhere.at_all:Motor\n", encoding="utf-8"
+        )
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nsession: lab\nfrontend: pyqt\n"
+            "devices:\n  motor:\n    plugin_name: missing-pkg\n"
+            "    plugin_id: motor\n",
+            encoding="utf-8",
+        )
+
+        with install_plugins({"missing-pkg": manifest_dir}):
+            container = AppContainer.from_config(str(config))
+        container.build()
+
+        assert container.devices == {}
+        assert 'names "nowhere.at_all:Motor", which cannot be imported' in caplog.text
+
+    def test_a_section_written_empty_builds_from_a_file(self, tmp_path: Path) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nsession: lab\nfrontend: pyqt\n"
+            "devices:\npresenters:\nviews:\n",
+            encoding="utf-8",
+        )
+
+        container = AppContainer.from_config(str(config))
+        container.build()
+
+        assert container.devices == {}
+
+    def test_every_mistake_of_a_file_is_reported_in_one_error(
+        self, tmp_path: Path
+    ) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\ntransport: pv-access\n"
+            "devices:\n  m:\n    plugin_name: p\n    plugin_idd: m\n"
+            "hooks:\n  greet:\n    provider: nocolon\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError) as refused:
+            AppContainer.from_config(str(config))
+
+        message = str(refused.value)
+        assert "\n  transport: 'transport' goes under 'services'" in message
+        assert "\n  devices.m: 'plugin_idd' is not a plugin key" in message
+        assert "\n  hooks.greet.provider: 'nocolon' is not a class path" in message
+
+    def test_a_component_without_its_plugin_is_refused_by_from_config(
+        self, tmp_path: Path
+    ) -> None:
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\ndevices:\n  m:\n    axis: [X]\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigurationError, match="devices.m: names no plugin"):
+            AppContainer.from_config(str(config))
+
+    def test_a_manifest_naming_another_plugin_is_left_out(
+        self,
+        install_plugins: Callable[[dict[str, Path]], AbstractContextManager[None]],
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        manifest_dir = tmp_path / "renamed"
+        manifest_dir.mkdir()
+        (manifest_dir / "redsun.yaml").write_text(
+            "name: other-pkg\ndevices:\n  motor: mock_pkg.device:MyMotor\n",
+            encoding="utf-8",
+        )
+        config = tmp_path / "session.yaml"
+        config.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nsession: renamed\n"
+            "devices:\n  motor:\n    plugin_name: renamed-pkg\n"
+            "    plugin_id: motor\n",
+            encoding="utf-8",
+        )
+
+        with install_plugins({"renamed-pkg": manifest_dir}):
+            container = AppContainer.from_config(str(config))
+        container.build()
+
+        assert "motor" not in container.devices
+        assert 'names itself "other-pkg" and was skipped' in caplog.text
+
 
 class TestComponentFieldSyntax:
     """Tests for the ``component()`` field-specifier syntax."""
@@ -640,7 +807,7 @@ class TestConfigField:
 
         # the overlay adds a component and leaves the one it does not name
         assert presenter_settings(app)["string"] == "common ctrl"
-        assert app.config["name"] == "mock-overlay-session"
+        assert app.config["session"] == "mock-overlay-session"
 
     def test_a_subclass_layers_its_config_over_its_base(
         self, config_path: Path
@@ -655,16 +822,46 @@ class TestConfigField:
 
         assert presenter_settings(Base().build())["string"] == "common ctrl"
         assert presenter_settings(derived)["string"] == "common ctrl"
-        assert derived.config["name"] == "mock-overlay-session"
+        assert derived.config["session"] == "mock-overlay-session"
 
     def test_required_keys_are_checked_on_the_merged_configuration(
         self, config_path: Path
     ) -> None:
         # the overlay alone carries neither schema_version nor frontend
-        with pytest.raises(KeyError, match="missing required keys"):
+        with pytest.raises(ConfigurationError, match="schema_version: Field required"):
 
             class Alone(AppContainer, config=config_path / "mock_overlay_config.yaml"):
                 ctrl = declare_presenter(MockController, from_config="ctrl")
+
+    def test_a_bad_hook_entry_is_located_by_its_hook_points(
+        self, tmp_path: Path
+    ) -> None:
+        bad = tmp_path / "session.yaml"
+        bad.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nhooks:\n"
+            "  greet: &shared\n    provider: no-colon\n  farewell: *shared\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(
+            ConfigurationError, match=r"hooks\.greet\+farewell\.provider: "
+        ):
+            AppContainer.from_config(str(bad))
+
+    def test_a_bad_file_fails_the_container_rather_than_defaulting(
+        self, tmp_path: Path
+    ) -> None:
+        bad = tmp_path / "session.yaml"
+        bad.write_text(
+            "schema_version: 1.0\nfrontend: pyqt\nstorage:\n  base_dirs: x\n",
+            encoding="utf-8",
+        )
+
+        class TestApp(AppContainer, config=bad):
+            pass
+
+        with pytest.raises(ConfigurationError, match="storage.base_dirs"):
+            TestApp()
 
     def test_layered_files_must_agree_on_the_frontend(self, config_path: Path) -> None:
         with pytest.raises(ValueError, match="contradicts"):
@@ -864,23 +1061,32 @@ class TestConfigField:
         }
         assert presenter_settings(app)["string"] == "common ctrl"
 
-    def test_the_layer_chain_is_logged(
+    def test_the_layer_chain_is_logged_once_the_container_sets_a_level(
         self, config_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        with caplog.at_level(logging.DEBUG, logger="redsun"):
+        files = [
+            config_path / "mock_common_config.yaml",
+            config_path / "mock_overlay_config.yaml",
+        ]
+        redsun_logger = logging.getLogger("redsun")
+        before = redsun_logger.level
+        # as in an application that sets its level only when it builds one
+        redsun_logger.setLevel(logging.WARNING)
+        try:
 
-            class TestApp(
-                AppContainer,
-                config=[
-                    config_path / "mock_common_config.yaml",
-                    config_path / "mock_overlay_config.yaml",
-                ],
-            ):
+            class TestApp(AppContainer, config=files):
                 motor = declare_device(MyMotor, from_config="motor")
 
-        assert "Reading configuration from 2 sources" in caplog.text
-        assert "mock_common_config.yaml" in caplog.text
-        assert "mock_overlay_config.yaml" in caplog.text
+            TestApp(log_level=logging.DEBUG)
+        finally:
+            redsun_logger.setLevel(before)
+
+        messages = [
+            r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG
+        ]
+        assert "Configuration read from 2 files, in order:" in messages
+        assert f"  1. {files[0]}" in messages
+        assert f"  2. {files[1]}" in messages
 
     def test_a_shadowed_component_is_logged(
         self, config_path: Path, caplog: pytest.LogCaptureFixture
@@ -1124,7 +1330,7 @@ class TestDevicePathProvider:
         class TestApp(AppContainer):
             writer = declare_device(Writer)
 
-        app = TestApp(name="its-own-session").build()
+        app = TestApp(session="its-own-session").build()
 
         writer = app.devices["writer"]
         assert isinstance(writer, Writer)
@@ -1154,7 +1360,7 @@ class TestDevicePathProvider:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "name": "configured-session",
+            "session": "configured-session",
             "storage": {"base_dir": str(tmp_path / "elsewhere"), "max_digits": 3},
         }
         cfg_file = tmp_path / "storage.yaml"
@@ -1211,17 +1417,17 @@ class TestStorageSection:
         app = AppContainer.from_config(
             str(config_path / "mock_catalog_config.yaml")
         ).build()
-        storage = app.storage
+        catalog = app.virtual_container.try_require(CATALOG)
         app.shutdown()
 
-        assert storage == StorageConfig(catalog=CatalogConfig())
+        assert catalog is not None
 
     @requires_tiled
     def test_every_key_reaches_the_container(self, tmp_path: Path) -> None:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "name": "catalog-session",
+            "session": "catalog-session",
             "storage": {
                 "base_dir": str(tmp_path / "root"),
                 "max_digits": 3,
@@ -1234,14 +1440,16 @@ class TestStorageSection:
         cfg_file.write_text(yaml.dump(config))
 
         app = AppContainer.from_config(str(cfg_file)).build()
-        storage = app.storage
+        base_dir = app.path_provider.base_dir
+        filename = app.path_provider("det").filename
+        catalog = app.virtual_container.try_require(CATALOG)
         app.shutdown()
 
-        assert storage == StorageConfig(
-            base_dir=tmp_path / "root",
-            max_digits=3,
-            catalog=CatalogConfig(readable=(tmp_path / "aht", tmp_path / "scratch")),
-        )
+        # the readable directories are checked by what the catalog serves,
+        # in test_catalog.py
+        assert base_dir == tmp_path / "root"
+        assert len(filename.rsplit("_", 1)[1]) == 3
+        assert catalog is not None
 
     def test_a_session_without_the_section_has_no_catalog(self) -> None:
         class TestApp(AppContainer):
@@ -1249,15 +1457,14 @@ class TestStorageSection:
 
         app = TestApp().build()
 
-        assert app.storage == StorageConfig()
         assert app.virtual_container.try_require(CATALOG) is None
 
     @pytest.mark.parametrize(
         ("section", "named"),
         [
-            ({"base_dirs": "x"}, "'base_dirs'"),
-            ({"catalog": {"events": False}}, "'events'"),
-            ({"catalog": {"directory": "x"}}, "'directory'"),
+            ({"base_dirs": "x"}, "storage.base_dirs"),
+            ({"catalog": {"events": False}}, "storage.catalog.events"),
+            ({"catalog": {"directory": "x"}}, "storage.catalog.directory"),
         ],
         ids=["storage", "catalog", "catalog-directory"],
     )
@@ -1268,28 +1475,28 @@ class TestStorageSection:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "name": "catalog-session",
+            "session": "catalog-session",
             "storage": section,
         }
         cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
-        with pytest.raises(ValueError, match=named):
-            AppContainer.from_config(str(cfg_file)).build()
+        with pytest.raises(ConfigurationError, match=named):
+            AppContainer.from_config(str(cfg_file))
 
     def test_readable_must_be_a_list(self, tmp_path: Path) -> None:
         """A single path must not be read one character at a time."""
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "name": "catalog-session",
+            "session": "catalog-session",
             "storage": {"catalog": {"readable": "/data/camera"}},
         }
         cfg_file = tmp_path / "storage.yaml"
         cfg_file.write_text(yaml.dump(config))
 
-        with pytest.raises(TypeError, match="must be a list"):
-            AppContainer.from_config(str(cfg_file)).build()
+        with pytest.raises(ConfigurationError, match="storage.catalog.readable"):
+            AppContainer.from_config(str(cfg_file))
 
     @pytest.mark.parametrize("absent", ["tiled", "ome_tiled", "bluesky_tiled_plugins"])
     def test_a_catalog_needs_every_package_of_the_extra(
@@ -1348,7 +1555,7 @@ class TestBuiltinPlugins:
         config = {
             "schema_version": 1.0,
             "frontend": "pyqt",
-            "name": "builtin-session",
+            "session": "builtin-session",
             "views": {
                 "logs": {
                     "plugin_name": "redsun",
@@ -1622,11 +1829,14 @@ class TestWiring:
         self, qapp: QApplication
     ) -> None:
         """A build that returns instead of raising keeps what it made."""
-        before = len(QApplication.topLevelWidgets())
+        # widgets earlier tests left unreferenced may be collected during the
+        # build, so the count before is no baseline; only new widgets count
+        before = QApplication.topLevelWidgets()
 
         app = _PartlyBuiltViewApp().build()
 
-        assert len(QApplication.topLevelWidgets()) == before + 1
+        added = [w for w in QApplication.topLevelWidgets() if w not in before]
+        assert len(added) == 1
         assert [str(link) for link in app.virtual_container.connections] == [
             "mover.sig_motor_moved -> ok.note_position  [thread=main]"
         ]
@@ -1715,7 +1925,6 @@ class TestYamlWiring:
                 "exposes no slot",
             ),
             ({"from": "mover", "to": "ctrl.on_motor_moved"}, "is not a port path"),
-            ({"from": "mover.sig_motor_moved"}, "keys 'from' and 'to'"),
         ],
     )
     def test_a_bad_rule_fails_the_build(
@@ -1734,6 +1943,17 @@ class TestYamlWiring:
 
         with pytest.raises(WiringError, match=expected):
             AppContainer.from_config(str(broken)).build()
+
+    def test_a_rule_without_a_slot_is_refused_at_load(
+        self, mock_entry_points: None, config_path: Path, tmp_path: Path
+    ) -> None:
+        source = yaml.safe_load((config_path / "mock_wiring_config.yaml").read_text())
+        source["wiring"] = [{"from": "mover.sig_motor_moved"}]
+        broken = tmp_path / "broken_wiring.yaml"
+        broken.write_text(yaml.safe_dump(source))
+
+        with pytest.raises(ConfigurationError, match="wiring.0.to: Field required"):
+            AppContainer.from_config(str(broken))
 
     def test_a_rule_naming_a_component_that_failed_is_skipped(
         self,
@@ -1779,3 +1999,219 @@ class TestYamlWiring:
 
         assert "on_motor_moved" in surface.slots
         assert "not_connectable" not in surface.slots
+
+
+_SESSION = {"schema_version": 1.0, "frontend": "pyqt"}
+
+
+class TestSessionFile:
+    """Tests for what a session file, merged, may and may not say."""
+
+    def test_a_merged_file_reads_as_its_sections(self, tmp_path: Path) -> None:
+        text = """
+        schema_version: 1
+        frontend: pyqt
+        presenters:
+        services:
+          transport: pv-access
+          ioc:
+            plugin_name: mock-pkg
+            plugin_id: stand_in
+        devices:
+          motor:
+            service: ioc
+            axis: [X]
+        storage:
+          base_dir: ~/data
+          catalog:
+        hooks:
+          greet: &shared
+            provider: mock_pkg.hooks:BothPointsHook
+          farewell: *shared
+          other:
+            provider: mock_pkg.hooks:BothPointsHook
+        """
+        session = SessionFile.model_validate(yaml.safe_load(text))
+
+        assert session.schema_version == 1.0
+        assert session.presenters == {}
+        assert session.transport == "pv-access"
+        assert list(session.services) == ["ioc"]
+        assert session.devices["motor"].service == "ioc"
+        assert session.devices["motor"].model_extra == {"axis": ["X"]}
+        assert session.storage is not None
+        assert session.storage.base_dir == Path("~/data").expanduser()
+        assert session.storage.catalog == CatalogConfig()
+        assert [group.moments for group in session.hooks] == [
+            ("greet", "farewell"),
+            ("other",),
+        ]
+
+    def test_a_file_with_several_mistakes_reports_every_one(self) -> None:
+        with pytest.raises(ValidationError) as refused:
+            SessionFile.model_validate(
+                {
+                    **_SESSION,
+                    "transport": "pv-access",
+                    "devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}},
+                    "hooks": {"greet": {"provider": "nocolon"}},
+                }
+            )
+
+        assert {error["loc"] for error in refused.value.errors()} == {
+            ("transport",),
+            ("devices", "m"),
+            ("hooks", 0, "provider"),
+        }
+
+    @pytest.mark.parametrize(
+        ("storage", "catalog"),
+        [
+            ({}, None),
+            ({"catalog": None}, CatalogConfig()),
+            ({"catalog": {}}, CatalogConfig()),
+        ],
+        ids=["absent", "empty", "mapping"],
+    )
+    def test_only_a_catalog_key_asks_for_a_catalog(
+        self, storage: dict[str, Any], catalog: CatalogConfig | None
+    ) -> None:
+        session = SessionFile.model_validate({**_SESSION, "storage": storage})
+
+        assert session.storage is not None
+        assert session.storage.catalog == catalog
+
+    @pytest.mark.parametrize(
+        ("overlay", "location", "says"),
+        [
+            ({"schema_version": 2.0}, ("schema_version",), "reads (1.0)"),
+            ({"schema_version": "1.0"}, ("schema_version",), "valid number"),
+            ({"frontend": "tk"}, ("frontend",), "pyqt"),
+            ({"sesion": "typo"}, ("sesion",), "Extra inputs"),
+            ({"transport": "pv-access"}, ("transport",), "goes under 'services'"),
+            (
+                {"devices": {"m": {"plugin_name": "p"}}},
+                ("devices", "m"),
+                "plugin_name is given without plugin_id",
+            ),
+            (
+                {"devices": {"m": {"plugin_name": "p", "plugin_idd": "m"}}},
+                ("devices", "m"),
+                "did you mean 'plugin_id'",
+            ),
+            (
+                {"devices": {"m": {"plugin_idd": "m"}}},
+                ("devices", "m"),
+                "did you mean 'plugin_id'",
+            ),
+            (
+                {"devices": {"m": {"autoconnect": "yes"}}},
+                ("devices", "m", "autoconnect"),
+                "boolean",
+            ),
+            ({"storage": {"base_dir": ""}}, ("storage", "base_dir"), "empty path"),
+            (
+                {"storage": {"catalog": {"readable": "/data"}}},
+                ("storage", "catalog", "readable"),
+                "tuple",
+            ),
+            ({"wiring": [{"from": "a.sig"}]}, ("wiring", 0, "to"), "required"),
+            ({"hooks": {"greet": "a string"}}, ("hooks",), "must be a mapping"),
+            ({"hooks": [{"provider": "a:B"}]}, ("hooks",), "'hooks' must be a mapping"),
+            (
+                {"hooks": {"greet": {"provider": "no-colon"}}},
+                ("hooks", 0, "provider"),
+                "not a class path",
+            ),
+        ],
+        ids=[
+            "unread-version",
+            "quoted-version",
+            "unknown-frontend",
+            "unknown-key",
+            "top-level-transport",
+            "unpaired-plugin-key",
+            "misspelled-beside-plugin-name",
+            "misspelled-plugin-key",
+            "non-bool-autoconnect",
+            "empty-base-dir",
+            "readable-not-a-list",
+            "rule-without-slot",
+            "hook-entry-not-a-mapping",
+            "hooks-not-a-mapping",
+            "provider-not-a-class-path",
+        ],
+    )
+    def test_a_file_saying_what_a_session_cannot_is_refused_where_it_says_it(
+        self, overlay: dict[str, Any], location: tuple[str | int, ...], says: str
+    ) -> None:
+        with pytest.raises(ValidationError) as refused:
+            SessionFile.model_validate({**_SESSION, **overlay})
+
+        (error,) = refused.value.errors()
+        assert error["loc"] == location
+        assert says in error["msg"]
+
+
+class TestSchemas:
+    """Tests for the JSON schemas an editor checks a file against."""
+
+    def test_every_session_file_the_container_reads_meets_the_schema(
+        self, config_path: Path
+    ) -> None:
+        validator = jsonschema.Draft202012Validator(session_file_schema())
+        # the overlay is a fragment, valid only over the file under it
+        files = sorted(
+            set(config_path.glob("*.yaml")) - {config_path / "mock_overlay_config.yaml"}
+        )
+
+        problems = {
+            path.name: [
+                error.message
+                for error in validator.iter_errors(yaml.safe_load(path.read_text()))
+            ]
+            for path in files
+        }
+
+        assert {name: found for name, found in problems.items() if found} == {}
+
+    def test_a_field_is_described_by_its_docstring(self) -> None:
+        schema = session_file_schema()
+
+        assert schema["properties"]["session"]["description"] == (
+            "The session's name, which also names its application; its class's name if unset."
+        )
+        assert (
+            "Root the session writes under"
+            in (
+                schema["$defs"]["StorageConfig"]["properties"]["base_dir"][
+                    "description"
+                ]
+            )
+        )
+
+    def test_a_manifest_meets_the_schema(self, config_path: Path) -> None:
+        manifest = yaml.safe_load(
+            (config_path.parent / "mock_pkg" / "redsun.yaml").read_text()
+        )
+
+        jsonschema.validate(manifest, PluginManifest.model_json_schema())
+
+    @pytest.mark.parametrize(
+        "overlay",
+        [
+            {"sesion": "typo"},
+            {"services": {"transport": "carrier-pigeon"}},
+            {"hooks": {"greet": {"provider": "x:Y", "name": "n"}}},
+            {"devices": {"m": {"autoconnect": "yes"}}},
+        ],
+        ids=["unknown-key", "unknown-transport", "hook-key", "non-bool-autoconnect"],
+    )
+    def test_the_schema_flags_what_the_model_refuses(
+        self, overlay: dict[str, Any]
+    ) -> None:
+        validator = jsonschema.Draft202012Validator(session_file_schema())
+
+        assert list(validator.iter_errors({**_SESSION, **overlay}))
+        with pytest.raises(ValidationError):
+            SessionFile.model_validate({**_SESSION, **overlay})

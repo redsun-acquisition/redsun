@@ -25,7 +25,7 @@ uv run tox -e mypy-pyqt
 
 | environment | what it runs |
 | --- | --- |
-| `lint` | `ruff check --fix` then `ruff format` |
+| `lint` | `prek run --all-files`: the [commit checks](run-commit-checks.md) |
 | `mypy-pyqt` / `mypy-pyside` | `mypy` against that Qt binding |
 | `tests` | `pytest -q` |
 | `docs` | `zensical build` then the cross-reference check |

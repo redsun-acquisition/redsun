@@ -81,7 +81,7 @@ class Anything:
 class App(Session):
     config: ClassVar[dict[str, Any]] = {
         "schema_version": 1.0,
-        "name": "round-trip",
+        "session": "round-trip",
         "devices": {"stage": {"axis": "Z"}},
         "presenters": {
             "ctrl": {"step": 7.5},
@@ -221,9 +221,11 @@ def test_the_written_file_is_one_flat_session(
     base = tmp_path / "instrument.yaml"
     base.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 1.5}}}))
 
-    written = build(App, [str(base), {"name": "layered"}]).write(tmp_path / "out.yaml")
+    written = build(App, [str(base), {"session": "layered"}]).write(
+        tmp_path / "out.yaml"
+    )
 
-    assert yaml.safe_load(written.read_text())["name"] == "layered"
+    assert yaml.safe_load(written.read_text())["session"] == "layered"
     assert yaml.safe_load(written.read_text())["presenters"]["ctrl"]["step"] == 1.5
 
 
@@ -244,10 +246,10 @@ def test_the_written_file_keeps_the_transport(
 def test_writing_over_a_source_is_refused(tmp_path: Path, build: BuildSession) -> None:
     """Overwriting one replaces what every session sharing it reads."""
     source = tmp_path / "shared.yaml"
-    source.write_text(yaml.safe_dump({"name": "shared"}))
+    source.write_text(yaml.safe_dump({"session": "shared"}))
     session = build(App, str(source))
 
     with pytest.raises(ConfigurationInUse, match="shared.yaml"):
         session.write(tmp_path / ".." / source.parent.name / "shared.yaml")
 
-    assert yaml.safe_load(source.read_text()) == {"name": "shared"}
+    assert yaml.safe_load(source.read_text()) == {"session": "shared"}

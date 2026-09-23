@@ -4,23 +4,23 @@ on:
   workflow_call:
 
 jobs:
-  ruff:
-    name: ruff
+  prek:
+    name: prek
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # no --fix: ruff exits 0 once it has fixed everything, so a fixable
-      # violation would pass here and reach the branch unnoticed
-      - uses: astral-sh/ruff-action@v4.1.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
         with:
-          version-file: uv.lock
-          args: "check"
-          src: "."
-      - uses: astral-sh/ruff-action@v4.1.0
-        with:
-          version-file: uv.lock
-          args: "format --check"
-          src: "."
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.14"
+
+      # the same hooks a commit runs; a hook that rewrites a file fails the
+      # run, so a fixable ruff violation still fails here
+      - name: Run prek hooks
+        run: uv run --locked --only-group lint prek run --all-files --show-diff-on-failure
 
   mypy:
     name: mypy with Qt
@@ -41,4 +41,4 @@ jobs:
       # the environment, the binding and the flags all come from
       # [tool.tox] in pyproject.toml, so this runs what a contributor runs
       - name: Run mypy
-        run: uv run tox -e mypy-${{ matrix.frontend }}
+        run: uv run --locked --only-group tox tox -e mypy-${{ matrix.frontend }}

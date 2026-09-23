@@ -69,8 +69,8 @@ def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[P
     A container opens a log file when it is constructed; without this, every
     test building one would write to the user's own log directory.
     """
-    monkeypatch.setattr("redsun.log.user_log_dir", lambda *a, **k: str(tmp_path))
-    yield tmp_path
+    monkeypatch.setattr("redsun.log.user_data_dir", lambda *a, **k: str(tmp_path))
+    yield tmp_path / "logs"
     loggers = [
         logging.getLogger(name)
         for name in list(logging.Logger.manager.loggerDict)

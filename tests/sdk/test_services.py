@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -43,6 +44,11 @@ STDLIB_WARNING = json.dumps(
         "exc_text": None,
     }
 )
+PVXS_WARNING = (
+    "2026-09-21T14:54:02.293642200 WARN pvxs.tcp.setup Server unable to bind "
+    "port 5075, falling back to 127.0.0.1:65003"
+)
+PVXS_CREATED = datetime(2026, 9, 21, 14, 54, 2, 293642).timestamp()
 LOGURU_ERROR = json.dumps(
     {
         "text": "trigger failed\nTraceback (most recent call last):\nRuntimeError: no answer\n",
@@ -297,6 +303,7 @@ def test_two_pva_services_answer_on_the_loopback(
 
     assert os.environ["EPICS_PVA_ADDR_LIST"].split() == ["127.0.0.1"]
     assert messages(service_log, logging.DEBUG).count("interface 127.0.0.1") == 2
+    assert "unable to bind" not in service_log.text
     with p4p.Context("pva") as client:
         assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
         assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
@@ -330,6 +337,14 @@ def test_two_pva_services_answer_on_the_loopback(
             "Traceback (most recent call last):\nRuntimeError: no answer",
         ),
         (
+            PVXS_WARNING,
+            "redsun.service.cam.pvxs.tcp.setup",
+            logging.WARNING,
+            "Server unable to bind port 5075, falling back to 127.0.0.1:65003",
+            PVXS_CREATED,
+            None,
+        ),
+        (
             '{"name": "incomplete"}',
             "redsun.service.cam",
             logging.DEBUG,
@@ -339,7 +354,14 @@ def test_two_pva_services_answer_on_the_loopback(
         ),
         ("[1, 2]", "redsun.service.cam", logging.DEBUG, "[1, 2]", None, None),
     ],
-    ids=["plain", "stdlib-json", "loguru-json", "incomplete-json", "not-an-object"],
+    ids=[
+        "plain",
+        "stdlib-json",
+        "loguru-json",
+        "pvxs",
+        "incomplete-json",
+        "not-an-object",
+    ],
 )
 def test_a_line_of_output_becomes_the_record_it_describes(
     line: str,

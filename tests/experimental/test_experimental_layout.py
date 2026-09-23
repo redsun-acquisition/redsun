@@ -36,7 +36,7 @@ class Charts(Panel):
 
 
 class LayoutApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"name": "layout-session"}
+    config: ClassVar[dict[str, Any]] = {"session": "layout-session"}
 
     panel: AsView[Panel]
     charts: AsView[Charts]

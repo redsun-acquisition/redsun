@@ -53,7 +53,7 @@ class Clashing:
 
 
 class App(Session):
-    config: ClassVar[dict[str, Any]] = {"name": "reporting"}
+    config: ClassVar[dict[str, Any]] = {"session": "reporting"}
 
     stage: AsPresenter[Stage]
     other: AsPresenter[Stage]

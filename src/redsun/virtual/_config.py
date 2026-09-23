@@ -14,8 +14,8 @@ class RedSunConfig(TypedDict, total=False):
     frontend: Required[str]
     """Frontend toolkit identifier (e.g. `"pyqt"`, `"pyside"`)."""
 
-    name: NotRequired[str]
-    """Session identity.
+    session: NotRequired[str]
+    """The session's name.
 
     Names the session's application, so two sessions in one process must not
     share it. A container omitting it is named after its own class, which is

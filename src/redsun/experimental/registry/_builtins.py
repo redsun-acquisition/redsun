@@ -48,7 +48,7 @@ class SessionConfig:
 
     schema_version: float = 1.0
     frontend: str = "pyqt"
-    name: str = "Redsun"
+    session: str = "Redsun"
     metadata: dict[str, object] = field(default_factory=dict)
 
 

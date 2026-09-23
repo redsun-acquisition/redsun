@@ -55,7 +55,7 @@ class LocatingApp(Session):
 
 
 def test_a_device_taking_one_gets_the_sessions_provider(build: BuildSession) -> None:
-    app = build(WriterApp, {"name": "its-own-session"})
+    app = build(WriterApp, {"session": "its-own-session"})
 
     provider = app.writer.path_provider
 
@@ -83,8 +83,12 @@ def test_the_root_comes_from_the_storage_section(
             TypeError,
             "reserves for the session",
         ),
-        ({"storage": {"base_dirs": "x"}}, ValueError, "'base_dirs'"),
-        ({"storage": {"catalog": {"readable": "/data"}}}, TypeError, "must be a list"),
+        ({"storage": {"base_dirs": "x"}}, ValueError, "base_dirs"),
+        (
+            {"storage": {"catalog": {"readable": "/data"}}},
+            ValueError,
+            "catalog.readable",
+        ),
     ],
     ids=["configured-provider", "unknown-storage-key", "readable-not-a-list"],
 )

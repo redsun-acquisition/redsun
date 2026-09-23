@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-name: mock-session
+session: mock-session
 devices:
   motor:
     axis: ["X"]

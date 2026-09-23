@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-name: mock-wiring-session
+session: mock-wiring-session
 presenters:
   mover:
     plugin_name: mock-pkg

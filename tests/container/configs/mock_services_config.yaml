@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-name: mock-services-session
+session: mock-services-session
 services:
   launched:
     plugin_name: mock-pkg

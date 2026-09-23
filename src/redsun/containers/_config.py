@@ -1,12 +1,18 @@
+"""The application container's configuration, as the container holds it."""
+
 from __future__ import annotations
 
-from typing import Any, NotRequired
+from typing import TYPE_CHECKING, Any, NotRequired
 
 from redsun.virtual import RedSunConfig
 
-from .._config import CatalogConfig, StorageConfig
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
-__all__ = ["AppConfig", "CatalogConfig", "StorageConfig"]
+    from .._config import Source
+    from .components import _ComponentField as ComponentField
+
+__all__ = ["AppConfig"]
 
 
 class AppConfig(RedSunConfig, total=False):
@@ -23,3 +29,31 @@ class AppConfig(RedSunConfig, total=False):
     storage: NotRequired[dict[str, Any] | None]
     wiring: NotRequired[list[dict[str, str]]]
     hooks: NotRequired[dict[str, dict[str, Any]]]
+
+
+def refuse_unresolved_fields(
+    owner: str, paths: Sequence[Source], fields: Mapping[str, ComponentField]
+) -> None:
+    """Refuse the container *owner* when a ``from_config`` field has no file.
+
+    Checked at construction, not class creation, since a base class leaves
+    ``config`` to its subclasses.
+
+    Raises
+    ------
+    TypeError
+        Naming every field wanting a configuration section.
+    """
+    if paths:
+        return
+    unresolved = sorted(
+        attr_name
+        for attr_name, field in fields.items()
+        if field.from_config is not None
+    )
+    if unresolved:
+        raise TypeError(
+            f"Component field(s) {', '.join(unresolved)} in {owner} have "
+            f"from_config set but no config path was provided to the container "
+            f"class"
+        )

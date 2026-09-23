@@ -18,6 +18,7 @@ from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from redsun.aio import run_coro
 from redsun.containers import (
     AppContainer,
+    ConfigurationError,
     declare_device,
     declare_presenter,
     declare_service,
@@ -109,7 +110,7 @@ def _launchable(launchable: None) -> None:
 def session_file(path: Path, services: str) -> Path:
     """Write a session file at *path* whose ``services`` section is *services*."""
     path.write_text(
-        f"schema_version: 1.0\nfrontend: pyqt\nname: transports\nservices:\n{services}",
+        f"schema_version: 1.0\nfrontend: pyqt\nsession: transports\nservices:\n{services}",
         encoding="utf-8",
     )
     return path
@@ -294,7 +295,7 @@ def test_a_service_it_cannot_make_is_refused_as_the_class_is_created() -> None:
 def test_a_session_file_service_it_cannot_make_is_refused(tmp_path: Path) -> None:
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nname: refused\n"
+        "schema_version: 1.0\nfrontend: pyqt\nsession: refused\n"
         "services:\n  ioc:\n    launch: attach\n",
         encoding="utf-8",
     )
@@ -403,31 +404,15 @@ def test_from_config_launches_a_plugin_service_and_attaches_to_the_rest(
     assert beamline.prefix == "BL01:"
 
 
-@pytest.mark.parametrize(
-    ("plugin_id", "error"),
-    [
-        (
-            "not_a_mapping",
-            (
-                'Plugin "mock-pkg" lists service "not_a_mapping" as '
-                "'mock_pkg.service.stand_in', not a mapping."
-            ),
-        ),
-        ("missing", 'Plugin "mock-pkg" does not contain the id "missing".'),
-    ],
-    ids=["not-a-mapping", "missing-id"],
-)
-def test_a_service_its_plugin_cannot_give_is_left_out_with_one_error(
+def test_a_service_its_plugin_does_not_list_is_left_out_with_one_error(
     mock_entry_points: None,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
-    plugin_id: str,
-    error: str,
 ) -> None:
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nname: left-out\n"
-        f"services:\n  ioc:\n    plugin_name: mock-pkg\n    plugin_id: {plugin_id}\n",
+        "schema_version: 1.0\nfrontend: pyqt\nsession: left-out\n"
+        "services:\n  ioc:\n    plugin_name: mock-pkg\n    plugin_id: missing\n",
         encoding="utf-8",
     )
 
@@ -435,7 +420,7 @@ def test_a_service_its_plugin_cannot_give_is_left_out_with_one_error(
 
     assert "ioc" not in app.services
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
-    assert errors == [error]
+    assert errors == ['Plugin "mock-pkg" does not contain the id "missing".']
 
 
 def test_a_presenter_reads_two_caproto_iocs_while_it_is_built(
@@ -505,7 +490,7 @@ def test_a_transport_redsun_does_not_have_is_refused_in_a_session_file(
 ) -> None:
     config = session_file(tmp_path / "session.yaml", "  transport: carrier-pigeon\n")
 
-    with pytest.raises(TypeError, match="carrier-pigeon"):
+    with pytest.raises(ConfigurationError, match="carrier-pigeon"):
         AppContainer.from_config(str(config))
 
 
@@ -543,7 +528,7 @@ def test_a_session_file_declares_a_service_for_a_container_class(
     """
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nname: from-a-file\n"
+        "schema_version: 1.0\nfrontend: pyqt\nsession: from-a-file\n"
         'services:\n  beamline:\n    prefix: "BL01:"\n',
         encoding="utf-8",
     )
@@ -563,7 +548,7 @@ def test_a_class_body_service_wins_over_the_session_file(tmp_path: Path) -> None
     """The class body is the later word on a service the file also declares."""
     config = tmp_path / "session.yaml"
     config.write_text(
-        "schema_version: 1.0\nfrontend: pyqt\nname: overridden\n"
+        "schema_version: 1.0\nfrontend: pyqt\nsession: overridden\n"
         'services:\n  beamline:\n    prefix: "FILE:"\n',
         encoding="utf-8",
     )

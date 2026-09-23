@@ -1,11 +1,11 @@
-# 16. Questions read from the annotation
+# 17. Questions read from the annotation
 
 Date: 2026-09-19
 
 ## Status
 
 Accepted, and applied to `redsun.experimental` only. Builds on
-[14. Collaborators arrive in `setup`](0014-collaborators-arrive-in-setup.md).
+[15. Collaborators arrive in `setup`](0015-collaborators-arrive-in-setup.md).
 
 ## Context
 

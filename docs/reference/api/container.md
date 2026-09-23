@@ -19,11 +19,7 @@
     options:
       show_root_heading: true
 
-::: redsun.containers.StorageConfig
-    options:
-      show_root_heading: true
-
-::: redsun.containers.CatalogConfig
+::: redsun.containers.ConfigurationError
     options:
       show_root_heading: true
 

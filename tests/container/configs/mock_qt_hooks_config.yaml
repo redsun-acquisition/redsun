@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-name: mock-qt-hooks-session
+session: mock-qt-hooks-session
 hooks:
   configure_application:
     provider: "mock_pkg.hooks:QtStyleHook"

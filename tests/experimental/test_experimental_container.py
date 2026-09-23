@@ -242,7 +242,7 @@ class OrderedApp(Session):
 
 class App(Session):
     config: ClassVar[Mapping[str, Any]] = {
-        "name": "test-session",
+        "session": "test-session",
         "devices": {"stage": {"axis": "Z"}},
         "presenters": {"ctrl": {"gain": 2.0}},
         "views": {"widget": {"label": "from-config"}},
@@ -674,7 +674,7 @@ class Shared(Session):
 
     config: ClassVar[Mapping[str, Any]] = {
         "schema_version": 1.0,
-        "name": "shared",
+        "session": "shared",
         "devices": {"motor": {"axis": "Z"}},
         "presenters": {"ctrl": {"gain": 1.0}},
     }
@@ -687,7 +687,7 @@ class Layered(Shared):
     """A session laying its own configuration over the base's."""
 
     config: ClassVar[Mapping[str, Any]] = {
-        "name": "layered",
+        "session": "layered",
         "presenters": {"ctrl": {"gain": 9.0}},
     }
 
@@ -746,7 +746,7 @@ class DataclassServices:
 
     @provides
     def calibration(self) -> Calibration:
-        return Calibration(len(self.config.name) / 10)
+        return Calibration(len(self.config.session) / 10)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1420,7 +1420,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     shared.write_text("name: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
 
     class Mixed(Session):
-        config: ClassVar[list[Any]] = [str(shared), {"name": "from-mapping"}]
+        config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
 
         motor: AsDevice[Stage]
         ctrl: AsPresenter[Ctrl]
@@ -1444,7 +1444,7 @@ def test_a_later_source_may_rename_the_session() -> None:
     """The name is content rather than identity, so an overlay may set it."""
 
     class Renamed(Session):
-        config: ClassVar[list[Any]] = [{"name": "first"}, {"name": "second"}]
+        config: ClassVar[list[Any]] = [{"session": "first"}, {"session": "second"}]
 
     app = Renamed().build()
     assert app.name == "second"
@@ -1466,7 +1466,7 @@ def test_a_session_knows_what_it_is_called() -> None:
         """A session naming itself nothing."""
 
     assert Instrument().name == "Instrument"
-    assert Instrument({"name": "morning-run"}).name == "morning-run"
+    assert Instrument({"session": "morning-run"}).name == "morning-run"
 
 
 def test_a_shared_service_may_be_any_kind_of_class(

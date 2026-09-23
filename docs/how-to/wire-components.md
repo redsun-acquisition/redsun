@@ -343,5 +343,5 @@ Not connecting mover.sig_motor_moved -> panel.on_moved: 'panel' not built
     | `'a' exposes no signal named 'sig'. Its signal ports: ...` | the signal name is wrong |
     | `'a' exposes no slot named 'port'. Its slot ports: ...` | the port name is wrong, or the method was never marked |
     | `'a.b.c' is not a port path; expected 'component.port'` | malformed path |
-    | `wiring entry 0 must be a mapping with exactly the keys 'from' and 'to'` | a rule is missing a key or carries an extra one |
+    | `wiring.0.to: Field required` | a rule is missing a key; raised as [`ConfigurationError`][redsun.containers.ConfigurationError] when the file is read |
     | `cannot connect a.sig -> b.port: Cannot connect slot ...` | `psygnal` rejected the signature |

@@ -6,6 +6,8 @@
     options:
       members:
         - RunEngine
+        - Deferrals
+        - DEFERRALS
         - Status
         - RunEngineResult
         - RunEngineInterrupted

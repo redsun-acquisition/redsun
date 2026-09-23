@@ -108,7 +108,7 @@ class QtAppContainer(AppContainer):
         if self._main_view is None:
             self._main_view = QtMainView(
                 virtual_container=self.virtual_container,
-                session_name=self._config["name"],
+                session_name=self._config["session"],
                 views=cast("dict[str, QtView]", self.views),
             )
             hook = self._ensure_hooks().get("configure_main_view")

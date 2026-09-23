@@ -324,7 +324,7 @@ There are two ways to assemble an application, with the same result at runtime. 
 
     ```yaml
     schema_version: 1.0
-    name: "My Experiment"
+    session: "My Experiment"
     frontend: "pyqt"
 
     devices:

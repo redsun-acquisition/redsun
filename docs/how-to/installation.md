@@ -109,4 +109,9 @@ uv run tox           # lint, both Qt type-checking legs, tests, docs
 uv run tox -e tests
 ```
 
-[Run tests](run-tests.md) lists what each environment covers.
+[Run tests](run-tests.md) lists what each environment covers. To run the
+formatting and lint checks on every commit, [install the git hook](run-commit-checks.md#install-the-git-hook):
+
+```bash
+uv run prek install
+```

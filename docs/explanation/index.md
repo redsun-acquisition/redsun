@@ -9,6 +9,7 @@
 - **[The experimental container](experimental-container.md)**
 - **[Services](services.md)**
 - **[The session catalog](catalog.md)**
+- **[Derived products](derived-products.md)**
 
 ## SDK
 
@@ -37,6 +38,7 @@ Status, Context, Decision, Consequences.
 - **[11. Tolerating a component that fails to build](decisions/0011-tolerating-a-component-that-fails-to-build.md)**
 - **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
 - **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**
-- **[14. Collaborators arrive in `setup`](decisions/0014-collaborators-arrive-in-setup.md)**
-- **[15. A component refused at declaration is skipped](decisions/0015-a-component-refused-at-declaration-is-skipped.md)**
-- **[16. Questions read from the annotation](decisions/0016-questions-read-from-the-annotation.md)**
+- **[14. Typed session files and plugin manifests](decisions/0014-typed-session-files-and-manifests.md)**
+- **[15. Collaborators arrive in `setup`](decisions/0015-collaborators-arrive-in-setup.md)**
+- **[16. A component refused at declaration is skipped](decisions/0016-a-component-refused-at-declaration-is-skipped.md)**
+- **[17. Questions read from the annotation](decisions/0017-questions-read-from-the-annotation.md)**

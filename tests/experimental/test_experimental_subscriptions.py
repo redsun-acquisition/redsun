@@ -45,7 +45,7 @@ class Renamed:
 
 
 class App(Session):
-    config: ClassVar[dict[str, Any]] = {"name": "subscribing"}
+    config: ClassVar[dict[str, Any]] = {"session": "subscribing"}
 
     watcher: AsPresenter[Watcher]
     renamed: AsPresenter[Renamed]

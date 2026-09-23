@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from .conftest import BuildSession
 
-CATALOG: dict[str, Any] = {"name": "catalog-session", "storage": {"catalog": None}}
+CATALOG: dict[str, Any] = {"session": "catalog-session", "storage": {"catalog": None}}
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +64,7 @@ def test_a_component_reaches_the_catalog_by_its_address(
 
 @pytest.mark.parametrize(
     ("config", "has_address"),
-    [(CATALOG, True), ({"name": "catalog-session"}, False)],
+    [(CATALOG, True), ({"session": "catalog-session"}, False)],
     ids=["with-catalog", "without"],
 )
 def test_an_optional_address_is_none_without_a_catalog(

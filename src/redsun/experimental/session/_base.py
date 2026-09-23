@@ -59,7 +59,14 @@ from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 
 from ... import _structural
 from ..._catalog import require_tiled, start_catalog
-from ..._config import Source, StorageConfig, as_sources, load
+from ..._config import (
+    Source,
+    StorageConfig,
+    as_sources,
+    label,
+    load,
+    storage_of,
+)
 from ..._hooks import HookError, parse_hook_specs, resolve_hooks
 from ...services._transports import (
     CHANNEL_ACCESS,
@@ -443,7 +450,13 @@ class Session(BuildableSession):
         components are built does not read the files a second time.
         """
         if self._merged is None:
-            self._merged = load(self._sources())
+            sources = self._sources()
+            if len(sources) > 1:
+                logger.debug(
+                    f"Reading configuration from {len(sources)} sources, in order: "
+                    f"{', '.join(label(source) for source in sources)}"
+                )
+            self._merged = load(sources)
         return self._merged
 
     @property
@@ -509,11 +522,11 @@ class Session(BuildableSession):
     def name(self) -> str:
         """What this session is called.
 
-        The configuration's ``name``, or this session's own class name when
+        The configuration's ``session``, or this session's own class name when
         the configuration says nothing. A class name is distinct per session
         where a shared constant would not be.
         """
-        declared = self._configuration().get("name")
+        declared = self._configuration().get("session")
         if isinstance(declared, str) and declared:
             return declared
         return type(self).__name__
@@ -665,7 +678,7 @@ class Session(BuildableSession):
             )
         for name, service in self._services.items():
             setattr(self, name, service)
-        self._storage = StorageConfig.from_mapping(config.get("storage"))
+        self._storage = storage_of(config.get("storage"))
         if self._storage.catalog is not None:
             require_tiled()
         self._path_provider = SessionPathProvider(
@@ -741,7 +754,7 @@ class Session(BuildableSession):
             built = sum(1 for d in declared if d.instance is not None)
             counted.append(f"{built}/{len(declared)} {layer}s")
         summary = f"Container built: {', '.join(counted)}"
-        for label, names in (
+        for heading, names in (
             ("Not built", self._failed),
             ("Not set up", self._not_set_up),
         ):
@@ -751,7 +764,7 @@ class Session(BuildableSession):
                     f"{', not connected' if isinstance(reason, ConnectionError) else ''})"
                     for name, reason in names.items()
                 )
-                summary += f"\n{label}: {named}"
+                summary += f"\n{heading}: {named}"
         named_services = {d.service for d in self._declarations.values()}
         used = {
             d.service for d in self._declarations.values() if d.instance is not None
@@ -952,7 +965,7 @@ class Session(BuildableSession):
         self._session_config = SessionConfig(
             schema_version=config.get("schema_version", 1.0),
             frontend=config.get("frontend", "pyqt"),
-            name=config.get("name", name),
+            session=config.get("session", name),
             metadata=dict(config.get("metadata", {})),
         )
 

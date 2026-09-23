@@ -198,7 +198,7 @@ class ClosingApp(QtSession):
 
 
 class SaveApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"name": "save-session"}
+    config: ClassVar[dict[str, Any]] = {"session": "save-session"}
 
 
 class Receiving(QWidget):
@@ -340,7 +340,7 @@ class Tunable:
 
 
 class PromptApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {"name": "closing-session"}
+    config: ClassVar[dict[str, Any]] = {"session": "closing-session"}
 
     tunable: AsPresenter[Tunable]
 
@@ -440,7 +440,7 @@ def test_no_toolkit_object_exists_before_the_build() -> None:
 
 def test_the_configuration_names_the_container() -> None:
     """A session naming Qt comes up on the Qt container without a class."""
-    app = Session.from_config({"frontend": "pyqt", "name": "from-file"})
+    app = Session.from_config({"frontend": "pyqt", "session": "from-file"})
     assert isinstance(app, QtSession)
     assert app.frontend is Qt
     try:
@@ -697,7 +697,7 @@ def test_the_save_action_writes_where_the_dialog_points(
 
     session.model.commands.execute_command("save-session.save_configuration")
 
-    assert yaml.safe_load(target.read_text())["name"] == "save-session"
+    assert yaml.safe_load(target.read_text())["session"] == "save-session"
 
 
 def test_a_cancelled_dialog_writes_nothing(
@@ -723,7 +723,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
 ) -> None:
     """Only the session knows which files it read, so Qt cannot refuse this."""
     source = tmp_path / "shared.yaml"
-    source.write_text(yaml.safe_dump({"name": "save-session"}))
+    source.write_text(yaml.safe_dump({"session": "save-session"}))
     _answer(monkeypatch, str(source))
     warned: list[str] = []
     monkeypatch.setattr(
@@ -734,7 +734,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
 
     session.model.commands.execute_command("save-session.save_configuration")
 
-    assert yaml.safe_load(source.read_text()) == {"name": "save-session"}
+    assert yaml.safe_load(source.read_text()) == {"session": "save-session"}
     assert "shared.yaml is a source this session was built from" in warned[0]
 
 

@@ -620,7 +620,7 @@ listed in the [changelog](changelog.md).
   built instance is checked against
   its layer's protocol and placement as soon as it is constructed, and skipped
   on failure, where the check ran when the session was sealed and raised. See
-  [ADR 15](../explanation/decisions/0015-a-component-refused-at-declaration-is-skipped.md).
+  [ADR 16](../explanation/decisions/0016-a-component-refused-at-declaration-is-skipped.md).
 
 - `AsPresenter` and `AsView` (`redsun.experimental`) build a presenter or
   view with every argument passed by keyword, `name` included. A constructor

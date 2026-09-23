@@ -10,12 +10,12 @@ from typing import (
     get_origin,
 )
 
-from typing_extensions import TypeForm
-
 from redsun.experimental.injection import devices_protocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
+
+    from typing_extensions import TypeForm
 
     from ._declarations import Declaration, Key
     from ._protocols import HasSetup

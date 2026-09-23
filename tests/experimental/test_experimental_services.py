@@ -392,7 +392,7 @@ def test_a_saved_device_keeps_the_service_it_names(
 ) -> None:
     class App(Session):
         config: ClassVar[dict[str, Any]] = {
-            "name": "saved",
+            "session": "saved",
             "services": {"beamline": {"prefix": "BL01:"}},
             "devices": {
                 "stage": {"service": "beamline", "autoconnect": False, "velocity": 1.5}

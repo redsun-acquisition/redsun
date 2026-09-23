@@ -19,7 +19,7 @@ redsun/
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
 |   |-- _catalog.py            require_tiled, start_catalog: the catalog both layers start
-|   |-- storage/               writers for derived products, by format
+|   |-- writers/               Writer for derived products, one stream per format
 |   |-- view/                  View ABC, PView
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   |-- virtual/               VirtualContainer, wiring, provider protocols
@@ -66,6 +66,7 @@ it drives is the one on `PATH`: `tox-uv` depends on the `uv` package, which puts
 a second `uv.exe` in the project `.venv` and shadows the installed one:
 
 ```bash
+uv run prek install              # once: run the prek.toml hooks on every commit
 uv run tox                       # lint, both mypy legs, tests, docs
 uv run tox -e tests              # one environment
 uv run tox -e tests -- tests/sdk -x              # posargs reach pytest
@@ -74,7 +75,7 @@ uv run tox -e mypy-pyqt,mypy-pyside
 
 | environment | what it runs |
 | --- | --- |
-| `lint` | `ruff check --fix` then `ruff format` |
+| `lint` | `prek run --all-files`: the commit hooks, ruff included |
 | `mypy-pyqt` / `mypy-pyside` | mypy against that binding |
 | `tests` | `pytest -q` |
 | `docs` | `zensical build` then `scripts/check_xrefs.py` |
@@ -163,7 +164,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   every device whose constructor takes a `path_provider` keyword. A
   declaration giving that keyword is refused, as with `service` and
   `autoconnect`.
-- `redsun.storage` holds per-format writers for derived products only: a
+- `redsun.writers` holds the `Writer` for derived products only: a
   component computing one writes it against the store named in the
   `StreamResource` document.
 - Rationale: `docs/explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md`.
@@ -172,6 +173,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 - Python >=3.11, `from __future__ import annotations` everywhere (ruff
   `FA102`).
+- **Module-level names come first, after the imports:** constants, type
+  aliases, `TypeVar`s and `ParamSpec`s, before any function or class. A
+  reader finds every name the module is built on in one place. The one
+  exception is a name built from something the module defines, such as
+  `ClassPath = Annotated[str, AfterValidator(class_path)]`: it goes directly
+  after that definition.
 - Ruff lint has `D` (numpy docstring convention) and `TC` (type-check imports)
   enabled: runtime-unneeded imports go under `if TYPE_CHECKING:`. Public
   symbols need docstrings; `D100`/`D104` are ignored.
@@ -191,6 +198,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's autocomplete
   key on the name. So `_hooks.py` holds `parse_hook_specs`, while
   `AppContainer._build_devices` stays underscored.
+  **A class no `__all__` re-exports is private as a whole**, so its members
+  drop the underscore too: the session-file and manifest models in `_config`
+  and `_manifest` name their validators `group_hooks`, not `_group_hooks`. The
+  class-member rule above is for classes a user can reach.
   Two consequences: ruff `D103` treats a non-underscore function as public, so
   helpers in a private module need docstrings; and a reference page targeting a
   *module* needs an explicit `members:` list, mkdocstrings selecting `__all__`
@@ -211,6 +222,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   slots.** psygnal refers to an owner weakly and falls back silently to a
   strong reference, on which the owner is never collected and takes everything
   it holds with it. Only `__slots__` classes reach that path.
+- **Don't annotate what the assignment already says.** `HOOK_GROUPS =
+  TypeAdapter(list[HookGroup])`, not `HOOK_GROUPS: TypeAdapter[list[HookGroup]]
+  = ...`. Annotate where mypy cannot infer the type (an empty container, an
+  `Any` from `getattr`, a narrower declared type).
 - **Don't alias an attribute to a local for a single use.** Write
   `self.main_window.show()`. A local earns its place when the value is read
   several times and reaching it costs something, when a type checker needs the
@@ -232,6 +247,18 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   meaning the name and type already carry. A `Parameters`, `Returns` or
   `Raises` section earns its place when it says something the signature cannot:
   units, accepted values, what `None` means, which exception and when.
+- **Attributes are documented where they are declared**, by a docstring on the
+  line after each one, never by a `Parameters` or `Attributes` section in the
+  class docstring. This holds for everything declared as fields: dataclasses,
+  `pydantic` models, `TypedDict`s, `NamedTuple`s.
+
+  ```python
+  class ServiceEntry(BaseModel):
+      """How a manifest launches a service."""
+
+      module: str
+      """Module run as ``python -m <module>``."""
+  ```
 - No section-divider or banner comments, and no comment blocks describing the
   code that follows. A comment earns its place only by explaining why a
   specific statement is the way it is.
@@ -252,9 +279,6 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   close) write one happy-path test driving the whole sequence and asserting the
   observable end state, then small focused tests for unhappy paths.
 - Parametrize normal and edge cases together in one `@pytest.mark.parametrize`.
-- **Falsify a test before trusting it.** Remove the thing it pins, watch it
-  fail, put it back. A test that still passes with its subject broken pins
-  nothing.
 - `src/redsun/view/**` is omitted from coverage; don't chase coverage there.
 - **A property only a type checker can observe is tested in `tests/typing/`**,
   with `typing.assert_type`, not with runtime asserts. Those modules are never

@@ -1,4 +1,4 @@
-# 15. A component refused at declaration is skipped
+# 16. A component refused at declaration is skipped
 
 Date: 2026-09-19
 

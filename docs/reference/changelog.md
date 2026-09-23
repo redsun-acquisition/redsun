@@ -11,7 +11,50 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+## [0.13.0] - 23-09-2026
+
 ### Added
+
+- **`ConfigurationError`** (`redsun.containers`) - raised when a session
+  file, its layers merged, does not describe a session. A `ValueError`
+  naming the files and listing every problem as `section.key: what`, a hook
+  entry located by its hook points (`hooks.greet.provider`).
+
+- A `storage` section in a session file: `base_dir`, the root a session writes
+  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
+  the width of the file counter, and `catalog`, which, even empty, gives the
+  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
+  extra. `catalog.readable` adds directories the catalog may read from:
+
+  ```yaml
+  storage:
+    base_dir: "D:/experiments/2026-09"
+    catalog:
+      readable:
+        - /data/aht
+  ```
+
+- JSON schemas of a session file and a plugin manifest, published with the
+  documentation under `reference/schemas/`. A first line
+  `# yaml-language-server: $schema=<url>` has an editor check a file against
+  one.
+
+- **`SessionPathProvider.sig_base_dir_changed`** (`redsun.path_provider`) -
+  emitted with the new root once `set_base_dir` accepted it.
+
+- **`SessionFileHandler.move`** and **`SessionFileHandler.root`**
+  (`redsun.log`) - `move(root)` carries the run's files under another root and
+  keeps writing there; `root` is the one they are under. The constructor takes
+  a `root` keyword, the user data directory by default.
+
+- **`Deferrals`** and **`DEFERRALS`** (`redsun.engine`) - a change to apply
+  between two messages of a running plan. `Deferrals(engine)` installs a
+  suspender; `request(apply)` hands over a coroutine function, applied on
+  the engine's loop once the message under way completes, or at once when
+  no plan runs, and returns a `concurrent.futures.Future` done once it was.
+  Safe from any thread; a caller on a loop must not block on the future. A
+  change that raises is logged and the rest still run. The engine's owner
+  provides it under `DEFERRALS`.
 
 - **`Service`**, **`STARTUP_TIMEOUT`** and **`STOP_TIMEOUT`** (`redsun.services`) - the handle a
   container makes for each service it declares. A service with a module runs
@@ -20,8 +63,8 @@ Dates are specified in the format `DD-MM-YYYY`.
   `redsun.service.<name>`, launches it with `REDSUN_SERVICE_NAME` and
   `REDSUN_SERVICE_PREFIX` in its environment, and arranges the session's
   transport for it: a Channel Access server port of its own appended to
-  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` with that address
-  in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
+  `EPICS_CA_ADDR_LIST`, or a PVAccess server on `127.0.0.1` and a free TCP
+  port with that address in `EPICS_PVA_ADDR_LIST`. `stop` closes the process's standard
   input, then sends `SIGINT` on POSIX, then kills it, each step waiting
   `stop_timeout` seconds, `STOP_TIMEOUT` (10 s) by default. A ready service exiting unasked logs its exit code
   and last 20 output lines at `ERROR` and emits `sig_exited(name, code)`. A
@@ -105,7 +148,9 @@ Dates are specified in the format `DD-MM-YYYY`.
   `remove_handler` and `session_log` take a `service`.
 - A line of a service's output that is a JSON log record, written by a stdlib
   formatter or by `loguru` with `serialize=True`, is logged with its own level,
-  time and traceback under `redsun.service.<service>.<logger>`.
+  time and traceback under `redsun.service.<service>.<logger>`; so is a line
+  `pvxs` writes, `<time> <LEVEL> <logger> <message>`, with its level, time
+  and logger.
 - **`LogView`** (`redsun.view.qt.builtins`) shows services' records on a
   Services tab, with a selector for one service or all of them.
 - **`SessionPathProvider`**, **`PlanFilenameProvider`** and
@@ -132,25 +177,6 @@ Dates are specified in the format `DD-MM-YYYY`.
       to: path_provider.set_plan
   ```
 
-- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`) and a
-  `storage` section in a session file: `base_dir`, the root a session writes
-  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
-  the width of the file counter, and `catalog`, which, even empty, gives the
-  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
-  extra:
-
-  ```yaml
-  storage:
-    base_dir: "D:/experiments/2026-09"   # optional
-    catalog:                             # optional
-      readable:                          # optional, added to <base_dir>/<session>
-        - /data/aht
-  ```
-
-  `AppContainer.storage` gives the section after the build. `readable` adds
-  directories the catalog may read from. Unknown keys are refused, and so is a
-  `catalog` without the `tiled` extra.
-
 - **`SessionPathProvider.session_dir`** (`redsun.path_provider`) - the
   session's directory inside `base_dir`, holding its files and catalog.
 - **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
@@ -166,30 +192,38 @@ Dates are specified in the format `DD-MM-YYYY`.
   provider = container.require(PATH_PROVIDER)
   ```
 
-- **`redsun.storage.writers`** - one module per format, each with
-  `write(uri, *, data_key, data, metadata=None) -> str`, adding a derived
-  product to an acquisition's store: `zarr` for `application/x-zarr`,
-  `ome_zarr` for `application/x-ome-zarr`:
+- **`Writer`** (`redsun.writers`) - writes the products a component
+  computes against the stores a run names. A product is declared before the
+  run, `derive(data_key, source=)` to take its layout and store from the
+  `descriptor` and `stream_resource` naming *source*, or `declare(data_key,
+  shape=, dtype=, store=)` to give both; the component forwards every
+  document with `writer(name, doc)` and hands the data over with
+  `append(data_key, data)` per frame or `write(data_key, data, metadata=None)`
+  for the whole product, which returns the product's URI:
 
   ```python
-  from redsun.storage.writers import ome_zarr
-
-  product_uri = ome_zarr.write(
-      resource["uri"],
-      data_key="det_median",
-      data=median,
-      metadata={"derived_from": resource["data_key"]},
-  )
+  writer = Writer()
+  writer.derive("det_median", source="det")
+  ...
+  writer.write("det_median", median, metadata={"derived_from": "det"})
   ```
 
-  The returned URI is the argument when the product joined that store, and a
-  new one when it went beside it, as it does for a root carrying OME-Zarr
-  metadata (an image, a plate, a `bioformats2raw` layout), which `zarr.write`
-  refuses. A writer registers nothing.
-- **`WriterError`** (`redsun.storage.writers`) - raised for a store the
-  writer cannot take, an array with too few or too many dimensions, or a
-  missing package, naming the extra that installs it.
-- A `zarr` extra and dependency group, with `ome-writers[acquire-zarr]`.
+  A product goes as a key of the store the acquisition wrote, or as a store of
+  its own beside a root carrying OME-Zarr metadata, named
+  `<store>_<data_key>.ome.zarr` and written whole. A run's `stop` closes the
+  streams opened for it and writes two mappings on each product's group: *metadata* as given, and
+  `redsun` with `run_start`, `source`, `resource_uri` and `written`.
+  `shutdown` closes what a session ending mid-run left open.
+- **`ArrayShape`** (`redsun.writers`) - the shape and dtype of one
+  frame of a product.
+- **`WriterError`** (`redsun.writers`) - raised for a product not
+  declared, one without its layout or store yet, one declared after its
+  store's stream opened, a store the writer cannot take, or an array with too
+  few or too many dimensions. Importing the package without `acquire-zarr`
+  raises `ImportError` naming the extra that installs it; writing beside an
+  OME-Zarr image without `ome-writers` does the same on first use.
+- A `zarr` extra and dependency group, with `acquire-zarr`, and an
+  `ome-zarr` one, with `ome-writers[acquire-zarr]`.
 - A `tiled` extra and dependency group, with `tiled[client,server]` and
   `ome-tiled[bluesky]`. It installs nothing on Python 3.14.
 - **`CatalogAddress`** and **`CATALOG`** (`redsun.catalog`) - where a
@@ -217,6 +251,26 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 
 ### Changed
+
+- Plugin manifests are validated when a session looks up its plugins. A
+  manifest that cannot be read or parsed, one with an unknown group or key, a class path not written as
+  `module:ClassName`, a service entry without `module`, or a `name` other
+  than its entry point's is left out whole, with one error naming its file
+  and every problem. A service entry takes `module`, `args`, `ready` and
+  `stop_timeout`.
+
+- **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
+  session's root instead of the platform's log directory: the application's
+  file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
+  Opening a run prunes both folders. The container moves the run's files when
+  the root changes, at build from `storage.base_dir` and later from
+  `set_base_dir`.
+
+- **`DescriptorTreeView`** (`redsun.view.qt`) groups rows by their
+  `name-property` key rather than by the descriptor's `source`: one header
+  per device name, and one under it per group a property names with a dash of
+  its own, `cam-properties-Binning` as `Binning` under `properties` under
+  `cam`. A source ending in `:readonly` still greys the row.
 
 - A container class taking a session file gets the services that file
   declares, as it already got its devices, presenters and views. A service
@@ -265,8 +319,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   and **`PlanFilenameProvider.reset`** takes `(plan, datakey)` keys.
 - **`SessionPathProvider`** writes under
   `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`.
-  Nothing is moved; a provider built while `~/redsun-storage` exists logs a
-  `WARNING` naming both locations.
 
 ### Removed
 
@@ -284,10 +336,24 @@ Dates are specified in the format `DD-MM-YYYY`.
   (`redsun.view.qt.builtins`), with their manifest entries. A session
   declaring them drops both and gives `base_dir` in the `storage` section.
   `redsun.storage.PATH_PROVIDER` moves to `redsun.path_provider`.
-- The `zarr` extra and dependency group install
-  `ome-writers[acquire-zarr]` instead of `acquire-zarr`.
+- The `redsun.storage` package. `Writer` lives in `redsun.writers`.
+- The `zarr` extra and dependency group require `acquire-zarr` 0.10.0 or
+  later, the first release whose arrays take `is_ngff`.
 
 ### Changed (breaking)
+
+- Session files (`AppContainer.from_config`, a container class's `config=`)
+  are validated once their layers are merged, before anything is built, and
+  raise `ConfigurationError` for an unknown key in any section, a
+  `schema_version` other than `1.0` or written as a string, an unknown
+  `frontend` or `services.transport`, a `transport` outside `services`,
+  `plugin_name` without `plugin_id` or the reverse, a misspelled `plugin_*`
+  key, a non-boolean device `autoconnect`, an empty `storage.base_dir`, a
+  `storage.catalog.readable` that is not a list, a hook entry or wiring
+  rule missing a key, and, in a file given to `from_config`, a device,
+  presenter or view without `plugin_name` and `plugin_id`, in place of `TypeError`, `KeyError`, `WiringError` and
+  `HookError`. A container class naming a file validates it when
+  constructed, or when created if it declares `from_config` fields.
 
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device
   as `cls(name=<name>, **kwargs)` rather than `cls(<name>, **kwargs)`. A device
@@ -301,6 +367,26 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 ### Fixed
+
+- **`AppContainer.from_config`** (`redsun.containers.container`) builds a
+  file whose `devices`, `presenters` or `views` section is written empty, and
+  logs and skips a component whose class cannot be imported.
+
+- **`SessionPathProvider.reset_plan`** (`redsun.path_provider`) rescans the
+  counters from disk, so a filename a plan requested and never wrote is
+  handed out again by the next plan instead of leaving a hole in the
+  numbering.
+
+- **`Deferrals.request`** (`redsun.engine`) does everything on the engine's
+  loop: the check for a running plan, the flag, and a change applied at
+  once. Raised from the caller's thread, the suspender gave the engine's
+  loop 0.1 s to make its event and raised `Could not create the suspender
+  event` on a busy machine; a change applied at once ran on the caller's
+  loop.
+
+- **`DescriptorTreeView`** (`redsun.view.qt`) greys a row whose source ends
+  in `:readonly` whatever comes before it, `pva://cam:readonly` included, as
+  the docs said; only `soft://readonly` did before.
 
 - **`create_plan_spec`** (`redsun.presenter.plan_spec`) no longer refuses a
   parameter whose default is an empty string, tuple or list as an action
@@ -1208,6 +1294,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.13.0]: https://github.com/redsun-acquisition/redsun/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/redsun-acquisition/redsun/compare/v0.12.0...v0.12.1

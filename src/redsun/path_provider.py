@@ -8,7 +8,6 @@ keyword.
 
 from __future__ import annotations
 
-import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +17,7 @@ import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
 
-from redsun.virtual import slot
+from redsun.virtual import Signal, slot
 
 from .utils._paths import session_folder
 
@@ -33,11 +32,7 @@ __all__ = [
     "session_directory",
 ]
 
-logger = logging.getLogger("redsun")
-
 _RESET_PLAN = "unknown"
-
-_LEGACY_DIR = "redsun-storage"
 
 
 def _base_dir() -> Path:
@@ -133,6 +128,9 @@ class SessionPathProvider(PathProvider):
         Clock giving the date directory, for tests. Defaults to `datetime.now`.
     """
 
+    sig_base_dir_changed = Signal(Path)
+    """Emitted with the new root once `set_base_dir` accepted it."""
+
     __slots__ = (
         "_base_dir",
         "_base_dir_lock",
@@ -160,12 +158,6 @@ class SessionPathProvider(PathProvider):
             rf"^(?P<plan>.+)_(?P<count>\d{{{max_digits}}})(?:-.*)?$"
         )
 
-        legacy = Path.home() / _LEGACY_DIR
-        if legacy.is_dir():
-            logger.warning(
-                f"Earlier sessions wrote to {legacy}. New files go to "
-                f"{self._base_dir}; nothing was moved."
-            )
         self._scan_existing()
 
     @property
@@ -205,6 +197,7 @@ class SessionPathProvider(PathProvider):
         self._base_dir = Path(base_dir).expanduser()
         self._filenames.reset({})
         self._scan_existing()
+        self.sig_base_dir_changed.emit(self._base_dir)
 
     def lock_base_dir(self, reason: str) -> None:
         """Refuse every later `set_base_dir`, giving *reason* in the error."""
@@ -217,8 +210,14 @@ class SessionPathProvider(PathProvider):
 
     @slot
     def reset_plan(self) -> None:
-        """Set the plan name back to its placeholder."""
+        """Set the plan name back to its placeholder, rescanning counters.
+
+        A filename requested by the plan and never written returns to the
+        pool, so the next plan continues from what is on disk.
+        """
         self._filenames.set_plan(_RESET_PLAN)
+        self._filenames.reset({})
+        self._scan_existing()
 
     def _scan_existing(self) -> None:
         """Set each `(plan, datakey)` counter one past the highest number on disk."""

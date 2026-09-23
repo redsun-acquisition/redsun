@@ -9,13 +9,18 @@ from __future__ import annotations
 import logging
 from abc import abstractmethod
 from collections.abc import Mapping
-from dataclasses import dataclass
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
+
+from pydantic import BaseModel, TypeAdapter, ValidationError
+
+from ._manifest import ClassPath, message_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
+
+    from redsun.containers.components import _HookField as HookField
 
 __all__ = [
     "ConfiguresApplication",
@@ -29,8 +34,6 @@ __all__ = [
 AppT_co = TypeVar("AppT_co", covariant=True)
 AppT_contra = TypeVar("AppT_contra", contravariant=True)
 ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
-
-ENTRY_KEYS = ("provider", "kwargs")
 
 logger = logging.getLogger("redsun")
 
@@ -118,91 +121,58 @@ class WrapsBuild(Protocol[AppT_contra]):
         ...
 
 
-@dataclass(frozen=True, slots=True)
-class HookSpec:
-    """One provider of the configuration ``hooks`` section, and what it serves.
-
-    *moments* holds every key the entry appeared under, so a YAML anchor shared
-    by two keys gives one spec and one provider.
-    """
-
-    moments: tuple[str, ...]
-    provider: str
-    kwargs: Mapping[str, Any]
-
-
 def parse_hook_specs(
     raw: Mapping[str, Any], moments: Mapping[str, type], owner: str
-) -> list[HookSpec]:
-    """Read the ``hooks`` section into one spec per distinct entry.
+) -> list[HookGroup]:
+    """Read the ``hooks`` section into one group per distinct entry.
 
     Keys are the hook points *owner* calls; an entry under several keys through
-    a YAML anchor is one spec serving all of them.
+    a YAML anchor is one group serving all of them.
 
     Raises
     ------
     HookError
-        If a key is not a hook point *owner* calls, an entry is not a mapping,
-        carries a key other than ``provider`` and ``kwargs``, carries no string
-        ``provider``, carries a non-mapping ``kwargs``, or two separate entries
-        name the same provider with the same keys.
+        If a key is not a hook point *owner* calls, an entry is not a mapping
+        of a class path ``provider`` and a mapping ``kwargs``, or two separate
+        entries name the same provider with the same keys.
     """
-    grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
-    for moment, entry in raw.items():
+    for moment in raw:
         if moment not in moments:
             raise HookError(
                 f"hooks key {moment!r} is not a hook point {owner} calls; "
                 f"{known_points(moments)}"
             )
-        if not isinstance(entry, Mapping):
-            raise HookError(
-                f"hooks entry {moment!r} must be a mapping, got {type(entry).__name__}"
+    try:
+        entries = group_hook_entries(raw)
+    except ValueError as e:
+        raise HookError(str(e)) from None
+    try:
+        groups = HOOK_GROUPS.validate_python(entries)
+    except ValidationError as e:
+        raise HookError(hook_problems(entries, e)) from None
+    refuse_ambiguous(groups)
+    return groups
+
+
+def hook_problems(entries: list[dict[str, Any]], error: ValidationError) -> str:
+    """Say what is wrong with each grouped entry, naming its hook points."""
+    lines = []
+    for problem in error.errors():
+        index, *rest = problem["loc"]
+        named = ", ".join(repr(moment) for moment in entries[int(index)]["moments"])
+        key = ".".join(str(part) for part in rest)
+        if problem["type"] == "extra_forbidden":
+            lines.append(
+                f"hooks entry {named} carries unknown key {key!r}; an entry takes "
+                "'provider' and 'kwargs' only, and constructor arguments go "
+                "under 'kwargs'"
             )
-        # a YAML anchor and its alias resolve to one object, which is how a
-        # session says that two hook points share a provider
-        served, _ = grouped.setdefault(id(entry), ([], entry))
-        served.append(moment)
-
-    specs = [
-        spec_from_entry(tuple(served), entry) for served, entry in grouped.values()
-    ]
-    refuse_ambiguous(specs)
-    return specs
+        else:
+            lines.append(f"hooks entry {named}: {key}: {message_of(problem)}")
+    return "\n".join(lines)
 
 
-def spec_from_entry(moments: tuple[str, ...], entry: Mapping[str, Any]) -> HookSpec:
-    """Read one ``hooks`` entry, named by every hook point it appeared under.
-
-    Raises
-    ------
-    HookError
-        If the entry carries an unknown key, no string ``provider``, or a
-        ``kwargs`` that is not a mapping.
-    """
-    named = ", ".join(repr(moment) for moment in moments)
-    unknown = sorted(key for key in entry if key not in ENTRY_KEYS)
-    if unknown:
-        raise HookError(
-            f"hooks entry {named} carries unknown key(s) {', '.join(unknown)}; "
-            "an entry takes 'provider' and 'kwargs' only, and constructor "
-            "arguments go under 'kwargs'"
-        )
-    provider = entry.get("provider")
-    if not isinstance(provider, str):
-        raise HookError(
-            f"hooks entry {named} must carry a string 'provider' naming a "
-            f"class as 'module:ClassName', got {provider!r}"
-        )
-    kwargs = entry.get("kwargs", {})
-    if not isinstance(kwargs, Mapping):
-        raise HookError(
-            f"hooks entry {named} must carry a mapping 'kwargs', "
-            f"got {type(kwargs).__name__}"
-        )
-    return HookSpec(moments=moments, provider=provider, kwargs=kwargs)
-
-
-def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
+def refuse_ambiguous(specs: Iterable[HookGroup]) -> None:
     """Refuse two separate entries naming one provider with the same keys.
 
     Raises
@@ -211,12 +181,10 @@ def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
         If two entries are identical, since the file cannot say whether they
         mean one shared provider or two.
     """
-    seen: list[HookSpec] = []
+    seen: list[HookGroup] = []
     for spec in specs:
         for other in seen:
-            if spec.provider == other.provider and dict(spec.kwargs) == dict(
-                other.kwargs
-            ):
+            if spec.provider == other.provider and spec.kwargs == other.kwargs:
                 first = ", ".join(repr(moment) for moment in other.moments)
                 second = ", ".join(repr(moment) for moment in spec.moments)
                 raise HookError(
@@ -228,7 +196,7 @@ def refuse_ambiguous(specs: Iterable[HookSpec]) -> None:
         seen.append(spec)
 
 
-def resolve_hooks(specs: Iterable[HookSpec]) -> dict[str, object]:
+def resolve_hooks(specs: Iterable[HookGroup]) -> dict[str, object]:
     """Instantiate the provider each spec names, once per spec.
 
     Returns one entry per hook point; a spec serving several points maps them
@@ -249,21 +217,16 @@ def resolve_hooks(specs: Iterable[HookSpec]) -> dict[str, object]:
     return resolved
 
 
-def instantiate(spec: HookSpec) -> object:
+def instantiate(spec: HookGroup) -> object:
     """Import the class *spec* names and construct it with the spec's keys.
 
     Raises
     ------
     HookError
-        If the path is malformed, does not import, does not name a class, or
-        names one that rejects the keys given.
+        If the path does not import, does not name a class, or names one that
+        rejects the keys given.
     """
     module_name, _, class_name = spec.provider.partition(":")
-    if not module_name or not class_name:
-        raise HookError(
-            f"hook provider {spec.provider!r} is not a class path; "
-            "expected 'module:ClassName'"
-        )
     try:
         imported = getattr(import_module(module_name), class_name)
     except (ImportError, AttributeError) as e:
@@ -287,3 +250,85 @@ def distinct(objects: Iterable[object]) -> tuple[object, ...]:
     for obj in objects:
         seen.setdefault(id(obj), obj)
     return tuple(seen.values())
+
+
+def build_hook_provider(
+    owner: str, hook_keys: Mapping[str, type], moment: str, field: HookField
+) -> object:
+    """Construct the provider the container *owner* declares at *moment*.
+
+    Raises
+    ------
+    HookError
+        If *moment* is not among *hook_keys*, the provider
+        rejects the keys given, or it does not implement the point's
+        protocol.
+    """
+    if moment not in hook_keys:
+        raise HookError(
+            f"{owner} declares a hook at {moment!r}, which is not a "
+            f"hook point it calls; {known_points(hook_keys)}"
+        )
+    declared = field.provider
+    if isinstance(declared, type):
+        try:
+            provider: object = declared(**field.kwargs)
+        except TypeError as e:
+            raise HookError(
+                f"cannot construct hook provider {declared.__name__!r} "
+                f"declared at {moment!r} with {sorted(field.kwargs)}: {e}"
+            ) from e
+    else:
+        provider = declared
+    protocol = hook_keys[moment]
+    if not isinstance(provider, protocol):
+        raise HookError(
+            f"hook provider {type(provider).__name__!r} declared at "
+            f"{moment!r} does not implement {protocol.__name__}"
+        )
+    return provider
+
+
+class HookGroup(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
+    """One provider of the ``hooks`` section, and every hook point it serves."""
+
+    moments: tuple[str, ...]
+    """The hook points the entry appeared under."""
+
+    provider: ClassPath
+    """The provider's class, as ``module:ClassName``."""
+
+    kwargs: dict[str, Any] = {}
+    """Keywords the provider is constructed with."""
+
+
+def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return one entry per distinct object in *raw*, with the hook points naming it.
+
+    Raises
+    ------
+    ValueError
+        If an entry is not a mapping.
+    """
+    grouped: dict[int, tuple[list[str], Mapping[str, Any]]] = {}
+    for moment, entry in raw.items():
+        if not isinstance(entry, Mapping):
+            # pydantic turns a ValueError raised in a validator into a
+            # ValidationError at the entry's location; a TypeError escapes
+            raise ValueError(  # noqa: TRY004
+                f"hooks entry {moment!r} must be a mapping, got {type(entry).__name__}"
+            )
+        # a YAML anchor and its alias resolve to one object; once validated
+        # they would be two equal copies, so sharing is read here or never
+        if "moments" in entry:
+            raise ValueError(
+                f"hooks entry {moment!r} carries unknown key 'moments'; an entry "
+                "takes 'provider' and 'kwargs' only"
+            )
+        served, _ = grouped.setdefault(id(entry), ([], entry))
+        served.append(moment)
+    return [{**entry, "moments": tuple(served)} for served, entry in grouped.values()]
+
+
+HOOK_GROUPS = TypeAdapter(list[HookGroup])
+"""Validates the grouped entries of a ``hooks`` section."""

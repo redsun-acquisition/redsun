@@ -1,6 +1,6 @@
 schema_version: 1.0
 frontend: pyqt
-name: mock-session
+session: mock-session
 devices:
   iSCAT channel:
     plugin_name: mock-pkg
@@ -20,10 +20,10 @@ devices:
   TIRF channel:
     plugin_name: mock-pkg
     plugin_id: my_detector
-    sensor_shape: 
+    sensor_shape:
       - 2400
       - 2048
-    pixel_size: 
+    pixel_size:
       - 17.5
       - 17.5
       - 17.5

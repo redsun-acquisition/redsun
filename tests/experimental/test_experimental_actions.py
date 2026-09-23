@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.qt
 
-SESSION = {"frontend": "pyqt", "name": "actions-session"}
+SESSION = {"frontend": "pyqt", "session": "actions-session"}
 
 
 @pytest.fixture(autouse=True)

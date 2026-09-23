@@ -304,7 +304,7 @@ And it is checked. A device has to be an `ophyd_async.core.Device` and a
 presenter or view has to take a `name` parameter. A class breaking one of these
 rules is left out rather than built into the wrong layer, the log says where
 you made the mistake, and the session runs without that component
-([ADR 15](decisions/0015-a-component-refused-at-declaration-is-skipped.md)):
+([ADR 16](decisions/0016-a-component-refused-at-declaration-is-skipped.md)):
 
 ```text
 Failed to build presenter 'motor': MyApp.motor is declared as a presenter, but
@@ -383,7 +383,7 @@ container to build on, so this session comes up on `QtSession` without ever
 importing it:
 
 ```yaml
-name: my-session
+session: my-session
 frontend: pyqt
 
 devices:
@@ -981,7 +981,7 @@ user put in the session file.
 Annotate a `setup` parameter with a protocol describing the capability, and the
 session answers with what has it. The shape of the annotation is how many
 answers you take
-([ADR 16](decisions/0016-questions-read-from-the-annotation.md)):
+([ADR 17](decisions/0017-questions-read-from-the-annotation.md)):
 
 | Annotation | Answer |
 | --- | --- |

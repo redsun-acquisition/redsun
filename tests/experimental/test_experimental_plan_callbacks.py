@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class Plans(Session):
-    config: ClassVar[dict[str, Any]] = {"name": "plan-callbacks"}
+    config: ClassVar[dict[str, Any]] = {"session": "plan-callbacks"}
 
     acquisition: AsPresenter[MockAcquisitionPresenter]
     median: AsPresenter[MockMedianPresenter]
@@ -30,7 +30,7 @@ class Plans(Session):
 
 
 class PlansWithoutAMedian(Session):
-    config: ClassVar[dict[str, Any]] = {"name": "plan-callbacks-unfiltered"}
+    config: ClassVar[dict[str, Any]] = {"session": "plan-callbacks-unfiltered"}
 
     acquisition: AsPresenter[MockAcquisitionPresenter]
     registrar: AsPresenter[MockRegistrar]

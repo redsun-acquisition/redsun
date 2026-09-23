@@ -262,10 +262,10 @@ def test_register_signals_all_signals_survive(bus: VirtualContainer) -> None:
 def test_virtual_container_configuration(bus: VirtualContainer) -> None:
     """Test that configuration can be set and read back from VirtualContainer."""
     bus._set_configuration(
-        {"schema_version": 1.0, "name": "redsun", "frontend": "unknown"}
+        {"schema_version": 1.0, "session": "redsun", "frontend": "unknown"}
     )
 
-    assert bus.name == "redsun"
+    assert bus.session == "redsun"
     assert bus.schema_version == 1.0
     assert bus.frontend == "unknown"
     assert bus.metadata == {}
@@ -275,14 +275,14 @@ def test_virtual_container_configuration(bus: VirtualContainer) -> None:
     bus._set_configuration(
         {
             "schema_version": 2.0,
-            "name": "test-session",
+            "session": "test-session",
             "frontend": "pyqt",
             "metadata": {"key": "value"},
         }
     )
 
     assert bus.schema_version == 2.0
-    assert bus.name == "test-session"
+    assert bus.session == "test-session"
     assert bus.frontend == "pyqt"
     assert bus.metadata == {"key": "value"}
 
@@ -305,13 +305,13 @@ def test_containers_do_not_share_state() -> None:
     container_b = VirtualContainer()
 
     container_a._set_configuration(
-        {"schema_version": 1.0, "frontend": "pyqt", "name": "session-a"}
+        {"schema_version": 1.0, "frontend": "pyqt", "session": "session-a"}
     )
     container_b._set_configuration(
-        {"schema_version": 1.0, "frontend": "pyqt", "name": "session-b"}
+        {"schema_version": 1.0, "frontend": "pyqt", "session": "session-b"}
     )
-    assert container_a.name == "session-a"
-    assert container_b.name == "session-b"
+    assert container_a.session == "session-a"
+    assert container_b.session == "session-b"
 
     container_a.register_signals(_Owner())
     assert "owner" in container_a.signals

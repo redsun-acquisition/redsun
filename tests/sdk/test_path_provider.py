@@ -39,22 +39,6 @@ def test_default_base_dir_is_the_user_data_dir(
     assert provider().directory_path.parent == session_directory("s")
 
 
-def test_the_old_location_is_named_when_it_still_exists(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Nothing is moved, so whoever goes looking is told where the files went."""
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("HOME", str(tmp_path))
-    (tmp_path / "redsun-storage").mkdir()
-
-    with caplog.at_level("WARNING", logger="redsun"):
-        SessionPathProvider(base_dir=tmp_path / "new", session="s")
-
-    assert "redsun-storage" in caplog.text
-
-
 def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> None:
     expected_directory = tmp_path / path_data.session / path_data.date
     expected_filename = f"{path_data.plan}_00000"
@@ -125,6 +109,21 @@ def test_scan_existing_resumes_counters(tmp_path: Path) -> None:
     assert provider().filename == "other_00005"
 
 
+def test_reset_plan_returns_an_unwritten_filename(tmp_path: Path) -> None:
+    """A filename a plan requested and never wrote is handed out again."""
+    provider = SessionPathProvider(
+        base_dir=tmp_path, session="s", now=lambda: datetime(2026, 7, 20)
+    )
+    provider.set_plan("scan")
+    info = provider("det")
+    Path(info.directory_path, f"{info.filename}.zarr").mkdir(parents=True)
+    assert provider("det").filename == "scan_00001"
+    provider.reset_plan()
+
+    provider.set_plan("scan")
+    assert provider("det").filename == "scan_00001"
+
+
 @pytest.mark.parametrize(
     "stored", ["scan_00004", "scan_00004.zarr", "scan_00004.ome.zarr"]
 )
@@ -187,6 +186,21 @@ def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
     provider.set_base_dir(tmp_path / "elsewhere")
 
     assert provider.base_dir == tmp_path / "elsewhere"
+
+
+def test_set_base_dir_announces_the_root_it_accepted(tmp_path: Path) -> None:
+    """A refused change announces nothing, so a listener never moves too early."""
+    provider = SessionPathProvider(base_dir=tmp_path, session="s")
+    announced: list[Path] = []
+    provider.sig_base_dir_changed.connect(announced.append)
+
+    provider.set_plan("scan")
+    with pytest.raises(RuntimeError):
+        provider.set_base_dir(tmp_path / "refused")
+    provider.reset_plan()
+    provider.set_base_dir(tmp_path / "accepted")
+
+    assert announced == [tmp_path / "accepted"]
 
 
 def test_set_base_dir_rescans_new_location(tmp_path: Path) -> None:

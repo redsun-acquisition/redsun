@@ -12,7 +12,7 @@ constructor's positional shape is checked at declaration, the protocol on the
 built instance.
 
 Amended by
-[15. A component refused at declaration is skipped](0015-a-component-refused-at-declaration-is-skipped.md)
+[16. A component refused at declaration is skipped](0016-a-component-refused-at-declaration-is-skipped.md)
 for `redsun.experimental`, where a component failing a declaration check is
 logged and skipped rather than ending the build.
 
