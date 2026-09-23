@@ -157,5 +157,5 @@ tree.confirm_change("stage-position", success=False)  # revert
 
 ## See also
 
-- [Qt widgets API reference](../../reference/api/view.md#qt-widgets)
+- [Qt widgets API reference](../reference/api/view.md#qt-widgets)
 - [Plans](plans.md)

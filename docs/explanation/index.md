@@ -2,22 +2,22 @@
 
 - **[Statement of need](statement.md)**
 
-## Architecture & design
+## How a session works
 
-- **[Container architecture](container-architecture.md)**
-- **[Component system](component-system.md)**
-- **[The experimental container](experimental-container.md)**
-- **[Services](services.md)**
+- **[Sessions](session.md)**: what a build does, and how it ends
+- **[Components](components.md)**: devices, presenters and views
+- **[Questions](questions.md)**: asking the session what it holds
+- **[Frontends](frontends.md)**: showing a session on screen
+- **[Plugins](plugins.md)**: components from installed packages
+- **[Services](services.md)**: the processes devices talk to
+- **[Limits](limits.md)**: what a session does not do
+
+## Data and plans
+
+- **[Plans](plans.md)**
+- **[Qt widgets](qt-widgets.md)**
 - **[The session catalog](catalog.md)**
 - **[Derived products](derived-products.md)**
-
-## SDK
-
-- **[Devices](architecture/devices.md)**
-- **[Presenters](architecture/presenters.md)**
-- **[Plans](architecture/plans.md)**
-- **[Qt widgets](architecture/qt-widgets.md)**
-- **[Virtual container](architecture/virtual.md)**
 
 ## Decisions
 

@@ -3,7 +3,7 @@
 A service is a server devices talk to: an EPICS IOC, a camera server, a motion
 controller's gateway. `ophyd-async` devices talk to it over Channel Access or
 PVAccess; `redsun` does not. What `redsun` handles is the session's side:
-starting the service when the session owns it, noticing when it exits, stopping
+starting the service when the session launches it, noticing when it exits, stopping
 it cleanly, and giving its prefix and transport to the devices that use it.
 
 ## Two connection levels
@@ -38,26 +38,24 @@ every connection stays up.
 
 ## Launched and attached
 
-A service declared with a `module` is **launched**: the container runs it as
-`python -m <module>` when built and stops it at shutdown. A service declared
-without one is **attached**: it already runs, in a container or on another
-host, and only lends its devices their prefix. Declare either with
-[`declare_service`][redsun.containers.declare_service] or in the `services`
-section of a session file, which works whether the session is built with
-`from_config` or from a container class taking that file. A service the class
-body declares replaces one the file names. See
+A service declared with `Launch` is **launched**: the session runs it as
+`python -m <module>` while it builds and stops it at shutdown. A service
+declared with `Attach` is **attached**: it already runs, in a container or on
+another host, and only lends its devices their prefix. Declare either on the
+session class, or in the `services` section of a session file. A keyword the
+class leaves out is taken from the file. See
 [Write a service](../how-to/write-a-service.md).
 
 The session owns a launched service from start to stop:
 
 - **Starting** is the first build step, before any device is built. The
-  container waits for the line the service prints when ready, up to
+  session waits for the line the service prints when ready, up to
   [`STARTUP_TIMEOUT`][redsun.services.STARTUP_TIMEOUT]. A service that does not
   start is logged, and every device naming it is skipped.
-- **Stopping** runs at shutdown, whether or not the container was built, and
-  before the session's log file closes, so the file records how each service
-  ended. A build that raises stops the services it started before the
-  exception propagates.
+- **Stopping** runs at shutdown, after every component, and before the
+  session's log files close, so the files record how each service ended. A
+  build that raises stops the services it started before the error leaves
+  it.
 
 ## Stopping a process
 
@@ -81,8 +79,7 @@ written. A service needing longer to close sets a longer `stop_timeout`.
 ## One transport per session
 
 Every service of a session is reached over the same protocol, named once under
-the `services` section of its file or as the `transport` attribute of its
-container class:
+the `services` section of its configuration:
 
 ```yaml
 services:
@@ -104,8 +101,8 @@ each unable to say which service a variable is for.
 
 Under Channel Access, two IOCs on the default port both answer on Linux, but on
 Windows the second is never found, which is why each gets a port. It keeps that
-port while the session process runs, so a container built again reaches it
-again. The note in [Connecting](architecture/devices.md#connecting) describes
+port while the session process runs, so a session built again reaches it
+again. The note in [Connecting](components.md#connecting) describes
 the limit: libca reads the address list once per process. Under PVAccess a
 service picks its own ports, and `pvxs` takes a free one when the default is
 busy, so a session assigns nothing. A client does not search the loopback
@@ -165,7 +162,7 @@ record keeps its level and time; any other line is logged at `DEBUG`. See
 - **Restarting a crashed service.**
 - **Standby**, a service releasing its hardware while connected, is for now
   written by the application, in the presenter owning the devices; see
-  [Standby](architecture/devices.md#standby). The container takes it over once
+  [Standby](components.md#standby). The session takes it over once
   `ophyd-async` can disconnect a device, when standby can also drop connections
   and stop launched services.
 - **Launching a service in a container.** An attached service covers one

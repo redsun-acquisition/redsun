@@ -178,7 +178,7 @@ descriptors = yield from rps.describe_collect(collectable)
 
 ## See also
 
-- [`engine/actions` API](../../reference/api/engine.md#actions)
-- [`engine/plan_stubs` API](../../reference/api/engine.md#plan-stubs)
-- [`presenter/plan_spec` API](../../reference/api/presenter.md#plan-specification)
+- [`engine/actions` API](../reference/api/engine.md#actions)
+- [`engine/plan_stubs` API](../reference/api/engine.md#plan-stubs)
+- [`presenter/plan_spec` API](../reference/api/presenter.md#plan-specification)
 - [Qt widgets - plans](qt-widgets.md)
