@@ -3,18 +3,27 @@
 from __future__ import annotations
 
 import logging
+import re
 from importlib.metadata import entry_points
 from importlib.resources import as_file, files
 from typing import Annotated, Final
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import AfterValidator, BaseModel, ValidationError
 
 logger = logging.getLogger("redsun")
 
 ENTRY_POINT_GROUP: Final = "redsun.plugins"
 
-ClassPath = Annotated[str, Field(pattern=r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")]
+
+def class_path(value: str) -> str:
+    """Refuse text that does not name a class as ``module:ClassName``."""
+    if not re.fullmatch(r"[A-Za-z_][\w.]*:[A-Za-z_]\w*", value):
+        raise ValueError(f"{value!r} is not a class path; expected 'module:ClassName'")
+    return value
+
+
+ClassPath = Annotated[str, AfterValidator(class_path)]
 """A class named as ``module:ClassName``, imported only when a session uses it."""
 
 

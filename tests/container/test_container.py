@@ -1952,7 +1952,7 @@ class TestSessionFile:
             (
                 {"hooks": {"greet": {"provider": "no-colon"}}},
                 ("hooks", 0, "provider"),
-                "pattern",
+                "not a class path",
             ),
         ],
         ids=[

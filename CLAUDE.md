@@ -208,6 +208,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   slots.** psygnal refers to an owner weakly and falls back silently to a
   strong reference, on which the owner is never collected and takes everything
   it holds with it. Only `__slots__` classes reach that path.
+- **Don't annotate what the assignment already says.** `HOOK_GROUPS =
+  TypeAdapter(list[HookGroup])`, not `HOOK_GROUPS: TypeAdapter[list[HookGroup]]
+  = ...`. Annotate where mypy cannot infer the type (an empty container, an
+  `Any` from `getattr`, a narrower declared type).
 - **Don't alias an attribute to a local for a single use.** Write
   `self.main_window.show()`. A local earns its place when the value is read
   several times and reaching it costs something, when a type checker needs the

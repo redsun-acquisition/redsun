@@ -73,6 +73,22 @@ class CatalogConfig(BaseModel, extra="forbid", frozen=True):
     """Directories the catalog may read from besides the session's own."""
 
 
+def with_empty_catalog(section: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Return a ``storage`` section whose present but empty ``catalog`` is a mapping.
+
+    An empty key asks for a catalog with every default, which only the raw
+    section can tell apart from an absent one.
+    """
+    if section.get("catalog", {}) is None:
+        return {**section, "catalog": {}}
+    return section
+
+
+def storage_of(section: Mapping[str, Any] | None) -> StorageConfig:
+    """Read a ``storage`` section, the defaults when it is absent or empty."""
+    return StorageConfig.model_validate(with_empty_catalog(section or {}))
+
+
 class StorageConfig(BaseModel, extra="forbid", frozen=True):
     """Where a session writes, and whether it keeps a catalog of its runs."""
 
@@ -84,65 +100,6 @@ class StorageConfig(BaseModel, extra="forbid", frozen=True):
 
     catalog: CatalogConfig | None = None
     """The session's catalog, needing the ``tiled`` extra; `None` for none."""
-
-    @classmethod
-    def from_mapping(cls, section: Mapping[str, Any] | None) -> StorageConfig:
-        """Read a session file's `storage` section. An empty `catalog` key is a catalog.
-
-        Raises
-        ------
-        TypeError
-            If the section, or its `catalog` key, is not a mapping, or
-            `readable` is not a list.
-        ValueError
-            If either names a key it has no place for.
-        """
-        section = mapping_of(section, "storage")
-        refuse_unknown(section, "storage", ("base_dir", "max_digits", "catalog"))
-        catalog = None
-        if "catalog" in section:
-            entry = mapping_of(section["catalog"], "storage.catalog")
-            refuse_unknown(entry, "storage.catalog", ("readable",))
-            readable = entry.get("readable") or []
-            if not isinstance(readable, list):
-                raise TypeError(
-                    "'storage.catalog.readable' must be a list of directories, "
-                    f"got {type(readable).__name__}"
-                )
-            catalog = CatalogConfig(
-                readable=tuple(Path(path).expanduser() for path in readable)
-            )
-        base_dir = section.get("base_dir")
-        return cls(
-            base_dir=Path(base_dir).expanduser() if base_dir else None,
-            max_digits=section.get("max_digits", 5),
-            catalog=catalog,
-        )
-
-
-def mapping_of(section: Any, name: str) -> Mapping[str, Any]:
-    """Return *section*, an empty mapping for `None`, refusing anything else."""
-    if section is None:
-        return {}
-    if not isinstance(section, Mapping):
-        raise TypeError(
-            f"the {name!r} section must be a mapping, got {type(section).__name__}"
-        )
-    return section
-
-
-def refuse_unknown(
-    section: Mapping[str, Any], name: str, keys: tuple[str, ...]
-) -> None:
-    """Raise `ValueError` if *section* names a key outside *keys*."""
-    unknown = sorted(set(section) - set(keys))
-    if unknown:
-        named = ", ".join(repr(key) for key in unknown)
-        accepted = ", ".join(repr(key) for key in keys)
-        raise ValueError(
-            f"the {name!r} section names {named}, which it has no key for; "
-            f"it takes {accepted}"
-        )
 
 
 class AppConfig(RedSunConfig, total=False):
@@ -490,17 +447,20 @@ class SessionFile(BaseModel, extra="forbid"):
             services = dict(services)
             data["transport"] = services.pop(TRANSPORT_KEY)
             data["services"] = services
-        storage = data.get("storage")
-        if isinstance(storage, Mapping) and storage.get("catalog", {}) is None:
-            # a present but empty key asks for a catalog with every default,
-            # which only the raw file can tell apart from an absent one
-            data["storage"] = {**storage, "catalog": {}}
+        if isinstance(data.get("storage"), Mapping):
+            data["storage"] = with_empty_catalog(data["storage"])
         hooks = data.get("hooks")
         if hooks is None and "hooks" in data:
             data["hooks"] = []
         elif isinstance(hooks, Mapping):
             data["hooks"] = group_hook_entries(hooks)
         return data
+
+    @field_validator("transport")
+    @classmethod
+    def known_transport(cls, value: str | None) -> str | None:
+        """Refuse a transport redsun does not have."""
+        return None if value is None else checked_transport(value, "the file")
 
     @field_validator("frontend", mode="before")
     @classmethod

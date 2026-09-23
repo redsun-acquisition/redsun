@@ -52,11 +52,11 @@ from ._config import (
     AppConfig,
     CatalogConfig,
     Frontend,
-    StorageConfig,
     checked_transport,
     declared_transport,
     merge_files,
     refuse_unresolved_fields,
+    storage_of,
     transport_of,
     validate_session,
 )
@@ -779,7 +779,7 @@ class AppContainer:
         declared = dict(type(self)._hook_providers)
         configured = resolve_hooks(
             parse_hook_specs(
-                self._config.get("hooks", {}), self._hook_keys, type(self).__name__
+                self._config.get("hooks") or {}, self._hook_keys, type(self).__name__
             )
         )
         both = sorted(declared.keys() & configured.keys())
@@ -825,7 +825,7 @@ class AppContainer:
 
         # parsed before the extra is checked, so a malformed section is refused
         # whether or not it is installed
-        storage = StorageConfig.from_mapping(self._config.get("storage"))
+        storage = storage_of(self._config.get("storage"))
         self._path_provider = SessionPathProvider(
             base_dir=storage.base_dir,
             session=base_cfg["session"],
@@ -1237,9 +1237,7 @@ class AppContainer:
 
         named = transport_of(config)
         if named is not None:
-            namespace[TRANSPORT_KEY] = checked_transport(
-                named, f"the services section of {config_path}"
-            )
+            namespace[TRANSPORT_KEY] = named
 
         declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
             ("devices", _DeviceComponent),
