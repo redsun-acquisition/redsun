@@ -391,7 +391,10 @@ it opened. A failing `shutdown` is logged and the others still run.
 ## Read a failure
 
 A wrong hook raises [`HookError`][redsun.containers.HookError], naming the
-point.
+point. In a configuration file, an entry of the wrong shape is found when the
+file is read instead, and raised as
+[`ConfigurationError`][redsun.containers.ConfigurationError] located as
+`hooks.<point>.<key>`.
 
 === "Container class"
 
@@ -410,9 +413,9 @@ point.
     | Message | Cause |
     |---|---|
     | `hooks key 'x' is not a hook point AppContainer calls; expected one of: ...` | the key is not a point this container calls |
-    | `hooks entry 'x' carries unknown key(s) ...` | a constructor argument was written beside `provider` instead of under `kwargs` |
-    | `hooks entry 'x' must carry a string 'provider' naming a class as 'module:ClassName'` | `provider` is missing or is not a string |
-    | `hook provider 'p' is not a class path; expected 'module:ClassName'` | the path has no `:` |
+    | `hooks.x.name: Extra inputs are not permitted` | a constructor argument was written beside `provider` instead of under `kwargs` |
+    | `hooks.x.provider: Field required` | `provider` is missing |
+    | `hooks.x.provider: 'p' is not a class path; expected 'module:ClassName'` | the path is not `module:ClassName` |
     | `cannot import hook provider 'p'` | the module or the attribute does not exist |
     | `hook provider 'p' names ..., which is not a class` | the path names a value, not a class |
     | `cannot construct hook provider 'p' with [...]` | the constructor rejected the `kwargs` |

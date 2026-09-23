@@ -8,7 +8,6 @@ keyword.
 
 from __future__ import annotations
 
-import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -32,11 +31,7 @@ __all__ = [
     "session_directory",
 ]
 
-logger = logging.getLogger("redsun")
-
 _RESET_PLAN = "unknown"
-
-_LEGACY_DIR = "redsun-storage"
 
 
 def _base_dir() -> Path:
@@ -162,11 +157,6 @@ class SessionPathProvider(PathProvider):
             rf"^(?P<plan>.+)_(?P<count>\d{{{max_digits}}})(?:-.*)?$"
         )
 
-        legacy = Path.home() / _LEGACY_DIR
-        if legacy.is_dir():
-            logger.warning(f"Earlier sessions wrote to {legacy}")
-            logger.warning(f"New files go to {self._base_dir}")
-            logger.warning("Nothing was moved")
         self._scan_existing()
 
     @property

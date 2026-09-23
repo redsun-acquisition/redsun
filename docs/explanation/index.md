@@ -37,3 +37,4 @@ Status, Context, Decision, Consequences.
 - **[11. Tolerating a component that fails to build](decisions/0011-tolerating-a-component-that-fails-to-build.md)**
 - **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
 - **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**
+- **[14. Typed session files and plugin manifests](decisions/0014-typed-session-files-and-manifests.md)**

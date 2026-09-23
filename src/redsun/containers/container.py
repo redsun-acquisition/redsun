@@ -9,26 +9,15 @@ from contextlib import suppress
 
 # resolved at runtime: the ClassVar annotation below is evaluated by ruff's
 # runtime-evaluated rules and by anything calling get_type_hints on a subclass
-from enum import Enum, unique
 from importlib import import_module
-from importlib.metadata import EntryPoints, entry_points
-from importlib.resources import as_file, files
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Literal,
-    TypedDict,
-    TypeGuard,
     TypeVar,
-    assert_never,
     cast,
-    overload,
 )
-
-import yaml
-from ophyd_async.core import Device
 
 from redsun.aio import get_shared_loop, run_coro
 from redsun.catalog import CATALOG, CatalogAddress
@@ -43,12 +32,9 @@ from redsun.containers.components import (
     _ServiceComponent,
     _ViewComponent,
     _ViewField,
-    expects_positionals,
 )
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import PATH_PROVIDER, SessionPathProvider
-from redsun.presenter import PPresenter
-from redsun.view import PView
 from redsun.virtual import (
     ComponentNotBuilt,
     Connection,
@@ -60,102 +46,47 @@ from redsun.virtual import (
 )
 
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
-from ._config import AppConfig, CatalogConfig, StorageConfig
+from ._config import (
+    COMPONENT_SECTIONS,
+    PLUGIN_KEYS,
+    TRANSPORT_KEY,
+    AppConfig,
+    CatalogConfig,
+    Frontend,
+    checked_transport,
+    merge_files,
+    refuse_unresolved_fields,
+    storage_of,
+    transport_of,
+    validate_session,
+)
 from ._hooks import (
     HookError,
+    build_hook_provider,
     distinct,
-    known_points,
     parse_hook_specs,
     resolve_hooks,
 )
+from ._manifest import discover
+from ._plugins import PLUGIN_GROUPS, load_configuration, services_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from typing import Final, Self, TypeAlias
 
+    from ophyd_async.core import Device
     from psygnal import SignalInstance
     from tiled.server.simple import SimpleTiledServer
 
     from redsun.containers.components import _ComponentBase
+    from redsun.presenter import PPresenter
     from redsun.services import Service
+    from redsun.view import PView
     from redsun.virtual import RedSunConfig
 
     from ..virtual._wiring import SlotThread
 
     _ComponentFactory: TypeAlias = Callable[..., _ComponentBase[Any]]
-
-ManifestItems = dict[str, Any]
-PluginType = type[Device] | type[PPresenter] | type[PView]
-PLUGIN_GROUPS = Literal["devices", "presenters", "views"]
-
-
-@unique
-class Frontend(str, Enum):
-    """Supported frontend types."""
-
-    PYQT = "pyqt"
-    PYSIDE = "pyside"
-
-
-class _PluginTypeDict(TypedDict):
-    """Discovered plugin classes, by group."""
-
-    devices: dict[str, type[Device]]
-    presenters: dict[str, type[PPresenter]]
-    views: dict[str, type[PView]]
-
-
-def _check_device_protocol(cls: type) -> TypeGuard[type[Device]]:
-    """Return whether a class subclasses the ``ophyd-async`` Device."""
-    try:
-        return issubclass(cls, Device)
-    except TypeError:
-        return False
-
-
-def _check_presenter_protocol(cls: type) -> TypeGuard[type[PPresenter]]:
-    """Check a presenter class before it is built.
-
-    The constructor's leading positional parameters must be exactly
-    ``(name, devices)``, the only part of the contract knowable before
-    instantiation. ``_PresenterComponent.build`` checks PPresenter on the
-    instance.
-    """
-    return isinstance(cls, type) and expects_positionals(cls, ("name", "devices"))
-
-
-def _check_view_protocol(cls: type) -> TypeGuard[type[PView]]:
-    """Check a view class before it is built.
-
-    The constructor's leading positional parameter must be exactly ``(name,)``,
-    the only part of the contract knowable before instantiation.
-    ``_ViewComponent.build`` checks PView on the instance.
-    """
-    return isinstance(cls, type) and expects_positionals(cls, ("name",))
-
-
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["devices"]
-) -> TypeGuard[type[Device]]: ...
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["presenters"]
-) -> TypeGuard[type[PPresenter]]: ...
-@overload
-def _check_plugin_protocol(
-    imported_class: type, group: Literal["views"]
-) -> TypeGuard[type[PView]]: ...
-def _check_plugin_protocol(imported_class: type, group: PLUGIN_GROUPS) -> bool:
-    match group:
-        case "devices":
-            return _check_device_protocol(imported_class)
-        case "presenters":
-            return _check_presenter_protocol(imported_class)
-        case "views":
-            return _check_view_protocol(imported_class)
-        case _:
-            assert_never(group)
 
 
 T = TypeVar("T")
@@ -187,17 +118,6 @@ def _require_tiled() -> None:
     )
 
 
-_PLUGIN_META_KEYS: frozenset[str] = frozenset({"plugin_name", "plugin_id"})
-
-_PLUGIN_EXPECTATIONS: dict[PLUGIN_GROUPS, str] = {
-    "devices": "must subclass ophyd_async.core.Device",
-    "presenters": (
-        "must accept exactly ('name', 'devices') as its leading positional parameters"
-    ),
-    "views": "must accept exactly ('name',) as its leading positional parameter",
-}
-
-
 def _silent(step: str) -> None:
     """Ignore a build step's name.
 
@@ -206,137 +126,10 @@ def _silent(step: str) -> None:
     """
 
 
-_COMPONENT_SECTIONS: frozenset[str] = frozenset(
-    {"services", "devices", "presenters", "views"}
-)
-"""The configuration sections whose entries are a component's constructor call."""
-
-TRANSPORT_KEY: Final[str] = "transport"
-"""The key of the ``services`` section naming what its services speak."""
-
-_IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
-"""Keys saying what kind of session this is, on which layered files must agree.
-
-Every other key describes the session's content, which a later file may
-override.
-"""
-
 _FRONTEND_CONTAINERS: dict[str, str] = {
     "pyqt": "redsun.containers.qt._container.QtAppContainer",
     "pyside": "redsun.containers.qt._container.QtAppContainer",
 }
-
-
-def _read_yaml(path: Path) -> dict[str, Any]:
-    """Read one YAML file into a mapping, unvalidated."""
-    with open(path) as fh:
-        data = yaml.safe_load(fh)
-    if not isinstance(data, dict):
-        raise TypeError(
-            f"Expected a YAML mapping at top level in {path}, got {type(data).__name__}"
-        )
-    return data
-
-
-def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """Return *base* with *overlay* laid over it, merging nested mappings.
-
-    A key in both is taken from *overlay* unless both values are mappings,
-    which merge in turn. Lists and scalars are replaced, not combined.
-
-    Component entries are the exception: ``services``, ``devices``,
-    ``presenters`` and ``views`` merge by component name, but a component
-    *named* in *overlay* is taken from it whole. Its entry is a constructor
-    call's keyword arguments, so one file owns them all and a reader stops at
-    the last file naming it.
-    """
-    merged = dict(base)
-    for key, value in overlay.items():
-        current = merged.get(key)
-        if not (isinstance(current, dict) and isinstance(value, dict)):
-            merged[key] = value
-        elif key in _COMPONENT_SECTIONS:
-            for shadowed in current.keys() & value.keys():
-                logger.debug(
-                    f"Component '{shadowed}' in '{key}' is taken from a later "
-                    f"configuration file, replacing the entry under it"
-                )
-            merged[key] = {**current, **value}
-        else:
-            merged[key] = merge_config(current, value)
-    return merged
-
-
-def _refuse_identity_conflict(
-    data: dict[str, Any], overlay: dict[str, Any], path: Path
-) -> None:
-    """Refuse a file contradicting what kind of session an earlier one declared.
-
-    Raises
-    ------
-    ValueError
-        If *overlay* changes a key naming the session's kind.
-    """
-    for key in _IDENTITY_KEYS:
-        if key in data and key in overlay and data[key] != overlay[key]:
-            raise ValueError(
-                f"Configuration file {path} sets {key}={overlay[key]!r}, "
-                f"which contradicts {data[key]!r} from a file layered under it. "
-                f"{key} names what kind of session this is, so every file must "
-                f"agree on it."
-            )
-
-
-def _transport_of(data: dict[str, Any]) -> str | None:
-    """Return the transport a configuration names, or ``None`` for none."""
-    services = data.get("services") or {}
-    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
-
-
-def checked_transport(name: str, where: str) -> str:
-    """Return *name*, refusing a transport ``redsun`` does not have.
-
-    Raises
-    ------
-    TypeError
-        Naming what was read and the transports there are.
-    """
-    if name not in TRANSPORTS:
-        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
-        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
-    return name
-
-
-def _load_yaml(paths: Sequence[Path]) -> dict[str, Any]:
-    """Read *paths* in order, merge each over the previous, and validate the result.
-
-    Required keys are checked on the merged mapping, not per file, so a layered
-    file may hold a fragment.
-
-    Raises
-    ------
-    ValueError
-        If two files disagree about the session's schema version or frontend.
-    KeyError
-        If the merged mapping is missing a key `AppConfig` requires.
-    """
-    if len(paths) > 1:
-        logger.debug(f"Reading configuration from {len(paths)} files, in order:")
-        for position, path in enumerate(paths, 1):
-            logger.debug(f"  {position}. {path}")
-    data: dict[str, Any] = {}
-    for path in paths:
-        overlay = _read_yaml(path)
-        _refuse_identity_conflict(data, overlay, path)
-        data = merge_config(data, overlay)
-    missing = AppConfig.__required_keys__ - data.keys()
-    if missing:
-        named = ", ".join(str(path) for path in paths)
-        raise KeyError(
-            f"Configuration ({named}) is missing required keys: "
-            f"{', '.join(sorted(missing))}"
-        )
-    return data
 
 
 def _resolve_frontend_container(frontend: str) -> type[AppContainer]:
@@ -383,7 +176,6 @@ class AppContainer:
         "_services",
         "_services_started",
         "_session_log",
-        "_storage",
         "_virtual_container",
     )
 
@@ -410,6 +202,12 @@ class AppContainer:
     A subclass's ``config`` is appended to its bases' files, so a file shared
     by several sessions sits under each session's own.
     """
+
+    _config_data: ClassVar[dict[str, Any]] = {}
+    """The merged content of `_config_paths`."""
+
+    _config_validated: ClassVar[bool] = False
+    """Whether `_config_data` passed validation, set on each class it passed for."""
 
     BUILD_STEPS: ClassVar[tuple[str, ...]] = (
         "services",
@@ -476,6 +274,9 @@ class AppContainer:
         for path in (*inherited, *(Path(entry) for entry in declared)):
             seen.setdefault(path, None)
         cls._config_paths = tuple(seen)
+        # merged here, validated where a whole session is needed: a class
+        # may name a fragment another base completes
+        cls._config_data = merge_files(cls._config_paths) if cls._config_paths else {}
 
         services: dict[str, _ServiceComponent] = {}
         devices: dict[str, _DeviceComponent] = {}
@@ -495,9 +296,7 @@ class AppContainer:
         # and the class body may add to or replace what it names
         if cls._config_paths:
             with suppress(Exception):
-                from_file = cls._services_of(
-                    _load_yaml(cls._config_paths), entry_points(group="redsun.plugins")
-                )
+                from_file = services_of(cls._config_data, discover())
                 for name, declared_kwargs in from_file.items():
                     declaration = _ServiceComponent(name, **declared_kwargs)
                     declaration.create()
@@ -536,7 +335,8 @@ class AppContainer:
                 views[attr_value.name] = attr_value
 
         cls.transport = checked_transport(
-            cls._declared_transport(), f"{cls.__name__}'s services"
+            transport_of(cls._config_data) or cls.transport,
+            f"{cls.__name__}'s services",
         )
 
         component_fields: dict[str, _ComponentField] = {}
@@ -553,9 +353,10 @@ class AppContainer:
         cls._component_fields = component_fields
 
         if component_fields:
-            config_data: dict[str, Any] = {}
             if cls._config_paths:
-                config_data = _load_yaml(cls._config_paths)
+                validate_session(cls._config_paths, cls._config_data)
+                cls._config_validated = True
+            config_data = cls._config_data
 
             _section_key: dict[type, str] = {
                 _DeviceField: "devices",
@@ -612,7 +413,9 @@ class AppContainer:
             if isinstance(value, _HookField)
         }
         for attr_name, hook_field in hook_fields.items():
-            provider = cls._build_hook_provider(attr_name, hook_field)
+            provider = build_hook_provider(
+                cls.__name__, cls._hook_keys, attr_name, hook_field
+            )
             hook_providers[attr_name] = provider
             setattr(cls, attr_name, provider)
         cls._hook_providers = hook_providers
@@ -632,9 +435,20 @@ class AppContainer:
         frontend: str = "pyqt",
         log_level: int | str | None = None,
     ) -> None:
-        self._refuse_unresolved_fields()
+        refuse_unresolved_fields(
+            type(self).__name__,
+            type(self)._config_paths,
+            type(self)._component_fields,
+        )
         if log_level is not None:
             set_level(log_level)
+        # the files were read as the class was created, before the application
+        # could set a level; they are named now, once it has
+        paths = type(self)._config_paths
+        if len(paths) > 1:
+            logger.debug(f"Configuration read from {len(paths)} files, in order:")
+            for position, path in enumerate(paths, 1):
+                logger.debug(f"  {position}. {path}")
         self._config: AppConfig = {
             "schema_version": 1.0,
             "session": session,
@@ -642,7 +456,6 @@ class AppContainer:
         }
         self._virtual_container: VirtualContainer | None = None
         self._path_provider: SessionPathProvider | None = None
-        self._storage: StorageConfig | None = None
         self._catalog: SimpleTiledServer | None = None
         self._hooks: tuple[object, ...] | None = None
         self._hook_by_moment: dict[str, object] = {}
@@ -671,80 +484,20 @@ class AppContainer:
         self._failed_services: dict[str, BaseException] = {}
         self._services_started: bool = False
 
-        # In the declarative subclass path (class MyApp(QtAppContainer, config=...))
-        # the metaclass loads the YAML only to resolve component kwargs and never
-        # populates _config with top-level sections such as 'storage', 'session',
-        # or 'schema_version'.  We read those here so that build() sees the same
-        # state as the from_config() path, which sets them explicitly.
-        config_paths: tuple[Path, ...] = getattr(type(self), "_config_paths", ())
-        if config_paths:
-            try:
-                yaml_data = _load_yaml(config_paths)
-            except Exception as e:  # noqa: BLE001 - unreadable config falls back to defaults
-                named = ", ".join(str(path) for path in config_paths)
-                logger.warning(f"Could not read config file(s) {named}: {e}")
-                yaml_data = {}
-            for key, value in yaml_data.items():
-                if key not in _COMPONENT_SECTIONS:
-                    self._config[key] = value  # type: ignore[literal-required]
+        # read from the class's own namespace: a base validated its own files,
+        # not the ones this class adds over them
+        if type(self)._config_paths and not vars(type(self)).get("_config_validated"):
+            validate_session(type(self)._config_paths, type(self)._config_data)
+            type(self)._config_validated = True
+        # the class body's components already took their sections; the rest
+        # of the file is the session's, as from_config gives it
+        for key, value in type(self)._config_data.items():
+            if key not in COMPONENT_SECTIONS:
+                self._config[key] = value  # type: ignore[literal-required]
 
         self._session_log: SessionFileHandler | None = None
         self._service_logs: dict[str, SessionFileHandler] = {}
         self._open_session_log()
-
-    @classmethod
-    def _declared_transport(cls) -> str:
-        """Return the transport the class's configuration names, or the class's own.
-
-        Raises
-        ------
-        ValueError
-            If two of its files name a different one. Every service of a session
-            speaks the same transport, so a file layered over another cannot
-            change what a file under it named.
-        """
-        named: dict[str, Path] = {}
-        for path in cls._config_paths:
-            # a file that cannot be read is reported where the rest of it is read
-            with suppress(Exception):
-                transport = _transport_of(_read_yaml(path))
-                if transport is not None:
-                    named.setdefault(transport, path)
-        if len(named) > 1:
-            (first, under), (second, over) = list(named.items())[:2]
-            raise ValueError(
-                f"Configuration file {over} sets {TRANSPORT_KEY}={second!r} under "
-                f"services, which contradicts {first!r} from {under}. Every service "
-                f"of a session speaks the same transport, so every file must agree "
-                f"on it."
-            )
-        return next(iter(named), cls.transport)
-
-    @classmethod
-    def _refuse_unresolved_fields(cls) -> None:
-        """Refuse a container whose ``from_config`` fields have no file.
-
-        Checked at construction, not class creation, since a base class leaves
-        ``config`` to its subclasses.
-
-        Raises
-        ------
-        TypeError
-            Naming every field wanting a configuration section.
-        """
-        if cls._config_paths:
-            return
-        unresolved = sorted(
-            attr_name
-            for attr_name, field in cls._component_fields.items()
-            if field.from_config is not None
-        )
-        if unresolved:
-            raise TypeError(
-                f"Component field(s) {', '.join(unresolved)} in {cls.__name__} have "
-                f"from_config set but no config path was provided to the container "
-                f"class"
-            )
 
     @property
     def config(self) -> AppConfig:
@@ -788,13 +541,6 @@ class AppContainer:
     def services(self) -> dict[str, Service]:
         """Return the container's services, started or not."""
         return dict(self._services)
-
-    @property
-    def storage(self) -> StorageConfig:
-        """Return the session's storage configuration."""
-        if self._storage is None:
-            raise RuntimeError("Container not built. Call build() first.")
-        return self._storage
 
     @property
     def path_provider(self) -> SessionPathProvider:
@@ -1021,41 +767,6 @@ class AppContainer:
         )
         logger.warning(f"{summary}\nNot started: {failed}")
 
-    @classmethod
-    def _build_hook_provider(cls, moment: str, field: _HookField) -> object:
-        """Construct the provider this container class declares at *moment*.
-
-        Raises
-        ------
-        HookError
-            If *moment* is not a hook point this container calls, the provider
-            rejects the keys given, or it does not implement the point's
-            protocol.
-        """
-        if moment not in cls._hook_keys:
-            raise HookError(
-                f"{cls.__name__} declares a hook at {moment!r}, which is not a "
-                f"hook point it calls; {known_points(cls._hook_keys)}"
-            )
-        declared = field.provider
-        if isinstance(declared, type):
-            try:
-                provider: object = declared(**field.kwargs)
-            except TypeError as e:
-                raise HookError(
-                    f"cannot construct hook provider {declared.__name__!r} "
-                    f"declared at {moment!r} with {sorted(field.kwargs)}: {e}"
-                ) from e
-        else:
-            provider = declared
-        protocol = cls._hook_keys[moment]
-        if not isinstance(provider, protocol):
-            raise HookError(
-                f"hook provider {type(provider).__name__!r} declared at "
-                f"{moment!r} does not implement {protocol.__name__}"
-            )
-        return provider
-
     def _ensure_hooks(self) -> dict[str, object]:
         """Return the hook providers by hook point, resolved once per build.
 
@@ -1084,7 +795,7 @@ class AppContainer:
         declared = dict(type(self)._hook_providers)
         configured = resolve_hooks(
             parse_hook_specs(
-                self._config.get("hooks", {}), self._hook_keys, type(self).__name__
+                self._config.get("hooks") or {}, self._hook_keys, type(self).__name__
             )
         )
         both = sorted(declared.keys() & configured.keys())
@@ -1130,18 +841,18 @@ class AppContainer:
 
         # parsed before the extra is checked, so a malformed section is refused
         # whether or not it is installed
-        self._storage = StorageConfig.from_mapping(self._config.get("storage"))
+        storage = storage_of(self._config.get("storage"))
         self._path_provider = SessionPathProvider(
-            base_dir=self._storage.base_dir,
+            base_dir=storage.base_dir,
             session=base_cfg["session"],
-            max_digits=self._storage.max_digits,
+            max_digits=storage.max_digits,
         )
         # the log opened at construction, before the root was known
         self._move_session_log(self._path_provider.base_dir)
         self._path_provider.sig_base_dir_changed.connect(self._move_session_log)
-        if self._storage.catalog is not None:
+        if storage.catalog is not None:
             _require_tiled()
-            self._catalog = self._start_catalog(self._storage.catalog)
+            self._catalog = self._start_catalog(storage.catalog)
         logger.debug("VirtualContainer created")
 
     def _start_catalog(self, config: CatalogConfig) -> SimpleTiledServer | None:
@@ -1534,17 +1245,15 @@ class AppContainer:
 
         *log_level* is passed to the container it builds.
         """
-        config, plugin_types, services = cls._load_configuration(config_path)
+        config, plugin_types, services = load_configuration(config_path)
 
         namespace: dict[str, Any] = {
             name: _ServiceComponent(name, **kwargs) for name, kwargs in services.items()
         }
 
-        named = _transport_of(config)
+        named = transport_of(config)
         if named is not None:
-            namespace[TRANSPORT_KEY] = checked_transport(
-                named, f"the services section of {config_path}"
-            )
+            namespace[TRANSPORT_KEY] = named
 
         declared: tuple[tuple[PLUGIN_GROUPS, _ComponentFactory], ...] = (
             ("devices", _DeviceComponent),
@@ -1552,16 +1261,16 @@ class AppContainer:
             ("views", _ViewComponent),
         )
         for group, component in declared:
-            section: dict[str, Any] = config.get(group, {})
+            section: dict[str, Any] = config.get(group) or {}
             for name, plugin_class in plugin_types[group].items():
                 cfg_kwargs = {
                     k: v
                     for k, v in section.get(name, {}).items()
-                    if k not in _PLUGIN_META_KEYS
+                    if k not in PLUGIN_KEYS
                 }
                 namespace[name] = component(plugin_class, name, **cfg_kwargs)
 
-        frontend = config.get("frontend", "pyqt")
+        frontend = config["frontend"]
         base_class = _resolve_frontend_container(frontend)
 
         DynamicApp: type[AppContainer] = type("DynamicApp", (base_class,), namespace)
@@ -1579,156 +1288,6 @@ class AppContainer:
             instance._config["hooks"] = config["hooks"]
 
         return instance
-
-    @classmethod
-    def _services_of(
-        cls, config: dict[str, Any], manifests: Any
-    ) -> dict[str, dict[str, Any]]:
-        """Return the keyword arguments of every service a session file declares.
-
-        A service naming a plugin takes its module and readiness line from that
-        plugin's manifest, overridden by what the session file writes.
-        """
-        services: dict[str, dict[str, Any]] = {}
-        section: dict[str, Any] = dict(config.get("services") or {})
-        section.pop(TRANSPORT_KEY, None)
-        for name, entry in section.items():
-            kwargs = {k: v for k, v in entry.items() if k not in _PLUGIN_META_KEYS}
-            if "plugin_name" in entry:
-                launched = cls._manifest_item(
-                    entry["plugin_name"], "services", entry["plugin_id"], manifests
-                )
-                if not isinstance(launched, dict):
-                    # _manifest_item already logged why it returned None
-                    if launched is not None:
-                        logger.error(
-                            'Plugin "%s" lists service "%s" as %r, not a mapping.',
-                            entry["plugin_name"],
-                            entry["plugin_id"],
-                            launched,
-                        )
-                    continue
-                kwargs = {**launched, **kwargs}
-            services[name] = kwargs
-        return services
-
-    @classmethod
-    def _load_configuration(
-        cls, config_path: str
-    ) -> tuple[dict[str, Any], _PluginTypeDict, dict[str, dict[str, Any]]]:
-        """Load configuration, discover plugin classes and resolve services.
-
-        Services are returned as each declaration's keyword arguments. A
-        service naming a plugin takes its module and readiness line from the
-        plugin's manifest, overridden by the session file.
-        """
-        with open(config_path, "r") as f:
-            config: dict[str, Any] = yaml.safe_load(f)
-
-        plugin_types: _PluginTypeDict = {"devices": {}, "presenters": {}, "views": {}}
-        available_manifests = entry_points(group="redsun.plugins")
-
-        services = cls._services_of(config, available_manifests)
-
-        groups: list[PLUGIN_GROUPS] = ["devices", "presenters", "views"]
-
-        for group in groups:
-            if group not in config:
-                logger.debug(
-                    "Group %s not found in the configuration file. Skipping", group
-                )
-                continue
-            loaded = cls._load_plugins(
-                group_cfg=config[group],
-                group=group,
-                available_manifests=available_manifests,
-            )
-            for name, plugin_cls in loaded:
-                plugin_types[group][name] = plugin_cls  # type: ignore[assignment]
-
-        return config, plugin_types, services
-
-    @classmethod
-    def _manifest_item(
-        cls,
-        plugin_name: str,
-        group: str,
-        plugin_id: str,
-        available_manifests: EntryPoints,
-    ) -> Any:
-        """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
-
-        ``None``, with the reason logged, if the plugin is not installed or
-        lacks the entry.
-        """
-        plugin = next(
-            (entry for entry in available_manifests if entry.name == plugin_name), None
-        )
-        if plugin is None:
-            logger.error('Plugin "%s" not found in the installed plugins.', plugin_name)
-            return None
-
-        pkg_manifest = files(plugin.name.replace("-", "_")) / plugin.value
-        with as_file(pkg_manifest) as manifest_path, open(manifest_path) as f:
-            manifest: dict[str, ManifestItems] = yaml.safe_load(f)
-
-        if group not in manifest:
-            logger.error(
-                'Plugin "%s" manifest does not contain group "%s".', plugin_name, group
-            )
-            return None
-        items = manifest[group]
-        if plugin_id not in items:
-            logger.error(
-                'Plugin "%s" does not contain the id "%s".', plugin_name, plugin_id
-            )
-            return None
-        return items[plugin_id]
-
-    @classmethod
-    def _load_plugins(
-        cls,
-        *,
-        group_cfg: dict[str, Any],
-        group: PLUGIN_GROUPS,
-        available_manifests: EntryPoints,
-    ) -> list[tuple[str, PluginType]]:
-        """Load a group's plugin classes from their manifests."""
-        plugins: list[tuple[str, PluginType]] = []
-
-        for name, info in group_cfg.items():
-            plugin_id: str = info["plugin_id"]
-            class_path = cls._manifest_item(
-                info["plugin_name"], group, plugin_id, available_manifests
-            )
-            if class_path is None:
-                continue
-            try:
-                class_item_module, class_item_type = class_path.split(":")
-                imported_class = getattr(
-                    import_module(class_item_module), class_item_type
-                )
-            except (KeyError, ValueError):
-                logger.error(
-                    'Plugin id "%s" of "%s" has invalid class path "%s". Skipping.',
-                    plugin_id,
-                    name,
-                    class_path,
-                )
-                continue
-
-            if not _check_plugin_protocol(imported_class, group):
-                logger.error(
-                    "%s cannot be loaded as a plugin in group %r: it %s.",
-                    imported_class,
-                    group,
-                    _PLUGIN_EXPECTATIONS[group],
-                )
-                continue
-
-            plugins.append((name, imported_class))
-
-        return plugins
 
 
 __all__ = ["AppContainer", "Frontend"]

@@ -11,6 +11,30 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`ConfigurationError`** (`redsun.containers`) - raised when a session
+  file, its layers merged, does not describe a session. A `ValueError`
+  naming the files and listing every problem as `section.key: what`, a hook
+  entry located by its hook points (`hooks.greet.provider`).
+
+- A `storage` section in a session file: `base_dir`, the root a session writes
+  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
+  the width of the file counter, and `catalog`, which, even empty, gives the
+  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
+  extra. `catalog.readable` adds directories the catalog may read from:
+
+  ```yaml
+  storage:
+    base_dir: "D:/experiments/2026-09"
+    catalog:
+      readable:
+        - /data/aht
+  ```
+
+- JSON schemas of a session file and a plugin manifest, published with the
+  documentation under `reference/schemas/`. A first line
+  `# yaml-language-server: $schema=<url>` has an editor check a file against
+  one.
+
 - **`SessionPathProvider.sig_base_dir_changed`** (`redsun.path_provider`) -
   emitted with the new root once `set_base_dir` accepted it.
 
@@ -149,25 +173,6 @@ Dates are specified in the format `DD-MM-YYYY`.
       to: path_provider.set_plan
   ```
 
-- **`StorageConfig`** and **`CatalogConfig`** (`redsun.containers`) and a
-  `storage` section in a session file: `base_dir`, the root a session writes
-  under (`user_data_dir("redsun", appauthor=False)` by default), `max_digits`,
-  the width of the file counter, and `catalog`, which, even empty, gives the
-  session a catalog in `<base_dir>/<session>/catalog` and needs the `tiled`
-  extra:
-
-  ```yaml
-  storage:
-    base_dir: "D:/experiments/2026-09"   # optional
-    catalog:                             # optional
-      readable:                          # optional, added to <base_dir>/<session>
-        - /data/aht
-  ```
-
-  `AppContainer.storage` gives the section after the build. `readable` adds
-  directories the catalog may read from. Unknown keys are refused, and so is a
-  `catalog` without the `tiled` extra.
-
 - **`SessionPathProvider.session_dir`** (`redsun.path_provider`) - the
   session's directory inside `base_dir`, holding its files and catalog.
 - **`SessionPathProvider.lock_base_dir`** (`redsun.path_provider`) - makes
@@ -243,6 +248,13 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed
 
+- Plugin manifests are validated when a session looks up its plugins. A
+  manifest that cannot be read or parsed, one with an unknown group or key, a class path not written as
+  `module:ClassName`, a service entry without `module`, or a `name` other
+  than its entry point's is left out whole, with one error naming its file
+  and every problem. A service entry takes `module`, `args`, `ready` and
+  `stop_timeout`.
+
 - **`SessionFileHandler`** (`redsun.log`) writes under `logs` in the
   session's root instead of the platform's log directory: the application's
   file in `logs/<session>/app/`, a service's in `logs/<session>/services/`.
@@ -303,8 +315,6 @@ Dates are specified in the format `DD-MM-YYYY`.
   and **`PlanFilenameProvider.reset`** takes `(plan, datakey)` keys.
 - **`SessionPathProvider`** writes under
   `user_data_dir("redsun", appauthor=False)` rather than `~/redsun-storage`.
-  Nothing is moved; a provider built while `~/redsun-storage` exists logs a
-  `WARNING` naming both locations.
 
 ### Removed
 
@@ -328,6 +338,19 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Changed (breaking)
 
+- Session files (`AppContainer.from_config`, a container class's `config=`)
+  are validated once their layers are merged, before anything is built, and
+  raise `ConfigurationError` for an unknown key in any section, a
+  `schema_version` other than `1.0` or written as a string, an unknown
+  `frontend` or `services.transport`, a `transport` outside `services`,
+  `plugin_name` without `plugin_id` or the reverse, a misspelled `plugin_*`
+  key, a non-boolean device `autoconnect`, an empty `storage.base_dir`, a
+  `storage.catalog.readable` that is not a list, a hook entry or wiring
+  rule missing a key, and, in a file given to `from_config`, a device,
+  presenter or view without `plugin_name` and `plugin_id`, in place of `TypeError`, `KeyError`, `WiringError` and
+  `HookError`. A container class naming a file validates it when
+  constructed, or when created if it declares `from_config` fields.
+
 - **`AppContainer.build`** (`redsun.containers.container`) constructs a device
   as `cls(name=<name>, **kwargs)` rather than `cls(<name>, **kwargs)`. A device
   subclassing `ophyd_async.epics.core.EpicsDevice`, whose first parameter is
@@ -340,6 +363,10 @@ Dates are specified in the format `DD-MM-YYYY`.
   ```
 
 ### Fixed
+
+- **`AppContainer.from_config`** (`redsun.containers.container`) builds a
+  file whose `devices`, `presenters` or `views` section is written empty, and
+  logs and skips a component whose class cannot be imported.
 
 - **`SessionPathProvider.reset_plan`** (`redsun.path_provider`) rescans the
   counters from disk, so a filename a plan requested and never wrote is

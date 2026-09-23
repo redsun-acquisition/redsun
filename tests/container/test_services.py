@@ -18,6 +18,7 @@ from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from redsun.aio import run_coro
 from redsun.containers import (
     AppContainer,
+    ConfigurationError,
     declare_device,
     declare_presenter,
     declare_service,
@@ -383,31 +384,15 @@ def test_from_config_launches_a_plugin_service_and_attaches_to_the_rest(
     assert beamline.prefix == "BL01:"
 
 
-@pytest.mark.parametrize(
-    ("plugin_id", "error"),
-    [
-        (
-            "not_a_mapping",
-            (
-                'Plugin "mock-pkg" lists service "not_a_mapping" as '
-                "'mock_pkg.service.stand_in', not a mapping."
-            ),
-        ),
-        ("missing", 'Plugin "mock-pkg" does not contain the id "missing".'),
-    ],
-    ids=["not-a-mapping", "missing-id"],
-)
-def test_a_service_its_plugin_cannot_give_is_left_out_with_one_error(
+def test_a_service_its_plugin_does_not_list_is_left_out_with_one_error(
     mock_entry_points: None,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
-    plugin_id: str,
-    error: str,
 ) -> None:
     config = tmp_path / "session.yaml"
     config.write_text(
         "schema_version: 1.0\nfrontend: pyqt\nsession: left-out\n"
-        f"services:\n  ioc:\n    plugin_name: mock-pkg\n    plugin_id: {plugin_id}\n",
+        "services:\n  ioc:\n    plugin_name: mock-pkg\n    plugin_id: missing\n",
         encoding="utf-8",
     )
 
@@ -415,7 +400,7 @@ def test_a_service_its_plugin_cannot_give_is_left_out_with_one_error(
 
     assert "ioc" not in app.services
     errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
-    assert errors == [error]
+    assert errors == ['Plugin "mock-pkg" does not contain the id "missing".']
 
 
 def test_a_presenter_reads_two_caproto_iocs_while_it_is_built(
@@ -485,7 +470,7 @@ def test_a_transport_redsun_does_not_have_is_refused_in_a_session_file(
 ) -> None:
     config = session_file(tmp_path / "session.yaml", "  transport: carrier-pigeon\n")
 
-    with pytest.raises(TypeError, match="carrier-pigeon"):
+    with pytest.raises(ConfigurationError, match="carrier-pigeon"):
         AppContainer.from_config(str(config))
 
 
