@@ -83,10 +83,10 @@ class LogView(QtW.QWidget):
     With session log files open, ``Save logs...`` copies the files of the tab
     shown and ``Open log folder`` opens their folder in the file browser;
     without them the folder button is disabled.
-
     """
 
     placement: Placement = Dock("bottom")
+    """Docked at the bottom of the main window."""
 
     def __init__(self, name: str, parent: QtW.QWidget) -> None:
         super().__init__(parent)

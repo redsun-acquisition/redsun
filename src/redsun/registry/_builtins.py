@@ -39,8 +39,6 @@ Not ophyd-async's ``DeviceMap``, which is a device holding string-keyed
 children; this is the application's own set.
 """
 
-"""The signals one component declares, by attribute name."""
-
 
 @dataclass(frozen=True, kw_only=True)
 class SessionConfig:

@@ -83,8 +83,8 @@ def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
 def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     """Write session log files under *tmp_path*, and close any a test left open.
 
-    A container opens a log file when it is constructed; without this, every
-    test building one would write to the user's own log directory.
+    A session opens a log file when it builds; without this, every test
+    building one would write to the user's own log directory.
     """
     monkeypatch.setattr("redsun.log.user_data_dir", lambda *a, **k: str(tmp_path))
     yield tmp_path / "logs"

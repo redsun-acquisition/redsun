@@ -1248,11 +1248,12 @@ class Session(BuildableSession):
 
     def connect_paths(
         self, source: str, target: str, *, thread: SlotThread = None
-    ) -> Connection:
+    ) -> Connection | None:
         """Connect two ports addressed as ``component.port``.
 
         The string form of `connect`, used by the ``wiring`` section of a
-        configuration file.
+        configuration file. A path naming a component that failed to build is
+        logged and skipped, as `connect` skips it.
 
         Parameters
         ----------
@@ -1265,25 +1266,34 @@ class Session(BuildableSession):
 
         Returns
         -------
-        Connection
-            The recorded link.
+        Connection | None
+            The recorded link, ``None`` when either end belongs to a component
+            that failed to build.
 
         Raises
         ------
         WiringError
-            If either path is malformed, names a component that was not built,
-            or names a port that component does not expose.
+            If either path is malformed, names a component that was never
+            declared, or names a port that component does not expose.
         """
-        signal = self._resolve_port(source, "signal")
-        slot = self._resolve_port(target, "slot")
-        link = self.connect(
+        try:
+            signal = self._resolve_port(source, "signal")
+            slot = self._resolve_port(target, "slot")
+        except ComponentNotBuilt as e:
+            if e.component not in self._failed:
+                raise
+            logger.warning(
+                "Not connecting %s -> %s: component %r was not built",
+                source,
+                target,
+                e.component,
+            )
+            return None
+        return self.connect(
             cast("SignalInstance", signal),
             cast("Callable[..., Any]", slot),
             thread=thread,
         )
-        # a path resolves to a built component or raises, so nothing is skipped
-        assert link is not None
-        return link
 
     def _resolve_port(self, path: str, kind: str) -> object:
         """Look up the signal or slot a ``component.port`` path names."""
@@ -1924,17 +1934,7 @@ class Session(BuildableSession):
             reason.
         """
         for rule in config.get("wiring", []):
-            try:
-                self.connect_paths(rule["from"], rule["to"])
-            except ComponentNotBuilt as e:
-                if e.component not in self._failed:
-                    raise
-                logger.warning(
-                    "Not connecting %s -> %s: component %r was not built",
-                    rule["from"],
-                    rule["to"],
-                    e.component,
-                )
+            self.connect_paths(rule["from"], rule["to"])
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.

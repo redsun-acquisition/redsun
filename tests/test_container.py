@@ -1677,6 +1677,22 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
     assert "Not built: broken (presenter)" in caplog.text
 
 
+def test_a_path_wire_connects_to_a_component_that_failed_is_skipped(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    class Chatty(Session):
+        broken: AsPresenter[BrokenTalker]
+        listener: AsPresenter[Listener]
+
+        def wire(self) -> None:
+            self.connect_paths("broken.sig_said", "listener.hear")
+
+    app = build(Chatty)
+
+    assert app.is_built
+    assert "Not connecting broken.sig_said -> listener.hear" in caplog.text
+
+
 def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
     """What the build took is given back before the error leaves it."""
     released: list[str] = []

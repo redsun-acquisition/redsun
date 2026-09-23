@@ -23,7 +23,13 @@ jobs:
       - name: Write the changelog section
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/release_notes.py prepare "${{ inputs.version }}"
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must look like 0.14.0, got '$VERSION'" >&2
+            exit 1
+          fi
+          python3 scripts/release_notes.py prepare "$VERSION"
 
       - name: Commit it and open a pull request
         env:

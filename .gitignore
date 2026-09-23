@@ -121,3 +121,5 @@ docs/reference/schemas/
 .claude/settings.local.json
 .claude/plans
 CLAUDE.local.md
+
+*.png
