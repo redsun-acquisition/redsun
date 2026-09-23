@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "ServiceEntry": {
+      "additionalProperties": false,
+      "description": "How a manifest launches a service; a session file may override any of it.",
+      "properties": {
+        "module": {
+          "description": "Module run as ``python -m <module>``.",
+          "title": "Module",
+          "type": "string"
+        },
+        "args": {
+          "default": [],
+          "description": "Arguments after the module.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "ready": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line the service prints once it serves.",
+          "title": "Ready"
+        },
+        "stop_timeout": {
+          "default": 10.0,
+          "description": "Seconds each stop step waits.",
+          "title": "Stop Timeout",
+          "type": "number"
+        }
+      },
+      "required": [
+        "module"
+      ],
+      "title": "ServiceEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What a bundle ships, by group, each entry under the id a session names.",
+  "properties": {
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The entry point's name; the manifest is left out if it differs.",
+      "title": "Name"
+    },
+    "schema_version": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Version of this manifest format.",
+      "title": "Schema Version"
+    },
+    "devices": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Device classes by id.",
+      "title": "Devices",
+      "type": "object"
+    },
+    "presenters": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Presenter classes by id.",
+      "title": "Presenters",
+      "type": "object"
+    },
+    "views": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "View classes by id.",
+      "title": "Views",
+      "type": "object"
+    },
+    "services": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ServiceEntry"
+      },
+      "default": {},
+      "description": "Services by id.",
+      "title": "Services",
+      "type": "object"
+    }
+  },
+  "title": "PluginManifest",
+  "type": "object"
+}

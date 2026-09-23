@@ -937,6 +937,8 @@
       
         
       
+        
+      
     
     
     
@@ -1319,6 +1321,33 @@
     
   
   13. Acquisition storage belongs to the device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0014-typed-session-files-and-manifests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  14. Typed session files and plugin manifests
 
     
   </span>
@@ -2973,8 +3002,8 @@ made.</p>
 <td>malformed path</td>
 </tr>
 <tr>
-<td><code>wiring entry 0 must be a mapping with exactly the keys 'from' and 'to'</code></td>
-<td>a rule is missing a key or carries an extra one</td>
+<td><code>wiring.0.to: Field required</code></td>
+<td>a rule is missing a key; raised as <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfigurationError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.ConfigurationError"><code>ConfigurationError</code></a> when the file is read</td>
 </tr>
 <tr>
 <td><code>cannot connect a.sig -&gt; b.port: Cannot connect slot ...</code></td>

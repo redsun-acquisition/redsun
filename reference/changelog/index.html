@@ -937,6 +937,8 @@
       
         
       
+        
+      
     
     
     
@@ -1319,6 +1321,33 @@
     
   
   13. Acquisition storage belongs to the device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0014-typed-session-files-and-manifests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  14. Typed session files and plugin manifests
 
     
   </span>
@@ -4382,6 +4411,33 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p><strong><code>ConfigurationError</code></strong> (<code>redsun.containers</code>) - raised when a session
+  file, its layers merged, does not describe a session. A <code>ValueError</code>
+  naming the files and listing every problem as <code>section.key: what</code>, a hook
+  entry located by its hook points (<code>hooks.greet.provider</code>).</p>
+</li>
+<li>
+<p>A <code>storage</code> section in a session file: <code>base_dir</code>, the root a session writes
+  under (<code>user_data_dir("redsun", appauthor=False)</code> by default), <code>max_digits</code>,
+  the width of the file counter, and <code>catalog</code>, which, even empty, gives the
+  session a catalog in <code>&lt;base_dir&gt;/&lt;session&gt;/catalog</code> and needs the <code>tiled</code>
+  extra. <code>catalog.readable</code> adds directories the catalog may read from:</p>
+</li>
+</ul>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">storage</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">base_dir</span><span class="p">:</span><span class="w"> </span><span class="s">"D:/experiments/2026-09"</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">catalog</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">readable</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/aht</span>
+</span></code></pre></div>
+<ul>
+<li>
+<p>JSON schemas of a session file and a plugin manifest, published with the
+  documentation under <code>reference/schemas/</code>. A first line
+  <code># yaml-language-server: $schema=&lt;url&gt;</code> has an editor check a file against
+  one.</p>
+</li>
+<li>
 <p><strong><code>SessionPathProvider.sig_base_dir_changed</code></strong> (<code>redsun.path_provider</code>) -
   emitted with the new root once <code>set_base_dir</code> accepted it.</p>
 </li>
@@ -4420,11 +4476,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   a container. One with a <code>module</code> is launched as <code>python -m &lt;module&gt; &lt;args&gt;</code>;
   one without only lends its <code>prefix</code>:</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">):</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">camera_ioc</span> <span class="o">=</span> <span class="n">declare_service</span><span class="p">(</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        <span class="n">module</span><span class="o">=</span><span class="s2">"mylab.iocs.camera"</span><span class="p">,</span> <span class="n">ready</span><span class="o">=</span><span class="s2">"Server startup complete."</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"CAM:"</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="p">)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">camera</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="s2">"camera_ioc"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">AppContainer</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">camera_ioc</span> <span class="o">=</span> <span class="n">declare_service</span><span class="p">(</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="n">module</span><span class="o">=</span><span class="s2">"mylab.iocs.camera"</span><span class="p">,</span> <span class="n">ready</span><span class="o">=</span><span class="s2">"Server startup complete."</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">"CAM:"</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="p">)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">camera</span> <span class="o">=</span> <span class="n">declare_device</span><span class="p">(</span><span class="n">MyCamera</span><span class="p">,</span> <span class="n">service</span><span class="o">=</span><span class="s2">"camera_ioc"</span><span class="p">)</span>
 </span></code></pre></div>
 <ul>
 <li><strong><code>service</code></strong> keyword of a device declaration - names the service whose
@@ -4443,14 +4499,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <code>plugin_name</code> and <code>plugin_id</code> takes both from the manifest; one without is
   attached to:</li>
 </ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">services</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM:"</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">stop_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">beamline</span><span class="p">:</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"BL01:"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM:"</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">stop_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">beamline</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"BL01:"</span>
 </span></code></pre></div>
 <ul>
 <li>A <code>transport</code> key in the <code>services</code> section, and <strong><code>AppContainer.transport</code></strong>
@@ -4459,11 +4515,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   named <code>transport</code>, and two layered files naming different transports are each
   refused as the container class is created:</li>
 </ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">services</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">transport</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pv-access</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">services</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">transport</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pv-access</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">camera_ioc</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">camera-ioc</span>
 </span></code></pre></div>
 <ul>
 <li>The build summary names a service whose every device failed to build:
@@ -4505,8 +4561,8 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   container: a device whose constructor takes it gets the session's provider,
   and a declaration giving one is refused:</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Camera</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path_provider</span><span class="p">:</span> <span class="n">PathProvider</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Camera</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path_provider</span><span class="p">:</span> <span class="n">PathProvider</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <ul>
 <li><strong><code>AppContainer.path_provider</code></strong> (<code>redsun.containers.container</code>) - the
@@ -4514,27 +4570,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   (<code>"path_provider"</code>), with <code>set_plan</code>, <code>reset_plan</code> and <code>set_base_dir</code> as
   slots:</li>
 </ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">wiring</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acquisition.sig_pre_launch_notify</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path_provider.set_plan</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acquisition.sig_pre_launch_notify</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path_provider.set_plan</span>
 </span></code></pre></div>
-<ul>
-<li><strong><code>StorageConfig</code></strong> and <strong><code>CatalogConfig</code></strong> (<code>redsun.containers</code>) and a
-  <code>storage</code> section in a session file: <code>base_dir</code>, the root a session writes
-  under (<code>user_data_dir("redsun", appauthor=False)</code> by default), <code>max_digits</code>,
-  the width of the file counter, and <code>catalog</code>, which, even empty, gives the
-  session a catalog in <code>&lt;base_dir&gt;/&lt;session&gt;/catalog</code> and needs the <code>tiled</code>
-  extra:</li>
-</ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">storage</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">base_dir</span><span class="p">:</span><span class="w"> </span><span class="s">"D:/experiments/2026-09"</span><span class="w">   </span><span class="c1"># optional</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">catalog</span><span class="p">:</span><span class="w">                             </span><span class="c1"># optional</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">readable</span><span class="p">:</span><span class="w">                          </span><span class="c1"># optional, added to &lt;base_dir&gt;/&lt;session&gt;</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/aht</span>
-</span></code></pre></div>
-<p><code>AppContainer.storage</code> gives the section after the build. <code>readable</code> adds
-  directories the catalog may read from. Unknown keys are refused, and so is a
-  <code>catalog</code> without the <code>tiled</code> extra.</p>
 <ul>
 <li><strong><code>SessionPathProvider.session_dir</code></strong> (<code>redsun.path_provider</code>) - the
   session's directory inside <code>base_dir</code>, holding its files and catalog.</li>
@@ -4606,6 +4645,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
+<p>Plugin manifests are validated when a session looks up its plugins. A
+  manifest that cannot be read or parsed, one with an unknown group or key, a class path not written as
+  <code>module:ClassName</code>, a service entry without <code>module</code>, or a <code>name</code> other
+  than its entry point's is left out whole, with one error naming its file
+  and every problem. A service entry takes <code>module</code>, <code>args</code>, <code>ready</code> and
+  <code>stop_timeout</code>.</p>
+</li>
+<li>
 <p><strong><code>SessionFileHandler</code></strong> (<code>redsun.log</code>) writes under <code>logs</code> in the
   session's root instead of the platform's log directory: the application's
   file in <code>logs/&lt;session&gt;/app/</code>, a service's in <code>logs/&lt;session&gt;/services/</code>.
@@ -4666,9 +4713,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
   <strong><code>PlanFilenameProvider.bump</code></strong> takes the data key as its second argument
   and <strong><code>PlanFilenameProvider.reset</code></strong> takes <code>(plan, datakey)</code> keys.</li>
 <li><strong><code>SessionPathProvider</code></strong> writes under
-  <code>user_data_dir("redsun", appauthor=False)</code> rather than <code>~/redsun-storage</code>.
-  Nothing is moved; a provider built while <code>~/redsun-storage</code> exists logs a
-  <code>WARNING</code> naming both locations.</li>
+  <code>user_data_dir("redsun", appauthor=False)</code> rather than <code>~/redsun-storage</code>.</li>
 </ul>
 <h3 id="removed">Removed<a class="headerlink" href="#removed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -4692,17 +4737,38 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed-breaking">Changed (breaking)<a class="headerlink" href="#changed-breaking" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>AppContainer.build</code></strong> (<code>redsun.containers.container</code>) constructs a device
+<li>
+<p>Session files (<code>AppContainer.from_config</code>, a container class's <code>config=</code>)
+  are validated once their layers are merged, before anything is built, and
+  raise <code>ConfigurationError</code> for an unknown key in any section, a
+  <code>schema_version</code> other than <code>1.0</code> or written as a string, an unknown
+  <code>frontend</code> or <code>services.transport</code>, a <code>transport</code> outside <code>services</code>,
+  <code>plugin_name</code> without <code>plugin_id</code> or the reverse, a misspelled <code>plugin_*</code>
+  key, a non-boolean device <code>autoconnect</code>, an empty <code>storage.base_dir</code>, a
+  <code>storage.catalog.readable</code> that is not a list, a hook entry or wiring
+  rule missing a key, and, in a file given to <code>from_config</code>, a device,
+  presenter or view without <code>plugin_name</code> and <code>plugin_id</code>, in place of <code>TypeError</code>, <code>KeyError</code>, <code>WiringError</code> and
+  <code>HookError</code>. A container class naming a file validates it when
+  constructed, or when created if it declares <code>from_config</code> fields.</p>
+</li>
+<li>
+<p><strong><code>AppContainer.build</code></strong> (<code>redsun.containers.container</code>) constructs a device
   as <code>cls(name=&lt;name&gt;, **kwargs)</code> rather than <code>cls(&lt;name&gt;, **kwargs)</code>. A device
   subclassing <code>ophyd_async.epics.core.EpicsDevice</code>, whose first parameter is
   <code>prefix</code>, can be declared with <code>declare_device(MyCamera, prefix="CAM:")</code>. A
-  device constructor taking <code>name</code> positional-only fails to build; drop the <code>/</code>:</li>
+  device constructor taking <code>name</code> positional-only fails to build; drop the <code>/</code>:</p>
+</li>
 </ul>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyMotor</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">egu</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"mm"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>
+<p><strong><code>AppContainer.from_config</code></strong> (<code>redsun.containers.container</code>) builds a
+  file whose <code>devices</code>, <code>presenters</code> or <code>views</code> section is written empty, and
+  logs and skips a component whose class cannot be imported.</p>
+</li>
 <li>
 <p><strong><code>SessionPathProvider.reset_plan</code></strong> (<code>redsun.path_provider</code>) rescans the
   counters from disk, so a filename a plan requested and never wrote is

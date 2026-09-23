@@ -1,0 +1,355 @@
+{
+  "$defs": {
+    "CatalogConfig": {
+      "additionalProperties": false,
+      "description": "The catalog a session keeps in `<base_dir>/<session>/catalog`.",
+      "properties": {
+        "readable": {
+          "default": [],
+          "description": "Directories the catalog may read from besides the session's own.",
+          "items": {
+            "format": "path",
+            "type": "string"
+          },
+          "title": "Readable",
+          "type": "array"
+        }
+      },
+      "title": "CatalogConfig",
+      "type": "object"
+    },
+    "ComponentEntry": {
+      "additionalProperties": true,
+      "description": "A component's entry: the plugin it comes from, and its constructor keywords.\n\nEvery key besides the plugin keys is a keyword for the component's\nconstructor, which checks them when the component is built.",
+      "properties": {
+        "plugin_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The plugin whose manifest lists the component.",
+          "title": "Plugin Name"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The component's id in that manifest.",
+          "title": "Plugin Id"
+        }
+      },
+      "title": "ComponentEntry",
+      "type": "object"
+    },
+    "DeviceEntry": {
+      "additionalProperties": true,
+      "description": "A device's entry, with the keys the container keeps from its constructor.",
+      "properties": {
+        "plugin_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The plugin whose manifest lists the component.",
+          "title": "Plugin Name"
+        },
+        "plugin_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The component's id in that manifest.",
+          "title": "Plugin Id"
+        },
+        "service": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The service whose prefix the device gets.",
+          "title": "Service"
+        },
+        "autoconnect": {
+          "default": true,
+          "description": "Whether the build connects the device.",
+          "title": "Autoconnect",
+          "type": "boolean"
+        }
+      },
+      "title": "DeviceEntry",
+      "type": "object"
+    },
+    "Frontend": {
+      "description": "Supported frontend types.",
+      "enum": [
+        "pyqt",
+        "pyside"
+      ],
+      "title": "Frontend",
+      "type": "string"
+    },
+    "StorageConfig": {
+      "additionalProperties": false,
+      "description": "Where a session writes, and whether it keeps a catalog of its runs.",
+      "properties": {
+        "base_dir": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Root the session writes under; `None` is the user data directory.",
+          "title": "Base Dir"
+        },
+        "max_digits": {
+          "default": 5,
+          "description": "Width of the counter in file names.",
+          "title": "Max Digits",
+          "type": "integer"
+        },
+        "catalog": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CatalogConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The session's catalog, needing the ``tiled`` extra; `None` for none."
+        }
+      },
+      "title": "StorageConfig",
+      "type": "object"
+    },
+    "WiringRule": {
+      "additionalProperties": false,
+      "description": "One connection a session file declares, from a signal to a slot.",
+      "properties": {
+        "from": {
+          "description": "The signal, as ``component.signal``.",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "description": "The slot, as ``component.slot``.",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "WiringRule",
+      "type": "object"
+    },
+    "HookEntry": {
+      "additionalProperties": false,
+      "description": "One provider of the ``hooks`` section, and every hook point it serves.",
+      "properties": {
+        "provider": {
+          "description": "The provider's class, as ``module:ClassName``.",
+          "title": "Provider",
+          "type": "string"
+        },
+        "kwargs": {
+          "additionalProperties": true,
+          "default": {},
+          "description": "Keywords the provider is constructed with.",
+          "title": "Kwargs",
+          "type": "object"
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "title": "HookEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A session file, after its layers are merged.",
+  "properties": {
+    "schema_version": {
+      "description": "The schema the file is written for, one of `SCHEMA_VERSIONS`.",
+      "title": "Schema Version",
+      "type": "number",
+      "enum": [
+        1.0
+      ]
+    },
+    "frontend": {
+      "$ref": "#/$defs/Frontend",
+      "description": "The toolkit the session runs on."
+    },
+    "session": {
+      "default": "Redsun",
+      "description": "The session's display name.",
+      "title": "Session",
+      "type": "string"
+    },
+    "metadata": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "default": {},
+          "description": "Metadata of the session.",
+          "title": "Metadata",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "services": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "transport": {
+              "enum": [
+                "channel-access",
+                "pv-access"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/ComponentEntry"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "devices": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/DeviceEntry"
+          },
+          "default": {},
+          "description": "Devices by name.",
+          "title": "Devices",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "presenters": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComponentEntry"
+          },
+          "default": {},
+          "description": "Presenters by name.",
+          "title": "Presenters",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "views": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComponentEntry"
+          },
+          "default": {},
+          "description": "Views by name.",
+          "title": "Views",
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "storage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StorageConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Where the session writes; the defaults when absent."
+    },
+    "wiring": {
+      "anyOf": [
+        {
+          "default": [],
+          "description": "Connections the session declares.",
+          "items": {
+            "$ref": "#/$defs/WiringRule"
+          },
+          "title": "Wiring",
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hooks": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/HookEntry"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "frontend"
+  ],
+  "title": "SessionFile",
+  "type": "object"
+}

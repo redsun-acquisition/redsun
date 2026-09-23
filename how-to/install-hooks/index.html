@@ -937,6 +937,8 @@
       
         
       
+        
+      
     
     
     
@@ -1319,6 +1321,33 @@
     
   
   13. Acquisition storage belongs to the device
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/decisions/0014-typed-session-files-and-manifests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  14. Typed session files and plugin manifests
 
     
   </span>
@@ -3096,7 +3125,10 @@ points only once:</p>
 it opened. A failing <code>shutdown</code> is logged and the others still run.</p>
 <h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
 <p>A wrong hook raises <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;HookError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.HookError"><code>HookError</code></a>, naming the
-point.</p>
+point. In a configuration file, an entry of the wrong shape is found when the
+file is read instead, and raised as
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfigurationError&lt;/span&gt;" href="../../reference/api/container/#redsun.containers.ConfigurationError"><code>ConfigurationError</code></a> located as
+<code>hooks.&lt;point&gt;.&lt;key&gt;</code>.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Container class</label><label for="__tabbed_5_2">Configuration file</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -3143,16 +3175,16 @@ not at build.</p>
 <td>the key is not a point this container calls</td>
 </tr>
 <tr>
-<td><code>hooks entry 'x' carries unknown key(s) ...</code></td>
+<td><code>hooks.x.name: Extra inputs are not permitted</code></td>
 <td>a constructor argument was written beside <code>provider</code> instead of under <code>kwargs</code></td>
 </tr>
 <tr>
-<td><code>hooks entry 'x' must carry a string 'provider' naming a class as 'module:ClassName'</code></td>
-<td><code>provider</code> is missing or is not a string</td>
+<td><code>hooks.x.provider: Field required</code></td>
+<td><code>provider</code> is missing</td>
 </tr>
 <tr>
-<td><code>hook provider 'p' is not a class path; expected 'module:ClassName'</code></td>
-<td>the path has no <code>:</code></td>
+<td><code>hooks.x.provider: 'p' is not a class path; expected 'module:ClassName'</code></td>
+<td>the path is not <code>module:ClassName</code></td>
 </tr>
 <tr>
 <td><code>cannot import hook provider 'p'</code></td>
