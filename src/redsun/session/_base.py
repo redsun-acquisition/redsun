@@ -37,6 +37,7 @@ from redsun.injection import (
     satisfying,
     shared_keys,
 )
+from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 from redsun.ports import (
     SLOT_ATTR,
@@ -296,12 +297,21 @@ class Session(BuildableSession):
     default attaches nothing and constrains no view.
     """
 
-    def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
+    def __init__(
+        self,
+        config: Source | Sequence[Source] | None = None,
+        *,
+        log_level: int | str | None = None,
+    ) -> None:
         """Prepare an empty session, to be filled by `build`.
 
         *config* layers over whatever the class declares rather than replacing
         it, so a caller naming one key changes that key and leaves the rest.
+        *log_level*, a `logging` constant or its name, sets the ``redsun``
+        logger's level; ``None`` leaves it as it is.
         """
+        if log_level is not None:
+            set_level(log_level)
         self._config = config
         self._merged: dict[str, Any] | None = None
         self._hooks: dict[str, object] | None = None
@@ -343,7 +353,12 @@ class Session(BuildableSession):
         self._is_built = False
 
     @classmethod
-    def from_config(cls, source: Source | Sequence[Source]) -> Self:
+    def from_config(
+        cls,
+        source: Source | Sequence[Source],
+        *,
+        log_level: int | str | None = None,
+    ) -> Self:
         """Return a session described entirely by *source*.
 
         Every component the configuration names is declared, its layer coming
@@ -364,7 +379,8 @@ class Session(BuildableSession):
             If it names one this session is not built against.
         """
         config = load(source)
-        return cast("Self", base_for(cls, config.get("frontend"))(config))
+        session = base_for(cls, config.get("frontend"))(config, log_level=log_level)
+        return cast("Self", session)
 
     @property
     def services(self) -> Mapping[str, Service]:
@@ -656,7 +672,7 @@ class Session(BuildableSession):
         self._releases.callback(release)
 
     def read_configuration(self) -> None:
-        """Merge the sources, install the hooks, and read the declarations."""
+        """Merge the sources, install the hooks, read the declarations, open the logs."""
         manifest.cache_clear()
         config = self._configuration()
         logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
@@ -686,6 +702,39 @@ class Session(BuildableSession):
             session=self.name,
             max_digits=self._storage.max_digits,
         )
+        self._open_logs(self._path_provider)
+
+    def _open_logs(self, path_provider: SessionPathProvider) -> None:
+        """Write this run's records to the session's log files, under its root.
+
+        Application records go to one file and each launched service's to its
+        own, so a noisy service rotates only its own file. The files follow the
+        root when *path_provider* moves it, and close in a release, after
+        everything the build took once they were open.
+        """
+        root = path_provider.base_dir
+        application = SessionFileHandler(self.name, root=root)
+        handlers: dict[str | None, SessionFileHandler] = {None: application}
+        for name, service in self._services.items():
+            if service.launched:
+                handlers[name] = SessionFileHandler(
+                    self.name, name, application.run, root=root
+                )
+        for owner, handler in handlers.items():
+            add_handler(handler, owner)
+
+        def move(root: Path) -> None:
+            for handler in handlers.values():
+                handler.move(root)
+
+        def close() -> None:
+            path_provider.sig_base_dir_changed.disconnect(move)
+            for owner, handler in handlers.items():
+                remove_handler(handler, owner)
+                handler.close()
+
+        path_provider.sig_base_dir_changed.connect(move)
+        self.on_release(close)
 
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.

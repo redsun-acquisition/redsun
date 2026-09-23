@@ -786,7 +786,7 @@ def test_discarding_closes_without_writing(
     _press(monkeypatch, QMessageBox.StandardButton.Discard)
 
     assert session.main_window.close()
-    assert list(tmp_path.iterdir()) == []
+    assert list(tmp_path.glob("*.yaml")) == []
 
 
 def test_saving_writes_and_then_closes(

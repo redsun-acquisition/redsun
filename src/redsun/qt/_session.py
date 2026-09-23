@@ -245,9 +245,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
         QtHook.CONFIRM_CLOSE: ConfirmsClose,
     }
 
-    def __init__(self, config: Source | Sequence[Source] | None = None) -> None:
+    def __init__(
+        self,
+        config: Source | Sequence[Source] | None = None,
+        *,
+        log_level: int | str | None = None,
+    ) -> None:
         """Prepare an empty container, to be filled by `build`."""
-        super().__init__(config)
+        super().__init__(config, log_level=log_level)
         self._close_guard: CloseGuard | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None
