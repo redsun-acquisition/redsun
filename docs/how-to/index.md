@@ -2,9 +2,6 @@
 
 ## Getting started
 - **[Installation](installation.md)**
-- **[Build documentation](build-docs.md)**
-- **[Run tests](run-tests.md)**
-- **[Run the commit checks](run-commit-checks.md)**
 
 ## Building an application
 - **[Wire components together](wire-components.md)**

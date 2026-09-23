@@ -56,9 +56,6 @@ nav = [
     { "How-to guides" = [
         "how-to/index.md",
         { "Installation" = "how-to/installation.md" },
-        { "Build documentation" = "how-to/build-docs.md" },
-        { "Run tests" = "how-to/run-tests.md" },
-        { "Run the commit checks" = "how-to/run-commit-checks.md" },
         { "Wire components together" = "how-to/wire-components.md" },
         { "Install container hooks" = "how-to/install-hooks.md" },
         { "Configure logging" = "how-to/configure-logging.md" },
@@ -66,6 +63,16 @@ nav = [
         { "Write a derived product" = "how-to/write-a-derived-product.md" },
         { "Change a setting while a plan runs" = "how-to/change-a-setting-while-a-plan-runs.md" },
         { "Keep a catalog of runs" = "how-to/keep-a-catalog.md" },
+    ]},
+    { "Contributing" = [
+        "contributing/index.md",
+        { "Set up" = "contributing/setup.md" },
+        { "Run tests" = "contributing/run-tests.md" },
+        { "Run the commit checks" = "contributing/run-commit-checks.md" },
+        { "Build the docs" = "contributing/build-docs.md" },
+        { "Commits and pull requests" = "contributing/commits-and-prs.md" },
+        { "Write documentation" = "contributing/write-docs.md" },
+        { "Record a decision" = "contributing/decisions.md" },
     ]},
     { "Reference" = [
         "reference/index.md",

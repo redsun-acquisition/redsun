@@ -6,7 +6,7 @@ every commit once installed, in `uv run tox -e lint`, and in CI.
 
 ## Prerequisites
 
-[Install `redsun` with development dependencies](installation.md#install-development-dependencies).
+[Set up a development environment](setup.md).
 `prek` and `ruff` live in the `lint` dependency group, which `dev` includes.
 
 ## Install the git hook

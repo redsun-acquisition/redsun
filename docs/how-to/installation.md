@@ -86,32 +86,4 @@ Install from [PyPI](https://pypi.org/project/redsun/) or from the GitHub [reposi
     pip install redsun[pyside]
     ```
 
-## Install development dependencies
-
-To contribute or run the tests, install the development dependencies from the [PEP-735](https://peps.python.org/pep-0735/) dependency groups.
-
-=== "uv (recommended)"
-
-    ```bash
-    uv sync
-    ```
-
-=== "pip"
-
-    ```bash
-    pip install -e . --group dev
-    ```
-
-The checks run through `tox`, which builds each environment from `uv.lock`:
-
-```bash
-uv run tox           # lint, both Qt type-checking legs, tests, docs
-uv run tox -e tests
-```
-
-[Run tests](run-tests.md) lists what each environment covers. To run the
-formatting and lint checks on every commit, [install the git hook](run-commit-checks.md#install-the-git-hook):
-
-```bash
-uv run prek install
-```
+To change `redsun` itself, see [Contributing](../contributing/index.md).

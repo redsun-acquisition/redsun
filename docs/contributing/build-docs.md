@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-[Install `redsun` with development dependencies](installation.md#install-development-dependencies).
+[Set up a development environment](setup.md).
 
 ## Build with Zensical
 
@@ -49,4 +49,4 @@ uv run zensical serve --dev-addr localhost:8080
 ## Next steps
 
 - [Run tests](run-tests.md)
-- Read about the [container architecture](../explanation/container-architecture.md)
+- [Write documentation](write-docs.md)

@@ -5,7 +5,7 @@ produce coverage reports.
 
 ## Prerequisites
 
-[Install `redsun` with development dependencies](installation.md#install-development-dependencies).
+[Set up a development environment](setup.md).
 
 ## Run everything
 
@@ -35,11 +35,11 @@ uv run tox -e mypy-pyqt
 Arguments after `--` go to `pytest`:
 
 ```bash
-# SDK tests only
+# the tests of the shared modules only
 uv run tox -e tests -- tests/sdk/
 
 # a specific test function
-uv run tox -e tests -- tests/container/test_container.py::test_function_name
+uv run tox -e tests -- tests/test_container.py::test_function_name
 
 # everything matching a pattern
 uv run tox -e tests -- -k "test_wiring"
