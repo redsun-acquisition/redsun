@@ -1,4 +1,8 @@
-# Write a derived product
+---
+icon: lucide/layers
+---
+
+# How to write a derived product
 
 A component computing something from a run, a median over a scan or a
 filtered copy of each frame, writes it against the store the device wrote.

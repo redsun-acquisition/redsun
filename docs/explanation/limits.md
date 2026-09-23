@@ -1,4 +1,8 @@
-# Limits
+---
+icon: lucide/ban
+---
+
+# What a session does not do
 
 What a session does not do, and what to do instead.
 

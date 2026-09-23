@@ -1,4 +1,8 @@
-# Save a session
+---
+icon: lucide/save
+---
+
+# How to save a session
 
 A session keeps two kinds of state:
 

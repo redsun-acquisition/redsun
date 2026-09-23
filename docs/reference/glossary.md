@@ -1,3 +1,7 @@
+---
+icon: lucide/book-a
+---
+
 # Glossary
 
 The words `redsun` uses, each with one plain definition. Other pages link a

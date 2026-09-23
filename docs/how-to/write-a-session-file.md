@@ -1,4 +1,8 @@
-# Write a session file
+---
+icon: lucide/file-code
+---
+
+# How to write a session file
 
 A [session file](../reference/glossary.md#session-file) is a YAML file with a
 session's settings. This page lists every key it can hold.

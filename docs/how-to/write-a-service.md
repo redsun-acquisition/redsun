@@ -1,4 +1,8 @@
-# Write a service
+---
+icon: lucide/server
+---
+
+# How to write a service
 
 Write a `caproto` IOC for a session to launch, declare it, and point a device
 at it. [Services](../explanation/services.md) explains what a

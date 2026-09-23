@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Registry
 
 ## Values every component may ask for

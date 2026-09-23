@@ -1,3 +1,7 @@
+---
+icon: lucide/archive
+---
+
 # Previous changelog
 
 The changes up to 0.13.0, written by hand before the changelog was made from

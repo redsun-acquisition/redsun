@@ -1,4 +1,8 @@
-# Install hooks
+---
+icon: lucide/anchor
+---
+
+# How to install hooks
 
 A [hook](../reference/glossary.md#hook) acts on the session's toolkit, not on
 a component: it makes the application object, styles every window, or shows a

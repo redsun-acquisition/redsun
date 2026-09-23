@@ -1,4 +1,8 @@
-# Services
+---
+icon: lucide/server-cog
+---
+
+# How a session runs and talks to services
 
 A service is a server devices talk to: an EPICS IOC, a camera server, a motion
 controller's gateway. `ophyd-async` devices talk to it over Channel Access or

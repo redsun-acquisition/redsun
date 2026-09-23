@@ -1,4 +1,8 @@
-# Plans
+---
+icon: lucide/route
+---
+
+# How presenters run plans
 
 `redsun` builds on the [Bluesky plan system](https://blueskyproject.io/bluesky/main/plans.html).
 A *plan* is a generator yielding `Msg` objects, which the `RunEngine` turns

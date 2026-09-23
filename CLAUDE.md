@@ -37,11 +37,9 @@ redsun/
 |   |-- compose/               an IOC in a container, for the tests marked compose
 |   `-- typing/                assert_type modules, checked by mypy, never run
 |-- docs/                      Diataxis site built by zensical
-|   |-- tutorials/
-|   |-- how-to/
+|   |-- tutorials/             installation, first session
+|   |-- how-to/                one task per page, contributing and migration included
 |   |-- explanation/           architecture pages and decisions/ (ADRs)
-|   |-- contributing/          setup, checks, commits, docs style, releases
-|   |-- migration/             one page per breaking release
 |   `-- reference/             api/ pages, glossary, changelog (generated)
 |-- benchmarks/                performance scripts, not tests, sdist only
 |-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
@@ -230,9 +228,9 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring, and a changelog label on the pull request.
   The changelog is written from the labels at release time
-  (`docs/contributing/release.md`); never edit `docs/reference/changelog.md` by
+  (`docs/how-to/make-a-release.md`); never edit `docs/reference/changelog.md` by
   hand. A change that breaks existing code also gets the `breaking` label and a
-  line on the current `docs/migration/` page.
+  line on the current `docs/how-to/migrate-from-*.md` page.
 
 ### Docstrings and comments
 

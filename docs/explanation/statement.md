@@ -1,4 +1,8 @@
-# Statement of need
+---
+icon: lucide/target
+---
+
+# Why redsun exists
 
 Scientific data acquisition means controlling many devices, coordinating measurements, and managing the data and metadata they produce. The [Bluesky] ecosystem provides a hardware abstraction layer and a data model, but turning them into a complete application with a usable interface is still hard work.
 

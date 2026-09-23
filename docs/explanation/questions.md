@@ -1,4 +1,8 @@
-# Questions
+---
+icon: lucide/circle-help
+---
+
+# How a component asks the session what it holds
 
 Most of the time a component asks for one thing by its type: "give me the
 `MotorReadings`". Sometimes it needs an answer instead: "which components in

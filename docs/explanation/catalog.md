@@ -1,4 +1,8 @@
-# The session catalog
+---
+icon: lucide/database
+---
+
+# How the session catalog works
 
 A session whose `storage` section has a `catalog` key runs a `tiled` server on
 this machine, from build to shutdown.

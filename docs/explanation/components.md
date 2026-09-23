@@ -1,4 +1,8 @@
-# Components
+---
+icon: lucide/boxes
+---
+
+# How devices, presenters and views fit together
 
 A [component](../reference/glossary.md#component) is a device, a presenter or
 a view. This page explains what each one is, and how a component gets the

@@ -1,4 +1,8 @@
-# Derived products
+---
+icon: lucide/git-branch
+---
+
+# How derived products are stored
 
 A derived product is an array a component computes from a run and keeps next
 to the data it came from, such as a median over a scan or a filtered copy

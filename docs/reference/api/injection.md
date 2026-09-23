@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Injection
 
 ## Sharing and asking

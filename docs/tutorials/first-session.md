@@ -1,4 +1,8 @@
-# Your first session
+---
+icon: lucide/play
+---
+
+# Writing your first session
 
 In this tutorial you build a small application: a simulated motor stage, a
 button that moves it, and a label that shows where it is. It takes about

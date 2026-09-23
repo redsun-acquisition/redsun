@@ -1,4 +1,8 @@
-# Share a value between components
+---
+icon: lucide/share-2
+---
+
+# How to share a value between components
 
 One component makes something, and others need it: a viewer model, a
 calibration, the readings of a motor. Share it as a

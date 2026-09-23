@@ -1,4 +1,8 @@
-# Frontends
+---
+icon: lucide/monitor
+---
+
+# How a frontend shows a session on screen
 
 A [frontend](../reference/glossary.md#frontend) is what shows a session to a
 person: a desktop window, and in the future perhaps a web page. `redsun` ships

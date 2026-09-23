@@ -1,4 +1,8 @@
-# Write a component
+---
+icon: lucide/puzzle
+---
+
+# How to write a component
 
 This page shows how to write each kind of
 [component](../reference/glossary.md#component) and add it to a session.

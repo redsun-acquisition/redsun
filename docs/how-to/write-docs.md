@@ -1,4 +1,8 @@
-# Write documentation
+---
+icon: lucide/pen-line
+---
+
+# How to write documentation
 
 These rules apply to every page under `docs/` and to every docstring, since
 the reference pages are made from docstrings.
@@ -49,10 +53,9 @@ Other rules:
 | section | the reader wants to | example |
 | --- | --- | --- |
 | Tutorials | learn by building something, step by step | build your first session |
-| How-to guides | get one task done | write a service |
-| Explanation | understand how and why | how a build runs |
+| How-to Guides | get one task done, including contributing and migrating | how to write a service |
+| Explanations | understand how and why | how a session build sequence works |
 | Reference | look up a fact | an API page, the glossary |
-| Migration | move code to a new release | 0.13 to 0.14 |
 
 Write each fact once, on the page where it belongs, and link to it from the
 others. The API reference comes from docstrings, so fix a wrong API page in

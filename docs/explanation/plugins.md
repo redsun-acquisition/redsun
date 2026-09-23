@@ -1,4 +1,8 @@
-# Plugins
+---
+icon: lucide/plug
+---
+
+# How plugins provide components
 
 A [plugin](../reference/glossary.md#plugin) is an installed Python package that
 offers components to sessions. A session file can then name a component by

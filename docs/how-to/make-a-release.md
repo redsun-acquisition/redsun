@@ -1,4 +1,8 @@
-# Make a release
+---
+icon: lucide/package
+---
+
+# How to make a release
 
 The changelog is written from the pull requests merged since the last
 release, grouped by their [labels](commits-and-prs.md#labels). Nobody edits

@@ -1,4 +1,8 @@
-# Configure logging
+---
+icon: lucide/scroll-text
+---
+
+# How to configure logging
 
 `redsun` logs to one logger, `redsun`. By default it is at `INFO` and writes to
 `sys.stdout`, with a formatter naming the component each record came from:

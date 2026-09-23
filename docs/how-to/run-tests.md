@@ -1,11 +1,15 @@
-# Run tests
+---
+icon: lucide/flask-conical
+---
+
+# How to run the tests
 
 Run the `redsun` test suite, type-check it against both Qt bindings, and
 produce coverage reports.
 
 ## Prerequisites
 
-[Set up a development environment](setup.md).
+[Set up a development environment](set-up-development.md).
 
 ## Run everything
 

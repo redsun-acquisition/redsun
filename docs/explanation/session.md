@@ -1,4 +1,8 @@
-# Sessions
+---
+icon: lucide/list-ordered
+---
+
+# How a session build sequence works
 
 A [session](../reference/glossary.md#session) is one running application. It
 knows which [components](../reference/glossary.md#component) to make, makes

@@ -1,4 +1,8 @@
-# Commits and pull requests
+---
+icon: lucide/git-pull-request
+---
+
+# How to write commits and pull requests
 
 ## Commit messages
 

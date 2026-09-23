@@ -1,4 +1,8 @@
-# Qt widgets
+---
+icon: lucide/layout-panel-left
+---
+
+# How the Qt plan widgets work
 
 `redsun.view.qt` provides Qt widgets for interfaces that run plans.
 

@@ -1,4 +1,8 @@
-# Run the commit checks
+---
+icon: lucide/check-check
+---
+
+# How to run the commit checks
 
 `redsun` checks formatting and lint with [`prek`](https://prek.j178.dev), which
 runs the hooks listed in `prek.toml` at the project root. The same hooks run on
@@ -6,7 +10,7 @@ every commit once installed, in `uv run tox -e lint`, and in CI.
 
 ## Prerequisites
 
-[Set up a development environment](setup.md).
+[Set up a development environment](set-up-development.md).
 `prek` and `ruff` live in the `lint` dependency group, which `dev` includes.
 
 ## Install the git hook

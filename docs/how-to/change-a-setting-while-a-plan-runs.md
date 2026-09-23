@@ -1,4 +1,8 @@
-# Change a setting while a plan runs
+---
+icon: lucide/sliders-horizontal
+---
+
+# How to change a device setting while a plan runs
 
 A user changes a device setting from a view while the engine runs a plan. A
 camera's region of interest is the usual case: applied halfway through a

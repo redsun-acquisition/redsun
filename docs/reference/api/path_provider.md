@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Path provider
 
 ::: redsun.path_provider

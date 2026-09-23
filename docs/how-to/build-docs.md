@@ -1,8 +1,12 @@
-# Build documentation
+---
+icon: lucide/book
+---
+
+# How to build the docs
 
 ## Prerequisites
 
-[Set up a development environment](setup.md).
+[Set up a development environment](set-up-development.md).
 
 ## Build with Zensical
 

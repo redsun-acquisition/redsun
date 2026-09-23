@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Utilities
 
 ::: redsun.utils.descriptors

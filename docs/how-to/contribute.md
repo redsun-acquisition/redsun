@@ -1,6 +1,10 @@
-# Contributing
+---
+icon: lucide/heart-handshake
+---
 
-This section is for people changing `redsun` itself. If you are writing a
+# How to contribute
+
+These steps are for people changing `redsun` itself. If you are writing a
 session or a plugin that uses `redsun`, start with the
 [tutorial](../tutorials/first-session.md) instead.
 
@@ -10,7 +14,7 @@ session or a plugin that uses `redsun`, start with the
    agreed on before you write it. A small fix can skip this.
 2. **Branch from `main`**, named after the kind of change and what it does:
    `fix/log-folder`, `feat/strict-sessions`, `docs/glossary`.
-3. **Set up your environment** once: see [Set up](setup.md).
+3. **Set up your environment** once: see [How to set up a development environment](set-up-development.md).
 4. **Make the change**, with tests. Run the checks before you push:
    see [Run tests](run-tests.md) and [Run the commit checks](run-commit-checks.md).
 5. **Open a pull request against `main`**, following
@@ -19,16 +23,13 @@ session or a plugin that uses `redsun`, start with the
 6. **Wait for CI and a review.** CI runs the same checks as
    `uv run tox`. A reviewer may ask for changes; push them to the same branch.
 
-## The pages in this section
+## The guides for each step
 
-- [Set up](setup.md): the development environment.
-- [Run tests](run-tests.md): the test suite, type checks and coverage.
-- [Run the commit checks](run-commit-checks.md): formatting and lint.
-- [Build the docs](build-docs.md): the documentation site.
-- [Commits and pull requests](commits-and-prs.md): how to write them, and the
-  labels.
-- [Write documentation](write-docs.md): the writing style.
-- [Record a decision](decisions.md): when and how to write an
-  [ADR](../reference/glossary.md#adr).
-- [Make a release](release.md): how the changelog is written and a version
-  published.
+- [How to set up a development environment](set-up-development.md)
+- [How to run the tests](run-tests.md)
+- [How to run the commit checks](run-commit-checks.md)
+- [How to build the docs](build-docs.md)
+- [How to write commits and pull requests](commits-and-prs.md)
+- [How to write documentation](write-docs.md)
+- [How to record a decision](record-a-decision.md)
+- [How to make a release](make-a-release.md)

@@ -1,4 +1,8 @@
-# From 0.13 to the next release
+---
+icon: lucide/arrow-right-left
+---
+
+# How to migrate from 0.13
 
 The next release replaces the container layer (`redsun.containers`,
 `redsun.virtual`, `AppContainer`) with the session layer that 0.13 did not
@@ -124,12 +128,12 @@ def setup(self, readings: MotorReadings) -> None:
 ```
 
 `try_require(KEY)` is a parameter `x: X | None = None`. See
-[Share a value](../how-to/share-a-value.md).
+[Share a value](share-a-value.md).
 
 The keys `redsun.path_provider.PATH_PROVIDER`, `redsun.catalog.CATALOG` and
 `redsun.engine.DEFERRALS` are removed. Ask for the type instead: a
 `SessionPathProvider` or `CatalogAddress | None` parameter, and `Deferrals`
-from the component that [shares it](../how-to/change-a-setting-while-a-plan-runs.md).
+from the component that [shares it](change-a-setting-while-a-plan-runs.md).
 
 ## Wiring
 
@@ -197,7 +201,7 @@ build step; `start_services` can no longer be called before `build`.
 | an entry naming no plugin and no declared component was ignored | it is logged and left out |
 
 New keys: `strict`, `providers`, `actions`, `color_scheme`. See
-[Write a session file](../how-to/write-a-session-file.md).
+[Write a session file](write-a-session-file.md).
 
 ## Other changes
 

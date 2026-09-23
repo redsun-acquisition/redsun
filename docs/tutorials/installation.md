@@ -1,3 +1,7 @@
+---
+icon: lucide/download
+---
+
 # Installation
 
 ## Create a virtual environment
@@ -86,4 +90,4 @@ Install from [PyPI](https://pypi.org/project/redsun/) or from the GitHub [reposi
     pip install redsun[pyside]
     ```
 
-To change `redsun` itself, see [Contributing](../contributing/index.md).
+To change `redsun` itself, see [How to contribute](../how-to/contribute.md).

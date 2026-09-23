@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Logging
 
 `redsun` logs everything to the `redsun` logger. Usage is in

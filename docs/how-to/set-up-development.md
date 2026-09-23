@@ -1,4 +1,8 @@
-# Set up
+---
+icon: lucide/wrench
+---
+
+# How to set up a development environment
 
 Get a copy of `redsun` you can change and test.
 

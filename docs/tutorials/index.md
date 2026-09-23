@@ -1,6 +1,10 @@
+---
+icon: lucide/graduation-cap
+---
+
 # Tutorials
 
-Step-by-step lessons. Each one builds something small you can run.
+Installation and a first working session. New users start here.
 
-- **[Your first session](first-session.md)**: a simulated stage, a button and
-  a label, connected into a working application.
+- [Installation](installation.md)
+- [Writing your first session](first-session.md)

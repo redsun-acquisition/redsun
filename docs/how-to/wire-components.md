@@ -1,4 +1,8 @@
-# Wire components together
+---
+icon: lucide/cable
+---
+
+# How to wire components together
 
 Components do not connect themselves. A presenter declares
 [signals](../reference/glossary.md#signal), a view declares signals and

@@ -1,4 +1,8 @@
-# Keep a catalog of runs
+---
+icon: lucide/library
+---
+
+# How to keep a catalog of runs
 
 A session can run a `tiled` server beside its files, so its runs can be read
 back through the `tiled` client. What goes into it is up to the session's
