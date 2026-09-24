@@ -2560,7 +2560,8 @@ messages of the plan instead: once the message under way completes, every
 change queued by then runs before the next message is sent. The plan
 contains nothing about it, so every plan gets the behaviour, and it is
 neither suspended nor rewound. A change asked for during a plan's last
-message runs when the plan ends.</p>
+message runs before the plan returns, so whoever waits on the plan's result
+finds it applied.</p>
 <h2 id="build-one-beside-the-engine">Build one beside the engine<a class="headerlink" href="#build-one-beside-the-engine" title="Permanent link">&para;</a></h2>
 <p>Whoever owns the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RunEngine&lt;/span&gt;" href="../../reference/api/engine/#redsun.engine.RunEngine"><code>RunEngine</code></a> builds the
 <code>Deferrals</code> and provides it under <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;DEFERRALS&lt;/span&gt;
