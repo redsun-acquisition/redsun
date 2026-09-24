@@ -9,6 +9,15 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Deferrals`** (`redsun.engine`) applies a change asked for during a
+  plan's last message before the plan returns, so its result is available
+  only once the change ran. A halted plan's changes run once the engine is
+  idle.
+
+## [0.13.1] - 24-09-2026
+
 ### Added
 
 - **`RunEngine.sig_state_changed`** (`redsun.engine`) - the engine's new
@@ -52,10 +61,6 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
-- **`Deferrals`** (`redsun.engine`) applies a change asked for during a
-  plan's last message before the plan returns, so its result is available
-  only once the change ran. A halted plan's changes run once the engine is
-  idle.
 - The plans page's example and the engine API page name only stubs that
   exist: `read_while_waiting`, `read_and_stash`, `stash` and `clear_cache`
   are gone, and `RunEngineInterrupted` is `bluesky`'s.
@@ -1343,6 +1348,7 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.13.1]: https://github.com/redsun-acquisition/redsun/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/redsun-acquisition/redsun/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
