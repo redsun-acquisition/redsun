@@ -1,3 +1,7 @@
+---
+icon: lucide/code
+---
+
 # Async runtime
 
 Design rationale:

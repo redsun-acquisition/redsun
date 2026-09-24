@@ -1,20 +1,7 @@
-from enum import Enum, unique
+"""Where a view asks to be attached, and the widgets views share."""
 
-from ._base import PView, View
+from __future__ import annotations
 
-__all__ = ["PView", "View", "ViewPosition"]
+from ._placement import Placement
 
-
-@unique
-class ViewPosition(str, Enum):
-    """Where a view sits in the main window.
-
-    !!! warning
-        The values follow Qt's dock widget areas and may change.
-    """
-
-    CENTER = "center"
-    LEFT = "left"
-    RIGHT = "right"
-    TOP = "top"
-    BOTTOM = "bottom"
+__all__ = ["Placement"]

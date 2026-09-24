@@ -17,6 +17,12 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.11"
 
+      # the build runs the tutorial's session to take a picture of its window
+      - name: Set up a display for Qt
+        uses: pyvista/setup-headless-display-action@v3
+        with:
+          qt: true
+
       - name: Build docs and check cross-references
         run: uv run --locked --only-group tox tox -e docs
 

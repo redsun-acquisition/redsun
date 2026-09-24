@@ -1,7 +1,10 @@
+---
+icon: lucide/graduation-cap
+---
+
 # Tutorials
 
-Step-by-step lessons. Each one builds something small you can run.
+Installation and a first working session. New users start here.
 
-!!! note
-
-    Tutorials will follow.
+- [Installation](installation.md)
+- [Writing your first session](first-session.md)

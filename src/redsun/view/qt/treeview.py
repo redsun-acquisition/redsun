@@ -14,9 +14,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
-
-from redsun.virtual import Signal
 
 if TYPE_CHECKING:
     from typing import Never

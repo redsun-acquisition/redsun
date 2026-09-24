@@ -8,38 +8,44 @@ cross-link, don't duplicate.
 ```text
 redsun/
 |-- src/redsun/
-|   |-- __init__.py            AppContainer and the declare_* functions
+|   |-- __init__.py            what a component author imports: Session, AsDevice, ...
 |   |-- aio.py                 shared background event loop, run_coro
 |   |-- log.py                 redsun logger, buffer, session log files
 |   |-- plugins.yaml           manifest of the built-in views
-|   |-- containers/            AppContainer, declare_*, hook points, config loading
-|   |   `-- qt/                QtAppContainer and the main window
+|   |-- session/               Session, declarations, build steps, plugin loading
+|   |-- qt/                    QtSession, placements, actions, colour scheme
+|   |-- ports/                 slot, connections, wiring errors
+|   |-- injection/             provides, DevicesOf, shared values
+|   |-- registry/              SessionConfig, PlanEntry, CallbackType, DeviceMapping
 |   |-- engine/                RunEngine wrapper, actions, plan stubs
-|   |-- presenter/             Presenter ABC, PPresenter, plan spec, built-ins
+|   |-- presenter/             plan spec: plan signatures read into widget descriptions
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
+|   |-- _config.py             session file loading, merging and validation
+|   |-- _catalog.py            require_tiled, start_catalog
 |   |-- writers/               Writer for derived products, one stream per format
-|   |-- view/                  View ABC, PView
+|   |-- view/                  Placement
 |   |   `-- qt/                Qt widgets and the built-in LogView
-|   |-- virtual/               VirtualContainer, wiring, provider protocols
-|   |-- qt/                    public Qt entry point, re-exports
-|   `-- utils/                 find_signals, descriptor helpers, session_folder (_paths.py)
+|   `-- utils/                 descriptor helpers, session_folder (_paths.py)
 |-- tests/
-|   |-- conftest.py            qt marker, qapp, log directory, psygnal queue
-|   |-- sdk/                   unit tests, mirroring src/redsun
-|   |-- container/             container, plugin discovery, services, hooks
-|   |   |-- mock_pkg/          fake plugin package: devices, presenters, views, services
-|   |   `-- configs/           session YAML files the tests load
+|   |-- conftest.py            qt marker, qapp, log directory, psygnal queue, build
+|   |-- test_*.py              session tests, one module per subject
+|   |-- mock_bundle/           fake plugin package the session tests discover
+|   |-- configs/               session YAML files the tests load
+|   |-- launchable/mock_pkg/   service stand-ins a test launches as processes
+|   |-- sdk/                   unit tests of the shared modules
 |   |-- compose/               an IOC in a container, for the tests marked compose
 |   `-- typing/                assert_type modules, checked by mypy, never run
 |-- docs/                      Diataxis site built by zensical
-|   |-- tutorials/
-|   |-- how-to/
+|   |-- tutorials/             installation, first session
+|   |-- how-to/                one task per page, contributing and migration included
 |   |-- explanation/           architecture pages and decisions/ (ADRs)
-|   `-- reference/             api/ pages and changelog.md
+|   `-- reference/             api/ pages, glossary, changelog (generated)
 |-- benchmarks/                performance scripts, not tests, sdist only
-|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs)
-|-- .github/workflows/         CI: code analysis, tests, docs check and publish
+|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
+|                              release_notes.py (changelog sections),
+|                              screenshots.py (tutorial window pictures, docs build)
+|-- .github/workflows/         CI, changelog label check, prepare-release
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
 |-- zensical.toml              docs site and navigation
@@ -49,9 +55,8 @@ redsun/
 - There is no device package: devices, `DeviceMap` included, come from
   ophyd-async.
 - `redsun.utils` imports nothing from `redsun` at runtime, only under
-  `TYPE_CHECKING`: `log.py` imports `redsun.utils._paths`, and
-  `redsun.virtual` imports `redsun.log`, so a runtime import there would be
-  circular.
+  `TYPE_CHECKING`: `log.py` imports `redsun.utils._paths`, so a runtime import
+  there would be circular.
 - `benchmarks/` are never collected by pytest. Run one with
   `uv run python benchmarks/bench_acquire_zarr.py`.
 
@@ -79,6 +84,13 @@ uv run tox -e mypy-pyqt,mypy-pyside
 | `tests` | `pytest -q` |
 | `docs` | `zensical build` then `scripts/check_xrefs.py` |
 
+**Run what the change can break, not the whole matrix.** A change confined to
+`docs/` (pages, ADRs, changelogs, `zensical.toml`) can only break the docs
+build, so validate it with `uv run tox -e docs` alone. A change to docstrings
+in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
+reference pages render them: `uv run tox -e lint,docs`. Anything touching code
+or tests runs the full `uv run tox`.
+
 The project `.venv` still works for a quick loop (`uv run pytest -q`), but it
 is not authoritative: it holds every group any `uv sync` has installed, both Qt
 bindings included. One such run reported five `QAction` errors tox does not,
@@ -102,7 +114,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 - mypy is `strict = true` with `warn_unreachable`; `files = "."` with only
   `docs/` excluded, so **tests are strictly type-checked too**. `mypy_path`
-  (`src`, `tests/container`) + `explicit_package_bases` make `mock_pkg`
+  (`src`, `tests/launchable`) + `explicit_package_bases` make `mock_pkg`
   resolve; don't pass mypy an explicit path or tests fall out of scope. Only
   `import-untyped` and `no-untyped-call` are globally disabled; do not widen
   that list to silence a real error.
@@ -115,37 +127,26 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 ## Architecture invariants
 
-- **`VirtualContainer`** subclasses `dependency_injector.DynamicContainer` and
-  is at once the DI container, the psygnal signal bus, and the
-  document-callback registry. Config is frozen (`_FrozenConfig`); read it
-  through the `schema_version` / `frontend` / `session` / `metadata`
-  properties.
-- **`AppContainer.build()` phase order cannot change**, and its docstring
-  records it: services -> VirtualContainer -> devices -> connect -> presenters -> views ->
-  `register_providers` -> `wire` -> `inject_dependencies`. Every provider is
-  registered before any injection runs; never interleave the last two phases,
-  and never move work into `__init__` that belongs in a phase.
-- **Services live outside the build.** `shutdown()` stops them whether or not
-  the container was built, and before the session log file closes; a build
-  that raises stops them before the exception leaves it.
-- **A component that fails to build is logged and skipped, in every layer.**
-  The build records the exception under the component's name in `_failed` and
-  carries on, so a session runs with what it has. Phases and the
-  `devices`/`presenters`/`views` properties read `_built_of`, never the
-  declarations, so a mapping can be shorter than what was declared.
+- **`Session.build()` step order cannot change**, and `BUILD_STEPS` records
+  it: services -> devices -> connect -> registry -> presenters -> views ->
+  setup -> seal -> wiring -> presentation -> report, after
+  `read_configuration` and `start_runtime`. Never move work into `__init__`
+  that belongs in a step.
+- **Services start in the first build step.** Each stop is registered as a
+  release, so `shutdown()` stops them after every component, and a build that
+  raises runs its releases before the exception leaves it.
+- **A component that fails to build is logged and skipped.** The build records
+  the exception under the component's name in `_failed` and carries on, so a
+  session runs with what it has, and the `devices`/`presenters`/`views`
+  mappings can be shorter than what was declared.
   Rationale: `docs/explanation/decisions/0011-tolerating-a-component-that-fails-to-build.md`.
-- Wiring is protocol-based, not inheritance-based: `IsProvider`, `IsInjectable`,
-  `HasShutdown` (sync, presenters and hooks) are `@runtime_checkable`
-  Protocols checked with `isinstance`.
-- `PPresenter`/`PView` data members are **read-only properties**, never plain
-  attributes, which would break structural subtyping for property-based and
-  covariant implementers. The `Presenter`/`View` ABCs must NOT inherit the
-  protocols, property descriptors shadowing instance attributes at runtime.
-  A presenter or view is checked twice: constructor shape (`(name, devices)` /
-  `(name,)` via `expects_positionals`) at declaration, then protocol
-  `isinstance` on the **built instance** in `_PresenterComponent.build`/
-  `_ViewComponent.build`. Never reintroduce class-level attribute checks.
-  Rationale: `docs/explanation/decisions/0003-structural-subtyping-for-presenters-and-views.md`.
+- Components conform by shape, never by inheritance: `NamedComponent`,
+  `AttachableComponent`, `HasSetup` and `HasShutdown` are protocols checked on
+  the built instance.
+- A presenter or view is checked twice: at declaration (layer, a `name` a
+  keyword can fill, placement, `Frontend.check_view`), then on the **built
+  instance** against its layer's protocol. A failed check skips the component.
+  Rationale: `docs/explanation/decisions/0016-a-component-refused-at-declaration-is-skipped.md`.
 
 ### Acquisition storage
 
@@ -189,7 +190,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   can never say that a method is private, and both the docs filter
   (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's autocomplete
   key on the name. So `_hooks.py` holds `parse_hook_specs`, while
-  `AppContainer._build_devices` stays underscored.
+  `Session._declarations` stays underscored.
   **A class no `__all__` re-exports is private as a whole**, so its members
   drop the underscore too: the session-file and manifest models in `_config`
   and `_manifest` name their validators `group_hooks`, not `_group_hooks`. The
@@ -226,8 +227,11 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   and not to explain a `# noqa`. The suppression code already names the rule.
   If a runtime import is surprising, say why at the annotation that needs it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
-- Public API change -> docstring + `docs/reference/changelog.md` entry. The root
-  `CHANGELOG.md` is only a redirect to it; never add entries there.
+- Public API change -> docstring, and a changelog label on the pull request.
+  The changelog is written from the labels at release time
+  (`docs/how-to/make-a-release.md`); never edit `docs/reference/changelog.md` by
+  hand. A change that breaks existing code also gets the `breaking` label and a
+  line on the current `docs/how-to/migrate-from-*.md` page.
 
 ### Docstrings and comments
 
@@ -277,7 +281,6 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   imported or executed: pytest skips them (no `test_` prefix) and mypy checks
   them via `files = "."`. `assert_type` demands an exact match, so an attribute
   regressing to `Any` fails there while every runtime test still passes.
-  `tests/typing/component_attributes.py` pins the `declare_*` returns.
 
 ## Docs conventions
 

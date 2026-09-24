@@ -1,4 +1,8 @@
-# Configure logging
+---
+icon: lucide/scroll-text
+---
+
+# How to configure logging
 
 `redsun` logs to one logger, `redsun`. By default it is at `INFO` and writes to
 `sys.stdout`, with a formatter naming the component each record came from:
@@ -21,25 +25,26 @@ A record below `INFO` also shows the file and line it came from.
 
 ## Set the level for a session
 
-Pass `log_level` to the container. It takes a `logging` constant or a level
+Pass `log_level` to the session. It takes a `logging` constant or a level
 name, as [`logging.Logger.setLevel`][logging.Logger.setLevel] does:
 
 ```python
 import logging
 
-from redsun.qt import QtAppContainer
+from redsun.qt import QtSession
 
 
-class MyApp(QtAppContainer, config="session.yaml"): ...
+class MyApp(QtSession):
+    config = "session.yaml"
 
 
 app = MyApp(log_level=logging.DEBUG)
 ```
 
-`AppContainer.from_config` takes the same keyword and passes it on:
+`Session.from_config` takes the same keyword:
 
 ```python
-app = AppContainer.from_config("session.yaml", log_level=logging.DEBUG)
+app = Session.from_config("session.yaml", log_level=logging.DEBUG)
 ```
 
 Without it the logger keeps its level, `INFO` unless something changed it.
@@ -52,7 +57,7 @@ Without it the logger keeps its level, `INFO` unless something changed it.
 ## Set the level anywhere else
 
 [`set_level`][redsun.log.set_level] sets the logger's level directly, for a
-script or notebook without a container:
+script or notebook without a session:
 
 ```python
 from redsun.log import set_level
@@ -65,8 +70,8 @@ unknown name raises `ValueError`.
 
 ## Find a session's log file
 
-A container also writes a run's records to a file, opened when the container
-is constructed and closed by `shutdown()`. It sits under `logs` in the
+A session also writes a run's records to a file, opened when the build reads
+the configuration and closed by `shutdown()`. It sits under `logs` in the
 session's root, `storage.base_dir` in the session file, in a folder named after
 the session, then `app`. Without a `storage.base_dir` the root is the user's
 data directory, as `platformdirs` reports it:
@@ -150,7 +155,7 @@ is
 ## Show the logs in the application
 
 [`LogView`][redsun.view.qt.builtins.LogView] is a built-in Qt view of the
-session's records. Declare it under `views` like any other component:
+session's records. Name it under `views` in the session file:
 
 ```yaml
 views:
@@ -173,7 +178,7 @@ pushes application records out. Its controls:
 | `Clear log window` | empties the console of the tab shown; the records stay available to `Level` and `Save logs...` |
 | `Open log folder` | opens the folder holding the session's log files in the system's file browser |
 
-Without session log files, as outside a container, `Save logs...` writes the
+Without session log files, as outside a session, `Save logs...` writes the
 records held in memory and `Open log folder` is disabled.
 
 ## Send records somewhere else as well
@@ -212,12 +217,11 @@ the `redsun` logger that fills in the class and name shown in the output:
 
 ```python
 from redsun.log import Loggable
-from redsun.presenter import Presenter
 
 
-class MyController(Presenter, Loggable):
-    def __init__(self, name: str, devices: dict[str, Device]) -> None:
-        super().__init__(name, devices)
+class MyController(Loggable):
+    def __init__(self, name: str) -> None:
+        self.name = name
         self.logger.info("Initialized")
 ```
 

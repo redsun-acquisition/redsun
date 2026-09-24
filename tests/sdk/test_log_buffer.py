@@ -118,7 +118,7 @@ def test_service_records_are_read_per_service_or_merged_by_time() -> None:
     ("name", "service"),
     [
         ("redsun", None),
-        ("redsun.containers", None),
+        ("redsun.session", None),
         ("redsun.service.cam", "cam"),
         ("redsun.service.cam.caproto.ioc", "cam"),
         ("redsun.services", None),

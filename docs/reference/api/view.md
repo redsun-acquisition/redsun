@@ -1,12 +1,14 @@
+---
+icon: lucide/code
+---
+
 # View
 
-## Base classes
+## Placement
 
-::: redsun.view.View
-
-::: redsun.view.PView
-
-::: redsun.view.ViewPosition
+::: redsun.Placement
+    options:
+      show_root_heading: true
 
 ## Qt widgets
 

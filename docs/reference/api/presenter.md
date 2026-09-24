@@ -1,10 +1,8 @@
+---
+icon: lucide/code
+---
+
 # Presenter
-
-## Base classes
-
-::: redsun.presenter.Presenter
-
-::: redsun.presenter.PPresenter
 
 ## Plan specification
 

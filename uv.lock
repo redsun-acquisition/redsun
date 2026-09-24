@@ -371,6 +371,21 @@ wheels = [
 ]
 
 [[package]]
+name = "app-model"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "in-n-out" },
+    { name = "psygnal" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/5e/a6ab504f9f11f3dfd8ce2861bd76822d8a22588affbc480f21d886d1714b/app_model-0.5.1.tar.gz", hash = "sha256:5623e7ba9d8244a67fdbe803f7c6cf48e544a128da9ed1745236307fe33cc9d8", size = 120500, upload-time = "2025-11-09T18:49:59.193Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/4f/e284b04faa34e540429cfaf7a44de9555691afc244000316da6e0c5a1154/app_model-0.5.1-py3-none-any.whl", hash = "sha256:6318c220c1c7b3c033c392be2ed22c4a92488636922d7571b16379f0917ef9e8", size = 65220, upload-time = "2025-11-09T18:49:57.796Z" },
+]
+
+[[package]]
 name = "argon2-cffi"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1336,28 +1351,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dependency-injector"
-version = "4.49.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/84/5e05c2997a196155b86446d48b9e5b2a055087c574746389fdc3c530f5b5/dependency_injector-4.49.1.tar.gz", hash = "sha256:b4614fa3731ffec00a381aebc1d17317b0a3a407aa679f164a3ea03c347de691", size = 1171204, upload-time = "2026-06-18T17:51:48.221Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/1e/9f3abdf0ac42cac1c319b210aa060669ea9d29f06caf00c27fe72fa5335c/dependency_injector-4.49.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:b1b71d6f500c001230a53e5bee01ea01c6d3bb2089f64ecc841b42672924a19a", size = 1771519, upload-time = "2026-06-18T17:50:58.476Z" },
-    { url = "https://files.pythonhosted.org/packages/68/20/fc1812f20ec75af2d4b5e391e93f15621af3102da46142e26177eb506b32/dependency_injector-4.49.1-cp310-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:10e481880b307a6a438c1cc7b0a1fa8754247239ef5a2e8fe82bd8a1e76e7682", size = 1854593, upload-time = "2026-06-18T17:51:02.069Z" },
-    { url = "https://files.pythonhosted.org/packages/32/ab/b1e1826aacc37d07ba0101230de7b5cbbb5ac6364b78ca3957f0a90d6a51/dependency_injector-4.49.1-cp310-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:e05da5bc73a3e026f962a223672002934c0f415064b6e2c3db0b255e46c7b521", size = 1767354, upload-time = "2026-06-18T17:51:03.715Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/ab/1d873876e9adb612f8fba1e801820bf5a69cd7d864e01dca81651edd40f6/dependency_injector-4.49.1-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:5760390d295af0b605aacd02bb8ac2e9fe206f9c4fbe7770d0843a6cbfb9c2cd", size = 1748758, upload-time = "2026-06-18T17:51:05.287Z" },
-    { url = "https://files.pythonhosted.org/packages/ee/ef/d715f4cd2e947fddc4c8763be1c4099793caf38aa1a099b6d621ecfeb768/dependency_injector-4.49.1-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:ba7e94e4323219c93dac35aabba7efa4e91c9afeac044b1d50bdc66a00a07238", size = 1845636, upload-time = "2026-06-18T17:51:07.023Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/32/03d1e5e0c6b79eaabf2ed4155302df05832e54789cc9f670cc62af20897b/dependency_injector-4.49.1-cp310-abi3-win32.whl", hash = "sha256:5a6e3a0df8cff636da3d7212473e30dff897c5bdbca2dd3049b5363012a495fa", size = 1548655, upload-time = "2026-06-18T17:51:08.721Z" },
-    { url = "https://files.pythonhosted.org/packages/93/51/ce3ca96314f93f44358523cb8cdf81c8c1e002b4e097141e460bc598c87f/dependency_injector-4.49.1-cp310-abi3-win_amd64.whl", hash = "sha256:153f6b8d1db35d1fc9b001e41564a47ab2a7708038fecefadf3afada8ec7f814", size = 1676934, upload-time = "2026-06-18T17:51:10.465Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/d0/175cc74c5b66be348a89086c221f9766f563164ef50d41c9dbd056df3241/dependency_injector-4.49.1-pp311-pypy311_pp73-macosx_11_0_arm64.whl", hash = "sha256:4fd20dd61d5cf3c98919a2ea6f647e8154e0b2d69ec729695ffa105c106f720a", size = 1746494, upload-time = "2026-06-18T17:51:40.23Z" },
-    { url = "https://files.pythonhosted.org/packages/3c/be/13b61e6c54ccdf937c76369f83c459597c0a65161efb20734d33f5b198e4/dependency_injector-4.49.1-pp311-pypy311_pp73-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:e1d8e5141dba1f942265029e385e26543ff9207ee158b411daeb75684dd4e8e6", size = 1823860, upload-time = "2026-06-18T17:51:42.433Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/1f/70a5107fda9ba772e5427f4a0a87c8a80e51e0dc6a10d2c2efc6cd8640ce/dependency_injector-4.49.1-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3c11aa23a425864443742b2487e2bbb9a0b64686aa5794982314a7cabee61a91", size = 1743046, upload-time = "2026-06-18T17:51:44.351Z" },
-    { url = "https://files.pythonhosted.org/packages/96/e6/7e9cea8ad23df40bffef671175c741c9c231da524fd855677cbd2657929c/dependency_injector-4.49.1-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:e4e5aaa3bf6d6b8fc74b487ff8df3881c6efe1689a8576a45d5be76c932f6ecd", size = 1653579, upload-time = "2026-06-18T17:51:46.372Z" },
-]
-
-[[package]]
 name = "distlib"
 version = "0.4.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2034,6 +2027,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e4/06/b56dfa750b44e86157093bc8fca0ab81dccbf5260510de4eaf1cb69b5b99/importlib_resources-7.1.0.tar.gz", hash = "sha256:0722d4c6212489c530f2a145a34c0a7a3b4721bc96a15fada5930e2a0b760708", size = 44985, upload-time = "2026-04-12T16:36:09.232Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl", hash = "sha256:1bd7b48b4088eddb2cd16382150bb515af0bd2c70128194392725f82ad2c96a1", size = 37232, upload-time = "2026-04-12T16:36:08.219Z" },
+]
+
+[[package]]
+name = "in-n-out"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/08/07edfac98a38ab0208557524cbdd94a296f565b0558417ccb2c03d14a6ea/in_n_out-0.2.1.tar.gz", hash = "sha256:43cde2b7de981d41a6d70618a2b7bd989481095922a53ead4dc75f2bbd5dffea", size = 26026, upload-time = "2024-04-22T18:56:50.418Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/06/711a4d105ad3d01d3ef351a1039bb5cc517a57dbf377d7da9a0808e34c77/in_n_out-0.2.1-py3-none-any.whl", hash = "sha256:343e81edb27cf41ec946134a92964f408465abdf6a065c6c55fe96f53bc3c8b7", size = 19951, upload-time = "2024-04-22T18:56:48.572Z" },
 ]
 
 [[package]]
@@ -4642,7 +4644,7 @@ source = { editable = "." }
 dependencies = [
     { name = "bluesky" },
     { name = "culsans" },
-    { name = "dependency-injector" },
+    { name = "in-n-out" },
     { name = "ophyd-async" },
     { name = "platformdirs" },
     { name = "psygnal" },
@@ -4656,16 +4658,19 @@ ome-zarr = [
     { name = "ome-writers", extra = ["acquire-zarr"] },
 ]
 pyqt = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
 ]
 pyside = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
 ]
 qt-common = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
 ]
@@ -4683,6 +4688,7 @@ coverage = [
 ]
 dev = [
     { name = "acquire-zarr" },
+    { name = "app-model" },
     { name = "caproto" },
     { name = "coverage" },
     { name = "griffe-fieldz" },
@@ -4724,16 +4730,19 @@ pva = [
     { name = "p4p" },
 ]
 pyqt = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
 ]
 pyside = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
 ]
 qt-common = [
+    { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
 ]
@@ -4751,9 +4760,12 @@ zarr = [
 [package.metadata]
 requires-dist = [
     { name = "acquire-zarr", marker = "extra == 'zarr'", specifier = ">=0.10.0" },
+    { name = "app-model", marker = "extra == 'pyqt'", specifier = ">=0.5.1" },
+    { name = "app-model", marker = "extra == 'pyside'", specifier = ">=0.5.1" },
+    { name = "app-model", marker = "extra == 'qt-common'", specifier = ">=0.5.1" },
     { name = "bluesky", specifier = ">=1.15.1" },
     { name = "culsans", specifier = ">=0.11.0" },
-    { name = "dependency-injector", specifier = ">=4.49.1" },
+    { name = "in-n-out", specifier = ">=0.2.1" },
     { name = "magicgui", marker = "extra == 'pyqt'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'pyside'", specifier = ">=0.10.2" },
     { name = "magicgui", marker = "extra == 'qt-common'", specifier = ">=0.10.2" },
@@ -4778,6 +4790,7 @@ provides-extras = ["ome-zarr", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
 coverage = [{ name = "coverage", specifier = ">=7.16.1" }]
 dev = [
     { name = "acquire-zarr", specifier = ">=0.10.0" },
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "caproto", specifier = ">=1.3.0" },
     { name = "coverage", specifier = ">=7.16.1" },
     { name = "griffe-fieldz", specifier = ">=0.4.0" },
@@ -4818,16 +4831,19 @@ pva = [
     { name = "p4p", specifier = ">=4.2.2" },
 ]
 pyqt = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
 pyside = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6", specifier = ">=6.11.0" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
 qt-common = [
+    { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]

@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from redsun.containers._config import session_file_schema
-from redsun.containers._manifest import PluginManifest
+from redsun._config import session_file_schema
+from redsun._manifest import PluginManifest
 
 TARGET = Path(__file__).parent.parent / "docs" / "reference" / "schemas"
 

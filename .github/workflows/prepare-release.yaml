@@ -1,0 +1,46 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the leading v, such as 0.14.0"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    name: Open the release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Write the changelog section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must look like 0.14.0, got '$VERSION'" >&2
+            exit 1
+          fi
+          python3 scripts/release_notes.py prepare "$VERSION"
+
+      - name: Commit it and open a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "release/v$VERSION"
+          git commit -am "docs: add the $VERSION changelog"
+          git push origin "release/v$VERSION"
+          gh pr create --base main --label skip-changelog \
+            --title "docs: add the $VERSION changelog" \
+            --body "Adds the changelog section for $VERSION. Merge it, then tag the merge commit v$VERSION."

@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
+import sys
 import threading
 import time
+import traceback
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -34,19 +36,23 @@ if TYPE_CHECKING:
 TIMEOUT = 10.0
 
 
-def _drain_state(
+def drain_state(
     backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
 ) -> str:
     """Describe a drain that did not do what a test waited for.
 
     Named on the assertion so that a failure on a machine nobody can reach
-    says which stage stalled, rather than ``assert False``.
+    says which stage stalled and what the shared loop's thread was running,
+    rather than ``assert False``.
     """
     task = backend._run_task
+    thread = _ensure_event_loop_running.loop_to_thread[get_shared_loop()]  # type: ignore[attr-defined]
+    frame = sys._current_frames().get(thread.ident)
+    stack = "".join(traceback.format_stack(frame)) if frame else "no frame\n"
     return (
         f"drain: cancelled={task.cancelled()} done={task.done()} "
         f"running={backend.running.is_set()} draining={backend._draining} "
-        f"records={caplog.record_tuples}"
+        f"records={caplog.record_tuples}\nshared loop thread:\n{stack}"
     )
 
 
@@ -280,7 +286,7 @@ def test_queue_shutdown_is_not_an_error(
 ) -> None:
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         backend.close()
-        assert wait_until(lambda: not backend.running.is_set()), _drain_state(
+        assert wait_until(lambda: not backend.running.is_set()), drain_state(
             backend, caplog
         )
 
@@ -303,8 +309,8 @@ def test_drain_cancellation_is_not_an_error(
     """
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         assert backend._run_task.cancel()
-        assert wait_until(backend._run_task.cancelled), _drain_state(backend, caplog)
-        assert wait_until(lambda: not backend.running.is_set()), _drain_state(
+        assert wait_until(backend._run_task.cancelled), drain_state(backend, caplog)
+        assert wait_until(lambda: not backend.running.is_set()), drain_state(
             backend, caplog
         )
 
@@ -330,7 +336,7 @@ def test_unexpected_drain_failure_is_logged(
 
     with caplog.at_level(logging.ERROR, logger="redsun"):
         failing = set_async_backend()
-        assert wait_until(lambda: not failing.running.is_set()), _drain_state(
+        assert wait_until(lambda: not failing.running.is_set()), drain_state(
             failing, caplog
         )
 

@@ -8,6 +8,7 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
 - Diataxis under `docs/`: `tutorials/` (learning), `how-to/` (task),
   `explanation/` (rationale), `reference/api/` (mkdocstrings-generated facts).
 - One authoritative source per fact; cross-link instead of restating.
+- Writing style and glossary linking: `docs/how-to/write-docs.md`.
 - Material-style admonitions (`!!! warning`), mermaid fences for diagrams.
 - Reference pages are generated from docstrings: fix the docstring, not the
   `.md`, when reference content is wrong.
@@ -21,7 +22,7 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
   build. Run the guard after every build:
 
   ```bash
-  uv run zensical build
+  uv run --group docs zensical build
   uv run python scripts/check_xrefs.py
   ```
 

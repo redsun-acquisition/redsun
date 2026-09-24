@@ -9,12 +9,12 @@ from qtpy import QtCore, QtGui
 from qtpy import QtWidgets as QtW
 
 from redsun.log import GlobalFormatter, log_buffer, service_of, session_log
-from redsun.view import ViewPosition
-from redsun.view.qt import QtView
+from redsun.qt import Dock
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from typing import Any
+
+    from redsun.view import Placement
 
 __all__ = ["LogView"]
 
@@ -62,7 +62,7 @@ _ALL_SERVICES = "All services"
 """Selector entry showing the records of every service."""
 
 
-class LogView(QtView):
+class LogView(QtW.QWidget):
     """Read-only console of the running session's log records.
 
     Records logged before the view existed are shown too, read from the session
@@ -83,22 +83,14 @@ class LogView(QtView):
     With session log files open, ``Save logs...`` copies the files of the tab
     shown and ``Open log folder`` opens their folder in the file browser;
     without them the folder button is disabled.
-
-    Parameters
-    ----------
-    name : str
-        Identity key of the view, positional-only.
-    kwargs : Any, optional
-        Additional keyword arguments (unused).
     """
 
-    @property
-    def view_position(self) -> ViewPosition:
-        """Position in the main window."""
-        return ViewPosition.BOTTOM
+    placement: Placement = Dock("bottom")
+    """Docked at the bottom of the main window."""
 
-    def __init__(self, name: str, /, **kwargs: Any) -> None:
-        super().__init__(name, **kwargs)
+    def __init__(self, name: str, parent: QtW.QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
 
         self._formatter = GlobalFormatter(datefmt="%d-%m-%y|%H:%M:%S")
         self._level = logging.INFO

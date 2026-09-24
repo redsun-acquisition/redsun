@@ -1,18 +1,27 @@
+---
+icon: lucide/book-open
+---
+
 # Reference
 
-## API reference
+Technical reference material, including the API, the glossary and the
+release notes.
 
-- **[Container](api/container.md)** - `AppContainer`, `AppConfig`, component field functions
-- **[Engine](api/engine.md)** - `RunEngine`, `Status`, actions, plan stubs
-- **[Presenter](api/presenter.md)** - `Presenter`, `PPresenter`, plan spec, built-ins
-- **[Path provider](api/path_provider.md)** - `SessionPathProvider`, `PlanFilenameProvider`, `session_directory`
-- **[Writers](api/writers.md)** - `Writer`, `ArrayShape`, `WriterError`
-- **[View](api/view.md)** - `View`, `PView`, Qt plan widgets, `DescriptorTreeView`
-- **[Virtual container](api/virtual.md)** - `VirtualContainer`, `slot`, `ports`, provider protocols
-- **[Utilities](api/utils.md)** - `find_signals`
-- **[Logging](api/log.md)** - `Loggable`
-
-## Other
-
-- **[Glossary](glossary.md)** - The vocabulary these pages are written in
-- **[Changelog](changelog.md)** - Version history and release notes
+- [Session](api/session.md)
+- [Injection](api/injection.md)
+- [Registry](api/registry.md)
+- [Ports](api/ports.md)
+- [Qt](api/qt.md)
+- [View](api/view.md)
+- [Presenter](api/presenter.md)
+- [Engine](api/engine.md)
+- [Services](api/services.md)
+- [Path provider](api/path_provider.md)
+- [Catalog](api/catalog.md)
+- [Writers](api/writers.md)
+- [Async runtime](api/aio.md)
+- [Logging](api/log.md)
+- [Utilities](api/utils.md)
+- [Glossary](glossary.md)
+- [Changelog](changelog.md)
+- [Previous changelog](previous-changelog.md)

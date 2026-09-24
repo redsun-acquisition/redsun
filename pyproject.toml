@@ -27,7 +27,7 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "bluesky>=1.15.1",
     "culsans>=0.11.0",
-    "dependency-injector>=4.49.1",
+    "in-n-out>=0.2.1",
     "ophyd-async>=0.21.2",
     "platformdirs>=4.11.0",
     "psygnal>=0.15.1",
@@ -62,6 +62,7 @@ docs = [
 ]
 
 qt-common = [
+    "app-model>=0.5.1",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
 ]
@@ -107,6 +108,7 @@ tox = [
 
 [project.optional-dependencies]
 qt-common = [
+    "app-model>=0.5.1",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
 ]
@@ -132,6 +134,9 @@ ome-zarr = [
 [project.entry-points."redsun.plugins"]
 redsun = "plugins.yaml"
 
+[project.entry-points."redsun.frontends"]
+qt = "redsun.qt:QtSession"
+
 [project.urls]
 bugs = "https://github.com/redsun-acquisition/redsun/issues"
 changelog = "https://github.com/redsun-acquisition/redsun/blob/master/changelog.md"
@@ -150,8 +155,10 @@ include = [
 
 [tool.mypy]
 files = "."
-exclude = ["docs"]
-mypy_path = ["src", "tests/container"]
+# example code in the docs is written to be read, and runs when the docs build;
+# site/ holds the built copy of it
+exclude = ["^docs/", "^site/"]
+mypy_path = ["src", "tests/launchable"]
 explicit_package_bases = true
 disable_error_code = [
     "import-untyped",
@@ -161,6 +168,11 @@ pretty = true
 strict = true
 warn_unreachable = true
 warn_no_return = true
+
+# mock_bundle is put on sys.path by tests/conftest.py, which mypy does not run
+[[tool.mypy.overrides]]
+module = ["mock_bundle.*"]
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["redsun"]
@@ -173,6 +185,9 @@ omit = [
 # the repository under a different absolute path
 [tool.coverage.paths]
 source = ["src/", "*/src/"]
+
+[tool.ruff]
+exclude = ["sketches/"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -187,6 +202,7 @@ extend-select = [
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 
 [tool.ruff.lint.per-file-ignores]
+"docs/**/*.py" = ["D"]
 "tests/*.py" = [
     # ignore missing docstrings in tests
     "D101",
@@ -236,8 +252,10 @@ commands = [["pytest", "-q", { replace = "posargs", extend = true }]]
 
 [tool.tox.env.docs]
 dependency_groups = ["dev", "docs"]
+pass_env = ["DISPLAY", "QT_QPA_PLATFORM"]
 commands = [
     ["python", "scripts/export_schemas.py"],
+    ["python", "scripts/screenshots.py"],
     ["zensical", "build"],
     ["python", "scripts/check_xrefs.py"],
 ]
@@ -259,6 +277,7 @@ minversion = "6.0"
 testpaths = [
     "tests",
 ]
+pythonpath = ["."]
 addopts = "-p no:warnings"
 asyncio_mode = "auto"
 markers = [

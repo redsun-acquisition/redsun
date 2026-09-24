@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
-import dependency_injector.providers as dip
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
 
     from ._wrapper import RunEngine
 
-__all__ = ["DEFERRALS", "Deferrals"]
+__all__ = ["Deferrals"]
 
 logger = logging.getLogger("redsun")
 
@@ -105,7 +104,3 @@ class Deferrals:
             await apply()
         except Exception:
             logger.exception("A deferred change failed")
-
-
-DEFERRALS: dip.Dependency[Deferrals] = dip.Dependency(instance_of=Deferrals)
-"""Key under which the engine's owner provides its `Deferrals`."""

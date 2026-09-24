@@ -33,6 +33,14 @@ STOP_TIMEOUT: Final = 10.0
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
+launch_lock = threading.Lock()
+"""Held while a service reserves its transport and copies the environment.
+
+Services started from several threads at once would otherwise draw one port
+twice, lose an entry of an address list, or copy the environment while
+another thread changes it.
+"""
+
 PVXS_LINE: Final = re.compile(
     r"^(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\.(?P<fraction>\d+) "
     r"(?P<level>CRIT|ERR|WARN|INFO|DEBUG) (?P<name>pvxs(?:\.\w+)*) (?P<message>.*)$"
@@ -171,15 +179,16 @@ class Service:
         if self.module is None or self.running:
             return
         transport = TRANSPORTS[self.transport]
-        reserved = transport.reserve(self.name)
-        transport.publish(self.name)
-        env = {
-            **os.environ,
-            **reserved,
-            "PYTHONUTF8": "1",
-            "REDSUN_SERVICE_NAME": self.name,
-            "REDSUN_SERVICE_PREFIX": self.prefix,
-        }
+        with launch_lock:
+            reserved = transport.reserve(self.name)
+            transport.publish(self.name)
+            env = {
+                **os.environ,
+                **reserved,
+                "PYTHONUTF8": "1",
+                "REDSUN_SERVICE_NAME": self.name,
+                "REDSUN_SERVICE_PREFIX": self.prefix,
+            }
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one

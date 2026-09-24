@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from redsun.log import GlobalFormatter
-from redsun.services import Service, _service
+from redsun.services import Service, _service, _transports
 from redsun.services._service import service_record
 from redsun.services._transports import (
     CHANNEL_ACCESS,
@@ -34,7 +34,7 @@ STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
 PVA_READY = "pva stand-in ready"
 READY = "stand-in ready"
-MOCK_PACKAGES = str(Path(__file__).parents[1] / "container")
+MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 STDLIB_WARNING = json.dumps(
     {
         "name": "caproto.ioc.camera",
@@ -257,6 +257,22 @@ def test_a_stopped_service_emits_no_exit(launch: Callable[..., Service]) -> None
     stand_in.stop()
 
     assert exits == []
+
+
+def test_a_port_another_service_holds_is_not_given_again(
+    launch: Callable[..., Service],
+    service_log: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The system may hand out one port twice; the second service draws again."""
+    drawn = iter([40001, 40001, 40002])
+    monkeypatch.setattr(_transports, "free_udp_port", lambda: next(drawn))
+    first, second = launch(name="first"), launch(name="second")
+
+    first.start()
+    second.start()
+
+    assert logged_ports(service_log) == ["40001", "40002"]
 
 
 def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(

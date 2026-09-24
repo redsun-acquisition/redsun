@@ -7,9 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import dependency_injector.providers as dip
-
-__all__ = ["CATALOG", "CatalogAddress"]
+__all__ = ["CatalogAddress"]
 
 
 @dataclass(frozen=True)
@@ -29,7 +27,3 @@ class CatalogAddress:
     """
 
     uri: str = field(repr=False)
-
-
-CATALOG: dip.Dependency[CatalogAddress] = dip.Dependency(instance_of=CatalogAddress)
-"""Key for the session's catalog address, bound when ``storage`` has a ``catalog``."""

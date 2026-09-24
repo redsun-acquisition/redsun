@@ -1,3 +1,9 @@
+---
+icon: lucide/house
+hide:
+  - toc
+---
+
 [![PyPI](https://img.shields.io/pypi/v/redsun.svg?color=green)](https://pypi.org/project/redsun)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/redsun)](https://pypi.org/project/redsun)
 [![codecov](https://codecov.io/gh/redsun-acquisition/redsun/graph/badge.svg?token=XAL7NBIU9N)](https://codecov.io/gh/redsun-acquisition/redsun)
@@ -7,77 +13,67 @@
 
 # `redsun`
 
-!!! note
+!!! note "Still settling"
     `redsun` is ready to deploy, but expect breaking changes while the API settles.
 
 `redsun` is a [CPython] framework for building modular scientific data acquisition software.
 
 It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
 
-`redsun` aims to:
+<div style="display: flex; justify-content: center" markdown>
 
-- ship the tools to build the wheel, rather than another wheel;
-- stay modular: use only the parts a job needs;
-- leave data and metadata to you: you decide what they mean.
-
-## Getting started
-
-<div class="grid cards" markdown>
-
--   __Tutorials__
-
-    ---
-
-    Step-by-step lessons
-
-    [Start learning :octicons-arrow-right-24:](tutorials/index.md)
-
--   __How-to guides__
-
-    ---
-
-    Recipes for common tasks
-
-    [Browse guides :octicons-arrow-right-24:](how-to/index.md)
-
--   __Reference__
-
-    ---
-
-    API reference and changelog
-
-    [View reference :octicons-arrow-right-24:](reference/index.md)
-
--   __Explanation__
-
-    ---
-
-    Concepts and design
-
-    [Read explanations :octicons-arrow-right-24:](explanation/index.md)
+| What | Where |
+| --- | --- |
+| Source | <https://github.com/redsun-acquisition/redsun> |
+| PyPI | `pip install redsun` |
+| Documentation | <https://redsun-acquisition.github.io/redsun> |
+| Releases | <https://github.com/redsun-acquisition/redsun/releases> |
 
 </div>
 
-## Quick links
+## How the documentation is structured
 
-- **[Installation guide](how-to/installation.md)**
-- **[Statement of need](explanation/statement.md)**
-- **[API reference](reference/api/container.md)**
-- **[Changelog](reference/changelog.md)**
+The documentation is split into [four categories](https://diataxis.fr), also
+reachable from the tabs at the top. Technical words are defined once, in the
+[glossary](reference/glossary.md).
 
-## About the documentation
+<div class="grid cards" markdown>
 
-The pages follow the [Diataxis](https://diataxis.fr/) layout:
+-   :lucide-graduation-cap:{ .lg .middle } **Tutorials**
 
-- **Tutorials** teach by building something
-- **How-to guides** solve one task
-- **Reference** describes the API
-- **Explanation** discusses concepts and decisions
+    ---
 
-## Project links
+    Installation and a first working session. New users start here.
 
-- [GitHub repository](https://github.com/redsun-acquisition/redsun)
-- [PyPI package](https://pypi.org/project/redsun/)
+    [:lucide-arrow-right: Tutorials](tutorials/index.md)
+
+-   :lucide-compass:{ .lg .middle } **How-to Guides**
+
+    ---
+
+    Practical step-by-step guides for one task each, including working on
+    `redsun` itself.
+
+    [:lucide-arrow-right: How-to Guides](how-to/index.md)
+
+-   :lucide-lightbulb:{ .lg .middle } **Explanations**
+
+    ---
+
+    Explanations of how `redsun` works and why it works that way.
+
+    [:lucide-arrow-right: Explanations](explanation/index.md)
+
+-   :lucide-book-open:{ .lg .middle } **Reference**
+
+    ---
+
+    Technical reference material, including the API, the glossary and the
+    release notes.
+
+    [:lucide-arrow-right: Reference](reference/index.md)
+
+</div>
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [cpython]: https://www.python.org/

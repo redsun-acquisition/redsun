@@ -6,14 +6,26 @@ from typing import TYPE_CHECKING, Final, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any
 
-__all__ = ["CHANNEL_ACCESS", "PV_ACCESS", "TRANSPORTS", "Transport"]
+__all__ = [
+    "CHANNEL_ACCESS",
+    "PV_ACCESS",
+    "TRANSPORTS",
+    "TRANSPORT_KEY",
+    "Transport",
+    "checked_transport",
+    "transport_of",
+]
 
 CHANNEL_ACCESS: Final = "channel-access"
 """The protocol a session's services speak unless it says otherwise."""
 
 PV_ACCESS: Final = "pv-access"
 """The other protocol a session may name."""
+
+TRANSPORT_KEY: Final = "transport"
+"""The key of the ``services`` section naming what its services speak."""
 
 LOOPBACK: Final = "127.0.0.1"
 """Where a launched service listens, and where this process looks for it."""
@@ -92,7 +104,11 @@ class ChannelAccess:
     def _port(self, service: str) -> int:
         """Return the service's port, taking a free one the first time."""
         if service not in self._ports:
-            self._ports[service] = free_udp_port()
+            # the system may hand out a port it already gave another service
+            port = free_udp_port()
+            while port in self._ports.values():
+                port = free_udp_port()
+            self._ports[service] = port
         return self._ports[service]
 
 
@@ -142,13 +158,41 @@ TRANSPORTS: dict[str, Transport] = {
 """The transports a session may name, by the name a session file writes."""
 
 
+def transport_of(config: Mapping[str, Any]) -> Any:
+    """Return what a configuration names under ``services.transport``.
+
+    ``None`` when it names nothing. Whatever it wrote otherwise, a string
+    or not: the caller says what a mapping there means.
+    """
+    services = config.get("services") or {}
+    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
+
+
+def checked_transport(name: str, where: str) -> str:
+    """Return *name*, refusing a transport ``redsun`` does not have.
+
+    Raises
+    ------
+    TypeError
+        Naming what was read and the transports there are.
+    """
+    if name not in TRANSPORTS:
+        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
+        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
+    return name
+
+
 def add_to_env(name: str, value: str) -> None:
     """Append *value* to the environment variable *name*, space separated."""
     os.environ[name] = " ".join(filter(None, [os.environ.get(name), value]))
 
 
 def free_udp_port() -> int:
-    """Return a UDP port on the loopback interface that nothing is bound to."""
+    """Return a UDP port on the loopback interface that nothing is bound to.
+
+    The port is free when read; nothing holds it for the caller, so another
+    program can bind it first, and a later call may return it again.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port: int = sock.getsockname()[1]

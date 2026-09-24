@@ -1,4 +1,8 @@
-# The session catalog
+---
+icon: lucide/database
+---
+
+# How the session catalog works
 
 A session whose `storage` section has a `catalog` key runs a `tiled` server on
 this machine, from build to shutdown.
@@ -7,8 +11,8 @@ this machine, from build to shutdown.
 ## What `redsun` does
 
 It starts the server, keeps its database in `<base_dir>/<session>/catalog`,
-and provides its address under [`CATALOG`][redsun.catalog.CATALOG]. It
-registers nothing: acquisition bytes belong to the service and its device
+and gives its address to any component asking for a
+[`CatalogAddress`][redsun.catalog.CatalogAddress]. It registers nothing: acquisition bytes belong to the service and its device
 ([ADR 0013](decisions/0013-acquisition-storage-belongs-to-the-device.md)), and
 the session's components decide whether runs are recorded. Each opens its own
 client with `tiled`'s `from_uri` and gets the whole client API.

@@ -1,4 +1,8 @@
-# Statement of need
+---
+icon: lucide/target
+---
+
+# Why redsun exists
 
 Scientific data acquisition means controlling many devices, coordinating measurements, and managing the data and metadata they produce. The [Bluesky] ecosystem provides a hardware abstraction layer and a data model, but turning them into a complete application with a usable interface is still hard work.
 
@@ -13,9 +17,9 @@ graph TD
 
 ## The role of each part
 
-- **`redsun` as SDK** provides base classes and communication patterns (devices, presenters, views, and a shared container through which components exchange signals and data), so every package is written the same way.
+- **`redsun` as SDK** provides the patterns components are written in: devices, presenters and views, and the signals, slots and shared values they exchange, so every package is written the same way.
 - **Components** are packages users write: hardware drivers, logic and interfaces built on the `redsun` SDK.
-- **`redsun` as application shell** discovers plugins, wires them together through its container, and launches the application.
+- **`redsun` as application shell** discovers plugins, builds their components into a session, connects them, and launches the application.
 
 ## Design philosophy
 

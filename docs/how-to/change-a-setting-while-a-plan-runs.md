@@ -1,4 +1,8 @@
-# Change a setting while a plan runs
+---
+icon: lucide/sliders-horizontal
+---
+
+# How to change a device setting while a plan runs
 
 A user changes a device setting from a view while the engine runs a plan. A
 camera's region of interest is the usual case: applied halfway through a
@@ -17,34 +21,41 @@ finds it applied.
 ## Build one beside the engine
 
 Whoever owns the [`RunEngine`][redsun.engine.RunEngine] builds the
-`Deferrals` and provides it under [`DEFERRALS`][redsun.engine.DEFERRALS]:
+`Deferrals` and [shares](../reference/glossary.md#shared-value) it:
 
 ```python
-from redsun.engine import DEFERRALS, Deferrals, RunEngine
+from redsun import provides
+from redsun.engine import Deferrals, RunEngine
 
 
-class AcquisitionPresenter(Presenter):
-    def __init__(self, name: str, devices: dict[str, Device]) -> None:
-        super().__init__(name, devices)
+class AcquisitionPresenter:
+    def __init__(self, name: str) -> None:
+        self.name = name
         self.engine = RunEngine()
-        self.deferrals = Deferrals(self.engine)
+        self._deferrals = Deferrals(self.engine)
 
-    def register_providers(self, container: VirtualContainer) -> None:
-        container.provide(DEFERRALS, self.deferrals)
+    @provides
+    def deferrals(self) -> Deferrals:
+        return self._deferrals
 ```
 
 ## Ask for it where the setting is written
 
-A component writing a setting takes the key in `inject_dependencies` and
-hands the write over as a coroutine function:
+A component writing a setting asks for `Deferrals` in `setup`, and hands the
+write over as a coroutine function:
 
 ```python
-from redsun.engine import DEFERRALS
+from redsun import DevicesOf, slot
+from redsun.engine import Deferrals
 
 
-class DetectorPresenter(Presenter):
-    def inject_dependencies(self, container: VirtualContainer) -> None:
-        self._deferrals = container.require(DEFERRALS)
+class DetectorPresenter:
+    def __init__(self, name: str, *, detectors: DevicesOf[HasRoi]) -> None:
+        self.name = name
+        self.detectors = detectors
+
+    def setup(self, deferrals: Deferrals) -> None:
+        self._deferrals = deferrals
 
     @slot
     async def set(self, detector: str, value: str) -> None:

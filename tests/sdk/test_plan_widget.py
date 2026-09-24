@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 import pytest
 from bluesky.utils import MsgGenerator
+from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
 from redsun.engine.actions import Action, continous
@@ -20,7 +21,7 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
 )
 from redsun.view.qt._widget_factory import create_param_widget
-from redsun.view.qt.utils import ActionButton, create_plan_widget
+from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 
 pytestmark = pytest.mark.qt
 
@@ -32,6 +33,22 @@ def _application(qapp: QtW.QApplication) -> None:
     The widgets are built without asking for one, so run alone the module
     made and lost its own, and the interpreter died between tests.
     """
+
+
+class Recorder:
+    """A document callback of the ordinary shape."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __call__(self, name: str, doc: Any) -> None: ...
+
+
+CALLBACKS = {name: Recorder(name) for name in ("a", "b", "c", "own")}
+"""Every callback the tests hand a plan widget, by name."""
+
+CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
+"""The callbacks a user may attach; ``own`` is only ever carried by a plan."""
 
 
 def _simple_spec() -> PlanSpec:
@@ -277,6 +294,103 @@ class TestCreatePlanWidget:
     def test_get_action_button_returns_none_for_unknown(self) -> None:
         pw = create_plan_widget(_action_spec())
         assert pw.get_action_button("nonexistent") is None
+
+
+def _listed(pw: PlanWidget) -> list[str]:
+    """Return every entry of the callbacks list, checked or not, in order."""
+    assert pw.callbacks_list is not None
+    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
+    return [item.text() for item in items if item is not None]
+
+
+class TestCallbacksList:
+    """Tests for the document callbacks a plan widget offers."""
+
+    @pytest.mark.parametrize(
+        ("carried", "extendable", "listed"),
+        [
+            ((), True, ["a", "b", "c"]),
+            (("b",), True, ["b", "a", "c"]),
+            (("b",), False, ["b"]),
+            (("own",), True, ["own", "a", "b", "c"]),
+        ],
+    )
+    def test_the_plans_own_callbacks_are_listed_first(
+        self, carried: tuple[str, ...], extendable: bool, listed: list[str]
+    ) -> None:
+        """One the catalogue also holds is labelled by its name and listed once."""
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS[name] for name in carried],
+            extendable=extendable,
+            available_callbacks=CATALOGUE,
+        )
+        assert _listed(pw) == listed
+        assert pw.callbacks == [CALLBACKS[name] for name in listed]
+
+    def test_a_plan_running_with_no_callbacks_has_no_list(self) -> None:
+        pw = create_plan_widget(
+            _simple_spec(), extendable=False, available_callbacks=CATALOGUE
+        )
+        assert pw.callbacks_list is None
+        assert pw.callbacks == []
+
+    @pytest.mark.parametrize(
+        ("attached", "expected"),
+        [
+            (None, ["a", "b", "c"]),
+            (["c", "a"], ["c", "a"]),
+            (["gone", "b"], ["b"]),
+        ],
+    )
+    def test_a_previous_choice_is_restored(
+        self, attached: list[str] | None, expected: list[str]
+    ) -> None:
+        pw = create_plan_widget(
+            _simple_spec(), available_callbacks=CATALOGUE, attached_callbacks=attached
+        )
+        assert pw.attached_callbacks == expected
+        assert pw.callbacks == [CALLBACKS[name] for name in expected]
+
+    def test_the_plans_own_callback_cannot_be_unchecked(self) -> None:
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS["own"]],
+            available_callbacks=CATALOGUE,
+        )
+        assert pw.callbacks_list is not None
+        item = pw.callbacks_list.item(0)
+        assert item is not None
+        assert not item.flags() & QtCore.Qt.ItemFlag.ItemIsUserCheckable
+        assert pw.attached_callbacks == ["a", "b", "c"]
+
+    def test_unchecking_a_callback_reports_the_attached_names(self) -> None:
+        reported: list[list[str]] = []
+        pw = create_plan_widget(
+            _simple_spec(),
+            available_callbacks=CATALOGUE,
+            selection_callback=reported.append,
+        )
+        assert pw.callbacks_list is not None
+        item = pw.callbacks_list.item(0)
+        assert item is not None
+        item.setCheckState(QtCore.Qt.CheckState.Unchecked)
+        assert reported == [["b", "c"]]
+
+    def test_a_callback_moved_above_the_plans_own_is_put_after_it(self) -> None:
+        reported: list[list[str]] = []
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS["own"]],
+            available_callbacks=CATALOGUE,
+            selection_callback=reported.append,
+        )
+        assert pw.callbacks_list is not None
+        model = pw.callbacks_list.model()
+        assert model is not None
+        model.moveRow(QtCore.QModelIndex(), 3, QtCore.QModelIndex(), 0)
+        assert _listed(pw) == ["own", "c", "a", "b"]
+        assert reported[-1] == ["c", "a", "b"]
 
 
 class TestPlanWidgetControlAPI:
