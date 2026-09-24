@@ -17,7 +17,7 @@ def RE() -> Iterator[RunEngine]:
     engine = RunEngine()
     yield engine
     if engine.state != "idle":
-        engine.abort()
+        engine.abort().result(timeout=10)
 
 
 @pytest.fixture(scope="function")

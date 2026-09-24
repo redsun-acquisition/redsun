@@ -81,7 +81,7 @@ def test_a_halted_plan_unlocks(RE: RunEngine) -> None:
 
     with pytest.raises(RunEngineInterrupted):
         RE(rps.lock_wrapper(bps.pause(), Device(name="stage"))).result(timeout=10)
-    RE.halt()
+    RE.halt().result(timeout=10)
 
     assert RE.locked == frozenset()
     assert seen == [{"stage"}, frozenset()]
