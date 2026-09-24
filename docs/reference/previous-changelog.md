@@ -4,11 +4,20 @@ icon: lucide/archive
 
 # Previous changelog
 
-The changes up to 0.13.1, written by hand before the changelog was made from
+The changes up to 0.13.2, written by hand before the changelog was made from
 pull requests. Later releases are in the [changelog](changelog.md).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Dates are written `DD-MM-YYYY`.
+
+## [0.13.2] - 24-09-2026
+
+### Fixed
+
+- **`Deferrals`** (`redsun.engine`) applies a change asked for during a
+  plan's last message before the plan returns, so its result is available
+  only once the change ran. A halted plan's changes run once the engine is
+  idle.
 
 ## [0.13.1] - 24-09-2026
 
@@ -1342,6 +1351,7 @@ Dates are written `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.13.2]: https://github.com/redsun-acquisition/redsun/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/redsun-acquisition/redsun/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/redsun-acquisition/redsun/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
