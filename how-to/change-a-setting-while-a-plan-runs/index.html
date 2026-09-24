@@ -2556,10 +2556,11 @@ point, one event stream carries frames of two shapes, and the store the
 service writes no longer matches the <code>StreamResource</code> describing it. Any
 setting a plan's readings depend on has the same problem.</p>
 <p><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Deferrals&lt;/span&gt;" href="../../reference/api/engine/#redsun.engine.Deferrals"><code>Deferrals</code></a> applies such a change between two
-messages of the plan instead: the engine suspends the plan once the message
-under way completes, applies every change queued by then, and resumes. The
-plan contains nothing about it, so every plan gets the behaviour. The cost is
-a pause the user sees, about a second.</p>
+messages of the plan instead: once the message under way completes, every
+change queued by then runs before the next message is sent. The plan
+contains nothing about it, so every plan gets the behaviour, and it is
+neither suspended nor rewound. A change asked for during a plan's last
+message runs when the plan ends.</p>
 <h2 id="build-one-beside-the-engine">Build one beside the engine<a class="headerlink" href="#build-one-beside-the-engine" title="Permanent link">&para;</a></h2>
 <p>Whoever owns the <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RunEngine&lt;/span&gt;" href="../../reference/api/engine/#redsun.engine.RunEngine"><code>RunEngine</code></a> builds the
 <code>Deferrals</code> and provides it under <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-attribute&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-attribute-name&quot;&gt;DEFERRALS&lt;/span&gt;
@@ -2607,13 +2608,12 @@ Several changes asked for during one message are applied together, in the
 order asked. A change that raises is logged under <code>redsun</code> and the ones after
 it still run.</p>
 <h2 id="what-a-plan-sees">What a plan sees<a class="headerlink" href="#what-a-plan-sees" title="Permanent link">&para;</a></h2>
-<p>Nothing. The suspension is <code>bluesky</code>'s own, a
-<a href="https://blueskyproject.io/bluesky/main/state-machine.html#suspending">suspender</a>
-installed on the engine, so a plan that pauses and resumes on its own terms
-already handles it: <code>bps.checkpoint</code> marks where a plan may be rewound, and a
-message under way, such as a <code>trigger</code> that waits for a frame, completes
-before the plan is suspended. A plan without checkpoints still suspends, at
-the next message.</p>
+<p>Nothing. <code>Deferrals</code> is a preprocessor on the engine, and it runs each queued
+change as a <code>wait_for</code> inserted before the plan's next message. No message
+runs twice: a <code>bluesky</code> suspension would rewind to the last checkpoint and
+replay what came after it, which is why one is not used. A change waits as
+long as the message under way takes, so a plan that sleeps or waits for a
+long move delays it by that much.</p>
 
 
 
