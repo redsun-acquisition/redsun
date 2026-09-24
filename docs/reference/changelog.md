@@ -52,6 +52,10 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Fixed
 
+- **`Deferrals`** (`redsun.engine`) applies a change asked for during a
+  plan's last message before the plan returns, so its result is available
+  only once the change ran. A halted plan's changes run once the engine is
+  idle.
 - The plans page's example and the engine API page name only stubs that
   exist: `read_while_waiting`, `read_and_stash`, `stash` and `clear_cache`
   are gone, and `RunEngineInterrupted` is `bluesky`'s.

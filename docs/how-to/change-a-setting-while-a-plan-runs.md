@@ -11,7 +11,8 @@ messages of the plan instead: once the message under way completes, every
 change queued by then runs before the next message is sent. The plan
 contains nothing about it, so every plan gets the behaviour, and it is
 neither suspended nor rewound. A change asked for during a plan's last
-message runs when the plan ends.
+message runs before the plan returns, so whoever waits on the plan's result
+finds it applied.
 
 ## Build one beside the engine
 
