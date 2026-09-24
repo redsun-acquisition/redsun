@@ -7,13 +7,9 @@ from threading import Lock, Thread
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from bluesky.run_engine import (
-    LoggingPropertyMachine,
-    RunEngineResult,
-    RunEngineStateMachine,
-)
-from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
+from bluesky.run_engine import RunEngineResult
 from psygnal import Signal
 
 from redsun.aio import get_shared_loop
@@ -42,18 +38,6 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 R = TypeVar("R")
-
-
-class LockReleasingState(LoggingPropertyMachine):
-    """The engine's state, which releases every device lock on reaching idle.
-
-    A halted plan skips its cleanup, so its ``unlock`` messages never run.
-    """
-
-    def __set__(self, obj: RunEngine, value: str) -> None:
-        super().__set__(obj, value)
-        if self.__get__(obj, type(obj)) == "idle":
-            obj._release_locks()
 
 
 class RunEngine(BlueskyRunEngine):
@@ -149,7 +133,8 @@ class RunEngine(BlueskyRunEngine):
     sig_locks_changed = Signal(frozenset)
     """The names of the locked devices, whenever that set changes."""
 
-    _state = LockReleasingState(RunEngineStateMachine)
+    sig_state_changed = Signal(str, str)
+    """The engine's new and old state on every change, as ``bluesky`` names them: ``idle``, ``running``, ``pausing``, ``paused``."""
 
     def __init__(
         self,
@@ -183,6 +168,8 @@ class RunEngine(BlueskyRunEngine):
 
         # override pause message to be an empty string
         self.pause_msg = ""
+        # bluesky types the hook as None, its default
+        self.state_hook = self._on_state_change  # type: ignore[assignment]
 
         # register custom commands
         self._command_registry.update(
@@ -249,6 +236,21 @@ class RunEngine(BlueskyRunEngine):
         """
         return self._run_in_thread(super().resume)
 
+    def stop(self) -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan and mark it successful, on a thread of its own.
+
+        A paused plan runs its cleanup there, not on the caller's thread.
+        """
+        return self._run_in_thread(super().stop)
+
+    def abort(self, reason: str = "") -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan and mark it aborted, on a thread of its own."""
+        return self._run_in_thread(partial(super().abort, reason))
+
+    def halt(self) -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan with no cleanup, on a thread of its own."""
+        return self._run_in_thread(super().halt)
+
     def _run_in_thread(self, call: Callable[[], R]) -> Future[R]:
         """Run *call* on a thread of its own, which ends with it, and return its future."""
         future: Future[R] = Future()
@@ -269,6 +271,15 @@ class RunEngine(BlueskyRunEngine):
 
     async def _unlock(self, msg: Msg) -> None:
         self._update_locks(msg.kwargs["token"], None)
+
+    def _on_state_change(self, new: str, old: str) -> None:
+        """Announce the state, releasing every lock on idle first.
+
+        A halted plan skips its cleanup, so its ``unlock`` messages never run.
+        """
+        if new == "idle":
+            self._release_locks()
+        self.sig_state_changed.emit(new, old)
 
     def _release_locks(self) -> None:
         with self._held_guard:

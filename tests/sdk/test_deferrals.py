@@ -39,6 +39,7 @@ class Recorder:
     def plan(self, pause: float = 0.3) -> MsgGenerator[None]:
         self.order.append("first")
         yield from bps.sleep(pause)
+        yield from bps.null()
         self.order.append("second")
 
 
@@ -113,3 +114,38 @@ def test_a_change_that_fails_is_logged_and_the_next_still_applied(
 
     assert recorder.order == ["first", "failed", "applied", "second"]
     assert "A deferred change failed" in caplog.text
+
+
+def test_a_change_runs_before_the_next_message_without_replaying_any(
+    RE: RunEngine, running: Callable[[Recorder], None]
+) -> None:
+    """The plan is neither suspended nor rewound: every message runs once."""
+    deferrals = Deferrals(RE)
+    recorder = Recorder()
+    seen: list[str] = []
+    RE.msg_hook = lambda msg: seen.append(msg.command)  # type: ignore[assignment]
+    running(recorder)
+
+    deferrals.request(recorder.apply)
+    assert recorder.future is not None
+    recorder.future.result(timeout=5)
+
+    assert recorder.order == ["first", "applied", "second"]
+    assert seen.count("sleep") == 1
+    assert seen.count("null") == 1
+
+
+def test_a_change_during_the_last_message_is_applied_when_the_plan_ends(
+    RE: RunEngine, wait_until: Callable[..., bool]
+) -> None:
+    deferrals = Deferrals(RE)
+    recorder = Recorder()
+    future = RE(bps.sleep(0.3))
+    assert wait_until(lambda: RE.state == "running")
+    time.sleep(0.05)
+
+    applied = deferrals.request(recorder.apply)
+    future.result(timeout=5)
+
+    applied.result(timeout=5)
+    assert recorder.order == ["applied"]

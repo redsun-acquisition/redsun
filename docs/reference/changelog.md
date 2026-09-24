@@ -11,6 +11,8 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ### Added
 
+- **`RunEngine.sig_state_changed`** (`redsun.engine`) - the engine's new
+  and old state, `idle`, `running` or `paused`, on every change.
 - **`lock`**, **`unlock`** and **`lock_wrapper`** (`redsun.engine.plan_stubs`)
   - lock devices against the user while a plan uses them. `lock(*devices)`
   yields a `lock` message and returns its token, `unlock(token)` releases
@@ -29,6 +31,30 @@ Dates are specified in the format `DD-MM-YYYY`.
   held by its token, so a device locked twice stays locked until both are
   released, and every lock is released when the engine goes idle, so a
   halted plan leaves nothing locked.
+
+### Changed
+
+- **`Deferrals`** (`redsun.engine`) runs a queued change before the plan's
+  next message, as a preprocessor, rather than by suspending the plan. A
+  suspension rewound the plan to its last checkpoint and replayed the
+  messages after it. A change asked for during a plan's last message runs
+  when the plan ends.
+- **`SRLatch.set`** and **`reset`** (`redsun.engine.actions`) may be called
+  from any thread: a call off the latch's loop is forwarded to it, so a
+  waiting `wait_for_actions` wakes at once rather than at its next poll.
+- **`RunEngine.stop`**, **`abort`** and **`halt`** (`redsun.engine`) run on
+  a thread of their own and return a `Future` of the plan's result, as
+  `resume` does, so a paused plan's cleanup never runs on the caller's
+  thread.
+- **`wait_for_actions`** (`redsun.engine.plan_stubs`) says what it does:
+  it returns as soon as a latch is in the wanted state, set or reset,
+  whether it already was or changed meanwhile.
+
+### Fixed
+
+- The plans page's example and the engine API page name only stubs that
+  exist: `read_while_waiting`, `read_and_stash`, `stash` and `clear_cache`
+  are gone, and `RunEngineInterrupted` is `bluesky`'s.
 
 ## [0.13.0] - 23-09-2026
 

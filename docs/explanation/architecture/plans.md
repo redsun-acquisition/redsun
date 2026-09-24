@@ -34,26 +34,30 @@ The decorator sets `__togglable__` and `__pausable__` on the function;
 ### In-flight actions
 
 An `Action` is something the user triggers while the plan runs. Declare one
-as a parameter default:
+as a parameter default, and wait on its latch with `wait_for_actions`:
 
 ```python
-from redsun.engine.actions import Action
-
-snap_action = Action(name="snap", description="Capture a single frame")
+import bluesky.plan_stubs as bps
+import redsun.engine.plan_stubs as rps
+from redsun.engine.actions import Action, continous
 
 
 @continous
 def live_view(
     camera: CameraProtocol,
-    snap: Action = snap_action,
+    snap: Action = Action(name="snap", description="Capture a single frame"),
 ) -> MsgGenerator[None]:
+    yield from bps.open_run()
     while True:
-        yield from read_while_waiting([camera], snap_action.event_map)
+        name, latch = yield from rps.wait_for_actions(snap.event_map)
         yield from bps.trigger_and_read([camera])
+        latch.reset()
 ```
 
-The view shows `snap` as a button. A click sets the `SRLatch` inside
-`snap_action`, which releases `wait_for_actions` inside `read_while_waiting`.
+The view shows `snap` as a button. A click sets the `SRLatch` inside the
+action from the Qt thread; `wait_for_actions` returns the action's name and
+latch, and the plan resets the latch once it has acted. The stub yields a
+checkpoint before each poll, so it cannot sit between `create` and `save`.
 
 A toggle button is an action with `togglable=True`:
 

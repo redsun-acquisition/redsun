@@ -1,8 +1,8 @@
 """Plan stubs adding action flow control to `bluesky.plan_stubs`.
 
-`wait_for_actions` and `read_while_waiting` wait on user actions; `lock`,
-`unlock` and `lock_wrapper` lock devices against the user. Every stub is a
-generator yielding `Msg` objects, used inside larger plans with ``yield from``.
+`wait_for_actions` waits on user actions; `lock`, `unlock` and `lock_wrapper`
+lock devices against the user. Every stub is a generator yielding `Msg`
+objects, used inside larger plans with ``yield from``.
 """
 
 from __future__ import annotations
@@ -39,11 +39,12 @@ def wait_for_actions(
     timeout: float = SIXTY_FPS,
     wait_for: Literal["set", "reset"] = "set",
 ) -> MsgGenerator[tuple[str, SRLatch]]:
-    """Wait for any of the given latches to change state.
+    """Wait until one of the given latches is in the wanted state.
 
-    Polls every *timeout* seconds until a latch changes, then returns its name
-    and latch. The plan yields control on each poll, so background tasks keep
-    running.
+    Returns as soon as a latch is set, or reset with ``wait_for="reset"``,
+    whether it was already or changed meanwhile. Polls every *timeout*
+    seconds, yielding a checkpoint before each poll, so it cannot be used
+    between ``create`` and ``save``.
 
     Parameters
     ----------
