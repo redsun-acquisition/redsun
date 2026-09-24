@@ -121,3 +121,6 @@ docs/reference/schemas/
 .claude/settings.local.json
 .claude/plans
 CLAUDE.local.md
+
+# images written by local runs and the docs build
+*.png

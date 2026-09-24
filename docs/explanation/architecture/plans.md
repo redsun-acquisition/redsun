@@ -174,6 +174,19 @@ descriptor = yield from rps.describe(readable)
 descriptors = yield from rps.describe_collect(collectable)
 ```
 
+### Lock stubs
+
+A plan locks the devices it must not have disturbed, and views disable their
+controls while those devices are locked. The run engine keeps the locks and
+announces them on `RunEngine.sig_locks_changed`, which a view connects to.
+
+```python
+import redsun.engine.plan_stubs as rps
+
+# lock the stage and camera while the inner plan runs, however it ends
+yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
+```
+
 ---
 
 ## See also

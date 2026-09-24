@@ -3,13 +3,18 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import Future
 from functools import partial
-from threading import Thread
+from threading import Lock, Thread
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from bluesky.run_engine import (
+    LoggingPropertyMachine,
+    RunEngineResult,
+    RunEngineStateMachine,
+)
+from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
-from bluesky.run_engine import RunEngineResult
+from psygnal import Signal
 
 from redsun.aio import get_shared_loop
 
@@ -37,6 +42,18 @@ def default_scan_id_source(md: dict[str, Any]) -> int:
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 R = TypeVar("R")
+
+
+class LockReleasingState(LoggingPropertyMachine):
+    """The engine's state, which releases every device lock on reaching idle.
+
+    A halted plan skips its cleanup, so its ``unlock`` messages never run.
+    """
+
+    def __set__(self, obj: RunEngine, value: str) -> None:
+        super().__set__(obj, value)
+        if self.__get__(obj, type(obj)) == "idle":
+            obj._release_locks()
 
 
 class RunEngine(BlueskyRunEngine):
@@ -129,6 +146,11 @@ class RunEngine(BlueskyRunEngine):
 
     """
 
+    sig_locks_changed = Signal(frozenset)
+    """The names of the locked devices, whenever that set changes."""
+
+    _state = LockReleasingState(RunEngineStateMachine)
+
     def __init__(
         self,
         md: dict[str, Any] | None = None,
@@ -140,6 +162,12 @@ class RunEngine(BlueskyRunEngine):
         scan_id_source: MDScanIDSource | None = default_scan_id_source,
         call_returns_result: bool = True,
     ):
+        # set before bluesky's constructor, which already moves the state to idle
+        # each lock's devices by token, so a lock replayed after a rewind
+        # replaces its own entry instead of adding another
+        self._held: dict[str, frozenset[str]] = {}
+        # plans lock devices on the engine's thread, views read on the main one
+        self._held_guard = Lock()
         super().__init__(
             md=md,
             loop=loop or get_shared_loop(),
@@ -160,8 +188,16 @@ class RunEngine(BlueskyRunEngine):
         self._command_registry.update(
             {
                 "wait_for_actions": self._wait_for_actions,
+                "lock": self._lock,
+                "unlock": self._unlock,
             }
         )
+
+    @property
+    def locked(self) -> frozenset[str]:
+        """The names of the devices the running plan locks."""
+        with self._held_guard:
+            return frozenset().union(*self._held.values())
 
     def __call__(  # type: ignore[override]
         self,
@@ -227,6 +263,31 @@ class RunEngine(BlueskyRunEngine):
 
         Thread(target=run, name="RunEngine", daemon=True).start()
         return future
+
+    async def _lock(self, msg: Msg) -> None:
+        self._update_locks(msg.kwargs["token"], {device.name for device in msg.args})
+
+    async def _unlock(self, msg: Msg) -> None:
+        self._update_locks(msg.kwargs["token"], None)
+
+    def _release_locks(self) -> None:
+        with self._held_guard:
+            held = bool(self._held)
+            self._held.clear()
+        if held:
+            self.sig_locks_changed.emit(frozenset())
+
+    def _update_locks(self, token: str, names: set[str] | None) -> None:
+        """Hold *names* under *token*, or release the token when *names* is None."""
+        with self._held_guard:
+            before = frozenset().union(*self._held.values())
+            if names is None:
+                self._held.pop(token, None)
+            else:
+                self._held[token] = frozenset(names)
+            after = frozenset().union(*self._held.values())
+        if after != before:
+            self.sig_locks_changed.emit(after)
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
         """Wait for any of the given latches to be set or reset.

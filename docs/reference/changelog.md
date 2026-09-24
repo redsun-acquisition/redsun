@@ -9,6 +9,27 @@ Dates are specified in the format `DD-MM-YYYY`.
 
 ## [Unreleased]
 
+### Added
+
+- **`lock`**, **`unlock`** and **`lock_wrapper`** (`redsun.engine.plan_stubs`)
+  - lock devices against the user while a plan uses them. `lock(*devices)`
+  yields a `lock` message and returns its token, `unlock(token)` releases
+  it, and `lock_wrapper(plan, *devices)` runs *plan* with the devices locked
+  and unlocks them however it ends:
+
+  ```python
+  import redsun.engine.plan_stubs as rps
+
+  yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
+  ```
+
+- **`RunEngine.sig_locks_changed`** and **`RunEngine.locked`**
+  (`redsun.engine`) - the names of the devices the running plan locks,
+  emitted whenever that set changes and readable at any time. Each lock is
+  held by its token, so a device locked twice stays locked until both are
+  released, and every lock is released when the engine goes idle, so a
+  halted plan leaves nothing locked.
+
 ## [0.13.0] - 23-09-2026
 
 ### Added
