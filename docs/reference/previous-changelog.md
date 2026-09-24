@@ -4,11 +4,60 @@ icon: lucide/archive
 
 # Previous changelog
 
-The changes up to 0.13.0, written by hand before the changelog was made from
+The changes up to 0.13.1, written by hand before the changelog was made from
 pull requests. Later releases are in the [changelog](changelog.md).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Dates are written `DD-MM-YYYY`.
+
+## [0.13.1] - 24-09-2026
+
+### Added
+
+- **`RunEngine.sig_state_changed`** (`redsun.engine`) - the engine's new
+  and old state, `idle`, `running` or `paused`, on every change.
+- **`lock`**, **`unlock`** and **`lock_wrapper`** (`redsun.engine.plan_stubs`)
+  - lock devices against the user while a plan uses them. `lock(*devices)`
+  yields a `lock` message and returns its token, `unlock(token)` releases
+  it, and `lock_wrapper(plan, *devices)` runs *plan* with the devices locked
+  and unlocks them however it ends:
+
+  ```python
+  import redsun.engine.plan_stubs as rps
+
+  yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
+  ```
+
+- **`RunEngine.sig_locks_changed`** and **`RunEngine.locked`**
+  (`redsun.engine`) - the names of the devices the running plan locks,
+  emitted whenever that set changes and readable at any time. Each lock is
+  held by its token, so a device locked twice stays locked until both are
+  released, and every lock is released when the engine goes idle, so a
+  halted plan leaves nothing locked.
+
+### Changed
+
+- **`Deferrals`** (`redsun.engine`) runs a queued change before the plan's
+  next message, as a preprocessor, rather than by suspending the plan. A
+  suspension rewound the plan to its last checkpoint and replayed the
+  messages after it. A change asked for during a plan's last message runs
+  when the plan ends.
+- **`SRLatch.set`** and **`reset`** (`redsun.engine.actions`) may be called
+  from any thread: a call off the latch's loop is forwarded to it, so a
+  waiting `wait_for_actions` wakes at once rather than at its next poll.
+- **`RunEngine.stop`**, **`abort`** and **`halt`** (`redsun.engine`) run on
+  a thread of their own and return a `Future` of the plan's result, as
+  `resume` does, so a paused plan's cleanup never runs on the caller's
+  thread.
+- **`wait_for_actions`** (`redsun.engine.plan_stubs`) says what it does:
+  it returns as soon as a latch is in the wanted state, set or reset,
+  whether it already was or changed meanwhile.
+
+### Fixed
+
+- The plans page's example and the engine API page name only stubs that
+  exist: `read_while_waiting`, `read_and_stash`, `stash` and `clear_cache`
+  are gone, and `RunEngineInterrupted` is `bluesky`'s.
 
 ## [0.13.0] - 23-09-2026
 
@@ -1293,6 +1342,7 @@ Dates are written `DD-MM-YYYY`.
 
 - Initial release on PyPI
 
+[0.13.1]: https://github.com/redsun-acquisition/redsun/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/redsun-acquisition/redsun/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/redsun-acquisition/redsun/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/redsun-acquisition/redsun/compare/v0.12.1...v0.12.2
