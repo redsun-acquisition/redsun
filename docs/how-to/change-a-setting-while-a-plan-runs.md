@@ -7,10 +7,11 @@ service writes no longer matches the `StreamResource` describing it. Any
 setting a plan's readings depend on has the same problem.
 
 [`Deferrals`][redsun.engine.Deferrals] applies such a change between two
-messages of the plan instead: the engine suspends the plan once the message
-under way completes, applies every change queued by then, and resumes. The
-plan contains nothing about it, so every plan gets the behaviour. The cost is
-a pause the user sees, about a second.
+messages of the plan instead: once the message under way completes, every
+change queued by then runs before the next message is sent. The plan
+contains nothing about it, so every plan gets the behaviour, and it is
+neither suspended nor rewound. A change asked for during a plan's last
+message runs when the plan ends.
 
 ## Build one beside the engine
 
@@ -64,10 +65,9 @@ it still run.
 
 ## What a plan sees
 
-Nothing. The suspension is `bluesky`'s own, a
-[suspender](https://blueskyproject.io/bluesky/main/state-machine.html#suspending)
-installed on the engine, so a plan that pauses and resumes on its own terms
-already handles it: `bps.checkpoint` marks where a plan may be rewound, and a
-message under way, such as a `trigger` that waits for a frame, completes
-before the plan is suspended. A plan without checkpoints still suspends, at
-the next message.
+Nothing. `Deferrals` is a preprocessor on the engine, and it runs each queued
+change as a `wait_for` inserted before the plan's next message. No message
+runs twice: a `bluesky` suspension would rewind to the last checkpoint and
+replay what came after it, which is why one is not used. A change waits as
+long as the message under way takes, so a plan that sleeps or waits for a
+long move delays it by that much.
