@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+import time
 
+import redsun.engine.plan_stubs as rps
+from redsun.engine import RunEngine
 from redsun.engine.actions import Action, ContinousPlan, SRLatch, continous
 
 
@@ -50,3 +54,19 @@ async def test_action_event_map_is_lazy_and_stable() -> None:
     # the latch is created once and reused
     assert action.event_map["scan"] is first["scan"]
     assert action.toggle_states == ("On", "Off")
+
+
+def test_a_latch_set_from_another_thread_wakes_the_plan(RE: RunEngine) -> None:
+    """The set is forwarded to the latch's loop, so a 5 s poll is not waited out."""
+    latch = SRLatch()
+    started = threading.Event()
+    RE.msg_hook = lambda msg: started.set()  # type: ignore[assignment]
+
+    future = RE(rps.wait_for_actions({"go": latch}, timeout=5.0))
+    assert started.wait(5)
+    time.sleep(0.1)
+    began = time.monotonic()
+    latch.set()
+
+    future.result(timeout=5)
+    assert time.monotonic() - began < 1.0

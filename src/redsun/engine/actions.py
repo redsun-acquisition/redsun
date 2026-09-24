@@ -36,10 +36,11 @@ R_co = TypeVar("R_co", covariant=True)
 
 
 class SRLatch:
-    """An ``asyncio`` set-reset latch.
+    """An ``asyncio`` set-reset latch, settable from any thread.
 
     Two `asyncio.Event` objects let a coroutine wait for either the *set* or the
-    *reset* state. A new latch is reset.
+    *reset* state. A new latch is reset. The first wait binds the latch to its
+    loop; a `set` or `reset` from another thread is forwarded to that loop.
     """
 
     def __init__(self) -> None:
@@ -47,12 +48,15 @@ class SRLatch:
         self._set_event: asyncio.Event = asyncio.Event()
         self._reset_event: asyncio.Event = asyncio.Event()
         self._reset_event.set()
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def set(self) -> None:
         """Set the latch, waking every coroutine in `wait_for_set`.
 
         Does nothing if already set.
         """
+        if self._forwarded(self.set):
+            return
         if not self._flag:
             self._flag = True
             self._set_event.set()
@@ -63,10 +67,25 @@ class SRLatch:
 
         Does nothing if already reset.
         """
+        if self._forwarded(self.reset):
+            return
         if self._flag:
             self._flag = False
             self._reset_event.set()
             self._set_event.clear()
+
+    def _forwarded(self, call: Callable[[], None]) -> bool:
+        """Hand *call* to the latch's loop when called off it, and say so."""
+        if self._loop is None:
+            return False
+        try:
+            on_loop = asyncio.get_running_loop() is self._loop
+        except RuntimeError:
+            on_loop = False
+        if on_loop:
+            return False
+        self._loop.call_soon_threadsafe(call)
+        return True
 
     def is_set(self) -> bool:
         """Return whether the latch is set."""
@@ -74,12 +93,14 @@ class SRLatch:
 
     async def wait_for_set(self) -> None:
         """Wait until the latch is set; return at once if it already is."""
+        self._loop = asyncio.get_running_loop()
         if self._flag:
             return
         await self._set_event.wait()
 
     async def wait_for_reset(self) -> None:
         """Wait until the latch is reset; return at once if it already is."""
+        self._loop = asyncio.get_running_loop()
         if not self._flag:
             return
         await self._reset_event.wait()

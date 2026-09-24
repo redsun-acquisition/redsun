@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import Future
 from functools import partial
-from threading import Thread
+from threading import Lock, Thread
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
 from bluesky.run_engine import RunEngineResult
+from psygnal import Signal
 
 from redsun.aio import get_shared_loop
 
@@ -129,6 +130,12 @@ class RunEngine(BlueskyRunEngine):
 
     """
 
+    sig_locks_changed = Signal(frozenset)
+    """The names of the locked devices, whenever that set changes."""
+
+    sig_state_changed = Signal(str, str)
+    """The engine's new and old state on every change, as ``bluesky`` names them: ``idle``, ``running``, ``pausing``, ``paused``."""
+
     def __init__(
         self,
         md: dict[str, Any] | None = None,
@@ -140,6 +147,12 @@ class RunEngine(BlueskyRunEngine):
         scan_id_source: MDScanIDSource | None = default_scan_id_source,
         call_returns_result: bool = True,
     ):
+        # set before bluesky's constructor, which already moves the state to idle
+        # each lock's devices by token, so a lock replayed after a rewind
+        # replaces its own entry instead of adding another
+        self._held: dict[str, frozenset[str]] = {}
+        # plans lock devices on the engine's thread, views read on the main one
+        self._held_guard = Lock()
         super().__init__(
             md=md,
             loop=loop or get_shared_loop(),
@@ -155,13 +168,23 @@ class RunEngine(BlueskyRunEngine):
 
         # override pause message to be an empty string
         self.pause_msg = ""
+        # bluesky types the hook as None, its default
+        self.state_hook = self._on_state_change  # type: ignore[assignment]
 
         # register custom commands
         self._command_registry.update(
             {
                 "wait_for_actions": self._wait_for_actions,
+                "lock": self._lock,
+                "unlock": self._unlock,
             }
         )
+
+    @property
+    def locked(self) -> frozenset[str]:
+        """The names of the devices the running plan locks."""
+        with self._held_guard:
+            return frozenset().union(*self._held.values())
 
     def __call__(  # type: ignore[override]
         self,
@@ -213,6 +236,21 @@ class RunEngine(BlueskyRunEngine):
         """
         return self._run_in_thread(super().resume)
 
+    def stop(self) -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan and mark it successful, on a thread of its own.
+
+        A paused plan runs its cleanup there, not on the caller's thread.
+        """
+        return self._run_in_thread(super().stop)
+
+    def abort(self, reason: str = "") -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan and mark it aborted, on a thread of its own."""
+        return self._run_in_thread(partial(super().abort, reason))
+
+    def halt(self) -> Future[RunEngineResult | tuple[str, ...]]:
+        """Stop the plan with no cleanup, on a thread of its own."""
+        return self._run_in_thread(super().halt)
+
     def _run_in_thread(self, call: Callable[[], R]) -> Future[R]:
         """Run *call* on a thread of its own, which ends with it, and return its future."""
         future: Future[R] = Future()
@@ -227,6 +265,40 @@ class RunEngine(BlueskyRunEngine):
 
         Thread(target=run, name="RunEngine", daemon=True).start()
         return future
+
+    async def _lock(self, msg: Msg) -> None:
+        self._update_locks(msg.kwargs["token"], {device.name for device in msg.args})
+
+    async def _unlock(self, msg: Msg) -> None:
+        self._update_locks(msg.kwargs["token"], None)
+
+    def _on_state_change(self, new: str, old: str) -> None:
+        """Announce the state, releasing every lock on idle first.
+
+        A halted plan skips its cleanup, so its ``unlock`` messages never run.
+        """
+        if new == "idle":
+            self._release_locks()
+        self.sig_state_changed.emit(new, old)
+
+    def _release_locks(self) -> None:
+        with self._held_guard:
+            held = bool(self._held)
+            self._held.clear()
+        if held:
+            self.sig_locks_changed.emit(frozenset())
+
+    def _update_locks(self, token: str, names: set[str] | None) -> None:
+        """Hold *names* under *token*, or release the token when *names* is None."""
+        with self._held_guard:
+            before = frozenset().union(*self._held.values())
+            if names is None:
+                self._held.pop(token, None)
+            else:
+                self._held[token] = frozenset(names)
+            after = frozenset().union(*self._held.values())
+        if after != before:
+            self.sig_locks_changed.emit(after)
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
         """Wait for any of the given latches to be set or reset.

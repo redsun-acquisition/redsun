@@ -13,7 +13,6 @@ icon: lucide/code
         - Deferrals
         - Status
         - RunEngineResult
-        - RunEngineInterrupted
 
 ## Actions
 
@@ -31,9 +30,8 @@ icon: lucide/code
     options:
       members:
         - wait_for_actions
-        - read_while_waiting
-        - read_and_stash
-        - stash
-        - clear_cache
         - describe
         - describe_collect
+        - lock
+        - unlock
+        - lock_wrapper

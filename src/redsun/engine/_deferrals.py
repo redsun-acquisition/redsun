@@ -6,13 +6,13 @@ from collections import deque
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
-from bluesky.suspenders import SuspendBoolHigh
+import bluesky.preprocessors as bpp
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from concurrent.futures import Future
 
-    from bluesky.utils import MsgGenerator
+    from bluesky.utils import Msg, MsgGenerator
 
     from ._wrapper import RunEngine
 
@@ -21,46 +21,14 @@ __all__ = ["Deferrals"]
 logger = logging.getLogger("redsun")
 
 
-class Flag:
-    """A boolean a suspender can watch.
-
-    What a suspender needs of an ``ophyd`` signal and nothing more: a name,
-    ``subscribe``, ``clear_sub``, and a call to each watcher with the value
-    when it changes.
-    """
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self._value = False
-        self._watchers: list[Callable[..., None]] = []
-
-    def subscribe(
-        self, watcher: Callable[..., None], *, event_type: Any = None, run: bool = True
-    ) -> None:
-        """Call *watcher* with every value set from now on, and now if *run*."""
-        self._watchers.append(watcher)
-        if run:
-            watcher(self._value)
-
-    def clear_sub(self, watcher: Callable[..., None]) -> None:
-        """Stop calling *watcher*."""
-        self._watchers.remove(watcher)
-
-    def set(self, value: bool) -> None:
-        """Set the value and tell every watcher."""
-        self._value = value
-        for watcher in list(self._watchers):
-            watcher(value)
-
-
 class Deferrals:
-    """Changes to apply the next time the engine is between two messages.
+    """Changes to apply before the next message of the running plan.
 
     Every change runs on the engine's loop. One asked for while a plan runs
-    waits: the engine suspends the plan once the message under way completes,
-    applies every change queued by then, and resumes. One asked for while no
-    plan runs is applied at once. A change that raises is logged, and the
-    ones after it still run.
+    waits for the message under way to complete, then runs before the next
+    message is sent; the plan is neither suspended nor rewound. One asked for
+    while no plan runs is applied at once. A change that raises is logged,
+    and the ones after it still run.
     """
 
     def __init__(self, engine: RunEngine) -> None:
@@ -68,10 +36,13 @@ class Deferrals:
         self._queue: deque[
             tuple[Callable[[], Awaitable[None]], asyncio.Future[None]]
         ] = deque()
-        self._pending = Flag("deferrals")
-        self._engine.install_suspender(
-            SuspendBoolHigh(self._pending, pre_plan=self._drain)
-        )
+        # the mutator sees the messages it inserts too, so the drain it
+        # inserts must not be wrapped in another drain
+        self._draining = False
+        self._engine.preprocessors.append(self.wrap)
+        # a change asked for during a plan's last message has no next
+        # message to run before
+        self._engine.sig_state_changed.connect(self._on_state)
 
     def request(self, apply: Callable[[], Awaitable[None]]) -> Future[None]:
         """Ask for *apply* to run, and return a future done once it did.
@@ -82,24 +53,38 @@ class Deferrals:
             self._schedule(apply), self._engine.loop
         )
 
+    def wrap(self, plan: MsgGenerator[Any]) -> MsgGenerator[Any]:
+        """Run the changes queued so far before each message of *plan*."""
+
+        def before(msg: Msg) -> tuple[MsgGenerator[Any] | None, None]:
+            if self._draining or not self._queue:
+                return None, None
+
+            def head() -> MsgGenerator[Any]:
+                self._draining = True
+                try:
+                    yield from bps.wait_for([self._apply_queued])
+                finally:
+                    self._draining = False
+                return (yield msg)
+
+            return head(), None
+
+        wrapped: MsgGenerator[Any] = bpp.plan_mutator(plan, before)
+        return wrapped
+
     async def _schedule(self, apply: Callable[[], Awaitable[None]]) -> None:
-        """Apply now, or queue and raise the flag; done once applied either way."""
+        """Apply now, or queue for the next message; done once applied either way."""
         if self._engine.state != "running":
             await self._apply(apply)
             return
         done = asyncio.get_running_loop().create_future()
         self._queue.append((apply, done))
-        self._pending.set(True)
         await done
 
-    def _drain(self) -> MsgGenerator[None]:
-        """Apply every queued change on the engine's loop, then let the plan resume."""
-        yield from bps.wait_for([self._apply_queued])
-        self._pending.set(False)
-        # a change queued between the last one applied and the resume would
-        # otherwise wait for the next request to raise the flag again
-        if self._queue:
-            self._pending.set(True)
+    def _on_state(self, new: str, old: str) -> None:
+        if new == "idle" and self._queue:
+            asyncio.run_coroutine_threadsafe(self._apply_queued(), self._engine.loop)
 
     async def _apply_queued(self) -> None:
         while self._queue:

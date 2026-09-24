@@ -204,3 +204,47 @@ def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
     wait(future_set)
 
     assert len(future_set) == 0
+
+
+def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
+    """Pause, resume and end reach a view as ``(new, old)`` pairs."""
+    seen: list[tuple[str, str]] = []
+    RE.sig_state_changed.connect(lambda new, old: seen.append((new, old)))
+
+    def plan() -> Any:
+        yield from bps.checkpoint()
+        yield from bps.pause()
+        yield from bps.null()
+
+    with pytest.raises(RunEngineInterrupted):
+        RE(plan()).result(timeout=5)
+    RE.resume().result(timeout=5)
+
+    assert seen == [
+        ("running", "idle"),
+        ("pausing", "running"),
+        ("paused", "pausing"),
+        ("running", "paused"),
+        ("idle", "running"),
+    ]
+
+
+def test_stopping_a_paused_plan_runs_its_cleanup_off_the_caller_thread(
+    RE: RunEngine,
+) -> None:
+    cleanup_thread: list[str] = []
+
+    def plan() -> Any:
+        try:
+            yield from bps.checkpoint()
+            yield from bps.pause()
+        finally:
+            cleanup_thread.append(threading.current_thread().name)
+
+    with pytest.raises(RunEngineInterrupted):
+        RE(plan()).result(timeout=5)
+
+    RE.stop().result(timeout=5)
+
+    assert cleanup_thread != [threading.current_thread().name]
+    assert RE.state == "idle"
