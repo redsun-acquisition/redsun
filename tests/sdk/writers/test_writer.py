@@ -10,10 +10,25 @@ import numpy as np
 import pytest
 
 from redsun.writers import Writer, WriterError
+from redsun.writers._acquire_zarr import Stream
 from redsun.writers._base import root_attributes as attributes
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture
+def closes(monkeypatch: pytest.MonkeyPatch) -> list[Stream]:
+    """Record every ``acquire-zarr`` stream as it closes."""
+    closed: list[Stream] = []
+    close = Stream.close
+
+    def record(stream: Stream) -> None:
+        closed.append(stream)
+        close(stream)
+
+    monkeypatch.setattr(Stream, "close", record)
+    return closed
 
 
 def shape_of(path: Path) -> list[int]:
@@ -288,7 +303,7 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
 
 
 def test_a_second_store_for_a_source_leaves_the_first_stream_open(
-    tmp_path: Path,
+    tmp_path: Path, closes: list[Stream]
 ) -> None:
     """A stream closes at its run's stop, so a run naming two stores holds both open."""
     writer = Writer()
@@ -300,10 +315,11 @@ def test_a_second_store_for_a_source_leaves_the_first_stream_open(
     run(writer, second, "application/x-zarr", start=False)
     writer.append("det_filtered", np.ones((4, 4), np.uint16))
 
-    assert not (first / "det_filtered" / "zarr.json").exists()
+    assert closes == []
     writer(
         "stop",
         {"uid": "stop-1", "run_start": "run-1", "time": 1.0, "exit_status": "success"},
     )
+    assert len(closes) == 2
     assert shape_of(first / "det_filtered") == [1, 4, 4]
     assert shape_of(second / "det_filtered") == [1, 4, 4]

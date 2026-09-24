@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 import time
@@ -31,6 +32,10 @@ class Recorder:
     async def apply(self) -> None:
         self.order.append("applied")
         self.applied.set()
+
+    async def apply_slowly(self) -> None:
+        await asyncio.sleep(0.2)
+        await self.apply()
 
     async def fail(self) -> None:
         self.order.append("failed")
@@ -135,17 +140,34 @@ def test_a_change_runs_before_the_next_message_without_replaying_any(
     assert seen.count("null") == 1
 
 
-def test_a_change_during_the_last_message_is_applied_when_the_plan_ends(
+def test_a_change_during_the_last_message_is_applied_before_the_plan_returns(
     RE: RunEngine, wait_until: Callable[..., bool]
 ) -> None:
+    """Whoever waits on the plan's result finds the change applied."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     future = RE(bps.sleep(0.3))
     assert wait_until(lambda: RE.state == "running")
     time.sleep(0.05)
 
-    applied = deferrals.request(recorder.apply)
+    deferrals.request(recorder.apply_slowly)
     future.result(timeout=5)
+
+    assert recorder.order == ["applied"]
+
+
+def test_a_change_left_by_a_halted_plan_is_applied_once_idle(
+    RE: RunEngine, wait_until: Callable[..., bool]
+) -> None:
+    """A halt skips the plan's cleanup, where the leftover changes would run."""
+    deferrals = Deferrals(RE)
+    recorder = Recorder()
+    RE(bps.sleep(5))
+    assert wait_until(lambda: RE.state == "running")
+    time.sleep(0.05)
+
+    applied = deferrals.request(recorder.apply)
+    RE.halt().result(timeout=5)
 
     applied.result(timeout=5)
     assert recorder.order == ["applied"]

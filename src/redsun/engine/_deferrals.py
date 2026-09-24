@@ -27,9 +27,10 @@ class Deferrals:
 
     Every change runs on the engine's loop. One asked for while a plan runs
     waits for the message under way to complete, then runs before the next
-    message is sent; the plan is neither suspended nor rewound. One asked for
-    while no plan runs is applied at once. A change that raises is logged,
-    and the ones after it still run.
+    message is sent, or before the plan returns if that message was its
+    last; the plan is neither suspended nor rewound. One asked for while no
+    plan runs is applied at once. A change that raises is logged, and the
+    ones after it still run.
     """
 
     def __init__(self, engine: RunEngine) -> None:
@@ -41,8 +42,7 @@ class Deferrals:
         # inserts must not be wrapped in another drain
         self._draining = False
         self._engine.preprocessors.append(self.wrap)
-        # a change asked for during a plan's last message has no next
-        # message to run before
+        # a halted plan skips its cleanup, so the changes it leaves wait for idle
         self._engine.sig_state_changed.connect(self._on_state)
 
     def request(self, apply: Callable[[], Awaitable[None]]) -> Future[None]:
@@ -55,7 +55,7 @@ class Deferrals:
         )
 
     def wrap(self, plan: MsgGenerator[Any]) -> MsgGenerator[Any]:
-        """Run the changes queued so far before each message of *plan*."""
+        """Run the changes queued so far before each message of *plan* and before it returns."""
 
         def before(msg: Msg) -> tuple[MsgGenerator[Any] | None, None]:
             if self._draining or not self._queue:
@@ -71,7 +71,14 @@ class Deferrals:
 
             return head(), None
 
-        wrapped: MsgGenerator[Any] = bpp.plan_mutator(plan, before)
+        def leftovers() -> MsgGenerator[None]:
+            # asked for during the last message, which no message follows
+            if self._queue:
+                yield from bps.wait_for([self._apply_queued])
+
+        wrapped: MsgGenerator[Any] = bpp.finalize_wrapper(
+            bpp.plan_mutator(plan, before), leftovers()
+        )
         return wrapped
 
     async def _schedule(self, apply: Callable[[], Awaitable[None]]) -> None:
