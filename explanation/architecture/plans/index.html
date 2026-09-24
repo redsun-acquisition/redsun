@@ -973,6 +973,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#lock-stubs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Lock stubs
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2713,6 +2724,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#lock-stubs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Lock stubs
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2901,6 +2923,15 @@ call:</p>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># gather descriptors from Readable / Collectable devices inside a plan</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">descriptor</span> <span class="o">=</span> <span class="k">yield from</span> <span class="n">rps</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="n">readable</span><span class="p">)</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">descriptors</span> <span class="o">=</span> <span class="k">yield from</span> <span class="n">rps</span><span class="o">.</span><span class="n">describe_collect</span><span class="p">(</span><span class="n">collectable</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="lock-stubs">Lock stubs<a class="headerlink" href="#lock-stubs" title="Permanent link">&para;</a></h3>
+<p>A plan locks the devices it must not have disturbed, and views disable their
+controls while those devices are locked. The run engine keeps the locks and
+announces them on <code>RunEngine.sig_locks_changed</code>, which a view connects to.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">redsun.engine.plan_stubs</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">rps</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># lock the stage and camera while the inner plan runs, however it ends</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">yield from</span> <span class="n">rps</span><span class="o">.</span><span class="n">lock_wrapper</span><span class="p">(</span><span class="n">scan</span><span class="p">(</span><span class="n">stage</span><span class="p">,</span> <span class="n">camera</span><span class="p">),</span> <span class="n">stage</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
