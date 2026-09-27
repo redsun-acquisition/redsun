@@ -28,8 +28,9 @@ from event_model import DocumentRouter
 from in_n_out import Store
 from ophyd_async.core import Device, SignalR
 from psygnal import SignalInstance
+from psygnal._async import clear_async_backend
 
-from redsun.aio import run_coro
+from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
 from redsun.injection import (
     constant,
@@ -779,10 +780,13 @@ class Session(BuildableSession):
     def start_runtime(self) -> None:
         """Put in place what a component may not be constructed without.
 
-        Nothing here: a session bound to no toolkit has no runtime of its
-        own. One that is bound to a toolkit makes its objects here, before the
-        first component exists and before anything can watch the build.
+        The async backend, which a coroutine slot cannot be connected
+        without. A session bound to a toolkit makes the toolkit's objects here
+        as well, before the first component exists and before anything can
+        watch the build.
         """
+        set_async_backend()
+        self.on_release(clear_async_backend)
 
     def open_registry(self) -> None:
         """Open the store the components are built out of, and fill it.

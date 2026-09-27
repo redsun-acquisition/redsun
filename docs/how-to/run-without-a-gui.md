@@ -44,7 +44,8 @@ app = MyApp().build()
 app.shutdown()
 ```
 
-`build` makes every component; `shutdown` releases them. There is no `run`:
+`build` makes every component and every link, a coroutine slot included;
+`shutdown` releases them. There is no `run`:
 that method exists only on a session with a frontend, since it also shows a
 window and starts that frontend's event loop.
 

@@ -52,7 +52,6 @@ from app_model.backends.qt import QModelMainWindow
 from app_model.types import MenuRule
 from platformdirs import user_documents_dir
 from psygnal import emit_queued
-from psygnal._async import clear_async_backend
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtCore import QByteArray, QEvent, QObject
 from qtpy.QtCore import Qt as QtNamespace
@@ -70,7 +69,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from redsun.aio import set_async_backend
 from redsun.view import Placement
 
 from .._hooks import (
@@ -320,9 +318,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def start_runtime(self) -> None:
         """Put the toolkit in place, before the first component is built.
 
-        A ``QApplication`` has to exist before any widget is constructed and
-        the async backend before any coroutine slot is connected, so both are
-        made here. The hooks were resolved by the step before this one, so one
+        A ``QApplication`` has to exist before any widget is constructed, so it
+        is made here. The hooks were resolved by the step before this one, so one
         may supply the ``QApplication`` itself. The session's own application
         follows, because the components are built out of its store, and the
         ``actions`` section is registered on it at once, so a hook dressing the
@@ -332,8 +329,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         a ``configure_application`` hook runs last, so one restyling the
         application does so over a scheme already in force. Each of them
         registers how it is given back as it is taken, so ``shutdown`` frees
-        the name and the backend without this class defining one.
+        the name without this class defining one.
         """
+        super().start_runtime()
         hooks = self.hooks
         creator = hooks.get(QtHook.CREATE_APPLICATION)
         if QApplication.instance() is None and isinstance(creator, CreatesApplication):
@@ -344,8 +342,6 @@ class QtSession(DesktopSession[QMainWindow], Session):
         # QApplication takes the next widget built with it
         self._qt_app = qt_app
         self.on_release(self._forget_application_object)
-        set_async_backend()
-        self.on_release(clear_async_backend)
 
         self._model = Application(self.name)
         self.on_release(self._forget_application)

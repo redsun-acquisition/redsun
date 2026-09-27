@@ -160,7 +160,9 @@ class Web(Frontend):
 class WebSession(Session):
     frontend = Web
 
-    def start_runtime(self) -> None: ...  # start the web server
+    def start_runtime(self) -> None:
+        super().start_runtime()
+        ...  # start the web server
 
     def present(self) -> None: ...  # serve each view at its route
 ```
@@ -198,3 +200,7 @@ class WebSession(Session):
         server.every(0.01, psygnal.emit_queued)
         server.serve()
 ```
+
+Coroutine slots need nothing from the frontend: every session sets the
+backend that runs them when it starts its runtime, which is why a frontend's
+`start_runtime` calls the one it overrides.

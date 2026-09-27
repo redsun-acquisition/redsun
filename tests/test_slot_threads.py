@@ -11,7 +11,7 @@ from psygnal import Signal, emit_queued
 from redsun import AsPresenter, Frontend, Session, slot
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
     from redsun import Link
     from redsun.ports import SlotThread
@@ -52,6 +52,16 @@ class OnCurrent(OnMain):
         super().hear(text)
 
 
+class Awaiting:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.heard: list[str] = []
+
+    @slot
+    async def hear(self, text: str) -> None:
+        self.heard.append(text)
+
+
 class ListenersOnMain(Frontend):
     """A frontend running every listener on the main thread."""
 
@@ -90,6 +100,14 @@ class SaidByTheSlot(Session):
         yield self.talker.sig_said, self.listener.hear
 
 
+class AwaitingApp(Session):
+    talker: AsPresenter[Talker]
+    listener: AsPresenter[Awaiting]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.talker.sig_said, self.listener.hear
+
+
 @pytest.mark.parametrize(
     ("session", "thread"),
     [
@@ -117,3 +135,13 @@ def test_a_slot_held_for_the_main_thread_waits_for_it(build: BuildSession) -> No
 
     emit_queued()
     assert app.listener.heard == [("hi", threading.main_thread().name)]
+
+
+def test_a_session_with_no_frontend_connects_a_coroutine_slot(
+    build: BuildSession, wait_until: Callable[..., bool]
+) -> None:
+    app = build(AwaitingApp)
+
+    app.talker.sig_said.emit("hi")
+
+    assert wait_until(lambda: app.listener.heard == ["hi"])

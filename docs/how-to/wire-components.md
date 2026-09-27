@@ -188,7 +188,8 @@ order, the thread comes from:
    widget's slots on the main thread, since a widget may only be used from
    there.
 
-A session with no frontend asks nothing at the third step.
+A session with no frontend asks nothing at the third step. A slot that is a
+coroutine function runs on the session's event loop whatever the frontend.
 
 ## Observe a device signal
 
