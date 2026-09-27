@@ -10,6 +10,7 @@ named the same way on first use.
 """
 
 from ._base import ArrayShape, WriterError
+from ._placement import OME_ZARR, ZARR
 from ._writer import Writer
 
-__all__ = ["ArrayShape", "Writer", "WriterError"]
+__all__ = ["OME_ZARR", "ZARR", "ArrayShape", "Writer", "WriterError"]

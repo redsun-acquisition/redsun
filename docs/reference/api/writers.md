@@ -10,3 +10,5 @@ icon: lucide/code
         - Writer
         - ArrayShape
         - WriterError
+        - ZARR
+        - OME_ZARR

@@ -104,7 +104,9 @@ readable.
 ## Where the product goes
 
 The `stream_resource` document names the format and the store; the writer
-reads the store's root and decides:
+reads the store's root and decides. `redsun.writers` exports the two
+mimetypes it knows as `ZARR` and `OME_ZARR`, for a device writing either into
+its documents:
 
 | Mimetype | Store root | Product goes | `write` returns |
 | --- | --- | --- | --- |

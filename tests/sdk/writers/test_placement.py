@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from redsun.writers import WriterError
-from redsun.writers._placement import OME_ZARR, ZARR, placement
+from redsun.writers import OME_ZARR, ZARR, WriterError
+from redsun.writers._placement import placement
 
 if TYPE_CHECKING:
     from pathlib import Path

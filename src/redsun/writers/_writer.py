@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from event_model import DocumentRouter
 
 from ._base import ArrayShape, WriterError, merge_attributes
-from ._placement import placement
+from ._placement import ZARR, placement
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -99,7 +99,7 @@ class Writer(DocumentRouter):
         self._products[data_key] = Product(
             data_key,
             layout=ArrayShape.of(shape, dtype),
-            store=(store, "application/x-zarr"),
+            store=(store, ZARR),
         )
 
     def derive(self, data_key: str, *, source: str) -> None:
