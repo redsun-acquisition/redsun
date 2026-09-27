@@ -244,6 +244,33 @@ build step; `start_services` can no longer be called before `build`.
 New keys: `strict`, `mock`, `providers`, `actions`, `color_scheme`. See
 [Write a session file](write-a-session-file.md).
 
+## Plans
+
+```python
+# 0.13
+@continous(togglable=True, pausable=True)
+def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
+
+
+# now
+@continuous(pausable=True)
+def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
+```
+
+| 0.13 | now |
+| --- | --- |
+| `redsun.engine.actions.continous` | `redsun.engine.actions.continuous`; the old spelling is not kept |
+| `continous(togglable=...)` | removed: a continuous plan always has a toggle to start and stop it |
+| `redsun.engine.actions.ContinousPlan` | removed: read `__continuous__` from the plan |
+| `__togglable__`, `__pausable__` on a plan | `__continuous__`, a `Continuous` with a `pausable` field |
+| `PlanSpec.togglable` | `PlanSpec.continuous` |
+| `wait_for_actions(events, timeout=...)` | `wait_for_actions(events, poll_interval=...)` |
+
+- `wait_for_actions` never timed out, and still does not: the argument is the
+  time between two checkpoints.
+- `wait_for_actions` raises `ValueError` when `events` is empty.
+- `Action.togglable` and `Action.toggle_states` are unchanged.
+
 ## Other changes
 
 - The `experimental` extra is gone; `in-n-out` is a dependency of `redsun`,

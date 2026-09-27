@@ -10,8 +10,8 @@ into hardware calls.
 
 `redsun` adds two things:
 
-- **`continous` plans** run in a loop, optionally pausable, and accept user
-  actions while running.
+- **`continuous` plans** run in a loop until stopped, optionally pausable, and
+  accept user actions while running.
 - **`PlanSpec`** describes a plan's signature, from which the view layer builds
   a parameter form.
 
@@ -19,21 +19,26 @@ into hardware calls.
 
 ## Continuous plans
 
-Mark a plan as continuous with the `@continous` decorator:
+Mark a plan as continuous with the `@continuous` decorator:
 
 ```python
-from redsun.engine.actions import continous, Action
+from redsun.engine.actions import Action, continuous
 from bluesky.utils import MsgGenerator
 
 
-@continous(togglable=True, pausable=True)
+@continuous(pausable=True)
 def live_scan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]:
     while True:
         yield from bps.trigger_and_read(detectors)
 ```
 
-The decorator sets `__togglable__` and `__pausable__` on the function;
-`create_plan_spec` reads them to set up the run and pause buttons.
+A continuous plan always gets a toggle to start and stop it. With
+`pausable=True` it also gets a button to pause and resume it.
+
+The decorator stores one attribute on the function, `__continuous__`, holding
+a `Continuous(pausable=True)`. `create_plan_spec` reads it to set
+`PlanSpec.continuous` and `PlanSpec.pausable`, from which the view builds the
+two buttons.
 
 ### In-flight actions
 
@@ -43,10 +48,10 @@ as a parameter default, and wait on its latch with `wait_for_actions`:
 ```python
 import bluesky.plan_stubs as bps
 import redsun.engine.plan_stubs as rps
-from redsun.engine.actions import Action, continous
+from redsun.engine.actions import Action, continuous
 
 
-@continous
+@continuous
 def live_view(
     camera: CameraProtocol,
     snap: Action = Action(name="snap", description="Capture a single frame"),
@@ -60,8 +65,13 @@ def live_view(
 
 The view shows `snap` as a button. A click sets the `SRLatch` inside the
 action from the Qt thread; `wait_for_actions` returns the action's name and
-latch, and the plan resets the latch once it has acted. The stub yields a
-checkpoint before each poll, so it cannot sit between `create` and `save`.
+latch, and the plan resets the latch once it has acted.
+
+The stub does not time out. It waits as long as it takes for a latch to be
+set, or reset with `wait_for="reset"`, and returns at once if one already is.
+While it waits it yields a checkpoint every `poll_interval` seconds, 1/60 s by
+default. A checkpoint is where the plan can be paused, so the stub cannot sit
+between `create` and `save`.
 
 A toggle button is an action with `togglable=True`:
 
@@ -87,8 +97,15 @@ await latch.wait_for_set()  # blocks until set()
 await latch.wait_for_reset()  # blocks until reset()
 ```
 
+`latch.changed_at` is when the latch last changed state, as `time.monotonic`
+reads it, and `0.0` for a latch that never changed.
+
 For a `wait_for_actions` message, the `RunEngine` runs one `wait_for_set` (or
-`wait_for_reset`) task per latch and returns the first to finish.
+`wait_for_reset`) task per latch, for `poll_interval` seconds at most. Of
+several latches in the wanted state, it returns the one that reached that
+state first. Of those that reached it together, it returns the first in the
+map. If no latch is in the wanted state when the interval ends, the stub
+yields its next checkpoint and sends the message again.
 
 ---
 
@@ -168,9 +185,13 @@ engine(my_plan(*args, **kwargs))
 ```python
 import redsun.engine.plan_stubs as rps
 
-# block until any latch in the map changes state, polling at `timeout`
-name, latch = yield from rps.wait_for_actions(action.event_map, timeout=0.016)
+# wait until a latch in the map is set, however long that takes,
+# with a checkpoint every `poll_interval` seconds
+name, latch = yield from rps.wait_for_actions(action.event_map, poll_interval=0.016)
 ```
+
+An empty map raises `ValueError`. See [In-flight actions](#in-flight-actions)
+for what the stub does while it waits.
 
 ### Descriptor stubs
 
