@@ -27,10 +27,10 @@ Label = NewType("Label", str)
 
 CONFIG: dict[str, Any] = {
     "presenters": {"ctrl": {"gain": 7.5}},
-    "wiring": [
-        {"from": "ctrl.sig_moved", "to": "listener.on_move"},
-        {"from": "listener.sig_step", "to": "ctrl.set_gain"},
-    ],
+    "wiring": {
+        "ctrl.sig_moved": "listener.on_move",
+        "listener.sig_step": "ctrl.set_gain",
+    },
 }
 
 

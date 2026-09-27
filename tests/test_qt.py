@@ -84,9 +84,7 @@ class Readout(QWidget):
 
 
 class Wired(QtSession):
-    config: ClassVar[dict[str, Any]] = {
-        "wiring": [{"from": "mover.sig_moved", "to": "readout.note"}]
-    }
+    config: ClassVar[dict[str, Any]] = {"wiring": {"mover.sig_moved": "readout.note"}}
 
     mover: AsPresenter[Mover]
     readout: AsView[Readout]

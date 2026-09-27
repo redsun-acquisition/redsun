@@ -31,6 +31,7 @@ from redsun.injection import (
 from redsun.ports import (
     ComponentNotBuilt,
     Connection,
+    Link,
     WiringError,
     slot,
 )
@@ -110,6 +111,7 @@ __all__ = [
     "HookError",
     "Launch",
     "Layer",
+    "Link",
     "NamedComponent",
     "Placement",
     "PlanEntry",

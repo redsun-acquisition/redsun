@@ -123,8 +123,8 @@ def test_a_presenter_receives_the_provider_by_type(build: BuildSession) -> None:
 
 
 def test_the_wiring_reaches_the_provider(build: BuildSession) -> None:
-    rules = [{"from": "announcer.sig_plan", "to": "path_provider.set_plan"}]
-    app = build(AnnouncerApp, {"wiring": rules})
+    wiring = {"announcer.sig_plan": "path_provider.set_plan"}
+    app = build(AnnouncerApp, {"wiring": wiring})
 
     app.announcer.sig_plan.emit("square_scan")
 

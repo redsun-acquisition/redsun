@@ -7,11 +7,17 @@ cannot be imported.
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING
 
 from ophyd_async.core import StandardReadable, StandardReadableFormat, soft_signal_rw
 from psygnal import Signal
 
 from redsun import AsDevice, AsPresenter, DeviceMapping, Session, slot
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from redsun import Link
 
 
 class Stage(StandardReadable):
@@ -44,13 +50,12 @@ class Headless(Session):
     mover: AsPresenter[Mover]
     recorder: AsPresenter[Recorder]
 
-    def wire(self) -> None:
-        self.connect(self.mover.sig_moved, self.recorder.record)
+    def wire(self) -> Iterator[Link]:
+        yield self.mover.sig_moved, self.recorder.record
 
 
 def main() -> None:
-    layers = [{"session": "lab"}, {"metadata": {"operator": "someone"}}]
-    app = Headless(layers).build()
+    app = Headless([{"session": "lab"}, {"metadata": {"operator": "someone"}}]).build()
     assert set(app.devices) == {"stage"}
     assert set(app.presenters) == {"mover", "recorder"}
     assert dict(app.views) == {}

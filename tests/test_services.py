@@ -39,6 +39,10 @@ from redsun.services._transports import PV_ACCESS, TRANSPORTS, PVAccess
 from redsun.session import _base as session_base
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from redsun import Link
+
     from .conftest import BuildSession
 
 
@@ -314,7 +318,7 @@ def test_a_build_that_raises_stops_the_services_it_started(launchable: None) -> 
     class App(Session):
         stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
 
-        def wire(self) -> None:
+        def wire(self) -> Iterator[Link]:
             raise RuntimeError("wiring went wrong")
 
     app = App()
@@ -505,8 +509,8 @@ def test_a_presenter_hears_a_service_exit_through_wire(
         stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
         watcher: AsPresenter[ExitWatcher]
 
-        def wire(self) -> None:
-            self.connect(self.stand_in.sig_exited, self.watcher.on_exit)
+        def wire(self) -> Iterator[Link]:
+            yield self.stand_in.sig_exited, self.watcher.on_exit
 
     app = build(App)
     exit_now.touch()

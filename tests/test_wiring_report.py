@@ -11,6 +11,10 @@ from redsun import AsPresenter, Session, WiringError, slot
 from redsun.ports import Unconnected, ports
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from redsun import Link
+
     from .conftest import BuildSession
 
 
@@ -69,9 +73,11 @@ def test_a_session_wired_to_nothing_reports_every_port(
 
 
 def test_a_connected_pair_leaves_the_report(build: BuildSession) -> None:
-    session = build(App)
+    class HalfWired(App):
+        def wire(self) -> Iterator[Link]:
+            yield self.stage.sig_moved, self.other.halt
 
-    session.connect(session.stage.sig_moved, session.other.halt)
+    session = build(HalfWired)
 
     assert "stage.sig_moved" not in session.unconnected.signals
     assert "other.halt" not in session.unconnected.slots
@@ -81,10 +87,12 @@ def test_a_connected_pair_leaves_the_report(build: BuildSession) -> None:
 def test_a_fully_wired_session_reports_nothing(
     build: BuildSession,
 ) -> None:
-    session = build(App)
-    session.connect(session.stage.sig_moved, session.other.halt)
-    session.connect(session.other.sig_moved, session.stage.halt)
+    class FullyWired(App):
+        def wire(self) -> Iterator[Link]:
+            yield self.stage.sig_moved, self.other.halt
+            yield self.other.sig_moved, self.stage.halt
 
+    session = build(FullyWired)
     report = session.unconnected
 
     assert not report

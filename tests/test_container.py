@@ -7,7 +7,7 @@ import logging
 import weakref
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, NewType, cast
 
 import pydantic
 import pytest
@@ -51,7 +51,10 @@ from redsun.session import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+    from redsun import Link
 
     from .conftest import BuildSession
 
@@ -1656,7 +1659,7 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
     refused: bool, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
     """One component that could not be made must not keep the session down."""
-    rules = [{"from": "broken.sig_done", "to": "recorder.on_done"}]
+    rules = {"broken.sig_done": "recorder.on_done"}
 
     class Half(Session):
         broken: AsPresenter[Unmakeable]
@@ -1684,8 +1687,9 @@ def test_a_path_wire_connects_to_a_component_that_failed_is_skipped(
         broken: AsPresenter[BrokenTalker]
         listener: AsPresenter[Listener]
 
-        def wire(self) -> None:
-            self.connect_paths("broken.sig_said", "listener.hear")
+        config: ClassVar[Mapping[str, Any]] = {
+            "wiring": {"broken.sig_said": "listener.hear"}
+        }
 
     app = build(Chatty)
 
@@ -1719,9 +1723,9 @@ def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(
         talker: AsPresenter[Talker]
         listener: AsPresenter[Listener]
 
-        def wire(self) -> None:
-            self.connect(self.broken.sig_said, self.listener.hear)
-            self.connect(self.talker.sig_said, self.listener.hear)
+        def wire(self) -> Iterator[Link]:
+            yield self.broken.sig_said, self.listener.hear
+            yield self.talker.sig_said, self.listener.hear
 
     app = build(Chatty)
     app.talker.sig_said.emit("hi")
@@ -1738,27 +1742,27 @@ def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(
     ("rules", "error", "message"),
     [
         pytest.param(
-            [{"from": "absent.sig_done", "to": "recorder.on_done"}],
+            {"absent.sig_done": "recorder.on_done"},
             WiringError,
             "names component 'absent', which was not built",
             id="never-declared",
         ),
         pytest.param(
-            [{"from": "recorder.sig_done"}],
+            {"recorder.sig_done": 3},
             ConfigurationError,
-            "wiring.0.to: Field required",
-            id="missing-key",
+            "wiring.recorder.sig_done.str: Input should be a valid string",
+            id="value-not-a-string-or-list",
         ),
         pytest.param(
             ["recorder.sig_done -> recorder.on_done"],
             ConfigurationError,
-            "wiring.0: Input should be a valid dictionary",
+            "wiring: Input should be a valid dictionary",
             id="not-a-mapping",
         ),
     ],
 )
 def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
-    rules: list[Any], error: type[Exception], message: str
+    rules: Any, error: type[Exception], message: str
 ) -> None:
     """Only a component the build skipped is forgiven, not a typo."""
 
@@ -1769,6 +1773,67 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
 
     with pytest.raises(error, match=message):
         Wrong().build()
+
+
+def test_a_signal_wired_to_a_list_of_slots_in_the_config_reaches_both(
+    build: BuildSession,
+) -> None:
+    class Chorus(Session):
+        talker: AsPresenter[Talker]
+        first: AsPresenter[Listener]
+        second: AsPresenter[Listener]
+
+        config: ClassVar[Mapping[str, Any]] = {
+            "wiring": {"talker.sig_said": ["first.hear", "second.hear"]}
+        }
+
+    app = build(Chorus)
+    app.talker.sig_said.emit("hi")
+
+    assert app.first.heard == ["hi"]
+    assert app.second.heard == ["hi"]
+
+
+def test_a_wire_that_yields_nothing_is_fatal() -> None:
+    class Empty(Session):
+        recorder: AsPresenter[Recorder]
+
+        def wire(self) -> None:  # type: ignore[override]
+            return None
+
+    with pytest.raises(WiringError, match="wire returned nothing"):
+        Empty().build()
+
+
+def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
+    class Miswired(Session):
+        recorder: AsPresenter[Recorder]
+
+        def wire(self) -> Iterator[Link]:
+            yield cast("Link", ("not-a-signal", lambda: None))
+
+    with pytest.raises(WiringError, match="is not a signal"):
+        Miswired().build()
+
+
+def test_a_later_layers_wiring_keeps_the_earlier_layers_links(
+    build: BuildSession,
+) -> None:
+    """The ``wiring`` section merges by signal path, like any other mapping."""
+
+    class Chatting(Session):
+        talker: AsPresenter[Talker]
+        chatter: AsPresenter[Talker]
+        listener: AsPresenter[Listener]
+
+    first = {"wiring": {"talker.sig_said": "listener.hear"}}
+    second = {"wiring": {"chatter.sig_said": "listener.hear"}}
+
+    app = build(Chatting, [first, second])
+    app.talker.sig_said.emit("one")
+    app.chatter.sig_said.emit("two")
+
+    assert app.listener.heard == ["one", "two"]
 
 
 def test_a_session_can_be_referred_to_weakly() -> None:

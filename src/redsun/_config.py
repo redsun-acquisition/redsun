@@ -52,7 +52,6 @@ __all__ = [
     "SessionFile",
     "Source",
     "StorageConfig",
-    "WiringRule",
     "as_sources",
     "label",
     "load",
@@ -76,7 +75,7 @@ PLUGIN_KEYS: Final = ("plugin_name", "plugin_id")
 """The keys naming the plugin a component comes from."""
 
 EMPTY_AS_MAPPING: Final = frozenset(
-    {"metadata", "services", "devices", "presenters", "views"}
+    {"metadata", "services", "devices", "presenters", "views", "wiring"}
 )
 """Sections a file may write empty, read as an empty mapping."""
 
@@ -384,16 +383,6 @@ class DeviceEntry(ComponentEntry):
     """Whether the build connects the device."""
 
 
-class WiringRule(BaseModel, extra="forbid", use_attribute_docstrings=True):
-    """One connection a session file declares, from a signal to a slot."""
-
-    from_: str = Field(alias="from")
-    """The signal, as ``component.signal``."""
-
-    to: str
-    """The slot, as ``component.slot``."""
-
-
 class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """A session file, after its layers are merged."""
 
@@ -430,8 +419,8 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     storage: StorageConfig | None = None
     """Where the session writes; the defaults when absent."""
 
-    wiring: list[WiringRule] = []
-    """Connections the session declares."""
+    wiring: dict[str, str | list[str]] = {}
+    """The slots each signal reaches, both written as ``component.port``."""
 
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
@@ -527,7 +516,7 @@ def session_file_schema() -> dict[str, Any]:
         "type": "object",
         "additionalProperties": {"$ref": "#/$defs/HookEntry"},
     }
-    for section in (*EMPTY_AS_MAPPING, "hooks", "wiring"):
+    for section in (*EMPTY_AS_MAPPING, "hooks"):
         properties[section] = {"anyOf": [properties[section], {"type": "null"}]}
     return schema
 
@@ -566,8 +555,6 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
                 "of the session reads it",
             )
         )
-    if "wiring" in data and data["wiring"] is None:
-        data["wiring"] = []
     services = data.get("services")
     if isinstance(services, Mapping) and TRANSPORT_KEY in services:
         services = dict(services)

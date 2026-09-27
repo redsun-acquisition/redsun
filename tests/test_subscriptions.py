@@ -10,9 +10,11 @@ from ophyd_async.core import soft_signal_r_and_setter
 from redsun import AsPresenter, Session, WiringError, slot
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from ophyd_async.core import SignalR
+
+    from redsun import Link
 
     from .conftest import BuildSession
 
@@ -68,9 +70,12 @@ def test_a_reading_reaches_the_slot(
     does not have to wait for the next change to know where things stand.
     """
     signal, setter = counter
-    session = build(App)
-    session.subscribe(signal, session.watcher.on_reading)
 
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.on_reading
+
+    session = build(Wired)
     setter(42)
 
     assert session.watcher.seen == [0, 42]
@@ -81,11 +86,14 @@ def test_the_subscription_is_recorded_by_both_ends(
     build: BuildSession,
 ) -> None:
     signal, _ = counter
-    session = build(App)
 
-    record = session.subscribe(signal, session.watcher.on_reading)
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.on_reading
 
-    assert record is not None
+    session = build(Wired)
+
+    record = session.subscriptions[0]
     assert (record.source, record.consumer, record.consumer_port) == (
         "counter",
         "watcher",
@@ -100,12 +108,14 @@ def test_the_record_uses_the_port_name_the_slot_declares(
 ) -> None:
     """A configuration addresses the port, so the record must name it too."""
     signal, _ = counter
-    session = build(App)
 
-    record = session.subscribe(signal, session.renamed.on_reading)
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.renamed.on_reading
 
-    assert record is not None
-    assert record.consumer_port == "readings"
+    session = build(Wired)
+
+    assert session.subscriptions[0].consumer_port == "readings"
 
 
 def test_a_slot_that_is_not_marked_is_refused(
@@ -113,10 +123,13 @@ def test_a_slot_that_is_not_marked_is_refused(
     build: BuildSession,
 ) -> None:
     signal, _ = counter
-    session = build(App)
+
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.unmarked
 
     with pytest.raises(WiringError, match="unmarked"):
-        session.subscribe(signal, session.watcher.unmarked)
+        build(Wired)
 
 
 def test_shutdown_stops_the_readings(
@@ -125,9 +138,13 @@ def test_shutdown_stops_the_readings(
 ) -> None:
     """A reading delivered after teardown reaches a component being finalized."""
     signal, setter = counter
-    session = build(App)
+
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.on_reading
+
+    session = build(Wired)
     watcher = session.watcher
-    session.subscribe(signal, watcher.on_reading)
     setter(1)
 
     session.shutdown()
@@ -141,9 +158,12 @@ def test_shutdown_forgets_the_subscriptions(
     build: BuildSession,
 ) -> None:
     signal, _ = counter
-    session = build(App)
-    session.subscribe(signal, session.watcher.on_reading)
 
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.on_reading
+
+    session = build(Wired)
     session.shutdown()
 
     assert session.subscriptions == []
@@ -158,6 +178,9 @@ def test_a_subscribed_port_is_not_reported_as_unconnected(
     session = build(App)
     assert "watcher.on_reading" in session.unconnected.slots
 
-    session.subscribe(signal, session.watcher.on_reading)
+    class Wired(App):
+        def wire(self) -> Iterator[Link]:
+            yield signal, self.watcher.on_reading
 
-    assert "watcher.on_reading" not in session.unconnected.slots
+    wired = build(Wired)
+    assert "watcher.on_reading" not in wired.unconnected.slots

@@ -21,6 +21,10 @@ from redsun import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from redsun import Link
+
     from .conftest import BuildSession
 
 Readings = NewType("Readings", "dict[str, float]")
@@ -231,7 +235,7 @@ class CountedFailingApp(Session):
     counting: AsPresenter[Counting]
 
     config: ClassVar[dict[str, Any]] = {
-        "wiring": [{"from": "failing.sig_done", "to": "counting.on_done"}]
+        "wiring": {"failing.sig_done": "counting.on_done"}
     }
 
 
@@ -252,8 +256,8 @@ class DoubleRouteApp(Session):
     listening: AsPresenter[Listening]
     panel: AsView[Calling]
 
-    def wire(self) -> None:
-        self.connect(self.panel.sig_moved, self.listening.refresh)
+    def wire(self) -> Iterator[Link]:
+        yield self.panel.sig_moved, self.listening.refresh
 
 
 def test_setup_takes_a_value_shared_by_a_component_declared_below_it(

@@ -26,7 +26,7 @@ from typing import (
 import yaml
 from event_model import DocumentRouter
 from in_n_out import Store
-from ophyd_async.core import Device  # noqa: TC002
+from ophyd_async.core import Device, SignalR
 from psygnal import SignalInstance
 
 from redsun.aio import run_coro
@@ -114,11 +114,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from contextlib import AbstractContextManager
 
-    from ophyd_async.core import SignalR
     from tiled.server.simple import SimpleTiledServer
     from typing_extensions import TypeForm
 
-    from redsun.ports import SlotThread
+    from redsun.ports import Link, SlotThread
     from redsun.services import Service
 
     from ._declarations import Key
@@ -212,7 +211,7 @@ class NotBuilt:
     """Stands in for a component that failed to build, while `Session.wire` runs.
 
     Any attribute read on it is another stand-in for the same component, so
-    ``self.stage.readback`` reaches `Session.connect`, which skips the link.
+    a link yielding ``self.stage.readback`` is recognised and skipped.
     """
 
     component: str
@@ -241,8 +240,8 @@ class Session(BuildableSession):
         motor_ctrl: AsPresenter[MotorPresenter]
         motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
 
-        def wire(self) -> None:
-            self.connect(self.motor_ctrl.sig_moved, self.motor_widget.update)
+        def wire(self) -> Iterator[Link]:
+            yield self.motor_ctrl.sig_moved, self.motor_widget.update
     ```
 
     An annotation is a declaration only if it names a layer, so a session may
@@ -811,12 +810,25 @@ class Session(BuildableSession):
         self._baseline = self._serialized()
 
     def apply_wiring(self) -> None:
-        """Connect the ports the class declares, then those the file names."""
+        """Make the links the class yields, then those the file names.
+
+        Raises
+        ------
+        WiringError
+            If `wire` yields nothing iterable, or a link that cannot be made.
+        """
         stand_ins = [name for name in self._failed if name in self._declarations]
         for name in stand_ins:
             setattr(self, name, NotBuilt(name))
         try:
-            self.wire()
+            links = self.wire()
+            if links is None:
+                raise WiringError(
+                    f"{type(self).__name__}.wire returned nothing; it yields "
+                    "each link as a signal and a slot"
+                )
+            for signal, slot in links:
+                self._link(signal, slot)
         finally:
             for name in stand_ins:
                 delattr(self, name)
@@ -887,13 +899,26 @@ class Session(BuildableSession):
             )
         return summary
 
-    def wire(self) -> None:
-        """Connect the signals and slots of built components.
+    def wire(self) -> Iterable[Link]:
+        """Yield the links of the session, each a signal and the slot it reaches.
 
-        Every component that built exists by the time this runs; one that
-        failed reads as a stand-in, and `connect` or `subscribe` skips a link
-        naming it. Connects nothing by default.
+        ```python
+        def wire(self) -> Iterator[Link]:
+            yield self.motor_ctrl.sig_moved, self.motor_widget.update
+            yield self.stage.readback, self.motor_widget.on_reading
+        ```
+
+        A signal is a `psygnal` signal of a component, or a signal of an
+        ``ophyd-async`` device, whose reading dictionary the slot is called
+        with. A slot is a bound method marked with `slot`, which may be a
+        coroutine function, and is delivered on the thread it declares, then
+        the one its class declares, then the session's default for it.
+
+        Every component that built exists by the time this runs. One that
+        failed reads as a stand-in, and a link naming it is skipped with a
+        warning. Yields nothing by default.
         """
+        return ()
 
     def connect_devices(self, mock: bool = False) -> None:
         """Connect every built device through ophyd-async.
@@ -1103,7 +1128,7 @@ class Session(BuildableSession):
             return "<unknown>"
         return self._names.get(id(component), type(component).__name__)
 
-    def _affinity(self, slot: Callable[..., Any], thread: SlotThread) -> SlotThread:
+    def _affinity(self, slot: Callable[..., Any]) -> SlotThread:
         declaration: Slot | None = getattr(slot, SLOT_ATTR, None)
         # a marker with a thread is a slot, whichever layer's decorator set it
         if declaration is None or not hasattr(declaration, "thread"):
@@ -1111,8 +1136,6 @@ class Session(BuildableSession):
             raise WiringError(
                 f"{name} is not connectable; mark it with the 'slot' decorator"
             )
-        if thread is not None:
-            return thread
         consumer = getattr(slot, "__self__", None)
         return (
             declaration.thread
@@ -1127,42 +1150,29 @@ class Session(BuildableSession):
         """
         return None
 
-    def connect(
-        self,
-        signal: SignalInstance,
-        slot: Callable[..., Any],
-        *,
-        thread: SlotThread = None,
-    ) -> Connection | None:
-        """Connect a signal to a slot and record the link.
-
-        Parameters
-        ----------
-        signal : SignalInstance
-            The emitting signal.
-        slot : Callable[..., Any]
-            A bound method marked with `slot`. May be a
-            coroutine function.
-        thread : SlotThread
-            Delivery thread. Defaults to the affinity the slot declares, then
-            to the one its class declares, then to the session's default for
-            the consumer.
-
-        Returns
-        -------
-        Connection | None
-            The recorded link, ``None`` when either end belongs to a component
-            that failed to build.
+    def _link(self, signal: object, slot: Callable[..., Any]) -> None:
+        """Make one link, unless an end of it belongs to a component that failed.
 
         Raises
         ------
         WiringError
-            If *slot* is not marked as connectable, or if psygnal rejects the
-            two signatures.
+            If *signal* is not a signal, if *slot* is not marked as
+            connectable, or if psygnal rejects the two signatures.
         """
         if skipped(signal, slot):
-            return None
-        thread = self._affinity(slot, thread)
+            return
+        if isinstance(signal, SignalInstance):
+            self._connect(signal, slot)
+        elif isinstance(signal, SignalR):
+            self._subscribe(signal, slot)
+        else:
+            raise WiringError(
+                f"{signal!r} is not a signal; a link is a psygnal signal or a "
+                "device signal, then the slot it reaches"
+            )
+
+    def _connect(self, signal: SignalInstance, slot: Callable[..., Any]) -> None:
+        thread = self._affinity(slot)
         link = Connection(
             publisher=self._label(owner_of(signal)),
             publisher_port=signal.name or "<anonymous>",
@@ -1178,47 +1188,12 @@ class Session(BuildableSession):
         self._links.append((signal, slot))
         self._connections.append(link)
         logger.debug(f"Connected {link}")
-        return link
 
-    def subscribe(
-        self,
-        signal: SignalR[Any],
-        slot: Callable[..., Any],
-        *,
-        thread: SlotThread = None,
-    ) -> Subscription | None:
-        """Subscribe a slot to an ophyd-async device signal and record it.
-
-        Delivery is marshalled through a psygnal signal, so *thread* behaves as
-        it does for `connect`. This is the only way a device signal can reach a
-        slot with a thread affinity: ophyd-async calls its subscribers on
-        whatever thread produced the reading.
-
-        Parameters
-        ----------
-        signal : SignalR[Any]
-            The device signal to observe.
-        slot : Callable[..., Any]
-            A bound method marked with `slot`, called
-            with the reading dictionary.
-        thread : SlotThread
-            Delivery thread. Defaults to the affinity the slot declares, then
-            to the one its class declares.
-
-        Returns
-        -------
-        Subscription | None
-            The recorded subscription, ``None`` when either end belongs to a
-            component that failed to build.
-
-        Raises
-        ------
-        WiringError
-            If *slot* is not marked as connectable.
-        """
-        if skipped(signal, slot):
-            return None
-        thread = self._affinity(slot, thread)
+    def _subscribe(self, signal: SignalR[Any], slot: Callable[..., Any]) -> None:
+        # ophyd-async calls a subscriber on whatever thread produced the
+        # reading, so the reading goes through a psygnal signal to reach the
+        # thread the slot asks for
+        thread = self._affinity(slot)
         relay = SignalInstance((object,), name=signal.name)
         relay.connect(slot, thread=thread)
 
@@ -1241,36 +1216,16 @@ class Session(BuildableSession):
         self._subscriptions.append((signal, forward, relay))
         self._subscription_records.append(record)
         logger.debug(f"Subscribed {record}")
-        return record
 
     @property
     def subscriptions(self) -> list[Subscription]:
         """The device-signal subscriptions made through this session."""
         return list(self._subscription_records)
 
-    def connect_paths(
-        self, source: str, target: str, *, thread: SlotThread = None
-    ) -> Connection | None:
+    def _connect_paths(self, source: str, target: str) -> None:
         """Connect two ports addressed as ``component.port``.
 
-        The string form of `connect`, used by the ``wiring`` section of a
-        configuration file. A path naming a component that failed to build is
-        logged and skipped, as `connect` skips it.
-
-        Parameters
-        ----------
-        source : str
-            Path of the emitting signal.
-        target : str
-            Path of the consuming slot.
-        thread : SlotThread
-            Delivery thread, overriding the slot and its class.
-
-        Returns
-        -------
-        Connection | None
-            The recorded link, ``None`` when either end belongs to a component
-            that failed to build.
+        A path naming a component that failed to build is logged and skipped.
 
         Raises
         ------
@@ -1290,12 +1245,8 @@ class Session(BuildableSession):
                 target,
                 e.component,
             )
-            return None
-        return self.connect(
-            cast("SignalInstance", signal),
-            cast("Callable[..., Any]", slot),
-            thread=thread,
-        )
+            return
+        self._connect(cast("SignalInstance", signal), cast("Callable[..., Any]", slot))
 
     def _resolve_port(self, path: str, kind: str) -> object:
         """Look up the signal or slot a ``component.port`` path names."""
@@ -1922,21 +1873,22 @@ class Session(BuildableSession):
         self.on_release(close)
 
     def _apply_wiring_config(self, config: Mapping[str, Any]) -> None:
-        """Connect the port pairs the ``wiring`` section lists.
+        """Connect each signal the ``wiring`` section names to its slots.
 
-        A rule naming a component the build failed on is warned about and
+        A path naming a component the build failed on is warned about and
         skipped, so one component that could not be made does not keep the
-        session from coming up. Every other way of getting a rule wrong stays
+        session from coming up. Every other way of getting a path wrong stays
         fatal, a name that was never declared included.
 
         Raises
         ------
         WiringError
-            If a rule names a port that cannot be resolved for any other
+            If a path names a port that cannot be resolved for any other
             reason.
         """
-        for rule in config.get("wiring", []):
-            self.connect_paths(rule["from"], rule["to"])
+        for source, targets in (config.get("wiring") or {}).items():
+            for target in [targets] if isinstance(targets, str) else targets:
+                self._connect_paths(source, target)
 
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.

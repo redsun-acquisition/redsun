@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from threading import Thread
     from typing import TypeAlias
 
+    from ophyd_async.core import SignalR
     from psygnal import SignalInstance
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "SLOT_THREAD_ATTR",
     "ComponentNotBuilt",
     "Connection",
+    "Link",
     "Ports",
     "Slot",
     "SlotThread",
@@ -45,6 +47,9 @@ SLOT_THREAD_ATTR = "__redsun_slot_thread__"
 
 SlotThread: TypeAlias = "Literal['main', 'current'] | Thread | None"
 """Thread a slot is delivered on, as accepted by `psygnal`."""
+
+Link: TypeAlias = "tuple[SignalInstance | SignalR[Any], Callable[..., Any]]"
+"""A signal and the slot it reaches, as a session's ``wire`` yields it."""
 
 
 class WiringError(RuntimeError):

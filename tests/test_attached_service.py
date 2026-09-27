@@ -34,7 +34,11 @@ from redsun.aio import run_coro
 from redsun.qt import Central, QtSession
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from qtpy.QtWidgets import QApplication
+
+    from redsun import Link
 
     from .conftest import BuildSession
 
@@ -102,9 +106,9 @@ class AttachedPanel(QtSession):
     reader: Annotated[AsPresenter[SignalReader], Declare(signal="a")]
     panel: AsView[ReadingView]
 
-    def wire(self) -> None:
-        self.connect(self.panel.sig_read_requested, self.reader.read)
-        self.connect(self.reader.sig_read, self.panel.show_reading)
+    def wire(self) -> Iterator[Link]:
+        yield self.panel.sig_read_requested, self.reader.read
+        yield self.reader.sig_read, self.panel.show_reading
 
 
 @pytest.fixture

@@ -28,5 +28,4 @@ views:
     title: from-config
 
 wiring:
-  - from: motor_ctrl.sig_moved
-    to: motor_widget.refresh
+  motor_ctrl.sig_moved: motor_widget.refresh

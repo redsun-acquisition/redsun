@@ -12,7 +12,10 @@ from mock_bundle.views import MockAcquisitionView
 from redsun import AsPresenter, AsView, Session
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+    from redsun import Link
 
     from .conftest import BuildSession
 
@@ -25,8 +28,8 @@ class Plans(Session):
     registrar: AsPresenter[MockRegistrar]
     panel: AsView[MockAcquisitionView]
 
-    def wire(self) -> None:
-        self.connect(self.panel.sig_launch, self.acquisition.launch)
+    def wire(self) -> Iterator[Link]:
+        yield self.panel.sig_launch, self.acquisition.launch
 
 
 class PlansWithoutAMedian(Session):
@@ -36,8 +39,8 @@ class PlansWithoutAMedian(Session):
     registrar: AsPresenter[MockRegistrar]
     panel: AsView[MockAcquisitionView]
 
-    def wire(self) -> None:
-        self.connect(self.panel.sig_launch, self.acquisition.launch)
+    def wire(self) -> Iterator[Link]:
+        yield self.panel.sig_launch, self.acquisition.launch
 
 
 def test_a_plan_runs_with_the_callback_it_carries_first(
