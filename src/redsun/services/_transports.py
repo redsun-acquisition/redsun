@@ -14,7 +14,6 @@ __all__ = [
     "TRANSPORTS",
     "TRANSPORT_KEY",
     "Transport",
-    "checked_transport",
     "transport_of",
 ]
 
@@ -166,20 +165,6 @@ def transport_of(config: Mapping[str, Any]) -> Any:
     """
     services = config.get("services") or {}
     return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
-
-
-def checked_transport(name: str, where: str) -> str:
-    """Return *name*, refusing a transport ``redsun`` does not have.
-
-    Raises
-    ------
-    TypeError
-        Naming what was read and the transports there are.
-    """
-    if name not in TRANSPORTS:
-        known = ", ".join(repr(key) for key in sorted(TRANSPORTS))
-        raise TypeError(f"{where} asks for transport {name!r}; redsun has {known}")
-    return name
 
 
 def add_to_env(name: str, value: str) -> None:
