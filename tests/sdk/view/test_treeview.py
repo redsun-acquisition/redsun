@@ -16,6 +16,29 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.qt
 
 
+def edited_tree() -> tuple[DescriptorTreeView, list[tuple[str, str, Any]]]:
+    """Return a tree whose gain the user has just changed from 1 to 100, and what it sent."""
+    view = DescriptorTreeView(
+        {"cam-gain": {"dtype": "integer", "source": "cam", "shape": []}},
+        {"cam-gain": {"value": 1, "timestamp": 0.0}},
+    )
+    sent: list[tuple[str, str, Any]] = []
+    view.sig_property_changed.connect(lambda *args: sent.append(args))
+    spinbox = view.findChild(QtWidgets.QSpinBox)
+    assert spinbox is not None
+    field = spinbox.lineEdit()
+    assert field is not None
+    field.setText("100")
+    spinbox.interpretText()
+    return view, sent
+
+
+def shown(view: DescriptorTreeView) -> int:
+    spinbox = view.findChild(QtWidgets.QSpinBox)
+    assert spinbox is not None
+    return spinbox.value()
+
+
 @pytest.mark.parametrize(
     ("dtype", "editor", "expected"),
     [
@@ -93,3 +116,35 @@ def test_a_read_only_source_gives_a_label_not_an_editor(
     assert view.findChild(QtWidgets.QLineEdit) is None
     label = view.findChild(QtWidgets.QLabel)
     assert label is not None and label.text() == "uint8"
+
+
+def test_an_edit_shows_what_the_device_read_back(qapp: QApplication) -> None:
+    """The device clips 100 to 64, and a refusal arriving late changes nothing."""
+    view, sent = edited_tree()
+
+    view.set_value("cam-gain", 64)
+    view.revert("cam-gain")
+
+    assert shown(view) == 64
+    assert sent == [("cam", "gain", 100)]
+
+
+def test_a_refused_edit_shows_the_value_before_it(qapp: QApplication) -> None:
+    view, sent = edited_tree()
+
+    view.revert("cam-gain")
+
+    assert shown(view) == 1
+    assert sent == [("cam", "gain", 100)]
+
+
+def test_a_value_changing_with_no_edit_pending_is_shown(qapp: QApplication) -> None:
+    view = DescriptorTreeView(
+        {"cam-gain": {"dtype": "integer", "source": "cam", "shape": []}},
+        {"cam-gain": {"value": 1, "timestamp": 0.0}},
+    )
+
+    view.set_value("cam-gain", 7)
+    view.set_value("cam-missing", 3)
+
+    assert shown(view) == 7

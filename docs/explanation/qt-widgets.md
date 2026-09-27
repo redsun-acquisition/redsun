@@ -144,17 +144,46 @@ and a header under it for a property naming a group with a dash of its own,
 so `cam-properties-Binning` is `Binning` under `properties` under `cam`. A
 property whose source ends in `:readonly` is shown as a greyed label.
 
-Update a value:
+An edit is a request. The tree emits `sig_property_changed` and keeps the
+edit pending, showing what was typed, until it is told what came of it:
 
 ```python
-tree.update_reading("stage-position", new_reading)
+tree.set_value("stage-position", 12.5)  # what the device read back
+tree.revert("stage-position")  # the device refused: show the value before
 ```
 
-Confirm or revert a pending edit:
+`set_value` shows the value given, which may differ from the one typed when
+the device rounds or clips it. It also shows a value that changed with no
+edit pending. Neither call emits `sig_property_changed`.
+
+A presenter setting the device announces the value it reads back afterwards,
+and the view hands it to the tree:
 
 ```python
-tree.confirm_change("stage-position", success=True)  # keep new value
-tree.confirm_change("stage-position", success=False)  # revert
+class MyController:
+    sig_new_configuration = Signal(str, object)
+    sig_refused = Signal(str)
+
+    @slot
+    async def set(self, device: str, property: str, value: object) -> None:
+        signal = self.settings[device][property]
+        try:
+            await signal.set(value)
+        except Exception:
+            self.sig_refused.emit(signal.name)
+            return
+        reading = await signal.read()
+        self.sig_new_configuration.emit(signal.name, reading[signal.name]["value"])
+
+
+class MyView(QWidget):
+    @slot
+    def on_new_configuration(self, key: str, value: object) -> None:
+        self.tree.set_value(key, value)
+
+    @slot
+    def on_refused(self, key: str) -> None:
+        self.tree.revert(key)
 ```
 
 ---
