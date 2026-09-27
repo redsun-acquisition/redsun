@@ -245,6 +245,18 @@ A component that needs to clean up defines `shutdown`, plain or `async`. The
 session calls it when it shuts down, newest component first. Nothing else is
 needed.
 
+A device may define one too, to leave its hardware in a safe state:
+
+```python
+class MyLaser(StandardReadable):
+    async def shutdown(self) -> None:
+        await self.intensity.set(0)
+```
+
+Devices are shut down after every presenter and view, which may still use
+them in a `shutdown` of their own, and before the services stop, so the
+device can still reach its service.
+
 ## Dataclasses and pydantic models
 
 A presenter can be a dataclass or a pydantic model, since the session passes
