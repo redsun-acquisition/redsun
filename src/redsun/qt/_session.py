@@ -208,6 +208,11 @@ class Qt(Frontend):
             "session passes to every view; neither may sit after a '/' or a '*'"
         )
 
+    @classmethod
+    def thread_of(cls, consumer: object) -> SlotThread:
+        """Run a widget's slots on the main thread, the only one it may be used from."""
+        return "main" if isinstance(consumer, QWidget) else None
+
 
 class QtSession(DesktopSession[QMainWindow], Session):
     """Application container whose views are attached to a Qt main window.
@@ -444,10 +449,6 @@ class QtSession(DesktopSession[QMainWindow], Session):
             return
         self.settings.set("window.geometry", encoded(self._main_window.saveGeometry()))
         self.settings.set("window.state", encoded(self._main_window.saveState()))
-
-    def _default_thread(self, consumer: object) -> SlotThread:
-        """Run a widget's slots on the main thread, the only one it may be used from."""
-        return "main" if isinstance(consumer, QWidget) else None
 
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.

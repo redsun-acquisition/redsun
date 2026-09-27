@@ -67,7 +67,7 @@ slots.
 
 A link no longer takes a thread override of its own. The thread a slot is
 delivered on comes from the slot's own declaration, then its class's, then
-the session's default for the consumer, so a slot is delivered on the same
+the one the session's frontend gives it, so a slot is delivered on the same
 thread wherever it is reached from.
 
 ## Consequences

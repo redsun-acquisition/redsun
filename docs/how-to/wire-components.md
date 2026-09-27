@@ -183,8 +183,12 @@ order, the thread comes from:
 
 1. `@slot(thread=...)`, for one method;
 2. `__redsun_slot_thread__` on the class, for every slot of it;
-3. the session's default: a `QtSession` runs a Qt widget's slots on the main
-   thread, since a widget may only be used from there.
+3. the session's frontend, through
+   [`Frontend.thread_of`][redsun.Frontend.thread_of]: the Qt frontend runs a
+   widget's slots on the main thread, since a widget may only be used from
+   there.
+
+A session with no frontend asks nothing at the third step.
 
 ## Observe a device signal
 

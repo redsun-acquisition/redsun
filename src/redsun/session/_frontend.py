@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from redsun.ports import SlotThread
     from redsun.view import Placement
 
 __all__ = ["Frontend"]
@@ -17,11 +18,16 @@ class Frontend:
     attaches with the toolkit type it demands of the view asking for it. A view
     asking for a placement the frontend does not list, or one whose class is
     not the type its placement demands, is refused before it is built. The
-    table is all a session needs; the placements themselves and the attaching
-    live in the frontend's own package.
+    placements themselves and the attaching live in the frontend's own
+    package.
 
     An empty table constrains nothing, which is what an application that names
     no toolkit gets.
+
+    `thread_of` says where the slots of a component run when the component
+    does not say. A slot held for a thread is called there once that thread
+    calls ``psygnal.emit_queued``, which a session built on the frontend does
+    from the toolkit's event loop.
     """
 
     requires: ClassVar[Mapping[type[Placement], type]] = {}
@@ -39,6 +45,15 @@ class Frontend:
         TypeError
             In an override, naming what *view* lacks.
         """
+
+    @classmethod
+    def thread_of(cls, consumer: object) -> SlotThread:
+        """Return the thread the slots of *consumer* run on when nothing else says.
+
+        Asked after the slot itself and the class of *consumer*. ``None``
+        here: the slot runs on the thread that emits.
+        """
+        return None
 
     @classmethod
     def check_placement(

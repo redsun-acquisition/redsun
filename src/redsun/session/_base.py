@@ -912,7 +912,7 @@ class Session(BuildableSession):
         ``ophyd-async`` device, whose reading dictionary the slot is called
         with. A slot is a bound method marked with `slot`, which may be a
         coroutine function, and is delivered on the thread it declares, then
-        the one its class declares, then the session's default for it.
+        the one its class declares, then the one the frontend gives it.
 
         Every component that built exists by the time this runs. One that
         failed reads as a stand-in, and a link naming it is skipped with a
@@ -1140,15 +1140,8 @@ class Session(BuildableSession):
         return (
             declaration.thread
             or cast("SlotThread", getattr(type(consumer), SLOT_THREAD_ATTR, None))
-            or self._default_thread(consumer)
+            or self.frontend.thread_of(consumer)
         )
-
-    def _default_thread(self, consumer: object) -> SlotThread:
-        """Return where a slot of *consumer* runs when nothing else says.
-
-        ``None`` here: the slot runs on the thread that emits.
-        """
-        return None
 
     def _link(self, signal: object, slot: Callable[..., Any]) -> None:
         """Make one link, unless an end of it belongs to a component that failed.
