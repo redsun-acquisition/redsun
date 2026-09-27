@@ -404,6 +404,8 @@ class Session(BuildableSession):
         ValueError
             If the configuration names a frontend no session is built
             against.
+        ImportError
+            If it names one whose packages are not installed.
         TypeError
             If it names one this session is not built against.
         """
@@ -2180,7 +2182,14 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
             f"the configuration names frontend {frontend!r}, which no session "
             f"is built against. Known: {', '.join(sorted(registered))}."
         )
-    resolved: type[Session] = entry.load()
+    try:
+        resolved: type[Session] = entry.load()
+    except ImportError as e:
+        raise ImportError(
+            f"the configuration names frontend {frontend!r}, which cannot be "
+            f"imported: {e}. Install the packages it needs; the 'qt' frontend "
+            "comes with the 'pyqt' and the 'pyside' extra."
+        ) from e
     if issubclass(cls, resolved):
         return cls
     if cls is not Session:
