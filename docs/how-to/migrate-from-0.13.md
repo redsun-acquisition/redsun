@@ -257,6 +257,7 @@ New keys: `strict`, `mock`, `providers`, `actions`, `color_scheme`. See
 - `DescriptorTreeView.update_reading` and `confirm_change` are replaced by
   `set_value(key, value)`, which shows what the device read back and settles
   a pending edit, and `revert(key)`, for an edit the device refused.
+- `redsun.engine.Status` is removed; import it from `bluesky.protocols`.
 - `connect_devices` is removed. A session file setting `mock: true` connects
   every `autoconnect` device to a simulated backend during the build, and a
   device declared with `autoconnect: false` is connected by the component
