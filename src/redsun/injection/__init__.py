@@ -8,17 +8,7 @@ the rest of the layer, and is the import a component is written against.
 
 from __future__ import annotations
 
-from ._census import Devices, DevicesOf, devices_protocol, rejected, satisfying
-from ._provides import constant, provides, register_shared, shared_keys
+from ._census import DevicesOf, rejected, satisfying
+from ._provides import provides
 
-__all__ = [
-    "Devices",
-    "DevicesOf",
-    "constant",
-    "devices_protocol",
-    "provides",
-    "register_shared",
-    "rejected",
-    "satisfying",
-    "shared_keys",
-]
+__all__ = ["DevicesOf", "provides", "rejected", "satisfying"]

@@ -32,26 +32,15 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
-from redsun.injection import (
-    constant,
-    register_shared,
-    rejected,
-    satisfying,
-    shared_keys,
-)
+from redsun.injection import rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 from redsun.ports import (
-    SLOT_ATTR,
-    SLOT_THREAD_ATTR,
     ComponentNotBuilt,
     Connection,
-    Slot,
     Subscription,
     Unconnected,
     WiringError,
-    owner_of,
-    port_name,
     ports,
 )
 from redsun.registry import (
@@ -75,6 +64,8 @@ from .._config import (
 )
 from .._hooks import HookError, distinct, parse_hook_specs, resolve_hooks
 from .._settings import Settings
+from ..injection._provides import constant, register_shared, shared_keys
+from ..ports._wiring import SLOT_ATTR, SLOT_THREAD_ATTR, Slot, owner_of, port_name
 from ..services._transports import (
     CHANNEL_ACCESS,
     TRANSPORTS,

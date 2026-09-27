@@ -31,7 +31,7 @@ from redsun import (
     Placement,
     Session,
 )
-from redsun.injection import Devices
+from redsun.injection._census import Devices
 
 
 @dataclass(frozen=True)

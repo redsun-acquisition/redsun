@@ -10,7 +10,7 @@ from typing import (
     get_origin,
 )
 
-from redsun.injection import devices_protocol
+from ..injection._census import devices_protocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping

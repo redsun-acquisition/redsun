@@ -19,12 +19,13 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
-from redsun.injection import devices_protocol, shared_keys
 from redsun.services import Service
 from redsun.view import Placement
 
 from .._hooks import HookError, known_points
 from .._structural import protocol_of
+from ..injection._census import devices_protocol
+from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS, TRANSPORT_KEY
 from ._factories import resolved
 from ._frontend import Frontend
