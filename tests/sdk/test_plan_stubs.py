@@ -3,13 +3,14 @@ from __future__ import annotations
 from time import sleep
 from typing import TYPE_CHECKING
 
+import pytest
 from bluesky.utils import Msg
 from ophyd_async.core import soft_signal_rw
 
 import redsun.engine.plan_stubs as rps
 from redsun.aio import run_coro
 from redsun.engine import register_bound_command
-from redsun.engine.actions import Action
+from redsun.engine.actions import Action, SRLatch
 
 if TYPE_CHECKING:
     from typing import Any
@@ -20,20 +21,20 @@ if TYPE_CHECKING:
     from redsun.engine import RunEngine
 
 
-def test_wait_for_actions_set_after_timeout_iterations(RE: RunEngine) -> None:
-    """The stub polls at `timeout` intervals until a latch is set."""
+def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
+    """The stub polls at `poll_interval` until a latch is set."""
     action = Action(name="go")
     events = action.event_map
     results: list[tuple[str, bool]] = []
 
     def plan() -> MsgGenerator[None]:
         name, latch = yield from rps.wait_for_actions(
-            events, timeout=0.01, wait_for="set"
+            events, poll_interval=0.01, wait_for="set"
         )
         results.append((name, latch.is_set()))
 
     future = RE(plan())
-    # let the stub iterate through at least one timed-out wait first
+    # let the stub go through at least one poll that finds nothing first
     sleep(0.1)
     RE.loop.call_soon_threadsafe(events["go"].set)
     future.result(timeout=10)
@@ -47,10 +48,12 @@ def test_wait_for_actions_reset(RE: RunEngine) -> None:
     results: list[str] = []
 
     def plan() -> MsgGenerator[None]:
-        name, _ = yield from rps.wait_for_actions(events, timeout=0.01, wait_for="set")
+        name, _ = yield from rps.wait_for_actions(
+            events, poll_interval=0.01, wait_for="set"
+        )
         results.append(f"set:{name}")
         name, _ = yield from rps.wait_for_actions(
-            events, timeout=0.01, wait_for="reset"
+            events, poll_interval=0.01, wait_for="reset"
         )
         results.append(f"reset:{name}")
 
@@ -61,6 +64,46 @@ def test_wait_for_actions_reset(RE: RunEngine) -> None:
     RE.loop.call_soon_threadsafe(events["go"].reset)
     future.result(timeout=10)
     assert results == ["set:go", "reset:go"]
+
+
+def test_wait_for_actions_refuses_an_empty_mapping(RE: RunEngine) -> None:
+    with pytest.raises(ValueError, match="no actions to wait on"):
+        RE(rps.wait_for_actions({})).result(timeout=10)
+
+
+@pytest.mark.parametrize("order", [("early", "late"), ("late", "early")])
+def test_wait_for_actions_returns_the_latch_set_first(
+    RE: RunEngine, order: tuple[str, str]
+) -> None:
+    latches = {"early": SRLatch(), "late": SRLatch()}
+    latches["early"].set()
+    # longer than the coarsest step of time.monotonic, 16 ms on Windows
+    sleep(0.05)
+    latches["late"].set()
+    events = {name: latches[name] for name in order}
+    results: list[str] = []
+
+    def plan() -> MsgGenerator[None]:
+        name, _ = yield from rps.wait_for_actions(events)
+        results.append(name)
+
+    RE(plan()).result(timeout=10)
+    assert results == ["early"]
+
+
+@pytest.mark.parametrize("order", [("a", "b"), ("b", "a")])
+def test_wait_for_reset_on_unchanged_latches_returns_the_first_in_the_mapping(
+    RE: RunEngine, order: tuple[str, str]
+) -> None:
+    events = {name: SRLatch() for name in order}
+    results: list[str] = []
+
+    def plan() -> MsgGenerator[None]:
+        name, _ = yield from rps.wait_for_actions(events, wait_for="reset")
+        results.append(name)
+
+    RE(plan()).result(timeout=10)
+    assert results == [order[0]]
 
 
 def test_describe_stub_returns_signal_descriptor(RE: RunEngine) -> None:

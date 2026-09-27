@@ -306,18 +306,19 @@ class RunEngine(BlueskyRunEngine):
         Parameters
         ----------
         msg: Msg
-            Carries a map of SRLatch in `msg.args` and a timeout in
-            `msg.kwargs`:
+            Carries a map of SRLatch in `msg.args`, and in `msg.kwargs` how
+            long to wait and for which state:
 
-            Msg("wait_for_actions", None, latches, timeout=timeout, wait_for="set")
+            Msg("wait_for_actions", None, latches, poll_interval=0.1, wait_for="set")
 
         Returns
         -------
         tuple[str, SRLatch] | None
-            Name and latch that changed; None if the timeout expired first.
+            Name and latch in the wanted state, the one that reached it first
+            of several; None if none did within the interval.
         """
         latch_map: Mapping[str, SRLatch] = msg.args[0]
-        timeout: float | None = msg.kwargs.get("timeout", None)
+        interval: float | None = msg.kwargs.get("poll_interval", None)
         wait_for: Literal["set", "reset"] = msg.kwargs.get("wait_for", "set")
 
         # Create a mapping to track which task corresponds to which latch
@@ -333,19 +334,23 @@ class RunEngine(BlueskyRunEngine):
             }
 
         done, pending = await asyncio.wait(
-            latch_tasks, return_when=asyncio.FIRST_COMPLETED, timeout=timeout
+            latch_tasks, return_when=asyncio.FIRST_COMPLETED, timeout=interval
         )
 
         # Cancel all pending tasks
         for task in pending:
             task.cancel()
 
-        # Return the latch that changed state
-        if not done:
+        ready = {task.get_name() for task in done}
+        if not ready:
             return None
-        completed_task = done.pop()
-        task_name = completed_task.get_name()
-        return task_name, latch_map[task_name]
+        # min keeps the first of equals, so latches that changed together
+        # are told apart by their order in the map
+        first = min(
+            (name for name in latch_map if name in ready),
+            key=lambda name: latch_map[name].changed_at,
+        )
+        return first, latch_map[first]
 
 
 def register_bound_command(

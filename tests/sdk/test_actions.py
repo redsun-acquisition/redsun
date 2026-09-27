@@ -62,7 +62,7 @@ def test_a_latch_set_from_another_thread_wakes_the_plan(RE: RunEngine) -> None:
     started = threading.Event()
     RE.msg_hook = lambda msg: started.set()  # type: ignore[assignment]
 
-    future = RE(rps.wait_for_actions({"go": latch}, timeout=5.0))
+    future = RE(rps.wait_for_actions({"go": latch}, poll_interval=5.0))
     assert started.wait(5)
     time.sleep(0.1)
     began = time.monotonic()

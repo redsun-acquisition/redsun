@@ -36,35 +36,48 @@ SIXTY_FPS: Final[float] = 1.0 / 60.0
 
 def wait_for_actions(
     events: Mapping[str, SRLatch],
-    timeout: float = SIXTY_FPS,
+    poll_interval: float = SIXTY_FPS,
     wait_for: Literal["set", "reset"] = "set",
 ) -> MsgGenerator[tuple[str, SRLatch]]:
     """Wait until one of the given latches is in the wanted state.
 
     Returns as soon as a latch is set, or reset with ``wait_for="reset"``,
-    whether it was already or changed meanwhile. Polls every *timeout*
-    seconds, yielding a checkpoint before each poll, so it cannot be used
-    between ``create`` and ``save``.
+    whether it was already or changed meanwhile. It waits as long as that
+    takes. A checkpoint is yielded every *poll_interval* seconds, where the
+    plan can be paused, so it cannot be used between ``create`` and ``save``.
 
     Parameters
     ----------
     events : Mapping[str, SRLatch]
         Mapping of action names to their `SRLatch` objects.
-    timeout : float, optional
-        Polling interval in seconds, 1/60 s by default.
+    poll_interval : float, optional
+        Seconds between two checkpoints, 1/60 s by default.
     wait_for : Literal["set", "reset"], optional
         Whether to wait for a latch to be set or reset.
 
     Returns
     -------
     tuple[str, SRLatch]
-        The name and latch that changed state.
+        The name and the latch. Of several in the wanted state, the one that
+        reached it first, and of those that reached it together, the first in
+        *events*.
+
+    Raises
+    ------
+    ValueError
+        If *events* is empty.
     """
+    if not events:
+        raise ValueError("no actions to wait on")
     result: tuple[str, SRLatch] | None = None
     while result is None:
         yield from bps.checkpoint()
         result = yield Msg(
-            "wait_for_actions", None, events, timeout=timeout, wait_for=wait_for
+            "wait_for_actions",
+            None,
+            events,
+            poll_interval=poll_interval,
+            wait_for=wait_for,
         )
     return result
 

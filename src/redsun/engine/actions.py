@@ -15,6 +15,7 @@ actions the user triggers while it runs.
 from __future__ import annotations
 
 import asyncio
+import time
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import (
@@ -49,6 +50,7 @@ class SRLatch:
         self._reset_event: asyncio.Event = asyncio.Event()
         self._reset_event.set()
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._changed_at = 0.0
 
     def set(self) -> None:
         """Set the latch, waking every coroutine in `wait_for_set`.
@@ -59,6 +61,7 @@ class SRLatch:
             return
         if not self._flag:
             self._flag = True
+            self._changed_at = time.monotonic()
             self._set_event.set()
             self._reset_event.clear()
 
@@ -71,6 +74,7 @@ class SRLatch:
             return
         if self._flag:
             self._flag = False
+            self._changed_at = time.monotonic()
             self._reset_event.set()
             self._set_event.clear()
 
@@ -90,6 +94,14 @@ class SRLatch:
     def is_set(self) -> bool:
         """Return whether the latch is set."""
         return self._flag
+
+    @property
+    def changed_at(self) -> float:
+        """When the latch last changed state, as `time.monotonic` reads it.
+
+        ``0.0`` for a latch that never changed.
+        """
+        return self._changed_at
 
     async def wait_for_set(self) -> None:
         """Wait until the latch is set; return at once if it already is."""
