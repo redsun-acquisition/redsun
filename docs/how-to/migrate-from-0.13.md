@@ -241,7 +241,7 @@ build step; `start_services` can no longer be called before `build`.
 | an entry that did not resolve raised `PluginError` | it is logged and left out; set `strict: true` to stop instead |
 | an entry naming no plugin and no declared component was ignored | it is logged and left out |
 
-New keys: `strict`, `providers`, `actions`, `color_scheme`. See
+New keys: `strict`, `mock`, `providers`, `actions`, `color_scheme`. See
 [Write a session file](write-a-session-file.md).
 
 ## Other changes
@@ -254,3 +254,7 @@ New keys: `strict`, `providers`, `actions`, `color_scheme`. See
   left it.
 - `AppContainer.config`, the merged configuration, is `Session.serialize()`.
 - `run` exists only on a session with a frontend.
+- `connect_devices` is removed. A session file setting `mock: true` connects
+  every `autoconnect` device to a simulated backend during the build, and a
+  device declared with `autoconnect: false` is connected by the component
+  that uses it.

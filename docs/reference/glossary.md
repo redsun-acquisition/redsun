@@ -92,6 +92,12 @@ or an earlier one owns.
 The `redsun.yaml` file a plugin ships, listing its components under ids a
 session file can name.
 
+### Mocked session
+
+A session whose file sets `mock: true`. Its devices connect to the simulated
+backends `ophyd-async` gives them, and it launches no service, so it runs
+with no hardware present.
+
 ### Path provider
 
 The object that decides where a session's files go and what they are called.

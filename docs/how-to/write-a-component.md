@@ -168,4 +168,14 @@ def test_nudge_moves_by_one_step() -> None:
 ```
 
 To test it inside a session without a window, build a plain
-[`Session`][redsun.Session]: it makes every component and shows nothing.
+[`Session`][redsun.Session]: it makes every component and shows nothing. Give
+it `mock: true` and its devices connect as `connect(mock=True)` does, with no
+service launched:
+
+```python
+def test_the_session_builds_without_hardware() -> None:
+    app = MyApp({"mock": True}).build()
+
+    assert set(app.devices) == {"stage"}
+    app.shutdown()
+```

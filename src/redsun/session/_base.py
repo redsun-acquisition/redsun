@@ -924,30 +924,6 @@ class Session(BuildableSession):
         """
         return ()
 
-    def connect_devices(self, mock: bool = False) -> None:
-        """Connect every built device through ophyd-async.
-
-        Parameters
-        ----------
-        mock : bool
-            Connect each device to a simulated backend rather than to the
-            hardware it names.
-
-        Raises
-        ------
-        RuntimeError
-            If called before `build`.
-        """
-        if not self._is_built:
-            raise RuntimeError("Call build() before connect_devices()")
-
-        async def connect_all() -> None:
-            await asyncio.gather(
-                *[device.connect(mock=mock) for device in self._devices.values()]
-            )
-
-        run_coro(connect_all())
-
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.
 
@@ -1686,10 +1662,16 @@ class Session(BuildableSession):
         release, so `shutdown` stops services after every component, the last
         declared first, then drops what the transport caches about them so a
         rebuilt session reconnects at once.
+
+        A session whose configuration sets ``mock`` starts none: its devices
+        connect to simulated backends, which reach no service.
         """
         self._failed_services = {}
         self._start_catalog()
         if not self._services:
+            return
+        if self._configuration().get("mock", False):
+            logger.info("Services not started: the session is mocked")
             return
         self.on_release(lambda: run_coro(TRANSPORTS[self._transport].release()))
         with ThreadPoolExecutor(len(self._services), "service-start") as pool:
@@ -1796,9 +1778,12 @@ class Session(BuildableSession):
     def connect_built_devices(self) -> None:
         """Connect every autoconnect device at once.
 
-        A device not connected within `CONNECT_TIMEOUT` is dropped and recorded
-        as failed, like one that fails to build.
+        To a simulated backend when the configuration sets ``mock``, to what
+        the device names otherwise. A device not connected within
+        `CONNECT_TIMEOUT` is dropped and recorded as failed, like one that
+        fails to build.
         """
+        mock = self._configuration().get("mock", False)
         targets = {
             name: device
             for name, device in self._devices.items()
@@ -1810,7 +1795,7 @@ class Session(BuildableSession):
         async def connect_all() -> list[BaseException | None]:
             return await asyncio.gather(
                 *(
-                    device.connect(timeout=CONNECT_TIMEOUT)
+                    device.connect(mock=mock, timeout=CONNECT_TIMEOUT)
                     for device in targets.values()
                 ),
                 return_exceptions=True,

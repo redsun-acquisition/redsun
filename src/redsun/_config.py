@@ -401,6 +401,9 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     strict: bool = False
     """Whether a component that fails to build or set up stops the session."""
 
+    mock: bool = False
+    """Whether devices connect to simulated backends and no service is launched."""
+
     transport: str | None = None
     """What the session's services speak, from the ``services`` section."""
 

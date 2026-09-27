@@ -23,6 +23,7 @@ schema_version: 1.0     # the format of this file; 1.0 is the only one
 session: my-lab         # the session's name
 frontend: qt            # the registered frontend to build on
 strict: false           # stop if a component fails to build
+mock: false             # connect devices to simulated backends
 metadata:               # anything you want recorded with the session
   user: Ada
   setup: iSCAT

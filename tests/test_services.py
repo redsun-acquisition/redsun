@@ -472,6 +472,22 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
     )
 
 
+def test_a_mocked_session_reaches_no_service_and_no_hardware(
+    build: BuildSession,
+) -> None:
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {"mock": True}
+        stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY, prefix="SIM:")]
+        camera: Annotated[AsDevice[Camera], Declare(service="stand_in")]
+        refusing: Annotated[AsDevice[RefusingDevice], Declare(prefix="X:")]
+
+    app = build(App)
+
+    assert set(app.devices) == {"camera", "refusing"}
+    assert not app.stand_in.running
+    assert run_coro(app.camera.exposure.get_value()) == 0.0
+
+
 def test_a_caproto_ioc_is_launched_and_its_device_read_while_building(
     build: BuildSession, launchable: None
 ) -> None:
