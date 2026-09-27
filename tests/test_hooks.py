@@ -279,6 +279,52 @@ def test_one_point_may_not_be_named_twice_over() -> None:
         App().build()
 
 
+def test_an_entry_two_points_share_is_one_provider(
+    qapp: QApplication,
+    build: Callable[..., QtSession],
+) -> None:
+    """One entry under two keys, as a YAML anchor and its alias read."""
+    shared = {"provider": "mock_bundle.hooks:MockBoth"}
+
+    class App(QtSession):
+        config: ClassVar[dict[str, Any]] = {
+            "hooks": {"configure_application": shared, "configure_main_view": shared}
+        }
+
+    hooks = build(App).hooks
+
+    assert hooks["configure_application"] is hooks["configure_main_view"]
+
+
+def test_two_equal_entries_are_not_one_provider() -> None:
+    class App(QtSession):
+        config: ClassVar[dict[str, Any]] = {
+            "hooks": {
+                "configure_application": {"provider": "mock_bundle.hooks:MockBoth"},
+                "configure_main_view": {"provider": "mock_bundle.hooks:MockBoth"},
+            }
+        }
+
+    with pytest.raises(HookError, match="named twice"):
+        App().build()
+
+
+@pytest.mark.parametrize(
+    ("session", "match"),
+    [
+        pytest.param(Session, "it calls none", id="a-session-calling-no-point"),
+        pytest.param(QtSession, "expected one of", id="a-misspelled-point"),
+    ],
+)
+def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
+    session: type[Session], match: str
+) -> None:
+    hooks = {"configure_main_vew": {"provider": "mock_bundle.hooks:MockBranding"}}
+
+    with pytest.raises(HookError, match=match):
+        session({"hooks": hooks}).build()
+
+
 def test_during_build_brackets_the_build_and_names_every_step(
     qapp: QApplication,
     build: Callable[..., QtSession],

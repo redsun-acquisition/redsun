@@ -29,3 +29,11 @@ class MockBranding:
     def configure_main_view(self, view: Any) -> None:
         """Retitle *view*."""
         view.setWindowTitle(self.title)
+
+
+class MockBoth(MockStyle, MockBranding):
+    """One provider for two points."""
+
+    def __init__(self) -> None:
+        MockStyle.__init__(self)
+        MockBranding.__init__(self)
