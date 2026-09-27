@@ -10,9 +10,9 @@ Scope: `src/redsun/writers/**` and `tests/sdk/writers/**`.
 The rules live in CLAUDE.md (Acquisition storage section) and
 `docs/explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md`;
 read them before editing, don't restate them here. The session catalog is
-container code, not storage: see the container-dev agent.
+session code, not storage: see the container-dev agent.
 
-Verify with `uv run pytest tests/sdk/writers -x -q`, then the shimmed mypy
-call (see the type-checker agent for the per-shell form).
+Verify with `uv run tox -e tests -- tests/sdk/writers -x`, then
+`uv run tox -e mypy-pyqt,mypy-pyside`.
 
 Report only: files changed, pass/fail counts, invariants touched.

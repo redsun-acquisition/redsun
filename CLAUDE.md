@@ -261,9 +261,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 ## Testing conventions
 
-- Mirror the source layout under `tests/sdk/`. Container/plugin-discovery tests
-  live in `tests/container/` and use the `mock_pkg/` fixture package; extend
-  that package rather than inventing new mock plugins elsewhere.
+- Mirror the source layout under `tests/sdk/`. Session and plugin-discovery
+  tests live directly under `tests/` and use the `mock_bundle/` fixture
+  package; a service a test launches lives in `tests/launchable/mock_pkg/`.
+  Extend those rather than inventing new mock plugins elsewhere.
 - **Test objects go at the top of the module, after the imports**: mock
   components, the container classes declaring them, fixtures, helpers, in that
   order, before the first test. A test body is then the case it exercises and
