@@ -26,3 +26,4 @@ never edited; a later one replaces it.
 - [15. Collaborators arrive in `setup`](0015-collaborators-arrive-in-setup.md)
 - [16. A component refused at declaration is skipped](0016-a-component-refused-at-declaration-is-skipped.md)
 - [17. Questions read from the annotation](0017-questions-read-from-the-annotation.md)
+- [18. Wire yields links](0018-wire-yields-links.md)

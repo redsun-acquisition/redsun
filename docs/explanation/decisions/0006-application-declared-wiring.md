@@ -8,6 +8,11 @@ Accepted
 
 Extends [4. Owner-scoped signal lookup](0004-owner-scoped-signal-lookup.md).
 
+Amended by
+[18. Wire yields links](0018-wire-yields-links.md), where `wire` yields each
+link instead of calling `connect` and `subscribe` itself, and the file's
+`wiring` section became a mapping.
+
 ## Context
 
 Signal connections were made by consumers, which reached into the container's

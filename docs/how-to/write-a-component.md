@@ -93,7 +93,9 @@ class StageView(QWidget):
 ## Add them to a session
 
 ```python
-from redsun import AsDevice, AsPresenter, AsView
+from collections.abc import Iterator
+
+from redsun import AsDevice, AsPresenter, AsView, Link
 from redsun.qt import QtSession
 
 
@@ -102,9 +104,9 @@ class MyApp(QtSession):
     stage_ctrl: AsPresenter[StagePresenter]
     stage_view: AsView[StageView]
 
-    def wire(self) -> None:
-        self.connect(self.stage_view.sig_nudge, self.stage_ctrl.nudge)
-        self.connect(self.stage_ctrl.sig_moved, self.stage_view.show_position)
+    def wire(self) -> Iterator[Link]:
+        yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
+        yield self.stage_ctrl.sig_moved, self.stage_view.show_position
 ```
 
 To give a component arguments in Python rather than in the file, use

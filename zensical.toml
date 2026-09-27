@@ -68,6 +68,7 @@ nav = [
         "how-to/record-a-decision.md",
         "how-to/run-commit-checks.md",
         "how-to/run-tests.md",
+        "how-to/run-without-a-gui.md",
         "how-to/save-a-session.md",
         "how-to/set-up-development.md",
         "how-to/share-a-value.md",
@@ -111,6 +112,7 @@ nav = [
             "explanation/decisions/0015-collaborators-arrive-in-setup.md",
             "explanation/decisions/0016-a-component-refused-at-declaration-is-skipped.md",
             "explanation/decisions/0017-questions-read-from-the-annotation.md",
+            "explanation/decisions/0018-wire-yields-links.md",
         ]},
     ]},
     { "Reference" = [

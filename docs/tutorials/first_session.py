@@ -6,11 +6,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator  # noqa: TC003
+
 from ophyd_async.core import StandardReadable, soft_signal_rw
 from psygnal import Signal
 from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
-from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Placement, slot
+from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Link, Placement, slot
 from redsun.qt import Dock, QtSession
 
 
@@ -67,9 +69,9 @@ class FirstSession(QtSession):
     stage_ctrl: AsPresenter[StagePresenter]
     stage_view: AsView[StageView]
 
-    def wire(self) -> None:
-        self.connect(self.stage_view.sig_nudge, self.stage_ctrl.nudge)
-        self.connect(self.stage_ctrl.sig_moved, self.stage_view.show_position)
+    def wire(self) -> Iterator[Link]:
+        yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
+        yield self.stage_ctrl.sig_moved, self.stage_view.show_position
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ Practical step-by-step guides for one task each, including working on
 - [How to record a decision](record-a-decision.md)
 - [How to run the commit checks](run-commit-checks.md)
 - [How to run the tests](run-tests.md)
+- [How to run a session without a GUI](run-without-a-gui.md)
 - [How to save a session](save-a-session.md)
 - [How to set up a development environment](set-up-development.md)
 - [How to share a value between components](share-a-value.md)

@@ -27,13 +27,14 @@ In CBD, interfaces are key. Each component express what it requires to be built,
 Components are put together in a session, which builds the application for you, so you can focus on what each component does.
 
 ```python
+from collections.abc import Iterator
 from typing import Annotated
 
 from mylab.devices import MyMotor
 from mylab.presenters import MyController
 from mylab.views import MyView
 
-from redsun import AsDevice, AsPresenter, AsView, Declare
+from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.qt import QtSession
 
 
@@ -42,8 +43,8 @@ class MyApp(QtSession):
     ctrl: Annotated[AsPresenter[MyController], Declare(timeout=2.0)]
     panel: AsView[MyView]
 
-    def wire(self) -> None:
-        self.connect(self.ctrl.sig_position_changed, self.panel.update_position)
+    def wire(self) -> Iterator[Link]:
+        yield self.ctrl.sig_position_changed, self.panel.update_position
 
 
 MyApp({"session": "my-session"}).run()
@@ -80,8 +81,7 @@ views:
     plugin_id: my_view
 
 wiring:
-  - from: ctrl.sig_position_changed
-    to: panel.update_position
+  ctrl.sig_position_changed: panel.update_position
 ```
 
 `plugin_id` is resolved through the manifest the contributing package ships:

@@ -174,7 +174,9 @@ exit code. A service is set on the session under its name, so `wire` can
 connect it:
 
 ```python
-from redsun import AsPresenter, slot
+from collections.abc import Iterator
+
+from redsun import AsPresenter, Link, slot
 from redsun.log import Loggable
 
 
@@ -191,8 +193,8 @@ class MyApp(QtSession):
     camera_ioc: CameraIoc
     presenter: AsPresenter[CameraPresenter]
 
-    def wire(self) -> None:
-        self.connect(self.camera_ioc.sig_exited, self.presenter.on_service_exited)
+    def wire(self) -> Iterator[Link]:
+        yield self.camera_ioc.sig_exited, self.presenter.on_service_exited
 ```
 
 Without `thread="main"`, a presenter's slot runs on the thread reading the

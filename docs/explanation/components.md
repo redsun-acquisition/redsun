@@ -147,12 +147,9 @@ The path provider has three slots for the wiring:
 
 ```yaml
 wiring:
-  - from: acquisition.sig_pre_launch_notify
-    to: path_provider.set_plan
-  - from: acquisition.sig_plan_done
-    to: path_provider.reset_plan
-  - from: output_dir_widget.sig_directory_chosen
-    to: path_provider.set_base_dir
+  acquisition.sig_pre_launch_notify: path_provider.set_plan
+  acquisition.sig_plan_done: path_provider.reset_plan
+  output_dir_widget.sig_directory_chosen: path_provider.set_base_dir
 ```
 
 `set_plan` names the files after the next run, and `reset_plan` goes back to

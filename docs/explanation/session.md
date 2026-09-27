@@ -12,9 +12,10 @@ ends.
 You write a session as a class:
 
 ```python
+from collections.abc import Iterator
 from typing import Annotated
 
-from redsun import AsDevice, AsPresenter, AsView, Declare
+from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.qt import QtSession
 
 
@@ -25,8 +26,8 @@ class MyApp(QtSession):
     motor_ctrl: AsPresenter[MotorPresenter]
     motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
 
-    def wire(self) -> None:
-        self.connect(self.motor_ctrl.sig_moved, self.motor_widget.refresh)
+    def wire(self) -> Iterator[Link]:
+        yield self.motor_ctrl.sig_moved, self.motor_widget.refresh
 
 
 MyApp().run()
@@ -185,7 +186,8 @@ app = Session.from_config("session.yaml").build()
 
 The `frontend` key picks the class to build on, so a file naming `qt` comes
 up as a `QtSession`. Such a session has no class name to fall back on, so its
-file must set `session`.
+file must set `session`. [Run a session without a GUI](../how-to/run-without-a-gui.md)
+shows a file naming no frontend at all.
 
 ## The session's name
 

@@ -16,8 +16,7 @@ the same form.
 
 === "Session class"
 
-    Override [`wire`][redsun.Session.wire] and call
-    [`connect`][redsun.Session.connect].
+    Override [`wire`][redsun.Session.wire] and yield each link.
 
 === "Session file"
 
@@ -59,10 +58,13 @@ Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
 === "Session class"
 
     Every component exists when `wire` runs, under the attribute it was declared
-    as:
+    as. `wire` is a generator: yield a signal and the slot it reaches, one pair
+    per link.
 
     ```python
-    from redsun import AsPresenter, AsView
+    from collections.abc import Iterator
+
+    from redsun import AsPresenter, AsView, Link
     from redsun.qt import QtSession
 
 
@@ -71,17 +73,19 @@ Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
         img_widget: AsView[ImageView]
         det_widget: AsView[DetectorView]
 
-        def wire(self) -> None:
-            self.connect(self.det_ctrl.sig_new_data, self.img_widget.update_layers)
-            self.connect(self.det_widget.sig_property_changed, self.det_ctrl.configure)
+        def wire(self) -> Iterator[Link]:
+            yield self.det_ctrl.sig_new_data, self.img_widget.update_layers
+            yield self.det_widget.sig_property_changed, self.det_ctrl.configure
     ```
 
     Each attribute has the type it was declared with, so a misspelled signal is a
-    type error before the program runs.
+    type error before the program runs. A `wire` that returns `None`, an
+    ordinary method with no `yield`, raises [`WiringError`][redsun.WiringError].
 
 === "Session file"
 
-    Each end is written `component.port`:
+    Each signal maps to one slot, or a list of slots, both written
+    `component.port`:
 
     ```yaml
     session: my-lab
@@ -101,10 +105,8 @@ Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
         plugin_id: detector-view
 
     wiring:
-      - from: det_ctrl.sig_new_data
-        to: img_widget.update_layers
-      - from: det_widget.sig_property_changed
-        to: det_ctrl.configure
+      det_ctrl.sig_new_data: img_widget.update_layers
+      det_widget.sig_property_changed: det_ctrl.configure
     ```
 
     A signal's port is its attribute name; a slot's port is the name the slot
@@ -158,8 +160,8 @@ class MedianPresenter:
 === "Session class"
 
     ```python
-    def wire(self) -> None:
-        self.connect(self.median_ctrl.frames.median, self.img_widget.update_layers)
+    def wire(self) -> Iterator[Link]:
+        yield self.median_ctrl.frames.median, self.img_widget.update_layers
     ```
 
 === "Session file"
@@ -168,8 +170,7 @@ class MedianPresenter:
 
     ```yaml
     wiring:
-      - from: median_ctrl.median
-        to: img_widget.update_layers
+      median_ctrl.median: img_widget.update_layers
     ```
 
 Pass `instance=self` when making the group, or the session cannot tell which
@@ -180,26 +181,24 @@ component owns the signal.
 A slot runs on the thread that emitted, unless something says otherwise. In
 order, the thread comes from:
 
-1. `connect(..., thread=...)`, for one connection;
-2. `@slot(thread=...)`, for one method;
-3. `__redsun_slot_thread__` on the class, for every slot of it;
-4. the session's default: a `QtSession` runs a Qt widget's slots on the main
+1. `@slot(thread=...)`, for one method;
+2. `__redsun_slot_thread__` on the class, for every slot of it;
+3. the session's default: a `QtSession` runs a Qt widget's slots on the main
    thread, since a widget may only be used from there.
 
 ## Observe a device signal
 
-Device signals come from `ophyd-async`, not `psygnal`, so `connect` does not
-take them. [`subscribe`][redsun.Session.subscribe] does:
+Device signals come from `ophyd-async`, not `psygnal`. `wire` tells the two
+apart by the signal's type, so a link to a device signal is yielded the same
+way as one to a `psygnal` signal:
 
 ```python
 class MyApp(QtSession):
     detector: AsDevice[MyDetector]
     temperature_widget: AsView[TemperatureView]
 
-    def wire(self) -> None:
-        self.subscribe(
-            self.detector.temperature, self.temperature_widget.update_temperature
-        )
+    def wire(self) -> Iterator[Link]:
+        yield self.detector.temperature, self.temperature_widget.update_temperature
 ```
 
 The slot receives each reading. The subscription is released at shutdown.
@@ -263,4 +262,6 @@ Not connecting mover.sig_moved -> panel.on_moved: component 'panel' was not buil
 | `'a.sig' names component 'a', which was not built. Built: ...` | the file names a component nobody declared |
 | `'a' exposes no signal named 'sig'. ...` | the signal name in the file is wrong |
 | `'a' exposes no slot named 'port'. ...` | the slot name is wrong, or the method is not marked |
-| `wiring.0.to: Field required` | a rule is missing a key; raised as [`ConfigurationError`][redsun.ConfigurationError] when the file is read |
+| `wire returned nothing; it yields each link as a signal and a slot` | `wire` has no `yield` and returns `None` |
+| `... is not a signal; a link is a psygnal signal or a device signal, then the slot it reaches` | the first item of a yielded link is not a signal |
+| `wiring.det_ctrl.sig_new_data.str: Input should be a valid string` | a signal maps to something other than a slot path or a list of them; raised as [`ConfigurationError`][redsun.ConfigurationError] when the file is read |

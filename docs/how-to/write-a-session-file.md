@@ -94,9 +94,12 @@ See [Keep a catalog of runs](keep-a-catalog.md).
 
 ```yaml
 wiring:
-  - from: motor_ctrl.sig_moved
-    to: motor_widget.refresh
+  motor_ctrl.sig_moved: motor_widget.refresh
 ```
+
+A signal maps to one slot or a list of them. Layered files merge `wiring` by
+signal: a later file naming a new signal adds it, and naming one already
+wired replaces its slots.
 
 See [Wire components together](wire-components.md).
 

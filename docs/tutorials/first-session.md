@@ -35,11 +35,13 @@ pip install "redsun[pyqt]"
 Everything below goes in the file, after these imports:
 
 ```python
+from collections.abc import Iterator
+
 from ophyd_async.core import StandardReadable, soft_signal_rw
 from psygnal import Signal
 from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
-from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Placement, slot
+from redsun import AsDevice, AsPresenter, AsView, DeviceMapping, Link, Placement, slot
 from redsun.qt import Dock, QtSession
 ```
 
@@ -52,7 +54,7 @@ it. You have no hardware, so this one keeps its position in memory, using a
 "soft" signal from `ophyd-async`:
 
 ```python
---8<-- "docs/tutorials/first_session.py:device"
+--8 < --"docs/tutorials/first_session.py:device"
 ```
 
 A real stage would replace `soft_signal_rw` with signals a service provides.
@@ -64,7 +66,7 @@ A [presenter](../reference/glossary.md#presenter) holds the behaviour. This
 one moves the stage by one step, and announces where it went:
 
 ```python
---8<-- "docs/tutorials/first_session.py:presenter"
+--8 < --"docs/tutorials/first_session.py:presenter"
 ```
 
 Look at the constructor. You never call it yourself: the session does. It
@@ -85,7 +87,7 @@ A [view](../reference/glossary.md#view) is what the user sees. This one is a
 button and a label:
 
 ```python
---8<-- "docs/tutorials/first_session.py:view"
+--8 < --"docs/tutorials/first_session.py:view"
 ```
 
 `placement` says where the view goes: docked on the left of the window. The
@@ -99,7 +101,7 @@ knows nothing about the view. Each only has signals and slots.
 Now put the three together:
 
 ```python
---8<-- "docs/tutorials/first_session.py:session"
+--8 < --"docs/tutorials/first_session.py:session"
 ```
 
 Each line in the class body is a component. The name on the left, `stage`, is
@@ -133,7 +135,7 @@ Press **Nudge**: the label counts up by one each time.
 ??? example "The whole script"
 
     ```python
-    --8<-- "docs/tutorials/first_session.py"
+    --8 < --"docs/tutorials/first_session.py"
     ```
 
 ## 6. Change a setting without touching the code

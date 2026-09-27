@@ -25,7 +25,7 @@ each change and what to write instead.
 | `redsun.virtual.WiringError`, `ports` | `redsun.WiringError`, `redsun.ports.ports` |
 | `redsun.presenter.PPresenter`, `Presenter` | nothing to inherit: see [Presenters](#presenters) |
 | `redsun.view.PView`, `View`, `ViewPosition`, `redsun.view.qt.QtView` | a `QWidget` with a `placement`: see [Views](#views) |
-| `redsun.utils.find_signals` | removed: connect in `wire` |
+| `redsun.utils.find_signals` | removed: yield a link in `wire` |
 
 ## Declaring components
 
@@ -59,7 +59,9 @@ type:
 ```python
 # 0.13
 class MotorPresenter(Presenter):
-    def __init__(self, name: str, devices: Mapping[str, Device], /, step: float = 1.0) -> None:
+    def __init__(
+        self, name: str, devices: Mapping[str, Device], /, step: float = 1.0
+    ) -> None:
         super().__init__(name, devices)
         self.step = step
 
@@ -111,8 +113,10 @@ as `QtView`'s did.
 # 0.13
 MOTOR_READINGS = ProviderKey(instance_of=MotorReadings)
 
+
 def register_providers(self, container):
     container.provide(MOTOR_READINGS, self._readings)
+
 
 def inject_dependencies(self, container):
     self.readings = container.require(MOTOR_READINGS)
@@ -122,6 +126,7 @@ def inject_dependencies(self, container):
 @provides
 def readings(self) -> MotorReadings:
     return self._readings
+
 
 def setup(self, readings: MotorReadings) -> None:
     self.readings = readings
@@ -137,18 +142,50 @@ from the component that [shares it](change-a-setting-while-a-plan-runs.md).
 
 ## Wiring
 
-`wire` still calls `self.connect`, which now lives on the session. The
-virtual container's other members moved too:
+`wire` no longer connects anything itself: it is a generator that yields each
+link as a signal and the slot it reaches, and the session makes the
+connection. `connect`, `subscribe` and `connect_paths` are gone; a `psygnal`
+signal and an `ophyd-async` device signal are yielded the same way, and the
+session tells them apart:
+
+```python
+# 0.13
+def wire(self) -> None:
+    self.connect(self.ctrl.sig_moved, self.widget.refresh)
+    self.virtual_container.subscribe(self.stage.readback, self.widget.on_reading)
+
+
+# now
+def wire(self) -> Iterator[Link]:
+    yield self.ctrl.sig_moved, self.widget.refresh
+    yield self.stage.readback, self.widget.on_reading
+```
+
+The `wiring` section of a session file is now a mapping from a signal path to
+one slot path or a list of them, not a list of `from:`/`to:` entries:
+
+```yaml
+# 0.13
+wiring:
+  - from: ctrl.sig_moved
+    to: widget.refresh
+
+# now
+wiring:
+  ctrl.sig_moved: widget.refresh
+```
+
+The virtual container's other members moved too:
 
 | 0.13 | now |
 | --- | --- |
-| `container.virtual_container.connect`, `.connections`, `.unconnected`, `.disconnect_all` | the same names on the session |
-| `container.virtual_container.subscribe`, `.subscriptions` | the same names on the session |
+| `container.virtual_container.connections`, `.unconnected`, `.disconnect_all` | the same names on the session |
+| `container.virtual_container.subscriptions` | the same name on the session |
 | `register_callbacks` | a component that is a `DocumentRouter` is collected; ask for `Mapping[str, CallbackType]` in `setup` |
 | `register_signals`, `signals`, `find_signals` | removed |
 
-`connect` and `subscribe` return `None` for a link to a component that failed
-to build, and log it.
+A link to a component that failed to build is skipped and logged, rather than
+raising.
 
 ## Hooks
 
@@ -178,13 +215,17 @@ class MyApp(QtSession):
 # 0.13
 class MyApp(AppContainer):
     transport = "pv-access"
-    camera_ioc = declare_service(module="mylab.iocs.camera", ready="serving", prefix="CAM:")
+    camera_ioc = declare_service(
+        module="mylab.iocs.camera", ready="serving", prefix="CAM:"
+    )
 
 
 # now
 class MyApp(Session):
     config = {"services": {"transport": "pv-access"}}
-    camera_ioc: Annotated[AsService, Launch("mylab.iocs.camera", ready="serving", prefix="CAM:")]
+    camera_ioc: Annotated[
+        AsService, Launch("mylab.iocs.camera", ready="serving", prefix="CAM:")
+    ]
 ```
 
 A service without a module is `Attach("BL01:")`. Services start in the first
