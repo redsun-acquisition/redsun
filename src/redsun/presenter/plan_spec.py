@@ -146,11 +146,11 @@ class PlanSpec:
     parameters: list[ParamDescription]
     """One description per parameter, in order."""
 
-    togglable: bool = False
+    continuous: bool = False
     """Whether the plan loops until stopped with a toggle button."""
 
     pausable: bool = False
-    """Whether a running togglable plan can be paused and resumed."""
+    """Whether a running continuous plan can be paused and resumed."""
 
 
 class _FieldsFromAnnotation(NamedTuple):
@@ -536,15 +536,14 @@ def create_plan_spec(
             )
         )
 
-    togglable = bool(getattr(func_obj, "__togglable__", False))
-    pausable = bool(getattr(func_obj, "__pausable__", False))
+    marked = getattr(func_obj, "__continuous__", None)
 
     return PlanSpec(
         name=func_obj.__name__,
         docs=inspect.getdoc(func_obj) or "No documentation available.",
         parameters=params,
-        togglable=togglable,
-        pausable=pausable,
+        continuous=marked is not None,
+        pausable=marked is not None and marked.pausable,
     )
 
 

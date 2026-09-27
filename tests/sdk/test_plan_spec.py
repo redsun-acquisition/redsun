@@ -20,7 +20,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun.engine.actions import Action, continous
+from redsun.engine.actions import Action, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
@@ -332,21 +332,35 @@ class TestCreatePlanSpec:
         assert isinstance(p.actions, list)
         assert len(p.actions) == 2
 
-    def test_togglable_flag(self) -> None:
-        @continous(togglable=True, pausable=True)
+    @pytest.mark.parametrize(
+        ("mark", "pausable"),
+        [
+            pytest.param(continuous, False, id="bare"),
+            pytest.param(continuous(), False, id="called"),
+            pytest.param(continuous(pausable=True), True, id="pausable"),
+        ],
+    )
+    def test_a_continuous_plan_is_reported(
+        self,
+        mark: Callable[
+            [Callable[[], MsgGenerator[None]]], Callable[[], MsgGenerator[None]]
+        ],
+        pausable: bool,
+    ) -> None:
+        @mark
         def plan() -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
-        assert spec.togglable is True
-        assert spec.pausable is True
+        assert spec.continuous is True
+        assert spec.pausable is pausable
 
-    def test_non_togglable_plan(self) -> None:
+    def test_an_unmarked_plan_is_not_continuous(self) -> None:
         def plan(x: int) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
-        assert spec.togglable is False
+        assert spec.continuous is False
         assert spec.pausable is False
 
     def test_self_is_stripped_from_method_signature(self) -> None:

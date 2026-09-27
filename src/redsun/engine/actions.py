@@ -5,35 +5,22 @@ actions the user triggers while it runs.
 
 - `SRLatch`: an ``asyncio`` set-reset latch synchronising a plan with outside
   signals.
-- `continous`: marks a plan as continuous, recording whether it is
-  ``togglable`` and ``pausable``.
+- `continuous`: marks a plan as continuous, recording whether it is
+  pausable.
 - `Action`: a dataclass describing one action (name, description, toggle state).
-- `ContinousPlan`: a `typing.Protocol` typing decorated plans, also usable with
-  ``isinstance``.
 """
 
 from __future__ import annotations
 
 import asyncio
 import time
-from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    ParamSpec,
-    Protocol,
-    TypeVar,
-    cast,
-    overload,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-P = ParamSpec("P")
-R = TypeVar("R")
-R_co = TypeVar("R_co", covariant=True)
+F = TypeVar("F", bound="Callable[..., Any]")
 
 
 class SRLatch:
@@ -118,70 +105,49 @@ class SRLatch:
         await self._reset_event.wait()
 
 
-@overload
-def continous(
-    func: Callable[P, R_co],
-    /,
-) -> ContinousPlan[P, R_co]: ...
+@dataclass(frozen=True)
+class Continuous:
+    """What `continuous` records on the plan it marks."""
+
+    pausable: bool = False
+    """Whether the run engine can pause and resume the plan."""
 
 
 @overload
-def continous(
-    *,
-    togglable: bool = True,
-    pausable: bool = False,
-) -> Callable[[Callable[P, R_co]], ContinousPlan[P, R_co]]: ...
+def continuous(func: F, /) -> F: ...
 
 
-def continous(
-    func: Callable[P, R_co] | None = None,
-    /,
-    *,
-    togglable: bool = True,
-    pausable: bool = False,
-) -> Callable[[Callable[P, R_co]], ContinousPlan[P, R_co]] | ContinousPlan[P, R_co]:
-    """Mark a plan as continuous.
+@overload
+def continuous(*, pausable: bool = False) -> Callable[[F], F]: ...
 
-    A continuous plan gets UI controls to start, stop, pause and resume it.
-    Usable with or without arguments:
+
+def continuous(
+    func: F | None = None, /, *, pausable: bool = False
+) -> F | Callable[[F], F]:
+    """Mark a plan as continuous: it loops until it is stopped.
+
+    A continuous plan gets a toggle to start and stop it, and with *pausable*
+    a button to pause and resume it. Usable with or without arguments:
 
     ```python
-    @continous
+    @continuous
     def my_plan() -> MsgGenerator[None]: ...
 
 
-    @continous(togglable=True, pausable=True)
+    @continuous(pausable=True)
     def my_plan(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
     ```
 
-    Parameters
-    ----------
-    togglable : bool, optional
-        Whether the plan loops until stopped with a toggle button.
-    pausable : bool, optional
-        Whether the run engine can pause and resume the plan.
-
-    Returns
-    -------
-    ContinousPlan
-        The decorated plan function, typed as a `ContinousPlan`.
-
-    Notes
-    -----
-    The signature is untouched; the flags are stored on the function as
-    ``__togglable__`` and ``__pausable__``.
+    The signature is untouched; what was asked is stored on the function as
+    ``__continuous__``, a `Continuous`.
     """
 
-    def decorator(func: Callable[P, R_co]) -> ContinousPlan[P, R_co]:
-        # setattr keeps mypy happy: Callable has no such attributes to assign
-        setattr(func, "__togglable__", togglable)  # noqa: B010
-        setattr(func, "__pausable__", pausable)  # noqa: B010
-        return cast("ContinousPlan[P, R_co]", func)
+    def decorator(plan: F) -> F:
+        # setattr keeps mypy happy: Callable has no such attribute to assign
+        setattr(plan, "__continuous__", Continuous(pausable=pausable))  # noqa: B010
+        return plan
 
-    if func is None:
-        return decorator
-
-    return decorator(func)
+    return decorator if func is None else decorator(func)
 
 
 @dataclass(kw_only=True)
@@ -221,38 +187,9 @@ class Action:
         return {self.name: self._latch}
 
 
-@runtime_checkable
-class ContinousPlan(Protocol[P, R_co]):
-    """Protocol for plans decorated with `continous`.
-
-    The return type of `continous`, also usable with ``isinstance``:
-
-    ```python
-    if isinstance(f, ContinousPlan):
-        print(f.__togglable__, f.__pausable__)
-    ```
-
-    Attributes
-    ----------
-    __togglable__ : bool
-        Whether the plan loops until the run engine stops it.
-    __pausable__ : bool
-        Whether the run engine can pause and resume the plan.
-    """
-
-    __togglable__: bool
-    __pausable__: bool
-
-    @abstractmethod
-    def __call__(  # noqa: D102
-        self, *args: P.args, **kwargs: P.kwargs
-    ) -> R_co:  # pragma: no cover - protocol
-        ...
-
-
 __all__ = [
     "Action",
-    "ContinousPlan",
+    "Continuous",
     "SRLatch",
-    "continous",
+    "continuous",
 ]

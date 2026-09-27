@@ -12,7 +12,7 @@ from bluesky.utils import MsgGenerator
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine.actions import Action, continous
+from redsun.engine.actions import Action, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
@@ -87,10 +87,10 @@ def _int_literal_spec() -> PlanSpec:
     return create_plan_spec(plan, {})
 
 
-def _togglable_spec() -> PlanSpec:
-    """Build a togglable plan spec (no pause)."""
+def _continuous_spec() -> PlanSpec:
+    """Build a continuous plan spec (no pause)."""
 
-    @continous(togglable=True, pausable=False)
+    @continuous
     def plan() -> MsgGenerator[None]:
         yield from ()
 
@@ -98,9 +98,9 @@ def _togglable_spec() -> PlanSpec:
 
 
 def _pausable_spec() -> PlanSpec:
-    """Build a togglable and pausable plan spec."""
+    """Build a continuous and pausable plan spec."""
 
-    @continous(togglable=True, pausable=True)
+    @continuous(pausable=True)
     def plan() -> MsgGenerator[None]:
         yield from ()
 
@@ -205,12 +205,12 @@ class TestCreatePlanWidget:
         pw = create_plan_widget(_simple_spec())
         assert not pw.run_button.isCheckable()
 
-    def test_togglable_plan_run_button_is_checkable(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+    def test_continuous_plan_run_button_is_checkable(self) -> None:
+        pw = create_plan_widget(_continuous_spec())
         assert pw.run_button.isCheckable()
 
-    def test_togglable_plan_has_no_pause_button(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+    def test_continuous_plan_has_no_pause_button(self) -> None:
+        pw = create_plan_widget(_continuous_spec())
         assert pw.pause_button is None
 
     def test_pausable_plan_has_pause_button(self) -> None:
@@ -242,17 +242,17 @@ class TestCreatePlanWidget:
         assert not create_plan_widget(_simple_spec()).has_actions()
 
     def test_run_callback_connected(self) -> None:
-        """run_callback fires when run_button is clicked on a non-togglable plan."""
+        """run_callback fires when run_button is clicked on a plan that is not continuous."""
         fired: list[bool] = []
         pw = create_plan_widget(_simple_spec(), run_callback=lambda: fired.append(True))
         pw.run_button.click()
         assert fired == [True]
 
     def test_toggle_callback_connected(self) -> None:
-        """toggle_callback fires when run_button is toggled on a togglable plan."""
+        """toggle_callback fires when run_button is toggled on a continuous plan."""
         states: list[bool] = []
         pw = create_plan_widget(
-            _togglable_spec(), toggle_callback=lambda checked: states.append(checked)
+            _continuous_spec(), toggle_callback=lambda checked: states.append(checked)
         )
         pw.run_button.setChecked(True)
         assert True in states
@@ -397,7 +397,7 @@ class TestPlanWidgetControlAPI:
     """Tests for PlanWidget.toggle / pause / setEnabled / enable_actions."""
 
     def test_toggle_swaps_the_run_button_text(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+        pw = create_plan_widget(_continuous_spec())
         pw.toggle(True)
         assert pw.run_button.text() == "Stop"
         pw.toggle(False)

@@ -18,10 +18,10 @@ icon: lucide/code
 ::: redsun.engine.actions
     options:
       members:
-        - continous
+        - continuous
         - Action
         - SRLatch
-        - ContinousPlan
+        - Continuous
 
 ## Plan stubs
 

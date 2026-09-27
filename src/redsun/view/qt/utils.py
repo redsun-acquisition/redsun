@@ -124,7 +124,7 @@ class PlanWidget:
     """
 
     def toggle(self, status: bool) -> None:
-        """Update the widgets when a togglable plan starts or stops.
+        """Update the widgets when a continuous plan starts or stops.
 
         Parameters
         ----------
@@ -338,7 +338,7 @@ def _build_run_buttons(
     run_container = QtW.QWidget(parent)
 
     run_button = QtW.QPushButton("Run")
-    if spec.togglable:
+    if spec.continuous:
         run_button.setCheckable(True)
         run_button.toggled.connect(toggle_callback)
     else:
@@ -346,7 +346,7 @@ def _build_run_buttons(
     run_layout.addWidget(run_button)
 
     pause_button: QtW.QPushButton | None = None
-    if spec.togglable and spec.pausable:
+    if spec.pausable:
         pause_button = QtW.QPushButton("Pause")
         pause_button.setEnabled(False)
         pause_button.setCheckable(True)
@@ -509,9 +509,9 @@ def create_plan_widget(
     spec : PlanSpec
         The plan's specification.
     run_callback : Callable[[], None] | None, optional
-        Connected to ``run_button.clicked`` for non-togglable plans.
+        Connected to ``run_button.clicked`` for plans that are not continuous.
     toggle_callback : Callable[[bool], None] | None, optional
-        Connected to ``run_button.toggled`` for togglable plans.
+        Connected to ``run_button.toggled`` for continuous plans.
     pause_callback : Callable[[bool], None] | None, optional
         Connected to ``pause_button.toggled`` for pausable plans.
     action_clicked_callback : Callable[[str], None] | None, optional

@@ -6,7 +6,7 @@ import time
 
 import redsun.engine.plan_stubs as rps
 from redsun.engine import RunEngine
-from redsun.engine.actions import Action, ContinousPlan, SRLatch, continous
+from redsun.engine.actions import Action, SRLatch
 
 
 async def test_srlatch_lifecycle() -> None:
@@ -28,23 +28,6 @@ async def test_srlatch_lifecycle() -> None:
     latch.reset()  # no-op when already reset
     await asyncio.wait_for(waiter, timeout=1)
     assert not latch.is_set()
-
-
-def test_continous_decorator_bare_form() -> None:
-    @continous
-    def plan() -> None: ...
-
-    assert plan.__togglable__ is True
-    assert plan.__pausable__ is False
-    assert isinstance(plan, ContinousPlan)
-
-
-def test_continous_decorator_with_arguments() -> None:
-    @continous(togglable=False, pausable=True)
-    def plan() -> None: ...
-
-    assert plan.__togglable__ is False
-    assert plan.__pausable__ is True
 
 
 async def test_action_event_map_is_lazy_and_stable() -> None:
