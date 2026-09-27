@@ -572,6 +572,17 @@ def test_a_mismatched_signature_is_not_a_match(
     app.session.reset_all()
 
 
+def test_the_session_answers_as_it_answered_the_component(
+    build: BuildSession,
+) -> None:
+    app = build(App)
+
+    answer = app.satisfying(Resettable)
+
+    assert set(answer) == {"motor", "detector"}
+    assert answer == dict(app.session.resettable)
+
+
 def test_a_near_miss_explains_itself(build: BuildSession) -> None:
     """A component carrying some of the protocol reports why it was left out."""
     app = build(LooseApp)

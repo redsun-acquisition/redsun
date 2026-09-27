@@ -66,9 +66,13 @@ The protocol does not need `runtime_checkable`, may list attributes as well as
 methods, and may be generic: `Reading[float]` is matched as `Reading`.
 
 When a component you expected is missing from an answer,
-[`Session.rejected`][redsun.Session.rejected] says why:
+[`Session.satisfying`][redsun.Session.satisfying] shows the answer the session
+gives, and [`Session.rejected`][redsun.Session.rejected] says why a component
+is not in it:
 
 ```python
+>>> session.satisfying(Resettable)
+{'motor': <Motor>, 'detector': <Detector>}
 >>> session.rejected(Resettable)
 {'loose': ["reset(hard) cannot be called as reset(): missing a required argument: 'hard'"]}
 ```
