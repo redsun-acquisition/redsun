@@ -59,7 +59,6 @@ __all__ = [
     "read",
     "refuse_identity_conflict",
     "session_file_schema",
-    "storage_of",
     "validate_session",
 ]
 
@@ -303,11 +302,6 @@ def with_empty_catalog(section: Mapping[str, Any]) -> Mapping[str, Any]:
     return section
 
 
-def storage_of(section: Mapping[str, Any] | None) -> StorageConfig:
-    """Read a ``storage`` section, the defaults when it is absent or empty."""
-    return StorageConfig.model_validate(with_empty_catalog(section or {}))
-
-
 class StorageConfig(
     BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True
 ):
@@ -323,8 +317,8 @@ class StorageConfig(
     """The session's catalog, needing the ``tiled`` extra; `None` for none."""
 
 
-def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> None:
-    """Validate *data*, the merged content of *sources*, as a session file.
+def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> SessionFile:
+    """Return *data*, the merged content of *sources*, as a session file.
 
     Raises
     ------
@@ -332,7 +326,7 @@ def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> None
         Listing every problem, and naming *sources*.
     """
     try:
-        SessionFile.model_validate(data)
+        return SessionFile.model_validate(data)
     except ValidationError as e:
         raise ConfigurationError(sources, problems_of(e, data)) from None
 

@@ -189,7 +189,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   underscore**, in a private module too, because `__all__` is module-scoped and
   can never say that a method is private, and both the docs filter
   (`filters = ["!^_", "!^__"]` in `zensical.toml`) and a reader's autocomplete
-  key on the name. So `_hooks.py` holds `parse_hook_specs`, while
+  key on the name. So `_hooks.py` holds `group_hook_entries`, while
   `Session._declarations` stays underscored.
   **A class no `__all__` re-exports is private as a whole**, so its members
   drop the underscore too: the session-file and manifest models in `_config`
@@ -215,9 +215,8 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   slots.** psygnal refers to an owner weakly and falls back silently to a
   strong reference, on which the owner is never collected and takes everything
   it holds with it. Only `__slots__` classes reach that path.
-- **Don't annotate what the assignment already says.** `HOOK_GROUPS =
-  TypeAdapter(list[HookGroup])`, not `HOOK_GROUPS: TypeAdapter[list[HookGroup]]
-  = ...`. Annotate where mypy cannot infer the type (an empty container, an
+- **Don't annotate what the assignment already says.** `MARKERS = (Declare,
+  FromConfig, Alias)`, not `MARKERS: tuple[type, ...] = ...`. Annotate where mypy cannot infer the type (an empty container, an
   `Any` from `getattr`, a narrower declared type).
 - **Don't alias an attribute to a local for a single use.** Write
   `self.main_window.show()`. A local earns its place when the value is read

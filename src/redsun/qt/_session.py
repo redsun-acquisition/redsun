@@ -354,7 +354,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         window.setWindowTitle(self.name)
         self._main_window = window
 
-        ColorSchemeMode.from_config(self._configuration()).apply()
+        ColorSchemeMode.from_config(self._configuration().color_scheme).apply()
 
         configurer = hooks.get(QtHook.CONFIGURE_APPLICATION)
         if isinstance(configurer, ConfiguresApplication):
@@ -411,7 +411,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         self._close_guard = CloseGuard(self)
         window.installEventFilter(self._close_guard)
         ColorSchemeButton.pin_to(
-            window, ColorSchemeMode.from_config(self._configuration())
+            window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
         attach(window, self.views)
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
@@ -583,9 +583,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ActionError
             If the section is not a list, or an entry is not an action.
         """
-        actions = read_actions(
-            self._configuration().get("actions"), type(self).__name__
-        )
+        actions = read_actions(self._configuration().actions, type(self).__name__)
         if not actions:
             return
         self.on_release(self.model.register_actions(actions))

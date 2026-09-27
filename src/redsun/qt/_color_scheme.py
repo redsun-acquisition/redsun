@@ -3,21 +3,16 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 
 from qtpy.QtCore import Qt as QtNamespace
 from qtpy.QtGui import QGuiApplication
 from qtpy.QtWidgets import QSizePolicy, QToolButton, QWidget
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from qtpy.QtWidgets import QMainWindow
 
 __all__ = ["ColorSchemeButton", "ColorSchemeMode"]
-
-CONFIG_KEY = "color_scheme"
-"""The configuration key naming the mode a session starts in."""
 
 
 class ColorSchemeMode(StrEnum):
@@ -33,15 +28,14 @@ class ColorSchemeMode(StrEnum):
     DARK = "dark"
 
     @classmethod
-    def from_config(cls, config: Mapping[str, Any]) -> Self:
-        """Return the mode *config* names, or `SYSTEM` when it names none.
+    def from_config(cls, declared: str | None) -> Self:
+        """Return the mode the ``color_scheme`` key names, or `SYSTEM` for ``None``.
 
         Raises
         ------
         ValueError
             If the key names no mode the control offers.
         """
-        declared = config.get(CONFIG_KEY)
         return cls(declared) if declared is not None else cls(cls.SYSTEM)
 
     @property

@@ -53,24 +53,27 @@ from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
     ConfigurationError,
+    SessionFile,
     Source,
     StorageConfig,
     as_sources,
     frontends,
     label,
     load,
-    storage_of,
     validate_session,
 )
-from .._hooks import HookError, distinct, parse_hook_specs, resolve_hooks
+from .._hooks import (
+    HookError,
+    HookGroup,
+    distinct,
+    refuse_ambiguous,
+    refuse_unknown_points,
+    resolve_hooks,
+)
 from .._settings import Settings
 from ..injection._provides import constant, register_shared, shared_keys
 from ..ports._wiring import SLOT_ATTR, SLOT_THREAD_ATTR, Slot, owner_of, port_name
-from ..services._transports import (
-    CHANNEL_ACCESS,
-    TRANSPORTS,
-    transport_of,
-)
+from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
     Declaration,
     HookDeclaration,
@@ -262,6 +265,7 @@ class Session(BuildableSession):
         "_devices",
         "_failed",
         "_failed_services",
+        "_file",
         "_hooks",
         "_is_built",
         "_links",
@@ -330,7 +334,10 @@ class Session(BuildableSession):
         if log_level is not None:
             set_level(log_level)
         self._config = config
-        self._merged: dict[str, Any] | None = None
+        self._file: SessionFile | None = None
+        # the sources merged as written, which is what saving writes: the
+        # model holds the transport and the hooks in another shape
+        self._merged: dict[str, Any] = {}
         self._hooks: dict[str, object] | None = None
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
@@ -485,13 +492,13 @@ class Session(BuildableSession):
             found.extend(as_sources(klass.__dict__.get("config")))
         return found + as_sources(self._config)
 
-    def _configuration(self) -> dict[str, Any]:
-        """Merge every source this session layers, reading each one once.
+    def _configuration(self) -> SessionFile:
+        """Merge every source this session layers and validate the result, once.
 
         The result is kept, so that a subclass needing it before the
         components are built does not read the files a second time.
         """
-        if self._merged is None:
+        if self._file is None:
             sources = self._sources()
             if len(sources) > 1:
                 logger.debug(
@@ -499,8 +506,8 @@ class Session(BuildableSession):
                     f"{', '.join(label(source) for source in sources)}"
                 )
             self._merged = load(sources)
-            validate_session(sources, self._merged)
-        return self._merged
+            self._file = validate_session(sources, self._merged)
+        return self._file
 
     @property
     def hooks(self) -> Mapping[str, object]:
@@ -518,17 +525,18 @@ class Session(BuildableSession):
             be built, or one does not implement the protocol its point calls.
         """
         if self._hooks is None:
-            self._hooks = self._resolve_hooks(self._configuration())
+            self._hooks = self._resolve_hooks(self._configuration().hooks)
         return self._hooks
 
-    def _resolve_hooks(self, config: Mapping[str, Any]) -> dict[str, object]:
-        """Build the providers this class declares and the configuration names.
+    def _resolve_hooks(self, groups: list[HookGroup]) -> dict[str, object]:
+        """Build the providers this class declares and *groups* name.
 
         Raises
         ------
         HookError
-            If both name one point, a provider cannot be built, or one does
-            not implement the protocol its point calls.
+            If both name one point, *groups* name a point this class does not
+            call or one provider twice with the same keys, a provider cannot
+            be built, or one does not implement the protocol its point calls.
         """
         points = self.hook_points
         owner = type(self).__name__
@@ -541,9 +549,9 @@ class Session(BuildableSession):
                 built[id(declaration)] = provider
             declared[moment] = provider
 
-        configured = resolve_hooks(
-            parse_hook_specs(config.get("hooks", {}), points, owner)
-        )
+        refuse_unknown_points(groups, points, owner)
+        refuse_ambiguous(groups)
+        configured = resolve_hooks(groups)
         both = sorted(declared.keys() & configured.keys())
         if both:
             named = ", ".join(repr(moment) for moment in both)
@@ -571,10 +579,7 @@ class Session(BuildableSession):
         the configuration says nothing. A class name is distinct per session
         where a shared constant would not be.
         """
-        declared = self._configuration().get("session")
-        if isinstance(declared, str) and declared:
-            return declared
-        return type(self).__name__
+        return self._configuration().session or type(self).__name__
 
     @property
     def storage(self) -> StorageConfig:
@@ -619,7 +624,7 @@ class Session(BuildableSession):
         """
         return Store(self.name)
 
-    def _share(self, store: Store, config: Mapping[str, Any]) -> None:
+    def _share(self, store: Store, providers: Mapping[str, Any]) -> None:
         """Build the shared services this session installs, before any component.
 
         A provider owns no name, no layer and no wiring. It exists to put
@@ -628,7 +633,7 @@ class Session(BuildableSession):
         the store like anything else.
         """
         classes: dict[str, type] = {cls.__name__: cls for cls in self.providers}
-        classes.update(load_providers(config))
+        classes.update(load_providers(providers))
         for name, cls in classes.items():
             params = injectable(cls, {}, binds_name=False)
             refuse_unanswered(store, name, params)
@@ -713,8 +718,8 @@ class Session(BuildableSession):
         # read only classes, so a mistake is reported before anything starts
         self._refuse_component_values(self._components())
         self._check_layers(self._components())
-        self._transport = transport_of(config) or CHANNEL_ACCESS
-        self._services = read_services(type(self), config, self._transport)
+        self._transport = config.transport or CHANNEL_ACCESS
+        self._services = read_services(type(self), config.services, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
         if clash:
             raise TypeError(
@@ -723,7 +728,7 @@ class Session(BuildableSession):
             )
         for name, service in self._services.items():
             setattr(self, name, service)
-        self._storage = storage_of(config.get("storage"))
+        self._storage = StorageConfig() if config.storage is None else config.storage
         if self._storage.catalog is not None:
             require_tiled()
         self._path_provider = SessionPathProvider(
@@ -791,7 +796,7 @@ class Session(BuildableSession):
         self._settings = Settings.for_session(self.name)
         store.register_provider(constant(self._settings), type_hint=Settings)
         self._register_framework_values(store, lambda: dict(self._devices))
-        self._share(store, self._configuration())
+        self._share(store, self._configuration().providers)
 
     def seal(self) -> None:
         """Check what was built, then close the session to further building."""
@@ -827,7 +832,7 @@ class Session(BuildableSession):
         finally:
             for name in stand_ins:
                 delattr(self, name)
-        self._apply_wiring_config(self._configuration())
+        self._apply_wiring_config(self._configuration().wiring)
         self._warn_unused()
 
     def present(self) -> None:
@@ -852,7 +857,7 @@ class Session(BuildableSession):
             logger.info(summary)
             return
         logger.warning(summary)
-        if self._configuration().get("strict", False):
+        if self._configuration().strict:
             reasons = "\n".join(
                 f"  {name}: {reason}"
                 for name, reason in {**self._failed, **self._not_set_up}.items()
@@ -947,7 +952,8 @@ class Session(BuildableSession):
         Layered sources are merged before anything is built, so what comes
         back is one flat configuration whatever the session was built from.
         """
-        config = deepcopy(self._configuration())
+        self._configuration()
+        config = deepcopy(self._merged)
         for declaration in self._declarations.values():
             entry = self._entry_for(declaration)
             if entry is not None:
@@ -1064,17 +1070,17 @@ class Session(BuildableSession):
             n: self._callbacks[n] for n in self._declarations if n in self._callbacks
         }
 
-    def _set_configuration(self, config: Mapping[str, Any], name: str) -> None:
+    def _set_configuration(self, config: SessionFile, name: str) -> None:
         """Set the session configuration, for the components to read.
 
         *name* is what the session is called when the configuration does not
         say, which the session takes from its own class.
         """
         self._session_config = SessionConfig(
-            schema_version=config.get("schema_version", 1.0),
+            schema_version=config.schema_version,
             frontend=frontend_of(type(self)),
-            session=config.get("session", name),
-            metadata=dict(config.get("metadata", {})),
+            session=name if config.session is None else config.session,
+            metadata=dict(config.metadata),
         )
 
     @property
@@ -1661,7 +1667,7 @@ class Session(BuildableSession):
         self._start_catalog()
         if not self._services:
             return
-        if self._configuration().get("mock", False):
+        if self._configuration().mock:
             logger.info("Services not started: the session is mocked")
             return
         self.on_release(lambda: run_coro(TRANSPORTS[self._transport].release()))
@@ -1774,7 +1780,7 @@ class Session(BuildableSession):
         `CONNECT_TIMEOUT` is dropped and recorded as failed, like one that
         fails to build.
         """
-        mock = self._configuration().get("mock", False)
+        mock = self._configuration().mock
         targets = {
             name: device
             for name, device in self._devices.items()
@@ -1845,7 +1851,7 @@ class Session(BuildableSession):
 
         self.on_release(close)
 
-    def _apply_wiring_config(self, config: Mapping[str, Any]) -> None:
+    def _apply_wiring_config(self, wiring: Mapping[str, str | list[str]]) -> None:
         """Connect each signal the ``wiring`` section names to its slots.
 
         A path naming a component the build failed on is warned about and
@@ -1859,7 +1865,7 @@ class Session(BuildableSession):
             If a path names a port that cannot be resolved for any other
             reason.
         """
-        for source, targets in (config.get("wiring") or {}).items():
+        for source, targets in wiring.items():
             for target in [targets] if isinstance(targets, str) else targets:
                 self._connect_paths(source, target)
 

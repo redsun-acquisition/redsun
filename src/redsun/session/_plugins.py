@@ -10,6 +10,8 @@ from .._manifest import PluginManifest, ServiceEntry, discover
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .._config import ComponentEntry
+
 __all__ = [
     "PluginError",
     "installed",
@@ -21,22 +23,22 @@ __all__ = [
 
 logger = logging.getLogger("redsun")
 
-META_KEYS = frozenset({"plugin_name", "plugin_id"})
-
 
 class PluginError(RuntimeError):
     """A configuration entry names a plugin, group or id that does not resolve."""
 
 
-def resolve(entry: Mapping[str, Any], group: str) -> type | None:
+def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type | None:
     """Return the class a configuration entry names, or ``None``.
 
     An entry naming no plugin is not a plugin entry and yields ``None``.
 
     Parameters
     ----------
-    entry : Mapping[str, Any]
-        A configuration entry, carrying ``plugin_name`` and ``plugin_id``.
+    plugin_name : str | None
+        The entry's ``plugin_name``, ``None`` when it gives none.
+    plugin_id : str | None
+        The entry's ``plugin_id``, ``None`` when it gives none.
     group : str
         Manifest section to look in: ``devices``, ``presenters``, ``views`` or
         ``providers``.
@@ -46,29 +48,28 @@ def resolve(entry: Mapping[str, Any], group: str) -> type | None:
     PluginError
         If the plugin, the group, the id or the class path does not resolve.
     """
-    if not META_KEYS <= entry.keys():
+    if plugin_name is None or plugin_id is None:
         return None
-    listed = manifest_item(entry["plugin_name"], entry["plugin_id"], group)
-    return import_class(str(listed))
+    return import_class(str(manifest_item(plugin_name, plugin_id, group)))
 
 
-def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
-    """Return the shared-service classes a configuration names, by entry name.
+def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
+    """Return the shared-service classes a ``providers`` section names, by entry name.
 
-    Read from the ``providers`` section, so that a session assembled from a
-    file gets a plugin's shared services without naming them in Python. A
-    provider is an ordinary class: its constructor is filled from the session
-    the way a component's is, and every method it marks with ``provides``
-    registers a value under the type that method returns.
+    A session assembled from a file gets a plugin's shared services this way,
+    without naming them in Python. A provider is an ordinary class: its
+    constructor is filled from the session the way a component's is, and every
+    method it marks with ``provides`` registers a value under the type that
+    method returns.
 
     An entry that does not resolve is logged and left out.
     """
     found: dict[str, type] = {}
-    for name, entry in config.get("providers", {}).items():
+    for name, entry in providers.items():
         if not isinstance(entry, dict):
             continue
         try:
-            cls = resolve(entry, "providers")
+            cls = resolve(entry.get("plugin_name"), entry.get("plugin_id"), "providers")
         except PluginError as e:
             logger.error("Failed to load provider '%s': %s", name, e)
             continue
@@ -77,7 +78,7 @@ def load_providers(config: Mapping[str, Any]) -> dict[str, type]:
     return found
 
 
-def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
+def service_entry(entry: ComponentEntry) -> dict[str, Any]:
     """Return the keywords a ``services`` entry gives, its plugin's included.
 
     An entry naming a plugin takes ``module`` and ``ready`` from the plugin's
@@ -88,10 +89,10 @@ def service_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
     PluginError
         If the plugin does not resolve.
     """
-    own = {k: v for k, v in entry.items() if k not in META_KEYS}
-    if not META_KEYS <= entry.keys():
+    own = dict(entry.model_extra or {})
+    if entry.plugin_name is None or entry.plugin_id is None:
         return own
-    listed = manifest_item(entry["plugin_name"], entry["plugin_id"], "services")
+    listed = manifest_item(entry.plugin_name, entry.plugin_id, "services")
     assert isinstance(listed, ServiceEntry)
     return {**listed.model_dump(exclude_none=True), **own}
 

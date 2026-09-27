@@ -22,19 +22,21 @@ from psygnal import Signal
 from redsun.services import Service
 from redsun.view import Placement
 
+from .._config import DeviceEntry
 from .._hooks import HookError, known_points
 from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
-from ..services._transports import CHANNEL_ACCESS, TRANSPORT_KEY
+from ..services._transports import CHANNEL_ACCESS
 from ._factories import resolved
 from ._frontend import Frontend
-from ._plugins import META_KEYS, PluginError, resolve, service_entry
+from ._plugins import PluginError, resolve, service_entry
 from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
+    from .._config import ComponentEntry, SessionFile
     from ._protocols import NamedComponent
 
 logger = logging.getLogger("redsun")
@@ -512,7 +514,7 @@ def positional_only(cls: type) -> list[str]:
 
 
 def read(
-    cls: type, config: Mapping[str, Any], frontend: type[Frontend] = Frontend
+    cls: type, config: SessionFile, frontend: type[Frontend] = Frontend
 ) -> dict[str, Declaration]:
     """Collect the component declarations of *cls*.
 
@@ -554,9 +556,9 @@ def read(
             elif isinstance(marker, Alias):
                 name = marker.name
 
-        section = config.get(kind.section, {})
+        section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
         declarations[name] = Declaration(
-            target, name, kind, {**entry(section, cfg_key), **inline}
+            target, name, kind, {**keywords(section.get(cfg_key)), **inline}
         )
         declarations[name].refusal = refused
 
@@ -566,15 +568,15 @@ def read(
 
 
 def read_services(
-    cls: type, config: Mapping[str, Any], transport: str = CHANNEL_ACCESS
+    cls: type, section: Mapping[str, ComponentEntry], transport: str = CHANNEL_ACCESS
 ) -> dict[str, Service]:
     """Make the services *cls* annotates and the ``services`` section lists.
 
     A `Launch` or `Attach` marker overrides the section's entry, and the last
     marker wins, so one written where an alias is used replaces the alias's.
     `FromConfig` names the entry and `Alias` the service. An entry no annotation
-    reads is a service too, except the section's ``transport`` key, which is
-    what every service made here speaks: *transport*, settled by the caller.
+    reads is a service too. Every service made here speaks *transport*, settled
+    by the caller.
 
     Raises
     ------
@@ -585,9 +587,6 @@ def read_services(
 
     An entry naming a plugin that does not resolve is logged and left out.
     """
-    section: Mapping[str, Any] = {
-        k: v for k, v in (config.get("services") or {}).items() if k != TRANSPORT_KEY
-    }
     found: dict[str, Service] = {}
     read_keys: set[str] = set()
     for attr, hint in hints(cls).items():
@@ -613,7 +612,7 @@ def read_services(
         read_keys.add(cfg_key)
         listed = section.get(cfg_key)
         try:
-            from_file = service_entry(listed) if isinstance(listed, dict) else {}
+            from_file = service_entry(listed) if listed is not None else {}
         except PluginError as e:
             logger.error("Failed to read service '%s': %s", name, e)
             continue
@@ -626,7 +625,7 @@ def read_services(
             from_file.update((k, v) for k, v in vars(given).items() if v is not None)
         found[name] = Service(name, transport=transport, **from_file)
     for cfg_key, listed in section.items():
-        if cfg_key in read_keys or not isinstance(listed, dict):
+        if cfg_key in read_keys:
             continue
         try:
             found[cfg_key] = Service(
@@ -724,7 +723,7 @@ def warn_if_forgotten(cls: type, attr: str, target: object) -> None:
 
 
 def from_config(
-    config: Mapping[str, Any], declared: Iterable[str], frontend: type[Frontend]
+    config: SessionFile, declared: Iterable[str], frontend: type[Frontend]
 ) -> dict[str, Declaration]:
     """Collect the components named only in *config*.
 
@@ -741,13 +740,14 @@ def from_config(
     found: dict[str, Declaration] = {}
     for kind in Layer:
         section_name = kind.section
-        for cfg_key, entry in config.get(section_name, {}).items():
-            if cfg_key in declared or not isinstance(entry, dict):
+        section: Mapping[str, ComponentEntry] = getattr(config, section_name)
+        for cfg_key, entry in section.items():
+            if cfg_key in declared:
                 continue
             where = f"configuration entry {section_name}.{cfg_key}"
             refused: Exception | None
             try:
-                target = resolve(entry, section_name)
+                target = resolve(entry.plugin_name, entry.plugin_id, section_name)
             except PluginError as e:
                 target, refused = object, e
             else:
@@ -761,14 +761,9 @@ def from_config(
                     )
                 else:
                     refused = refusal(target, kind, where, frontend)
-            found[cfg_key] = Declaration(target, cfg_key, kind, without_meta(entry))
+            found[cfg_key] = Declaration(target, cfg_key, kind, keywords(entry))
             found[cfg_key].refusal = refused
     return found
-
-
-def without_meta(entry: Mapping[str, Any]) -> dict[str, Any]:
-    """Return *entry* without the keys naming the plugin it came from."""
-    return {k: v for k, v in entry.items() if k not in META_KEYS}
 
 
 def hints(cls: type) -> dict[str, Any]:
@@ -827,10 +822,18 @@ def is_service(hint: Any) -> bool:
     return any(isinstance(m, ServiceMark) for m in get_args(hint)[1:])
 
 
-def entry(section: Mapping[str, Any], key: str) -> dict[str, Any]:
-    """Return the settings *section* holds under *key*, without its meta keys.
+def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
+    """Return the keywords *entry* gives its component, none for no entry.
 
-    Anything that is not a table reads as no settings at all.
+    A device's ``service`` and ``autoconnect`` are among them where the entry
+    gives them.
     """
-    found = section.get(key) or {}
-    return without_meta(found) if isinstance(found, dict) else {}
+    if entry is None:
+        return {}
+    found = dict(entry.model_extra or {})
+    if isinstance(entry, DeviceEntry):
+        if "service" in entry.model_fields_set:
+            found["service"] = entry.service
+        if "autoconnect" in entry.model_fields_set:
+            found["autoconnect"] = entry.autoconnect
+    return found

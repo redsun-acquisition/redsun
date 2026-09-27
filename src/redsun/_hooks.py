@@ -8,9 +8,9 @@ from collections.abc import Mapping
 from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
-from pydantic import BaseModel, TypeAdapter, ValidationError
+from pydantic import BaseModel
 
-from ._manifest import ClassPath, message_of
+from ._manifest import ClassPath
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -115,55 +115,23 @@ class WrapsBuild(Protocol[AppT_contra]):
         ...
 
 
-def parse_hook_specs(
-    raw: Mapping[str, Any], moments: Mapping[str, type], owner: str
-) -> list[HookGroup]:
-    """Read the ``hooks`` section into one group per distinct entry.
-
-    Keys are the hook points *owner* calls; an entry under several keys through
-    a YAML anchor is one group serving all of them.
+def refuse_unknown_points(
+    specs: Iterable[HookGroup], moments: Mapping[str, type], owner: str
+) -> None:
+    """Refuse an entry of the ``hooks`` section under a key *owner* does not call.
 
     Raises
     ------
     HookError
-        If a key is not a hook point *owner* calls, an entry is not a mapping
-        of a class path ``provider`` and a mapping ``kwargs``, or two separate
-        entries name the same provider with the same keys.
+        If a key is not a hook point *owner* calls.
     """
-    for moment in raw:
-        if moment not in moments:
-            raise HookError(
-                f"hooks key {moment!r} is not a hook point {owner} calls; "
-                f"{known_points(moments)}"
-            )
-    try:
-        entries = group_hook_entries(raw)
-    except ValueError as e:
-        raise HookError(str(e)) from None
-    try:
-        groups = HOOK_GROUPS.validate_python(entries)
-    except ValidationError as e:
-        raise HookError(hook_problems(entries, e)) from None
-    refuse_ambiguous(groups)
-    return groups
-
-
-def hook_problems(entries: list[dict[str, Any]], error: ValidationError) -> str:
-    """Say what is wrong with each grouped entry, naming its hook points."""
-    lines = []
-    for problem in error.errors():
-        index, *rest = problem["loc"]
-        named = ", ".join(repr(moment) for moment in entries[int(index)]["moments"])
-        key = ".".join(str(part) for part in rest)
-        if problem["type"] == "extra_forbidden":
-            lines.append(
-                f"hooks entry {named} carries unknown key {key!r}; an entry takes "
-                "'provider' and 'kwargs' only, and constructor arguments go "
-                "under 'kwargs'"
-            )
-        else:
-            lines.append(f"hooks entry {named}: {key}: {message_of(problem)}")
-    return "\n".join(lines)
+    for spec in specs:
+        for moment in spec.moments:
+            if moment not in moments:
+                raise HookError(
+                    f"hooks key {moment!r} is not a hook point {owner} calls; "
+                    f"{known_points(moments)}"
+                )
 
 
 def refuse_ambiguous(specs: Iterable[HookGroup]) -> None:
@@ -285,7 +253,3 @@ def group_hook_entries(raw: Mapping[str, Any]) -> list[dict[str, Any]]:
         served, _ = grouped.setdefault(id(entry), ([], entry))
         served.append(moment)
     return [{**entry, "moments": tuple(served)} for served, entry in grouped.values()]
-
-
-HOOK_GROUPS = TypeAdapter(list[HookGroup])
-"""Validates the grouped entries of a ``hooks`` section."""
