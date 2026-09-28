@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["fastcs[epicspva]"]
 # ///
-"""The service launched in the "Writing a service with FastCS" tutorial."""
+"""The service of the guide "How to write a service with FastCS"."""
 
 from __future__ import annotations
 

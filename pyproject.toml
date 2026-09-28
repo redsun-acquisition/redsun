@@ -156,10 +156,14 @@ include = [
 
 [tool.mypy]
 files = "."
-# of the docs only the tutorial scripts are checked, the first one excepted:
-# it reads a device without knowing its type, which the second tutorial
-# corrects; site/ holds the built copy of them
-exclude = ["^docs/(?!$|tutorials/)", "^docs/tutorials/first_session\\.py$", "^site/"]
+# of the docs only the scripts of the tutorials and of the guides are checked,
+# the first tutorial excepted: it reads a device without knowing its type,
+# which the second tutorial corrects; site/ holds the built copy of them
+exclude = [
+    "^docs/(?!$|tutorials/|examples/)",
+    "^docs/tutorials/first_session\\.py$",
+    "^site/",
+]
 mypy_path = ["src", "tests/launchable"]
 explicit_package_bases = true
 disable_error_code = [
@@ -179,7 +183,7 @@ ignore_missing_imports = true
 # caproto and fastcs ship no type information, so a class taken from either is
 # Any and subclassing one is an error a stub would fix
 [[tool.mypy.overrides]]
-module = ["docs.tutorials.stage_ioc", "docs.tutorials.stage_fastcs"]
+module = ["docs.tutorials.stage_ioc", "docs.examples.stage_fastcs"]
 disable_error_code = ["misc"]
 
 [tool.coverage.run]
