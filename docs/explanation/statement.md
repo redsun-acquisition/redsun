@@ -37,35 +37,31 @@ graph TD
 
 ## Coming from Micro-Manager
 
-The two are organised differently, so nothing of one matches the other
-exactly. This is what comes closest:
+If you have used Micro-Manager, many ideas in `redsun` will be familiar,
+although the pieces are divided differently. These are the closest matches:
 
 | Micro-Manager | `redsun` |
 | --- | --- |
-| device adapter | a [device](glossary.md#device), and a [service](glossary.md#service) when the hardware sits behind a server |
+| device adapter | a [device](glossary.md#device), usually with a [service](glossary.md#service) behind it |
 | hardware configuration file | [session file](glossary.md#session-file) |
 | multi-dimensional acquisition | [plan](glossary.md#plan) |
 | live mode | a plan that runs until it is stopped, see [Plans](plans.md#continuous-plans) |
 | plugin | a [plugin](glossary.md#plugin) providing [components](glossary.md#component) |
 
-## What redsun does not ship
+## What redsun leaves to you
 
-`redsun` is a library you build a program with. These are left to you, or to
-a plugin you install:
+`redsun` provides the framework; the instrument is yours to build. The
+following come from you, or from a plugin:
 
-| Not shipped | Who provides it |
+| Not included | Where it comes from |
 | --- | --- |
-| drivers for hardware | the devices and services you write or install |
-| an acquisition panel | a [view](glossary.md#view) you write; the form of a plan is given, see [Qt widgets](qt-widgets.md) |
+| hardware drivers | the devices and services you write or install |
+| an acquisition panel | a [view](glossary.md#view) you write; `redsun` builds the input form of each plan, see [Qt widgets](qt-widgets.md) |
 | an image viewer | a view you write |
-| a writer of acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
+| a writer for acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
 
-Two things nobody provides:
-
-- A service that crashed is not started again. The session logs that it
-  exited.
-- Two [frontends](glossary.md#frontend) cannot run in one program.
-
+Keep in mind that a service which crashes is not restarted, and that a program
+can run only one [frontend](glossary.md#frontend).
 [What a running session cannot change](limits.md) explains both.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html

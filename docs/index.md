@@ -24,46 +24,41 @@ hide:
 
 It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
 
-## What you get, and what you write
+## About redsun
 
-`redsun` is a library you build an acquisition program with. It is not a
-program you open.
+`redsun` is a toolkit for building your own acquisition software. You describe
+your instrument in Python, and `redsun` assembles it into an application with
+a graphical interface.
 
-`redsun` gives you:
+With `redsun` you can:
 
-- a [session](explanation/glossary.md#session), which builds your
-  [components](explanation/glossary.md#component) in order and connects them
-- a [session file](explanation/glossary.md#session-file), to change settings
-  without touching code
-- the starting and stopping of the
-  [services](explanation/glossary.md#service) your hardware sits behind
-- a form to fill in and start a [plan](explanation/glossary.md#plan) from,
-  made from its parameters
-- built-in [views](explanation/glossary.md#view): today one, the log window
-- a place and a numbered name for the files of each acquisition, under one
-  folder per session
-- a [catalog](explanation/glossary.md#catalog) for the
-  [runs](explanation/glossary.md#run) your components record, if you install
-  it and ask for it in the session file
-
-You write, or install as a [plugin](explanation/glossary.md#plugin):
-
-- the [devices](explanation/glossary.md#device),
+- describe an instrument as [devices](explanation/glossary.md#device),
   [presenters](explanation/glossary.md#presenter) and
-  [views](explanation/glossary.md#view) of your setup
-- the services that reach your hardware
-- the plans of your acquisitions
+  [views](explanation/glossary.md#view), and let a
+  [session](explanation/glossary.md#session) build and connect them;
+- change settings from a
+  [session file](explanation/glossary.md#session-file), without touching
+  code;
+- start and stop the [services](explanation/glossary.md#service) that drive
+  your hardware, together with the application;
+- run acquisitions as `bluesky` [plans](explanation/glossary.md#plan), each
+  with an input form built from its parameters;
+- use the built-in views, starting with a log window;
+- give every acquisition file a place and a name, under one folder per
+  session;
+- search past [runs](explanation/glossary.md#run) in a
+  [catalog](explanation/glossary.md#catalog), if you choose to keep one.
 
-`redsun` does not ship:
+The parts specific to your instrument come from you, or from a
+[plugin](explanation/glossary.md#plugin) you install: the devices and the
+services behind them, the presenters and views, and the plans for your
+acquisitions.
 
-- drivers for hardware
-- an acquisition panel
-- an image viewer
-- a writer of acquisition files
-
-[Why redsun exists](explanation/statement.md#what-redsun-does-not-ship) says
-who provides each of these, and how the parts compare with those of
-Micro-Manager.
+`redsun` is not a ready-made microscope program. It comes with no hardware
+drivers, no acquisition panel and no image viewer, and it leaves writing the
+data to your devices.
+[Why redsun exists](explanation/statement.md#what-redsun-leaves-to-you) has
+the details, and shows how its parts compare with those of Micro-Manager.
 
 <div style="display: flex; justify-content: center" markdown>
 

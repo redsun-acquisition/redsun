@@ -4,9 +4,9 @@ icon: lucide/ban
 
 # What a running session cannot change
 
-What a session fixes when it is built, and what to do instead of changing it.
-For what `redsun` does not ship, see
-[Why redsun exists](statement.md#what-redsun-does-not-ship).
+Some things are fixed once a session is built. This page lists them, and says
+what to do instead. For the parts `redsun` leaves to you, see
+[Why redsun exists](statement.md#what-redsun-leaves-to-you).
 
 ## A value cannot be added while the session runs
 
