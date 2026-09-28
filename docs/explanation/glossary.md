@@ -85,9 +85,9 @@ component.
 
 A device is one part of your setup as the session sees it: the values it can
 read and set. Devices are written with [`ophyd-async`](#ophyd-async), and
-together they model the setup. The hardware is usually reached through a
-[service](#service), which is the preferred way for now; see
-[Services](services.md). Devices are the first [layer](#layer) to be built.
+together they model the setup. For now, the preferred way to reach the
+hardware is a [service](#service); see [Services](services.md). Devices are
+the first [layer](#layer) to be built.
 
 ### Device signal
 
@@ -249,8 +249,8 @@ The `RunEngine` is the object of [`bluesky`](#bluesky) that executes a
 
 ### Service
 
-A service is a program that owns hardware and offers it to devices over the
-network. It may be started by the session, or already be running elsewhere. A
+A service is a program that owns hardware and offers it to devices under a
+[prefix](#prefix). The session starts it, or it already runs elsewhere. A
 session stops the services it started when it shuts down.
 
 ### Session

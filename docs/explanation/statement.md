@@ -42,7 +42,7 @@ although the pieces are divided differently. These are the closest matches:
 
 | Micro-Manager | `redsun` |
 | --- | --- |
-| device adapter | a [device](glossary.md#device), usually with a [service](glossary.md#service) behind it |
+| device adapter | a [device](glossary.md#device), preferably with a [service](glossary.md#service) to reach the hardware |
 | hardware configuration file | [session file](glossary.md#session-file) |
 | multi-dimensional acquisition | [plan](glossary.md#plan) |
 | live mode | a plan that runs until it is stopped, see [Plans](plans.md#continuous-plans) |
@@ -50,8 +50,8 @@ although the pieces are divided differently. These are the closest matches:
 
 ## What redsun leaves to you
 
-`redsun` provides the framework; the instrument is yours to build. The
-following come from you, or from a plugin:
+`redsun` provides the framework. The parts specific to your instrument come
+from you, or from a plugin:
 
 | Not included | Where it comes from |
 | --- | --- |
@@ -60,8 +60,8 @@ following come from you, or from a plugin:
 | an image viewer | a view you write |
 | a writer for acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
 
-Keep in mind that a service which crashes is not restarted, and that a program
-can run only one [frontend](glossary.md#frontend).
+A service that crashes is not restarted, and a program can run only one
+[frontend](glossary.md#frontend).
 [What a running session cannot change](limits.md) explains both.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html

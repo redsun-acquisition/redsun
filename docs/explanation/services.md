@@ -16,9 +16,9 @@ and transport to the devices that use it.
 !!! warning "Devices without a service"
 
     A device does not strictly need a service: an `ophyd-async` device can
-    reach its hardware on its own. Support for such devices is limited for
-    now, and a service is the preferred way to reach hardware. Guidance on
-    devices that wrap a third-party package will follow.
+    reach its hardware on its own. `redsun` supports such devices only in
+    part for now, and a service is the preferred way to reach hardware.
+    Guidance on devices that wrap a third-party package will follow.
 
 ## Devices model the setup, services drive the hardware
 
