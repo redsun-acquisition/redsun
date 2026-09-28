@@ -123,8 +123,29 @@ class MyApp(QtSession):
     stage_ctrl: Annotated[AsPresenter[StagePresenter], Declare(step=0.5)]
 ```
 
-`Declare` wins over the file. `FromConfig("key")` reads the file under another
-key, and `Alias("name")` gives the component another name.
+`Declare` wins over the file.
+
+A component reads its arguments from the file under its own name. To read
+them under another key, use `FromConfig`:
+
+```python
+from redsun import FromConfig
+
+
+class MyApp(QtSession):
+    stage: Annotated[AsDevice[MyStage], FromConfig("xy_stage")]
+```
+
+```yaml
+devices:
+  xy_stage:
+    units: um
+```
+
+The device is still called `stage`. Only the key it is read from changes,
+which helps when the key is not a valid Python name.
+
+`Alias("name")` gives the component another name.
 
 ## Use another component
 
@@ -132,6 +153,13 @@ A constructor runs before the other components exist, so ask for another
 component, or a value it shares, in `setup`:
 
 ```python
+class MotorReadings:
+    """The last position read from each motor."""
+
+    def __init__(self) -> None:
+        self.positions: dict[str, float] = {}
+
+
 class RoiPresenter:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -139,6 +167,8 @@ class RoiPresenter:
     def setup(self, readings: MotorReadings) -> None:
         self.readings = readings
 ```
+
+`MotorReadings` stands for any class of yours that another component shares.
 
 See [Share a value](share-a-value.md), and [Questions](../explanation/questions.md)
 to ask for "every component that can do X".
@@ -158,6 +188,9 @@ class StagePresenter:
 A component takes plain values, so a test makes it directly:
 
 ```python
+from redsun.aio import run_coro
+
+
 def test_nudge_moves_by_one_step() -> None:
     stage = MyStage(name="stage")
     run_coro(stage.connect(mock=True))
