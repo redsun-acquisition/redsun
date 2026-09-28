@@ -33,6 +33,7 @@ __all__ = [
     "SlotThread",
     "Unconnected",
     "WiringError",
+    "marker_of",
     "owner_of",
     "port_name",
     "ports",
@@ -114,9 +115,15 @@ def slot(
     return deco if fn is None else deco(fn)
 
 
+def marker_of(method: object) -> Slot | None:
+    """Return what `slot` recorded on *method*, ``None`` for one it did not mark."""
+    marker = getattr(method, SLOT_ATTR, None)
+    return marker if isinstance(marker, Slot) else None
+
+
 def port_name(bound_slot: Callable[..., Any]) -> str:
     """Return the port name of a method marked with `slot`."""
-    declaration: Slot | None = getattr(bound_slot, SLOT_ATTR, None)
+    declaration = marker_of(bound_slot)
     if declaration is not None and declaration.name is not None:
         return declaration.name
     return getattr(bound_slot, "__name__", "<anonymous>").lstrip("_")
@@ -161,8 +168,7 @@ def ports(component: object) -> Ports:
         declared = getattr(cls, attr, None)
         if isinstance(declared, Signal) and not attr.startswith("_"):
             signals[attr] = getattr(component, attr)
-        # a marker with a thread is a slot, whichever layer's decorator set it
-        elif hasattr(getattr(declared, SLOT_ATTR, None), "thread"):
+        elif marker_of(declared) is not None:
             slots[port_name(getattr(component, attr))] = getattr(component, attr)
 
     for group_name, value in getattr(component, "__dict__", {}).items():

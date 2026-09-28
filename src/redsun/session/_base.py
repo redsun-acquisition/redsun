@@ -71,7 +71,7 @@ from .._hooks import (
 )
 from .._settings import Settings
 from ..injection._provides import constant, register_shared, shared_keys
-from ..ports._wiring import SLOT_ATTR, SLOT_THREAD_ATTR, Slot, owner_of, port_name
+from ..ports._wiring import SLOT_THREAD_ATTR, marker_of, owner_of, port_name
 from ..services._transports import CHANNEL_ACCESS, TRANSPORTS
 from ._declarations import (
     Declaration,
@@ -1114,9 +1114,8 @@ class Session(BuildableSession):
         return type(owner).__name__
 
     def _affinity(self, slot: Callable[..., Any]) -> SlotThread:
-        declaration: Slot | None = getattr(slot, SLOT_ATTR, None)
-        # a marker with a thread is a slot, whichever layer's decorator set it
-        if declaration is None or not hasattr(declaration, "thread"):
+        declaration = marker_of(slot)
+        if declaration is None:
             name = getattr(slot, "__qualname__", repr(slot))
             raise WiringError(
                 f"{name} is not connectable; mark it with the 'slot' decorator"
