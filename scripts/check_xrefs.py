@@ -44,8 +44,10 @@ def dangling(site: Path) -> Iterator[str]:
     """Yield a line for each link of *site* whose fragment reaches nothing.
 
     Links to another site are left alone, and so are fragments starting with
-    two underscores, which the theme handles in the browser.
+    two underscores, which the theme handles in the browser. A link whose
+    target resolves outside *site* is reported as leaving it instead.
     """
+    root = site.resolve()
     for page in sorted(site.rglob("*.html")):
         for href in sorted(set(HREF.findall(page.read_text(encoding="utf-8")))):
             parts = urlsplit(html.unescape(href))
@@ -57,10 +59,15 @@ def dangling(site: Path) -> Iterator[str]:
             target = page.parent / unquote(parts.path) if parts.path else page
             if target.is_dir():
                 target = target / "index.html"
-            if target.is_file() and fragment not in ids(target):
+            if not target.is_file():
+                continue
+            resolved = target.resolve()
+            if not resolved.is_relative_to(root):
+                yield f"{page.relative_to(site).as_posix()}: {href} leaves the site"
+            elif fragment not in ids(target):
                 yield (
                     f"{page.relative_to(site).as_posix()}: no #{fragment} in "
-                    f"{target.resolve().relative_to(site.resolve()).as_posix()}"
+                    f"{resolved.relative_to(root).as_posix()}"
                 )
 
 

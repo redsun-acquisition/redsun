@@ -31,3 +31,15 @@ def test_a_fragment_reaching_nothing_is_reported(tmp_path: Path) -> None:
         "guide/index.html: no #devise in glossary/index.html",
         "guide/index.html: no #nowhere in guide/index.html",
     ]
+
+
+def test_a_link_leaving_the_site_is_reported(tmp_path: Path) -> None:
+    site = tmp_path / "site"
+    page(site, "guide", '<a href="../../outside/#part">outside</a>')
+    outside = tmp_path / "outside" / "index.html"
+    outside.parent.mkdir(parents=True, exist_ok=True)
+    outside.write_text("<html><body></body></html>", encoding="utf-8")
+
+    assert list(dangling(site)) == [
+        "guide/index.html: ../../outside/#part leaves the site",
+    ]
