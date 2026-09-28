@@ -217,7 +217,8 @@ and `ctrl.sig_changed -> panel.on_action_changed`. See
 ### SRLatch
 
 `ActionManager` makes one `SRLatch` for each action it offers, and waits on it. A
-latch is two `asyncio.Event` objects, with a wait for either state:
+latch is set and reset from any thread, and a coroutine waits for either
+state on whatever loop it runs:
 
 ```python
 latch = SRLatch()
