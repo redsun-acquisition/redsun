@@ -37,9 +37,8 @@ It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so
 
 ## How the documentation is structured
 
-The documentation is split into [four categories](https://diataxis.fr), also
-reachable from the tabs at the top. Technical words are defined once, in the
-[glossary](explanation/glossary.md).
+The documentation follows the [Diataxis](https://diataxis.fr) format. Reference
+to technical terminology is shown in the [glossary](explanation/glossary.md).
 
 <div class="grid cards" markdown>
 
