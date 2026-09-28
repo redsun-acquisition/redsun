@@ -5,9 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
-from ophyd_async.core import soft_signal_r_and_setter
+from ophyd_async.core import (
+    StandardReadable,
+    soft_signal_r_and_setter,
+    soft_signal_rw,
+)
 
-from redsun import AsPresenter, Session, WiringError, slot
+from redsun import AsDevice, AsPresenter, Session, WiringError, slot
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -46,11 +50,25 @@ class Renamed:
         self.seen.append(next(iter(reading.values()))["value"])
 
 
+class Stage(StandardReadable):
+    def __init__(self, name: str) -> None:
+        with self.add_children_as_readables():
+            self.position = soft_signal_rw(float, initial_value=1.5)
+        super().__init__(name=name)
+
+
 class App(Session):
     config: ClassVar[dict[str, Any]] = {"session": "subscribing"}
 
     watcher: AsPresenter[Watcher]
     renamed: AsPresenter[Renamed]
+
+
+class Following(App):
+    stage: AsDevice[Stage]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.stage.position, self.watcher.on_reading
 
 
 @pytest.fixture
@@ -93,13 +111,24 @@ def test_the_subscription_is_recorded_by_both_ends(
 
     session = build(Wired)
 
-    record = session.subscriptions[0]
-    assert (record.source, record.consumer, record.consumer_port) == (
+    [link] = session.connections
+
+    assert (link.publisher_port, link.consumer, link.consumer_port) == (
         "counter",
         "watcher",
         "on_reading",
     )
-    assert session.subscriptions == [record]
+
+
+def test_a_signal_of_a_device_is_recorded_under_the_device(
+    build: BuildSession,
+) -> None:
+    session = build(Following)
+
+    assert [str(link) for link in session.connections] == [
+        "stage.position -> watcher.on_reading"
+    ]
+    assert session.watcher.seen == [1.5]
 
 
 def test_the_record_uses_the_port_name_the_slot_declares(
@@ -115,7 +144,7 @@ def test_the_record_uses_the_port_name_the_slot_declares(
 
     session = build(Wired)
 
-    assert session.subscriptions[0].consumer_port == "readings"
+    assert session.connections[0].consumer_port == "readings"
 
 
 def test_a_slot_that_is_not_marked_is_refused(
@@ -166,7 +195,7 @@ def test_shutdown_forgets_the_subscriptions(
     session = build(Wired)
     session.shutdown()
 
-    assert session.subscriptions == []
+    assert session.connections == []
 
 
 def test_a_subscribed_port_is_not_reported_as_unconnected(

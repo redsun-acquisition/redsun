@@ -213,17 +213,16 @@ The slot receives each reading. The subscription is released at shutdown.
 ```python
 for link in app.connections:
     print(link)
-for record in app.subscriptions:
-    print(record)
 ```
 
 ```
 det_ctrl.sig_new_data -> img_widget.update_layers  [thread=main]
 det_widget.sig_property_changed -> det_ctrl.configure
-temperature ~> temperature_widget.update_temperature  [thread=main]
+detector.temperature -> temperature_widget.update_temperature  [thread=main]
 ```
 
-`->` is a signal connection, `~>` a device subscription.
+A link from a device signal is listed with the others, under the device and
+the name of the signal within it.
 
 A component may hold an object with signals or slots of its own as an
 attribute. The session records that object under the name of the component.

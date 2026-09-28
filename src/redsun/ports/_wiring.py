@@ -31,7 +31,6 @@ __all__ = [
     "Ports",
     "Slot",
     "SlotThread",
-    "Subscription",
     "Unconnected",
     "WiringError",
     "owner_of",
@@ -182,7 +181,12 @@ def ports(component: object) -> Ports:
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class Connection:
-    """A recorded link between a signal and a slot."""
+    """A recorded link between a signal and a slot.
+
+    The signal is a ``psygnal`` signal of a component, or a signal of a
+    device, whose publisher is the device and whose port is the signal's name
+    within it.
+    """
 
     publisher: str
     publisher_port: str
@@ -218,20 +222,6 @@ class Unconnected:
         lines = [f"{path} -> nothing" for path in self.signals]
         lines += [f"nothing -> {path}" for path in self.slots]
         return "\n".join(lines)
-
-
-@dataclass(frozen=True, kw_only=True, slots=True)
-class Subscription:
-    """A recorded subscription to a device signal."""
-
-    source: str
-    consumer: str
-    consumer_port: str
-    thread: SlotThread = None
-
-    def __str__(self) -> str:
-        thread = f"  [thread={self.thread}]" if self.thread else ""
-        return f"{self.source} ~> {self.consumer}.{self.consumer_port}{thread}"
 
 
 def owner_of(signal: SignalInstance) -> object | None:

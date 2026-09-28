@@ -180,7 +180,7 @@ The virtual container's other members moved too:
 | 0.13 | now |
 | --- | --- |
 | `container.virtual_container.connections`, `.unconnected`, `.disconnect_all` | the same names on the session |
-| `container.virtual_container.subscriptions` | the same name on the session |
+| `container.virtual_container.subscriptions` | removed: `connections` lists a link from a device signal with the others |
 | `register_callbacks` | a component that is a `DocumentRouter` is collected; ask for `Mapping[str, CallbackType]` in `setup` |
 | `register_signals`, `signals`, `find_signals` | removed |
 

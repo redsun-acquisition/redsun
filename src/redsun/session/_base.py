@@ -38,7 +38,6 @@ from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
 from redsun.ports import (
     ComponentNotBuilt,
     Connection,
-    Subscription,
     Unconnected,
     WiringError,
     ports,
@@ -282,7 +281,6 @@ class Session(BuildableSession):
         "_shared_values",
         "_storage",
         "_store",
-        "_subscription_records",
         "_subscriptions",
         "_transport",
     )
@@ -367,7 +365,6 @@ class Session(BuildableSession):
         self._subscriptions: list[
             tuple[SignalR[Any], Callable[[Any], None], SignalInstance]
         ] = []
-        self._subscription_records: list[Subscription] = []
         self._settings: Settings | None = None
         self._store: Store | None = None
         # the component sharing each key, carried across the layer steps so
@@ -1181,8 +1178,11 @@ class Session(BuildableSession):
         def forward(reading: Any) -> None:
             relay.emit(reading)
 
-        record = Subscription(
-            source=signal.name,
+        # a device names its signals after itself, as device-signal
+        device, _, port = signal.name.partition("-")
+        link = Connection(
+            publisher=device if port else self._label(None),
+            publisher_port=port or signal.name,
             consumer=self._label(getattr(slot, "__self__", None)),
             consumer_port=port_name(slot),
             thread=thread,
@@ -1195,13 +1195,8 @@ class Session(BuildableSession):
         # the main thread during the build
         run_coro(attach())
         self._subscriptions.append((signal, forward, relay))
-        self._subscription_records.append(record)
-        logger.debug(f"Subscribed {record}")
-
-    @property
-    def subscriptions(self) -> list[Subscription]:
-        """The device-signal subscriptions made through this session."""
-        return list(self._subscription_records)
+        self._connections.append(link)
+        logger.debug(f"Connected {link}")
 
     def _connect_paths(self, source: str, target: str) -> None:
         """Connect two ports addressed as ``component.port``.
@@ -1265,7 +1260,7 @@ class Session(BuildableSession):
     def unconnected(self) -> Unconnected:
         """Ports of the built components that no connection reaches.
 
-        The complement of `connections` and `subscriptions`: what a component
+        The complement of `connections`: what a component
         offers and nothing uses.
 
         Raises
@@ -1275,9 +1270,6 @@ class Session(BuildableSession):
         """
         used_signals = {(c.publisher, c.publisher_port) for c in self._connections}
         used_slots = {(c.consumer, c.consumer_port) for c in self._connections}
-        used_slots |= {
-            (s.consumer, s.consumer_port) for s in self._subscription_records
-        }
 
         signals: list[str] = []
         slots: list[str] = []
@@ -1317,7 +1309,6 @@ class Session(BuildableSession):
             run_coro(release(device_signal, forward))
             relay.disconnect()
         self._subscriptions.clear()
-        self._subscription_records.clear()
 
     def _components(self) -> list[Declaration]:
         return [
@@ -1966,7 +1957,6 @@ class Session(BuildableSession):
         if CallbackCatalogue in wanted:
             names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
         names |= {c.consumer for c in self.connections}
-        names |= {s.consumer for s in self.subscriptions}
         names |= self._answered
         names |= {
             declaration.name

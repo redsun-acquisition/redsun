@@ -16,10 +16,6 @@ icon: lucide/code
     options:
       show_root_heading: true
 
-::: redsun.ports.Subscription
-    options:
-      show_root_heading: true
-
 ::: redsun.ports.Unconnected
     options:
       show_root_heading: true
