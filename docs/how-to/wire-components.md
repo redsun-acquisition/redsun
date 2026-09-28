@@ -28,14 +28,24 @@ Decorate it with [`slot`][redsun.slot]. Only marked methods can be connected,
 so marking one makes its name and arguments public.
 
 ```python
+from typing import Any
+
+from bluesky.protocols import Reading
+from qtpy.QtWidgets import QWidget
+
 from redsun import slot
 
 
 class ImageView(QWidget):
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.images: dict[str, Any] = {}
+
     @slot
     def update_layers(self, readings: dict[str, Reading[Any]]) -> None:
         for key, reading in readings.items():
-            self._layer(key).data = reading["value"]
+            self.images[key] = reading["value"]
 ```
 
 `slot` takes two options:
@@ -48,10 +58,32 @@ class ImageView(QWidget):
 - `name` is the port name a session file uses. It defaults to the method name
   without leading underscores, so you can rename the method without breaking a
   file.
-- `thread` chooses the thread the slot runs on.
+- `thread` chooses the thread the slot runs on: `"main"` for the main thread,
+  `"current"` for the thread that made the connection, which is the one the
+  session was built on, or a `threading.Thread`. Left out, the session
+  chooses, as
+  [Choose the thread a slot runs on](#choose-the-thread-a-slot-runs-on)
+  describes.
 
 Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
-[port](../explanation/glossary.md#port).
+[port](../explanation/glossary.md#port):
+
+```python
+from psygnal import Signal
+
+
+class DetectorPresenter:
+    sig_new_data = Signal(dict)
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @slot
+    def configure(self, settings: dict[str, Any]) -> None: ...
+```
+
+The examples below connect this presenter and the view above, together with a
+`DetectorView` that sends `sig_property_changed`.
 
 ## Declare the connections
 
