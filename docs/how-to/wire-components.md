@@ -148,6 +148,44 @@ A session may use both: `wire` runs first, then the `wiring` section. The
 [path provider](../explanation/glossary.md#path-provider) can be wired too, as
 `path_provider`.
 
+!!! warning "Call a component or connect to it, not both"
+
+    A component can reach another in two ways. It can ask for it in `setup`
+    and call its methods, or it can send a signal that the session connects
+    to one of its slots. Use one way for one action. This view uses both:
+
+    ```python
+    class StageView(QWidget):
+        sig_nudge = Signal()
+
+        def setup(self, ctrl: StagePresenter) -> None:
+            self.ctrl = ctrl
+
+        def on_click(self) -> None:
+            self.ctrl.nudge()
+            self.sig_nudge.emit()
+
+
+    class MyApp(QtSession):
+        stage_ctrl: AsPresenter[StagePresenter]
+        stage_view: AsView[StageView]
+
+        def wire(self) -> Iterator[Link]:
+            yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
+    ```
+
+    Each click moves the stage twice. The session cannot see which methods a
+    component calls, so when it builds it names every component that holds
+    another and is also connected to it:
+
+    ```text
+    'stage_view' holds 'stage_ctrl' and is also connected to it; a bundle reaches a component one way, by calling it or by a signal
+    ```
+
+    The two ways may also do different things, which is allowed: the warning
+    asks you to check. Asking for a value a component shares, such as a
+    `PlanSpec`, is not holding the component and logs nothing.
+
 ## Connect a coroutine
 
 An `async def` method is a slot like any other:
