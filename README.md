@@ -27,7 +27,7 @@ program you open.
 - a session, which builds your components in order and connects them
 - a session file, to change settings without touching code
 - the starting and stopping of the services your hardware sits behind
-- the widgets of a plan, made from its signature
+- a form to fill in and start a plan from, made from its parameters
 - built-in views, such as the log window
 - a folder for each acquisition
 - a catalog of runs, if you install it
@@ -45,7 +45,7 @@ You write, or install as a plugin:
 - an image viewer
 - a writer of acquisition files
 
-Each of these words is defined in the
+The words `redsun` uses for its parts are defined in the
 [glossary](https://redsun-acquisition.github.io/redsun/explanation/glossary/).
 
 ## Problem statement

@@ -37,8 +37,8 @@ graph TD
 
 ## Coming from Micro-Manager
 
-The two divide the work differently, so no part of one is the other under
-another name. This is what comes closest:
+The two are organised differently, so nothing of one matches the other
+exactly. This is what comes closest:
 
 | Micro-Manager | `redsun` |
 | --- | --- |
@@ -56,7 +56,7 @@ a plugin you install:
 | Not shipped | Who provides it |
 | --- | --- |
 | drivers for hardware | the devices and services you write or install |
-| an acquisition panel | a [view](glossary.md#view) you write; the widgets of a plan are given, see [Qt widgets](qt-widgets.md) |
+| an acquisition panel | a [view](glossary.md#view) you write; the form of a plan is given, see [Qt widgets](qt-widgets.md) |
 | an image viewer | a view you write |
 | a writer of acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
 
@@ -64,7 +64,7 @@ Two things nobody provides:
 
 - A service that crashed is not started again. The session logs that it
   exited.
-- One process has one frontend.
+- Two [frontends](glossary.md#frontend) cannot run in one program.
 
 [What a running session cannot change](limits.md) explains both.
 

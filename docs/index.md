@@ -37,8 +37,8 @@ program you open.
   without touching code
 - the starting and stopping of the
   [services](explanation/glossary.md#service) your hardware sits behind
-- the widgets of a [plan](explanation/glossary.md#plan), made from its
-  signature
+- a form to fill in and start a [plan](explanation/glossary.md#plan) from,
+  made from its parameters
 - built-in views, such as the log window
 - a folder for each acquisition
 - a [catalog](explanation/glossary.md#catalog) of runs, if you install it
