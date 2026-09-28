@@ -39,9 +39,12 @@ program you open.
   [services](explanation/glossary.md#service) your hardware sits behind
 - a form to fill in and start a [plan](explanation/glossary.md#plan) from,
   made from its parameters
-- built-in views, such as the log window
-- a folder for each acquisition
-- a [catalog](explanation/glossary.md#catalog) of runs, if you install it
+- built-in [views](explanation/glossary.md#view): today one, the log window
+- a place and a numbered name for the files of each acquisition, under one
+  folder per session
+- a [catalog](explanation/glossary.md#catalog) for the
+  [runs](explanation/glossary.md#run) your components record, if you install
+  it and ask for it in the session file
 
 You write, or install as a [plugin](explanation/glossary.md#plugin):
 

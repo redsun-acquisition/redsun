@@ -43,7 +43,8 @@ are.
 
 A searchable record of the [runs](#run) a session has done, kept by a
 [`tiled`](#tiled) server the session starts. A session has one when its
-`storage` section has a `catalog` key.
+`storage` section has a `catalog` key. A run enters it only when a component
+records it there.
 
 ### Channel Access
 
