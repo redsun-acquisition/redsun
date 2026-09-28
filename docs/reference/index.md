@@ -34,7 +34,7 @@ Look up a class or a function by the module it is imported from.
         - [`redsun.view.qt`](api/view.md#qt-widgets)
     - [`redsun.writers`](api/writers.md)
 
-The words these pages use, and what changed in each release:
+<!-- ends the list above, so the three below are a list of their own -->
 
 - [Glossary](glossary.md)
 - [Changelog](changelog.md)
