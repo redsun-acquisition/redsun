@@ -9,10 +9,11 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping  # noqa: TC003
 from typing import Annotated, Any, ClassVar, Protocol
 
+from bluesky.protocols import Reading  # noqa: TC002
 from ophyd_async.core import Device, SignalRW
 from ophyd_async.fastcs.core import fastcs_connector
 from psygnal import Signal
-from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QFormLayout, QLabel, QPushButton, QWidget
 
 from redsun import (
     AsDevice,
@@ -43,39 +44,42 @@ class HasPosition(Protocol):
 
 
 class StagePresenter:
-    sig_moved = Signal(float)
-
     def __init__(
         self, name: str, *, stages: DevicesOf[HasPosition], step: float = 1.0
     ) -> None:
         self.name = name
-        self.stage = stages["stage"]
+        self.stages = stages
         self.step = step
 
     @slot
-    async def nudge(self) -> None:
-        position = await self.stage.position.get_value()
-        await self.stage.position.set(position + self.step)
-        self.sig_moved.emit(position + self.step)
+    async def nudge(self, stage: str) -> None:
+        position = await self.stages[stage].position.get_value()
+        await self.stages[stage].position.set(position + self.step)
 
 
 class StageView(QWidget):
     placement: Placement = Dock("left")
-    sig_nudge = Signal()
+    sig_nudge = Signal(str)
 
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
         self.name = name
-        button = QPushButton("Nudge")
-        button.clicked.connect(self.sig_nudge.emit)
-        self.label = QLabel("position: 0.0")
-        layout = QVBoxLayout(self)
-        layout.addWidget(button)
-        layout.addWidget(self.label)
+        self.rows = QFormLayout(self)
+        self.labels: dict[str, QLabel] = {}
+
+    def add_row(self, stage: str) -> None:
+        button = QPushButton(f"Nudge {stage}")
+        button.clicked.connect(lambda: self.sig_nudge.emit(stage))
+        self.labels[stage] = QLabel()
+        self.rows.addRow(button, self.labels[stage])
 
     @slot
-    def show_position(self, position: float) -> None:
-        self.label.setText(f"position: {position}")
+    def show_reading(self, reading: dict[str, Reading[float]]) -> None:
+        for signal, entry in reading.items():
+            stage = signal.removesuffix("-position")
+            if stage not in self.labels:
+                self.add_row(stage)
+            self.labels[stage].setText(f"position: {entry['value']}")
 
 
 # --8<-- [start:session]
@@ -91,7 +95,7 @@ class MyApp(QtSession):
 
     def wire(self) -> Iterator[Link]:
         yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
-        yield self.stage_ctrl.sig_moved, self.stage_view.show_position
+        yield self.stage.position, self.stage_view.show_reading
 
 
 if __name__ == "__main__":
