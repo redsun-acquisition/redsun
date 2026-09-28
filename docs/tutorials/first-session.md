@@ -53,8 +53,8 @@ here, a stage with a position. In a lab, a
 it. You have no hardware, so this one keeps its position in memory, using a
 "soft" signal from `ophyd-async`:
 
-```python
---8 < --"docs/tutorials/first_session.py:device"
+```{.python}
+--8<-- "docs/tutorials/first_session.py:device"
 ```
 
 A real stage would replace `soft_signal_rw` with signals a service provides.
@@ -65,8 +65,8 @@ Nothing else in this tutorial would change.
 A [presenter](../explanation/glossary.md#presenter) holds the behaviour. This
 one moves the stage by one step, and announces where it went:
 
-```python
---8 < --"docs/tutorials/first_session.py:presenter"
+```{.python}
+--8<-- "docs/tutorials/first_session.py:presenter"
 ```
 
 Look at the constructor. You never call it yourself: the session does. It
@@ -86,8 +86,8 @@ trigger.
 A [view](../explanation/glossary.md#view) is what the user sees. This one is a
 button and a label:
 
-```python
---8 < --"docs/tutorials/first_session.py:view"
+```{.python}
+--8<-- "docs/tutorials/first_session.py:view"
 ```
 
 `placement` says where the view goes: docked on the left of the window. The
@@ -100,8 +100,8 @@ knows nothing about the view. Each only has signals and slots.
 
 Now put the three together:
 
-```python
---8 < --"docs/tutorials/first_session.py:session"
+```{.python}
+--8<-- "docs/tutorials/first_session.py:session"
 ```
 
 Each line in the class body is a component. The name on the left, `stage`, is
@@ -134,8 +134,8 @@ Press **Nudge**: the label counts up by one each time.
 
 ??? example "The whole script"
 
-    ```python
-    --8 < --"docs/tutorials/first_session.py"
+    ```{.python}
+    --8<-- "docs/tutorials/first_session.py"
     ```
 
 ## 6. Change a setting without touching the code
