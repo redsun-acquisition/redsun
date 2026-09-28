@@ -136,9 +136,8 @@ It is delivered differently from a plain method:
 If you need the emitter to wait, connect a plain method that calls
 `run_coro(...)` from `redsun.aio` instead.
 
-A `QtSession` installs the async backend `psygnal` needs for coroutine slots.
-A plain `Session` does not: call
-[`set_async_backend`][redsun.aio.set_async_backend] before `build`.
+Every session installs the async backend `psygnal` needs for coroutine slots
+when it is built, and removes it at shutdown.
 
 ## Address a signal group
 
