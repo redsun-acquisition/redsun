@@ -1736,9 +1736,7 @@ class Session(BuildableSession):
                 logger.error("Failed to build device '%s': %s", declaration.name, e)
                 continue
             self._devices[declaration.name] = device
-            declaration.instance = device
-            setattr(self, declaration.name, device)
-            self._register_teardown(device)
+            self._keep(declaration, device)
 
     def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
         """Return the ``prefix`` keyword from *declaration*'s service, if it names one.
@@ -1827,6 +1825,12 @@ class Session(BuildableSession):
 
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         self._verify(declaration, instance)
+        self._keep(declaration, instance)
+
+    def _keep(
+        self, declaration: Declaration, instance: Device | NamedComponent
+    ) -> None:
+        """Hold *instance* as what *declaration* built, and register its teardown."""
         declaration.instance = instance
         setattr(self, declaration.name, instance)
         self._register_teardown(instance)
