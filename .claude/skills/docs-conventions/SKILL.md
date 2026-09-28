@@ -26,6 +26,11 @@ description: Conventions for writing and updating docs under docs/ - Diataxis st
   uv run python scripts/check_xrefs.py
   ```
 
+  It also reports a snippet marker the build left unread. Write the fence of
+  a `--8<--` include as `{.python}`, never `python`: `ruff format` rewrites
+  the marker inside a `python` fence and the page shows it in place of the
+  code.
+
   It scans the built `site/` for leftover `][target]` outside code blocks. A
   hit is either a typo, a symbol that moved, or a third-party object whose
   inventory is missing from `inventories` in `zensical.toml`. If the project

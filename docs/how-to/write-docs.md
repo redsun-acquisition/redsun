@@ -61,6 +61,22 @@ Write each fact once, on the page where it belongs, and link to it from the
 others. The API reference comes from docstrings, so fix a wrong API page in
 the docstring, not in the `.md` file.
 
+## Show the code of a tutorial
+
+A tutorial includes its code from the script beside it, so the page shows
+what runs. Mark each part of the script with a `start` and an `end` comment,
+and include it as `docs/tutorials/first-session.md` does.
+
+Write the fence of an included part as `{.python}`. `ruff format` reads the
+line inside a `python` fence as Python and rewrites it, and the page then
+shows that line in place of the code.
+
+End each tutorial with the whole script in a collapsed block, before
+"What you learned".
+
+The tutorial scripts are type checked with the rest of the code, by
+`uv run tox -e mypy-pyqt,mypy-pyside`.
+
 ## Check the build
 
 ```bash
@@ -68,5 +84,6 @@ uv run tox -e docs
 ```
 
 This builds the site and then checks that every cross-reference found its
-target. A link to a missing symbol does not stop the build on its own, which
-is why the check runs after it. See [Build the docs](build-docs.md).
+target and every included script was read. Neither a link to a missing
+symbol nor a misspelt include stops the build on its own, which is why the
+check runs after it. See [Build the docs](build-docs.md).
