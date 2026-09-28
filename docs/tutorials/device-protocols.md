@@ -19,7 +19,7 @@ Open `first_session.py` as you left it at the end of the first tutorial.
 
 You need a type checker. This tutorial uses
 [`mypy`](https://mypy.readthedocs.io/). With `uv` there is nothing to install.
-Without it:
+Without it, install `mypy` in the virtual environment of the first tutorial:
 
 ```bash
 pip install mypy

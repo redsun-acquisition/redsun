@@ -14,10 +14,13 @@ You will write the three kinds of
 
 ## Before you start
 
-Make an empty file called `first_session.py`. If you run scripts with
-[`uv`](https://docs.astral.sh/uv/), start it with these lines, which tell `uv`
-what the script needs so it installs them itself
-([PEP 723](https://peps.python.org/pep-0723/)):
+Make an empty folder to work in, and an empty file called `first_session.py`
+inside it.
+
+If you run scripts with [`uv`](https://docs.astral.sh/uv/), start the file
+with these lines. They tell `uv` what the script needs
+([PEP 723](https://peps.python.org/pep-0723/)), and `uv` makes a virtual
+environment for the script and installs them in it:
 
 ```python
 # /// script
@@ -26,7 +29,9 @@ what the script needs so it installs them itself
 # ///
 ```
 
-Without `uv`, install `redsun` with a Qt binding instead:
+Without `uv`, make a virtual environment in the folder and activate it, as
+[Installation](installation.md#create-a-virtual-environment) shows. Then
+install `redsun` with a Qt binding in it:
 
 ```bash
 pip install "redsun[pyqt]"
