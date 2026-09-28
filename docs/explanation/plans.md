@@ -4,16 +4,178 @@ icon: lucide/route
 
 # How presenters run plans
 
-`redsun` builds on the [Bluesky plan system](https://blueskyproject.io/bluesky/main/plans.html).
-A *plan* is a generator yielding `Msg` objects, which the
-[`RunEngine`](glossary.md#runengine) turns into hardware calls.
+A [plan](glossary.md#plan) is a recipe for an acquisition: a Python generator
+that says, one step at a time, what to move, what to read and when. Plans come
+from [`bluesky`](glossary.md#bluesky), and what its
+[documentation on plans](https://blueskyproject.io/bluesky/main/plans.html)
+says applies here too.
 
-`redsun` adds two things:
+In `redsun` a [presenter](glossary.md#presenter) owns the plans. It creates a
+[`RunEngine`](glossary.md#runengine), which executes them, and starts a plan
+when a view asks for it.
 
-- **`continuous` plans** run in a loop until stopped, optionally pausable, and
-  accept user actions while running.
-- **`PlanSpec`** describes a plan's signature, from which the view layer builds
-  a parameter form.
+`redsun` adds three things:
+
+- a `RunEngine` that does not block: starting a plan returns at once, so the
+  window keeps responding while the plan runs;
+- `PlanSpec`, a description of the parameters of a plan, from which a view
+  builds a form;
+- continuous plans, which run until they are stopped and take actions from the
+  user while they run.
+
+---
+
+## A plan that ends by itself
+
+The simplest plan does its steps and stops. This one walks a stage forward:
+
+```python
+import bluesky.plan_stubs as bps
+from bluesky.utils import MsgGenerator
+from psygnal import Signal
+
+from redsun import DevicesOf, slot
+from redsun.engine import RunEngine
+
+
+class ScanPresenter:
+    sig_finished = Signal()
+
+    def __init__(self, name: str, *, stages: DevicesOf[HasPosition]) -> None:
+        self.name = name
+        self.stage = stages["stage"]
+        self.engine = RunEngine()
+
+    def walk(self, steps: int = 5, size: float = 1.0) -> MsgGenerator[None]:
+        for _ in range(steps):
+            position = yield from bps.rd(self.stage.position)
+            yield from bps.mv(self.stage.position, position + size)
+
+    @slot
+    def run(self) -> None:
+        future = self.engine(self.walk())
+        future.add_done_callback(lambda _: self.sig_finished.emit())
+```
+
+`walk` is an ordinary `bluesky` plan: `bps.rd` reads the position, and `bps.mv`
+moves the stage and waits for it to arrive. `HasPosition` is the protocol
+written in
+[Describing a device with a protocol](../tutorials/device-protocols.md).
+
+`run` starts the plan. Calling the engine does not wait for the plan to end:
+the plan runs on a thread of its own, and the call returns a `Future`. The
+presenter uses it to send `sig_finished`, so that a view can disable its button
+while the plan runs and enable it again afterwards.
+
+---
+
+## From a plan to a form
+
+`walk` takes two parameters, and the user should be able to choose them. The
+presenter describes the plan with `create_plan_spec`, shares the description,
+and reads the values back when the view asks for a run:
+
+```python
+from typing import Any
+
+from redsun import DeviceMapping, provides
+from redsun.presenter.plan_spec import (
+    PlanSpec,
+    collect_arguments,
+    create_plan_spec,
+    resolve_arguments,
+)
+
+
+class ScanPresenter:
+    def __init__(
+        self, name: str, *, stages: DevicesOf[HasPosition], devices: DeviceMapping
+    ) -> None:
+        self.name = name
+        self.stage = stages["stage"]
+        self.devices = devices
+        self.engine = RunEngine()
+        self._spec = create_plan_spec(self.walk, devices)
+
+    @provides
+    def spec(self) -> PlanSpec:
+        return self._spec
+
+    @slot
+    def run(self, values: dict[str, Any]) -> None:
+        resolved = resolve_arguments(self._spec, values, self.devices)
+        args, kwargs = collect_arguments(self._spec, resolved)
+        future = self.engine(self.walk(*args, **kwargs))
+        future.add_done_callback(lambda _: self.sig_finished.emit())
+```
+
+`walk` and `sig_finished` are as above. The view that builds the form from the
+description is in [Qt widgets](qt-widgets.md#plan-widgets).
+
+### What a description holds
+
+`create_plan_spec` inspects a plan's signature and returns a `PlanSpec`:
+
+```python
+from redsun.presenter.plan_spec import create_plan_spec
+
+spec = create_plan_spec(my_plan, devices={"stage": motor, "cam": camera})
+```
+
+Each parameter becomes a `ParamDescription` with:
+
+| Field | Meaning |
+|-------|---------|
+| `annotation` | stripped type (no `Annotated` wrapper) |
+| `choices` | string labels for `Literal` or device params |
+| `multiselect` | True for `Sequence[...]` / `*args` device parameters |
+| `device_proto` | the device class or runtime-checkable protocol for device params |
+| `actions` | `PlanAction` metadata if the default is a `PlanAction` |
+
+### Annotation dispatch
+
+Annotations map to `ParamDescription` fields, first match wins:
+
+1. `Literal["a", "b"]` -> `choices=["a", "b"]`
+2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
+3. `*args: MyDevice` (VAR_POSITIONAL) -> multi-select
+4. `MyDevice` (bare protocol) -> single-select
+5. Everything else -> a plain value, left to the view layer to render
+
+Step 5 accepts:
+
+- `int`, `float`, `str`, `bool`, `bytes` and `range`
+- `Path`
+- `datetime`, `date`, `time` and `timedelta`
+- any `Enum` subclass
+- a sequence of anything that is not a device
+
+A *required* parameter with any other annotation raises
+`UnresolvableAnnotationError`, and the plan is skipped instead of shown with a
+control nobody can fill in. `Any` is excluded on purpose: it would accept
+everything and show as a bare text field.
+
+The check is plain Python and imports no toolkit, so a plan can be inspected
+before any application object exists. The view layer turns descriptions into
+widgets; for Qt, see [Qt widgets - plans](qt-widgets.md).
+
+### Collecting and resolving arguments
+
+Once the user fills in the form, the presenter turns the values into a plan
+call:
+
+```python
+from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
+
+# 1. Resolve: string device names -> live device instances
+resolved = resolve_arguments(spec, widget_values, devices)
+
+# 2. Collect: build (args, kwargs) matching the plan signature
+args, kwargs = collect_arguments(spec, resolved)
+
+# 3. Run
+engine(my_plan(*args, **kwargs))
+```
 
 ---
 
@@ -214,6 +376,43 @@ so the two links are recorded as `panel.sig_action_request -> ctrl.request`
 and `ctrl.sig_changed -> panel.on_action_changed`. See
 [Inspect what is connected](../how-to/wire-components.md#inspect-what-is-connected).
 
+---
+
+## Steps for use inside a plan
+
+`redsun.engine.plan_stubs` holds steps to use inside larger plans, beside those
+of `bluesky.plan_stubs`.
+
+### Descriptor stubs
+
+```python
+import redsun.engine.plan_stubs as rps
+
+# gather descriptors from Readable / Collectable devices inside a plan
+descriptor = yield from rps.describe(readable)
+descriptors = yield from rps.describe_collect(collectable)
+```
+
+### Lock stubs
+
+A plan locks the devices it must not have disturbed, and views disable their
+controls while those devices are locked. The run engine keeps the locks and
+announces them on `RunEngine.sig_locks_changed`, which a view connects to.
+
+```python
+import redsun.engine.plan_stubs as rps
+
+# lock the stage and camera while the inner plan runs, however it ends
+yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
+```
+
+---
+
+## How waiting for an action works
+
+This section describes what `ActionManager` is built on. A plan written against
+an `ActionManager` needs none of it.
+
 ### SRLatch
 
 `ActionManager` makes one `SRLatch` for each action it offers, and waits on it. A
@@ -238,79 +437,6 @@ state first. Of those that reached it together, it returns the first in the
 map. If no latch is in the wanted state when the interval ends, the stub
 yields its next checkpoint and sends the message again.
 
----
-
-## Plan specification
-
-`create_plan_spec` inspects a plan's signature and returns a `PlanSpec`:
-
-```python
-from redsun.presenter.plan_spec import create_plan_spec
-
-spec = create_plan_spec(my_plan, devices={"stage": motor, "cam": camera})
-```
-
-Each parameter becomes a `ParamDescription` with:
-
-| Field | Meaning |
-|-------|---------|
-| `annotation` | stripped type (no `Annotated` wrapper) |
-| `choices` | string labels for `Literal` or device params |
-| `multiselect` | True for `Sequence[...]` / `*args` device parameters |
-| `device_proto` | the device class or runtime-checkable protocol for device params |
-| `actions` | `PlanAction` metadata if the default is a `PlanAction` |
-
-### Annotation dispatch
-
-Annotations map to `ParamDescription` fields, first match wins:
-
-1. `Literal["a", "b"]` -> `choices=["a", "b"]`
-2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
-3. `*args: MyDevice` (VAR_POSITIONAL) -> multi-select
-4. `MyDevice` (bare protocol) -> single-select
-5. Everything else -> a plain value, left to the view layer to render
-
-Step 5 accepts:
-
-- `int`, `float`, `str`, `bool`, `bytes` and `range`
-- `Path`
-- `datetime`, `date`, `time` and `timedelta`
-- any `Enum` subclass
-- a sequence of anything that is not a device
-
-A *required* parameter with any other annotation raises
-`UnresolvableAnnotationError`, and the plan is skipped instead of shown with a
-control nobody can fill in. `Any` is excluded on purpose: it would accept
-everything and show as a bare text field.
-
-The check is plain Python and imports no toolkit, so a plan can be inspected
-before any application object exists. The view layer turns descriptions into
-widgets; for Qt, see [Qt widgets - plans](qt-widgets.md).
-
-### Collecting and resolving arguments
-
-Once the user fills in the form, the presenter turns the values into a plan
-call:
-
-```python
-from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
-
-# 1. Resolve: string device names -> live device instances
-resolved = resolve_arguments(spec, widget_values, devices)
-
-# 2. Collect: build (args, kwargs) matching the plan signature
-args, kwargs = collect_arguments(spec, resolved)
-
-# 3. Run
-engine(my_plan(*args, **kwargs))
-```
-
----
-
-## Plan stubs
-
-`redsun.engine.plan_stubs` holds stubs to use inside larger plans.
-
 ### Action flow-control stubs
 
 `wait_for_actions` waits on a map of names to latches. `ActionManager.wait` and
@@ -333,29 +459,6 @@ set, or reset with `wait_for="reset"`, and returns at once if one already is.
 While it waits it yields a checkpoint every `poll_interval` seconds, 1/60 s by
 default. A checkpoint is where the plan can be paused, so the stub cannot sit
 between `create` and `save`. An empty map raises `ValueError`.
-
-### Descriptor stubs
-
-```python
-import redsun.engine.plan_stubs as rps
-
-# gather descriptors from Readable / Collectable devices inside a plan
-descriptor = yield from rps.describe(readable)
-descriptors = yield from rps.describe_collect(collectable)
-```
-
-### Lock stubs
-
-A plan locks the devices it must not have disturbed, and views disable their
-controls while those devices are locked. The run engine keeps the locks and
-announces them on `RunEngine.sig_locks_changed`, which a view connects to.
-
-```python
-import redsun.engine.plan_stubs as rps
-
-# lock the stage and camera while the inner plan runs, however it ends
-yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
-```
 
 ---
 
