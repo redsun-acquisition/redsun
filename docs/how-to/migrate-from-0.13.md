@@ -23,6 +23,12 @@ each change and what to write instead.
 | `redsun.virtual.Signal` | `psygnal.Signal` |
 | `redsun.virtual.CallbackType` | `redsun.CallbackType` |
 | `redsun.virtual.WiringError`, `ports` | `redsun.WiringError`, `redsun.ports.ports` |
+| `redsun.virtual.Connection`, `ComponentNotBuilt`, `HasShutdown` | `redsun.Connection`, `redsun.ComponentNotBuilt`, `redsun.HasShutdown` |
+| `redsun.virtual.Ports`, `Unconnected`, `SlotThread` | the same names in `redsun.ports` |
+| `redsun.virtual.Subscription` | removed: a `redsun.Connection` records a link from a device signal too |
+| `redsun.virtual.RedSunConfig` | `redsun.SessionConfig`, a frozen dataclass with the same four fields |
+| `redsun.virtual.IsProvider`, `IsInjectable`, `ProviderKey` | removed: see [Sharing values between components](#sharing-values-between-components) |
+| `redsun.virtual.VirtualContainer`, `SignalCache` | removed: see [Wiring](#wiring) |
 | `redsun.presenter.PPresenter`, `Presenter` | nothing to inherit: see [Presenters](#presenters) |
 | `redsun.view.PView`, `View`, `ViewPosition`, `redsun.view.qt.QtView` | a `QWidget` with a `placement`: see [Views](#views) |
 | `redsun.utils.find_signals` | removed: yield a link in `wire` |
