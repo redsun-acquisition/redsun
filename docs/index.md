@@ -17,8 +17,9 @@ hide:
 
 # `redsun`
 
-!!! note "Still settling"
-    `redsun` is ready to deploy, but expect breaking changes while the API settles.
+!!! note "Before 1.0"
+    `redsun` can be used today. Until version 1.0, a release may change the API
+    in ways that break existing code.
 
 `redsun` is a [CPython] framework for building modular scientific data acquisition software.
 
@@ -26,7 +27,8 @@ It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so
 
 ## About redsun
 
-`redsun` is a toolkit for building your own acquisition software. You describe
+`redsun` is a framework for building your own acquisition software. You
+describe
 your instrument in Python, and `redsun` assembles it into an application with
 a graphical interface.
 

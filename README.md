@@ -15,7 +15,7 @@
 A component-based, customizable application framework for scientific hardware orchestration, based on the [Bluesky] framework.
 
 > [!NOTE]
-> `redsun` is slowly reaching maturity, enough that it is safe to start being deployed. Still, expect major breaking changes as the API crystallizes.
+> `redsun` can be used today. Until version 1.0, a release may change the API in ways that break existing code.
 
 ## Problem statement
 
