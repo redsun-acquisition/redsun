@@ -17,6 +17,37 @@ A component-based, customizable application framework for scientific hardware or
 > [!NOTE]
 > `redsun` is slowly reaching maturity, enough that it is safe to start being deployed. Still, expect major breaking changes as the API crystallizes.
 
+## What you get, and what you write
+
+`redsun` is a library you build an acquisition program with. It is not a
+program you open.
+
+`redsun` gives you:
+
+- a session, which builds your components in order and connects them
+- a session file, to change settings without touching code
+- the starting and stopping of the services your hardware sits behind
+- the widgets of a plan, made from its signature
+- built-in views, such as the log window
+- a folder for each acquisition
+- a catalog of runs, if you install it
+
+You write, or install as a plugin:
+
+- the devices, presenters and views of your setup
+- the services that reach your hardware
+- the plans of your acquisitions
+
+`redsun` does not ship:
+
+- drivers for hardware
+- an acquisition panel
+- an image viewer
+- a writer of acquisition files
+
+Each of these words is defined in the
+[glossary](https://redsun-acquisition.github.io/redsun/explanation/glossary/).
+
 ## Problem statement
 
 In scientific research involving device control, one of the major problems is orchestrating different hardware units to achieve reusable, reliable and documentable workflows. On top of that, such hardware orchestration should provide a coherent and understandable user interface that less technical inclined users are able to understand and leverage accurately.
