@@ -35,17 +35,27 @@ writes. Declare them in the constructor, since a store's arrays are all sized
 when its stream opens:
 
 ```python
+from collections.abc import Sequence
+
+from event_model import DocumentRouter
+
 from redsun.writers import Writer
 
 
-class MyPresenter(Presenter, DocumentRouter):
-    def __init__(self, name: str, devices: Mapping[str, Device]) -> None:
-        super().__init__(name, devices)
+class MedianPresenter(DocumentRouter):
+    def __init__(self, name: str, *, sources: Sequence[str]) -> None:
+        super().__init__()
+        self.name = name
+        self._sources = tuple(sources)
         self._writer = Writer()
-        for detector in self.detectors:
-            self._writer.derive(f"{detector}_median", source=detector)
-            self._writer.derive(f"{detector}_filtered", source=detector)
+        for source in self._sources:
+            self._writer.derive(f"{source}_median", source=source)
+            self._writer.derive(f"{source}_filtered", source=source)
 ```
+
+`sources` holds the [data keys](../explanation/glossary.md#data-key) to
+compute from. It comes from the session file, like any other argument of a
+component.
 
 `derive` takes the layout and the store from the run: the `descriptor`
 naming `source` gives the frame shape and dtype, the `stream_resource`
@@ -73,18 +83,20 @@ def __call__(self, name: str, doc: dict[str, Any], validate: bool = False) -> An
 ## Hand the data over
 
 `append` takes one frame, or a stack of frames, of a product written as the
-run goes; `write` takes the whole of one computed at the end:
+run goes; `write` takes the whole of one computed at the end. Below, `source`
+is one of the data keys, and `filtered` and `median` are the arrays the
+component computed for it:
 
 ```python
 def event(self, doc: Event) -> Event:
     ...
-    self._writer.append(f"{detector}_filtered", filtered)
+    self._writer.append(f"{source}_filtered", filtered)
     return doc
 
 
 def stop(self, doc: RunStop) -> RunStop:
     self._writer.write(
-        f"{detector}_median", median, metadata={"derived_from": detector}
+        f"{source}_median", median, metadata={"derived_from": source}
     )
     return doc
 
