@@ -1,7 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["redsun[pyqt]>=0.14", "fastcs[epicspva]", "ophyd-async[pva]"]
-# ///
 """The session of the guide "How to write a service with FastCS"."""
 
 from __future__ import annotations
@@ -83,6 +79,7 @@ class StageView(QWidget):
 
 
 # --8<-- [start:session]
+# --8<-- [start:declare]
 class MyApp(QtSession):
     config: ClassVar[Mapping[str, Any]] = {"services": {"transport": "pv-access"}}
 
@@ -90,6 +87,7 @@ class MyApp(QtSession):
         AsService, Launch("stage_fastcs", ready="stage ready", prefix="STAGE:")
     ]
     stage: Annotated[AsDevice[MyStage], Declare(service="stage_service")]
+    # --8<-- [end:declare]
     stage_ctrl: AsPresenter[StagePresenter]
     stage_view: AsView[StageView]
 
