@@ -1959,8 +1959,13 @@ class Session(BuildableSession):
         Two routes to one component means an action written both ways runs
         twice. Which method a component calls is not knowable here, so a pair
         using each route for something different is named once and legally.
+
+        Holding a value a component shares is not holding the component.
         """
-        by_type = owners(declarations)
+        classes = [d.cls for d in declarations]
+        by_type: dict[Any, Declaration] = {
+            d.cls: d for d in declarations if classes.count(d.cls) == 1
+        }
         by_type.update({d.key: d for d in declarations})
         held = {
             by_type[asked].name

@@ -199,6 +199,20 @@ class Calling:
         self.presenter = presenter
 
 
+class Reading:
+    """A view holding a value its presenter shares, and publishing to the presenter."""
+
+    sig_moved = Signal(float)
+    placement: Placement = Somewhere()
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.readings: Readings | None = None
+
+    def setup(self, readings: Readings) -> None:
+        self.readings = readings
+
+
 class SetUpApp(Session):
     taking: AsPresenter[Taking]
     sharing: AsPresenter[Sharing]
@@ -255,6 +269,14 @@ class AwaitingApp(Session):
 class DoubleRouteApp(Session):
     listening: AsPresenter[Listening]
     panel: AsView[Calling]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.panel.sig_moved, self.listening.refresh
+
+
+class SharedValueApp(Session):
+    listening: AsPresenter[Listening]
+    panel: AsView[Reading]
 
     def wire(self) -> Iterator[Link]:
         yield self.panel.sig_moved, self.listening.refresh
@@ -340,3 +362,14 @@ def test_a_component_reaching_another_two_ways_is_named(
         build(DoubleRouteApp)
 
     assert "'panel' holds 'listening' and is also connected to it" in caplog.text
+
+
+def test_holding_a_shared_value_is_not_holding_the_component_that_shares_it(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """A value is data: the view reaches the presenter by its signal alone."""
+    with caplog.at_level(logging.WARNING, logger="redsun"):
+        app = build(SharedValueApp)
+
+    assert app.panel.readings == {"stage": 1.0}
+    assert "is also connected to it" not in caplog.text
