@@ -56,6 +56,24 @@ class Clashing:
         self.moves = Moves()
 
 
+class Relay:
+    """An object with ports of its own, for a presenter to hold."""
+
+    sig_passed = Signal(float)
+
+    @slot
+    def take(self, position: float) -> None:
+        self.taken = position
+
+
+class Holding:
+    """Presenter whose ports are those of an object it holds."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.relay = Relay()
+
+
 class App(Session):
     config: ClassVar[dict[str, Any]] = {"session": "reporting"}
 
@@ -97,6 +115,30 @@ def test_a_fully_wired_session_reports_nothing(
 
     assert not report
     assert str(report) == "every port is connected"
+
+
+def test_a_port_of_an_object_a_presenter_holds_is_recorded_under_the_presenter(
+    build: BuildSession,
+) -> None:
+    class Held(Session):
+        config: ClassVar[dict[str, Any]] = {"session": "reporting"}
+
+        stage: AsPresenter[Stage]
+        holder: AsPresenter[Holding]
+
+        def wire(self) -> Iterator[Link]:
+            yield self.stage.sig_moved, self.holder.relay.take
+            yield self.holder.relay.sig_passed, self.stage.halt
+
+    links = build(Held).connections
+
+    assert [
+        (link.publisher, link.publisher_port, link.consumer, link.consumer_port)
+        for link in links
+    ] == [
+        ("stage", "sig_moved", "holder", "take"),
+        ("holder", "sig_passed", "stage", "halt"),
+    ]
 
 
 def test_the_report_says_which_end_is_missing() -> None:

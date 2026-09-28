@@ -1100,10 +1100,21 @@ class Session(BuildableSession):
         self._names.clear()
         self._names.update({id(c): name for name, c in components.items()})
 
-    def _label(self, component: object | None) -> str:
-        if component is None:
+    def _label(self, owner: object | None) -> str:
+        """Return the name of the component *owner* is, or is held by.
+
+        An object a component keeps as an attribute, with ports of its own,
+        is named after that component.
+        """
+        if owner is None:
             return "<unknown>"
-        return self._names.get(id(component), type(component).__name__)
+        if id(owner) in self._names:
+            return self._names[id(owner)]
+        for name, component in self._built_components.items():
+            held = getattr(component, "__dict__", {}).values()
+            if any(value is owner for value in held):
+                return name
+        return type(owner).__name__
 
     def _affinity(self, slot: Callable[..., Any]) -> SlotThread:
         declaration: Slot | None = getattr(slot, SLOT_ATTR, None)
