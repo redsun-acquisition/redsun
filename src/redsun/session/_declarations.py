@@ -744,16 +744,19 @@ def warn_if_forgotten(cls: type, attr: str, target: object) -> None:
 
 
 def from_config(
-    config: SessionFile, declared: Iterable[str], frontend: type[Frontend]
+    config: SessionFile, declared: Mapping[str, Declaration], frontend: type[Frontend]
 ) -> dict[str, Declaration]:
     """Collect the components named only in *config*.
 
     A configuration entry carrying ``plugin_name`` and ``plugin_id`` is a
     component even when the session class never annotates it; the annotation
-    only adds a typed attribute to reach it by. An entry already declared is
-    left alone, so a class-body declaration wins. An entry whose plugin does
-    not resolve, or that names no plugin and no declared component, is
-    refused, so the session is built without it.
+    only adds a typed attribute to reach it by. An entry a declared component
+    reads is left alone, so a class-body declaration wins. An entry whose
+    plugin does not resolve, or that names no plugin and no declared
+    component, is refused, so the session is built without it.
+
+    An entry under the name of a declared component that reads another entry
+    is logged and left out, since nothing would read it.
 
     The section an entry appears under is its layer, so nothing here has to be
     marked; it is checked against that layer all the same.
@@ -762,10 +765,23 @@ def from_config(
     for kind in Layer:
         section_name = kind.section
         section: Mapping[str, ComponentEntry] = getattr(config, section_name)
+        read_here = {d.source for d in declared.values() if d.kind is kind}
         for cfg_key, entry in section.items():
-            if cfg_key in declared:
+            if cfg_key in read_here:
                 continue
             where = f"configuration entry {section_name}.{cfg_key}"
+            if cfg_key in declared:
+                named = declared[cfg_key]
+                if named.kind is kind:
+                    logger.error(
+                        "%s is not read: component %r takes its keywords from the "
+                        "entry %r. Move them there, or name this entry with "
+                        "FromConfig.",
+                        where,
+                        cfg_key,
+                        named.source,
+                    )
+                continue
             refused: Exception | None
             try:
                 target = resolve(entry.plugin_name, entry.plugin_id, section_name)

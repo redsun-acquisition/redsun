@@ -942,6 +942,12 @@ class RenamedBrokenApp(Session):
         yield self.speaker.sig_said, self.listener.hear
 
 
+class MisfiledApp(Session):
+    config: ClassVar[Mapping[str, Any]] = {"presenters": {"ctrl": {"gain": 2.0}}}
+
+    stage_ctrl: Annotated[AsPresenter[Ctrl], Alias("ctrl")]
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Components come up, typed attributes reach them, devices are built."""
     assert app.is_built
@@ -1874,4 +1880,23 @@ def test_a_renamed_component_that_failed_does_not_break_the_wiring() -> None:
 
     assert set(app.presenters) == {"listener"}
     assert app.listener.heard == []
+    app.shutdown()
+
+
+def test_an_entry_read_under_another_key_is_no_component_of_its_own(app: App) -> None:
+    """``motor`` reads the entry ``stage``, which must not be declared a second time."""
+    assert "stage" not in app.declarations
+    assert set(app.devices) == {"motor"}
+
+
+def test_an_entry_under_the_name_of_a_renamed_component_is_reported(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The arguments are read under the attribute, so the entry would be lost silently."""
+    with caplog.at_level(logging.ERROR, logger="redsun"):
+        app = MisfiledApp().build()
+
+    assert app.stage_ctrl.gain == 1.0
+    assert "presenters.ctrl" in caplog.text
+    assert "'stage_ctrl'" in caplog.text
     app.shutdown()
