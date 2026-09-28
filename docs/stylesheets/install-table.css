@@ -1,0 +1,84 @@
+.install-table {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.3rem;
+  margin: 1em 0;
+}
+
+.install-table .install-row {
+  display: contents;
+}
+
+.install-table .install-label {
+  display: flex;
+  align-items: center;
+  padding-left: 0.6rem;
+  color: var(--md-default-fg-color--light);
+  border-left: 2px solid var(--md-default-fg-color--lightest);
+}
+
+.install-table .install-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.install-table .install-choices button {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  font: inherit;
+  text-align: left;
+  color: var(--md-default-fg-color--light);
+  background-color: var(--md-accent-fg-color--transparent);
+  border: none;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.install-table .install-choices button:hover,
+.install-table .install-choices button:focus-visible {
+  color: var(--md-primary-bg-color);
+  background-color: var(--md-primary-fg-color--light);
+}
+
+.install-table .install-choices button[aria-pressed="true"] {
+  color: var(--md-primary-bg-color);
+  background-color: var(--md-primary-fg-color);
+}
+
+.install-table .install-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  background-color: var(--md-code-bg-color);
+}
+
+.install-table .install-command {
+  padding: 0;
+  color: var(--md-code-fg-color);
+  background: none;
+  box-shadow: none;
+}
+
+.install-table .install-copy {
+  font: inherit;
+  color: var(--md-default-fg-color--light);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.install-table .install-copy:hover,
+.install-table .install-copy:focus-visible {
+  color: var(--md-accent-fg-color);
+}
+
+@media screen and (max-width: 30em) {
+  .install-table {
+    grid-template-columns: 1fr;
+  }
+}
