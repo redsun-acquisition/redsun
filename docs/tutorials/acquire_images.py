@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator  # noqa: TC003
-from typing import Any, NewType, Protocol
+from typing import Any, NewType, Protocol, runtime_checkable
 from urllib.parse import urlsplit
 from urllib.request import url2pathname
 
@@ -22,7 +22,7 @@ from ophyd_async.core import SignalRW, StandardReadable, soft_signal_rw
 from ophyd_async.sim import SimBlobDetector  # noqa: TC002
 from psygnal import Signal
 from qtpy.QtGui import QImage, QPixmap
-from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 from redsun import (
     AsDevice,
@@ -53,26 +53,96 @@ class MyStage(StandardReadable):
         super().__init__(name=name)
 
 
+class FastStage(StandardReadable):
+    def __init__(self, name: str = "", *, units: str = "mm") -> None:
+        with self.add_children_as_readables():
+            self.position = soft_signal_rw(float, units=units)
+            self.speed = soft_signal_rw(float, initial_value=10.0)
+        super().__init__(name=name)
+
+
+@runtime_checkable
 class HasPosition(Protocol):
     position: SignalRW[float]
+
+
+class StagePresenter:
+    sig_moved = Signal(float)
+
+    def __init__(
+        self, name: str, *, stages: DevicesOf[HasPosition], step: float = 1.0
+    ) -> None:
+        self.name = name
+        self.stage = stages["stage"]
+        self.step = step
+
+    @slot
+    async def nudge(self) -> None:
+        position = await self.stage.position.get_value()
+        await self.stage.position.set(position + self.step)
+        self.sig_moved.emit(position + self.step)
+
+
+class StageView(QWidget):
+    placement: Placement = Dock("left")
+    sig_nudge = Signal()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        button = QPushButton("Nudge")
+        button.clicked.connect(self.sig_nudge.emit)
+        self.label = QLabel("position: 0.0")
+        layout = QVBoxLayout(self)
+        layout.addWidget(button)
+        layout.addWidget(self.label)
+
+    @slot
+    def show_position(self, position: float) -> None:
+        self.label.setText(f"position: {position}")
+
+
+class HomePresenter:
+    sig_homed = Signal(float)
+
+    def __init__(self, name: str, *, stages: DevicesOf[HasPosition]) -> None:
+        self.name = name
+        self.stages = stages
+
+    @slot
+    async def home(self) -> None:
+        for stage in self.stages.values():
+            await stage.position.set(0.0)
+        self.sig_homed.emit(0.0)
+
+
+class HomeView(QWidget):
+    placement: Placement = Dock("left")
+    sig_home = Signal()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        button = QPushButton("Home")
+        button.clicked.connect(self.sig_home.emit)
+        QVBoxLayout(self).addWidget(button)
 
 
 class ScanPresenter:
     sig_finished = Signal()
 
-    def __init__(
-        self, name: str, *, stages: DevicesOf[HasPosition], devices: DeviceMapping
-    ) -> None:
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
         self.name = name
-        self.stage = stages["stage"]
         self.devices = devices
         self.engine = RunEngine()
         self._spec = create_plan_spec(self.walk, devices)
 
-    def walk(self, steps: int = 5, size: float = 1.0) -> MsgGenerator[None]:
+    def walk(
+        self, stage: HasPosition, steps: int = 5, size: float = 1.0
+    ) -> MsgGenerator[None]:
         for _ in range(steps):
-            position = yield from bps.rd(self.stage.position)
-            yield from bps.mv(self.stage.position, position + size)
+            position = yield from bps.rd(stage.position)
+            yield from bps.mv(stage.position, position + size)
 
     @provides
     def spec(self) -> PlanSpec:
@@ -87,7 +157,7 @@ class ScanPresenter:
 
 
 class ScanView(QWidget):
-    placement: Placement = Dock("left")
+    placement: Placement = Dock("right")
     sig_run = Signal(dict)
 
     def __init__(self, name: str, parent: QWidget) -> None:
@@ -112,7 +182,7 @@ SnapSpec = NewType("SnapSpec", PlanSpec)
 
 
 # --8<-- [end:spec]
-# --8<-- [start:presenter]
+# --8<-- [start:camera]
 class CameraPresenter(DocumentRouter):
     sig_started = Signal(str)
     sig_finished = Signal()
@@ -130,16 +200,13 @@ class CameraPresenter(DocumentRouter):
         self._spec = SnapSpec(create_plan_spec(self.snap, devices))
         self._written: tuple[str, str] | None = None
 
-    # --8<-- [start:plan]
     def snap(self, frames: int = 3) -> MsgGenerator[Any]:
         return (yield from bp.count([self.camera], num=frames))
 
-    # --8<-- [end:plan]
     @provides
     def spec(self) -> SnapSpec:
         return self._spec
 
-    # --8<-- [start:run]
     @slot
     def run(self, values: dict[str, Any]) -> None:
         resolved = resolve_arguments(self._spec, values, self.devices)
@@ -148,8 +215,6 @@ class CameraPresenter(DocumentRouter):
         future = self.engine(self.snap(*args, **kwargs))
         future.add_done_callback(self.finish)
 
-    # --8<-- [end:run]
-    # --8<-- [start:frame]
     def stream_resource(self, doc: StreamResource) -> StreamResource:
         if doc["data_key"] == "camera":
             self._written = (doc["uri"], doc["parameters"]["dataset"])
@@ -162,11 +227,9 @@ class CameraPresenter(DocumentRouter):
                 self.sig_frame.emit(file[dataset][-1])
         self.sig_finished.emit()
 
-    # --8<-- [end:frame]
 
-
-# --8<-- [end:presenter]
-# --8<-- [start:view]
+# --8<-- [end:camera]
+# --8<-- [start:camera_view]
 class CameraView(QWidget):
     placement: Placement = Dock("right")
     sig_run = Signal(dict)
@@ -186,7 +249,6 @@ class CameraView(QWidget):
         self.widget.setEnabled(False)
         self.sig_run.emit(self.widget.parameters)
 
-    # --8<-- [start:show]
     @slot
     def show_frame(self, frame: object) -> None:
         values = np.asarray(frame, dtype=float)
@@ -198,23 +260,31 @@ class CameraView(QWidget):
         )
         self.image.setPixmap(QPixmap.fromImage(image.copy()))
 
-    # --8<-- [end:show]
     @slot
     def on_finished(self) -> None:
         self.widget.setEnabled(True)
 
 
-# --8<-- [end:view]
+# --8<-- [end:camera_view]
 # --8<-- [start:session]
-class AcquireSession(QtSession):
+class FirstSession(QtSession):
     stage: AsDevice[MyStage]
+    fast_stage: AsDevice[FastStage]
     camera: AsDevice[SimBlobDetector]
+    stage_ctrl: AsPresenter[StagePresenter]
+    home_ctrl: AsPresenter[HomePresenter]
     scan_ctrl: AsPresenter[ScanPresenter]
     camera_ctrl: AsPresenter[CameraPresenter]
+    stage_view: AsView[StageView]
+    home_view: AsView[HomeView]
     scan_view: AsView[ScanView]
     camera_view: AsView[CameraView]
 
     def wire(self) -> Iterator[Link]:
+        yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
+        yield self.stage_ctrl.sig_moved, self.stage_view.show_position
+        yield self.home_view.sig_home, self.home_ctrl.home
+        yield self.home_ctrl.sig_homed, self.stage_view.show_position
         yield self.scan_view.sig_run, self.scan_ctrl.run
         yield self.scan_ctrl.sig_finished, self.scan_view.on_finished
         yield self.camera_view.sig_run, self.camera_ctrl.run
@@ -225,5 +295,5 @@ class AcquireSession(QtSession):
 
 
 if __name__ == "__main__":
-    AcquireSession().run()
+    FirstSession().run()
 # --8<-- [end:session]
