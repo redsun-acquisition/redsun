@@ -53,42 +53,30 @@ Install `redsun` in a virtual environment.
     mamba activate redsun-env
     ```
 
-## Install Redsun
+## Install redsun
 
-Install from [PyPI](https://pypi.org/project/redsun/) or from the GitHub [repository](https://github.com/redsun-acquisition/redsun).
-
-=== "PyPI"
-
-    ```bash
-    pip install -U redsun
-
-    # Or if you're using uv
-    uv pip install redsun
-    ```
-
-=== "GitHub (development)"
-
-    ```bash
-    git clone https://github.com/redsun-acquisition/redsun.git
-    cd redsun
-    pip install -e .
-    ```
-
-### Qt backend
-
-`redsun` needs a [Qt binding](../explanation/glossary.md#qt-binding). Install
-the one you prefer:
+`redsun` is on [PyPI](https://pypi.org/project/redsun/). Install it together
+with the [Qt binding](../explanation/glossary.md#qt-binding) you prefer:
 
 === "`pyqt6`"
 
     ```bash
-    pip install redsun[pyqt]
+    pip install "redsun[pyqt]"
+
+    # Or if you're using uv
+    uv pip install "redsun[pyqt]"
     ```
 
 === "`pyside6`"
 
     ```bash
-    pip install redsun[pyside]
+    pip install "redsun[pyside]"
+
+    # Or if you're using uv
+    uv pip install "redsun[pyside]"
     ```
+
+A session that shows no window needs no Qt binding: `pip install redsun` is
+enough. See [Run without a GUI](../how-to/run-without-a-gui.md).
 
 To change `redsun` itself, see [How to contribute](../how-to/contribute.md).
