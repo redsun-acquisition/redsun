@@ -333,13 +333,15 @@ class RunEngine(BlueskyRunEngine):
                 for name, latch in latch_map.items()
             }
 
-        done, pending = await asyncio.wait(
-            latch_tasks, return_when=asyncio.FIRST_COMPLETED, timeout=interval
-        )
-
-        # Cancel all pending tasks
-        for task in pending:
-            task.cancel()
+        try:
+            done, _ = await asyncio.wait(
+                latch_tasks, return_when=asyncio.FIRST_COMPLETED, timeout=interval
+            )
+        finally:
+            # a plan stopped while it waits cancels this coroutine, and the
+            # tasks would outlive it
+            for task in latch_tasks:
+                task.cancel()
 
         ready = {task.get_name() for task in done}
         if not ready:
