@@ -14,18 +14,24 @@ Mark a method with [`provides`][redsun.provides]. Its return type is what
 others ask for:
 
 ```python
+from qtpy.QtWidgets import QWidget
+
 from redsun import provides
+
+
+class Canvas:
+    """The area an image view draws on."""
 
 
 class ImageView(QWidget):
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
         self.name = name
-        self._viewer = ViewerModel()
+        self._canvas = Canvas()
 
     @provides
-    def viewer(self) -> ViewerModel:
-        return self._viewer
+    def canvas(self) -> Canvas:
+        return self._canvas
 ```
 
 The session calls the method once, right after it makes the component, and
@@ -38,12 +44,12 @@ Ask in `setup`, by type:
 
 ```python
 class RoiView(QWidget):
-    def setup(self, viewer: ViewerModel) -> None:
-        self._viewer = viewer
+    def setup(self, canvas: Canvas) -> None:
+        self._canvas = canvas
 ```
 
 Every component exists when `setup` runs, so it does not matter which one is
-declared first. If nothing shares a `ViewerModel`, the session does not start
+declared first. If nothing shares a `Canvas`, the session does not start
 and names `RoiView` and the type.
 
 A component may only ask for what its own [layer](../explanation/glossary.md#layer)
