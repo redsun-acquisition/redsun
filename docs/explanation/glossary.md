@@ -4,307 +4,325 @@ icon: lucide/book-a
 
 # Glossary
 
-The words `redsun` uses, and the words it takes from the projects it is built
-on, each with one plain definition. Other pages link a term here the first
-time they use it, so this is the only place a definition is written. An entry
-for a word of another project names that project, whose own entry links to
-its documentation.
+This glossary explains the terms used across the documentation: those
+specific to `redsun`, and those borrowed from the projects it builds on. Each
+term is defined once, here, and other pages link to it the first time they
+use it.
 
 Acronyms also appear as tooltips across the site: hover a dotted-underlined
 word to read it.
 
 ### ADR
 
-Architecture Decision Record. A numbered page under
-[Decisions](decisions/0001-record-architecture-decisions.md)
-that records one decision and the reasons for it. Once accepted it is never
-edited; a later ADR replaces it instead.
+An ADR (Architecture Decision Record) is a numbered page under
+[Decisions](decisions/0001-record-architecture-decisions.md) that records one
+decision and the reasons for it. Once accepted it is never edited; a later ADR
+replaces it.
 
 ### bluesky
 
-The library `redsun` runs every acquisition through. A [plan](#plan) says what
-to do, and the [`RunEngine`](#runengine) does it and reports what happened as
-[documents](#document). Nothing is stored unless something listens to them.
-See the [documentation of `bluesky`](https://blueskyproject.io/bluesky/main/index.html).
+`bluesky` is the library that runs every acquisition in `redsun`. A
+[plan](#plan) says what to do; the [`RunEngine`](#runengine) does it and
+reports what happened as [documents](#document). Nothing is stored unless
+something is listening. See the
+[documentation of `bluesky`](https://blueskyproject.io/bluesky/main/index.html).
 
 ### Build
 
-What [`Session.build`][redsun.Session.build] does: it reads the configuration,
-starts the services, makes every component, connects them, and shows them. It
-runs as a fixed list of build steps.
+A build is what [`Session.build`][redsun.Session.build] does: it reads the
+configuration, starts the services, makes every component, connects them and
+shows them. It runs as a fixed list of [build steps](#build-step).
 
 ### Build step
 
-One named stage of a build, such as `services`, `devices` or `views`.
-`BUILD_STEPS` lists them in order, so a progress display knows how many there
-are.
+A build step is one named stage of a [build](#build), such as `services`,
+`devices` or `views`. `BUILD_STEPS` lists them in order, so a progress display
+knows how many there are.
 
 ### Catalog
 
-A searchable record of the [runs](#run) a session has done, kept by a
-[`tiled`](#tiled) server the session starts. A session has one when its
-`storage` section has a `catalog` key. A run enters it only when a component
-records it there.
+A catalog is a searchable record of the [runs](#run) a session has done, kept
+by a [`tiled`](#tiled) server that the session starts. A session has one when
+its `storage` section has a `catalog` key, and a run enters it only when a
+component records it there.
 
 ### Channel Access
 
-The older of the two network protocols of [EPICS](#epics), by which a program
-reads and sets [process variables](#process-variable).
+Channel Access is the older of the two network protocols of [EPICS](#epics).
+A program uses it to read and set [process variables](#process-variable).
 
 ### Checkpoint
 
-A point of a [plan](#plan) the [`RunEngine`](#runengine) goes back to when it
-resumes after a pause, repeating what followed it. A word of
-[`bluesky`](#bluesky).
+A checkpoint is a point in a [plan](#plan) that the
+[`RunEngine`](#runengine) returns to when it resumes after a pause, repeating
+what came after it. The term comes from [`bluesky`](#bluesky).
 
 ### Component
 
-A device, presenter or view: one of the objects a session makes and owns.
+A component is a [device](#device), a [presenter](#presenter) or a
+[view](#view): one of the objects a session makes and owns.
 
 ### Configuration
 
-The settings a session is built from: one or more session files or
-mappings, laid on top of each other in order. Later ones win, except for the
-keys that say what kind of session it is.
+The configuration is the set of settings a session is built from. It comes
+from one or more session files or Python dictionaries, applied in order, so
+that a later one overrides an earlier one. The keys that say what kind of
+session it is cannot be overridden.
 
 ### Data key
 
-The name one measured value is recorded under in a [run](#run), such as
-`camera-image`. A word of [`bluesky`](#bluesky).
+A data key is the name under which one measured value is recorded in a
+[run](#run), such as `camera-image`. The term comes from
+[`bluesky`](#bluesky).
 
 ### Declaration
 
-A line in a session class saying which component to make, such as
-`stage: AsDevice[MyStage]`. The attribute name is the component's name.
+A declaration is a line in a session class that says which component to make,
+such as `stage: AsDevice[MyStage]`. The attribute name becomes the name of the
+component.
 
 ### Device
 
-One part of the setup as the session sees it: the values it can read and
-set, written as an `ophyd-async` device. Together the devices model the
-setup; the hardware itself is reached through a service. Devices are the
-first layer to be built.
+A device is one part of your setup as the session sees it: the values it can
+read and set. Devices are written with [`ophyd-async`](#ophyd-async), and
+together they model the setup. The hardware is usually reached through a
+[service](#service), which is the preferred way for now; see
+[Services](services.md). Devices are the first [layer](#layer) to be built.
 
 ### Device signal
 
-One value of a [device](#device) that can be read, set, or both, such as the
-position of a stage, or one action of the device that can be triggered. It
-comes from [`ophyd-async`](#ophyd-async), and is not a [signal](#signal) in
-the sense of this glossary.
+A device signal is one value of a [device](#device) that can be read, set or
+both, such as the position of a stage, or an action of the device that can be
+triggered. It comes from [`ophyd-async`](#ophyd-async), and is different from
+a [signal](#signal) as this glossary defines it.
 
 ### Document
 
-A record the [`RunEngine`](#runengine) emits while a [plan](#plan) runs: the
-start of a [run](#run), what is measured, each measurement, the stop. A word
-of [`bluesky`](#bluesky), explained in
+A document is a record that the [`RunEngine`](#runengine) emits while a
+[plan](#plan) runs: the start of a [run](#run), a description of what is
+measured, each measurement, and the stop. The term comes from
+[`bluesky`](#bluesky), which explains it on
 [its page on documents](https://blueskyproject.io/bluesky/main/documents.html).
 
 ### DVP
 
-Device-View-Presenter, the way a `redsun` session is organised: devices talk
-to hardware, presenters hold the behaviour, views show it. It is
-Model-View-Presenter with devices in place of the model.
+DVP stands for Device-View-Presenter, the way a `redsun` session is
+organised: devices model the hardware, presenters hold the behaviour and views
+show it. It is Model-View-Presenter with devices in place of the model.
 
 ### EPICS
 
-A set of tools for controlling instruments over a network. A server offers
-values by name, and a program that can reach it on the network reads them
-and, where the server allows it, sets them. See
+EPICS is a set of tools for controlling instruments over a network. A server
+offers values by name, and a program that can reach it reads them and, where
+the server allows, sets them. See
 [epics-controls.org](https://epics-controls.org/).
 
 ### Frontend
 
-The part of `redsun` that shows a session on screen, such as the Qt one. A
-session file names it by its registered name (`frontend: qt`), and a package
-can register its own.
+A frontend is the part of `redsun` that shows a session on screen, such as the
+Qt one. A session file names it by its registered name (`frontend: qt`), and a
+package can register its own.
 
 ### Hook
 
-An object you give a session to act at one moment of its build, such as
-styling the application before any window exists. A hook never changes what
-the session builds.
+A hook is an object you give a session so that it can act at one moment of the
+[build](#build), for example to style the application before any window
+exists. A hook never changes what the session builds.
 
 ### Hook point
 
-A named moment at which a hook is called, such as `configure_application`.
-Each frontend lists the points it calls; a session with no frontend calls none.
+A hook point is a named moment at which a [hook](#hook) is called, such as
+`configure_application`. Each frontend lists the points it calls, and a
+session with no frontend calls none.
 
 ### IOC
 
-Input/output controller. The server program of [EPICS](#epics) that owns one
-or more pieces of hardware and offers their values as
+An IOC (input/output controller) is the server program of [EPICS](#epics). It
+owns one or more pieces of hardware and offers their values as
 [process variables](#process-variable).
 
 ### Layer
 
-One of the three groups a component belongs to: devices, presenters or views.
-They are built in that order, and a component may only use what its own layer
-or an earlier one owns.
+A layer is one of the three groups a component belongs to: devices, presenters
+or views. Layers are built in that order, and a component may only use what
+its own layer or an earlier one owns.
 
 ### Manifest
 
-The `redsun.yaml` file a plugin ships, listing its components under ids a
-session file can name.
+A manifest is the `redsun.yaml` file that a [plugin](#plugin) ships. It lists
+the components of the plugin under ids that a session file can name.
 
 ### Mocked session
 
-A session whose file sets `mock: true`. Its devices connect to the simulated
-backends `ophyd-async` gives them, and it launches no service, so it runs
-with no hardware present.
+A mocked session is a session whose file sets `mock: true`. Its devices
+connect to replacements that `ophyd-async` provides in place of the hardware,
+and no service is launched, so the session runs with no hardware present.
 
 ### ophyd-async
 
-The library a [device](#device) is written in. It gives the device its
-[signals](#device-signal) and connects them to the hardware or to a
-[service](#service). See the
+`ophyd-async` is the library devices are written with. It gives a
+[device](#device) its [signals](#device-signal) and connects them to the
+hardware, directly or through a [service](#service). See the
 [documentation of `ophyd-async`](https://blueskyproject.io/ophyd-async/main/index.html).
 
 ### Path provider
 
-The object that decides where a session's files go and what they are called.
-Each session has one, and a device asking for `path_provider` gets it.
+The path provider is the object that decides where the files of a session go
+and what they are called. Each session has one, and a device that asks for
+`path_provider` receives it.
 
 ### Placement
 
-Where a view asks to be shown, such as `Dock("left")`. The frontend decides
-which placements it can show.
+A placement is where a view asks to be shown, such as `Dock("left")`. The
+frontend decides which placements it can show.
 
 ### Plan
 
-A recipe for an acquisition, written as a Python generator that yields one
-instruction at a time, and run by the [`RunEngine`](#runengine). A presenter
-starts it. A word of [`bluesky`](#bluesky), explained in
-[its page on plans](https://blueskyproject.io/bluesky/main/plans.html).
+A plan is a recipe for an acquisition, written as a Python generator that
+yields one instruction at a time. The [`RunEngine`](#runengine) runs it, and a
+presenter starts it. The term comes from [`bluesky`](#bluesky), which explains
+it on [its page on plans](https://blueskyproject.io/bluesky/main/plans.html).
 
 ### Plugin
 
-An installed package that offers components to sessions through its manifest.
+A plugin is an installed package that offers components to sessions through
+its [manifest](#manifest).
 
 ### Port
 
-One end of a connection: a signal on the sending side, a slot on the
-receiving side. A session file names a port as `component.port`.
+A port is one end of a connection: a [signal](#signal) on the sending side, a
+[slot](#slot) on the receiving side. A session file names a port as
+`component.port`.
 
 ### Prefix
 
-The start shared by the names of the [process variables](#process-variable)
-of one device, such as `CAM:` in `CAM:Exposure`. A word of [EPICS](#epics).
+A prefix is the beginning shared by the names of the
+[process variables](#process-variable) of one device, such as `CAM:` in
+`CAM:Exposure`. The term comes from [EPICS](#epics).
 
 ### Presenter
 
-The component that holds a session's behaviour. It talks to devices and
-sends signals, but never touches a widget.
+A presenter is the component that holds the behaviour of a session. It talks
+to devices and sends signals, but never touches a widget.
 
 ### Process variable
 
-One named value an [IOC](#ioc) offers, such as `CAM:Exposure`. Often written
-PV. A word of [EPICS](#epics).
+A process variable, often written PV, is one named value that an [IOC](#ioc)
+offers, such as `CAM:Exposure`. The term comes from [EPICS](#epics).
 
 ### Protocol
 
-A description of the methods and attributes an object must have. A
-component can ask for "whatever satisfies this protocol" instead of naming a
+A protocol is a description of the methods and attributes an object must have.
+A component can ask for whatever satisfies a protocol, instead of naming a
 class.
 
 ### PVAccess
 
-The newer of the two network protocols of [EPICS](#epics). It also carries
-structured values, such as an image with its size.
+PVAccess is the newer of the two network protocols of [EPICS](#epics). It also
+carries structured values, such as an image together with its size.
 
 ### Qt binding
 
-The Python package Qt is used through: `pyqt6` or `pyside6`. A session with a
-window needs one of the two.
+A Qt binding is the Python package through which Qt is used: `pyqt6` or
+`pyside6`. A session with a window needs one of the two.
 
 ### Release
 
-Something a build step registers so `shutdown` can undo it later, such as
-stopping a service. Releases run in the reverse of the order they were
-registered.
+A release is something a [build step](#build-step) registers so that
+`shutdown` can undo it later, such as stopping a service. Releases run in the
+reverse of the order they were registered in.
 
 ### Run
 
-What a [plan](#plan) records between opening a run and closing it, from a
-start [document](#document) to a stop document, with an identifier of its
-own. A plan usually holds one run, and may hold several or none. A word of
-[`bluesky`](#bluesky).
+A run is what a [plan](#plan) records between opening and closing it, from a
+start [document](#document) to a stop document, under an identifier of its
+own. A plan usually holds one run, but may hold several or none. The term
+comes from [`bluesky`](#bluesky).
 
 ### RunEngine
 
-The object of [`bluesky`](#bluesky) that executes a [plan](#plan). A
-[presenter](#presenter) makes one and starts plans on it.
-[`redsun.engine.RunEngine`][redsun.engine.RunEngine] is the one `redsun`
-gives.
+The `RunEngine` is the object of [`bluesky`](#bluesky) that executes a
+[plan](#plan). A [presenter](#presenter) creates one and starts plans on it.
+`redsun` provides its own,
+[`redsun.engine.RunEngine`][redsun.engine.RunEngine].
 
 ### Service
 
-A separate process, or a server already running elsewhere, that owns a piece
-of hardware and offers it to devices under a [prefix](#prefix). A session
-starts the ones it launches and stops them at shutdown.
+A service is a program that owns hardware and offers it to devices over the
+network. It may be started by the session, or already be running elsewhere. A
+session stops the services it started when it shuts down.
 
 ### Session
 
-One running application: its configuration, its components, and the
-connections between them. [`Session`][redsun.Session] is the class you
+A session is one running application: its configuration, its components and
+the connections between them. [`Session`][redsun.Session] is the class you
 subclass to write one.
 
 ### Session file
 
-A YAML file holding a session's configuration.
+A session file is a YAML file that holds the
+[configuration](#configuration) of a session.
 
 ### Setup
 
-An optional `setup` method a component defines to receive what other
-components own. The session calls it once every component exists.
+Setup is an optional `setup` method that a component defines to receive what
+other components own. The session calls it once every component exists.
 
 ### Shared value
 
-A value one component makes available to the others, by marking a method with
-[`provides`][redsun.provides].
+A shared value is a value that one component makes available to the others,
+by marking a method with [`provides`][redsun.provides].
 
 ### Signal
 
-A message a component sends to every [slot](#slot) connected to it, made with
-`psygnal`. Every public signal is a port, named `sig_snake_case`. A value of
-a device is a [device signal](#device-signal), which is another thing.
+A signal is a message that a component sends to every [slot](#slot) connected
+to it. Signals are made with `psygnal`; every public one is a [port](#port),
+named `sig_snake_case`. A value of a device is a
+[device signal](#device-signal), which is a different thing.
 
 ### Slot
 
-A method marked with [`slot`][redsun.slot], which lets other components
-connect to it. Its name and arguments are public, since others rely on them.
+A slot is a method marked with [`slot`][redsun.slot], which lets other
+components connect to it. Its name and arguments are public, since others
+rely on them.
 
 ### StreamResource
 
-A [document](#document) naming a file or a store that a device or its
-[service](#service) wrote, so that whoever reads the [run](#run) finds the
-data. A word of [`bluesky`](#bluesky).
+A `StreamResource` is a [document](#document) that names a file or a data
+store written by a device or its [service](#service), so that whoever reads
+the [run](#run) can find the data. The term comes from
+[`bluesky`](#bluesky).
 
 ### Strict session
 
-A session whose file sets `strict: true`. It stops with an error if any
-component fails to build, instead of running without it.
+A strict session is a session whose file sets `strict: true`. It stops with an
+error if any component fails to build, instead of running without it.
 
 ### Structural subtyping
 
-Deciding whether a class fits by the members it has, not by what it inherits
-from. Components never inherit from `redsun` to be accepted.
+Structural subtyping means deciding whether a class fits by the members it
+has, not by what it inherits from. Components never inherit from `redsun` to
+be accepted.
 
 ### tiled
 
-The server a [catalog](#catalog) is kept by. It gives the runs and their data
-to a program or a browser over the network. See the
+`tiled` is the server that keeps a [catalog](#catalog). It serves the runs and
+their data to a program or a browser over the network. See the
 [documentation of `tiled`](https://blueskyproject.io/tiled/).
 
 ### Transport
 
-The network protocol a session's services speak: `channel-access` for
-[Channel Access](#channel-access), or `pv-access` for [PVAccess](#pvaccess).
+The transport is the network protocol that the services of a session speak:
+`channel-access` for [Channel Access](#channel-access), or `pv-access` for
+[PVAccess](#pvaccess).
 
 ### View
 
-The component that holds a session's widgets. It shows things and passes on
-what the user does, with no behaviour of its own.
+A view is the component that holds the widgets of a session. It shows things
+and passes on what the user does, with no behaviour of its own.
 
 ### Wiring
 
-Which signal reaches which slot. The session decides it, in its `wire` method
-or its file's `wiring` section; components only declare their ports.
+Wiring is the choice of which [signal](#signal) reaches which [slot](#slot).
+The session decides it, in its `wire` method or in the `wiring` section of its
+file; components only declare their [ports](#port).
