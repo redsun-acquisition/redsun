@@ -95,9 +95,7 @@ def event(self, doc: Event) -> Event:
 
 
 def stop(self, doc: RunStop) -> RunStop:
-    self._writer.write(
-        f"{source}_median", median, metadata={"derived_from": source}
-    )
+    self._writer.write(f"{source}_median", median, metadata={"derived_from": source})
     return doc
 
 
