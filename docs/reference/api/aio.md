@@ -14,20 +14,5 @@ Design rationale:
       members:
         - run_coro
 
-## Internal machinery
-
-!!! warning "Not part of the public API"
-
-    The container sets these up at startup and tears them down at shutdown.
-    They are documented so the runtime can be inspected, not for components to
-    call: a second backend, or a loop beside the shared one, breaks signal
-    dispatch for the whole process. Reach the shared loop with
-    [`run_coro`](#redsun.aio.run_coro).
-
-::: redsun.aio.get_shared_loop
-
-::: redsun.aio.set_async_backend
-
-::: redsun.aio.CulsansAsyncioBackend
-
-::: redsun.aio.AwaitableEvent
+The names a session sets the runtime up with are in the
+[private API](private.md).

@@ -23,12 +23,6 @@ icon: lucide/code
     options:
       show_docstring_parameters: false
 
-::: redsun.view.qt._widget_factory
-    options:
-      members:
-        - create_param_widget
-      filters: ["!^_"]
-
 ::: redsun.view.qt.treeview
     options:
       members:
