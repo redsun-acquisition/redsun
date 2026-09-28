@@ -72,7 +72,8 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Technical reference material: the API and the release notes.
+    Technical reference material: the API, the private API and the release
+    notes.
 
     [:lucide-arrow-right: Reference](reference/index.md)
 
