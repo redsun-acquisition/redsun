@@ -30,8 +30,8 @@ TAG = re.compile(r"<[^>]+>")
 # a formatter reading the marker as Python spaces it out, so allow for that
 SNIPPET = re.compile(r"^\s*-\s*-\s*8\s*<\s*-\s*-.*$", re.MULTILINE)
 
-HREF = re.compile(r'<a\b[^>]*?\bhref="([^"]+)"')
-ID = re.compile(r'\bid="([^"]+)"')
+HREF = re.compile(r'<a\b[^>]*?(?<![-\w])href="([^"]+)"')
+ID = re.compile(r'(?<![-\w])id="([^"]+)"')
 
 
 @cache
@@ -45,7 +45,8 @@ def dangling(site: Path) -> Iterator[str]:
 
     Links to another site are left alone, and so are fragments starting with
     two underscores, which the theme handles in the browser. A link whose
-    target resolves outside *site* is reported as leaving it instead.
+    target resolves outside *site* is reported as leaving it instead, and a
+    link to a page that does not exist is reported too.
     """
     root = site.resolve()
     for page in sorted(site.rglob("*.html")):
@@ -60,6 +61,10 @@ def dangling(site: Path) -> Iterator[str]:
             if target.is_dir():
                 target = target / "index.html"
             if not target.is_file():
+                yield (
+                    f"{page.relative_to(site).as_posix()}: {href} names a page "
+                    "that does not exist"
+                )
                 continue
             resolved = target.resolve()
             if not resolved.is_relative_to(root):

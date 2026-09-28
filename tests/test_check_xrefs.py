@@ -43,3 +43,26 @@ def test_a_link_leaving_the_site_is_reported(tmp_path: Path) -> None:
     assert list(dangling(site)) == [
         "guide/index.html: ../../outside/#part leaves the site",
     ]
+
+
+def test_a_link_to_a_page_that_does_not_exist_is_reported(tmp_path: Path) -> None:
+    page(tmp_path, "glossary", '<h3 id="device">Device</h3>')
+    page(tmp_path, "guide", '<a href="../glosary/#device">misspelt page</a>')
+
+    assert list(dangling(tmp_path)) == [
+        "guide/index.html: ../glosary/#device names a page that does not exist"
+    ]
+
+
+def test_an_attribute_ending_in_id_or_href_is_not_read_as_one(tmp_path: Path) -> None:
+    page(tmp_path, "glossary", '<h3 data-id="ghost">Ghost</h3>')
+    page(
+        tmp_path,
+        "guide",
+        '<a href="../glossary/#ghost">named by data-id only</a>'
+        '<a data-href="../glossary/#nothing" href="../glossary/">no fragment</a>',
+    )
+
+    assert list(dangling(tmp_path)) == [
+        "guide/index.html: no #ghost in glossary/index.html"
+    ]
