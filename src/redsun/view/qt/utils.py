@@ -1,6 +1,6 @@
 """Qt widgets for interfaces that run plans.
 
-- `ActionButton`: a `QPushButton` carrying an `Action`, its label following
+- `ActionButton`: a `QPushButton` carrying a `PlanAction`, its label following
   the toggle state.
 - `PlanWidget`: a frozen dataclass owning one plan's widgets (parameter form,
   run and pause buttons, action buttons).
@@ -20,7 +20,7 @@ import magicgui.widgets.bases as mgw_bases
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine.actions import Action
+from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 
 from ._widget_factory import create_param_widget
@@ -41,24 +41,24 @@ __all__ = [
 
 
 class ActionButton(QtW.QPushButton):
-    """A ``QPushButton`` carrying an ``Action``.
+    """A ``QPushButton`` carrying a ``PlanAction``.
 
     Its label follows the toggle state, using the action's ``toggle_states``.
 
     Parameters
     ----------
-    action : Action
+    action : PlanAction
         The button's action.
     parent : QtWidgets.QWidget | None, optional
         The parent widget.
 
     Attributes
     ----------
-    action : Action
+    action : PlanAction
         The button's action.
     """
 
-    def __init__(self, action: Action, parent: QtW.QWidget | None = None) -> None:
+    def __init__(self, action: PlanAction, parent: QtW.QWidget | None = None) -> None:
         self.name_capital = action.name.capitalize()
         super().__init__(self.name_capital, parent)
         self.action = action
@@ -66,17 +66,27 @@ class ActionButton(QtW.QPushButton):
         if action.description:
             self.setToolTip(action.description)
 
-        if action.togglable:
+        if action.toggle_states is not None:
             self.setCheckable(True)
             self.toggled.connect(self._update_text)
             self._update_text(False)
 
+    def release(self) -> None:
+        """Show the button released, without emitting ``toggled``.
+
+        For an action that ended by itself: unchecking the button any other
+        way reads as the user asking the action to end.
+        """
+        self.blockSignals(True)
+        self.setChecked(False)
+        self.blockSignals(False)
+        self._update_text(False)
+
     def _update_text(self, checked: bool) -> None:
         """Update the label to the toggle state."""
-        state_text = (
-            self.action.toggle_states[1] if checked else self.action.toggle_states[0]
-        )
-        self.setText(f"{self.name_capital} ({state_text})")
+        states = self.action.toggle_states
+        if states is not None:
+            self.setText(f"{self.name_capital} ({states[1] if checked else states[0]})")
 
 
 @dataclass(frozen=True)
@@ -377,12 +387,12 @@ def _build_actions_group(
     for p in actions_params:
         if p.actions is None:
             continue
-        action_list: list[Action] = (
-            [p.actions] if isinstance(p.actions, Action) else list(p.actions)
+        action_list: list[PlanAction] = (
+            [p.actions] if isinstance(p.actions, PlanAction) else list(p.actions)
         )
         for action in action_list:
             btn = ActionButton(action)
-            if action.togglable:
+            if action.toggle_states is not None:
                 btn.toggled.connect(
                     lambda checked, name=action.name: action_toggled_callback(
                         checked, name
@@ -515,9 +525,10 @@ def create_plan_widget(
     pause_callback : Callable[[bool], None] | None, optional
         Connected to ``pause_button.toggled`` for pausable plans.
     action_clicked_callback : Callable[[str], None] | None, optional
-        Called with ``action_name`` when a non-togglable action fires.
+        Called with ``action_name`` when an action's button is clicked.
     action_toggled_callback : Callable[[bool, str], None] | None, optional
-        Called with ``(checked, action_name)`` when a togglable action fires.
+        Called with ``(checked, action_name)`` when an action's button is
+        pressed or released.
     plan_callbacks : Sequence[CallbackType], optional
         The document callbacks the plan requires, in the order they run. They
         are listed first, checked, and cannot be unchecked or moved.

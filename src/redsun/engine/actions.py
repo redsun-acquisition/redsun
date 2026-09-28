@@ -7,20 +7,34 @@ actions the user triggers while it runs.
   signals.
 - `continuous`: marks a plan as continuous, recording whether it is
   pausable.
-- `Action`: a dataclass describing one action (name, description, toggle state).
+- `PlanAction`: what a plan declares of an action: its name, its description
+  and the labels of its button.
+- `ActionManager`: the actions a running plan offers, asked for from outside and
+  reported as they change state.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, TypeVar, overload
+
+from psygnal import Signal
+
+from redsun.engine.plan_stubs import SIXTY_FPS, wait_for_actions
+from redsun.ports import slot
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from bluesky.utils import MsgGenerator
+
 F = TypeVar("F", bound="Callable[..., Any]")
+
+logger = logging.getLogger("redsun")
 
 
 class SRLatch:
@@ -150,46 +164,160 @@ def continuous(
     return decorator if func is None else decorator(func)
 
 
-@dataclass(kw_only=True)
-class Action:
-    """Metadata for an in-flight action on a continuous plan.
+@dataclass(frozen=True, kw_only=True)
+class PlanAction:
+    """An action a user triggers while a continuous plan runs.
 
-    An `Action` is something the user triggers while a continuous plan runs. It
-    holds an `SRLatch`, so the plan can ``await`` the trigger.
+    A declaration only. A plan names it as the default of a parameter, from
+    which its button is made, and waits for it through an `ActionManager`.
 
-    !!! warning
-        The latch is created on first access of `event_map`, so an `Action` can
-        be constructed without a running event loop. Access the latch only from
-        inside a plan.
-
-    Subclass it to add fields.
+    Subclass it to add fields; the subclass is a frozen dataclass too.
     """
 
     name: str
     """Name of the action."""
 
-    description: str = field(default="")
+    description: str = ""
     """Short description of the action, usable as a tooltip."""
 
-    togglable: bool = field(default=False)
-    """Whether the action is togglable."""
+    toggle_states: tuple[str, str] | None = None
+    """Labels of a button that stays pressed until it is released.
 
-    toggle_states: tuple[str, str] = field(default=("On", "Off"))
-    """Labels of the toggle states (on, off), used when `togglable` is True."""
+    The first is shown while it is released and the second while it is
+    pressed. ``None`` for a button that is clicked.
+    """
 
-    _latch: SRLatch | None = field(init=False, default=None, repr=False)
 
-    @property
-    def event_map(self) -> dict[str, SRLatch]:
-        """Return ``{name: latch}`` for this action."""
-        if not self._latch:
-            self._latch = SRLatch()
-        return {self.name: self._latch}
+class ActionState(StrEnum):
+    """What an action is doing, as `ActionManager.sig_changed` reports it."""
+
+    OFFERED = "offered"
+    """A plan waits for it."""
+
+    WITHDRAWN = "withdrawn"
+    """No longer waited for: the plan took another, or stopped waiting."""
+
+    REQUESTED = "requested"
+    """Asked for, and not yet taken by the plan."""
+
+    RUNNING = "running"
+    """The plan took it."""
+
+    RELEASED = "released"
+    """Asked to end while it runs."""
+
+    DONE = "done"
+    """The plan finished it."""
+
+    REFUSED = "refused"
+    """Asked for while no plan offered it, or asked to end while not running."""
+
+
+class ActionManager:
+    """The actions a running plan offers, and the state each is in.
+
+    Whoever owns the plans owns one. A plan waits on it with `wait`, a user
+    asks through `request`, and `sig_changed` reports every change, so the
+    engine running the plan needs to know nothing of actions.
+    """
+
+    sig_changed = Signal(str, str)
+    """Emitted with the name of an action and its new `ActionState`."""
+
+    def __init__(self) -> None:
+        self._offered: dict[str, SRLatch] = {}
+        self._running: dict[str, SRLatch] = {}
+
+    @slot
+    def request(self, name: str, on: bool = True) -> None:
+        """Ask for the action *name*, or with ``on=False`` ask a running one to end.
+
+        Safe from any thread. Asking for an action no plan offers, or asking
+        one that is not running to end, raises nothing: it is logged and
+        reported as `ActionState.REFUSED`.
+        """
+        latch = (self._offered if on else self._running).get(name)
+        if latch is None:
+            logger.warning(
+                "PlanAction %r refused: %s",
+                name,
+                "no plan offers it" if on else "it is not running",
+            )
+            self.sig_changed.emit(name, ActionState.REFUSED)
+            return
+        # reported first: the plan wakes on another thread as soon as the
+        # latch changes, and would report its own state ahead of this one
+        self.sig_changed.emit(
+            name, ActionState.REQUESTED if on else ActionState.RELEASED
+        )
+        if on:
+            latch.set()
+        else:
+            latch.reset()
+
+    def wait(
+        self, *actions: PlanAction, poll_interval: float = SIXTY_FPS
+    ) -> MsgGenerator[str]:
+        """Offer *actions*, wait until one is asked for, and return its name.
+
+        Every call offers latches of its own, so a request left from an
+        earlier wait cannot fire an action of this one. The action returned
+        runs until `done`. The others are withdrawn, as all of them are when
+        the plan is stopped while it waits. A checkpoint is yielded every
+        *poll_interval* seconds, so it cannot be used between ``create`` and
+        ``save``.
+
+        Raises
+        ------
+        ValueError
+            If no action is given.
+        """
+        latches = {action.name: SRLatch() for action in actions}
+        for name in latches:
+            self._running.pop(name, None)
+        self._offered = latches
+        for name in latches:
+            self.sig_changed.emit(name, ActionState.OFFERED)
+        taken: str | None = None
+        try:
+            taken, latch = yield from wait_for_actions(latches, poll_interval)
+        finally:
+            self._offered = {}
+            for name in latches:
+                if name != taken:
+                    self.sig_changed.emit(name, ActionState.WITHDRAWN)
+        self._running[taken] = latch
+        self.sig_changed.emit(taken, ActionState.RUNNING)
+        return taken
+
+    def wait_released(
+        self, action: PlanAction, poll_interval: float = SIXTY_FPS
+    ) -> MsgGenerator[None]:
+        """Wait until the running *action* is asked to end.
+
+        Raises
+        ------
+        ValueError
+            If *action* is not running.
+        """
+        latch = self._running.get(action.name)
+        if latch is None:
+            raise ValueError(f"action {action.name!r} is not running")
+        yield from wait_for_actions(
+            {action.name: latch}, poll_interval, wait_for="reset"
+        )
+
+    def done(self, name: str) -> None:
+        """Say the plan finished the action *name*."""
+        self._running.pop(name, None)
+        self.sig_changed.emit(name, ActionState.DONE)
 
 
 __all__ = [
-    "Action",
+    "ActionManager",
+    "ActionState",
     "Continuous",
+    "PlanAction",
     "SRLatch",
     "continuous",
 ]

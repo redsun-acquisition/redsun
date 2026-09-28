@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
@@ -12,7 +11,7 @@ from bluesky.utils import MsgGenerator
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine.actions import Action, continuous
+from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
@@ -24,6 +23,8 @@ from redsun.view.qt._widget_factory import create_param_widget
 from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 
 pytestmark = pytest.mark.qt
+
+STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
 
 
 @pytest.fixture(autouse=True)
@@ -110,26 +111,9 @@ def _pausable_spec() -> PlanSpec:
 def _action_spec() -> PlanSpec:
     """Build a plan spec with an action parameter."""
 
-    @dataclass
-    class Snap(Action):
-        name: str = "snap"
-
-    def plan(frames: int = 1, /, snap: Action = Snap()) -> MsgGenerator[None]:
-        yield from ()
-
-    return create_plan_spec(plan, {})
-
-
-def _togglable_action_spec() -> PlanSpec:
-    """Build a plan spec with a togglable action."""
-
-    @dataclass
-    class Stream(Action):
-        name: str = "stream"
-        togglable: bool = True
-        toggle_states: tuple[str, str] = ("Start", "Stop")
-
-    def plan(frames: int = 1, /, stream: Action = Stream()) -> MsgGenerator[None]:
+    def plan(
+        frames: int = 1, /, snap: PlanAction = PlanAction(name="snap")
+    ) -> MsgGenerator[None]:
         yield from ()
 
     return create_plan_spec(plan, {})
@@ -139,54 +123,40 @@ class TestActionButton:
     """Tests for ActionButton."""
 
     def test_initial_label_is_capitalised_name(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-
-        btn = ActionButton(Go())
+        btn = ActionButton(PlanAction(name="go"))
         assert btn.text() == "Go"
 
     def test_tooltip_set_when_description_present(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-            description: str = "Start acquisition"
-
-        btn = ActionButton(Go())
+        btn = ActionButton(PlanAction(name="go", description="Start acquisition"))
         assert btn.toolTip() == "Start acquisition"
 
-    def test_not_checkable_for_non_togglable_action(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-            togglable: bool = False
-
-        btn = ActionButton(Go())
+    def test_not_checkable_for_a_clicked_action(self) -> None:
+        btn = ActionButton(PlanAction(name="go"))
         assert not btn.isCheckable()
 
-    def test_checkable_for_togglable_action(self) -> None:
-        @dataclass
-        class Stream(Action):
-            name: str = "stream"
-            togglable: bool = True
-            toggle_states: tuple[str, str] = ("Start", "Stop")
-
-        btn = ActionButton(Stream())
+    def test_checkable_for_an_action_with_toggle_states(self) -> None:
+        btn = ActionButton(STREAM)
         assert btn.isCheckable()
 
     def test_label_updates_on_toggle(self) -> None:
-        @dataclass
-        class Stream(Action):
-            name: str = "stream"
-            togglable: bool = True
-            toggle_states: tuple[str, str] = ("Start", "Stop")
-
-        btn = ActionButton(Stream())
+        btn = ActionButton(STREAM)
         assert btn.text() == "Stream (Start)"
         btn.setChecked(True)
         assert btn.text() == "Stream (Stop)"
         btn.setChecked(False)
         assert btn.text() == "Stream (Start)"
+
+    def test_release_shows_the_button_released_and_emits_nothing(self) -> None:
+        btn = ActionButton(STREAM)
+        btn.setChecked(True)
+        toggled: list[bool] = []
+        btn.toggled.connect(toggled.append)
+
+        btn.release()
+
+        assert not btn.isChecked()
+        assert btn.text() == "Stream (Start)"
+        assert toggled == []
 
 
 class TestCreatePlanWidget:

@@ -19,7 +19,9 @@ icon: lucide/code
     options:
       members:
         - continuous
-        - Action
+        - PlanAction
+        - ActionManager
+        - ActionState
         - SRLatch
         - Continuous
 

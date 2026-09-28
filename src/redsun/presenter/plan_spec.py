@@ -32,7 +32,7 @@ from typing import (
 from ophyd_async.core import Device as OADevice
 from typing_extensions import Format, evaluate_forward_ref, get_annotations
 
-from redsun.engine.actions import Action
+from redsun.engine.actions import PlanAction
 from redsun.presenter.utils import (
     get_choice_list,
     isdevice,
@@ -121,7 +121,7 @@ class ParamDescription:
     hidden: bool = False
     """Whether the parameter is hidden from the interface, as for metadata only."""
 
-    actions: Sequence[Action] | Action | None = None
+    actions: Sequence[PlanAction] | PlanAction | None = None
     """Actions taken from the parameter's default value, if any."""
 
     device_proto: type[Any] | None = None
@@ -273,12 +273,12 @@ def _dispatch_annotation(
 def _extract_action_meta(
     param: Parameter,
     ann: Any,
-) -> Sequence[Action] | Action | None:
-    """Extract ``Action`` instances from a parameter's default value.
+) -> Sequence[PlanAction] | PlanAction | None:
+    """Extract ``PlanAction`` instances from a parameter's default value.
 
-    Returns the ``Action``, or list of them, if the default holds actions, and
-    ``None`` otherwise. Also checks the annotation is ``Action``,
-    ``Sequence[Action]`` or a union containing ``Action``.
+    Returns the ``PlanAction``, or list of them, if the default holds actions, and
+    ``None`` otherwise. Also checks the annotation is ``PlanAction``,
+    ``Sequence[PlanAction]`` or a union containing ``PlanAction``.
 
     Raises
     ------
@@ -287,12 +287,12 @@ def _extract_action_meta(
     """
     if param.default is _empty:
         return None
-    if isinstance(param.default, Action):
-        actions_meta: Sequence[Action] | Action = param.default
+    if isinstance(param.default, PlanAction):
+        actions_meta: Sequence[PlanAction] | PlanAction = param.default
     elif (
         param.default
         and isinstance(param.default, cabc.Sequence)
-        and all(isinstance(a, Action) for a in param.default)
+        and all(isinstance(a, PlanAction) for a in param.default)
     ):
         actions_meta = list(param.default)
     else:
@@ -314,16 +314,16 @@ def _extract_action_meta(
 
     if not (is_action_type or is_sequence_action or is_union_containing_action):
         raise TypeError(
-            f"Parameter {param.name!r} has Action instances in its default value "
-            f"but is not annotated as Action, Sequence[Action], or a union "
-            f"containing Action; got {ann!r}"
+            f"Parameter {param.name!r} has PlanAction instances in its default value "
+            f"but is not annotated as PlanAction, Sequence[PlanAction], or a union "
+            f"containing PlanAction; got {ann!r}"
         )
     return actions_meta
 
 
 def _is_action_type(ann: Any) -> bool:
-    """Whether *ann* is `Action` itself or a subclass of it."""
-    return isinstance(ann, type) and issubclass(ann, Action)
+    """Whether *ann* is `PlanAction` itself or a subclass of it."""
+    return isinstance(ann, type) and issubclass(ann, PlanAction)
 
 
 def _safe_issubclass(cls: Any, parent: type) -> bool:
@@ -450,6 +450,8 @@ def create_plan_spec(
         build a control for it.
     RuntimeError
         On an unexpected ``inspect.Parameter.kind``.
+    ValueError
+        If *plan* declares two actions of one name.
     """
     func_obj: cabc.Callable[..., cabc.Generator[Any, Any, Any]] = getattr(
         plan, "__func__", plan
@@ -534,6 +536,24 @@ def create_plan_spec(
                 actions=actions_meta,
                 device_proto=fields.device_proto,
             )
+        )
+
+    declared = [
+        action.name
+        for description in params
+        if description.actions is not None
+        for action in (
+            [description.actions]
+            if isinstance(description.actions, PlanAction)
+            else description.actions
+        )
+    ]
+    twice = sorted({name for name in declared if declared.count(name) > 1})
+    if twice:
+        raise ValueError(
+            f"plan {func_obj.__name__!r} declares more than one action named "
+            f"{', '.join(repr(name) for name in twice)}; a name tells the "
+            "actions of a plan apart"
         )
 
     marked = getattr(func_obj, "__continuous__", None)

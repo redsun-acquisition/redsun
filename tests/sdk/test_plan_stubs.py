@@ -10,7 +10,7 @@ from ophyd_async.core import soft_signal_rw
 import redsun.engine.plan_stubs as rps
 from redsun.aio import run_coro
 from redsun.engine import register_bound_command
-from redsun.engine.actions import Action, SRLatch
+from redsun.engine.actions import SRLatch
 
 if TYPE_CHECKING:
     from typing import Any
@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 
 def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
     """The stub polls at `poll_interval` until a latch is set."""
-    action = Action(name="go")
-    events = action.event_map
+    events = {"go": SRLatch()}
     results: list[tuple[str, bool]] = []
 
     def plan() -> MsgGenerator[None]:
@@ -43,8 +42,7 @@ def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
 
 def test_wait_for_actions_reset(RE: RunEngine) -> None:
     """wait_for='reset' unblocks when the latch transitions back to reset."""
-    action = Action(name="go")
-    events = action.event_map
+    events = {"go": SRLatch()}
     results: list[str] = []
 
     def plan() -> MsgGenerator[None]:

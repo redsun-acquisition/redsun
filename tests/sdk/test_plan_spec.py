@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
-from dataclasses import dataclass
 from inspect import Parameter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
@@ -20,7 +19,7 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun.engine.actions import Action, continuous
+from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
@@ -298,32 +297,22 @@ class TestCreatePlanSpec:
         assert p.multiselect
 
     def test_action_param_has_no_choices_and_stores_meta(self) -> None:
-        @dataclass
-        class Snap(Action):
-            name: str = "snap"
-
-        def plan(frames: int = 1, /, snap: Action = Snap()) -> MsgGenerator[None]:
+        def plan(
+            frames: int = 1, /, snap: PlanAction = PlanAction(name="snap")
+        ) -> MsgGenerator[None]:
             yield from ()
 
         spec = create_plan_spec(plan, {})
         action_p = next(p for p in spec.parameters if p.name == "snap")
         assert action_p.actions is not None
-        assert isinstance(action_p.actions, Action)
+        assert isinstance(action_p.actions, PlanAction)
         assert action_p.choices is None
 
     def test_action_sequence_param(self) -> None:
-        @dataclass
-        class A(Action):
-            name: str = "a"
-
-        @dataclass
-        class B(Action):
-            name: str = "b"
-
         def plan(
             frames: int = 1,
             /,
-            actions: Action = [A(), B()],  # type: ignore[assignment]
+            actions: PlanAction = [PlanAction(name="a"), PlanAction(name="b")],  # type: ignore[assignment]
         ) -> MsgGenerator[None]:
             yield from ()
 
@@ -331,6 +320,18 @@ class TestCreatePlanSpec:
         p = next(q for q in spec.parameters if q.name == "actions")
         assert isinstance(p.actions, list)
         assert len(p.actions) == 2
+
+    def test_two_actions_of_one_name_are_refused(self) -> None:
+        def plan(
+            snap: PlanAction = PlanAction(name="snap"),
+            again: PlanAction = PlanAction(name="snap", description="another"),
+        ) -> MsgGenerator[None]:
+            yield from ()
+
+        with pytest.raises(
+            ValueError, match="declares more than one action named 'snap'"
+        ):
+            create_plan_spec(plan, {})
 
     @pytest.mark.parametrize(
         ("mark", "pausable"),
@@ -564,16 +565,12 @@ class TestResolveArguments:
         assert resolved["frames"] == 5
 
     def test_action_injected_when_absent(self) -> None:
-        @dataclass
-        class MyAction(Action):
-            name: str = "go"
-
-        action_instance = MyAction()
+        action_instance = PlanAction(name="go")
         spec = _make_spec(
             ParamDescription(
                 name="go",
                 kind=ParamKind.POSITIONAL_ONLY,
-                annotation=Action,
+                annotation=PlanAction,
                 default=action_instance,
                 actions=action_instance,
             )
@@ -582,17 +579,13 @@ class TestResolveArguments:
         assert resolved["go"] is action_instance
 
     def test_action_not_overwritten_when_present(self) -> None:
-        @dataclass
-        class MyAction(Action):
-            name: str = "go"
-
-        a1 = MyAction()
-        a2 = MyAction()
+        a1 = PlanAction(name="go")
+        a2 = PlanAction(name="go")
         spec = _make_spec(
             ParamDescription(
                 name="go",
                 kind=ParamKind.POSITIONAL_ONLY,
-                annotation=Action,
+                annotation=PlanAction,
                 default=a1,
                 actions=a1,
             )
@@ -727,11 +720,6 @@ class TestCreateParamWidget:
         assert isinstance(w, mgw.LineEdit)
 
     def test_action_param_creates_line_edit_placeholder(self) -> None:
-        @dataclass
-        class Snap(Action):
-            name: str = "snap"
-
-        snap = Snap()
-        p = _param("snap", Action, actions=snap)
+        p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
