@@ -13,6 +13,13 @@ the session's side: starting the service when the session launches it, noticing
 when it exits, stopping it cleanly, and giving its [prefix](glossary.md#prefix)
 and transport to the devices that use it.
 
+!!! warning "Devices without a service"
+
+    A device does not strictly need a service: an `ophyd-async` device can
+    reach its hardware on its own. Support for such devices is limited for
+    now, and a service is the preferred way to reach hardware. Guidance on
+    devices that wrap a third-party package will follow.
+
 ## Devices model the setup, services drive the hardware
 
 A session splits a setup into two parts that know as little about each other as
