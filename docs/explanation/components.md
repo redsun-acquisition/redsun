@@ -257,6 +257,11 @@ Devices are shut down after every presenter and view, which may still use
 them in a `shutdown` of their own, and before the services stop, so the
 device can still reach its service.
 
+A device that did not connect is left out of the session, and its `shutdown`
+is not called: it would write to hardware that never answered. A device
+declared with `autoconnect=False` is shut down, since a component may have
+connected it.
+
 ## Dataclasses and pydantic models
 
 A presenter can be a dataclass or a pydantic model, since the session passes

@@ -1737,6 +1737,10 @@ class Session(BuildableSession):
                 continue
             self._devices[declaration.name] = device
             self._keep(declaration, device)
+            # a device the session connects is given back only once it has
+            # connected: one that did not has nothing to give back
+            if not declaration.autoconnect:
+                self._register_teardown(device)
 
     def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
         """Return the ``prefix`` keyword from *declaration*'s service, if it names one.
@@ -1777,7 +1781,8 @@ class Session(BuildableSession):
         To a simulated backend when the configuration sets ``mock``, to what
         the device names otherwise. A device not connected within
         `CONNECT_TIMEOUT` is dropped and recorded as failed, like one that
-        fails to build.
+        fails to build, and its ``shutdown`` is never called. One that
+        connected has its ``shutdown`` registered as a release.
         """
         mock = self._configuration().mock
         targets = {
@@ -1799,6 +1804,7 @@ class Session(BuildableSession):
 
         for name, result in zip(targets, run_coro(connect_all()), strict=True):
             if result is None:
+                self._register_teardown(targets[name])
                 continue
             declaration = self._declarations[name]
             reason = self._connection_failure(declaration, result)
@@ -1826,14 +1832,14 @@ class Session(BuildableSession):
     def _on_built(self, declaration: Declaration, instance: NamedComponent) -> None:
         self._verify(declaration, instance)
         self._keep(declaration, instance)
+        self._register_teardown(instance)
 
     def _keep(
         self, declaration: Declaration, instance: Device | NamedComponent
     ) -> None:
-        """Hold *instance* as what *declaration* built, and register its teardown."""
+        """Hold *instance* as what *declaration* built."""
         declaration.instance = instance
         setattr(self, declaration.name, instance)
-        self._register_teardown(instance)
 
     def _register_teardown(self, component: object) -> None:
         """Hand the session's own teardown to the one owner of it.

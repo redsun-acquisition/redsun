@@ -1,12 +1,17 @@
-"""A `shutdown` that is a coroutine is awaited when the session shuts down."""
+"""Which `shutdown` a session calls when it shuts down, and in what order."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar
 
-from ophyd_async.core import StandardReadable
+from ophyd_async.core import (
+    Device,
+    DeviceConnector,
+    NotConnectedError,
+    StandardReadable,
+)
 
-from redsun import AsDevice, AsPresenter, Session
+from redsun import AsDevice, AsPresenter, Declare, Session
 
 if TYPE_CHECKING:
     from .conftest import BuildSession
@@ -24,6 +29,20 @@ class Laser(StandardReadable):
         self.closed.append(self.name)
 
 
+class Refusing(DeviceConnector):
+    async def connect_real(
+        self, device: Device, timeout: float, force_reconnect: bool
+    ) -> None:
+        raise NotConnectedError("no answer")
+
+
+class Unplugged(Laser):
+    """A laser nothing answers for."""
+
+    def __init__(self, name: str) -> None:
+        Device.__init__(self, name=name, connector=Refusing())
+
+
 class Ctrl:
     """Presenter whose teardown awaits."""
 
@@ -39,6 +58,12 @@ class App(Session):
     ctrl: AsPresenter[Ctrl]
 
 
+class Partial(Session):
+    laser: AsDevice[Laser]
+    unplugged: AsDevice[Unplugged]
+    later: Annotated[AsDevice[Unplugged], Declare(autoconnect=False)]
+
+
 def test_a_component_is_awaited_before_the_device_it_may_use(
     build: BuildSession,
 ) -> None:
@@ -47,3 +72,14 @@ def test_a_component_is_awaited_before_the_device_it_may_use(
     build(App).shutdown()
 
     assert Laser.closed == ["ctrl", "laser"]
+
+
+def test_a_device_that_did_not_connect_is_not_shut_down(build: BuildSession) -> None:
+    """A device the session does not connect is: a component may have connected it."""
+    Laser.closed.clear()
+    app = build(Partial)
+    assert set(app.devices) == {"laser", "later"}
+
+    app.shutdown()
+
+    assert sorted(Laser.closed) == ["laser", "later"]
