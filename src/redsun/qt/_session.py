@@ -676,46 +676,29 @@ def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> Non
     central: dict[str, QWidget] = {}
     for name, view in views.items():
         placement = view.placement
+        Qt.check_placement(view, placement, f"view {name!r}")
         match placement:
             case Central():
-                central[name] = named(name, view, placement, QWidget)
+                central[name] = named(name, view, QWidget)
             case Dock():
-                add_dock(window, name, named(name, view, placement, QWidget), placement)
+                add_dock(window, name, named(name, view, QWidget), placement)
             case MenuItem():
-                add_menu_item(window, named(name, view, placement, QAction), placement)
+                add_menu_item(window, named(name, view, QAction), placement)
             case ToolBarItem():
-                add_toolbar_item(
-                    window, named(name, view, placement, QAction), placement
-                )
-            case _:
-                raise TypeError(
-                    f"view {name!r} asks to be attached as "
-                    f"{type(placement).__name__!r}, which Qt does not attach. "
-                    "It attaches: "
-                    + ", ".join(sorted(p.__name__ for p in Qt.requires))
-                    + "."
-                )
+                add_toolbar_item(window, named(name, view, QAction), placement)
     set_central(window, central)
 
 
 # taken as 'object' rather than 'AttachableComponent': narrowing a protocol
 # against a type variable leaves mypy nothing it can name, and it yields Never
-def named(name: str, view: object, placement: Placement, required: type[T]) -> T:
+def named(name: str, view: object, required: type[T]) -> T:
     """Return *view* as *required*, named after *name* so it can be found again.
 
-    Raises
-    ------
-    TypeError
-        If the view is not that type.
+    `Qt.check_placement` has confirmed the type by the time this is called.
     """
-    if not isinstance(view, required):
-        raise TypeError(
-            f"view {name!r} asks to be attached as {type(placement).__name__!r}, "
-            f"which needs a {required.__name__}, but {type(view).__name__} is "
-            "not one"
-        )
-    view.setObjectName(name)
-    return view
+    widget = cast("T", view)
+    widget.setObjectName(name)
+    return widget
 
 
 def add_dock(window: QMainWindow, name: str, widget: QWidget, placement: Dock) -> None:
