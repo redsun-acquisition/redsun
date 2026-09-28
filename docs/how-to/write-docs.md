@@ -84,6 +84,6 @@ uv run tox -e docs
 ```
 
 This builds the site and then checks that every cross-reference found its
-target and every included script was read. Neither a link to a missing
-symbol nor a misspelt include stops the build on its own, which is why the
+target, every included script was read, and every link to a part of a page
+reaches it. None of the three stops the build on its own, which is why the
 check runs after it. See [Build the docs](build-docs.md).
