@@ -57,7 +57,7 @@ acquisitions.
 `redsun` is not a ready-made microscope program. It comes with no hardware
 drivers, no acquisition panel and no image viewer, and it leaves writing the
 data to your devices.
-[Why redsun exists](explanation/statement.md#what-redsun-leaves-to-you) has
+[Why redsun exists](explanation/statement.md#coming-from-micro-manager) has
 the details, and shows how its parts compare with those of Micro-Manager.
 
 <div style="display: flex; justify-content: center" markdown>
