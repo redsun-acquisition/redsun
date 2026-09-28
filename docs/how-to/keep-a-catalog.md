@@ -13,7 +13,7 @@ components: `redsun` writes no acquisition data itself
 ## Install the extra
 
 ```bash
-pip install redsun[tiled]
+pip install "redsun[tiled]"
 ```
 
 It installs `tiled` and `ome-tiled`, and nothing on Python 3.14, which `tiled`

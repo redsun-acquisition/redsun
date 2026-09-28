@@ -24,8 +24,9 @@ and reopen it to start them.
 ## 2. Review and merge
 
 Read the new section. A title that reads badly is fixed by renaming the pull
-request it came from and running the workflow again, so the changelog and
-GitHub agree. Then merge.
+request it came from, so the changelog and GitHub agree. Then close the
+release pull request, delete its branch `release/vX.Y.Z`, and run the
+workflow again: it cannot push to a branch that exists. Then merge.
 
 ## 3. Tag
 

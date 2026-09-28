@@ -19,12 +19,12 @@ A bug fix or a new option that follows an existing decision does not need one.
 
 ## How to write one
 
-1. Copy `docs/explanation/decisions/COPYME` to the next free number:
-   `0018-short-title.md`.
+1. Copy `docs/explanation/decisions/COPYME` to the next free number, as
+   `NNNN-short-title.md`.
 2. Fill in the sections: the context, the decision, and its consequences.
    Follow [Write documentation](write-docs.md).
 3. Add it to the `Decisions` list in `zensical.toml` and to
-   `docs/explanation/index.md`.
+   `docs/explanation/decisions/index.md`.
 
 ## Changing a decision
 

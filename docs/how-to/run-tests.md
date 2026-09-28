@@ -98,7 +98,8 @@ its own and can miss errors CI catches.
 `pyproject.toml` configures the coverage sources:
 
 ```bash
-uv run pytest --cov --cov-report=html
+uv run coverage run -m pytest
+uv run coverage html
 ```
 
 Open `htmlcov/index.html` in a browser.

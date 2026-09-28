@@ -12,9 +12,9 @@ session or a plugin that uses `redsun`, start with the
 
 1. **Open an issue** describing the bug or the feature, so the change is
    agreed on before you write it. A small fix can skip this.
-2. **Branch from `main`**, named after the kind of change and what it does:
+2. **Set up your environment** once: see [How to set up a development environment](set-up-development.md).
+3. **Branch from `main`**, named after the kind of change and what it does:
    `fix/log-folder`, `feat/strict-sessions`, `docs/glossary`.
-3. **Set up your environment** once: see [How to set up a development environment](set-up-development.md).
 4. **Make the change**, with tests. Run the checks before you push:
    see [Run tests](run-tests.md) and [Run the commit checks](run-commit-checks.md).
 5. **Open a pull request against `main`**, following

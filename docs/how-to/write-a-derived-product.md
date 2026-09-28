@@ -20,8 +20,8 @@ handed over rather than carried by a
 image.
 
 ```bash
-pip install redsun[zarr]
-pip install redsun[ome-zarr]
+pip install "redsun[zarr]"
+pip install "redsun[ome-zarr]"
 ```
 
 Without `acquire-zarr`, importing `redsun.writers` raises
