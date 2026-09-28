@@ -4,8 +4,9 @@ icon: lucide/flask-conical
 
 # How to run the tests
 
-Run the `redsun` test suite, type-check it against both Qt bindings, and
-produce coverage reports.
+Run the `redsun` test suite, type-check it against both
+[Qt bindings](../explanation/glossary.md#qt-binding), and produce coverage
+reports.
 
 ## Prerequisites
 
@@ -59,7 +60,8 @@ Tests marked `@pytest.mark.qt` are skipped when no display is available.
 
 ## Run the tests against a service outside the process
 
-Tests marked `@pytest.mark.compose` talk to an IOC in a container started from
+Tests marked `@pytest.mark.compose` talk to an
+[IOC](../explanation/glossary.md#ioc) in a container started from
 `tests/compose/compose.yaml`. They are skipped unless `REDSUN_COMPOSE` is set,
 so the rest of the suite needs no container runtime. With Docker running:
 
@@ -69,9 +71,9 @@ REDSUN_COMPOSE=1 uv run pytest -m compose
 docker compose -f tests/compose/compose.yaml down
 ```
 
-The IOC listens on `127.0.0.1` port 5064, the default Channel Access port, so
-stop any other IOC on that port first. CI runs these tests in their own job on
-Ubuntu.
+The IOC listens on `127.0.0.1` port 5064, the default
+[Channel Access](../explanation/glossary.md#channel-access) port, so stop any
+other IOC on that port first. CI runs these tests in their own job on Ubuntu.
 
 ## Type-check against both Qt bindings
 

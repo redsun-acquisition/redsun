@@ -52,7 +52,8 @@ graph LR
     D[devices] --> P[presenters] --> V[views]
 ```
 
-- **Devices** talk to hardware. They are `ophyd-async` devices.
+- **Devices** talk to hardware. They are
+  [`ophyd-async`](glossary.md#ophyd-async) devices.
 - **Presenters** hold the behaviour: they run plans, compute things from the
   data, and drive the devices.
 - **Views** show things on screen and pass on what the user does.

@@ -5,10 +5,11 @@ icon: lucide/sliders-horizontal
 # How to change a device setting while a plan runs
 
 A user changes a device setting from a view while the engine runs a plan. A
-camera's region of interest is the usual case: applied halfway through a
-point, one event stream carries frames of two shapes, and the store the
-service writes no longer matches the `StreamResource` describing it. Any
-setting a plan's readings depend on has the same problem.
+camera's region of interest is the usual case: applied halfway through a point,
+one event stream carries frames of two shapes, and the store the service writes
+no longer matches the
+[`StreamResource`](../explanation/glossary.md#streamresource) describing it.
+Any setting a plan's readings depend on has the same problem.
 
 [`Deferrals`][redsun.engine.Deferrals] applies such a change between two
 messages of the plan instead: once the message under way completes, every
@@ -78,8 +79,9 @@ it still run.
 ## What a plan sees
 
 Nothing. `Deferrals` is a preprocessor on the engine, and it runs each queued
-change as a `wait_for` inserted before the plan's next message. No message
-runs twice: a `bluesky` suspension would rewind to the last checkpoint and
-replay what came after it, which is why one is not used. A change waits as
-long as the message under way takes, so a plan that sleeps or waits for a
-long move delays it by that much.
+change as a `wait_for` inserted before the plan's next message. No message runs
+twice: a [`bluesky`](../explanation/glossary.md#bluesky) suspension would
+rewind to the last [checkpoint](../explanation/glossary.md#checkpoint) and
+replay what came after it, which is why one is not used. A change waits as long
+as the message under way takes, so a plan that sleeps or waits for a long move
+delays it by that much.

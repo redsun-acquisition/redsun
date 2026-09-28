@@ -192,9 +192,10 @@ coroutine function runs on the session's event loop whatever the frontend.
 
 ## Observe a device signal
 
-Device signals come from `ophyd-async`, not `psygnal`. `wire` tells the two
-apart by the signal's type, so a link to a device signal is yielded the same
-way as one to a `psygnal` signal:
+[Device signals](../explanation/glossary.md#device-signal) come from
+[`ophyd-async`](../explanation/glossary.md#ophyd-async), not `psygnal`. `wire`
+tells the two apart by the signal's type, so a link to a device signal is
+yielded the same way as one to a `psygnal` signal:
 
 ```python
 class MyApp(QtSession):

@@ -10,8 +10,9 @@ This page shows how to write each kind of
 
 ## A device
 
-Write an `ophyd-async` device. Its constructor must accept `name` as a
-keyword, as every `ophyd-async` base class does:
+Write an [`ophyd-async`](../explanation/glossary.md#ophyd-async) device. Its
+constructor must accept `name` as a keyword, as every `ophyd-async` base class
+does:
 
 ```python
 from ophyd_async.core import StandardReadable, soft_signal_rw

@@ -17,8 +17,8 @@ for a display.
 pip install redsun
 ```
 
-`redsun[pyqt]` and `redsun[pyside]` only exist to bring in a Qt binding for
-`QtSession`.
+`redsun[pyqt]` and `redsun[pyside]` only exist to bring in a
+[Qt binding](../explanation/glossary.md#qt-binding) for `QtSession`.
 
 ## Write the session
 

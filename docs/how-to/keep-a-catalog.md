@@ -4,8 +4,9 @@ icon: lucide/library
 
 # How to keep a catalog of runs
 
-A session can run a `tiled` server beside its files, so its runs can be read
-back through the `tiled` client. What goes into it is up to the session's
+A session can run a [`tiled`](../explanation/glossary.md#tiled) server beside
+its files, so its [runs](../explanation/glossary.md#run) can be read back
+through the `tiled` client. What goes into it is up to the session's
 components: `redsun` writes no acquisition data itself
 ([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md)).
 
@@ -51,7 +52,8 @@ the root with `storage.base_dir` before starting.
 
 Nothing enters the catalog unless a component puts it there.
 `bluesky-tiled-plugins`' `TiledWriter` writes whole runs. The presenter owning
-the `RunEngine` asks for the catalog's address and subscribes a writer:
+the [`RunEngine`](../explanation/glossary.md#runengine) asks for the catalog's
+address and subscribes a writer:
 
 ```python
 from bluesky_tiled_plugins import TiledWriter
@@ -75,7 +77,8 @@ to start.
 
 ## What a device has to emit
 
-`TiledWriter` registers a detector's files from its `StreamResource`:
+`TiledWriter` registers a detector's files from its
+[`StreamResource`](../explanation/glossary.md#streamresource):
 
 - `mimetype` matches the bytes: `application/x-ome-zarr` for OME-Zarr,
   `application/x-zarr` for a plain Zarr array.

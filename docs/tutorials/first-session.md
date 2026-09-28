@@ -31,7 +31,8 @@ environment for the script and installs them in it:
 
 Without `uv`, make a virtual environment in the folder and activate it, as
 [Installation](installation.md#create-a-virtual-environment) shows. Then
-install `redsun` with a Qt binding in it:
+install `redsun` with a [Qt binding](../explanation/glossary.md#qt-binding) in
+it:
 
 ```bash
 pip install "redsun[pyqt]"
@@ -56,7 +57,7 @@ A [device](../explanation/glossary.md#device) describes one part of your setup:
 here, a stage with a position. In a lab, a
 [service](../explanation/glossary.md#service) would reach the real hardware for
 it. You have no hardware, so this one keeps its position in memory, using a
-"soft" signal from `ophyd-async`:
+"soft" signal from [`ophyd-async`](../explanation/glossary.md#ophyd-async):
 
 ```{.python}
 --8<-- "docs/tutorials/first_session.py:device"

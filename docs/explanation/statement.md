@@ -25,13 +25,13 @@ graph TD
 
 `redsun` follows three principles:
 
-1. **Don't reinvent the wheel.** Use existing tools, such as the `bluesky` hardware protocols and Qt for the interface, and ship the tools to build the wheel.
+1. **Don't reinvent the wheel.** Use existing tools, such as the [`bluesky`](glossary.md#bluesky) hardware protocols and Qt for the interface, and ship the tools to build the wheel.
 2. **Be modular.** Users pick only the components they need. A plugin providing a motor controller works without one providing a camera interface.
 3. **Give users control.** Users own their data and metadata. The framework gives structure but does not decide what data means or how it is organized.
 
 ## Why not use Bluesky directly?
 
-`bluesky` was designed for interactive use: the user drives the `RunEngine` from a command line or `IPython`. That fits where it was developed, large facilities with many devices behind a central control system such as [EPICS] or [Tango].
+`bluesky` was designed for interactive use: the user drives the [`RunEngine`](glossary.md#runengine) from a command line or `IPython`. That fits where it was developed, large facilities with many devices behind a central control system such as [EPICS] or [Tango].
 
 `redsun` adds a lab-bench experience on top of `bluesky`, for setups controlled through a graphical interface, as with [Micro-Manager].
 

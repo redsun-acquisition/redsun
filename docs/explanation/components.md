@@ -82,9 +82,9 @@ details, including optional values.
 
 ## Devices
 
-A [device](glossary.md#device) is an `ophyd-async` device: a
-subclass of `ophyd_async.core.Device`. `redsun` adds nothing to the device
-layer, so see the `ophyd-async` documentation for signals, detectors and
+A [device](glossary.md#device) is an [`ophyd-async`](glossary.md#ophyd-async)
+device: a subclass of `ophyd_async.core.Device`. `redsun` adds nothing to the
+device layer, so see the `ophyd-async` documentation for signals, detectors and
 the base classes.
 
 The devices of a session model the setup: what it contains and what can be
@@ -176,10 +176,11 @@ The devices stay connected; the service decides what letting go means.
 
 ## Presenters
 
-A [presenter](glossary.md#presenter) holds the session's
-behaviour. It may run `bluesky` [plans](plans.md), react to the documents a
-run produces, move a device directly, or talk to another program. It never
-touches a widget, so it works without a screen.
+A [presenter](glossary.md#presenter) holds the session's behaviour. It may run
+[`bluesky`](glossary.md#bluesky) [plans](plans.md), react to the
+[documents](glossary.md#document) a run produces, move a device directly, or
+talk to another program. It never touches a widget, so it works without a
+screen.
 
 A presenter is any class whose constructor takes `name` as a keyword and
 whose instances keep that `name`. It inherits nothing from `redsun`.

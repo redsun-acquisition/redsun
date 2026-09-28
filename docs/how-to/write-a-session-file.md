@@ -60,8 +60,9 @@ presenters:
 For a component the session class already declares, leave out `plugin_name`
 and `plugin_id`: the entry only gives constructor arguments.
 
-A device entry also takes `service`, the service whose prefix it gets, and
-`autoconnect: false`, to leave it unconnected.
+A device entry also takes `service`, the service whose
+[prefix](../explanation/glossary.md#prefix) it gets, and `autoconnect: false`,
+to leave it unconnected.
 
 ### Services
 

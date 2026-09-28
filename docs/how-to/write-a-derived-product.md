@@ -4,13 +4,14 @@ icon: lucide/layers
 
 # How to write a derived product
 
-A component computing something from a run, a median over a scan or a
-filtered copy of each frame, writes it against the store the device wrote.
-The acquisition belongs to the service and its device
+A component computing something from a [run](../explanation/glossary.md#run), a
+median over a scan or a filtered copy of each frame, writes it against the
+store the device wrote. The acquisition belongs to the service and its device
 ([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md));
 a derived product is the one thing `redsun` writes.
 [Derived products](../explanation/derived-products.md) says why a product is
-handed over rather than carried by a document.
+handed over rather than carried by a
+[document](../explanation/glossary.md#document).
 
 ## Install the extra
 
@@ -129,7 +130,7 @@ which a stream closing on the store rewrites: the `metadata` given to
 | Key | Value |
 | --- | --- |
 | `run_start` | the uid of the run, `null` for a product written outside one |
-| `source` | the data key a `derive`d product was laid out and stored as |
+| `source` | the [data key](../explanation/glossary.md#data-key) a `derive`d product was laid out and stored as |
 | `resource_uri` | the URI of the store the `stream_resource` named |
 | `written` | when the product's stream closed, ISO 8601, UTC |
 

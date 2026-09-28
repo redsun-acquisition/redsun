@@ -82,8 +82,8 @@ built.
 - closes and deletes every view at shutdown, delivering any signal still
   waiting for one first.
 
-`QT_API` chooses the Qt binding, as `qtpy` reads it. A session file never names
-one.
+`QT_API` chooses the [Qt binding](glossary.md#qt-binding), as `qtpy` reads it.
+A session file never names one.
 
 ### Hook points
 

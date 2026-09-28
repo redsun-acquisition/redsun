@@ -5,8 +5,8 @@ icon: lucide/route
 # How presenters run plans
 
 `redsun` builds on the [Bluesky plan system](https://blueskyproject.io/bluesky/main/plans.html).
-A *plan* is a generator yielding `Msg` objects, which the `RunEngine` turns
-into hardware calls.
+A *plan* is a generator yielding `Msg` objects, which the
+[`RunEngine`](glossary.md#runengine) turns into hardware calls.
 
 `redsun` adds two things:
 
@@ -88,9 +88,9 @@ stopped while it waits. Called with no action, `wait` raises `ValueError`.
 Each call to `wait` makes new latches for the actions it offers. A request
 left from an earlier launch of the plan cannot start an action of this one.
 
-`wait` does not time out, and yields a checkpoint every `poll_interval`
-seconds while it waits, as the [stub it uses](#action-flow-control-stubs)
-does.
+`wait` does not time out, and yields a [checkpoint](glossary.md#checkpoint)
+every `poll_interval` seconds while it waits, as the
+[stub it uses](#action-flow-control-stubs) does.
 
 The user asks for an action through `request`, a [slot](glossary.md#slot)
 that is safe to call from any thread and raises nothing. Asking for an action

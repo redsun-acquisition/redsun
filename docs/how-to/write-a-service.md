@@ -4,28 +4,31 @@ icon: lucide/server
 
 # How to write a service
 
-Write a `caproto` IOC for a session to launch, declare it, and point a device
-at it. [Services](../explanation/services.md) explains what a
+Write a `caproto` [IOC](../explanation/glossary.md#ioc) for a session to
+launch, declare it, and point a device at it.
+[Services](../explanation/services.md) explains what a
 [service](../explanation/glossary.md#service) is and how a session handles it.
 
 ## Prerequisites
 
-`redsun` depends on `ophyd-async` and on nothing a control-system protocol
-needs, so a service brings its own. For a `caproto` IOC reached over Channel
-Access:
+`redsun` depends on [`ophyd-async`](../explanation/glossary.md#ophyd-async) and
+on nothing a control-system protocol needs, so a service brings its own. For a
+`caproto` IOC reached over Channel Access:
 
 ```bash
 uv add caproto "ophyd-async[ca]"
 ```
 
-For one reached over PVAccess, use `p4p` or a library built on it, such as
-`fastcs`, and `ophyd-async[pva]` for the device side.
+For one reached over [PVAccess](../explanation/glossary.md#pvaccess), use `p4p`
+or a library built on it, such as `fastcs`, and `ophyd-async[pva]` for the
+device side.
 
 ## Write the IOC
 
-Besides serving its process variables, a service that `redsun` launches must
-print a line when it is ready, stop when its standard input closes, and listen
-only on the local machine:
+Besides serving its
+[process variables](../explanation/glossary.md#process-variable), a service
+that `redsun` launches must print a line when it is ready, stop when its
+standard input closes, and listen only on the local machine:
 
 ```python
 # mylab/iocs/camera.py
@@ -89,7 +92,7 @@ class MyApp(QtSession):
 
 `Launch` is a service the session starts and stops. `Attach` is one already
 running elsewhere: nothing starts or stops, and its devices only get its
-prefix.
+[prefix](../explanation/glossary.md#prefix).
 
 The device gets the service's prefix as its `prefix` argument, so giving the
 device a `prefix` of its own is refused. A device whose service did not start

@@ -37,7 +37,7 @@ See [Run the commit checks](run-commit-checks.md) for what the hook does.
 uv run tox
 ```
 
-This runs every check CI runs: lint, type checks against both Qt bindings,
-the tests and the docs build. Each one gets its own environment built from
-`uv.lock`, so your result matches CI's. [Run tests](run-tests.md) explains
-each environment.
+This runs every check CI runs: lint, type checks against both
+[Qt bindings](../explanation/glossary.md#qt-binding), the tests and the docs
+build. Each one gets its own environment built from `uv.lock`, so your result
+matches CI's. [Run tests](run-tests.md) explains each environment.

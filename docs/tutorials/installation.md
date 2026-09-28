@@ -76,7 +76,8 @@ Install from [PyPI](https://pypi.org/project/redsun/) or from the GitHub [reposi
 
 ### Qt backend
 
-`redsun` needs a Qt binding. Install the one you prefer:
+`redsun` needs a [Qt binding](../explanation/glossary.md#qt-binding). Install
+the one you prefer:
 
 === "`pyqt6`"
 
