@@ -145,7 +145,20 @@ devices:
 The device is still called `stage`. Only the key it is read from changes,
 which helps when the key is not a valid Python name.
 
-`Alias("name")` gives the component another name.
+`Alias` gives the component another name:
+
+```python
+from redsun import Alias
+
+
+class MyApp(QtSession):
+    stage_ctrl: Annotated[AsPresenter[StagePresenter], Alias("ctrl")]
+```
+
+The name is what the component receives, what the session lists it under, and
+what a session file wires it by. The attribute you declared it under still
+holds it, and its arguments are still read from the entry named after that
+attribute, here `stage_ctrl`.
 
 ## Use another component
 
