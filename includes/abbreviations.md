@@ -4,3 +4,6 @@
 *[MVP]: Model-View-Presenter. The pattern DVP comes from, with devices in place of the model.
 *[hook point]: A named moment of a build at which a session calls one of your objects.
 *[structural subtyping]: Deciding whether a class fits by the members it has, not by what it inherits from.
+*[EPICS]: A set of tools for controlling instruments over a network.
+*[IOC]: Input/output controller. The EPICS server program that owns a piece of hardware.
+*[PV]: Process variable. One named value an IOC offers.
