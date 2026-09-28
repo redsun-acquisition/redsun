@@ -10,20 +10,67 @@ icon: lucide/layout-panel-left
 
 ## Plan widgets
 
-`create_plan_widget` builds a parameter form for a `PlanSpec`:
+`create_plan_widget` builds a parameter form for a `PlanSpec`. A view asks
+for the description in `setup`, builds the form from it, and sends the values
+of the form when the user presses **Run**:
 
 ```python
+from psygnal import Signal
+from qtpy.QtWidgets import QVBoxLayout, QWidget
+
+from redsun import Placement, slot
+from redsun.presenter.plan_spec import PlanSpec
+from redsun.qt import Dock
 from redsun.view.qt.utils import create_plan_widget
 
+
+class ScanView(QWidget):
+    placement: Placement = Dock("left")
+    sig_run = Signal(dict)
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    def setup(self, spec: PlanSpec) -> None:
+        self.widget = create_plan_widget(spec, run_callback=self.ask_to_run)
+        QVBoxLayout(self).addWidget(self.widget.group_box)
+
+    def ask_to_run(self) -> None:
+        self.widget.setEnabled(False)
+        self.sig_run.emit(self.widget.parameters)
+
+    @slot
+    def on_finished(self) -> None:
+        self.widget.setEnabled(True)
+```
+
+The description comes from the presenter of
+[From a plan to a form](plans.md#from-a-plan-to-a-form), and the session
+connects the two:
+
+```python
+class ScanSession(QtSession):
+    stage: AsDevice[MyStage]
+    scan_ctrl: AsPresenter[ScanPresenter]
+    scan_view: AsView[ScanView]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.scan_view.sig_run, self.scan_ctrl.run
+        yield self.scan_ctrl.sig_finished, self.scan_view.on_finished
+```
+
+A plan that is continuous, can be paused or offers actions takes more
+callbacks, one for each kind of button:
+
+```python
 widget = create_plan_widget(
     spec,
-    run_callback=on_run,
     toggle_callback=on_toggle,
     pause_callback=on_pause,
     action_clicked_callback=on_action,
     action_toggled_callback=on_action_toggled,
 )
-stack.addWidget(widget.group_box)
 ```
 
 It returns a `PlanWidget`, a frozen dataclass owning the widget tree:
