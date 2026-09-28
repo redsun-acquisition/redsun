@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# View
+# redsun.view
 
 ## Placement
 

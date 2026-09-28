@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Services
+# redsun.services
 
 ::: redsun.services
     options:

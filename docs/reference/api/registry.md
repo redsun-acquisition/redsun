@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Registry
+# redsun.registry
 
 ## Values every component may ask for
 

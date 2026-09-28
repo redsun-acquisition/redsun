@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Session
+# redsun.session
 
 ## The session
 

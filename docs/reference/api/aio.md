@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Async runtime
+# redsun.aio
 
 Design rationale:
 [ADR 0005](../../explanation/decisions/0005-culsans-psygnal-async-backend.md).

@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Logging
+# redsun.log
 
 `redsun` logs everything to the `redsun` logger. Usage is in
 [Configure logging](../../how-to/configure-logging.md).

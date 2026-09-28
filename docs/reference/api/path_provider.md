@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Path provider
+# redsun.path_provider
 
 ::: redsun.path_provider
     options:

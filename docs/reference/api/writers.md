@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Writers
+# redsun.writers
 
 ::: redsun.writers
     options:

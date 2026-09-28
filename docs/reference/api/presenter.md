@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Presenter
+# redsun.presenter
 
 ## Plan specification
 

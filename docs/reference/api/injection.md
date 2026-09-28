@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Injection
+# redsun.injection
 
 ## Sharing and asking
 

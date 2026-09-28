@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Catalog
+# redsun.catalog
 
 ::: redsun.catalog
     options:

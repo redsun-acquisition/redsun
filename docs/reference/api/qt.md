@@ -2,7 +2,7 @@
 icon: lucide/code
 ---
 
-# Qt
+# redsun.qt
 
 ## Session
 
