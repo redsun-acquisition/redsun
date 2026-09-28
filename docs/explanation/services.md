@@ -201,8 +201,8 @@ each unable to say which service a variable is for.
 Under Channel Access, two IOCs on the default port both answer on Linux, but on
 Windows the second is never found, which is why each gets a port. It keeps that
 port while the session process runs, so a session built again reaches it
-again. The note in [Connecting](components.md#connecting) describes
-the limit: libca reads the address list once per process. Under PVAccess a
+again. The limit comes from libca, which reads the address list once per
+process. Under PVAccess a
 service picks its own ports, and `pvxs` takes a free one when the default is
 busy, so a session assigns nothing. A client does not search the loopback
 unless it is told to, which is what the address list is for.

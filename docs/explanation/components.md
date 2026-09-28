@@ -144,7 +144,8 @@ not declared, did not start, or has no prefix, the device is left out.
 A device writes its own data files. A device whose constructor takes
 `path_provider` gets the session's
 [path provider](glossary.md#path-provider), which puts every file
-of a session under one folder:
+of a session under one folder, and creates the folder of a file when it
+names it:
 
 ```
 <base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>

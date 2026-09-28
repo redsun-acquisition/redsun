@@ -56,7 +56,7 @@ from you, or from a plugin:
 | Not included | Where it comes from |
 | --- | --- |
 | hardware drivers | the devices and services you write or install |
-| an acquisition panel | a [view](glossary.md#view) you write; `redsun` builds the input form of each plan, see [Qt widgets](qt-widgets.md) |
+| an acquisition panel | a [view](glossary.md#view) you write; `redsun` builds the [plan widget](glossary.md#plan-widget) of each plan, see [Qt widgets](qt-widgets.md) |
 | an image viewer | a view you write |
 | a writer for acquisition files | the device or its service, see [Where a device writes](components.md#where-a-device-writes) |
 

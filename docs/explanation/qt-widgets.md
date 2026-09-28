@@ -10,54 +10,78 @@ icon: lucide/layout-panel-left
 
 ## Plan widgets
 
-`create_plan_widget` builds a parameter form for a `PlanSpec`. A view asks
-for the description in `setup`, builds the form from it, and sends the values
-of the form when the user presses **Run**:
+`create_plan_widget` builds a [plan widget](glossary.md#plan-widget) for a
+`PlanSpec`. A view asks the session for the components that offer plans,
+describes each plan, and builds a plan widget from each description. It shows
+the plan widget of the plan the user chooses, and when the user presses
+**Run** it sends the name of that plan and the values the user chose:
 
 ```python
+from collections.abc import Mapping
+
 from psygnal import Signal
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QComboBox, QStackedWidget, QVBoxLayout, QWidget
 
-from redsun import Placement, slot
-from redsun.presenter.plan_spec import PlanSpec
+from redsun import DeviceMapping, HasPlans, Placement, slot
+from redsun.presenter.plan_spec import PlanSpec, create_plan_spec
 from redsun.qt import Dock
-from redsun.view.qt.utils import create_plan_widget
+from redsun.view.qt.utils import PlanWidget, create_plan_widget
 
 
-class ScanView(QWidget):
-    placement: Placement = Dock("left")
-    sig_run = Signal(dict)
+class PlanView(QWidget):
+    placement: Placement = Dock("right")
+    sig_run = Signal(str, dict)
 
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
         self.name = name
+        self.chooser = QComboBox()
+        self.pages = QStackedWidget()
+        self.chooser.currentIndexChanged.connect(self.pages.setCurrentIndex)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.chooser)
+        layout.addWidget(self.pages)
+        self.widgets: dict[str, PlanWidget] = {}
 
-    def setup(self, spec: PlanSpec) -> None:
-        self.widget = create_plan_widget(spec, run_callback=self.ask_to_run)
-        QVBoxLayout(self).addWidget(self.widget.group_box)
+    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
+        for component in providers.values():
+            for entry in component.plan_map().values():
+                self.add_plan(create_plan_spec(entry["plan"], devices))
 
-    def ask_to_run(self) -> None:
-        self.widget.setEnabled(False)
-        self.sig_run.emit(self.widget.parameters)
+    def add_plan(self, spec: PlanSpec) -> None:
+        widget = create_plan_widget(
+            spec, run_callback=lambda: self.ask_to_run(spec.name)
+        )
+        self.widgets[spec.name] = widget
+        self.chooser.addItem(spec.name)
+        self.pages.addWidget(widget.group_box)
+
+    def ask_to_run(self, plan: str) -> None:
+        self.setEnabled(False)
+        self.sig_run.emit(plan, self.widgets[plan].parameters)
 
     @slot
     def on_finished(self) -> None:
-        self.widget.setEnabled(True)
+        self.setEnabled(True)
 ```
 
-The description comes from the presenter of
-[From a plan to a form](plans.md#from-a-plan-to-a-form), and the session
-connects the two:
+The plans come from the components of
+[A plan that ends by itself](plans.md#a-plan-that-ends-by-itself), and
+[From a plan to its widget](plans.md#from-a-plan-to-its-widget) says why the
+view
+describes them itself. The session connects the view to the presenter that
+runs the plans:
 
 ```python
-class ScanSession(QtSession):
+class MyApp(QtSession):
     stage: AsDevice[MyStage]
-    scan_ctrl: AsPresenter[ScanPresenter]
-    scan_view: AsView[ScanView]
+    stage_plans: AsPresenter[StagePlans]
+    plan_ctrl: AsPresenter[PlanPresenter]
+    plan_view: AsView[PlanView]
 
     def wire(self) -> Iterator[Link]:
-        yield self.scan_view.sig_run, self.scan_ctrl.run
-        yield self.scan_ctrl.sig_finished, self.scan_view.on_finished
+        yield self.plan_view.sig_run, self.plan_ctrl.run
+        yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
 ```
 
 A plan that is continuous, can be paused or offers actions takes more
@@ -78,7 +102,7 @@ It returns a `PlanWidget`, a frozen dataclass owning the widget tree:
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `group_box` | `QWidget` | top-level page for a `QStackedWidget` |
-| `container` | `mgw.Container` | `magicgui` parameter form |
+| `container` | `mgw.Container` | the inputs of the parameters, a `magicgui` container |
 | `run_button` | `QPushButton` | run / stop button |
 | `pause_button` | `QPushButton \| None` | pause / resume (pausable plans only) |
 | `actions_group` | `QGroupBox \| None` | action buttons (if any) |
@@ -104,7 +128,8 @@ widget.enable_actions(True)  # enable action buttons independently
 args, kwargs = collect_arguments(spec, widget.parameters)
 ```
 
-`widget.parameters` returns `{name: value}` for every widget in the form.
+`widget.parameters` returns `{name: value}` for every input of the plan
+widget.
 
 ### Document callbacks
 

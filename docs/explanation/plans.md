@@ -10,75 +10,87 @@ from [`bluesky`](glossary.md#bluesky), and what its
 [documentation on plans](https://blueskyproject.io/bluesky/main/plans.html)
 says applies here too.
 
-In `redsun` a [presenter](glossary.md#presenter) owns the plans. It creates a
-[`RunEngine`](glossary.md#runengine), which executes them, and starts a plan
-when a view asks for it.
+In `redsun` any [component](glossary.md#component) can offer plans, and one
+[presenter](glossary.md#presenter) runs them. That presenter creates a
+[`RunEngine`](glossary.md#runengine), which executes the plans, and starts one
+when a view asks for it. The presenter names none of the components that
+offer plans: it asks the session which ones do.
 
-`redsun` adds three things:
+`redsun` adds three things to `bluesky`.
 
-- a `RunEngine` that does not block: starting a plan returns at once, so the
-  window keeps responding while the plan runs;
-- `PlanSpec`, a description of the parameters of a plan, from which a view
-  builds a form;
-- continuous plans, which run until they are stopped and take actions from the
-  user while they run.
+A `RunEngine` that does not block. The `RunEngine` of `bluesky` blocks the
+thread that calls it until the plan has ended. Called from a window, that is
+the main thread, and the window freezes. The one of `redsun` hands the plan to
+a thread in the background and returns at once.
+
+`PlanSpec`, a description of the parameters of a plan. It is read from the
+signature of the plan and its type hints, and names no toolkit. A component
+offers a plan once, and a view of any toolkit builds its controls from the
+same description. For Qt, those controls are a
+[plan widget](glossary.md#plan-widget).
+
+Continuous plans, which run until they are stopped and take actions from the
+user while they run. They let the user work with a plan that is running. A
+live view that captures data when the user asks for it is one plan: it shows
+frames until it is stopped, and records when the action comes.
 
 ---
 
 ## A plan that ends by itself
 
-The simplest plan does its steps and stops. This one walks a stage forward:
+The simplest plan does its steps and stops. This one walks a stage forward,
+and the component that holds it offers it to the session:
 
 ```python
+from collections.abc import Mapping
+
 import bluesky.plan_stubs as bps
 from bluesky.utils import MsgGenerator
-from psygnal import Signal
 
-from redsun import DevicesOf, slot
-from redsun.engine import RunEngine
+from redsun import PlanEntry
 
 
-class ScanPresenter:
-    sig_finished = Signal()
-
-    def __init__(self, name: str, *, stages: DevicesOf[HasPosition]) -> None:
+class StagePlans:
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.stage = stages["stage"]
-        self.engine = RunEngine()
 
-    def walk(self, steps: int = 5, size: float = 1.0) -> MsgGenerator[None]:
+    def walk(
+        self, stage: HasPosition, steps: int = 5, size: float = 1.0
+    ) -> MsgGenerator[None]:
         for _ in range(steps):
-            position = yield from bps.rd(self.stage.position)
-            yield from bps.mv(self.stage.position, position + size)
+            position = yield from bps.rd(stage.position)
+            yield from bps.mv(stage.position, position + size)
 
-    @slot
-    def run(self) -> None:
-        future = self.engine(self.walk())
-        future.add_done_callback(lambda _: self.sig_finished.emit())
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        return {"walk": {"plan": self.walk}}
 ```
 
 `walk` is an ordinary `bluesky` plan: `bps.rd` reads the position, and `bps.mv`
 moves the stage and waits for it to arrive. `HasPosition` is the protocol
 written in
-[Describing a device with a protocol](../tutorials/device-protocols.md).
+[Describing a device with a protocol](../tutorials/device-protocols.md), so
+the plan works with any stage.
 
-`run` starts the plan. Calling the engine does not wait for the plan to end:
-the plan runs on a thread of its own, and the call returns a `Future`. The
-presenter uses it to send `sig_finished`, so that a view can disable its button
-while the plan runs and enable it again afterwards.
+`plan_map` is how a component offers plans. It returns each plan under its
+name, as a [`PlanEntry`][redsun.PlanEntry], and a component with that method
+satisfies the protocol [`HasPlans`][redsun.HasPlans]. An entry may also list
+the document callbacks the plan requires, under `callbacks`, and say under
+`extendable` whether the user may attach more.
 
 ---
 
-## From a plan to a form
+## Running the plans of a session
 
-`walk` takes two parameters, and the user should be able to choose them. The
-presenter describes the plan with `create_plan_spec`, shares the description,
-and reads the values back when the view asks for a run:
+One presenter has the `RunEngine`. In `setup` it asks the session for every
+component that offers plans, and keeps what they offer:
 
 ```python
 from typing import Any
 
-from redsun import DeviceMapping, provides
+from psygnal import Signal
+
+from redsun import DeviceMapping, HasPlans, slot
+from redsun.engine import RunEngine
 from redsun.presenter.plan_spec import (
     PlanSpec,
     collect_arguments,
@@ -87,95 +99,82 @@ from redsun.presenter.plan_spec import (
 )
 
 
-class ScanPresenter:
-    def __init__(
-        self, name: str, *, stages: DevicesOf[HasPosition], devices: DeviceMapping
-    ) -> None:
+class PlanPresenter:
+    sig_finished = Signal()
+
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
         self.name = name
-        self.stage = stages["stage"]
         self.devices = devices
         self.engine = RunEngine()
-        self._spec = create_plan_spec(self.walk, devices)
+        self.plans: dict[str, PlanEntry] = {}
+        self.specs: dict[str, PlanSpec] = {}
 
-    @provides
-    def spec(self) -> PlanSpec:
-        return self._spec
+    def setup(self, providers: Mapping[str, HasPlans]) -> None:
+        for component in providers.values():
+            self.plans.update(component.plan_map())
+        for plan, entry in self.plans.items():
+            self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
 
     @slot
-    def run(self, values: dict[str, Any]) -> None:
-        resolved = resolve_arguments(self._spec, values, self.devices)
-        args, kwargs = collect_arguments(self._spec, resolved)
-        future = self.engine(self.walk(*args, **kwargs))
+    def run(self, plan: str, values: dict[str, Any]) -> None:
+        resolved = resolve_arguments(self.specs[plan], values, self.devices)
+        args, kwargs = collect_arguments(self.specs[plan], resolved)
+        future = self.engine(self.plans[plan]["plan"](*args, **kwargs))
         future.add_done_callback(lambda _: self.sig_finished.emit())
 ```
 
-`walk` and `sig_finished` are as above. The view that builds the form from the
-description is in [Qt widgets](qt-widgets.md#plan-widgets).
+`providers` is a question to the session, answered with every component that
+satisfies `HasPlans`. A session file that adds such a component adds its plans
+to the presenter, which is not edited.
+[Questions](questions.md) explains how the session answers.
 
-### What a description holds
+`run` starts a plan. Calling the engine does not wait for the plan to end:
+the plan runs on a thread of its own, and the call returns a `Future`. The
+presenter uses it to send `sig_finished`, so that a view can disable its controls
+while the plan runs and enable it again afterwards.
 
-`create_plan_spec` inspects a plan's signature and returns a `PlanSpec`:
+---
+
+## From a plan to its widget
+
+`walk` takes a stage and two numbers, and the user should be able to choose
+them. `create_plan_spec` describes a plan from its signature, and a view
+builds a plan widget from the description. The view asks the session the
+question
+the presenter asks:
 
 ```python
-from redsun.presenter.plan_spec import create_plan_spec
-
-spec = create_plan_spec(my_plan, devices={"stage": motor, "cam": camera})
+class PlanView(QWidget):
+    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
+        for component in providers.values():
+            for entry in component.plan_map().values():
+                self.add_plan(create_plan_spec(entry["plan"], devices))
 ```
 
-Each parameter becomes a `ParamDescription` with:
+The presenter and the view each describe the plans. The presenter cannot
+hand its descriptions over as a
+[shared value](glossary.md#shared-value): the session reads a shared value
+when it makes the component, and the presenter learns which plans exist
+later, in `setup`. The view holds the devices for the description alone,
+which names those that can fill a parameter.
 
-| Field | Meaning |
-|-------|---------|
-| `annotation` | stripped type (no `Annotated` wrapper) |
-| `choices` | string labels for `Literal` or device params |
-| `multiselect` | True for `Sequence[...]` / `*args` device parameters |
-| `device_proto` | the device class or runtime-checkable protocol for device params |
-| `actions` | `PlanAction` metadata if the default is a `PlanAction` |
+The whole view is in [Qt widgets](qt-widgets.md#plan-widgets), and the
+tutorial [Building controls for a plan](../tutorials/plan-controls.md) builds the
+three components one step at a time.
 
-### Annotation dispatch
+### Plans that are refused
 
-Annotations map to `ParamDescription` fields, first match wins:
-
-1. `Literal["a", "b"]` -> `choices=["a", "b"]`
-2. `Sequence[MyDevice]` -> multi-select, `choices=<matching device names>`
-3. `*args: MyDevice` (VAR_POSITIONAL) -> multi-select
-4. `MyDevice` (bare protocol) -> single-select
-5. Everything else -> a plain value, left to the view layer to render
-
-Step 5 accepts:
-
-- `int`, `float`, `str`, `bool`, `bytes` and `range`
-- `Path`
-- `datetime`, `date`, `time` and `timedelta`
-- any `Enum` subclass
-- a sequence of anything that is not a device
-
-A *required* parameter with any other annotation raises
+A required parameter whose annotation no input can show raises
 `UnresolvableAnnotationError`, and the plan is skipped instead of shown with a
-control nobody can fill in. `Any` is excluded on purpose: it would accept
+control nobody can fill in. `Any` is refused on purpose: it would accept
 everything and show as a bare text field.
 
 The check is plain Python and imports no toolkit, so a plan can be inspected
-before any application object exists. The view layer turns descriptions into
-widgets; for Qt, see [Qt widgets - plans](qt-widgets.md).
+before any application object exists.
 
-### Collecting and resolving arguments
-
-Once the user fills in the form, the presenter turns the values into a plan
-call:
-
-```python
-from redsun.presenter.plan_spec import collect_arguments, resolve_arguments
-
-# 1. Resolve: string device names -> live device instances
-resolved = resolve_arguments(spec, widget_values, devices)
-
-# 2. Collect: build (args, kwargs) matching the plan signature
-args, kwargs = collect_arguments(spec, resolved)
-
-# 3. Run
-engine(my_plan(*args, **kwargs))
-```
+What a description holds, how each annotation is read and how the values of a
+plan widget become a call are in the
+[reference](../reference/api/presenter.md#plan-specification).
 
 ---
 
@@ -213,13 +212,13 @@ describe it:
 
 A `PlanAction` is a frozen dataclass and holds no latch. A plan names it as the
 default of a parameter, and `create_plan_spec` reads it there to make the
-button. Whoever owns the plans owns an `ActionManager`, and the plans wait on it:
+button. The component that offers the plans owns an `ActionManager`, and the
+plans wait on it:
 
 ```python
 import bluesky.plan_stubs as bps
 from bluesky.utils import MsgGenerator
 
-from redsun.engine import RunEngine
 from redsun.engine.actions import PlanAction, ActionManager, continuous
 
 SNAP = PlanAction(name="snap", description="Take one frame")
@@ -228,7 +227,6 @@ SNAP = PlanAction(name="snap", description="Take one frame")
 class MyController:
     def __init__(self, name: str) -> None:
         self.name = name
-        self.engine = RunEngine()
         self.actions = ActionManager()
 
     @continuous
@@ -252,7 +250,7 @@ left from an earlier launch of the plan cannot start an action of this one.
 
 `wait` does not time out, and yields a [checkpoint](glossary.md#checkpoint)
 every `poll_interval` seconds while it waits, as the
-[stub it uses](#action-flow-control-stubs) does.
+[stub it uses](../reference/api/engine.md#plan-stubs) does.
 
 The user asks for an action through `request`, a [slot](glossary.md#slot)
 that is safe to call from any thread and raises nothing. Asking for an action
@@ -317,153 +315,14 @@ Only the plan changes a state, so the changes arrive in the order they
 happened. A request changes none: the view that made it learns what came of
 it from the next state.
 
-The view asks with a signal carrying the name and whether the button is
-pressed, and follows the answer in a slot:
-
-```python
-from psygnal import Signal
-
-from redsun import slot
-from redsun.engine.actions import ActionState
-
-
-class MyView(QWidget):
-    sig_action_request = Signal(str, bool)
-
-    def ask(self, name: str) -> None:
-        self.sig_action_request.emit(name, True)
-
-    def ask_or_release(self, checked: bool, name: str) -> None:
-        self.sig_action_request.emit(name, checked)
-
-    @slot
-    def on_action_changed(self, name: str, state: str) -> None:
-        button = self.widget.action_buttons[name]
-        match state:
-            case ActionState.IDLE:
-                button.setEnabled(False)
-                button.release()
-            case ActionState.OFFERED:
-                button.setEnabled(True)
-            case ActionState.RUNNING:
-                button.setEnabled(button.isCheckable())
-```
-
-`ask` and `ask_or_release` are the `action_clicked_callback` and
-`action_toggled_callback` of the [plan widget](qt-widgets.md#plan-widgets),
-here `self.widget`. `release` shows a button released without emitting
-`toggled`, which unchecking it would: the view would then ask an action that
-already ended to end.
-
-The session links the two components in `wire`:
-
-```python
-class MyApp(QtSession):
-    ctrl: AsPresenter[MyController]
-    panel: AsView[MyView]
-
-    def wire(self) -> Iterator[Link]:
-        yield self.panel.sig_action_request, self.ctrl.actions.request
-        yield self.ctrl.actions.sig_changed, self.panel.on_action_changed
-```
-
-The `wiring` section of a session file cannot make these links. A path there
-is `component.port`, and the ports of a component do not include those of an
-object it holds.
-
-The session records an `ActionManager` under the name of the component holding it,
-so the two links are recorded as `panel.sig_action_request -> ctrl.request`
-and `ctrl.sig_changed -> panel.on_action_changed`. See
-[Inspect what is connected](../how-to/wire-components.md#inspect-what-is-connected).
-
----
-
-## Steps for use inside a plan
-
-`redsun.engine.plan_stubs` holds steps to use inside larger plans, beside those
-of `bluesky.plan_stubs`.
-
-### Descriptor stubs
-
-```python
-import redsun.engine.plan_stubs as rps
-
-# gather descriptors from Readable / Collectable devices inside a plan
-descriptor = yield from rps.describe(readable)
-descriptors = yield from rps.describe_collect(collectable)
-```
-
-### Lock stubs
-
-A plan locks the devices it must not have disturbed, and views disable their
-controls while those devices are locked. The run engine keeps the locks and
-announces them on `RunEngine.sig_locks_changed`, which a view connects to.
-
-```python
-import redsun.engine.plan_stubs as rps
-
-# lock the stage and camera while the inner plan runs, however it ends
-yield from rps.lock_wrapper(scan(stage, camera), stage, camera)
-```
-
----
-
-## How waiting for an action works
-
-This section describes what `ActionManager` is built on. A plan written against
-an `ActionManager` needs none of it.
-
-### SRLatch
-
-`ActionManager` makes one `SRLatch` for each action it offers, and waits on it. A
-latch is set and reset from any thread, and a coroutine waits for either
-state on whatever loop it runs:
-
-```python
-latch = SRLatch()
-
-# in a coroutine:
-await latch.wait_for_set()  # blocks until set()
-await latch.wait_for_reset()  # blocks until reset()
-```
-
-`latch.changed_at` is when the latch last changed state, as `time.monotonic`
-reads it, and `0.0` for a latch that never changed.
-
-For a `wait_for_actions` message, the `RunEngine` runs one `wait_for_set` (or
-`wait_for_reset`) task per latch, for `poll_interval` seconds at most. Of
-several latches in the wanted state, it returns the one that reached that
-state first. Of those that reached it together, it returns the first in the
-map. If no latch is in the wanted state when the interval ends, the stub
-yields its next checkpoint and sends the message again.
-
-### Action flow-control stubs
-
-`wait_for_actions` waits on a map of names to latches. `ActionManager.wait` and
-`ActionManager.wait_released` use it, so a plan written against an `ActionManager` does
-not call it.
-
-```python
-import redsun.engine.plan_stubs as rps
-from redsun.engine.actions import SRLatch
-
-latches = {"snap": SRLatch()}
-
-# wait until a latch in the map is set, however long that takes,
-# with a checkpoint every `poll_interval` seconds
-name, latch = yield from rps.wait_for_actions(latches, poll_interval=0.016)
-```
-
-The stub does not time out. It waits as long as it takes for a latch to be
-set, or reset with `wait_for="reset"`, and returns at once if one already is.
-While it waits it yields a checkpoint every `poll_interval` seconds, 1/60 s by
-default. A checkpoint is where the plan can be paused, so the stub cannot sit
-between `create` and `save`. An empty map raises `ValueError`.
+[How to follow a plan action from a view](../how-to/follow-a-plan-action.md)
+shows the view and its links.
 
 ---
 
 ## See also
 
+- [How to follow a plan action from a view](../how-to/follow-a-plan-action.md)
 - [`engine/actions` API](../reference/api/engine.md#actions)
 - [`engine/plan_stubs` API](../reference/api/engine.md#plan-stubs)
 - [`presenter/plan_spec` API](../reference/api/presenter.md#plan-specification)

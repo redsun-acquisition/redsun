@@ -15,7 +15,7 @@ word to read it.
 ### ADR
 
 An ADR (Architecture Decision Record) is a numbered page under
-[Decisions](decisions/0001-record-architecture-decisions.md) that records one
+[Decisions](decisions/index.md) that records one
 decision and the reasons for it. Once accepted it is never edited; a later ADR
 replaces it.
 
@@ -169,8 +169,8 @@ hardware, directly or through a [service](#service). See the
 ### Path provider
 
 The path provider is the object that decides where the files of a session go
-and what they are called. Each session has one, and a device that asks for
-`path_provider` receives it.
+and what they are called, and creates their folders. Each session has one,
+and a device that asks for `path_provider` receives it.
 
 ### Placement
 
@@ -183,6 +183,13 @@ A plan is a recipe for an acquisition, written as a Python generator that
 yields one instruction at a time. The [`RunEngine`](#runengine) runs it, and a
 presenter starts it. The term comes from [`bluesky`](#bluesky), which explains
 it on [its page on plans](https://blueskyproject.io/bluesky/main/plans.html).
+
+### Plan widget
+
+A plan widget is the set of controls `redsun` builds for one
+[plan](#plan): an input for each parameter, a list of the devices that can
+fill a parameter asking for one, and a button to run the plan. A view builds
+it from the description of the plan, with `create_plan_widget`.
 
 ### Plugin
 
