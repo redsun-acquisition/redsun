@@ -23,7 +23,8 @@ edited; a later ADR replaces it instead.
 ### bluesky
 
 The library `redsun` runs every acquisition through. A [plan](#plan) says what
-to do, and the [`RunEngine`](#runengine) does it and records what happened.
+to do, and the [`RunEngine`](#runengine) does it and reports what happened as
+[documents](#document). Nothing is stored unless something listens to them.
 See the [documentation of `bluesky`](https://blueskyproject.io/bluesky/main/index.html).
 
 ### Build
@@ -51,8 +52,8 @@ reads and sets [process variables](#process-variable).
 
 ### Checkpoint
 
-A point of a [plan](#plan) at which the [`RunEngine`](#runengine) can pause,
-and resume from later. A word of `bluesky`.
+A point of a [plan](#plan) the [`RunEngine`](#runengine) goes back to when it
+resumes after a pause, repeating what followed it. A word of `bluesky`.
 
 ### Component
 
@@ -84,8 +85,9 @@ first layer to be built.
 ### Device signal
 
 One value of a [device](#device) that can be read, set, or both, such as the
-position of a stage. It comes from `ophyd-async`, and is not a
-[signal](#signal) in the sense of this glossary.
+position of a stage, or one action of the device that can be triggered. It
+comes from `ophyd-async`, and is not a [signal](#signal) in the sense of this
+glossary.
 
 ### Document
 
@@ -103,7 +105,8 @@ Model-View-Presenter with devices in place of the model.
 ### EPICS
 
 A set of tools for controlling instruments over a network. A server offers
-values by name, and any program on the network reads and sets them. See
+values by name, and a program that can reach it on the network reads them
+and, where the server allows it, sets them. See
 [epics-controls.org](https://epics-controls.org/).
 
 ### Frontend
@@ -125,8 +128,8 @@ Each frontend lists the points it calls; a session with no frontend calls none.
 
 ### IOC
 
-Input/output controller. The server program of [EPICS](#epics) that owns a
-piece of hardware and offers its values as
+Input/output controller. The server program of [EPICS](#epics) that owns one
+or more pieces of hardware and offers their values as
 [process variables](#process-variable).
 
 ### Layer
@@ -218,8 +221,10 @@ registered.
 
 ### Run
 
-One execution of a [plan](#plan), from its start [document](#document) to its
-stop document, with an identifier of its own. A word of `bluesky`.
+What a [plan](#plan) records between opening a run and closing it, from a
+start [document](#document) to a stop document, with an identifier of its
+own. A plan usually holds one run, and may hold several or none. A word of
+`bluesky`.
 
 ### RunEngine
 
@@ -256,9 +261,9 @@ A value one component makes available to the others, by marking a method with
 
 ### Signal
 
-A `psygnal` signal a component sends. Every public signal is a port, named
-`sig_snake_case`. A value of a device is a [device signal](#device-signal),
-which is another thing.
+A message a component sends to every [slot](#slot) connected to it, made with
+`psygnal`. Every public signal is a port, named `sig_snake_case`. A value of
+a device is a [device signal](#device-signal), which is another thing.
 
 ### Slot
 
