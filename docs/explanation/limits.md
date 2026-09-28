@@ -2,9 +2,11 @@
 icon: lucide/ban
 ---
 
-# What a session does not do
+# What a running session cannot change
 
-What a session does not do, and what to do instead.
+What a session fixes when it is built, and what to do instead of changing it.
+For what `redsun` does not ship, see
+[Why redsun exists](statement.md#what-redsun-does-not-ship).
 
 ## A value cannot be added while the session runs
 

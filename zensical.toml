@@ -61,13 +61,13 @@ nav = [
         "explanation/glossary.md",
         { "Purpose" = [
             "explanation/statement.md",
-            "explanation/limits.md",
         ]},
         { "Sessions and components" = [
             "explanation/session.md",
             "explanation/components.md",
             "explanation/questions.md",
             "explanation/plugins.md",
+            "explanation/limits.md",
         ]},
         { "Hardware and plans" = [
             "explanation/services.md",

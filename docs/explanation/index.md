@@ -10,10 +10,10 @@ Explanations of how `redsun` works and why it works that way.
 
 ### Purpose
 
-Learn about the problem `redsun` answers and what it leaves to other tools.
+Learn about the problem `redsun` answers, what it gives and what it leaves to
+you.
 
 - [Why redsun exists](statement.md)
-- [What a session does not do](limits.md)
 
 ### Sessions and components
 
@@ -24,6 +24,7 @@ the [components](glossary.md#component) it is made of.
 - [How devices, presenters and views fit together](components.md)
 - [How a component asks the session what it holds](questions.md)
 - [How plugins provide components](plugins.md)
+- [What a running session cannot change](limits.md)
 
 ### Hardware and plans
 
