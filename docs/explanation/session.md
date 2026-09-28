@@ -4,8 +4,8 @@ icon: lucide/list-ordered
 
 # How a session build sequence works
 
-A [session](../reference/glossary.md#session) is one running application. It
-knows which [components](../reference/glossary.md#component) to make, makes
+A [session](glossary.md#session) is one running application. It
+knows which [components](glossary.md#component) to make, makes
 them in the right order, connects them, and takes them apart again when it
 ends.
 
@@ -33,9 +33,9 @@ class MyApp(QtSession):
 MyApp().run()
 ```
 
-Each annotated line is a [declaration](../reference/glossary.md#declaration):
+Each annotated line is a [declaration](glossary.md#declaration):
 the name on the left is the component's name, and the annotation says which
-[layer](../reference/glossary.md#layer) it belongs to and which class to make.
+[layer](glossary.md#layer) it belongs to and which class to make.
 A line without `AsDevice`, `AsPresenter` or `AsView` is an ordinary attribute,
 not a component.
 
@@ -45,7 +45,7 @@ not a component.
 ## Devices, presenters, views
 
 A session is split into three layers, the
-[DVP](../reference/glossary.md#dvp) pattern:
+[DVP](glossary.md#dvp) pattern:
 
 ```mermaid
 graph LR
@@ -65,9 +65,9 @@ what lets it run without a screen, for example in a test.
 ## What a build does
 
 [`build`][redsun.Session.build] runs a fixed list of steps. First it reads the
-[configuration](../reference/glossary.md#configuration) and gets the
-[frontend](../reference/glossary.md#frontend) ready (for Qt, the
-`QApplication`). Then it runs the [build steps](../reference/glossary.md#build-step)
+[configuration](glossary.md#configuration) and gets the
+[frontend](glossary.md#frontend) ready (for Qt, the
+`QApplication`). Then it runs the [build steps](glossary.md#build-step)
 in this order:
 
 | step | what happens |
@@ -80,7 +80,7 @@ in this order:
 | `views` | make the views |
 | `setup` | call each component's `setup` method |
 | `seal` | record what each component would save, to notice changes later |
-| `wiring` | connect the [signals](../reference/glossary.md#signal) to the [slots](../reference/glossary.md#slot) |
+| `wiring` | connect the [signals](glossary.md#signal) to the [slots](glossary.md#slot) |
 | `presentation` | put the views on screen |
 | `report` | log a summary of what was built |
 
@@ -104,7 +104,7 @@ session itself, such as a malformed `wiring` section, still stops the build.
 why.
 
 To stop instead whenever something is missing, make the session
-[strict](../reference/glossary.md#strict-session):
+[strict](glossary.md#strict-session):
 
 ```yaml
 strict: true
@@ -118,7 +118,7 @@ reason.
 
 Each step registers how to undo what it did, at the moment it does it: a
 started service registers its stop, a built component registers its
-`shutdown`. These are [releases](../reference/glossary.md#release).
+`shutdown`. These are [releases](glossary.md#release).
 [`shutdown`][redsun.Session.shutdown] runs them in reverse order:
 
 ```mermaid
@@ -133,7 +133,7 @@ shut down can be built again.
 
 ## The configuration
 
-A session reads its settings from [session files](../reference/glossary.md#session-file)
+A session reads its settings from [session files](glossary.md#session-file)
 and mappings, listed in `config`. The name of each component is also its key
 in the file:
 
@@ -207,7 +207,7 @@ data folder if it moves while the session runs, and close last at shutdown.
 
 ## Protocols a session is built from
 
-A session is written against two [protocols](../reference/glossary.md#protocol):
+A session is written against two [protocols](glossary.md#protocol):
 
 - [`BuildableSession`][redsun.BuildableSession] lists every build step as a
   method. [`Session`][redsun.Session] implements them all, and does nothing

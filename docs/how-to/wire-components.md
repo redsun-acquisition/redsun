@@ -5,9 +5,9 @@ icon: lucide/cable
 # How to wire components together
 
 Components do not connect themselves. A presenter declares
-[signals](../reference/glossary.md#signal), a view declares signals and
-[slots](../reference/glossary.md#slot), and the
-[session](../reference/glossary.md#session) says which signal reaches which
+[signals](../explanation/glossary.md#signal), a view declares signals and
+[slots](../explanation/glossary.md#slot), and the
+[session](../explanation/glossary.md#session) says which signal reaches which
 slot.
 
 You can write the connections in the session class or in the session file;
@@ -51,7 +51,7 @@ class ImageView(QWidget):
 - `thread` chooses the thread the slot runs on.
 
 Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
-[port](../reference/glossary.md#port).
+[port](../explanation/glossary.md#port).
 
 ## Declare the connections
 
@@ -113,7 +113,7 @@ Signals need no marker: every public [`Signal`][psygnal.Signal] attribute is a
     declares.
 
 A session may use both: `wire` runs first, then the `wiring` section. The
-[path provider](../reference/glossary.md#path-provider) can be wired too, as
+[path provider](../explanation/glossary.md#path-provider) can be wired too, as
 `path_provider`.
 
 ## Connect a coroutine

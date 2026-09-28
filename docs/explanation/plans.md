@@ -92,7 +92,7 @@ left from an earlier launch of the plan cannot start an action of this one.
 seconds while it waits, as the [stub it uses](#action-flow-control-stubs)
 does.
 
-The user asks for an action through `request`, a [slot](../reference/glossary.md#slot)
+The user asks for an action through `request`, a [slot](glossary.md#slot)
 that is safe to call from any thread and raises nothing. Asking for an action
 no plan offers changes nothing and is logged as a warning. So is asking an
 action that is not running to end.

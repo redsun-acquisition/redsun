@@ -6,6 +6,8 @@ icon: lucide/lightbulb
 
 Explanations of how `redsun` works and why it works that way.
 
+- [Glossary](glossary.md)
+
 ### Purpose
 
 Learn about the problem `redsun` answers and what it leaves to other tools.
@@ -15,8 +17,8 @@ Learn about the problem `redsun` answers and what it leaves to other tools.
 
 ### Sessions and components
 
-Learn about the build of a [session](../reference/glossary.md#session) and
-the [components](../reference/glossary.md#component) it is made of.
+Learn about the build of a [session](glossary.md#session) and
+the [components](glossary.md#component) it is made of.
 
 - [How a session build sequence works](session.md)
 - [How devices, presenters and views fit together](components.md)
@@ -25,8 +27,8 @@ the [components](../reference/glossary.md#component) it is made of.
 
 ### Hardware and plans
 
-Learn about the [services](../reference/glossary.md#service) a session
-reaches hardware through, and the [plans](../reference/glossary.md#plan) it
+Learn about the [services](glossary.md#service) a session
+reaches hardware through, and the [plans](glossary.md#plan) it
 runs.
 
 - [How a session runs and talks to services](services.md)
@@ -34,7 +36,7 @@ runs.
 
 ### Frontends
 
-Learn about the [frontend](../reference/glossary.md#frontend) that shows a
+Learn about the [frontend](glossary.md#frontend) that shows a
 session on screen.
 
 - [How a frontend shows a session on screen](frontends.md)
@@ -42,7 +44,7 @@ session on screen.
 
 ### Data
 
-Learn about the [catalog](../reference/glossary.md#catalog) of runs and the
+Learn about the [catalog](glossary.md#catalog) of runs and the
 products derived from them.
 
 - [How the session catalog works](catalog.md)

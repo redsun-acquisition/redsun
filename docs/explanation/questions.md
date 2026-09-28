@@ -10,7 +10,7 @@ this session can be reset?". The answer depends on what the session file puts
 in the session, so no one can write it down in advance.
 
 A component asks such a question in `setup`, with a
-[protocol](../reference/glossary.md#protocol) describing what it is looking
+[protocol](glossary.md#protocol) describing what it is looking
 for.
 
 ## The shape of the parameter is the question
@@ -55,7 +55,7 @@ annotation carries the question.
 
 A component matches a protocol when it has every member the protocol lists,
 and each method accepts every call the protocol allows. This is
-[structural subtyping](../reference/glossary.md#structural-subtyping): the
+[structural subtyping](glossary.md#structural-subtyping): the
 component does not have to inherit from the protocol, or even know it exists.
 
 - An extra parameter **with** a default still matches.

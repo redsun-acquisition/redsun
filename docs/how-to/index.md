@@ -10,7 +10,7 @@ Practical step-by-step guides for one task each, including working on
 ### Build a session
 
 Learn how to write the parts of a
-[session](../reference/glossary.md#session) and put them together.
+[session](../explanation/glossary.md#session) and put them together.
 
 - [How to write a component](write-a-component.md)
 - [How to write a service](write-a-service.md)
@@ -37,7 +37,7 @@ Learn how to run a session, follow what it does and keep its settings.
 
 ### Store data
 
-Learn how to keep a [catalog](../reference/glossary.md#catalog) of runs and
+Learn how to keep a [catalog](../explanation/glossary.md#catalog) of runs and
 write what is computed from them.
 
 - [How to keep a catalog of runs](keep-a-catalog.md)

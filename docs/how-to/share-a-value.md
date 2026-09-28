@@ -6,7 +6,7 @@ icon: lucide/share-2
 
 One component makes something, and others need it: a viewer model, a
 calibration, the readings of a motor. Share it as a
-[shared value](../reference/glossary.md#shared-value), named by its type.
+[shared value](../explanation/glossary.md#shared-value), named by its type.
 
 ## Share it
 
@@ -46,7 +46,7 @@ Every component exists when `setup` runs, so it does not matter which one is
 declared first. If nothing shares a `ViewerModel`, the session does not start
 and names `RoiView` and the type.
 
-A component may only ask for what its own [layer](../reference/glossary.md#layer)
+A component may only ask for what its own [layer](../explanation/glossary.md#layer)
 or an earlier one shares. A presenter asking for something only a view shares
 is refused.
 

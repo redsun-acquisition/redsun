@@ -39,8 +39,8 @@ redsun/
 |-- docs/                      Diataxis site built by zensical
 |   |-- tutorials/             installation, first session
 |   |-- how-to/                one task per page, contributing and migration included
-|   |-- explanation/           architecture pages and decisions/ (ADRs)
-|   `-- reference/             api/ pages, glossary, changelog (generated)
+|   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
+|   `-- reference/             api/ pages, changelog (generated)
 |-- benchmarks/                performance scripts, not tests, sdist only
 |-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
 |                              release_notes.py (changelog sections),

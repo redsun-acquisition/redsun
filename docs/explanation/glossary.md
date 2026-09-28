@@ -14,7 +14,7 @@ word to read it.
 ### ADR
 
 Architecture Decision Record. A numbered page under
-[Decisions](../explanation/decisions/0001-record-architecture-decisions.md)
+[Decisions](decisions/0001-record-architecture-decisions.md)
 that records one decision and the reasons for it. Once accepted it is never
 edited; a later ADR replaces it instead.
 

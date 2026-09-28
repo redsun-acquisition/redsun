@@ -6,7 +6,7 @@ icon: lucide/server
 
 Write a `caproto` IOC for a session to launch, declare it, and point a device
 at it. [Services](../explanation/services.md) explains what a
-[service](../reference/glossary.md#service) is and how a session handles it.
+[service](../explanation/glossary.md#service) is and how a session handles it.
 
 ## Prerequisites
 
@@ -139,7 +139,7 @@ devices:
 
 ## Name the transport
 
-Every service of a session speaks one [transport](../reference/glossary.md#transport),
+Every service of a session speaks one [transport](../explanation/glossary.md#transport),
 `channel-access` unless the configuration says otherwise:
 
 ```yaml

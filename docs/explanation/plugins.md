@@ -4,7 +4,7 @@ icon: lucide/plug
 
 # How plugins provide components
 
-A [plugin](../reference/glossary.md#plugin) is an installed Python package that
+A [plugin](glossary.md#plugin) is an installed Python package that
 offers components to sessions. A session file can then name a component by
 the plugin it comes from, without any Python code:
 
@@ -21,7 +21,7 @@ argument to its constructor.
 
 ## The manifest
 
-A plugin lists what it offers in a [manifest](../reference/glossary.md#manifest),
+A plugin lists what it offers in a [manifest](glossary.md#manifest),
 a YAML file inside the package:
 
 ```yaml
@@ -90,7 +90,7 @@ session builds without it:
   that name.
 
 Each shows in the log and in the build summary under `Not built`. To stop the
-session instead, make it [strict](../reference/glossary.md#strict-session).
+session instead, make it [strict](glossary.md#strict-session).
 
 ## Components from a file and from a class
 

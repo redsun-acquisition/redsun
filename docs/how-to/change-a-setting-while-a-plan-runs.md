@@ -21,7 +21,7 @@ finds it applied.
 ## Build one beside the engine
 
 Whoever owns the [`RunEngine`][redsun.engine.RunEngine] builds the
-`Deferrals` and [shares](../reference/glossary.md#shared-value) it:
+`Deferrals` and [shares](../explanation/glossary.md#shared-value) it:
 
 ```python
 from redsun import provides

@@ -4,7 +4,7 @@ icon: lucide/scale
 
 # How to record a decision
 
-An [ADR](../reference/glossary.md#adr) records one decision about how
+An [ADR](../explanation/glossary.md#adr) records one decision about how
 `redsun` is built, and the reasons for it. The records live in
 `docs/explanation/decisions/`.
 

@@ -4,8 +4,7 @@ icon: lucide/book-open
 
 # Reference
 
-Technical reference material, including the API, the glossary and the
-release notes.
+Technical reference material: the API and the release notes.
 
 ### API
 
@@ -34,8 +33,7 @@ Look up a class or a function by the module it is imported from.
         - [`redsun.view.qt`](api/view.md#qt-widgets)
     - [`redsun.writers`](api/writers.md)
 
-<!-- ends the list above, so the three below are a list of their own -->
+<!-- ends the list above, so the two below are a list of their own -->
 
-- [Glossary](glossary.md)
 - [Changelog](changelog.md)
 - [Previous changelog](previous-changelog.md)

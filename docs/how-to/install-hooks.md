@@ -4,12 +4,12 @@ icon: lucide/anchor
 
 # How to install hooks
 
-A [hook](../reference/glossary.md#hook) acts on the session's toolkit, not on
+A [hook](../explanation/glossary.md#hook) acts on the session's toolkit, not on
 a component: it makes the application object, styles every window, or shows a
 splash screen while the session builds. It is an ordinary class, and it never
 changes what the session builds.
 
-Each [hook point](../reference/glossary.md#hook-point) is named after the
+Each [hook point](../explanation/glossary.md#hook-point) is named after the
 method it calls, and a session installs one provider per point. You can name a
 provider in the session class or in the session file; each example below shows
 both. Picking a tab switches every tab on the site to the same form.

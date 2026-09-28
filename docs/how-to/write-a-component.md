@@ -5,7 +5,7 @@ icon: lucide/puzzle
 # How to write a component
 
 This page shows how to write each kind of
-[component](../reference/glossary.md#component) and add it to a session.
+[component](../explanation/glossary.md#component) and add it to a session.
 [Components](../explanation/components.md) explains the rules behind it.
 
 ## A device
@@ -54,13 +54,13 @@ class StagePresenter:
 - `devices` is filled by type: [`DeviceMapping`][redsun.DeviceMapping] is
   every device of the session, by name.
 - `step` comes from the session file if it is there, and is `1.0` if not.
-- `nudge` is a [slot](../reference/glossary.md#slot), so the session can
+- `nudge` is a [slot](../explanation/glossary.md#slot), so the session can
   connect a signal to it. It may be `async`.
 
 ## A view
 
 A Qt view is a `QWidget` with a
-[placement](../reference/glossary.md#placement), and a constructor starting
+[placement](../explanation/glossary.md#placement), and a constructor starting
 with `(name: str, parent: QWidget)`:
 
 ```python

@@ -39,7 +39,7 @@ It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so
 
 The documentation is split into [four categories](https://diataxis.fr), also
 reachable from the tabs at the top. Technical words are defined once, in the
-[glossary](reference/glossary.md).
+[glossary](explanation/glossary.md).
 
 <div class="grid cards" markdown>
 
@@ -64,7 +64,8 @@ reachable from the tabs at the top. Technical words are defined once, in the
 
     ---
 
-    Explanations of how `redsun` works and why it works that way.
+    Explanations of how `redsun` works and why it works that way, and the
+    glossary.
 
     [:lucide-arrow-right: Explanations](explanation/index.md)
 
@@ -72,8 +73,7 @@ reachable from the tabs at the top. Technical words are defined once, in the
 
     ---
 
-    Technical reference material, including the API, the glossary and the
-    release notes.
+    Technical reference material: the API and the release notes.
 
     [:lucide-arrow-right: Reference](reference/index.md)
 

@@ -34,7 +34,7 @@ callback is imported the first time someone runs the command.
 A callback is an ordinary function. Its parameters are filled by type from
 the same values the components were built from, so it can ask for the
 session's [`Settings`][redsun.Settings], a
-[shared value](../reference/glossary.md#shared-value), or the devices:
+[shared value](../explanation/glossary.md#shared-value), or the devices:
 
 ```python
 # mylab/contributions.py

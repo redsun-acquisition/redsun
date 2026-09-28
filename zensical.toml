@@ -57,6 +57,7 @@ nav = [
     ]},
     { "Explanations" = [
         "explanation/index.md",
+        "explanation/glossary.md",
         { "Purpose" = [
             "explanation/statement.md",
             "explanation/limits.md",
@@ -120,9 +121,10 @@ nav = [
             { "redsun.view" = "reference/api/view.md" },
             { "redsun.writers" = "reference/api/writers.md" },
         ]},
-        "reference/glossary.md",
-        "reference/changelog.md",
-        "reference/previous-changelog.md",
+        { "Changelog" = [
+            "reference/changelog.md",
+            "reference/previous-changelog.md",
+        ]},
     ]},
 ]
 
@@ -234,7 +236,7 @@ pygments_lang_class = true
 # includes/abbreviations.md is appended to every page, so each entry underlines
 # every occurrence of its term site-wide. Keep it to acronyms and terms that are
 # rare in prose; a common word such as "presenter" or "slot" belongs in
-# docs/reference/glossary.md alone.
+# docs/explanation/glossary.md alone.
 [project.markdown_extensions.pymdownx.snippets]
 auto_append = ["includes/abbreviations.md"]
 

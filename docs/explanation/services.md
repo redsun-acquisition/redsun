@@ -112,7 +112,7 @@ flowchart LR
 1. **Session to service.** `ophyd-async`'s `connect()`, which the build runs for
    every device declared with `autoconnect`. A device that does not connect is
    skipped, like one that fails to build. A
-   [mocked session](../reference/glossary.md#mocked-session) connects each
+   [mocked session](glossary.md#mocked-session) connects each
    device to a simulated backend and launches no service, so neither level
    is reached.
 2. **Service to hardware.** The service opens a serial port or a camera, and

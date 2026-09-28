@@ -4,7 +4,7 @@ icon: lucide/boxes
 
 # How devices, presenters and views fit together
 
-A [component](../reference/glossary.md#component) is a device, a presenter or
+A [component](glossary.md#component) is a device, a presenter or
 a view. This page explains what each one is, and how a component gets the
 things it needs.
 
@@ -14,7 +14,7 @@ A session makes a component by calling its constructor with every argument
 by keyword. It fills each parameter from one of these places:
 
 - `name` is always the component's name.
-- A parameter the [session file](../reference/glossary.md#session-file) or an
+- A parameter the [session file](glossary.md#session-file) or an
   inline `Declare(...)` mentions takes that value.
 - Any other parameter is looked up **by its type**, among the values the
   session holds before any component exists: `SessionConfig`, `Settings`,
@@ -82,7 +82,7 @@ details, including optional values.
 
 ## Devices
 
-A [device](../reference/glossary.md#device) is an `ophyd-async` device: a
+A [device](glossary.md#device) is an `ophyd-async` device: a
 subclass of `ophyd_async.core.Device`. `redsun` adds nothing to the device
 layer, so see the `ophyd-async` documentation for signals, detectors and
 the base classes.
@@ -132,7 +132,7 @@ not declared, did not start, or has no prefix, the device is left out.
 
 A device writes its own data files. A device whose constructor takes
 `path_provider` gets the session's
-[path provider](../reference/glossary.md#path-provider), which puts every file
+[path provider](glossary.md#path-provider), which puts every file
 of a session under one folder:
 
 ```
@@ -176,7 +176,7 @@ The devices stay connected; the service decides what letting go means.
 
 ## Presenters
 
-A [presenter](../reference/glossary.md#presenter) holds the session's
+A [presenter](glossary.md#presenter) holds the session's
 behaviour. It may run `bluesky` [plans](plans.md), react to the documents a
 run produces, move a device directly, or talk to another program. It never
 touches a widget, so it works without a screen.
@@ -186,8 +186,8 @@ whose instances keep that `name`. It inherits nothing from `redsun`.
 
 ## Views
 
-A [view](../reference/glossary.md#view) holds the widgets. It says where it
-wants to be shown with a [placement](../reference/glossary.md#placement):
+A [view](glossary.md#view) holds the widgets. It says where it
+wants to be shown with a [placement](glossary.md#placement):
 
 ```python
 from qtpy.QtWidgets import QWidget
@@ -211,8 +211,8 @@ placement and that the view is the right kind of object for it.
 
 ## Signals and slots
 
-Components talk to each other through [signals](../reference/glossary.md#signal)
-and [slots](../reference/glossary.md#slot), and never call each other
+Components talk to each other through [signals](glossary.md#signal)
+and [slots](glossary.md#slot), and never call each other
 directly unless they received each other in `setup`:
 
 ```python

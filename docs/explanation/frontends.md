@@ -4,7 +4,7 @@ icon: lucide/monitor
 
 # How a frontend shows a session on screen
 
-A [frontend](../reference/glossary.md#frontend) is what shows a session to a
+A [frontend](glossary.md#frontend) is what shows a session to a
 person: a desktop window, and in the future perhaps a web page. `redsun` ships
 one, for Qt.
 
@@ -14,7 +14,7 @@ connects them. A frontend adds two things:
 - a session class to subclass, such as [`QtSession`][redsun.qt.QtSession],
   which knows how to start the toolkit and put views on screen;
 - a [`Frontend`][redsun.Frontend] class, which lists the
-  [placements](../reference/glossary.md#placement) it can show.
+  [placements](glossary.md#placement) it can show.
 
 ## Placements
 
@@ -87,9 +87,9 @@ one.
 
 ### Hook points
 
-A [hook](../reference/glossary.md#hook) lets you act at fixed moments of a
+A [hook](glossary.md#hook) lets you act at fixed moments of a
 Qt session's build without changing what it builds. The Qt frontend calls five
-[hook points](../reference/glossary.md#hook-point):
+[hook points](glossary.md#hook-point):
 
 | point | called with | to |
 | --- | --- | --- |
@@ -173,7 +173,7 @@ does anything unless a frontend overrides it.
 
 ### What a frontend provides
 
-A view's [slots](../reference/glossary.md#slot) are called by presenters
+A view's [slots](glossary.md#slot) are called by presenters
 working on other threads, and most toolkits allow a view to be used from one
 thread only. A frontend settles that in three places:
 

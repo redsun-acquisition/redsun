@@ -9,8 +9,8 @@ button that moves it, and a label that shows where it is. It takes about
 fifteen minutes, and needs no hardware.
 
 You will write the three kinds of
-[component](../reference/glossary.md#component), put them in a
-[session](../reference/glossary.md#session), and connect them.
+[component](../explanation/glossary.md#component), put them in a
+[session](../explanation/glossary.md#session), and connect them.
 
 ## Before you start
 
@@ -47,9 +47,9 @@ from redsun.qt import Dock, QtSession
 
 ## 1. The device
 
-A [device](../reference/glossary.md#device) describes one part of your setup:
+A [device](../explanation/glossary.md#device) describes one part of your setup:
 here, a stage with a position. In a lab, a
-[service](../reference/glossary.md#service) would reach the real hardware for
+[service](../explanation/glossary.md#service) would reach the real hardware for
 it. You have no hardware, so this one keeps its position in memory, using a
 "soft" signal from `ophyd-async`:
 
@@ -62,7 +62,7 @@ Nothing else in this tutorial would change.
 
 ## 2. The presenter
 
-A [presenter](../reference/glossary.md#presenter) holds the behaviour. This
+A [presenter](../explanation/glossary.md#presenter) holds the behaviour. This
 one moves the stage by one step, and announces where it went:
 
 ```python
@@ -76,14 +76,14 @@ passes the component's `name`, and finds a value for every other parameter:
   devices, by name.
 - `step` has a default, so it is `1.0` unless you say otherwise.
 
-`sig_moved` is a [signal](../reference/glossary.md#signal): the presenter
+`sig_moved` is a [signal](../explanation/glossary.md#signal): the presenter
 sends it, and does not care who listens. `nudge` is a
-[slot](../reference/glossary.md#slot): something another component can
+[slot](../explanation/glossary.md#slot): something another component can
 trigger.
 
 ## 3. The view
 
-A [view](../reference/glossary.md#view) is what the user sees. This one is a
+A [view](../explanation/glossary.md#view) is what the user sees. This one is a
 button and a label:
 
 ```python
@@ -107,7 +107,7 @@ Now put the three together:
 Each line in the class body is a component. The name on the left, `stage`, is
 the component's name; that is why the presenter finds it as
 `devices["stage"]`. The part on the right says its
-[layer](../reference/glossary.md#layer) and its class.
+[layer](../explanation/glossary.md#layer) and its class.
 
 `wire` connects the pieces: pressing the button nudges the stage, and the
 stage's new position reaches the label.

@@ -21,11 +21,11 @@ Picture a reader around 15 years old who knows some Python and nothing about
 ## Define each term once
 
 Every technical word, such as session, layer, placement or slot, has one
-plain definition in the [glossary](../reference/glossary.md). A page links
+plain definition in the [glossary](../explanation/glossary.md). A page links
 the word to its glossary entry the first time it uses it:
 
 ```markdown
-A [layer](../reference/glossary.md#layer) is built after the one before it.
+A [layer](../explanation/glossary.md#layer) is built after the one before it.
 ```
 
 Never write a second definition somewhere else. If a word needs explaining
@@ -54,8 +54,8 @@ Other rules:
 | --- | --- | --- |
 | Tutorials | learn by building something, step by step | build your first session |
 | How-to Guides | get one task done, including contributing and migrating | how to write a service |
-| Explanations | understand how and why | how a session build sequence works |
-| Reference | look up a fact | an API page, the glossary |
+| Explanations | understand how and why | how a session build sequence works, the glossary |
+| Reference | look up a fact | an API page, the changelog |
 
 Write each fact once, on the page where it belongs, and link to it from the
 others. The API reference comes from docstrings, so fix a wrong API page in
