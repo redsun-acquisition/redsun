@@ -155,9 +155,10 @@ include = [
 
 [tool.mypy]
 files = "."
-# example code in the docs is written to be read, and runs when the docs build;
-# site/ holds the built copy of it
-exclude = ["^docs/", "^site/"]
+# of the docs only the tutorial scripts are checked, the first one excepted:
+# it reads a device without knowing its type, which the second tutorial
+# corrects; site/ holds the built copy of them
+exclude = ["^docs/(?!$|tutorials/)", "^docs/tutorials/first_session\\.py$", "^site/"]
 mypy_path = ["src", "tests/launchable"]
 explicit_package_bases = true
 disable_error_code = [
