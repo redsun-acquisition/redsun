@@ -82,7 +82,7 @@ class MyController:
 
 `wait` offers the actions it is given, waits until one is asked for, and
 returns the name of the one asked for first. That action runs until the plan
-calls `done`. The others are withdrawn, as all of them are when the plan is
+calls `done`. The others go back to idle, as all of them do when the plan is
 stopped while it waits. Called with no action, `wait` raises `ValueError`.
 
 Each call to `wait` makes new latches for the actions it offers. A request
@@ -94,8 +94,8 @@ does.
 
 The user asks for an action through `request`, a [slot](../reference/glossary.md#slot)
 that is safe to call from any thread and raises nothing. Asking for an action
-no plan offers is logged and reported as `refused`. So is asking an action
-that is not running to end.
+no plan offers changes nothing and is logged as a warning. So is asking an
+action that is not running to end.
 
 The `RunEngine` has no code for actions. It receives the latches `wait` made
 and waits on them.
@@ -133,19 +133,27 @@ raises `ValueError` for an action that is not running.
 
 ### Following an action from a view
 
-`ActionManager.sig_changed` reports every change, with the name of the action and
-its new `ActionState`. A view connected to it sets each button from the state
-reported:
+An action is in one of three states, and `ActionManager.sig_changed` reports
+each change with the name of the action and its new `ActionState`. A view
+connected to it sets each button from the state reported:
 
 | State | Meaning | What the view does |
 |-------|---------|--------------------|
+| `idle` | no plan waits for it and none runs it | disables the button, and shows a toggle button released |
 | `offered` | a plan waits for it | enables the button |
-| `withdrawn` | no longer waited for: the plan took another, or stopped waiting | disables the button |
-| `requested` | asked for, not yet taken by the plan | nothing |
-| `running` | the plan took it | disables a button that is clicked; a toggle button stays enabled, so the user can release it |
-| `released` | asked to end while it runs | nothing |
-| `done` | the plan finished it | enables the button again, and shows a toggle button released |
-| `refused` | asked for while not offered, or asked to end while not running | the same |
+| `running` | the plan took it, and has not finished it | disables a button that is clicked; a toggle button stays enabled, so the user can release it |
+
+```mermaid
+graph LR
+    idle -- "wait" --> offered
+    offered -- "asked for" --> running
+    offered -- "another was taken, or the plan stopped" --> idle
+    running -- "done" --> idle
+```
+
+Only the plan changes a state, so the changes arrive in the order they
+happened. A request changes none: the view that made it learns what came of
+it from the next state.
 
 The view asks with a signal carrying the name and whether the button is
 pressed, and follows the answer in a slot:
@@ -170,13 +178,11 @@ class MyView(QWidget):
     def on_action_changed(self, name: str, state: str) -> None:
         button = self.widget.action_buttons[name]
         match state:
+            case ActionState.IDLE:
+                button.setEnabled(False)
+                button.release()
             case ActionState.OFFERED:
                 button.setEnabled(True)
-            case ActionState.DONE | ActionState.REFUSED:
-                button.setEnabled(True)
-                button.release()
-            case ActionState.WITHDRAWN:
-                button.setEnabled(False)
             case ActionState.RUNNING:
                 button.setEnabled(button.isCheckable())
 ```

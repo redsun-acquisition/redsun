@@ -189,36 +189,26 @@ class PlanAction:
 
 
 class ActionState(StrEnum):
-    """What an action is doing, as `ActionManager.sig_changed` reports it."""
+    """The state of an action, as `ActionManager.sig_changed` reports it."""
+
+    IDLE = "idle"
+    """No plan waits for it and none runs it."""
 
     OFFERED = "offered"
     """A plan waits for it."""
 
-    WITHDRAWN = "withdrawn"
-    """No longer waited for: the plan took another, or stopped waiting."""
-
-    REQUESTED = "requested"
-    """Asked for, and not yet taken by the plan."""
-
     RUNNING = "running"
-    """The plan took it."""
-
-    RELEASED = "released"
-    """Asked to end while it runs."""
-
-    DONE = "done"
-    """The plan finished it."""
-
-    REFUSED = "refused"
-    """Asked for while no plan offered it, or asked to end while not running."""
+    """The plan took it, and has not finished it."""
 
 
 class ActionManager:
     """The actions a running plan offers, and the state each is in.
 
     Whoever owns the plans owns one. A plan waits on it with `wait`, a user
-    asks through `request`, and `sig_changed` reports every change, so the
-    engine running the plan needs to know nothing of actions.
+    asks through `request`, and `sig_changed` reports every change of state,
+    so the engine running the plan needs to know nothing of actions. Only the
+    plan changes a state, so the changes are reported in the order they
+    happen.
     """
 
     sig_changed = Signal(str, str)
@@ -233,24 +223,17 @@ class ActionManager:
         """Ask for the action *name*, or with ``on=False`` ask a running one to end.
 
         Safe from any thread. Asking for an action no plan offers, or asking
-        one that is not running to end, raises nothing: it is logged and
-        reported as `ActionState.REFUSED`.
+        one that is not running to end, changes nothing and raises nothing:
+        it is logged as a warning.
         """
         latch = (self._offered if on else self._running).get(name)
         if latch is None:
             logger.warning(
-                "PlanAction %r refused: %s",
+                "Action %r refused: %s",
                 name,
                 "no plan offers it" if on else "it is not running",
             )
-            self.sig_changed.emit(name, ActionState.REFUSED)
-            return
-        # reported first: the plan wakes on another thread as soon as the
-        # latch changes, and would report its own state ahead of this one
-        self.sig_changed.emit(
-            name, ActionState.REQUESTED if on else ActionState.RELEASED
-        )
-        if on:
+        elif on:
             latch.set()
         else:
             latch.reset()
@@ -261,8 +244,8 @@ class ActionManager:
         """Offer *actions*, wait until one is asked for, and return its name.
 
         Every call offers latches of its own, so a request left from an
-        earlier wait cannot fire an action of this one. The action returned
-        runs until `done`. The others are withdrawn, as all of them are when
+        earlier wait cannot start an action of this one. The action returned
+        runs until `done`. The others go back to idle, as all of them do when
         the plan is stopped while it waits. A checkpoint is yielded every
         *poll_interval* seconds, so it cannot be used between ``create`` and
         ``save``.
@@ -285,7 +268,7 @@ class ActionManager:
             self._offered = {}
             for name in latches:
                 if name != taken:
-                    self.sig_changed.emit(name, ActionState.WITHDRAWN)
+                    self.sig_changed.emit(name, ActionState.IDLE)
         self._running[taken] = latch
         self.sig_changed.emit(taken, ActionState.RUNNING)
         return taken
@@ -308,9 +291,9 @@ class ActionManager:
         )
 
     def done(self, name: str) -> None:
-        """Say the plan finished the action *name*."""
+        """Say the plan finished the action *name*, which goes back to idle."""
         self._running.pop(name, None)
-        self.sig_changed.emit(name, ActionState.DONE)
+        self.sig_changed.emit(name, ActionState.IDLE)
 
 
 __all__ = [

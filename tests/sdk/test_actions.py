@@ -94,7 +94,7 @@ def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
-    """A request is reported before the plan reports what it did with it."""
+    """Every change of state is reported, in the order the plan makes them."""
 
     def plan() -> MsgGenerator[None]:
         name = yield from actions.wait(SNAP, STREAM)
@@ -116,17 +116,14 @@ def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
     assert seen == [
         ("snap", ActionState.OFFERED),
         ("stream", ActionState.OFFERED),
-        ("snap", ActionState.REQUESTED),
-        ("stream", ActionState.WITHDRAWN),
+        ("stream", ActionState.IDLE),
         ("snap", ActionState.RUNNING),
-        ("snap", ActionState.DONE),
+        ("snap", ActionState.IDLE),
         ("snap", ActionState.OFFERED),
         ("stream", ActionState.OFFERED),
-        ("stream", ActionState.REQUESTED),
-        ("snap", ActionState.WITHDRAWN),
+        ("snap", ActionState.IDLE),
         ("stream", ActionState.RUNNING),
-        ("stream", ActionState.RELEASED),
-        ("stream", ActionState.DONE),
+        ("stream", ActionState.IDLE),
     ]
 
 
@@ -137,7 +134,7 @@ def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
         pytest.param(False, "it is not running", id="asked-to-end"),
     ],
 )
-def test_a_request_nothing_answers_is_refused(
+def test_a_request_nothing_answers_is_logged_and_changes_no_state(
     actions: ActionManager,
     seen: list[tuple[str, str]],
     caplog: pytest.LogCaptureFixture,
@@ -146,8 +143,8 @@ def test_a_request_nothing_answers_is_refused(
 ) -> None:
     actions.request("snap", on)
 
-    assert seen == [("snap", ActionState.REFUSED)]
-    assert f"PlanAction 'snap' refused: {reason}" in caplog.text
+    assert seen == []
+    assert f"Action 'snap' refused: {reason}" in caplog.text
 
 
 def test_a_request_made_before_a_plan_waits_does_not_fire_later(
@@ -163,7 +160,7 @@ def test_a_request_made_before_a_plan_waits_does_not_fire_later(
 
     assert wait_until(lambda: len(polls) >= 2)
     assert not future.done()
-    assert seen == [("snap", ActionState.REFUSED), ("snap", ActionState.OFFERED)]
+    assert seen == [("snap", ActionState.OFFERED)]
 
 
 def test_a_request_one_launch_left_unanswered_does_not_fire_in_the_next(
@@ -188,7 +185,7 @@ def test_a_request_one_launch_left_unanswered_does_not_fire_in_the_next(
     assert ("snap", ActionState.RUNNING) not in seen
 
 
-def test_stopping_a_plan_that_waits_withdraws_what_it_offered(
+def test_stopping_a_plan_that_waits_puts_what_it_offered_back_to_idle(
     RE: RunEngine,
     actions: ActionManager,
     seen: list[tuple[str, str]],
@@ -205,8 +202,8 @@ def test_stopping_a_plan_that_waits_withdraws_what_it_offered(
     assert seen == [
         ("snap", ActionState.OFFERED),
         ("stream", ActionState.OFFERED),
-        ("snap", ActionState.WITHDRAWN),
-        ("stream", ActionState.WITHDRAWN),
+        ("snap", ActionState.IDLE),
+        ("stream", ActionState.IDLE),
     ]
 
 
