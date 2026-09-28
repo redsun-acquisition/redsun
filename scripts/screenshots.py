@@ -23,22 +23,33 @@ import time
 from pathlib import Path
 from unittest import mock
 
-from qtpy.QtWidgets import QApplication, QMainWindow
+from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QPushButton
 
-SCREENSHOTS = {
+SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
     Path("docs/tutorials/first_session.py"): (
         Path("docs/tutorials/images/first-session.png"),
         (420, 220),
+        None,
     ),
     Path("docs/tutorials/plan_form.py"): (
         Path("docs/tutorials/images/plan-form.png"),
         (420, 260),
+        None,
+    ),
+    Path("docs/tutorials/acquire_images.py"): (
+        Path("docs/tutorials/images/acquire-images.png"),
+        (760, 520),
+        "camera_view",
     ),
 }
-"""Each example script, where its picture is written, and the size of the window."""
+"""Each example script, with where its picture is written, the size of the
+window, and the view whose **Run** is pressed before the picture, if any."""
+
+SETTLE = 3.0
+"""Seconds a plan started for a picture is given to finish."""
 
 
-def photograph(target: Path, size: tuple[int, int]) -> int:
+def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
     """Save the visible main window to *target*, and close every window."""
     app = QApplication.instance()
     assert isinstance(app, QApplication)
@@ -46,6 +57,15 @@ def photograph(target: Path, size: tuple[int, int]) -> int:
         w for w in app.topLevelWidgets() if isinstance(w, QMainWindow) and w.isVisible()
     )
     window.resize(*size)
+    if press is not None:
+        view = next(
+            d for d in window.findChildren(QDockWidget) if d.windowTitle() == press
+        )
+        next(b for b in view.findChildren(QPushButton) if b.text() == "Run").click()
+        finished = time.monotonic() + SETTLE
+        while time.monotonic() < finished:
+            app.processEvents()
+            time.sleep(0.05)
     # let queued signals and the layout settle before the picture is taken
     for _ in range(10):
         app.processEvents()
@@ -57,7 +77,9 @@ def photograph(target: Path, size: tuple[int, int]) -> int:
     return 0
 
 
-def capture(script: Path, target: Path, size: tuple[int, int]) -> None:
+def capture(
+    script: Path, target: Path, size: tuple[int, int], press: str | None
+) -> None:
     """Run *script* as ``__main__`` and photograph the window it shows."""
     with tempfile.TemporaryDirectory() as home:
 
@@ -68,7 +90,9 @@ def capture(script: Path, target: Path, size: tuple[int, int]) -> None:
             mock.patch("redsun._settings.user_config_dir", elsewhere),
             mock.patch("redsun.log.user_data_dir", elsewhere),
             mock.patch("redsun.path_provider.user_data_dir", elsewhere),
-            mock.patch.object(QApplication, "exec", lambda _: photograph(target, size)),
+            mock.patch.object(
+                QApplication, "exec", lambda _: photograph(target, size, press)
+            ),
         ):
             try:
                 runpy.run_path(str(script), run_name="__main__")
