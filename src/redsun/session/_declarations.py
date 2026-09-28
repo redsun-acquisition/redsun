@@ -191,7 +191,9 @@ class Declaration:
     class stay separable in a type-keyed graph. A device's ``service`` and
     ``autoconnect`` keywords are kept here, not passed to its constructor.
     ``refusal`` is why the class cannot be built in its layer, or ``None``; a
-    refused declaration is never built.
+    refused declaration is never built. ``attribute`` is the annotation the
+    session class declares it under and ``source`` the configuration entry its
+    keywords are read from; both are the name unless a marker says otherwise.
 
     Raises
     ------
@@ -201,6 +203,7 @@ class Declaration:
     """
 
     __slots__ = (
+        "attribute",
         "autoconnect",
         "cfg_kwargs",
         "cls",
@@ -210,6 +213,7 @@ class Declaration:
         "name",
         "refusal",
         "service",
+        "source",
     )
 
     def __init__(
@@ -217,6 +221,8 @@ class Declaration:
     ) -> None:
         self.cls = cls
         self.name = name
+        self.attribute = name
+        self.source = name
         self.kind = kind
         self.service: str | None = None
         self.autoconnect = True
@@ -557,14 +563,29 @@ def read(
                 name = marker.name
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
-        declarations[name] = Declaration(
+        declaration = Declaration(
             target, name, kind, {**keywords(section.get(cfg_key)), **inline}
         )
-        declarations[name].refusal = refused
+        declaration.attribute = attr
+        declaration.source = cfg_key
+        declaration.refusal = refused
+        declarations[name] = declaration
 
-    declarations.update(from_config(config, declarations.keys(), frontend))
+    declarations.update(from_config(config, declarations, frontend))
     refuse_shadowed(cls, declarations)
     return declarations
+
+
+def service_attributes(cls: type) -> dict[str, str]:
+    """Return the attribute each service *cls* annotates is declared under, by name."""
+    found: dict[str, str] = {}
+    for attr, hint in hints(cls).items():
+        if attr.startswith("_") or not is_service(hint):
+            continue
+        _, metadata, _ = split(hint)
+        names = [marker.name for marker in metadata if isinstance(marker, Alias)]
+        found[names[-1] if names else attr] = attr
+    return found
 
 
 def read_services(

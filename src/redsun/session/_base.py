@@ -80,6 +80,7 @@ from ._declarations import (
     read,
     read_hooks,
     read_services,
+    service_attributes,
 )
 from ._factories import (
     constructor,
@@ -725,6 +726,9 @@ class Session(BuildableSession):
             )
         for name, service in self._services.items():
             setattr(self, name, service)
+        for name, attribute in service_attributes(type(self)).items():
+            if name in self._services and not hasattr(type(self), attribute):
+                setattr(self, attribute, self._services[name])
         self._storage = StorageConfig() if config.storage is None else config.storage
         if self._storage.catalog is not None:
             require_tiled()
@@ -814,9 +818,14 @@ class Session(BuildableSession):
         WiringError
             If `wire` yields nothing iterable, or a link that cannot be made.
         """
-        stand_ins = [name for name in self._failed if name in self._declarations]
-        for name in stand_ins:
-            setattr(self, name, NotBuilt(name))
+        stand_ins = {
+            attribute: name
+            for name in self._failed
+            if name in self._declarations
+            for attribute in self._held_as(self._declarations[name])
+        }
+        for attribute, name in stand_ins.items():
+            setattr(self, attribute, NotBuilt(name))
         try:
             links = self.wire()
             if links is None:
@@ -827,8 +836,8 @@ class Session(BuildableSession):
             for signal, slot in links:
                 self._link(signal, slot)
         finally:
-            for name in stand_ins:
-                delattr(self, name)
+            for attribute in stand_ins:
+                delattr(self, attribute)
         self._apply_wiring_config(self._configuration().wiring)
         self._warn_unused()
 
@@ -1811,7 +1820,8 @@ class Session(BuildableSession):
             self._failed[name] = ConnectionError(reason)
             del self._devices[name]
             declaration.instance = None
-            delattr(self, name)
+            for attribute in self._held_as(declaration):
+                delattr(self, attribute)
             logger.error("Failed to connect device '%s': %s", name, reason)
 
     def _connection_failure(
@@ -1839,7 +1849,20 @@ class Session(BuildableSession):
     ) -> None:
         """Hold *instance* as what *declaration* built."""
         declaration.instance = instance
-        setattr(self, declaration.name, instance)
+        for attribute in self._held_as(declaration):
+            setattr(self, attribute, instance)
+
+    def _held_as(self, declaration: Declaration) -> tuple[str, ...]:
+        """Return the attributes of the session that hold what *declaration* builds.
+
+        Its name, and the attribute it was declared under where the two differ
+        and the session does not answer that attribute itself.
+        """
+        if declaration.attribute == declaration.name:
+            return (declaration.name,)
+        if hasattr(type(self), declaration.attribute):
+            return (declaration.name,)
+        return (declaration.name, declaration.attribute)
 
     def _register_teardown(self, component: object) -> None:
         """Hand the session's own teardown to the one owner of it.

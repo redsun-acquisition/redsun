@@ -630,3 +630,13 @@ def test_services_start_together(
     app = build(App)
 
     assert (app.left.running, app.right.running) == (True, True)
+
+
+def test_a_renamed_service_is_reached_by_its_attribute() -> None:
+    class App(Session):
+        motors: Annotated[AsService, Alias("stage_ioc"), Attach("MOT:")]
+
+    app = App()
+    app.read_configuration()
+
+    assert app.motors is app.services["stage_ioc"]

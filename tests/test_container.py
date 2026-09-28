@@ -926,6 +926,22 @@ class Listener:
         self.heard.append(text)
 
 
+class RenamedApp(Session):
+    speaker: Annotated[AsPresenter[Talker], Alias("talker")]
+    listener: AsPresenter[Listener]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.speaker.sig_said, self.listener.hear
+
+
+class RenamedBrokenApp(Session):
+    speaker: Annotated[AsPresenter[BrokenTalker], Alias("talker")]
+    listener: AsPresenter[Listener]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.speaker.sig_said, self.listener.hear
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Components come up, typed attributes reach them, devices are built."""
     assert app.is_built
@@ -1839,3 +1855,23 @@ def test_a_session_can_be_referred_to_weakly() -> None:
     long an instance is kept.
     """
     assert weakref.ref(Session())() is not None
+
+
+def test_a_renamed_component_is_reached_by_its_attribute() -> None:
+    """`Alias` names the component; the attribute it was declared as still holds it."""
+    app = RenamedApp().build()
+
+    app.speaker.sig_said.emit("one")
+
+    assert app.listener.heard == ["one"]
+    assert app.speaker.name == "talker"
+    assert app.presenters["talker"] is app.speaker
+    app.shutdown()
+
+
+def test_a_renamed_component_that_failed_does_not_break_the_wiring() -> None:
+    app = RenamedBrokenApp().build()
+
+    assert set(app.presenters) == {"listener"}
+    assert app.listener.heard == []
+    app.shutdown()
