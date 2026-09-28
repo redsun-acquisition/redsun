@@ -23,6 +23,7 @@ ENTRY = re.compile(
     r"^\* (?P<title>.+?) by @\S+ in (?P<url>https://\S+/pull/(?P<number>\d+))$"
 )
 LINK = re.compile(r"^\[[^\]]+\]: https?://")
+TYPE = re.compile(r"^[a-z]+(\([^)]*\))?!?:\s*")
 FINAL_TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 
 
@@ -49,12 +50,23 @@ def entries(notes: str) -> list[re.Match[str]]:
     return [m for line in notes.splitlines() if (m := ENTRY.match(line.strip()))]
 
 
+def worded(title: str) -> str:
+    """Return *title* as a changelog entry words it.
+
+    Without the type and scope a commit's first line starts with, which the
+    heading of the section already says, and starting with a capital.
+    """
+    summary = TYPE.sub("", title, count=1)
+    return summary[:1].upper() + summary[1:]
+
+
 def section(version: str, date: datetime.date, notes: str, breaking: set[int]) -> str:
     """Return the changelog section for *version* from GitHub's *notes*.
 
-    Headings and entries are kept; an entry becomes its pull request's title
-    and link, marked as breaking when its number is in *breaking*. The
-    contributor lines and the compare link GitHub adds are dropped.
+    Headings and entries are kept; an entry becomes its pull request's title,
+    as `worded`, and its link, marked as breaking when its number is in
+    *breaking*. The contributor lines and the compare link GitHub adds are
+    dropped.
     """
     lines = [f"## [{version}] - {date:%d-%m-%Y}"]
     for raw in notes.splitlines():
@@ -68,7 +80,8 @@ def section(version: str, date: datetime.date, notes: str, breaking: set[int]) -
         if match is not None:
             number = int(match["number"])
             marker = "**Breaking:** " if number in breaking else ""
-            lines.append(f"- {marker}{match['title']} ([#{number}]({match['url']}))")
+            title = worded(match["title"])
+            lines.append(f"- {marker}{title} ([#{number}]({match['url']}))")
     return "\n".join(lines) + "\n"
 
 

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import datetime
 
-from scripts.release_notes import extract, insert, section
+import pytest
+
+from scripts.release_notes import extract, insert, section, worded
 
 NOTES = """\
 ## What's Changed
@@ -51,11 +53,11 @@ Intro.
 
 ### Added
 
-- feat: add strict sessions ([#140](https://github.com/o/r/pull/140))
+- Add strict sessions ([#140](https://github.com/o/r/pull/140))
 
 ### Changed
 
-- **Breaking:** refactor!: promote the session layer ([#141](https://github.com/o/r/pull/141))
+- **Breaking:** Promote the session layer ([#141](https://github.com/o/r/pull/141))
 
 ## [0.13.0] - 23-09-2026
 
@@ -80,3 +82,22 @@ def test_the_first_section_goes_below_the_introduction() -> None:
     assert changelog.endswith("\n[0.14.0]: https://x\n")
     assert "New Contributors" not in changelog
     assert "Full Changelog" not in changelog
+
+
+@pytest.mark.parametrize(
+    ("title", "entry"),
+    [
+        pytest.param("feat: add strict sessions", "Add strict sessions", id="type"),
+        pytest.param("fix(engine): wake a latch", "Wake a latch", id="scope"),
+        pytest.param("refactor(qt)!: drop a hook", "Drop a hook", id="breaking"),
+        pytest.param(
+            "fix: `wire` yields links", "`wire` yields links", id="code-first"
+        ),
+        pytest.param("Bump the actions group", "Bump the actions group", id="no-type"),
+        pytest.param("docs: say why: a colon", "Say why: a colon", id="second-colon"),
+    ],
+)
+def test_an_entry_drops_the_type_its_section_already_says(
+    title: str, entry: str
+) -> None:
+    assert worded(title) == entry

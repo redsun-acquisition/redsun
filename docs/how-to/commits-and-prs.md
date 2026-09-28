@@ -41,7 +41,9 @@ you.
 ## Pull requests
 
 Open the pull request against `main`. The title follows the same rules as a
-commit's first line, since it becomes the changelog entry.
+commit's first line, since the changelog entry is made from it:
+`feat(session): add strict sessions` is listed under *Added* as "Add strict
+sessions".
 
 Split the description into the sections that apply:
 
