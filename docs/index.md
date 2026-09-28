@@ -46,7 +46,8 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Installation and a first working session. New users start here.
+    Installation, a first working session, and what is built on it. New users
+    start here.
 
     [:lucide-arrow-right: Tutorials](tutorials/index.md)
 

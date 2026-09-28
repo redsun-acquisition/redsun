@@ -81,6 +81,13 @@ sends it, and does not care who listens. `nudge` is a
 [slot](../explanation/glossary.md#slot): something another component can
 trigger.
 
+!!! note
+
+    An editor that checks types underlines `self.stage.position`. `devices`
+    holds devices of every kind, so the editor cannot tell that this one has
+    a position. The script runs all the same, and
+    [Describing a device with a protocol](device-protocols.md) corrects it.
+
 ## 3. The view
 
 A [view](../explanation/glossary.md#view) is what the user sees. This one is a
@@ -175,6 +182,8 @@ Run it again. Each press now moves the stage by `0.5`: the session found
 
 ## Next steps
 
+- [Describing a device with a protocol](device-protocols.md) is the next
+  tutorial: it makes the presenter say what it needs from a stage.
 - [Write a component](../how-to/write-a-component.md) has more detail on each
   kind.
 - [Sessions](../explanation/session.md) explains what happens when a session

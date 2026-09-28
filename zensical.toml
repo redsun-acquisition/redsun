@@ -14,6 +14,7 @@ nav = [
         "tutorials/index.md",
         "tutorials/installation.md",
         "tutorials/first-session.md",
+        "tutorials/device-protocols.md",
     ]},
     { "How-to Guides" = [
         "how-to/index.md",
