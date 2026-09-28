@@ -76,11 +76,11 @@ in this order:
 | `services` | start the [services](services.md) the session launches, and the catalog |
 | `devices` | make every device |
 | `connect` | connect the devices, all at once |
-| `registry` | make the values every component may ask for |
+| `registry` | register what a constructor may ask for: the settings, the devices, the values of providers |
 | `presenters` | make the presenters |
 | `views` | make the views |
 | `setup` | call each component's `setup` method |
-| `seal` | record what each component would save, to notice changes later |
+| `seal` | check what was built, close the session to further building, and record what each component would save, to notice changes later |
 | `wiring` | connect the [signals](glossary.md#signal) to the [slots](glossary.md#slot) |
 | `presentation` | put the views on screen |
 | `report` | log a summary of what was built |
