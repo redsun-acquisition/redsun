@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 from unittest import mock
 
+from qtpy.QtCore import QLocale
 from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QPushButton
 
 SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
@@ -31,14 +32,19 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (420, 220),
         None,
     ),
+    Path("docs/tutorials/device_protocols.py"): (
+        Path("docs/tutorials/images/device-protocols.png"),
+        (420, 300),
+        None,
+    ),
     Path("docs/tutorials/plan_form.py"): (
         Path("docs/tutorials/images/plan-form.png"),
-        (420, 260),
+        (820, 340),
         None,
     ),
     Path("docs/tutorials/acquire_images.py"): (
         Path("docs/tutorials/images/acquire-images.png"),
-        (760, 520),
+        (820, 760),
         "camera_view",
     ),
 }
@@ -86,6 +92,8 @@ def capture(
         def elsewhere(*_: object, **__: object) -> str:
             return home
 
+        # numbers are written the same way whatever machine takes the picture
+        QLocale.setDefault(QLocale(QLocale.Language.English))
         with (
             mock.patch("redsun._settings.user_config_dir", elsewhere),
             mock.patch("redsun.log.user_data_dir", elsewhere),
