@@ -542,7 +542,7 @@ class Session(BuildableSession):
         for moment, declaration in read_hooks(type(self), points).items():
             provider = built.get(id(declaration))
             if provider is None:
-                provider = instantiate(declaration, owner)
+                provider = provider_from_class(declaration, owner)
                 built[id(declaration)] = provider
             declared[moment] = provider
 
@@ -2132,7 +2132,7 @@ def base_for(cls: type[Session], frontend: object) -> type[Session]:
     return resolved
 
 
-def instantiate(declaration: HookDeclaration, owner: str) -> object:
+def provider_from_class(declaration: HookDeclaration, owner: str) -> object:
     """Construct the provider *declaration* names.
 
     Raises

@@ -172,13 +172,13 @@ def resolve_hooks(specs: Iterable[HookGroup]) -> dict[str, object]:
     """
     resolved: dict[str, object] = {}
     for spec in specs:
-        provider = instantiate(spec)
+        provider = provider_from_file(spec)
         for moment in spec.moments:
             resolved[moment] = provider
     return resolved
 
 
-def instantiate(spec: HookGroup) -> object:
+def provider_from_file(spec: HookGroup) -> object:
     """Import the class *spec* names and construct it with the spec's keys.
 
     Raises
