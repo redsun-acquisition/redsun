@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import logging
 from functools import cache
-from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
-from .._manifest import PluginManifest, ServiceEntry, discover
+from .._manifest import PluginManifest, ServiceEntry, discover, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -50,7 +49,11 @@ def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type 
     """
     if plugin_name is None or plugin_id is None:
         return None
-    return import_class(str(manifest_item(plugin_name, plugin_id, group)))
+    listed = str(manifest_item(plugin_name, plugin_id, group))
+    try:
+        return import_class(listed)
+    except (ImportError, TypeError) as e:
+        raise PluginError(f"cannot import {listed!r}: {e}") from e
 
 
 def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
@@ -143,19 +146,3 @@ def manifest_item(plugin_name: str, plugin_id: str, group: str) -> str | Service
             f"Its {group}: {known}"
         )
     return items[plugin_id]
-
-
-def import_class(class_path: str) -> type:
-    """Import ``module:Class``."""
-    module_name, _, class_name = class_path.partition(":")
-    if not module_name or not class_name:
-        raise PluginError(
-            f"{class_path!r} is not a class path; expected 'module:ClassName'"
-        )
-    try:
-        imported = getattr(import_module(module_name), class_name)
-    except (ImportError, AttributeError) as e:
-        raise PluginError(f"cannot import {class_path!r}: {e}") from e
-    if not isinstance(imported, type):
-        raise PluginError(f"{class_path!r} names {imported!r}, which is not a class")
-    return imported

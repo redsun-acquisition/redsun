@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from importlib import import_module
 from importlib.metadata import entry_points
 from importlib.resources import as_file, files
 from typing import TYPE_CHECKING, Annotated, Final
@@ -32,6 +33,26 @@ def class_path(value: str) -> str:
 
 ClassPath = Annotated[str, AfterValidator(class_path)]
 """A class named as ``module:ClassName``, imported only when a session uses it."""
+
+
+def import_class(path: str) -> type:
+    """Import the class *path* names as ``module:ClassName``.
+
+    Raises
+    ------
+    ImportError
+        If the module cannot be imported, or holds no such name.
+    TypeError
+        If the name is not a class.
+    """
+    module_name, _, class_name = path.partition(":")
+    try:
+        imported = getattr(import_module(module_name), class_name)
+    except AttributeError as e:
+        raise ImportError(str(e)) from e
+    if not isinstance(imported, type):
+        raise TypeError(f"it names {imported!r}, which is not a class")
+    return imported
 
 
 def message_of(problem: ErrorDetails) -> str:

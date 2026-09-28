@@ -5,12 +5,11 @@ from __future__ import annotations
 import logging
 from abc import abstractmethod
 from collections.abc import Mapping
-from importlib import import_module
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
-from ._manifest import ClassPath
+from ._manifest import ClassPath, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -188,15 +187,10 @@ def instantiate(spec: HookGroup) -> object:
         If the path does not import, does not name a class, or names one that
         rejects the keys given.
     """
-    module_name, _, class_name = spec.provider.partition(":")
     try:
-        imported = getattr(import_module(module_name), class_name)
-    except (ImportError, AttributeError) as e:
+        imported = import_class(spec.provider)
+    except (ImportError, TypeError) as e:
         raise HookError(f"cannot import hook provider {spec.provider!r}: {e}") from e
-    if not isinstance(imported, type):
-        raise HookError(
-            f"hook provider {spec.provider!r} names {imported!r}, which is not a class"
-        )
     try:
         return imported(**spec.kwargs)
     except TypeError as e:
