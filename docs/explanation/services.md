@@ -28,7 +28,7 @@ possible.
 The devices are the model. Together they describe what the setup contains: a
 stage with an X and a Y position, a camera with an exposure time and a region
 of interest. Each is a set of signals the session reads and sets. A device says
-what can be controlled, not how the hardware is reached.
+what can be controlled, and leaves how the hardware is reached to a service.
 
 The services are the implementation. A service owns the hardware: it opens the
 serial port or the camera, speaks the vendor's protocol or runs the vendor's
