@@ -4,8 +4,11 @@ icon: lucide/compass
 
 # How-to Guides
 
-Practical step-by-step guides for one task each, including working on
-`redsun` itself.
+Practical step-by-step guides for one task each.
+
+### Install
+
+- [How to install redsun](install-redsun.md)
 
 ### Build a session
 
@@ -14,9 +17,11 @@ Learn how to write the parts of a
 
 - [How to write a component](write-a-component.md)
 - [How to write a service](write-a-service.md)
+- [How to write a service with FastCS](write-a-service-with-fastcs.md)
 - [How to write a session file](write-a-session-file.md)
 - [How to wire components together](wire-components.md)
 - [How to share a value between components](share-a-value.md)
+- [How to follow a plan action from a view](follow-a-plan-action.md)
 
 ### Extend the window
 
@@ -51,19 +56,5 @@ Learn how to move code written for an earlier release.
 
 ### Contribute
 
-Learn how to set up, check and submit a change to `redsun` itself.
-
-- [How to contribute](contribute.md)
-- [How to set up a development environment](set-up-development.md)
-- [How to run the tests](run-tests.md)
-- [How to run the commit checks](run-commit-checks.md)
-- [How to write commits and pull requests](commits-and-prs.md)
-- [How to record a decision](record-a-decision.md)
-- [How to make a release](make-a-release.md)
-
-### Document
-
-Learn how to write a page of these docs and see it built.
-
-- [How to write documentation](write-docs.md)
-- [How to build the docs](build-docs.md)
+The guides for changing `redsun` itself are in a section of their own,
+[Contributing](contribute.md).

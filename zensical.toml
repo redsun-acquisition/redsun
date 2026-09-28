@@ -7,6 +7,8 @@ docs_dir = "docs"
 site_dir = "site"
 repo_url = "https://github.com/redsun-acquisition/redsun"
 repo_name = "redsun-acquisition/redsun"
+extra_css = ["stylesheets/install-table.css"]
+extra_javascript = ["javascripts/install-table.js"]
 
 nav = [
     "index.md",
@@ -15,15 +17,25 @@ nav = [
         "tutorials/installation.md",
         "tutorials/first-session.md",
         "tutorials/device-protocols.md",
+        "tutorials/plan-controls.md",
+        "tutorials/acquire-images.md",
+        "tutorials/scan-plan.md",
+        "tutorials/window-layout.md",
+        "tutorials/device-service.md",
     ]},
     { "How-to Guides" = [
         "how-to/index.md",
+        { "Install" = [
+            "how-to/install-redsun.md",
+        ]},
         { "Build a session" = [
             "how-to/write-a-component.md",
             "how-to/write-a-service.md",
+            "how-to/write-a-service-with-fastcs.md",
             "how-to/write-a-session-file.md",
             "how-to/wire-components.md",
             "how-to/share-a-value.md",
+            "how-to/follow-a-plan-action.md",
         ]},
         { "Extend the window" = [
             "how-to/install-hooks.md",
@@ -42,23 +54,9 @@ nav = [
         { "Upgrade" = [
             "how-to/migrate-from-0.13.md",
         ]},
-        { "Contribute" = [
-            "how-to/contribute.md",
-            "how-to/set-up-development.md",
-            "how-to/run-tests.md",
-            "how-to/run-commit-checks.md",
-            "how-to/commits-and-prs.md",
-            "how-to/record-a-decision.md",
-            "how-to/make-a-release.md",
-        ]},
-        { "Document" = [
-            "how-to/write-docs.md",
-            "how-to/build-docs.md",
-        ]},
     ]},
     { "Explanations" = [
         "explanation/index.md",
-        "explanation/glossary.md",
         { "Purpose" = [
             "explanation/statement.md",
         ]},
@@ -105,6 +103,7 @@ nav = [
     ]},
     { "Reference" = [
         "reference/index.md",
+        "explanation/glossary.md",
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
@@ -125,6 +124,21 @@ nav = [
         { "Changelog" = [
             "reference/changelog.md",
             "reference/previous-changelog.md",
+        ]},
+    ]},
+    { "Contributing" = [
+        "how-to/contribute.md",
+        { "Change the code" = [
+            "how-to/set-up-development.md",
+            "how-to/run-tests.md",
+            "how-to/run-commit-checks.md",
+            "how-to/commits-and-prs.md",
+            "how-to/record-a-decision.md",
+            "how-to/make-a-release.md",
+        ]},
+        { "Change the documentation" = [
+            "how-to/write-docs.md",
+            "how-to/build-docs.md",
         ]},
     ]},
 ]
@@ -240,6 +254,7 @@ pygments_lang_class = true
 # docs/explanation/glossary.md alone.
 [project.markdown_extensions.pymdownx.snippets]
 auto_append = ["includes/abbreviations.md"]
+dedent_subsections = true
 
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [

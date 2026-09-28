@@ -14,8 +14,10 @@
 
 A component-based, customizable application framework for scientific hardware orchestration, based on the [Bluesky] framework.
 
+To learn `redsun`, start with the [tutorials]. They build one application step by step, and need no hardware.
+
 > [!NOTE]
-> `redsun` can be used today. Until version 1.0, a release may change the API in ways that break existing code.
+> `redsun` is slowly reaching maturity. It is currently in a usable state, but expect breaking changes.
 
 ## Problem statement
 
@@ -124,6 +126,7 @@ See the [documentation] for more informations.
 
 [bluesky]: https://blueskyproject.io/bluesky/main/index.html
 [documentation]: https://redsun-acquisition.github.io/redsun/
+[tutorials]: https://redsun-acquisition.github.io/redsun/tutorials/
 
 ## License
 

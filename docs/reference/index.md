@@ -4,7 +4,12 @@ icon: lucide/book-open
 
 # Reference
 
-Technical reference material: the API and the release notes.
+Technical reference material: the glossary, the API and the release notes.
+
+### Glossary
+
+- [Glossary](../explanation/glossary.md): the words the documentation uses,
+  each defined once
 
 ### API
 

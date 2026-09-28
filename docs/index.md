@@ -17,13 +17,15 @@ hide:
 
 # `redsun`
 
-!!! note "Before 1.0"
-    `redsun` can be used today. Until version 1.0, a release may change the API
-    in ways that break existing code.
+!!! note "Project status"
+    `redsun` is slowly reaching maturity. It is currently in a usable state, but expect breaking changes.
 
 `redsun` is a [CPython] framework for building modular scientific data acquisition software.
 
 It builds on the [Bluesky] ecosystem and makes no assumptions about hardware, so each lab can build the control software its experiments need.
+
+To learn `redsun`, start with the [tutorials](tutorials/index.md). They build
+one application step by step, and need no hardware.
 
 ## About redsun
 
@@ -44,7 +46,8 @@ With `redsun` you can:
 - start and stop the [services](explanation/glossary.md#service) that drive
   your hardware, together with the application;
 - run acquisitions as `bluesky` [plans](explanation/glossary.md#plan), each
-  with an input form built from its parameters;
+  with a [plan widget](explanation/glossary.md#plan-widget) built from its
+  parameters;
 - use the built-in views, starting with a log window;
 - give every acquisition file a place and a name, under one folder per
   session;
@@ -67,7 +70,8 @@ the details, and shows how its parts compare with those of Micro-Manager.
 | What | Where |
 | --- | --- |
 | Source | <https://github.com/redsun-acquisition/redsun> |
-| PyPI | `pip install redsun` |
+| PyPI | <https://pypi.org/project/redsun/> |
+| Installation | [How to install redsun](how-to/install-redsun.md) |
 | Documentation | <https://redsun-acquisition.github.io/redsun> |
 | Releases | <https://github.com/redsun-acquisition/redsun/releases> |
 
@@ -84,7 +88,7 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Installation, a first working session, and what is built on it. New users
+    Eight tutorials that build one application, step by step. New users
     start here.
 
     [:lucide-arrow-right: Tutorials](tutorials/index.md)
@@ -93,8 +97,7 @@ to technical terminology is shown in the [glossary](explanation/glossary.md).
 
     ---
 
-    Practical step-by-step guides for one task each, including working on
-    `redsun` itself.
+    Practical step-by-step guides for one task each.
 
     [:lucide-arrow-right: How-to Guides](how-to/index.md)
 

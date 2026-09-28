@@ -4,9 +4,9 @@ icon: lucide/lightbulb
 
 # Explanations
 
-Explanations of how `redsun` works and why it works that way.
-
-- [Glossary](glossary.md)
+Explanations of how `redsun` works and why it works that way. The words these
+pages use are defined in the [glossary](glossary.md), which is listed under
+Reference.
 
 ### Purpose
 
