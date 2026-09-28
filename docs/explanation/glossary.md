@@ -67,7 +67,7 @@ A component is a [device](#device), a [presenter](#presenter) or a
 The configuration is the set of settings a session is built from. It comes
 from one or more session files or Python dictionaries, applied in order, so
 that a later one overrides an earlier one. The keys that say what kind of
-session it is cannot be overridden.
+session it is must be the same in every source: a disagreement is an error.
 
 ### Data key
 
@@ -107,7 +107,7 @@ measured, each measurement, and the stop. The term comes from
 ### DVP
 
 DVP stands for Device-View-Presenter, the way a `redsun` session is
-organised: devices model the hardware, presenters hold the behaviour and views
+organised: devices model the setup, presenters hold the behaviour and views
 show it. It is Model-View-Presenter with devices in place of the model.
 
 ### EPICS
@@ -125,7 +125,7 @@ package can register its own.
 
 ### Hook
 
-A hook is an object you give a session so that it can act at one moment of the
+A hook is an object you give a session to act at one moment of the
 [build](#build), for example to style the application before any window
 exists. A hook never changes what the session builds.
 
@@ -155,8 +155,9 @@ the components of the plugin under ids that a session file can name.
 ### Mocked session
 
 A mocked session is a session whose file sets `mock: true`. Its devices
-connect to replacements that `ophyd-async` provides in place of the hardware,
-and no service is launched, so the session runs with no hardware present.
+connect to simulated backends that `ophyd-async` provides in place of the
+hardware, and the session launches no service, so it runs with no hardware
+present.
 
 ### ophyd-async
 
@@ -229,15 +230,15 @@ A Qt binding is the Python package through which Qt is used: `pyqt6` or
 ### Release
 
 A release is something a [build step](#build-step) registers so that
-`shutdown` can undo it later, such as stopping a service. Releases run in the
-reverse of the order they were registered in.
+`shutdown` can undo it later, such as stopping a service. The last release
+registered runs first.
 
 ### Run
 
-A run is what a [plan](#plan) records between opening and closing it, from a
-start [document](#document) to a stop document, under an identifier of its
-own. A plan usually holds one run, but may hold several or none. The term
-comes from [`bluesky`](#bluesky).
+A run is one recording made by a [plan](#plan): everything between a start
+[document](#document) and a stop document, under an identifier of its own. A
+plan usually makes one run, but may make several or none. The term comes
+from [`bluesky`](#bluesky).
 
 ### RunEngine
 
