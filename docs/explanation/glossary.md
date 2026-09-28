@@ -7,8 +7,8 @@ icon: lucide/book-a
 The words `redsun` uses, and the words it takes from the projects it is built
 on, each with one plain definition. Other pages link a term here the first
 time they use it, so this is the only place a definition is written. An entry
-for a word of another project names that project and links to its own
-documentation.
+for a word of another project names that project, whose own entry links to
+its documentation.
 
 Acronyms also appear as tooltips across the site: hover a dotted-underlined
 word to read it.
@@ -54,7 +54,8 @@ reads and sets [process variables](#process-variable).
 ### Checkpoint
 
 A point of a [plan](#plan) the [`RunEngine`](#runengine) goes back to when it
-resumes after a pause, repeating what followed it. A word of `bluesky`.
+resumes after a pause, repeating what followed it. A word of
+[`bluesky`](#bluesky).
 
 ### Component
 
@@ -69,7 +70,7 @@ keys that say what kind of session it is.
 ### Data key
 
 The name one measured value is recorded under in a [run](#run), such as
-`camera-image`. A word of `bluesky`.
+`camera-image`. A word of [`bluesky`](#bluesky).
 
 ### Declaration
 
@@ -87,14 +88,14 @@ first layer to be built.
 
 One value of a [device](#device) that can be read, set, or both, such as the
 position of a stage, or one action of the device that can be triggered. It
-comes from `ophyd-async`, and is not a [signal](#signal) in the sense of this
-glossary.
+comes from [`ophyd-async`](#ophyd-async), and is not a [signal](#signal) in
+the sense of this glossary.
 
 ### Document
 
 A record the [`RunEngine`](#runengine) emits while a [plan](#plan) runs: the
 start of a [run](#run), what is measured, each measurement, the stop. A word
-of `bluesky`, explained in
+of [`bluesky`](#bluesky), explained in
 [its page on documents](https://blueskyproject.io/bluesky/main/documents.html).
 
 ### DVP
@@ -171,7 +172,7 @@ which placements it can show.
 
 A recipe for an acquisition, written as a Python generator that yields one
 instruction at a time, and run by the [`RunEngine`](#runengine). A presenter
-starts it. A word of `bluesky`, explained in
+starts it. A word of [`bluesky`](#bluesky), explained in
 [its page on plans](https://blueskyproject.io/bluesky/main/plans.html).
 
 ### Plugin
@@ -186,7 +187,7 @@ receiving side. A session file names a port as `component.port`.
 ### Prefix
 
 The start shared by the names of the [process variables](#process-variable)
-of one device, such as `CAM:` in `CAM:Exposure`. A word of EPICS.
+of one device, such as `CAM:` in `CAM:Exposure`. A word of [EPICS](#epics).
 
 ### Presenter
 
@@ -196,7 +197,7 @@ sends signals, but never touches a widget.
 ### Process variable
 
 One named value an [IOC](#ioc) offers, such as `CAM:Exposure`. Often written
-PV. A word of EPICS.
+PV. A word of [EPICS](#epics).
 
 ### Protocol
 
@@ -225,11 +226,11 @@ registered.
 What a [plan](#plan) records between opening a run and closing it, from a
 start [document](#document) to a stop document, with an identifier of its
 own. A plan usually holds one run, and may hold several or none. A word of
-`bluesky`.
+[`bluesky`](#bluesky).
 
 ### RunEngine
 
-The object of `bluesky` that executes a [plan](#plan). A
+The object of [`bluesky`](#bluesky) that executes a [plan](#plan). A
 [presenter](#presenter) makes one and starts plans on it.
 [`redsun.engine.RunEngine`][redsun.engine.RunEngine] is the one `redsun`
 gives.
@@ -275,7 +276,7 @@ connect to it. Its name and arguments are public, since others rely on them.
 
 A [document](#document) naming a file or a store that a device or its
 [service](#service) wrote, so that whoever reads the [run](#run) finds the
-data. A word of `bluesky`.
+data. A word of [`bluesky`](#bluesky).
 
 ### Strict session
 

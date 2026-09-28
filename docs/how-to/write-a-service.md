@@ -13,7 +13,8 @@ launch, declare it, and point a device at it.
 
 `redsun` depends on [`ophyd-async`](../explanation/glossary.md#ophyd-async) and
 on nothing a control-system protocol needs, so a service brings its own. For a
-`caproto` IOC reached over Channel Access:
+`caproto` IOC reached over
+[Channel Access](../explanation/glossary.md#channel-access):
 
 ```bash
 uv add caproto "ophyd-async[ca]"
