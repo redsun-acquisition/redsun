@@ -265,11 +265,24 @@ def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
 | `__togglable__`, `__pausable__` on a plan | `__continuous__`, a `Continuous` with a `pausable` field |
 | `PlanSpec.togglable` | `PlanSpec.continuous` |
 | `wait_for_actions(events, timeout=...)` | `wait_for_actions(events, poll_interval=...)` |
+| `Action` | `PlanAction` |
+| `Action(togglable=True, toggle_states=...)` | `PlanAction(toggle_states=...)` |
+| `Action.togglable` | removed: `toggle_states` is `None` for a button that is clicked |
+| `action.event_map` | removed: a `PlanAction` holds no latch |
+| `name, latch = yield from wait_for_actions(action.event_map)` | `name = yield from actions.wait(action)` |
+| `wait_for_actions(action.event_map, wait_for="reset")` | `actions.wait_released(action)` |
+| `latch.reset()` once the plan has acted | `actions.done(name)` |
+| a latch set from a slot | `actions.request(name)`, linked in `wire` to the signal of the view |
 
 - `wait_for_actions` never timed out, and still does not: the argument is the
   time between two checkpoints.
 - `wait_for_actions` raises `ValueError` when `events` is empty.
-- `Action.togglable` and `Action.toggle_states` are unchanged.
+- `actions` is an `ActionManager` from `redsun.engine.actions`, made by whoever owns
+  the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
+- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None` where it
+  defaulted to `("On", "Off")`.
+- `create_plan_spec` raises `ValueError` for a plan declaring two actions of
+  one name.
 
 ## Other changes
 

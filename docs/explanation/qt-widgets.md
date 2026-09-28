@@ -109,17 +109,24 @@ engine is left to the presenter.
 
 ## Action buttons
 
-`ActionButton` is a `QPushButton` carrying an `Action`. For a togglable action
-its label follows the toggle state:
+`ActionButton` is a `QPushButton` carrying a `PlanAction`. An action with
+`toggle_states` gets a button that can be checked, and whose label follows the
+state:
 
 ```python
 from redsun.view.qt.utils import ActionButton
-from redsun.engine.actions import Action
+from redsun.engine.actions import PlanAction
 
-action = Action(name="led", togglable=True, toggle_states=("On", "Off"))
+action = PlanAction(name="record", toggle_states=("Start", "Stop"))
 btn = ActionButton(action)
-# label shows "Led (On)" when checked, "Led (Off)" when unchecked
+# label shows "Record (Start)" when unchecked, "Record (Stop)" when checked
 ```
+
+An action whose `toggle_states` is `None` gets a button that is clicked, and
+whose label does not change.
+
+To enable and disable a button as the plan offers and takes its action, see
+[Following an action from a view](plans.md#following-an-action-from-a-view).
 
 ---
 

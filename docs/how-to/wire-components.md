@@ -224,6 +224,16 @@ temperature ~> temperature_widget.update_temperature  [thread=main]
 ```
 
 `->` is a signal connection, `~>` a device subscription.
+
+A component may hold an object with signals or slots of its own as an
+attribute. The session records that object under the name of the component.
+It records a link yielded as
+`self.det_widget.sig_action_request, self.det_ctrl.actions.request` as:
+
+```
+det_widget.sig_action_request -> det_ctrl.request
+```
+
 [`ports`][redsun.ports.ports] lists what one component offers:
 
 ```python
