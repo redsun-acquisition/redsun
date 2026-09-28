@@ -250,11 +250,13 @@ class SessionPathProvider(PathProvider):
         """Return the `PathInfo` of the next file for *datakey_name*.
 
         Each call returns a new path, since it increments that data key's
-        counter for the active plan.
+        counter for the active plan. The folder of the path is created if it
+        does not exist.
         """
         directory = self.session_dir / self._now().strftime("%Y-%m-%d")
         if datakey_name:
             directory = directory / datakey_name
+        directory.mkdir(parents=True, exist_ok=True)
         return PathInfo(
             directory_path=directory, filename=self._filenames(datakey_name)
         )

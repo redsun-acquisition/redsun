@@ -248,3 +248,14 @@ def test_filename_provider_accessors_and_padding() -> None:
     assert filenames("other") == "scan_000"
     filenames.reset({})
     assert filenames("det") == "scan_000"
+
+
+def test_the_folder_of_a_path_exists_once_the_path_is_asked_for(
+    tmp_path: Path,
+) -> None:
+    provider = SessionPathProvider(base_dir=tmp_path, session="lab")
+
+    info = provider("camera")
+
+    assert Path(info.directory_path).is_dir()
+    assert info.directory_path.parent.parent == tmp_path / "lab"
