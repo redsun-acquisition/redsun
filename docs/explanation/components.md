@@ -44,6 +44,13 @@ one of them. A component that needs another component, or a value another
 component shares, asks for it in an optional `setup` method:
 
 ```python
+class MotorReadings:
+    """The last position read from each motor."""
+
+    def __init__(self) -> None:
+        self.positions: dict[str, float] = {}
+
+
 class RoiPresenter:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -69,7 +76,11 @@ A component offers a value to the others by marking a method with
 [`provides`][redsun.provides]. The return type is what others ask for:
 
 ```python
-class CameraPresenter:
+class MotorPresenter:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self._readings = MotorReadings()
+
     @provides
     def readings(self) -> MotorReadings:
         return self._readings
@@ -88,7 +99,7 @@ device layer, so see the `ophyd-async` documentation for signals, detectors and
 the base classes.
 
 The devices of a session model the setup: what it contains and what can be
-controlled. Reaching the hardware is a service's job, and
+controlled. Reaching the hardware is best left to a service, and
 [Devices model the setup, services drive the hardware](services.md#devices-model-the-setup-services-drive-the-hardware)
 explains why the two are kept apart.
 
@@ -139,11 +150,15 @@ of a session under one folder:
 <base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
 ```
 
-`base_dir` comes from the `storage` section of the session file, and is the
-user's data folder when left out. A declaration cannot give `path_provider`
+`base_dir` comes from the `storage` section of the session file. When left
+out, it is the folder `redsun` keeps for the user: `%LOCALAPPDATA%\redsun` on
+Windows, `~/Library/Application Support/redsun` on macOS and
+`~/.local/share/redsun` on Linux. A declaration cannot give `path_provider`
 itself. A device that does not take it picks its own paths.
 
-The path provider has three slots for the wiring:
+The path provider has three slots for the wiring. In this example
+`acquisition` is a presenter that runs plans, and `output_dir_widget` a view
+where the user picks a folder:
 
 ```yaml
 wiring:
