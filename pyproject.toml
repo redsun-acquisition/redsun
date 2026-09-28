@@ -175,6 +175,12 @@ warn_no_return = true
 module = ["mock_bundle.*"]
 ignore_missing_imports = true
 
+# caproto ships no type information, so a class taken from it is Any and
+# subclassing one is an error a stub would fix
+[[tool.mypy.overrides]]
+module = ["docs.tutorials.stage_ioc"]
+disable_error_code = ["misc"]
+
 [tool.coverage.run]
 source = ["redsun"]
 omit = [
