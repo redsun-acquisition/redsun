@@ -4,7 +4,7 @@ icon: lucide/book-open
 
 # Reference
 
-Technical reference material: the API, the private API and the release notes.
+Technical reference material: the API and the release notes.
 
 ### API
 
@@ -32,13 +32,6 @@ Look up a class or a function by the module it is imported from.
     - [`redsun.view`](api/view.md)
         - [`redsun.view.qt`](api/view.md#qt-widgets)
     - [`redsun.writers`](api/writers.md)
-
-### Private API
-
-Look up a name `redsun` uses internally, which a component does not call.
-
-- [`redsun.aio`](api/private.md#redsun-aio)
-- [`redsun.view.qt`](api/private.md#redsun-view-qt)
 
 <!-- ends the list above, so the two below are a list of their own -->
 

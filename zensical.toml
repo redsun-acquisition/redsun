@@ -121,7 +121,6 @@ nav = [
             "reference/api/view.md",
             "reference/api/writers.md",
         ]},
-        "reference/api/private.md",
         { "Changelog" = [
             "reference/changelog.md",
             "reference/previous-changelog.md",

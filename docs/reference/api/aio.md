@@ -13,6 +13,3 @@ Design rationale:
     options:
       members:
         - run_coro
-
-The names a session sets the runtime up with are in the
-[private API](private.md).
