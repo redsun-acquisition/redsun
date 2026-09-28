@@ -1,23 +1,15 @@
-"""The session built in the "Acquiring images" tutorial."""
+"""The session built in the "Building controls for a plan" tutorial."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping  # noqa: TC003
 from typing import Any, Protocol, runtime_checkable
-from urllib.parse import urlsplit
-from urllib.request import url2pathname
 
 import bluesky.plan_stubs as bps
-import bluesky.plans as bp
-import h5py
-import numpy as np
-from bluesky.protocols import Readable, Reading, Triggerable
+from bluesky.protocols import Reading  # noqa: TC002
 from bluesky.utils import MsgGenerator  # noqa: TC002
-from event_model import DocumentRouter, StreamResource
 from ophyd_async.core import SignalRW, StandardReadable, soft_signal_rw
-from ophyd_async.sim import SimBlobDetector  # noqa: TC002
 from psygnal import Signal
-from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -72,14 +64,6 @@ class HasPosition(Protocol):
     position: SignalRW[float]
 
 
-# --8<-- [start:camera]
-@runtime_checkable
-class Camera(Readable[Any], Triggerable, Protocol): ...
-
-
-# --8<-- [end:camera]
-
-
 class StagePresenter:
     def __init__(
         self, name: str, *, stages: DevicesOf[HasPosition], step: float = 1.0
@@ -119,6 +103,7 @@ class StageView(QWidget):
             self.labels[stage].setText(f"position: {entry['value']}")
 
 
+# --8<-- [start:stage_plans]
 class StagePlans:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -134,6 +119,10 @@ class StagePlans:
         return {"walk": {"plan": self.walk}}
 
 
+# --8<-- [end:stage_plans]
+
+
+# --8<-- [start:plan_ctrl]
 class PlanPresenter:
     sig_started = Signal(str)
     sig_finished = Signal()
@@ -166,6 +155,10 @@ class PlanPresenter:
         future.add_done_callback(lambda _: self.sig_finished.emit())
 
 
+# --8<-- [end:plan_ctrl]
+
+
+# --8<-- [start:plan_view]
 class PlanView(QWidget):
     placement: Placement = Dock("right")
     sig_run = Signal(str, dict)
@@ -203,76 +196,18 @@ class PlanView(QWidget):
         self.setEnabled(True)
 
 
-# --8<-- [start:camera_ctrl]
-class CameraPresenter(DocumentRouter):
-    sig_frame = Signal(object)
-
-    def __init__(self, name: str, *, cameras: DevicesOf[Camera]) -> None:
-        super().__init__()
-        self.name = name
-        self.cameras = cameras
-        self.written: tuple[str, str] | None = None
-
-    def snap(self, camera: Camera, frames: int = 3) -> MsgGenerator[Any]:
-        return (yield from bp.count([camera], num=frames))
-
-    def plan_map(self) -> Mapping[str, PlanEntry]:
-        return {"snap": {"plan": self.snap}}
-
-    def stream_resource(self, doc: StreamResource) -> StreamResource:
-        if doc["data_key"] in self.cameras:
-            self.written = (doc["uri"], doc["parameters"]["dataset"])
-        return doc
-
-    @slot
-    def show_last(self) -> None:
-        if self.written is not None:
-            uri, dataset = self.written
-            with h5py.File(url2pathname(urlsplit(uri).path), "r") as file:
-                self.sig_frame.emit(file[dataset][-1])
-            self.written = None
-
-
-# --8<-- [end:camera_ctrl]
-
-
-# --8<-- [start:image_view]
-class ImageView(QWidget):
-    placement: Placement = Dock("right")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-        self.image = QLabel("No image yet")
-        QVBoxLayout(self).addWidget(self.image)
-
-    @slot
-    def show_frame(self, frame: object) -> None:
-        values = np.asarray(frame, dtype=float)
-        low, high = values.min(), values.max()
-        grey = (255 * (values - low) / max(high - low, 1.0)).astype(np.uint8)
-        height, width = grey.shape
-        image = QImage(
-            grey.tobytes(), width, height, width, QImage.Format.Format_Grayscale8
-        )
-        self.image.setPixmap(QPixmap.fromImage(image.copy()))
-
-
-# --8<-- [end:image_view]
+# --8<-- [end:plan_view]
 
 
 # --8<-- [start:session]
 class FirstSession(QtSession):
     stage: AsDevice[MyStage]
     fast_stage: AsDevice[FastStage]
-    camera: AsDevice[SimBlobDetector]
     stage_ctrl: AsPresenter[StagePresenter]
     stage_plans: AsPresenter[StagePlans]
     plan_ctrl: AsPresenter[PlanPresenter]
-    camera_ctrl: AsPresenter[CameraPresenter]
     stage_view: AsView[StageView]
     plan_view: AsView[PlanView]
-    image_view: AsView[ImageView]
 
     def wire(self) -> Iterator[Link]:
         yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
@@ -280,10 +215,6 @@ class FirstSession(QtSession):
         yield self.fast_stage.position, self.stage_view.show_reading
         yield self.plan_view.sig_run, self.plan_ctrl.run
         yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
-        yield self.plan_ctrl.sig_started, self.path_provider.set_plan
-        yield self.plan_ctrl.sig_finished, self.path_provider.reset_plan
-        yield self.plan_ctrl.sig_finished, self.camera_ctrl.show_last
-        yield self.camera_ctrl.sig_frame, self.image_view.show_frame
 
 
 if __name__ == "__main__":

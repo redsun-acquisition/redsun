@@ -24,32 +24,48 @@ from pathlib import Path
 from unittest import mock
 
 from qtpy.QtCore import QLocale
-from qtpy.QtWidgets import QApplication, QDockWidget, QMainWindow, QPushButton
+from qtpy.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDockWidget,
+    QMainWindow,
+    QPushButton,
+)
 
 SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
     Path("docs/tutorials/first_session.py"): (
         Path("docs/tutorials/images/first-session.png"),
-        (420, 220),
+        (420, 160),
         None,
     ),
     Path("docs/tutorials/device_protocols.py"): (
         Path("docs/tutorials/images/device-protocols.png"),
-        (420, 300),
+        (420, 200),
         None,
     ),
-    Path("docs/tutorials/plan_form.py"): (
-        Path("docs/tutorials/images/plan-form.png"),
-        (820, 340),
+    Path("docs/tutorials/plan_controls.py"): (
+        Path("docs/tutorials/images/plan-controls.png"),
+        (820, 380),
         None,
     ),
     Path("docs/tutorials/acquire_images.py"): (
         Path("docs/tutorials/images/acquire-images.png"),
+        (820, 720),
+        "plan_view:snap",
+    ),
+    Path("docs/tutorials/scan_plan.py"): (
+        Path("docs/tutorials/images/scan-plan.png"),
         (820, 760),
-        "camera_view",
+        "plan_view:scan",
+    ),
+    Path("docs/tutorials/window_layout.py"): (
+        Path("docs/tutorials/images/window-layout.png"),
+        (900, 640),
+        "plan_view:snap",
     ),
 }
 """Each example script, with where its picture is written, the size of the
-window, and the view whose **Run** is pressed before the picture, if any."""
+window, and the plan run before the picture, if any, as ``view:plan``."""
 
 SETTLE = 3.0
 """Seconds a plan started for a picture is given to finish."""
@@ -64,10 +80,16 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
     )
     window.resize(*size)
     if press is not None:
+        title, _, plan = press.partition(":")
         view = next(
-            d for d in window.findChildren(QDockWidget) if d.windowTitle() == press
+            d for d in window.findChildren(QDockWidget) if d.windowTitle() == title
         )
-        next(b for b in view.findChildren(QPushButton) if b.text() == "Run").click()
+        view.findChildren(QComboBox)[0].setCurrentText(plan)
+        next(
+            b
+            for b in view.findChildren(QPushButton)
+            if b.text() == "Run" and b.isVisible()
+        ).click()
         finished = time.monotonic() + SETTLE
         while time.monotonic() < finished:
             app.processEvents()

@@ -1,4 +1,4 @@
-"""The session built in the "Acquiring images" tutorial."""
+"""The session built in the "Arranging the window" tutorial."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
     resolve_arguments,
 )
-from redsun.qt import Dock, QtSession
+from redsun.qt import Central, Dock, QtSession
 from redsun.view.qt.utils import PlanWidget, create_plan_widget
 
 
@@ -72,12 +72,8 @@ class HasPosition(Protocol):
     position: SignalRW[float]
 
 
-# --8<-- [start:camera]
 @runtime_checkable
 class Camera(Readable[Any], Triggerable, Protocol): ...
-
-
-# --8<-- [end:camera]
 
 
 class StagePresenter:
@@ -95,7 +91,7 @@ class StagePresenter:
 
 
 class StageView(QWidget):
-    placement: Placement = Dock("left")
+    placement: Placement = Dock("bottom")
     sig_nudge = Signal(str)
 
     def __init__(self, name: str, parent: QWidget) -> None:
@@ -203,7 +199,6 @@ class PlanView(QWidget):
         self.setEnabled(True)
 
 
-# --8<-- [start:camera_ctrl]
 class CameraPresenter(DocumentRouter):
     sig_frame = Signal(object)
 
@@ -233,12 +228,8 @@ class CameraPresenter(DocumentRouter):
             self.written = None
 
 
-# --8<-- [end:camera_ctrl]
-
-
-# --8<-- [start:image_view]
 class ImageView(QWidget):
-    placement: Placement = Dock("right")
+    placement: Placement = Central()
 
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
@@ -258,7 +249,22 @@ class ImageView(QWidget):
         self.image.setPixmap(QPixmap.fromImage(image.copy()))
 
 
-# --8<-- [end:image_view]
+class ScanPlans:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def scan(
+        self,
+        stage: HasPosition,
+        camera: Camera,
+        start: float = 0.0,
+        stop: float = 5.0,
+        points: int = 6,
+    ) -> MsgGenerator[Any]:
+        return (yield from bp.scan([camera], stage.position, start, stop, points))
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        return {"scan": {"plan": self.scan}}
 
 
 # --8<-- [start:session]
@@ -270,6 +276,7 @@ class FirstSession(QtSession):
     stage_plans: AsPresenter[StagePlans]
     plan_ctrl: AsPresenter[PlanPresenter]
     camera_ctrl: AsPresenter[CameraPresenter]
+    scan_plans: AsPresenter[ScanPlans]
     stage_view: AsView[StageView]
     plan_view: AsView[PlanView]
     image_view: AsView[ImageView]

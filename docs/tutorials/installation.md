@@ -4,79 +4,72 @@ icon: lucide/download
 
 # Installation
 
-## Create a virtual environment
+In this tutorial you make a project folder and install `redsun` in it. The
+tutorials that follow are written in that folder.
 
-Install `redsun` in a virtual environment.
+## Before you start
 
-=== "uv (recommended)"
+!!! note "What you need"
 
-    ```bash
-    uv venv --python 3.11
+    [`uv`](https://docs.astral.sh/uv/), which makes the project, installs the
+    packages and runs the scripts. Its documentation shows [how to install
+    it](https://docs.astral.sh/uv/getting-started/installation/). You do not
+    need to install Python: `uv` fetches it.
 
-    # For Linux/macOS
-    source .venv/bin/activate
+## 1. Make the project
 
-    # For Windows Command Prompt
-    .venv\Scripts\activate.bat
+Open a terminal in the place where you keep your work, and make a project
+called `my-microscope`:
 
-    # For Windows PowerShell
-    .venv\Scripts\Activate.ps1
-    ```
+```bash
+uv init --bare --pin-python --python 3.12 my-microscope
+```
 
-=== "venv"
+```text
+Initialized project `my-microscope` at `/home/you/my-microscope`
+```
 
-    ```bash
-    # Python version depends on the globally installed Python
-    python -m venv redsun-env
+The folder holds two files. `pyproject.toml` lists what the project needs,
+and `.python-version` says which Python runs it.
 
-    # For Linux/macOS
-    source redsun-env/bin/activate
+Go into the folder. Every command of the tutorials is run from there:
 
-    # For Windows Command Prompt
-    redsun-env\Scripts\activate.bat
+```bash
+cd my-microscope
+```
 
-    # For Windows PowerShell
-    redsun-env\Scripts\Activate.ps1
-    ```
+## 2. Install redsun
 
-=== "conda"
+Add `redsun` to the project, with
+[PyQt6](../explanation/glossary.md#qt-binding) to draw its windows:
 
-    ```bash
-    conda create -n redsun-env python=3.11
-    conda activate redsun-env
-    ```
+```bash
+uv add "redsun[pyqt]"
+```
 
-=== "mamba"
+`uv` makes a virtual environment in the folder, called `.venv`, and installs
+`redsun` in it. You never activate that environment: `uv run` uses it.
 
-    ```bash
-    mamba create -n redsun-env python=3.11
-    mamba activate redsun-env
-    ```
+## 3. Check that it works
 
-## Install redsun
+```bash
+uv run python -c "import redsun; print(redsun.__version__)"
+```
 
-`redsun` is on [PyPI](https://pypi.org/project/redsun/). Install it together
-with the [Qt binding](../explanation/glossary.md#qt-binding) you prefer:
+It prints the version that was installed:
 
-=== "`pyqt6`"
+```text
+0.14.0
+```
 
-    ```bash
-    pip install "redsun[pyqt]"
+## What you built
 
-    # Or if you're using uv
-    uv pip install "redsun[pyqt]"
-    ```
+A project folder, `my-microscope`, with `redsun` and PyQt6 installed in an
+environment of its own.
 
-=== "`pyside6`"
+## Next steps
 
-    ```bash
-    pip install "redsun[pyside]"
-
-    # Or if you're using uv
-    uv pip install "redsun[pyside]"
-    ```
-
-A session that shows no window needs no Qt binding: `pip install redsun` is
-enough. See [Run without a GUI](../how-to/run-without-a-gui.md).
-
-To change `redsun` itself, see [How to contribute](../how-to/contribute.md).
+- [Writing your first session](first-session.md) is the next tutorial: a
+  window with a button that moves a stage.
+- [How to install redsun](../how-to/install-redsun.md) covers other tools,
+  the other Qt binding, and the extras for storing data.
