@@ -132,12 +132,6 @@ A window opens with the view docked on the left:
 
 Press **Nudge**: the label counts up by one each time.
 
-??? example "The whole script"
-
-    ```{.python}
-    --8<-- "docs/tutorials/first_session.py"
-    ```
-
 ## 6. Change a setting without touching the code
 
 Make a file called `session.yaml` beside the script:
@@ -160,6 +154,15 @@ class FirstSession(QtSession):
 
 Run it again. Each press now moves the stage by `0.5`: the session found
 `step` in the file and passed it to the presenter's constructor.
+
+??? example "The whole script"
+
+    The script leaves out the `config` line of step 6, which needs
+    `session.yaml`.
+
+    ```{.python}
+    --8<-- "docs/tutorials/first_session.py"
+    ```
 
 ## What you learned
 
