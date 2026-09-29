@@ -40,10 +40,11 @@ redsun/
 |-- docs/                      Diataxis site built by zensical
 |   |-- tutorials/             installation, first session
 |   |-- how-to/                one task per page, contributing and migration included
+|   |-- examples/              whole scripts of the how-to guides, built by a test
 |   |-- explanation/           architecture pages, glossary and decisions/ (ADRs)
 |   `-- reference/             api/ pages, changelog (generated)
-|-- benchmarks/                performance scripts, not tests, sdist only
-|-- scripts/                   check_xrefs.py (docs), mypy_qt.py (tox mypy legs),
+|-- scripts/                   check_xrefs.py (docs), export_schemas.py (docs),
+|                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (changelog sections),
 |                              screenshots.py (tutorial window pictures, docs build)
 |-- .github/workflows/         CI, changelog label check, prepare-release
@@ -58,8 +59,6 @@ redsun/
 - `redsun.utils` imports nothing from `redsun` at runtime, only under
   `TYPE_CHECKING`: `log.py` imports `redsun.utils._paths`, so a runtime import
   there would be circular.
-- `benchmarks/` are never collected by pytest. Run one with
-  `uv run python benchmarks/bench_acquire_zarr.py`.
 
 ## Build & validate
 
