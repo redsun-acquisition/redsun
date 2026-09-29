@@ -827,6 +827,31 @@ class ProviderAndComponentApp(Session):
     owner: AsPresenter[ScaleOwner]
 
 
+class DefaultedServices:
+    """Shared service whose constructor parameter nothing provides."""
+
+    def __init__(self, factor: float = 2.0) -> None:
+        self.factor = factor
+
+    @provides
+    def scale(self) -> Scale:
+        return Scale(self.factor)
+
+
+class ScaleReader:
+    """Presenter taking the scale a shared service shares."""
+
+    def __init__(self, name: str, *, scale: Scale) -> None:
+        self.name = name
+        self.scale = scale
+
+
+class DefaultedServicesApp(Session):
+    providers: ClassVar[list[type]] = [DefaultedServices]
+
+    reader: AsPresenter[ScaleReader]
+
+
 class BrokenPresenter:
     """Presenter whose construction cannot succeed."""
 
@@ -1592,6 +1617,14 @@ def test_a_component_whose_collaborator_failed_is_not_set_up(
     assert app.is_built
     assert set(app.presenters) == {"ok", "dependent"}
     assert app.dependent.other is None
+
+
+def test_a_provider_keeps_the_default_of_a_parameter_nothing_provides(
+    build: BuildSession,
+) -> None:
+    """Build a provider with its own default where nothing provides the type."""
+    app = build(DefaultedServicesApp)
+    assert app.reader.scale == 2.0
 
 
 def test_asking_for_something_nothing_ever_declared_still_raises(

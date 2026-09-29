@@ -190,6 +190,18 @@ def defaulted(cls: type, names: Iterable[str]) -> set[str]:
     }
 
 
+def supplied(deps: Mapping[str, Any], optional: set[str]) -> dict[str, Any]:
+    """Return *deps* without the defaulted parameters the store answered with `None`.
+
+    Each one left out keeps the default its constructor gives it.
+    """
+    return {
+        pname: value
+        for pname, value in deps.items()
+        if value is not None or pname not in optional
+    }
+
+
 def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
     """Return `X` for `X | None`, or `None` for anything else."""
     if not is_union(hint):
@@ -223,13 +235,11 @@ def factory(
     optional = defaulted(declaration.cls, params)
 
     def build(**deps: Any) -> Any:
-        supplied = {
-            pname: value
-            for pname, value in deps.items()
-            if value is not None or pname not in optional
-        }
         instance = declaration.cls(
-            name=declaration.name, **passed, **declaration.cfg_kwargs, **supplied
+            name=declaration.name,
+            **passed,
+            **declaration.cfg_kwargs,
+            **supplied(deps, optional),
         )
         on_built(declaration, instance)
         return instance
@@ -261,11 +271,13 @@ def provider(cls: type, name: str) -> Callable[..., Any]:
     """Return the callable the store fills to build the shared service *cls*.
 
     A provider takes no name of its own, so every annotated parameter of its
-    constructor is the store's to answer, `name` included.
+    constructor is the store's to answer, `name` included. A parameter with a
+    default that nothing provides keeps its default, as a component's does.
     """
     params = injectable(cls, {}, binds_name=False)
+    optional = defaulted(cls, params)
 
     def build(**deps: Any) -> Any:
-        return cls(**deps)
+        return cls(**supplied(deps, optional))
 
     return synthesize(build, params, cls, f"build_{name}")
