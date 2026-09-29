@@ -906,13 +906,14 @@ def test_a_refused_close_leaves_the_window_open(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
-    """Refuse the window's own close when the close prompt is cancelled."""
+    """Keep the window open when the close prompt is cancelled."""
     session = build(PromptApp)
     session.tunable.step = 5.0
+    session.main_window.show()
     _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert not session.main_window.close()
-    assert session.main_window.isVisible() is False
+    assert session.main_window.isVisible()
 
 
 def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(

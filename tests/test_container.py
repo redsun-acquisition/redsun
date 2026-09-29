@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import inspect
 import logging
 import weakref
@@ -1030,10 +1031,15 @@ def test_rebuild_is_a_no_op(app: App) -> None:
 
 
 def test_shutdown_releases_and_allows_gc() -> None:
-    """Mark the session as not built after shutdown."""
+    """Leave nothing holding a session after its shutdown, so it is collected."""
     container = App().build()
     container.shutdown()
     assert not container.is_built
+
+    collected = weakref.ref(container)
+    del container
+    gc.collect()
+    assert collected() is None
 
 
 def test_two_components_sharing_one_type_is_refused() -> None:
