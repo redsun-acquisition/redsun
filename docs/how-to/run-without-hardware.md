@@ -91,6 +91,9 @@ declared with `service=`: it still gets the service's prefix, but nothing
 answers on it. A signal of a mocked device keeps the last value written to
 it, and starts at the default of its type, `0.0` for a `float`.
 
+A session keeping a [catalog](keep-a-catalog.md) starts it as usual, since
+the catalog reaches no hardware, and records the runs of the mocked devices.
+
 A device declared with `autoconnect=False` is not connected by the build; see
 [How to connect a device on demand](connect-a-device-on-demand.md).
 
