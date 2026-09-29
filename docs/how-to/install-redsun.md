@@ -68,14 +68,14 @@ which you name in the command:
 <!-- one button for each extra in pyproject.toml; tests/test_install_page.py
 checks that the two agree -->
 <div class="install-table" data-package="redsun">
-<div class="install-row" data-role="command">
+<div class="install-row" data-role="command" role="group" aria-label="Installer">
 <span class="install-label">Installer</span>
 <div class="install-choices">
 <button type="button" data-value="pip install">pip</button>
 <button type="button" data-value="uv pip install">uv</button>
 </div>
 </div>
-<div class="install-row" data-role="extra">
+<div class="install-row" data-role="extra" role="group" aria-label="Window">
 <span class="install-label">Window</span>
 <div class="install-choices">
 <button type="button" data-value="pyqt">PyQt6</button>
@@ -83,7 +83,7 @@ checks that the two agree -->
 <button type="button" data-value="">none</button>
 </div>
 </div>
-<div class="install-row" data-role="extra" data-multiple>
+<div class="install-row" data-role="extra" data-multiple role="group" aria-label="Data">
 <span class="install-label">Data</span>
 <div class="install-choices">
 <button type="button" data-value="zarr">Zarr</button>
@@ -94,11 +94,14 @@ checks that the two agree -->
 <div class="install-row">
 <span class="install-label">Command</span>
 <div class="install-result">
-<code class="install-command">pip install "redsun[pyqt]"</code>
+<code class="install-command" aria-live="polite">pip install "redsun[pyqt]"</code>
 <button type="button" class="install-copy" hidden>Copy</button>
 </div>
 </div>
 </div>
+<noscript><p>The buttons need JavaScript. Without it, write the command from the
+table below: the extras you want, between the brackets and separated by
+commas.</p></noscript>
 
 | Extra | Installs | You need it for |
 | --- | --- | --- |
