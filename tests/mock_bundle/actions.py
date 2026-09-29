@@ -1,4 +1,4 @@
-"""Module-level contributions a session's ``actions`` section may name."""
+"""Module-level contributions a session's `actions` section may name."""
 
 from __future__ import annotations
 

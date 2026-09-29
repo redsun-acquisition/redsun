@@ -1,7 +1,7 @@
 """A session attached to a service outside the process, and the service going away.
 
-Runs against the IOC in ``tests/compose/compose.yaml``, and is skipped unless
-``REDSUN_COMPOSE`` is set.
+Runs against the IOC in `tests/compose/compose.yaml`, and is skipped unless
+`REDSUN_COMPOSE` is set.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def read(device: SimpleIoc) -> int:
 def test_an_attached_service_that_stops_times_out_and_answers_once_back(
     attachable: None, build: BuildSession
 ) -> None:
-    """Channels recover on their own: no reconnect is asked for."""
+    """Time out while an attached IOC is stopped, then read it again once it is back."""
     app = build(Attached)
     before = read(app.simple)
 
@@ -165,11 +165,7 @@ def test_a_session_attached_to_an_ioc_shuts_down_cleanly(
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A view reads the IOC through a presenter, and shutdown ends each in turn.
-
-    The presenter still reads the IOC as it shuts down, and the view is
-    destroyed, without a warning.
-    """
+    """Shut down a view and a presenter reading an IOC in turn, without a warning."""
     app = build(AttachedPanel)
     panel, reader = app.panel, app.reader
 

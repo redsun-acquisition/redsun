@@ -227,7 +227,7 @@ class Camera:
 
 @runtime_checkable
 class Countable(Protocol):
-    """Satisfied only by an attribute assigned in ``__init__``."""
+    """Satisfied only by an attribute assigned in `__init__`."""
 
     count: int
 
@@ -235,7 +235,7 @@ class Countable(Protocol):
 
 
 class Counter:
-    """Its ``count`` exists only once constructed."""
+    """Its `count` exists only once constructed."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -246,7 +246,7 @@ class Counter:
 
 
 class Forgetful:
-    """Passes the class-level check but never assigns ``count``."""
+    """Passes the class-level check but never assigns `count`."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -267,7 +267,7 @@ class NeedsCount:
 
 @runtime_checkable
 class Movable(Protocol):
-    """A device that can be told where to go, as ``bluesky`` moves it."""
+    """A device that can be told where to go, as `bluesky` moves it."""
 
     def set(self, value: float) -> AsyncStatus[None]: ...
 
@@ -504,7 +504,7 @@ class BrokenMaybeApp(Session):
 
 
 def test_the_answer_holds_every_matching_component(app: App) -> None:
-    """Declaration order does not matter: the question is answered after the build."""
+    """Include every component matching the protocol, whatever its declaration order."""
     assert dict(app.session.resettable) == {
         "motor": app.motor,
         "detector": app.detector,
@@ -512,17 +512,19 @@ def test_the_answer_holds_every_matching_component(app: App) -> None:
 
 
 def test_a_component_that_does_not_match_is_absent(app: App) -> None:
+    """Leave out a component that does not match the protocol."""
     assert "readout" not in app.session.resettable
 
 
 def test_the_answer_is_usable_as_a_mapping(app: App) -> None:
-    """It is a plain Mapping, so a component needs no framework API to read it."""
+    """Return the census as a Mapping of names to components."""
     assert isinstance(app.session.resettable, Mapping)
     assert len(app.session.resettable) == 2
     assert sorted(app.session.resettable) == ["detector", "motor"]
 
 
 def test_driving_every_component_through_the_answer(app: App) -> None:
+    """Call every matching component through the census."""
     app.session.reset_all()
     assert (app.motor.resets, app.detector.resets) == (1, 1)
 
@@ -530,7 +532,7 @@ def test_driving_every_component_through_the_answer(app: App) -> None:
 def test_peers_see_the_whole_set_including_themselves(
     build: BuildSession,
 ) -> None:
-    """The answer describes the session, not the component that asked."""
+    """Include the asking component in its own census."""
     app = build(PeerApp)
     assert sorted(app.left.peers) == ["left", "middle", "right"]
     assert sorted(app.right.peers) == ["left", "middle", "right"]
@@ -539,13 +541,14 @@ def test_peers_see_the_whole_set_including_themselves(
 def test_a_peer_leaves_itself_out_where_it_matters(
     build: BuildSession,
 ) -> None:
-    """Only the component knows whether excluding itself is meaningful."""
+    """Let a component filter itself out of the census it received."""
     app = build(PeerApp)
     assert app.left.link_targets() == ["middle", "right"]
     assert app.right.link_targets() == ["left", "middle"]
 
 
 def test_peers_act_on_each_other(build: BuildSession) -> None:
+    """Let one component act on a peer it found through the census."""
     app = build(PeerApp)
     app.left.linked_to = "right"
     app.left.zoom_to(4.0)
@@ -556,7 +559,7 @@ def test_peers_act_on_each_other(build: BuildSession) -> None:
 def test_a_component_that_did_not_mean_to_offer_is_still_counted(
     build: BuildSession,
 ) -> None:
-    """Satisfying a protocol by accident puts a component in the answer."""
+    """Include a component that matches the protocol without meaning to."""
     app = build(AccidentalApp)
     app.bookkeeper.reset_all()
     assert app.motor.resets == 1
@@ -566,15 +569,17 @@ def test_a_component_that_did_not_mean_to_offer_is_still_counted(
 def test_a_mismatched_signature_is_not_a_match(
     build: BuildSession,
 ) -> None:
-    """Membership compares signatures, so a call the protocol permits works."""
+    """Leave out a component whose method cannot be called as the protocol says."""
     app = build(LooseApp)
     assert "loose" not in app.session.resettable
+    # Membership compares signatures, so a call the protocol permits works.
     app.session.reset_all()
 
 
 def test_the_session_answers_as_it_answered_the_component(
     build: BuildSession,
 ) -> None:
+    """Return from `satisfying` the same components the census holds."""
     app = build(App)
 
     answer = app.satisfying(Resettable)
@@ -584,7 +589,7 @@ def test_the_session_answers_as_it_answered_the_component(
 
 
 def test_a_near_miss_explains_itself(build: BuildSession) -> None:
-    """A component carrying some of the protocol reports why it was left out."""
+    """Report why a component carrying part of the protocol was left out."""
     app = build(LooseApp)
     rejected = app.rejected(Resettable)
     assert set(rejected) == {"loose"}
@@ -594,7 +599,7 @@ def test_a_near_miss_explains_itself(build: BuildSession) -> None:
 def test_a_component_missing_every_member_is_not_a_near_miss(
     build: BuildSession,
 ) -> None:
-    """Only components that nearly match are worth reporting."""
+    """Report no near miss for a component missing every protocol member."""
     app = build(App)
     assert app.rejected(Resettable) == {}
 
@@ -652,12 +657,13 @@ def test_a_component_missing_every_member_is_not_a_near_miss(
 def test_the_session_refuses_to_build(
     session: type[Session], error: type[Exception], match: str
 ) -> None:
+    """Refuse a build when a request for one component has no single valid answer."""
     with pytest.raises(error, match=match):
         session().build()
 
 
 def test_one_arrives_built(build: BuildSession) -> None:
-    """The one answer arrives built, ready to drive."""
+    """Inject the one matching component, already built."""
     app = build(OneApp)
     assert app.roi.camera is app.camera
     app.roi.zoom_to(3.0)
@@ -665,11 +671,13 @@ def test_one_arrives_built(build: BuildSession) -> None:
 
 
 def test_maybe_is_answered_when_present(build: BuildSession) -> None:
+    """Inject the matching component into an optional request."""
     app = build(MaybeApp)
     assert app.widget.camera is app.camera
 
 
 def test_maybe_is_none_when_absent(build: BuildSession) -> None:
+    """Inject None into an optional request that nothing matches."""
     app = build(MaybeEmptyApp)
     assert app.widget.camera is None
 
@@ -677,7 +685,7 @@ def test_maybe_is_none_when_absent(build: BuildSession) -> None:
 def test_an_extra_defaulted_parameter_still_answers(
     build: BuildSession,
 ) -> None:
-    """Widening an implementation does not break the protocol's calls."""
+    """Match a component whose method adds a parameter with a default."""
     app = build(TolerantApp)
     assert app.roi.camera is app.camera
     app.roi.zoom_to(2.0)
@@ -687,7 +695,7 @@ def test_an_extra_defaulted_parameter_still_answers(
 def test_a_data_member_assigned_in_init_still_answers(
     build: BuildSession,
 ) -> None:
-    """The match reads the instance, where ``__init__`` assigned the member."""
+    """Match a component whose data member is assigned in `__init__`."""
     app = build(CountApp)
     assert app.needs.counter is app.counter
 
@@ -695,6 +703,7 @@ def test_a_data_member_assigned_in_init_still_answers(
 def test_the_device_census_holds_every_matching_device(
     build: BuildSession,
 ) -> None:
+    """Include every device matching the protocol in the device census."""
     app = build(DeviceApp)
     assert dict(app.motors.motors) == {"stage": app.stage, "spare": app.spare}
 
@@ -702,6 +711,7 @@ def test_the_device_census_holds_every_matching_device(
 def test_a_device_that_does_not_match_is_absent(
     build: BuildSession,
 ) -> None:
+    """Leave a device that does not match out of the device census."""
     app = build(DeviceApp)
     assert "shutter" not in app.motors.motors
 
@@ -709,7 +719,7 @@ def test_a_device_that_does_not_match_is_absent(
 def test_the_device_census_is_readable_while_the_component_is_built(
     build: BuildSession,
 ) -> None:
-    """Every device exists before any component, so the answer is not a live view."""
+    """Fill the device census before the component that reads it is built."""
     app = build(DeviceApp)
     assert app.motors.names == ["spare", "stage"]
 
@@ -717,7 +727,7 @@ def test_the_device_census_is_readable_while_the_component_is_built(
 def test_a_component_asking_only_for_devices_is_not_warned_about(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Asking for devices is asking for something, whoever answers it."""
+    """Do not report as unused a component that asks only for a device census."""
     build(DeviceApp)
     assert "'motors' shares nothing" not in caplog.text
 
@@ -725,6 +735,7 @@ def test_a_component_asking_only_for_devices_is_not_warned_about(
 def test_the_device_census_is_empty_without_devices(
     build: BuildSession,
 ) -> None:
+    """Return an empty device census in a session without devices."""
     app = build(NoDeviceApp)
     assert dict(app.motors.motors) == {}
 
@@ -732,7 +743,7 @@ def test_the_device_census_is_empty_without_devices(
 def test_the_two_censuses_answer_over_different_populations(
     build: BuildSession,
 ) -> None:
-    """A device is never in the component census, and a component never in this one."""
+    """Keep devices out of the component census and components out of the device one."""
     app = build(BothCensusApp)
     assert sorted(app.both.motors) == ["stage"]
     assert sorted(app.both.resettable) == ["motor"]
@@ -741,7 +752,7 @@ def test_the_two_censuses_answer_over_different_populations(
 def test_the_census_leaves_out_a_component_that_failed(
     build: BuildSession,
 ) -> None:
-    """A component asks what the session holds, not what it declared."""
+    """Leave a component that failed to build out of the census."""
     app = build(CensusReaderApp)
     assert set(app.reader.peers) == {"camera"}
 
@@ -749,7 +760,7 @@ def test_the_census_leaves_out_a_component_that_failed(
 def test_the_one_answer_failing_leaves_the_asker_unset(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Exactly one was demanded, and the session holds none once it failed."""
+    """Log and skip the setup of a component whose single answer failed to build."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         app = BrokenOneApp().build()
     try:
@@ -764,7 +775,7 @@ def test_the_one_answer_failing_leaves_the_asker_unset(
 def test_an_optional_answer_failing_leaves_the_asker_without_one(
     build: BuildSession,
 ) -> None:
-    """At most one was asked for, and the session ended up holding none."""
+    """Give None to an optional request whose only match failed to build."""
     app = build(BrokenMaybeApp)
     assert set(app.presenters) == {"widget"}
     assert app.widget.camera is None
@@ -773,6 +784,7 @@ def test_an_optional_answer_failing_leaves_the_asker_without_one(
 def test_a_device_census_on_the_wrong_shape_skips_the_component(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Skip a component whose device census annotation has the wrong form."""
     app = build(MisshapenDevicesApp)
 
     assert "broken" not in app.presenters

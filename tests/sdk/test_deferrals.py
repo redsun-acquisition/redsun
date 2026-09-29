@@ -65,6 +65,7 @@ def running(
 def test_a_change_during_a_plan_lands_between_two_messages(
     RE: RunEngine, running: Callable[[Recorder], None]
 ) -> None:
+    """Apply a change requested during a plan between two of its messages."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     running(recorder)
@@ -78,7 +79,7 @@ def test_a_change_during_a_plan_lands_between_two_messages(
 
 
 def test_a_change_while_no_plan_runs_is_applied_at_once(RE: RunEngine) -> None:
-    """The future is done once the change ran on the engine's loop."""
+    """Apply a change at once when no plan runs, and complete its future."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
 
@@ -90,7 +91,7 @@ def test_a_change_while_no_plan_runs_is_applied_at_once(RE: RunEngine) -> None:
 def test_a_change_asked_for_from_a_loop_does_not_block_it(
     RE: RunEngine, wait_until: Callable[..., bool]
 ) -> None:
-    """An async slot on the shared loop asks too; waiting there would deadlock."""
+    """Accept a change requested from the shared loop without blocking it."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
 
@@ -107,6 +108,7 @@ def test_a_change_that_fails_is_logged_and_the_next_still_applied(
     running: Callable[[Recorder], None],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Log a failing change and still apply the changes after it."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     running(recorder)
@@ -124,7 +126,7 @@ def test_a_change_that_fails_is_logged_and_the_next_still_applied(
 def test_a_change_runs_before_the_next_message_without_replaying_any(
     RE: RunEngine, running: Callable[[Recorder], None]
 ) -> None:
-    """The plan is neither suspended nor rewound: every message runs once."""
+    """Apply a change without suspending the plan or running any message twice."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     seen: list[str] = []
@@ -143,7 +145,7 @@ def test_a_change_runs_before_the_next_message_without_replaying_any(
 def test_a_change_during_the_last_message_is_applied_before_the_plan_returns(
     RE: RunEngine, wait_until: Callable[..., bool]
 ) -> None:
-    """Whoever waits on the plan's result finds the change applied."""
+    """Apply a change made during the last message before the plan returns."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     future = RE(bps.sleep(0.3))
@@ -159,7 +161,7 @@ def test_a_change_during_the_last_message_is_applied_before_the_plan_returns(
 def test_a_change_left_by_a_halted_plan_is_applied_once_idle(
     RE: RunEngine, wait_until: Callable[..., bool]
 ) -> None:
-    """A halt skips the plan's cleanup, where the leftover changes would run."""
+    """Apply a change left pending by a halted plan once the engine is idle."""
     deferrals = Deferrals(RE)
     recorder = Recorder()
     RE(bps.sleep(5))

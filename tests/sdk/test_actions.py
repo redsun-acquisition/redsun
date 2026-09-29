@@ -30,7 +30,7 @@ def actions() -> ActionManager:
 
 @pytest.fixture
 def seen(actions: ActionManager) -> list[tuple[str, str]]:
-    """Return a list gaining every ``(name, state)`` that *actions* reports."""
+    """Return a list gaining every `(name, state)` that *actions* reports."""
     reported: list[tuple[str, str]] = []
     actions.sig_changed.connect(lambda name, state: reported.append((name, state)))
     return reported
@@ -52,6 +52,7 @@ def _polls(engine: RunEngine) -> list[Msg]:
 
 
 async def test_srlatch_lifecycle() -> None:
+    """Set and reset an SRLatch, waking whoever waits on each state."""
     latch = SRLatch()
     assert not latch.is_set()
     await latch.wait_for_reset()  # immediate: already reset
@@ -73,11 +74,12 @@ async def test_srlatch_lifecycle() -> None:
 
 
 def test_a_latch_set_from_another_thread_wakes_the_plan(RE: RunEngine) -> None:
-    """The set is forwarded to the latch's loop, so a 5 s poll is not waited out."""
+    """Wake a waiting plan at once when its latch is set from another thread."""
     latch = SRLatch()
     started = threading.Event()
     RE.msg_hook = lambda msg: started.set()  # type: ignore[assignment]
 
+    # The set is forwarded to the latch's loop, so this 5 s poll is not waited out.
     future = RE(rps.wait_for_actions({"go": latch}, poll_interval=5.0))
     assert started.wait(5)
     time.sleep(0.1)
@@ -94,7 +96,7 @@ def test_a_clicked_and_a_pressed_action_run_from_offer_to_done(
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
-    """Every change of state is reported, in the order the plan makes them."""
+    """Report every state change of a clicked and a pressed action, in plan order."""
 
     def plan() -> MsgGenerator[None]:
         name = yield from actions.wait(SNAP, STREAM)
@@ -141,6 +143,7 @@ def test_a_request_nothing_answers_is_logged_and_changes_no_state(
     on: bool,
     reason: str,
 ) -> None:
+    """Log a request to start or end an action nothing answers; change no state."""
     actions.request("snap", on)
 
     assert seen == []
@@ -153,6 +156,7 @@ def test_a_request_made_before_a_plan_waits_does_not_fire_later(
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
+    """Ignore a request made before a plan starts waiting for the action."""
     polls = _polls(RE)
     actions.request("snap")
 
@@ -169,6 +173,7 @@ def test_a_request_one_launch_left_unanswered_does_not_fire_in_the_next(
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
+    """Discard a request a stopped plan left unanswered, so the next ignores it."""
     polls = _polls(RE)
     first = RE(actions.wait(SNAP, poll_interval=0.01))
     assert wait_until(lambda: len(polls) >= 1)
@@ -191,6 +196,7 @@ def test_stopping_a_plan_that_waits_puts_what_it_offered_back_to_idle(
     seen: list[tuple[str, str]],
     wait_until: Callable[..., bool],
 ) -> None:
+    """Return offered actions to idle when a waiting plan is stopped."""
     polls = _polls(RE)
     future = RE(actions.wait(SNAP, STREAM))
     assert wait_until(lambda: len(polls) >= 1)
@@ -208,6 +214,7 @@ def test_stopping_a_plan_that_waits_puts_what_it_offered_back_to_idle(
 
 
 def test_waiting_on_no_action_is_refused(RE: RunEngine, actions: ActionManager) -> None:
+    """Refuse a wait given no actions."""
     with pytest.raises(ValueError, match="no actions to wait on"):
         RE(actions.wait()).result(timeout=10)
 
@@ -215,5 +222,6 @@ def test_waiting_on_no_action_is_refused(RE: RunEngine, actions: ActionManager) 
 def test_waiting_for_the_release_of_an_action_that_is_not_running_is_refused(
     RE: RunEngine, actions: ActionManager
 ) -> None:
+    """Refuse to wait for the release of an action that is not running."""
     with pytest.raises(ValueError, match="is not running"):
         RE(actions.wait_released(STREAM)).result(timeout=10)

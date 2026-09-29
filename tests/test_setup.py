@@ -285,7 +285,7 @@ class SharedValueApp(Session):
 def test_setup_takes_a_value_shared_by_a_component_declared_below_it(
     build: BuildSession,
 ) -> None:
-    """Every component exists by then, so declaration order does not matter."""
+    """Give `setup` a value shared by a component declared below it."""
     app = build(SetUpApp)
     assert app.taking.readings == {"stage": 1.0}
 
@@ -293,14 +293,14 @@ def test_setup_takes_a_value_shared_by_a_component_declared_below_it(
 def test_a_model_or_dataclass_is_set_up_like_any_component(
     build: BuildSession,
 ) -> None:
-    """Where the annotations live does not change how `setup` is filled."""
+    """Fill `setup` of a pydantic model or dataclass like any other component."""
     assert build(ModelApp).taking.readings == {"stage": 1.0}
     assert build(DataclassApp).taking.readings == {"stage": 1.0}
     assert build(FrozenApp).taking.readings == {"stage": 1.0}
 
 
 def test_a_generated_constructor_taking_a_shared_type_is_refused() -> None:
-    """A model field is a constructor parameter, wherever it is written."""
+    """Refuse a generated constructor with a field of a shared type."""
     with pytest.raises(TypeError, match="ask for it in 'setup'"):
         FieldModelApp().build()
 
@@ -308,7 +308,7 @@ def test_a_generated_constructor_taking_a_shared_type_is_refused() -> None:
 def test_a_setup_that_raises_leaves_the_component_in_place(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """What its constructor built still works; what `setup` assigns is missing."""
+    """Keep a component whose `setup` raises, logging it as not set up."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         app = build(FailingApp)
 
@@ -321,7 +321,7 @@ def test_a_setup_that_raises_leaves_the_component_in_place(
 def test_a_component_not_set_up_is_still_wired_and_counted(
     build: BuildSession,
 ) -> None:
-    """It keeps its place: a rule naming it connects, and a census lists it."""
+    """Wire and count a component whose `setup` failed."""
     app = build(CountedFailingApp)
 
     app.failing.sig_done.emit("failing")
@@ -333,6 +333,7 @@ def test_a_component_not_set_up_is_still_wired_and_counted(
 def test_a_setup_wanting_a_component_that_failed_is_not_called(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
+    """Skip `setup` when it asks for a component that failed to build."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         app = build(UnpluggedApp)
 
@@ -341,6 +342,7 @@ def test_a_setup_wanting_a_component_that_failed_is_not_called(
 
 
 def test_a_setup_asking_for_what_nothing_declares_is_refused() -> None:
+    """Refuse a `setup` asking for something no component declares."""
     with pytest.raises(TypeError, match=r"'asking.setup' asks for 'missing'"):
         AskingApp().build()
 
@@ -348,6 +350,7 @@ def test_a_setup_asking_for_what_nothing_declares_is_refused() -> None:
 def test_an_async_setup_is_skipped_at_declaration(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Skip a component with an async `setup` at declaration."""
     app = build(AwaitingApp)
 
     assert "awaiting" not in app.presenters
@@ -357,7 +360,7 @@ def test_an_async_setup_is_skipped_at_declaration(
 def test_a_component_reaching_another_two_ways_is_named(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """An action written both ways runs twice, and nothing else says so."""
+    """Warn when a component both holds another and is connected to it."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         build(DoubleRouteApp)
 
@@ -367,7 +370,7 @@ def test_a_component_reaching_another_two_ways_is_named(
 def test_holding_a_shared_value_is_not_holding_the_component_that_shares_it(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """A value is data: the view reaches the presenter by its signal alone."""
+    """Do not warn when a view holds a shared value and is connected to its owner."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         app = build(SharedValueApp)
 

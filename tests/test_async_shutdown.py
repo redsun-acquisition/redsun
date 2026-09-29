@@ -67,6 +67,7 @@ class Partial(Session):
 def test_a_component_is_awaited_before_the_device_it_may_use(
     build: BuildSession,
 ) -> None:
+    """Await a presenter's `shutdown` before that of the devices it may use."""
     Laser.closed.clear()
 
     build(App).shutdown()
@@ -75,7 +76,7 @@ def test_a_component_is_awaited_before_the_device_it_may_use(
 
 
 def test_a_device_that_did_not_connect_is_not_shut_down(build: BuildSession) -> None:
-    """A device the session does not connect is: a component may have connected it."""
+    """Skip `shutdown` for a device that failed to connect, not one left unconnected."""
     Laser.closed.clear()
     app = build(Partial)
     assert set(app.devices) == {"laser", "later"}

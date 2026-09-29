@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 
 def test_engine_wrapper_construction(RE: RunEngine) -> None:
+    """Start an engine with no context managers and an empty pause message."""
     assert RE.context_managers == []
     assert RE.pause_msg == ""
 
@@ -59,6 +60,7 @@ def _recorder(
 def test_each_plan_runs_on_a_thread_that_ends_with_it(
     RE: RunEngine, detector: MockDetector
 ) -> None:
+    """Run each plan on its own thread that ends when the plan does."""
     before = _engine_threads()
 
     fut = RE(count([detector], num=1))
@@ -70,7 +72,7 @@ def test_each_plan_runs_on_a_thread_that_ends_with_it(
 
 
 def test_abort_ends_the_running_plan_and_its_thread(RE: RunEngine) -> None:
-    """Bluesky's abort reaches a plan running on the engine's own thread."""
+    """End the running plan and its thread on abort."""
     before = _engine_threads()
     running = _running(RE)
     fut = RE(bps.sleep(10.0))
@@ -86,11 +88,12 @@ def test_abort_ends_the_running_plan_and_its_thread(RE: RunEngine) -> None:
 
 
 def test_an_engine_runs_on_the_shared_loop_by_default(RE: RunEngine) -> None:
+    """Use the shared loop when no loop is given."""
     assert RE.loop is get_shared_loop()
 
 
 def test_importing_the_engine_starts_no_thread() -> None:
-    """The shared loop and its thread wait for the first engine that needs them."""
+    """Start no thread when the engine module is imported."""
     probe = (
         "import threading, redsun.engine; "
         "print(sorted(t.name for t in threading.enumerate()))"
@@ -103,6 +106,7 @@ def test_importing_the_engine_starts_no_thread() -> None:
 
 
 def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -> None:
+    """Return a successful RunEngineResult from a finished plan."""
     fut = RE(count([detector], num=5))
 
     wait([fut])
@@ -116,6 +120,7 @@ def test_engine_wrapper_run_with_result(RE: RunEngine, detector: MockDetector) -
 def test_a_done_callback_receives_the_finished_future(
     RE: RunEngine, detector: MockDetector
 ) -> None:
+    """Pass the finished future to a done callback."""
     finished: list[Future[Any]] = []
     called = threading.Event()
 
@@ -138,6 +143,7 @@ def test_a_done_callback_receives_the_finished_future(
 def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
     RE: RunEngine, detector: MockDetector
 ) -> None:
+    """Send each subscriber its documents, on the shared loop's thread."""
     seen: list[tuple[str, str, threading.Thread]] = []
     RE.subscribe(_recorder(seen, "all"))
     for name in ("start", "descriptor", "event", "stop"):
@@ -164,6 +170,7 @@ def test_subscribed_callbacks_receive_their_documents_on_the_loop_thread(
 def test_an_unsubscribed_callback_receives_nothing(
     RE: RunEngine, detector: MockDetector
 ) -> None:
+    """Send no documents to an unsubscribed callback."""
     seen: list[tuple[str, str, threading.Thread]] = []
     RE.unsubscribe(RE.subscribe(_recorder(seen, "all")))
 
@@ -173,6 +180,7 @@ def test_an_unsubscribed_callback_receives_nothing(
 
 
 def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
+    """Pause a plan at a checkpoint, resume it, then stop it."""
     future_set = set()
 
     def pausable_plan() -> Any:
@@ -207,7 +215,7 @@ def test_pausable_engine(RE: RunEngine, detector: MockDetector) -> None:
 
 
 def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
-    """Pause, resume and end reach a view as ``(new, old)`` pairs."""
+    """Emit each state change as a (new, old) pair through pause, resume and end."""
     seen: list[tuple[str, str]] = []
     RE.sig_state_changed.connect(lambda new, old: seen.append((new, old)))
 
@@ -232,6 +240,7 @@ def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
 def test_stopping_a_paused_plan_runs_its_cleanup_off_the_caller_thread(
     RE: RunEngine,
 ) -> None:
+    """Run a paused plan's cleanup off the caller thread when stopped."""
     cleanup_thread: list[str] = []
 
     def plan() -> Any:

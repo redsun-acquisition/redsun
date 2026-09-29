@@ -30,7 +30,7 @@ def path_data() -> PathData:
 def test_default_base_dir_is_the_user_data_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Files land under the same root as the logs, not under ``~``."""
+    """Default the root to the user data directory the logs also use."""
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
 
@@ -40,6 +40,7 @@ def test_default_base_dir_is_the_user_data_dir(
 
 
 def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> None:
+    """Start in the session and date directory with a zero counter."""
     expected_directory = tmp_path / path_data.session / path_data.date
     expected_filename = f"{path_data.plan}_00000"
 
@@ -51,6 +52,7 @@ def test_path_provider_initialization(tmp_path: Path, path_data: PathData) -> No
 
 
 def test_path_provider_setters(tmp_path: Path, path_data: PathData) -> None:
+    """Apply a new root and plan, and fall back to `unknown` on reset."""
     new_path = tmp_path / "new_storage"
     new_plan = "new_plan"
 
@@ -70,7 +72,7 @@ def test_path_provider_setters(tmp_path: Path, path_data: PathData) -> None:
 
 
 def test_each_data_key_gets_its_own_directory_and_counter(tmp_path: Path) -> None:
-    """Two detectors in one run write the same name in directories of their own."""
+    """Give each data key its own directory and counter."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
     provider.set_plan("scan")
 
@@ -85,7 +87,7 @@ def test_each_data_key_gets_its_own_directory_and_counter(tmp_path: Path) -> Non
 
 
 def test_scan_existing_resumes_counters(tmp_path: Path) -> None:
-    """Counters resume one past the highest number on disk, per plan and key."""
+    """Resume each counter one past the highest number on disk, per plan and key."""
     day_one = tmp_path / "s" / "2026-07-20"
     day_two = tmp_path / "s" / "2026-07-21"
     (day_one / "det").mkdir(parents=True)
@@ -110,7 +112,7 @@ def test_scan_existing_resumes_counters(tmp_path: Path) -> None:
 
 
 def test_reset_plan_returns_an_unwritten_filename(tmp_path: Path) -> None:
-    """A filename a plan requested and never wrote is handed out again."""
+    """Hand out again a filename a plan requested but never wrote."""
     provider = SessionPathProvider(
         base_dir=tmp_path, session="s", now=lambda: datetime(2026, 7, 20)
     )
@@ -128,7 +130,7 @@ def test_reset_plan_returns_an_unwritten_filename(tmp_path: Path) -> None:
     "stored", ["scan_00004", "scan_00004.zarr", "scan_00004.ome.zarr"]
 )
 def test_a_store_with_several_suffixes_counts(tmp_path: Path, stored: str) -> None:
-    """``scan_00004.ome.zarr`` is number 4, so the next file is not a repeat."""
+    """Count a stored name whatever its suffixes."""
     (tmp_path / "s" / "2026-07-20" / "det" / stored).mkdir(parents=True)
 
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
@@ -138,6 +140,7 @@ def test_a_store_with_several_suffixes_counts(tmp_path: Path, stored: str) -> No
 
 
 def test_a_locked_root_cannot_move(tmp_path: Path) -> None:
+    """Refuse to move a locked root, giving the reason it was locked."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
     provider.lock_base_dir("a catalog reads from it")
 
@@ -162,6 +165,7 @@ def test_a_locked_root_cannot_move(tmp_path: Path) -> None:
 def test_every_session_name_gives_a_directory_inside_the_root(
     tmp_path: Path, session: str, folder: str
 ) -> None:
+    """Turn any session name into a directory inside the root."""
     provider = SessionPathProvider(base_dir=tmp_path, session=session)
 
     directory = provider("det").directory_path
@@ -173,7 +177,7 @@ def test_every_session_name_gives_a_directory_inside_the_root(
 
 
 def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
-    """A run's remaining files must not land somewhere else than its first ones."""
+    """Refuse to move the root while a plan runs, and allow it after."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
     provider.set_plan("scan")
 
@@ -189,7 +193,7 @@ def test_the_root_cannot_move_while_a_plan_runs(tmp_path: Path) -> None:
 
 
 def test_set_base_dir_announces_the_root_it_accepted(tmp_path: Path) -> None:
-    """A refused change announces nothing, so a listener never moves too early."""
+    """Announce an accepted root and nothing for a refused one."""
     provider = SessionPathProvider(base_dir=tmp_path, session="s")
     announced: list[Path] = []
     provider.sig_base_dir_changed.connect(announced.append)
@@ -204,7 +208,7 @@ def test_set_base_dir_announces_the_root_it_accepted(tmp_path: Path) -> None:
 
 
 def test_set_base_dir_rescans_new_location(tmp_path: Path) -> None:
-    """Changing base_dir resets counters and adopts the new location's state."""
+    """Resume the counters from the files under a new root."""
     base_a = tmp_path / "a"
     base_b = tmp_path / "b"
     (base_b / "s" / "2026-07-20").mkdir(parents=True)
@@ -218,7 +222,7 @@ def test_set_base_dir_rescans_new_location(tmp_path: Path) -> None:
 
 
 def test_counter_continues_across_dates(tmp_path: Path) -> None:
-    """The date directory groups files; it does not scope the counter."""
+    """Continue the counter when the date directory changes."""
     clock = {"now": datetime(2026, 7, 20, 12, 0, 0)}
     provider = SessionPathProvider(
         base_dir=tmp_path, session="s", now=lambda: clock["now"]
@@ -235,7 +239,7 @@ def test_counter_continues_across_dates(tmp_path: Path) -> None:
 
 
 def test_filename_provider_accessors_and_padding() -> None:
-    """PlanFilenameProvider exposes plan/max_digits and honors the padding."""
+    """Pad the counter, never lower it on bump, and count each key apart."""
     filenames = PlanFilenameProvider(max_digits=3)
     assert filenames() == "unknown_000"
     filenames.set_plan("scan")
@@ -253,6 +257,7 @@ def test_filename_provider_accessors_and_padding() -> None:
 def test_the_folder_of_a_path_exists_once_the_path_is_asked_for(
     tmp_path: Path,
 ) -> None:
+    """Create the directory of a path when the path is requested."""
     provider = SessionPathProvider(base_dir=tmp_path, session="lab")
 
     info = provider("camera")

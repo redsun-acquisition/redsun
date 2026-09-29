@@ -52,7 +52,7 @@ def _dock(app: QtSession, name: str) -> QDockWidget:
 def test_a_dock_is_named_after_the_view_it_holds(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:
-    """Qt places a dock by object name and drops one that has none."""
+    """Name each dock after its view, since Qt restores a dock by its object name."""
     app = build(LayoutApp)
     docks = app.main_window.findChildren(QDockWidget)
 
@@ -62,7 +62,7 @@ def test_a_dock_is_named_after_the_view_it_holds(
 def test_a_layout_saved_by_one_run_is_restored_by_the_next(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:
-    """Which is the whole of the deliverable, so it is driven end to end."""
+    """Restore in the next run the dock layout one run saved."""
     first = build(LayoutApp)
     first.main_window.addDockWidget(RIGHT, _dock(first, "charts"))
     first.save_layout()
@@ -77,7 +77,7 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:
-    """Nothing saved is the common case, and it must not disturb the layout."""
+    """Keep the docks where the views asked when no layout was saved."""
     app = build(LayoutApp)
 
     assert app.main_window.dockWidgetArea(_dock(app, "charts")) is LEFT
@@ -86,7 +86,7 @@ def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
 def test_the_layout_goes_to_the_settings_file_as_text(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:
-    """The settings file holds JSON, so a QByteArray cannot go in as it is."""
+    """Write the layout to the JSON settings file as base64 text."""
     build(LayoutApp).save_layout()
 
     written = json.loads((config_home / "layout-session.json").read_text())
@@ -97,7 +97,7 @@ def test_the_layout_goes_to_the_settings_file_as_text(
 def test_a_session_that_was_never_shown_writes_nothing(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:
-    """``run`` asks for the save, so building alone leaves the file alone."""
+    """Write no layout for a session that was built but never run."""
     build(LayoutApp).shutdown()
 
     assert not (config_home / "layout-session.json").exists()

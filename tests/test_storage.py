@@ -55,6 +55,7 @@ class LocatingApp(Session):
 
 
 def test_a_device_taking_one_gets_the_sessions_provider(build: BuildSession) -> None:
+    """Give a device taking a path provider the session's own provider."""
     app = build(WriterApp, {"session": "its-own-session"})
 
     provider = app.writer.path_provider
@@ -66,6 +67,7 @@ def test_a_device_taking_one_gets_the_sessions_provider(build: BuildSession) -> 
 def test_the_root_comes_from_the_storage_section(
     build: BuildSession, tmp_path: Path
 ) -> None:
+    """Take the storage root and file number width from the storage section."""
     config = {"storage": {"base_dir": str(tmp_path / "elsewhere"), "max_digits": 3}}
 
     app = build(WriterApp, config)
@@ -95,6 +97,7 @@ def test_the_root_comes_from_the_storage_section(
 def test_a_malformed_storage_setting_is_refused(
     build: BuildSession, config: dict[str, Any], error: type[Exception], match: str
 ) -> None:
+    """Refuse a malformed storage setting or a configured path provider."""
     with pytest.raises(error, match=match):
         build(WriterApp, config)
 
@@ -102,6 +105,7 @@ def test_a_malformed_storage_setting_is_refused(
 def test_a_catalog_is_refused_without_the_extra(
     build: BuildSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Refuse a catalog when the `tiled` extra is not installed."""
     monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
 
     with pytest.raises(RuntimeError, match=r"redsun\[tiled\]"):
@@ -109,6 +113,8 @@ def test_a_catalog_is_refused_without_the_extra(
 
 
 def test_a_component_named_path_provider_is_refused(build: BuildSession) -> None:
+    """Refuse a component named `path_provider`."""
+
     class Shadowing(Session):
         path_provider: AsPresenter[Announcer]  # type: ignore[assignment]
 
@@ -117,12 +123,14 @@ def test_a_component_named_path_provider_is_refused(build: BuildSession) -> None
 
 
 def test_a_presenter_receives_the_provider_by_type(build: BuildSession) -> None:
+    """Give a presenter the session's path provider when it asks by type."""
     app = build(LocatingApp)
 
     assert app.locating.provider is app.path_provider
 
 
 def test_the_wiring_reaches_the_provider(build: BuildSession) -> None:
+    """Connect a wiring rule to a slot of the path provider."""
     wiring = {"announcer.sig_plan": "path_provider.set_plan"}
     app = build(AnnouncerApp, {"wiring": wiring})
 

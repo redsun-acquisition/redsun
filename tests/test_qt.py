@@ -418,7 +418,7 @@ def _press(
 
 
 def test_the_session_owns_an_application_named_after_it() -> None:
-    """Commands, menus and keybindings belong to the session, not the process."""
+    """Create an application model named after the session and drop it on shutdown."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = app.model
@@ -434,14 +434,14 @@ def test_two_sessions_of_one_name_refuse_to_coexist(
     qapp: QApplication,
     build: BuildSession,
 ) -> None:
-    """The name is an identity, so a collision is loud rather than shared."""
+    """Refuse to build a second session under a name already in use."""
     build(QtApp)
     with pytest.raises(ValueError, match="already exists"):
         QtApp().build()
 
 
 def test_the_name_is_free_again_after_shutdown() -> None:
-    """A suite building one session repeatedly is the case this serves."""
+    """Free the session name on shutdown so the same session can be built again."""
     for _ in range(3):
         app = QtApp().build()
         assert app.model.name == "QtApp"
@@ -452,7 +452,7 @@ def test_the_container_builds_its_own_window(
     qapp: QApplication,
     build: BuildSession,
 ) -> None:
-    """The base container builds the components; this one arranges them."""
+    """Build a main window titled after the session, with docks and a central widget."""
     app = build(QtApp)
     window = app.main_window
     assert window.windowTitle() == "QtApp"
@@ -465,7 +465,7 @@ def test_the_container_builds_its_own_window(
 
 
 def test_no_toolkit_object_exists_before_the_build() -> None:
-    """Constructing a session touches no toolkit object and reads no file."""
+    """Create no main window until the session is built."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = app.main_window
@@ -476,7 +476,7 @@ def test_no_toolkit_object_exists_before_the_build() -> None:
 
 
 def test_the_configuration_names_the_container() -> None:
-    """A session naming Qt comes up on the Qt container without a class."""
+    """Return a QtSession from a configuration whose frontend is qt."""
     app = Session.from_config({"frontend": "qt", "session": "from-file"})
     assert isinstance(app, QtSession)
     assert app.frontend is Qt
@@ -489,7 +489,7 @@ def test_the_configuration_names_the_container() -> None:
 def test_every_placement_lands_where_it_asked(
     window: QMainWindow, build: BuildSession
 ) -> None:
-    """One pass over the views fills docks, the centre, a menu and a toolbar."""
+    """Attach each view to its dock, the central area, a menu or a toolbar."""
     app = build(QtApp)
     # inspected before the shutdown, which destroys the widgets it built
     attach(window, dict(app.views))
@@ -510,7 +510,7 @@ def test_every_placement_lands_where_it_asked(
 
 
 def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
-    """The menu is created once and found again, not created per entry."""
+    """Put every action asking for one menu into a single menu."""
     # a QAction is not reparented by addAction, so the caller keeps it alive
     views: dict[str, AttachableComponent] = {
         "save": Save("save", parent=window),
@@ -524,6 +524,7 @@ def test_one_menu_holds_every_entry_asking_for_it(window: QMainWindow) -> None:
 
 
 def test_several_central_views_share_the_area_as_tabs(window: QMainWindow) -> None:
+    """Put several central views into tabs of one tab widget."""
     attach(
         window,
         {
@@ -538,7 +539,7 @@ def test_several_central_views_share_the_area_as_tabs(window: QMainWindow) -> No
 
 
 def test_a_view_of_the_wrong_toolkit_type_is_refused(window: QMainWindow) -> None:
-    """The placement decides what the view must be, and only Qt knows that."""
+    """Refuse to attach a view that is not the QWidget its placement needs."""
     with pytest.raises(TypeError, match="needs a QWidget, but NotAWidget is not one"):
         attach(window, {"stray": NotAWidget("stray")})
 
@@ -546,7 +547,7 @@ def test_a_view_of_the_wrong_toolkit_type_is_refused(window: QMainWindow) -> Non
 def test_a_view_of_the_wrong_toolkit_type_is_skipped_before_it_is_built(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Qt's requirement table is read with the declarations, not at attach."""
+    """Skip at declaration a view that is not the Qt type its placement needs."""
 
     class Wrong(QtSession):
         stray: AsView[NotAWidget]
@@ -560,7 +561,7 @@ def test_a_view_of_the_wrong_toolkit_type_is_skipped_before_it_is_built(
 
 
 def test_a_command_is_filled_from_the_session() -> None:
-    """The session builds its components out of the application's own store."""
+    """Inject a value the session provides into a registered command's callback."""
     app = CommandApp().build()
     seen: list[Gain] = []
 
@@ -579,7 +580,7 @@ def test_the_window_is_built_against_the_session_application(
     qapp: QApplication,
     build: BuildSession,
 ) -> None:
-    """A menu bar on the window is filled from the session's own registries."""
+    """Fill the window's menu bar from the session application's menus."""
     app = build(CommandApp)
     app.model.register_action(
         Action(
@@ -595,7 +596,7 @@ def test_the_window_is_built_against_the_session_application(
 
 
 def test_the_session_holds_the_application_it_runs_on() -> None:
-    """A session adopting a running application still keeps a reference."""
+    """Hold the running QApplication after the build, and refuse access before it."""
     app = QtApp()
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = app.app
@@ -607,34 +608,27 @@ def test_the_session_holds_the_application_it_runs_on() -> None:
 
 
 def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
-    """Drive a session the way a program does, with no fixture holding anything.
-
-    Run in a subprocess, because the suite's ``qapp`` fixture holds an
-    application for the whole run and Qt allows one per process, so nothing in
-    here can reach this path. It covers two things the fixture hides: an
-    application the session made is collected between build steps unless the
-    session holds it, and Qt aborts when the next widget is constructed; and
-    connecting ``aboutToQuit`` to a session's method takes a weak reference to
-    the session. The exit code is the assertion, since the first of those
-    aborts the process rather than raising.
-    """
+    """Keep alive a QApplication the session created, run in a separate process."""
+    # Run in a subprocess: the suite's `qapp` fixture holds an application for the
+    # whole run and Qt allows one per process, so this path cannot be reached here.
     result = subprocess.run(
         [sys.executable, "-c", BUILDS_ITS_OWN],
         capture_output=True,
         text=True,
         check=False,
     )
+    # The exit code is the assertion: an application the session made and does not
+    # hold is collected between build steps, and Qt then aborts the process at the
+    # next widget rather than raising.
     assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_shutdown_destroys_the_widgets_the_session_built() -> None:
-    """A QWidget outlives its last Python reference whenever C++ owns it.
-
-    Holding a view across the shutdown is what shows the difference: dropping
-    the component would leave the widget alive, and the wrapper only reports a
-    destroyed one once ``deleteLater`` has been carried out.
-    """
+    """Destroy the main window and every view widget on shutdown."""
     app = QtApp().build()
+    # The view is held across the shutdown because a QWidget outlives its last Python
+    # reference whenever C++ owns it: dropping the component would leave the widget
+    # alive, and the wrapper reports it destroyed only once `deleteLater` has run.
     panel = app.views["panel"]
     window = app.main_window
     assert isinstance(panel, QWidget)
@@ -650,6 +644,7 @@ def test_shutdown_destroys_the_widgets_the_session_built() -> None:
 
 
 def test_a_view_is_given_the_main_window_as_its_parent(build: BuildSession) -> None:
+    """Pass the main window as the parent of a view."""
     app = build(ReceivingApp)
 
     assert app.panel.given is app.main_window
@@ -676,6 +671,7 @@ def test_a_view_not_shaped_for_qt_is_skipped(
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Skip a view whose constructor does not start with `(name: str, parent)`."""
     built = build(app)
 
     assert "panel" not in built.views
@@ -685,7 +681,7 @@ def test_a_view_not_shaped_for_qt_is_skipped(
 def test_a_view_given_a_parent_by_its_configuration_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """The configuration never replaces the window as the parent."""
+    """Skip a view whose configuration also passes a parent."""
     app = build(GivenParentApp)
 
     assert "panel" not in app.views
@@ -695,7 +691,7 @@ def test_a_view_given_a_parent_by_its_configuration_is_skipped(
 def test_a_view_refused_once_built_is_removed_from_the_window(
     qapp: QApplication, build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Its placement is read from the instance, after it joined the window."""
+    """Remove a view from the window when its built instance has a bad placement."""
     app = build(MisplacedApp)
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
@@ -707,7 +703,7 @@ def test_a_view_refused_once_built_is_removed_from_the_window(
 def test_a_view_failing_after_joining_the_window_leaves_nothing_in_it(
     qapp: QApplication, build: BuildSession
 ) -> None:
-    """What another view parented to the window stays."""
+    """Remove a failed view from the window and keep what other views parented to it."""
     app = build(BreakingApp)
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
@@ -716,7 +712,7 @@ def test_a_view_failing_after_joining_the_window_leaves_nothing_in_it(
 
 
 def test_a_view_is_shut_down_before_its_widget_is_destroyed() -> None:
-    """A component's own teardown may touch the widget it was built around."""
+    """Call a view's shutdown before its widget is closed."""
     TEARDOWN_ORDER.clear()
     ClosingApp().build().shutdown()
     assert TEARDOWN_ORDER == ["shutdown", "closed"]
@@ -728,6 +724,7 @@ def test_the_save_action_writes_where_the_dialog_points(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Write the configuration to the path the save dialog returns."""
     target = tmp_path / "written.yaml"
     _answer(monkeypatch, str(target))
     session = build(SaveApp)
@@ -742,6 +739,7 @@ def test_a_cancelled_dialog_writes_nothing(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Write nothing when the save dialog is cancelled."""
     _answer(monkeypatch, "")
     asked: list[object] = []
     monkeypatch.setattr(SaveApp, "write", lambda self, path: asked.append(path))
@@ -758,7 +756,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
-    """Only the session knows which files it read, so Qt cannot refuse this."""
+    """Warn and leave the file unchanged when saving over a configuration source."""
     source = tmp_path / "shared.yaml"
     source.write_text(yaml.safe_dump({"session": "save-session"}))
     _answer(monkeypatch, str(source))
@@ -778,6 +776,7 @@ def test_choosing_a_source_is_reported_rather_than_written(
 def test_the_action_joins_the_menu_a_window_can_show(
     qapp: QApplication, build: BuildSession
 ) -> None:
+    """Add the save action to the File menu of the window's menu bar."""
     session = build(SaveApp)
 
     menu_bar = session.main_window.setModelMenuBar({SAVE_MENU: "File"})
@@ -792,6 +791,7 @@ def test_a_session_nobody_has_changed_closes_without_asking(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Close an unchanged session without showing the close prompt."""
     shown = _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert build(PromptApp).main_window.close()
@@ -804,6 +804,7 @@ def test_cancelling_the_prompt_keeps_the_session_open(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Keep a changed session open when the close prompt is cancelled."""
     session = build(PromptApp)
     session.tunable.step = 5.0
     _press(monkeypatch, QMessageBox.StandardButton.Cancel)
@@ -818,6 +819,7 @@ def test_discarding_closes_without_writing(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Close without writing a file when the prompt answers Discard."""
     session = build(PromptApp)
     session.tunable.step = 5.0
     _press(monkeypatch, QMessageBox.StandardButton.Discard)
@@ -833,6 +835,7 @@ def test_saving_writes_and_then_closes(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Write the changed configuration and close when the prompt answers Save."""
     target = tmp_path / "on-close.yaml"
     _answer(monkeypatch, str(target))
     _press(monkeypatch, QMessageBox.StandardButton.Save)
@@ -849,7 +852,7 @@ def test_a_cancelled_save_dialog_keeps_the_session_open(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
-    """Closing anyway would drop the changes the user just asked to keep."""
+    """Keep the session open when the save dialog after the prompt is cancelled."""
     _answer(monkeypatch, "")
     _press(monkeypatch, QMessageBox.StandardButton.Save)
     session = build(PromptApp)
@@ -864,6 +867,7 @@ def test_dont_ask_again_is_remembered_between_runs(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Store the 'do not ask again' choice and skip the prompt in the next session."""
     first = build(PromptApp)
     first.tunable.step = 5.0
     _press(monkeypatch, QMessageBox.StandardButton.Discard, dont_ask=True)
@@ -885,6 +889,7 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
+    """Ask the close hook instead of showing the close prompt."""
     AlwaysCloses.asked = 0
     session = build(HookedApp)
     session.tunable.step = 5.0
@@ -901,7 +906,7 @@ def test_a_refused_close_leaves_the_window_open(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
-    """The prompt is reached through the window's own close, not by calling it."""
+    """Refuse the window's own close when the close prompt is cancelled."""
     session = build(PromptApp)
     session.tunable.step = 5.0
     _press(monkeypatch, QMessageBox.StandardButton.Cancel)
@@ -913,6 +918,7 @@ def test_a_refused_close_leaves_the_window_open(
 def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(
     qapp: QApplication, build: BuildSession
 ) -> None:
+    """Connect a view slot to run on the main thread by default."""
     session = build(Wired)
 
     assert [link.thread for link in session.connections] == ["main"]
@@ -921,6 +927,7 @@ def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(
 def test_a_queued_emission_is_delivered_before_the_widgets_are_destroyed(
     qapp: QApplication, build: BuildSession
 ) -> None:
+    """Deliver a signal queued from a worker thread once, during shutdown."""
     session = build(Wired)
     readout = session.readout
 

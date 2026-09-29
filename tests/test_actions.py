@@ -1,4 +1,4 @@
-"""Tests for the ``actions`` section of a Qt session."""
+"""Tests for the `actions` section of a Qt session."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def clear_record() -> Iterator[None]:
 
 
 def session(*declared: dict[str, object]) -> QtSession:
-    """Return an unbuilt Qt session declaring *declared* under ``actions``."""
+    """Return an unbuilt Qt session declaring *declared* under `actions`."""
     container = Session.from_config({**SESSION, "actions": list(declared)})
     assert isinstance(container, QtSession)
     return container
@@ -39,6 +39,7 @@ def test_the_section_registers_commands_on_the_session(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
+    """Register each declared command on the session and in the menus it names."""
     app = build(
         session(
             {
@@ -68,6 +69,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
+    """Unregister the session's commands when it shuts down."""
     app = build(
         session(
             {
@@ -117,6 +119,7 @@ def test_releasing_the_session_takes_its_commands_with_it(
 def test_a_section_that_is_not_actions_is_refused(
     qapp: QApplication, declared: object, message: str
 ) -> None:
+    """Refuse a malformed `actions` section and register no application."""
     app = Session.from_config({**SESSION, "actions": declared})
     with pytest.raises(ActionError, match=message):
         app.build()

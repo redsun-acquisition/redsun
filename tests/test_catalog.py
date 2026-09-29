@@ -56,6 +56,7 @@ class OptionalApp(Session):
 def test_a_component_reaches_the_catalog_by_its_address(
     build: BuildSession, data_directory: Path
 ) -> None:
+    """Start a catalog in the session directory and give a component its address."""
     app = build(RecorderApp, CATALOG)
 
     assert (data_directory / "catalog-session" / "catalog" / "catalog.db").is_file()
@@ -70,6 +71,7 @@ def test_a_component_reaches_the_catalog_by_its_address(
 def test_an_optional_address_is_none_without_a_catalog(
     build: BuildSession, config: dict[str, Any], has_address: bool
 ) -> None:
+    """Give an optional catalog address only when the session starts a catalog."""
     app = build(OptionalApp, config)
 
     assert isinstance(app.optional.address, CatalogAddress) is has_address
@@ -78,6 +80,7 @@ def test_an_optional_address_is_none_without_a_catalog(
 def test_the_root_cannot_move_while_the_catalog_runs(
     build: BuildSession, tmp_path: Path
 ) -> None:
+    """Refuse to move the storage root while the catalog runs."""
     app = build(OptionalApp, CATALOG)
 
     with pytest.raises(RuntimeError, match="catalog"):
@@ -85,6 +88,7 @@ def test_the_root_cannot_move_while_the_catalog_runs(
 
 
 def test_shutdown_stops_the_server(build: BuildSession) -> None:
+    """Stop the catalog server when the session shuts down."""
     app = build(RecorderApp, CATALOG)
     client = from_uri(app.recorder.address.uri)
 
@@ -97,7 +101,7 @@ def test_shutdown_stops_the_server(build: BuildSession) -> None:
 def test_a_catalog_that_fails_to_start_is_logged_and_skipped(
     build: BuildSession, data_directory: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """The session runs without a catalog rather than not at all."""
+    """Log a catalog that fails to start and run the session without it."""
     occupied = data_directory / "catalog-session" / "catalog"
     occupied.parent.mkdir(parents=True)
     occupied.write_text("a file, where the catalog wants a directory")

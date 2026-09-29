@@ -46,7 +46,7 @@ class PlansWithoutAMedian(Session):
 def test_a_plan_runs_with_the_callback_it_carries_first(
     config_home: Path, build: BuildSession
 ) -> None:
-    """The median presenter owns the plan and is its callback, listed once."""
+    """Run a plan with its own callback first, listed once, then the attached ones."""
     app = build(Plans)
 
     app.panel.request("median_scan")
@@ -61,7 +61,7 @@ def test_a_plan_runs_with_the_callback_it_carries_first(
 def test_a_plan_runs_with_the_arguments_and_callbacks_the_view_sends(
     config_home: Path, build: BuildSession
 ) -> None:
-    """An open plan carries none of its own, so only the attached ones run."""
+    """Run an open plan with the arguments and only the callbacks the view attaches."""
     app = build(Plans)
     app.panel.attach("stream", ["registrar"])
 
@@ -76,6 +76,7 @@ def test_a_plan_runs_with_the_arguments_and_callbacks_the_view_sends(
 def test_every_component_offering_plans_is_collected(
     config_home: Path, build: BuildSession
 ) -> None:
+    """Collect the plans of every component offering them."""
     app = build(Plans)
     assert set(app.panel.specs) == {"stream", "median_scan"}
     assert set(app.acquisition.entries) == {"stream", "median_scan"}
@@ -84,6 +85,7 @@ def test_every_component_offering_plans_is_collected(
 def test_a_plan_is_absent_when_the_component_owning_it_is(
     config_home: Path, build: BuildSession
 ) -> None:
+    """Leave out a plan whose owning component is not in the session."""
     app = build(PlansWithoutAMedian)
     assert set(app.panel.specs) == {"stream"}
 
@@ -91,7 +93,7 @@ def test_a_plan_is_absent_when_the_component_owning_it_is(
 def test_the_attached_callbacks_outlive_the_session(
     config_home: Path, build: BuildSession
 ) -> None:
-    """A name no longer in the catalogue is dropped rather than refused."""
+    """Keep attached callbacks for the next session, dropping names no longer there."""
     first = build(Plans)
     assert first.panel.attached("stream") == ["median", "registrar"]
     first.panel.attach("stream", ["gone", "registrar"])

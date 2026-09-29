@@ -37,7 +37,7 @@ class QtApp(QtSession):
 def test_reading_a_session_that_has_written_nothing_gives_the_default(
     tmp_path: Path,
 ) -> None:
-    """A first run has no file, and asking for a preference must still work."""
+    """Return the default for a preference when no settings file exists yet."""
     settings = Settings(tmp_path / "absent.json")
     assert settings.get("ask_on_close", True) is True
     assert "ask_on_close" not in settings
@@ -45,6 +45,7 @@ def test_reading_a_session_that_has_written_nothing_gives_the_default(
 
 
 def test_what_is_set_survives_the_session_that_set_it(tmp_path: Path) -> None:
+    """Keep a preference for later sessions reading the same file."""
     path = tmp_path / "nested" / "session.json"
     Settings(path).set("ask_on_close", False)
 
@@ -55,7 +56,7 @@ def test_what_is_set_survives_the_session_that_set_it(tmp_path: Path) -> None:
 def test_a_file_that_cannot_be_read_leaves_the_session_on_defaults(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """It is written by the program, so damage to it must not stop a session."""
+    """Log and ignore a settings file that is not valid JSON, returning defaults."""
     path = tmp_path / "broken.json"
     path.write_text("{not json", encoding="utf-8")
 
@@ -67,7 +68,7 @@ def test_a_file_that_cannot_be_read_leaves_the_session_on_defaults(
 def test_a_file_holding_something_other_than_an_object_is_ignored(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Valid JSON is not enough; the keys have to be somewhere."""
+    """Ignore a settings file whose JSON is not an object, and log why."""
     (tmp_path / "list.json").write_text("[1, 2]", encoding="utf-8")
 
     assert Settings(tmp_path / "list.json").get("anything") is None
@@ -75,6 +76,7 @@ def test_a_file_holding_something_other_than_an_object_is_ignored(
 
 
 def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
+    """Refuse to set a value JSON cannot hold."""
     with pytest.raises(TypeError):
         # a type checker refuses it too; this pins the refusal for untyped callers
         Settings(tmp_path / "settings.json").set("window", object())  # type: ignore[arg-type]
@@ -83,6 +85,7 @@ def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
 def test_a_session_opens_its_own_only_once_it_is_built(
     config_home: Path, build: BuildSession
 ) -> None:
+    """Open the settings file of a session only once the session is built."""
     with pytest.raises(RuntimeError, match=r"Call build\(\) before"):
         _ = App().settings
 
@@ -93,6 +96,7 @@ def test_a_session_opens_its_own_only_once_it_is_built(
 def test_an_action_asks_for_the_settings_by_type(
     qapp: QApplication, config_home: Path, build: BuildSession
 ) -> None:
+    """Pass the session's settings to an action callback asking for them by type."""
     seen: list[Settings] = []
 
     def remember(settings: Settings) -> None:

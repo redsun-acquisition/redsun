@@ -86,12 +86,12 @@ def built(session: Session, name: str, kind: type[C]) -> C:
 def configured(
     mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
 ) -> ConfiguredApp:
-    """Return the session ``mock_session.yaml`` describes, built."""
+    """Return the session `mock_session.yaml` describes, built."""
     return build(ConfiguredApp, str(config_path / SESSION))
 
 
 def test_components_come_up_from_the_file_alone(configured: ConfiguredApp) -> None:
-    """A class declaring nothing still builds the whole configured session."""
+    """Build every component the session file names, for a class declaring none."""
     assert set(configured.declarations) == DECLARED
     assert isinstance(
         configured.declarations["motor_ctrl"].instance, MockMotorPresenter
@@ -101,7 +101,7 @@ def test_components_come_up_from_the_file_alone(configured: ConfiguredApp) -> No
 
 
 def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
-    """Plugin metadata is stripped; everything else is a keyword argument."""
+    """Pass every non-plugin key of an entry to the constructor as a keyword."""
     stage = configured.devices["stage"]
 
     assert isinstance(stage, MockStage)
@@ -111,14 +111,14 @@ def test_config_kwargs_reach_the_constructor(configured: ConfiguredApp) -> None:
 
 
 def test_plugin_provider_supplies_a_dependency(configured: ConfiguredApp) -> None:
-    """The bundle's own shared services are loaded from the manifest."""
+    """Supply a dependency from the provider the plugin manifest names."""
     presenter = built(configured, "motor_ctrl", MockMotorPresenter)
 
     assert presenter.calibration == pytest.approx(Calibration(1.2))
 
 
 def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) -> None:
-    """`provides` works for components the class never named."""
+    """Share a value from a configured presenter to a configured view."""
     widget = built(configured, "motor_widget", MockMotorView)
 
     assert widget.readings == {"stage": pytest.approx(4.8)}
@@ -126,7 +126,7 @@ def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) 
 
 
 def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
-    """Ports named as strings connect once every component exists."""
+    """Connect the ports the wiring section names once every component exists."""
     links = configured.connections
 
     assert [
@@ -137,6 +137,7 @@ def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
 def test_annotation_and_config_describe_one_component(
     mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
+    """Merge a class annotation and a file entry for the same component."""
     app = build(PartlyDeclaredApp, str(config_path / SESSION))
 
     assert app.motor_widget.title == "from-class"
@@ -147,6 +148,8 @@ def test_annotation_and_config_describe_one_component(
 def test_configured_component_receives_the_catalogue(
     mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
+    """Give a configured component the routers the session class declares."""
+
     class WithRegistrar(Session):
         registrar: AsPresenter[MockRegistrar]
 
@@ -172,6 +175,8 @@ def test_an_entry_that_does_not_resolve_is_left_out_with_an_error(
     caplog: pytest.LogCaptureFixture,
     build: BuildSession,
 ) -> None:
+    """Leave out an entry that does not resolve to a plugin, and log why."""
+
     class BrokenApp(Session):
         config: ClassVar[dict[str, object]] = {"presenters": {"ctrl": entry}}
 
@@ -185,6 +190,7 @@ def test_an_entry_that_does_not_resolve_is_left_out_with_an_error(
 def test_a_session_needs_no_container_class(
     mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
+    """Build a session from a file alone, with no session class."""
     unbuilt = Session.from_config(str(config_path / "mock_headless.yaml"))
     assert not unbuilt.is_built
 
@@ -197,6 +203,7 @@ def test_a_session_needs_no_container_class(
 def test_from_config_takes_the_configuration_itself(
     mock_plugin: None, build: BuildSession
 ) -> None:
+    """Build a session from a configuration mapping."""
     app = build(
         Session.from_config(
             {
@@ -224,6 +231,7 @@ def test_from_config_takes_the_configuration_itself(
 def test_the_class_keeps_what_it_declares(
     mock_plugin: None, config_path: Path, build: BuildSession
 ) -> None:
+    """Keep what the session class declares when it is built from a file."""
     app = build(HeadlessApp.from_config(str(config_path / "mock_headless.yaml")))
 
     assert isinstance(app, HeadlessApp)
@@ -233,6 +241,7 @@ def test_the_class_keeps_what_it_declares(
 def test_the_configuration_is_the_instance_alone(
     mock_plugin: None, config_path: Path
 ) -> None:
+    """Keep the configuration on the instance, leaving the class attribute unset."""
     app = Session.from_config(str(config_path / "mock_headless.yaml"))
     assert Session.config is None
     assert set(app.build().declarations)
@@ -242,6 +251,7 @@ def test_the_configuration_is_the_instance_alone(
 def test_a_plugin_whose_manifest_is_invalid_is_left_out(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
+    """Leave out a plugin whose manifest is invalid, and log the error."""
     (tmp_path / "redsun.yaml").write_text("widgets: {}\n")
     entry = mock.Mock(spec=EntryPoint)
     entry.name = "bad-bundle"
@@ -264,11 +274,13 @@ def test_a_plugin_whose_manifest_is_invalid_is_left_out(
 
 
 def test_from_config_refuses_a_session_that_names_itself_nothing() -> None:
+    """Refuse a configuration with no session name."""
     with pytest.raises(ConfigurationError, match="must name itself"):
         Session.from_config({"presenters": {}})
 
 
 def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
+    """Refuse a frontend no session class is registered for."""
     path = tmp_path / "curses.yaml"
     path.write_text(yaml.safe_dump({"session": "lab", "frontend": "curses"}))
 
@@ -277,6 +289,7 @@ def test_an_unknown_frontend_is_refused(tmp_path: Path) -> None:
 
 
 def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> None:
+    """Refuse a frontend the session class is not built on."""
     path = tmp_path / "qt.yaml"
     path.write_text(yaml.safe_dump({"session": "lab", "frontend": "qt"}))
 
@@ -285,6 +298,7 @@ def test_a_frontend_the_container_cannot_serve_is_refused(tmp_path: Path) -> Non
 
 
 def test_a_frontend_another_package_registers_is_built_on() -> None:
+    """Build on a frontend another package registers as an entry point."""
     entry = EntryPoint(
         "custom", f"{CustomSession.__module__}:CustomSession", "redsun.frontends"
     )
@@ -299,7 +313,7 @@ def test_a_frontend_another_package_registers_is_built_on() -> None:
 def test_a_session_reports_the_frontend_it_is_built_on(
     base: type[Session], frontend: str | None, qapp: object, build: BuildSession
 ) -> None:
-    """The file need not say it: the class does."""
+    """Report the frontend of the session class, which the file need not name."""
 
     class App(base):  # type: ignore[valid-type,misc]
         reader: AsPresenter[FrontendReader]
@@ -312,7 +326,7 @@ def test_a_session_reports_the_frontend_it_is_built_on(
 def test_a_build_looks_each_plugin_up_once(
     mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
 ) -> None:
-    """Five entries name one plugin; a second build looks it up again."""
+    """Look up each plugin once per build, however many entries name it."""
     lookups = vars(_manifest)["entry_points"]
     assert isinstance(lookups, mock.Mock)
 
@@ -326,7 +340,7 @@ def test_a_build_looks_each_plugin_up_once(
 def test_a_session_builds_again_after_shutdown(
     mock_plugin: None, config_path: Path, build: Callable[..., ConfiguredApp]
 ) -> None:
-    """What one component shares reaches another on the second build too."""
+    """Build a session again after shutdown, sharing values between components again."""
     app = build(ConfiguredApp, str(config_path / SESSION))
     app.shutdown()
 

@@ -163,7 +163,7 @@ def summary_in(caplog: pytest.LogCaptureFixture) -> str:
 
 
 def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
-    """A device whose first parameter is not ``name`` gets its name by keyword."""
+    """Build an EPICS device from its prefix, passing its name by keyword."""
 
     class App(Session):
         camera: Annotated[AsDevice[Camera], Declare(prefix="CAM:", autoconnect=False)]
@@ -176,6 +176,8 @@ def test_an_epics_device_builds_with_its_prefix(build: BuildSession) -> None:
 
 
 def test_services_are_read_from_annotations_and_the_configuration() -> None:
+    """Read services from class annotations and from the configuration."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {
             "services": {
@@ -203,6 +205,8 @@ def test_services_are_read_from_annotations_and_the_configuration() -> None:
 
 
 def test_a_marker_where_an_alias_is_used_replaces_the_alias_marker() -> None:
+    """Replace the service marker of a type alias with one given where it is used."""
+
     class App(Session):
         spare: Annotated[CameraIoc, Launch("mylab.iocs.spare", prefix="SPARE:")]
 
@@ -220,6 +224,8 @@ def test_a_marker_where_an_alias_is_used_replaces_the_alias_marker() -> None:
 def test_a_service_from_a_plugin_takes_its_module_and_readiness_line(
     mock_plugin: None,
 ) -> None:
+    """Take the module and readiness line of a plugin service from its manifest."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {
             "services": {
@@ -249,6 +255,8 @@ def test_a_service_from_a_plugin_takes_its_module_and_readiness_line(
 def test_a_service_the_session_cannot_make_is_refused(
     config: dict[str, Any], error: str
 ) -> None:
+    """Refuse a service entry with an unknown key, or with arguments but no module."""
+
     class App(Session):
         pass
 
@@ -267,11 +275,14 @@ def test_a_service_the_session_cannot_make_is_refused(
 def test_a_service_described_against_its_marker_is_refused(
     cls: type[Session], error: str
 ) -> None:
+    """Refuse a service declared with `Declare`, or attached but given a module."""
     with pytest.raises(TypeError, match=error):
         cls().read_configuration()
 
 
 def test_a_service_named_like_a_session_attribute_is_refused() -> None:
+    """Refuse a service named like an attribute of the session."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {"services": {"devices": {"prefix": "X:"}}}
 
@@ -280,6 +291,8 @@ def test_a_service_named_like_a_session_attribute_is_refused() -> None:
 
 
 def test_a_service_named_like_a_component_is_refused() -> None:
+    """Refuse a name used for both a service and a component."""
+
     class App(Session):
         camera: Annotated[AsService, Attach("CAM:")]
         detector: Annotated[AsDevice[Camera], Alias("camera")]
@@ -291,6 +304,7 @@ def test_a_service_named_like_a_component_is_refused() -> None:
 def test_services_start_before_devices_and_stop_after_shutdown(
     build: BuildSession, launchable: None, tmp_path: Path
 ) -> None:
+    """Start services before building devices and stop them after shutdown."""
     marker = tmp_path / "cleaned"
 
     class App(Session):
@@ -315,6 +329,8 @@ def test_services_start_before_devices_and_stop_after_shutdown(
 
 
 def test_a_build_that_raises_stops_the_services_it_started(launchable: None) -> None:
+    """Stop the services a build started when the build raises."""
+
     class App(Session):
         stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
 
@@ -331,6 +347,8 @@ def test_a_build_that_raises_stops_the_services_it_started(launchable: None) -> 
 def test_a_device_whose_service_is_missing_is_skipped(
     build: BuildSession, launchable: None, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Skip a device whose service did not start, is not declared or has no prefix."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {"services": {"unprefixed": {}}}
         broken: Annotated[
@@ -372,6 +390,7 @@ def test_a_device_whose_service_is_missing_is_skipped(
 def test_a_device_declared_with_keywords_the_session_cannot_read_is_refused(
     cls: type[Session], reason: str
 ) -> None:
+    """Refuse a device declared with both service and prefix, or with a bad keyword."""
     with pytest.raises(TypeError, match=reason):
         cls().read_configuration()
 
@@ -379,6 +398,8 @@ def test_a_device_declared_with_keywords_the_session_cannot_read_is_refused(
 def test_a_service_whose_every_device_failed_is_reported_unused(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Report a service unused when every device on it failed to build."""
+
     class App(Session):
         beamline: Annotated[AsService, Attach("BL01:")]
         spare: Annotated[AsService, Attach("BL02:")]
@@ -395,6 +416,8 @@ def test_a_service_whose_every_device_failed_is_reported_unused(
 def test_a_saved_device_keeps_the_service_it_names(
     build: BuildSession, tmp_path: Path
 ) -> None:
+    """Save the service and autoconnect keywords of a device with its settings."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {
             "session": "saved",
@@ -417,6 +440,8 @@ def test_a_saved_device_keeps_the_service_it_names(
 def test_a_session_built_again_starts_its_services_again(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Start the services again when a session is built a second time."""
+
     class App(Session):
         beamline: Annotated[AsService, Attach("BL01:")]
 
@@ -433,6 +458,8 @@ def test_a_session_built_again_starts_its_services_again(
 def test_the_build_connects_devices_declared_with_autoconnect(
     build: BuildSession,
 ) -> None:
+    """Connect at build only the devices declared with autoconnect on."""
+
     class App(Session):
         motor: AsDevice[CountedDevice]
         idle: Annotated[AsDevice[CountedDevice], Declare(autoconnect=False)]
@@ -452,6 +479,7 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Skip a device that does not connect, naming its service in the error."""
     monkeypatch.setattr(session_base, "CONNECT_TIMEOUT", 0.5)
 
     class App(Session):
@@ -475,6 +503,8 @@ def test_a_device_that_does_not_connect_is_skipped_naming_its_service(
 def test_a_mocked_session_reaches_no_service_and_no_hardware(
     build: BuildSession,
 ) -> None:
+    """Start no service and connect no hardware in a mocked session."""
+
     class App(Session):
         config: ClassVar[dict[str, Any]] = {"mock": True}
         stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY, prefix="SIM:")]
@@ -491,7 +521,7 @@ def test_a_mocked_session_reaches_no_service_and_no_hardware(
 def test_a_caproto_ioc_is_launched_and_its_device_read_while_building(
     build: BuildSession, launchable: None
 ) -> None:
-    """The service is named as in the container tests, so it keeps libca's port."""
+    """Launch a caproto IOC and read its device during the build."""
 
     class App(Session):
         ioc_a: Annotated[
@@ -514,6 +544,7 @@ def test_a_caproto_ioc_is_launched_and_its_device_read_while_building(
 def test_a_presenter_hears_a_service_exit_through_wire(
     build: BuildSession, launchable: None, tmp_path: Path
 ) -> None:
+    """Deliver a service exit to a presenter slot wired to it."""
     exit_now = tmp_path / "exit-now"
 
     class App(Session):
@@ -536,10 +567,7 @@ def test_a_presenter_hears_a_service_exit_through_wire(
 
 
 def test_a_session_names_what_its_services_speak(build: BuildSession) -> None:
-    """Named once, it reaches every service, annotated or listed only.
-
-    A fragment layered under the source naming it needs no key of its own.
-    """
+    """Apply the transport the session names to every service, layered ones too."""
     named = {"services": {"transport": "pv-access"}}
     fragment = {"services": {"beamline": {"prefix": "BL01:"}}}
 
@@ -554,12 +582,13 @@ def test_a_session_names_what_its_services_speak(build: BuildSession) -> None:
 
 
 def test_a_transport_redsun_does_not_have_is_refused() -> None:
+    """Refuse a transport `redsun` does not support."""
     with pytest.raises(ConfigurationError, match="carrier-pigeon"):
         Session({"services": {"transport": "carrier-pigeon"}}).build()
 
 
 def test_a_service_named_transport_is_refused() -> None:
-    """From the section, where the key is reserved, and from an annotation."""
+    """Refuse a service named `transport`, in the section or as an annotation."""
     with pytest.raises(
         ConfigurationError, match="transport: Input should be a valid string"
     ):
@@ -575,7 +604,7 @@ def test_a_service_named_transport_is_refused() -> None:
 def test_two_pva_services_answer_on_the_loopback(
     build: BuildSession, launchable: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Both are kept local, and this process is told where to find them."""
+    """Keep two PV Access services on the loopback, where this process finds them."""
     p4p = pytest.importorskip("p4p.client.thread")
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
@@ -600,6 +629,7 @@ def test_two_pva_services_answer_on_the_loopback(
 
 
 def test_layered_sources_must_agree_on_the_transport() -> None:
+    """Refuse layered sources that name different transports."""
     under = {"services": {"transport": "channel-access"}}
     over = {"services": {"transport": "pv-access"}}
 
@@ -613,11 +643,13 @@ def test_services_start_together(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Each stand-in is ready only once the other runs, so one at a time never is."""
+    """Start services at the same time, not one after another."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 5.0)
     first, second = tmp_path / "first", tmp_path / "second"
 
     class App(Session):
+        # Each stand-in is ready only once the other runs, so starting them one at a
+        # time would never finish.
         config: ClassVar[dict[str, Any]] = {
             "services": {
                 "left": {"args": ["--touch", str(first), "--ready-when", str(second)]},
@@ -633,6 +665,8 @@ def test_services_start_together(
 
 
 def test_a_renamed_service_is_reached_by_its_attribute() -> None:
+    """Reach a service with an alias through its attribute name."""
+
     class App(Session):
         motors: Annotated[AsService, Alias("stage_ioc"), Attach("MOT:")]
 

@@ -98,17 +98,21 @@ class NoGreet:
     ],
 )
 def test_problems_reports_each_reason(candidate: object, expected: list[str]) -> None:
+    """Report each member a candidate lacks or has in the wrong form."""
     assert problems(candidate, Greets) == expected
 
 
 @pytest.mark.parametrize("candidate", [RenamedParameter(), ExtraRequired()])
 def test_signature_mismatch_names_both_calls(candidate: object) -> None:
+    """Name the method and the call it cannot accept on a signature mismatch."""
     (reason,) = problems(candidate, Greets)
     assert reason.startswith("greet(")
     assert "cannot be called as greet(who, loudly=False)" in reason
 
 
 def test_staticmethod_keeps_its_first_parameter() -> None:
+    """Compare a static method's signature including its first parameter."""
+
     class WrongStatic:
         label = "hi"
 
@@ -124,12 +128,13 @@ def test_staticmethod_keeps_its_first_parameter() -> None:
 
 
 def test_class_leaves_data_members_unchecked() -> None:
+    """Require data members on an instance but not on a class."""
     assert problems(MissingData, Greets) == []
     assert problems(MissingData(), Greets) == ["'label' is missing"]
 
 
 def test_members_and_methods_split_data_from_callables() -> None:
-    """The split decides what a class can be checked for and what needs an instance."""
+    """List every protocol member, and the callable ones apart."""
     assert members(Greets) == {"label", "greet", "parse"}
     assert methods(Greets) == {"greet", "parse"}
 
@@ -162,7 +167,7 @@ class Nameless:
 def test_a_property_member_is_data_not_a_call(
     candidate: object, expected: bool
 ) -> None:
-    """A protocol property is answered by any instance holding the name."""
+    """Accept any instance holding a name a protocol declares as a property."""
     assert methods(Named) == frozenset()
     assert satisfies(candidate, Named) is expected
 
@@ -188,5 +193,5 @@ class Calls:
 def test_a_class_is_not_taken_for_a_callable_instance(
     candidate: object, expected: list[str]
 ) -> None:
-    """Every class is callable through its metaclass, which its instances are not."""
+    """Require a class to define `__call__` for its instances, not only inherit one."""
     assert problems(candidate, Callback) == expected

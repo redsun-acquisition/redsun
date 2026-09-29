@@ -18,7 +18,7 @@ import pytest
 def test_a_missing_package_names_the_extra(
     package: str, module: str, extra: str
 ) -> None:
-    """The import says what to install, in a process without the package."""
+    """Name the package and the extra to install when a writer package is missing."""
     # None in sys.modules makes any import of the package raise ImportError
     code = f"import sys; sys.modules[{package!r}] = None; import {module}"
 

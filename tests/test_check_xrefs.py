@@ -14,6 +14,7 @@ def page(site: Path, address: str, body: str) -> None:
 
 
 def test_a_fragment_reaching_nothing_is_reported(tmp_path: Path) -> None:
+    """Report a fragment that names no element, ignoring outside and theme links."""
     page(tmp_path, "glossary", '<h3 id="device">Device</h3>')
     page(
         tmp_path,
@@ -34,6 +35,7 @@ def test_a_fragment_reaching_nothing_is_reported(tmp_path: Path) -> None:
 
 
 def test_a_link_leaving_the_site_is_reported(tmp_path: Path) -> None:
+    """Report a link whose target lies outside the site."""
     site = tmp_path / "site"
     page(site, "guide", '<a href="../../outside/#part">outside</a>')
     outside = tmp_path / "outside" / "index.html"
@@ -46,6 +48,7 @@ def test_a_link_leaving_the_site_is_reported(tmp_path: Path) -> None:
 
 
 def test_a_link_to_a_page_that_does_not_exist_is_reported(tmp_path: Path) -> None:
+    """Report a link to a page that does not exist."""
     page(tmp_path, "glossary", '<h3 id="device">Device</h3>')
     page(tmp_path, "guide", '<a href="../glosary/#device">misspelt page</a>')
 
@@ -55,6 +58,7 @@ def test_a_link_to_a_page_that_does_not_exist_is_reported(tmp_path: Path) -> Non
 
 
 def test_an_attribute_ending_in_id_or_href_is_not_read_as_one(tmp_path: Path) -> None:
+    """Read only the `id` and `href` attributes, not ones ending in those names."""
     page(tmp_path, "glossary", '<h3 data-id="ghost">Ghost</h3>')
     page(
         tmp_path,

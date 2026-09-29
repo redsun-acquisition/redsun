@@ -544,7 +544,7 @@ class Tuned(pydantic.BaseModel):
 
 
 class TunedCtrl(Tuned):
-    """Presenter whose inherited field comes before ``name``."""
+    """Presenter whose inherited field comes before `name`."""
 
     name: str
 
@@ -559,7 +559,7 @@ class TunedApp(Session):
 
 @dataclass
 class DataclassCtrl:
-    """Presenter whose annotations live on a generated ``__init__``."""
+    """Presenter whose annotations live on a generated `__init__`."""
 
     name: str
     devices: DeviceMapping
@@ -949,7 +949,7 @@ class MisfiledApp(Session):
 
 
 def test_build_resolves_every_declaration(app: App) -> None:
-    """Components come up, typed attributes reach them, devices are built."""
+    """Build every declared component and device and set each on its attribute."""
     assert app.is_built
     assert isinstance(app.ctrl, Ctrl)
     assert isinstance(app.widget, Widget)
@@ -959,51 +959,49 @@ def test_build_resolves_every_declaration(app: App) -> None:
 
 
 def test_config_supplies_kwargs_and_inline_overrides(app: App) -> None:
-    """The attribute name is the config key, and Declare wins over the file."""
+    """Read kwargs from the config under the attribute name, with Declare first."""
     assert app.ctrl.gain == 2.0
     assert app.widget.label == "inline"
     assert app.name == "test-session"
 
 
 def test_shared_value_is_bound_to_its_owner(app: App) -> None:
-    """A @provides method is called on the built component that declares it."""
+    """Call a @provides method on the built component that declares it."""
     assert app.widget.readings == {"motor": 2.0}
 
 
 def test_absent_optional_is_none(app: App) -> None:
-    """Nothing provides Missing, so the parameter is None rather than an error."""
+    """Pass None for an optional parameter whose type nothing provides."""
     assert app.widget.missing is None
 
 
 def test_default_applies_when_nothing_provides_the_type(app: App) -> None:
-    """A parameter the session says nothing about keeps its own default."""
+    """Keep a parameter's default when the session provides nothing for its type."""
     assert app.tunable.step == 1.5
 
 
 def test_default_is_overridden_by_what_the_session_provides(app: App) -> None:
-    """A defaulted parameter is still filled when the type is available."""
+    """Fill a defaulted parameter when the session provides its type."""
     assert app.tunable.readings == {"motor": 2.0}
 
 
 def test_framework_objects_are_injectable(app: App) -> None:
-    """The device map and the callback catalogue are ordinary dependencies."""
+    """Inject the device map and the callback catalogue like any other dependency."""
     assert dict(app.ctrl.devices) == {"motor": app.motor}
     assert app.late.callbacks == {"registrar": app.registrar}
     assert app.widget.callbacks == {"registrar": app.registrar}
 
 
 def test_the_container_itself_is_not_injectable() -> None:
-    """A component cannot ask for the whole session and help itself from it.
-
-    The exception type belongs to whatever resolves the graph, so only the
-    name of the key it could not find is pinned.
-    """
+    """Refuse a component that asks for the session itself."""
+    # The exception type belongs to whatever resolves the graph, so only the name of
+    # the key it could not find is pinned.
     with pytest.raises(Exception, match="Session"):
         LocatorApp().build()
 
 
 def test_shutdown_finalizes_components_in_reverse_declaration_order() -> None:
-    """Construction is declaration order, and teardown is its reverse."""
+    """Shut components down in the reverse of their declaration order."""
     teardown_order.clear()
     container = OrderedApp().build()
     container.shutdown()
@@ -1011,7 +1009,7 @@ def test_shutdown_finalizes_components_in_reverse_declaration_order() -> None:
 
 
 def test_component_shutdown_runs_without_being_asked(app: App) -> None:
-    """A component declaring shutdown needs no registration of its own."""
+    """Call a component's shutdown method without it registering one."""
     registrar = app.registrar
     assert not registrar.closed
     app.shutdown()
@@ -1019,36 +1017,39 @@ def test_component_shutdown_runs_without_being_asked(app: App) -> None:
 
 
 def test_unknown_attribute_raises_attribute_error(app: App) -> None:
+    """Raise AttributeError for an attribute the session does not declare."""
     with pytest.raises(AttributeError, match="nonexistent"):
         _ = app.nonexistent  # type: ignore[attr-defined]
 
 
 def test_rebuild_is_a_no_op(app: App) -> None:
+    """Keep the built components when build is called a second time."""
     first = app.ctrl
     app.build()
     assert app.ctrl is first
 
 
 def test_shutdown_releases_and_allows_gc() -> None:
+    """Mark the session as not built after shutdown."""
     container = App().build()
     container.shutdown()
     assert not container.is_built
 
 
 def test_two_components_sharing_one_type_is_refused() -> None:
-    """The message names both, which resolution-time failure could not."""
+    """Refuse two components sharing one type, naming both in the error."""
     with pytest.raises(TypeError, match="both share"):
         TwoOwners().build()
 
 
 def test_two_views_of_one_layer_may_share(build: BuildSession) -> None:
-    """Both exist by the time either is set up, whatever the order."""
+    """Give one view a value another view of the same layer shares."""
     app = build(SameLayerApp)
     assert app.control.viewer is app.display.viewer()
 
 
 def test_a_view_may_depend_on_a_presenter(build: BuildSession) -> None:
-    """A view is built after a presenter, so naming one is the allowed direction."""
+    """Inject a presenter into a view that asks for it."""
     app = build(ViewOnAPresenter)
     assert app.holder.ctrl is app.recorder
 
@@ -1063,7 +1064,7 @@ def test_a_view_may_depend_on_a_presenter(build: BuildSession) -> None:
 def test_a_presenter_depending_on_a_view_is_refused(
     app: type[Session], match: str
 ) -> None:
-    """Naming the class or a type it shares is the same backwards edge."""
+    """Refuse a presenter asking for a view class or a value a view shares."""
     with pytest.raises(TypeError, match="knows nothing about a view"):
         app().build()
     with pytest.raises(TypeError, match=match):
@@ -1081,7 +1082,7 @@ def test_a_presenter_depending_on_a_view_is_refused(
 def test_a_constructor_taking_what_another_component_owns_is_refused(
     app: type[Session], match: str
 ) -> None:
-    """A component is constructed before its peers, so it cannot hold one yet."""
+    """Refuse a constructor asking for a component, a shared value or the catalogue."""
     with pytest.raises(TypeError, match=match):
         app().build()
     with pytest.raises(TypeError, match="ask for it in 'setup'"):
@@ -1089,7 +1090,7 @@ def test_a_constructor_taking_what_another_component_owns_is_refused(
 
 
 def test_a_shared_value_is_read_once_at_construction(build: BuildSession) -> None:
-    """Every component asking for it receives the value the owner made."""
+    """Call a shared value's provider once and give every consumer that value."""
     app = build(CountingApp)
     assert app.owner.calls == 1
     assert app.first.counted == 1
@@ -1097,6 +1098,7 @@ def test_a_shared_value_is_read_once_at_construction(build: BuildSession) -> Non
 
 
 def test_unannotated_parameter_is_refused() -> None:
+    """Refuse a component whose constructor has an unannotated parameter."""
     with pytest.raises(TypeError, match="has no annotation"):
         BadApp().build()
 
@@ -1112,6 +1114,7 @@ def test_unannotated_parameter_is_refused() -> None:
 def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
     target: type, declared: Layer
 ) -> None:
+    """Accept a device, presenter or view class declared in its own layer."""
     assert check(target, declared, "somewhere") is target
 
 
@@ -1131,7 +1134,7 @@ def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
 def test_a_class_declared_in_the_wrong_layer_is_refused(
     target: object, declared: Layer, match: str
 ) -> None:
-    """A placement is what separates the two component layers, both ways."""
+    """Refuse a class declared in a layer it does not belong to, naming the reason."""
     with pytest.raises(TypeError, match=match):
         check(target, declared, "somewhere")
 
@@ -1148,7 +1151,7 @@ def test_a_class_declared_in_the_wrong_layer_is_refused(
 def test_a_frontend_accepts_what_it_attaches(
     view: type | object, frontend: type[Frontend], placement: Placement
 ) -> None:
-    """A class and an instance answer alike, and no toolkit constrains nothing."""
+    """Accept an attachable view class or instance, and any view on a base frontend."""
     frontend.check_placement(view, placement, "somewhere")
 
 
@@ -1166,7 +1169,7 @@ def test_a_frontend_accepts_what_it_attaches(
 def test_a_frontend_refuses_what_it_cannot_attach(
     view: type, placement: Placement, match: str
 ) -> None:
-    """Either half of the pairing can be wrong, and each says which."""
+    """Refuse an unattachable placement or view type, naming which one is wrong."""
     with pytest.raises(TypeError, match=match):
         Toy.check_placement(view, placement, "somewhere")
 
@@ -1181,7 +1184,7 @@ def test_a_frontend_refuses_what_it_cannot_attach(
 def test_a_view_is_refused_at_declaration_for_its_placement(
     target: type, match: str
 ) -> None:
-    """The class answers both halves, so nothing has to be built to find out."""
+    """Refuse a view class at declaration when the frontend cannot attach it."""
     with pytest.raises(TypeError, match=match):
         check(target, Layer.VIEW, "somewhere", Toy)
 
@@ -1196,7 +1199,7 @@ def test_a_component_that_drops_its_name_is_skipped(
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """The constructor is made to take a name; keeping it is the other half."""
+    """Skip a component whose constructor takes a name but does not store it."""
     built = build(app)
 
     assert not built.presenters
@@ -1205,13 +1208,14 @@ def test_a_component_that_drops_its_name_is_skipped(
 
 
 def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
+    """Accept a view class at declaration when the frontend attaches its placement."""
     assert check(Attached, Layer.VIEW, "somewhere", Toy) is Attached
 
 
 def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A placement behind a property is invisible on the class, so build first."""
+    """Skip a view whose placement, read from the built instance, is not attachable."""
     assert check(Deferred, Layer.VIEW, "somewhere", Toy) is Deferred
 
     app = build(DeferredApp)
@@ -1227,11 +1231,12 @@ def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
 def test_the_frontend_comes_from_the_class_it_is_declared_on(
     container: type[Session], expected: type[Frontend]
 ) -> None:
+    """Take the frontend from the session class or the nearest base declaring one."""
     assert container.frontend is expected
 
 
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
-    """__getattr__ never runs for a name ordinary lookup already answers."""
+    """Refuse a component named after an existing session attribute."""
 
     class Shadowed(Session):
         # mypy sees the clash too; the container has to as well
@@ -1244,7 +1249,7 @@ def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
 def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """A declaration is opt-in, so a container may hold plain attributes."""
+    """Leave a plain annotation without a layer undeclared and unreported."""
 
     class Plain(Session):
         threshold: int
@@ -1258,7 +1263,7 @@ def test_an_annotation_without_a_layer_is_an_ordinary_attribute(
 def test_a_component_nothing_reaches_is_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """A half-finished declaration, or a wiring rule with a typo in the name."""
+    """Log a component that shares nothing, asks for nothing and is wired to nothing."""
 
     class Inert(Session):
         recorder: AsPresenter[Recorder]
@@ -1273,7 +1278,7 @@ def test_a_component_nothing_reaches_is_reported(
 def test_a_component_another_is_built_from_is_not_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """Being injected is being used, though the component asks for nothing itself."""
+    """Do not report a component that another component is built from."""
     build(OrderedApp)
     assert "'first' shares nothing" not in caplog.text
 
@@ -1281,7 +1286,7 @@ def test_a_component_another_is_built_from_is_not_reported(
 def test_a_shared_value_nothing_asks_for_is_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """Usually the consumer was renamed or removed while the producer stayed."""
+    """Log a shared value that no component asks for."""
     build(App)
     assert (
         "ctrl.descriptions shares 'Descriptions', which no component asks for"
@@ -1292,7 +1297,7 @@ def test_a_shared_value_nothing_asks_for_is_reported(
 def test_a_session_is_named_after_its_class_when_it_says_nothing(
     build: BuildSession,
 ) -> None:
-    """A shared constant would let two unrelated sessions collide silently."""
+    """Name a session after its class when its configuration gives no name."""
 
     class Instrument(Session):
         """A session naming itself nothing."""
@@ -1304,7 +1309,7 @@ def test_a_session_is_named_after_its_class_when_it_says_nothing(
 def test_a_forgotten_layer_is_reported(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """Omitting the marker is silent by design, so a likely component is flagged."""
+    """Report an attribute annotated with a component class but no layer."""
 
     class Forgot(Session):
         ctrl: Ctrl
@@ -1325,16 +1330,19 @@ def test_a_forgotten_layer_is_reported(
     ],
 )
 def test_optional_arg(hint: Any, expected: Any) -> None:
+    """Return the inner type of `X | None`, and None for any other hint."""
     assert optional_arg(hint) is expected
 
 
 def test_injectable_excludes_name_and_config_kwargs() -> None:
-    """Identity and configured values are bound, never resolved."""
+    """Leave the name and configured kwargs out of the injectable parameters."""
     assert set(injectable(Ctrl, {})) == {"devices", "gain"}
     assert set(injectable(Ctrl, {"gain": 1.0})) == {"devices"}
 
 
 def test_synthesize_agrees_with_both_introspection_routes() -> None:
+    """Give the synthesized function a signature and annotations that agree."""
+
     def make(**deps: Any) -> Any:
         return deps
 
@@ -1351,7 +1359,7 @@ def test_synthesize_agrees_with_both_introspection_routes() -> None:
 
 
 def test_a_keyword_only_component_is_built() -> None:
-    """A pydantic model takes its name as a keyword; the container looks first."""
+    """Build a pydantic component that takes its name as a keyword."""
     app = PydanticApp().build()
     assert app.ctrl.name == "ctrl"
     assert app.ctrl.gain == 7.5
@@ -1359,11 +1367,7 @@ def test_a_keyword_only_component_is_built() -> None:
 
 
 def test_the_two_constructor_shapes_are_read_alike() -> None:
-    """A pydantic model and an ordinary class must not drift apart.
-
-    Their annotations live in different places: an ordinary class states them
-    on ``__init__``, a pydantic model only in its synthesized signature.
-    """
+    """Read the same injectable parameters from a pydantic model and a plain class."""
     assert injectable(PydanticCtrl, {}) == injectable(Ctrl, {})
     assert injectable(PydanticCtrl, {"gain": 1.0}) == injectable(Ctrl, {"gain": 1.0})
 
@@ -1373,13 +1377,14 @@ def test_the_two_constructor_shapes_are_read_alike() -> None:
     [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
 )
 def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> None:
-    """A name arriving inside ``*args`` is not one a keyword can fill."""
+    """Accept a class whose name a keyword can fill, and refuse one taking `*args`."""
     assert accepts_name(cls) is accepted
 
 
 def test_a_name_only_a_position_can_fill_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Skip a component that takes 'name' only positionally."""
     app = build(PositionalNameApp)
 
     assert "ctrl" not in app.presenters
@@ -1387,7 +1392,7 @@ def test_a_name_only_a_position_can_fill_is_skipped(
 
 
 def test_the_name_may_follow_inherited_fields() -> None:
-    """A generated signature lists a base class's fields first."""
+    """Build a model whose name field comes after inherited fields."""
     app = TunedApp().build()
     assert app.ctrl.name == "ctrl"
     assert app.ctrl.gain == 3.0
@@ -1409,7 +1414,7 @@ def test_a_component_owning_a_signal_needs_a_weak_reference(
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Without one the signal holds every instance alive, and what it holds."""
+    """Skip a slotted component owning a signal unless it allows weak references."""
     session = build(app)
 
     assert ("ctrl" in session.presenters) is built
@@ -1424,6 +1429,7 @@ def test_a_component_owning_a_signal_needs_a_weak_reference(
 def test_a_frozen_component_with_setup_is_built_and_warned_about(
     frozen: type[Session], build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Build a frozen component that has setup, and log a warning about it."""
     app = build(frozen)
 
     assert "ctrl" in app.presenters
@@ -1434,7 +1440,7 @@ def test_a_frozen_component_with_setup_is_built_and_warned_about(
 def test_a_dataclass_is_an_ordinary_component(
     app: type[DataclassApp | KwOnlyApp | FrozenApp],
 ) -> None:
-    """Every dataclass flavour builds, whatever kind its fields become."""
+    """Build plain, keyword-only and frozen dataclass components."""
     built = app().build()
     assert built.ctrl.name == "ctrl"
     assert built.ctrl.gain == 7.5
@@ -1442,7 +1448,7 @@ def test_a_dataclass_is_an_ordinary_component(
 
 
 def test_a_subclass_layers_over_its_base() -> None:
-    """The base holds the instrument, the subclass holds the session."""
+    """Merge a subclass's configuration over its base class's configuration."""
     app = Layered().build()
     assert app.name == "layered"
     assert app.ctrl.gain == 9.0
@@ -1450,14 +1456,14 @@ def test_a_subclass_layers_over_its_base() -> None:
 
 
 def test_layering_follows_the_mro() -> None:
-    """Reading the bases in the order they are written would give 'Y'."""
+    """Merge configuration from base classes in method resolution order."""
     app = Diamond().build()
     assert run_coro(app.motor.axis.get_value()) == "Z"
     assert app.ctrl.gain == 9.0
 
 
 def test_the_constructor_layers_over_the_class() -> None:
-    """Naming one key changes that key, rather than replacing the whole."""
+    """Merge a constructor mapping over the class configuration key by key."""
     app = Layered({"presenters": {"ctrl": {"gain": 4.0}}}).build()
     assert app.ctrl.gain == 4.0
     assert app.name == "layered"
@@ -1465,7 +1471,7 @@ def test_the_constructor_layers_over_the_class() -> None:
 
 
 def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
-    """A string is a path, not the sequence of characters it also is."""
+    """Read a string source as a file path and merge it with a mapping."""
     shared = tmp_path / "shared.yaml"
     shared.write_text("session: from-file\npresenters:\n  ctrl:\n    gain: 3.0\n")
 
@@ -1481,7 +1487,7 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
 
 
 def test_sources_must_agree_on_what_the_session_is() -> None:
-    """A later source says more about a session, never that it is another."""
+    """Refuse configuration sources that name different frontends."""
 
     class Contradiction(Session):
         config: ClassVar[list[Any]] = [{"frontend": "qt"}, {"frontend": "web"}]
@@ -1491,7 +1497,7 @@ def test_sources_must_agree_on_what_the_session_is() -> None:
 
 
 def test_a_later_source_may_rename_the_session() -> None:
-    """The name is content rather than identity, so an overlay may set it."""
+    """Let a later configuration source change the session name."""
 
     class Renamed(Session):
         config: ClassVar[list[Any]] = [{"session": "first"}, {"session": "second"}]
@@ -1503,14 +1509,14 @@ def test_a_later_source_may_rename_the_session() -> None:
 def test_two_components_taking_each_others_values_both_build(
     build: BuildSession,
 ) -> None:
-    """Neither needs the other to exist before it is constructed."""
+    """Build two components that each receive the other."""
     app = build(CircularApp)
     assert app.ping.other is app.pong
     assert app.pong.other is app.ping
 
 
 def test_a_session_knows_what_it_is_called() -> None:
-    """The name is read from the configuration before anything is built."""
+    """Read the session name from the configuration or the class, before the build."""
 
     class Instrument(Session):
         """A session naming itself nothing."""
@@ -1522,23 +1528,21 @@ def test_a_session_knows_what_it_is_called() -> None:
 def test_a_shared_service_may_be_any_kind_of_class(
     build: BuildSession,
 ) -> None:
-    """Its constructor is read from the signature, as a component's is.
-
-    The first value is derived from the session, which is how the injected
-    ``SessionConfig`` shows up in what the component receives.
-    """
+    """Build dataclass, frozen and pydantic shared services and inject their values."""
     app = build(ServicesApp)
+    # The first value is derived from the session, which is how the injected
+    # `SessionConfig` shows up in what the component receives.
     assert app.served.values == (len(app.name) / 10, 1.5, 2.5)
 
 
 def test_a_shared_service_is_given_no_name() -> None:
-    """A component is handed its name; a provider has none, so it must ask."""
+    """Refuse a shared service whose constructor asks for 'name'."""
     with pytest.raises(TypeError, match="'NamedServices' asks for 'name'"):
         NamedServicesApp().build()
 
 
 def test_a_shared_service_and_a_component_sharing_one_type_is_refused() -> None:
-    """The service's value would otherwise win, and the component's goes unread."""
+    """Refuse a shared service and a component that share the same type."""
     with pytest.raises(TypeError, match="'owner' and 'ModelServices' both share"):
         ProviderAndComponentApp().build()
 
@@ -1546,7 +1550,7 @@ def test_a_shared_service_and_a_component_sharing_one_type_is_refused() -> None:
 def test_a_component_that_fails_to_build_is_skipped(
     build: BuildSession,
 ) -> None:
-    """The build returns, and every component that could be made is there."""
+    """Skip a component that fails to build and keep every other one."""
     app = build(ToleratedApp)
     assert app.is_built
     assert set(app.presenters) == {"ok"}
@@ -1556,7 +1560,7 @@ def test_a_component_that_fails_to_build_is_skipped(
 def test_a_component_that_failed_is_not_set_on_the_session(
     build: BuildSession,
 ) -> None:
-    """Reading it raises, rather than answering None typed as the component."""
+    """Raise AttributeError when reading a component that failed to build."""
     app = build(ToleratedApp)
 
     with pytest.raises(AttributeError, match="bad"):
@@ -1566,7 +1570,7 @@ def test_a_component_that_failed_is_not_set_on_the_session(
 def test_a_failure_is_logged_against_the_component_name(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """The log is the whole report, so it names what failed and why."""
+    """Log each build failure with the component name and the error."""
     with caplog.at_level(logging.ERROR, logger="redsun"):
         ToleratedApp().build().shutdown()
 
@@ -1577,7 +1581,7 @@ def test_a_failure_is_logged_against_the_component_name(
 def test_a_component_whose_collaborator_failed_is_not_set_up(
     build: BuildSession,
 ) -> None:
-    """One that cannot be built leaves what wanted it built but not set up."""
+    """Build but do not set up a component whose setup needs a failed component."""
     app = build(DependsOnBrokenApp)
     assert app.is_built
     assert set(app.presenters) == {"ok", "dependent"}
@@ -1587,7 +1591,7 @@ def test_a_component_whose_collaborator_failed_is_not_set_up(
 def test_asking_for_something_nothing_ever_declared_still_raises(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Only a component the session tried and failed to build is tolerated."""
+    """Raise and log when a component asks for a type the session does not provide."""
     with (
         caplog.at_level(logging.ERROR, logger="redsun"),
         pytest.raises(TypeError, match="which nothing in the session provides"),
@@ -1601,7 +1605,7 @@ def test_asking_for_something_nothing_ever_declared_still_raises(
 def test_the_closing_line_names_what_is_missing(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A build that missed something says so above the level it reports at."""
+    """Log the closing build line as a warning naming each component not built."""
     with caplog.at_level(logging.INFO, logger="redsun"):
         ToleratedApp().build().shutdown()
 
@@ -1614,7 +1618,7 @@ def test_the_closing_line_names_what_is_missing(
 
 
 def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> None:
-    """A toolkit's two steps run around the components without overriding build."""
+    """Run the runtime step before the components and the presentation step after."""
     STEP_ORDER.clear()
     app = SteppedApp().build()
     try:
@@ -1625,14 +1629,12 @@ def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> N
 
 
 def test_a_session_missing_a_step_cannot_be_constructed() -> None:
-    """Inheriting the protocol is what makes a missing step refusable.
+    """Refuse to instantiate a session subclass that leaves a build step abstract."""
 
-    A session answers an unknown attribute with the component of that name, so
-    `isinstance` and a type checker both accept one that is missing a step.
-    The abstract members are read off the class when it is created, which no
-    `__getattr__` reaches.
-    """
-
+    # Inheriting the protocol is what makes a missing step refusable: a session
+    # answers an unknown attribute with the component of that name, so `isinstance`
+    # and a type checker both accept one missing a step, while the abstract members
+    # are read off the class when it is created, which no `__getattr__` reaches.
     class Partial(BuildableSession):
         def present(self) -> None: ...
 
@@ -1641,7 +1643,7 @@ def test_a_session_missing_a_step_cannot_be_constructed() -> None:
 
 
 def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
-    """A build that stops halfway releases what ran before it, and no more."""
+    """Run the releases registered so far, in reverse, when a build step raises."""
     released: list[str] = []
 
     class Failing(Session):
@@ -1658,7 +1660,7 @@ def test_a_failed_build_gives_back_what_its_finished_steps_took() -> None:
 
 
 def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
-    """A step's release runs before the release of the step that preceded it."""
+    """Run releases once, in reverse registration order, on shutdown."""
     released: list[str] = []
 
     class Ordered(Session):
@@ -1683,7 +1685,7 @@ def test_shutdown_gives_things_back_in_the_reverse_of_the_order_taken() -> None:
 def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
     refused: bool, caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """One component that could not be made must not keep the session down."""
+    """Warn about and skip a wiring rule that names a component not built."""
     rules = {"broken.sig_done": "recorder.on_done"}
 
     class Half(Session):
@@ -1708,6 +1710,8 @@ def test_a_wiring_rule_naming_a_skipped_component_is_warned_about(
 def test_a_path_wire_connects_to_a_component_that_failed_is_skipped(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
+    """Skip a configured wiring rule whose source component failed to build."""
+
     class Chatty(Session):
         broken: AsPresenter[BrokenTalker]
         listener: AsPresenter[Listener]
@@ -1723,7 +1727,7 @@ def test_a_path_wire_connects_to_a_component_that_failed_is_skipped(
 
 
 def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
-    """What the build took is given back before the error leaves it."""
+    """Raise BuildError in strict mode after releasing what the build took."""
     released: list[str] = []
 
     class Half(Session):
@@ -1741,7 +1745,7 @@ def test_a_strict_session_stops_on_a_component_it_could_not_build() -> None:
 def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
-    """The other links are still made, and the failed name reads as absent after."""
+    """Skip a link from a failed component in `wire` and make the others."""
 
     class Chatty(Session):
         broken: AsPresenter[BrokenTalker]
@@ -1789,7 +1793,7 @@ def test_a_link_wire_makes_to_a_component_that_failed_is_skipped(
 def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
     rules: Any, error: type[Exception], message: str
 ) -> None:
-    """Only a component the build skipped is forgiven, not a typo."""
+    """Raise for a wiring rule naming an undeclared component or of the wrong shape."""
 
     class Wrong(Session):
         recorder: AsPresenter[Recorder]
@@ -1803,6 +1807,8 @@ def test_a_wiring_rule_wrong_in_any_other_way_stays_fatal(
 def test_a_signal_wired_to_a_list_of_slots_in_the_config_reaches_both(
     build: BuildSession,
 ) -> None:
+    """Connect a signal to every slot in a configured list."""
+
     class Chorus(Session):
         talker: AsPresenter[Talker]
         first: AsPresenter[Listener]
@@ -1820,6 +1826,8 @@ def test_a_signal_wired_to_a_list_of_slots_in_the_config_reaches_both(
 
 
 def test_a_wire_that_yields_nothing_is_fatal() -> None:
+    """Raise WiringError when `wire` returns None."""
+
     class Empty(Session):
         recorder: AsPresenter[Recorder]
 
@@ -1831,6 +1839,8 @@ def test_a_wire_that_yields_nothing_is_fatal() -> None:
 
 
 def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
+    """Raise WiringError for a link whose first item is not a signal."""
+
     class Miswired(Session):
         recorder: AsPresenter[Recorder]
 
@@ -1844,7 +1854,7 @@ def test_a_link_whose_first_item_is_not_a_signal_is_fatal() -> None:
 def test_a_later_layers_wiring_keeps_the_earlier_layers_links(
     build: BuildSession,
 ) -> None:
-    """The ``wiring`` section merges by signal path, like any other mapping."""
+    """Merge wiring rules from a later configuration source with earlier ones."""
 
     class Chatting(Session):
         talker: AsPresenter[Talker]
@@ -1862,17 +1872,14 @@ def test_a_later_layers_wiring_keeps_the_earlier_layers_links(
 
 
 def test_a_session_can_be_referred_to_weakly() -> None:
-    """A toolkit connecting one of its signals to a session's method needs it.
-
-    ``__slots__`` without ``__weakref__`` refuses a weak reference outright,
-    which is a `TypeError` from the class rather than anything to do with how
-    long an instance is kept.
-    """
+    """Allow a weak reference to a session."""
+    # `__slots__` without `__weakref__` refuses a weak reference outright with a
+    # `TypeError` from the class, so how long the instance is kept does not matter.
     assert weakref.ref(Session())() is not None
 
 
 def test_a_renamed_component_is_reached_by_its_attribute() -> None:
-    """`Alias` names the component; the attribute it was declared as still holds it."""
+    """Reach an aliased component by its attribute and register it under the alias."""
     app = RenamedApp().build()
 
     app.speaker.sig_said.emit("one")
@@ -1884,6 +1891,7 @@ def test_a_renamed_component_is_reached_by_its_attribute() -> None:
 
 
 def test_a_renamed_component_that_failed_does_not_break_the_wiring() -> None:
+    """Build the rest of the session when an aliased component fails to build."""
     app = RenamedBrokenApp().build()
 
     assert set(app.presenters) == {"listener"}
@@ -1892,7 +1900,7 @@ def test_a_renamed_component_that_failed_does_not_break_the_wiring() -> None:
 
 
 def test_an_entry_read_under_another_key_is_no_component_of_its_own(app: App) -> None:
-    """``motor`` reads the entry ``stage``, which must not be declared a second time."""
+    """Declare no extra component for an entry `FromConfig` reads under another key."""
     assert "stage" not in app.declarations
     assert set(app.devices) == {"motor"}
 
@@ -1900,7 +1908,7 @@ def test_an_entry_read_under_another_key_is_no_component_of_its_own(app: App) ->
 def test_an_entry_under_the_name_of_a_renamed_component_is_reported(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """The arguments are read under the attribute, so the entry would be lost silently."""
+    """Log a config entry filed under a component's alias instead of its attribute."""
     with caplog.at_level(logging.ERROR, logger="redsun"):
         app = MisfiledApp().build()
 

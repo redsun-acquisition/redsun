@@ -18,6 +18,7 @@ pytestmark = pytest.mark.qt
 def test_the_dialog_renders_markdown_and_returns_once_accepted(
     qapp: QApplication,
 ) -> None:
+    """Render the Markdown text and return `Accepted` once OK is clicked."""
     seen: list[tuple[str, str]] = []
 
     def accept() -> None:

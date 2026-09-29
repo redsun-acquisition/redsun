@@ -21,7 +21,7 @@ def RE() -> Iterator[RunEngine]:
 
 @pytest.fixture(scope="function")
 def detector() -> MockDetector:
-    """Return a connected soft-signal detector, for plans the ``RE`` fixture runs.
+    """Return a connected soft-signal detector, for plans the `RE` fixture runs.
 
     Connected on the shared loop, which is the one the engine runs its plans
     on: a device connected anywhere else is bound to a loop the engine never

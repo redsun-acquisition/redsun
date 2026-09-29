@@ -29,7 +29,7 @@ pytestmark = pytest.mark.qt
 
 
 class Styler:
-    """Serves ``configure_application``, recording what it was handed."""
+    """Serves `configure_application`, recording what it was handed."""
 
     def __init__(self, style: str = "plain") -> None:
         self.style = style
@@ -41,7 +41,7 @@ class Styler:
 
 
 class Brander:
-    """Serves ``configure_main_view`` by retitling the window."""
+    """Serves `configure_main_view` by retitling the window."""
 
     def configure_main_view(self, view: QMainWindow) -> None:
         """Retitle *view*, so the call is visible from outside."""
@@ -53,7 +53,7 @@ class Both(Styler, Brander):
 
 
 class Splash:
-    """Serves ``during_build``, recording the span and every step inside it."""
+    """Serves `during_build`, recording the span and every step inside it."""
 
     entered = 0
     exited = 0
@@ -70,7 +70,7 @@ class Splash:
 
 
 class Founder:
-    """Serves ``create_application`` by handing back the running one."""
+    """Serves `create_application` by handing back the running one."""
 
     seen: ClassVar[list[list[str]]] = []
 
@@ -81,7 +81,7 @@ class Founder:
 
 
 class Heir(ConfiguresApplication[QApplication]):
-    """Serves ``configure_application`` by inheriting the protocol of the point."""
+    """Serves `configure_application` by inheriting the protocol of the point."""
 
     def __init__(self) -> None:
         self.seen: list[QApplication] = []
@@ -107,7 +107,7 @@ class ClosingPair(Both):
 
 
 class ClosingSplash(Splash):
-    """Serves ``during_build``, and records its shutdown."""
+    """Serves `during_build`, and records its shutdown."""
 
     def shutdown(self) -> None:
         CLOSED.append("splash")
@@ -153,7 +153,7 @@ def _reset() -> Iterator[None]:
 
 
 def test_a_container_that_calls_no_point_refuses_a_hook() -> None:
-    """Every point belongs to a toolkit, so a plain session has none to offer."""
+    """Refuse a hook on a plain session, which calls no hook points."""
 
     class Headless(Session):
         configure_application: AsHook[Styler]
@@ -166,7 +166,7 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """The attribute name is the point, with no marker needed to say so."""
+    """Run a hook at the hook point named by its attribute."""
 
     class App(QtSession):
         configure_application: AsHook[Styler]
@@ -180,7 +180,7 @@ def test_a_provider_may_inherit_the_protocol_of_its_point(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """The protocol of a point is a base class as well as a shape."""
+    """Accept a provider that subclasses its hook point's protocol."""
 
     class App(QtSession):
         configure_application: AsHook[Heir]
@@ -194,7 +194,7 @@ def test_declare_carries_the_providers_arguments(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """A hook is constructed the way everything else declared here is."""
+    """Pass Declare arguments to the hook provider's constructor."""
 
     class App(QtSession):
         configure_application: Annotated[AsHook[Styler], Declare(style="dark")]
@@ -208,7 +208,7 @@ def test_one_annotation_serves_several_points(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """The class is named once, so one instance answers at both points."""
+    """Use one provider instance for every point listed in Serves."""
 
     class App(QtSession):
         pair: Annotated[
@@ -226,6 +226,8 @@ def test_shutdown_reaches_each_provider_once_the_last_built_first(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
+    """Shut down each hook provider once, in reverse build order."""
+
     class App(QtSession):
         pair: Annotated[
             AsHook[ClosingPair],
@@ -240,7 +242,7 @@ def test_shutdown_reaches_each_provider_once_the_last_built_first(
 
 
 def test_two_declarations_may_not_claim_one_point() -> None:
-    """A point holds one provider, and nothing combines two."""
+    """Refuse two declarations claiming the same hook point."""
 
     class App(QtSession):
         first: Annotated[AsHook[Styler], Serves(QtHook.CONFIGURE_APPLICATION)]
@@ -251,7 +253,7 @@ def test_two_declarations_may_not_claim_one_point() -> None:
 
 
 def test_a_point_the_container_does_not_call_is_refused() -> None:
-    """A misspelled point is named against the four this container calls."""
+    """Refuse a hook point the session does not call, listing the valid ones."""
 
     class App(QtSession):
         configure_applications: AsHook[Styler]
@@ -261,7 +263,7 @@ def test_a_point_the_container_does_not_call_is_refused() -> None:
 
 
 def test_a_provider_missing_the_method_is_refused() -> None:
-    """The point names a protocol, and the provider is checked against it."""
+    """Refuse a provider that does not implement its hook point's protocol."""
 
     class App(QtSession):
         configure_application: AsHook[NotAHook]
@@ -274,7 +276,7 @@ def test_the_configuration_names_a_provider(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """A session installs a bundle's hook without naming it in Python."""
+    """Install a hook provider named in the configuration, with its kwargs."""
 
     class App(QtSession):
         config: ClassVar[dict[str, Any]] = {
@@ -291,7 +293,7 @@ def test_the_configuration_names_a_provider(
 
 
 def test_one_point_may_not_be_named_twice_over() -> None:
-    """The class and the configuration are separate, so neither layers."""
+    """Refuse a hook point named both on the class and in the configuration."""
 
     class App(QtSession):
         configure_main_view: AsHook[Brander]
@@ -309,7 +311,7 @@ def test_an_entry_two_points_share_is_one_provider(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """One entry under two keys, as a YAML anchor and its alias read."""
+    """Build one provider for one configuration entry shared by two points."""
     shared = {"provider": "mock_bundle.hooks:MockBoth"}
 
     class App(QtSession):
@@ -323,6 +325,8 @@ def test_an_entry_two_points_share_is_one_provider(
 
 
 def test_two_equal_entries_are_not_one_provider() -> None:
+    """Refuse one provider named in two separate configuration entries."""
+
     class App(QtSession):
         config: ClassVar[dict[str, Any]] = {
             "hooks": {
@@ -345,6 +349,7 @@ def test_two_equal_entries_are_not_one_provider() -> None:
 def test_the_configuration_may_not_name_a_point_the_session_does_not_call(
     session: type[Session], match: str
 ) -> None:
+    """Refuse a configured hook point the session does not call."""
     hooks = {"configure_main_vew": {"provider": "mock_bundle.hooks:MockBranding"}}
 
     with pytest.raises(HookError, match=match):
@@ -355,7 +360,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """A splash opens before the first component and closes once the window is up."""
+    """Enter the `during_build` hook once around the build and report every step."""
 
     class App(QtSession):
         during_build: AsHook[Splash]
@@ -382,7 +387,7 @@ def test_during_build_brackets_the_build_and_names_every_step(
 
 
 def test_the_span_closes_on_a_failed_build() -> None:
-    """Nothing is left covering an application that never got a window."""
+    """Exit the `during_build` hook when the build raises."""
 
     class App(QtSession):
         during_build: AsHook[Splash]
@@ -399,7 +404,7 @@ def test_create_application_is_consulted_only_with_none_running(
     monkeypatch: pytest.MonkeyPatch,
     build: Callable[..., QtSession],
 ) -> None:
-    """A running application is adopted as it is, whoever else offered one."""
+    """Call the `create_application` hook only when no QApplication is running."""
 
     class App(QtSession):
         create_application: AsHook[Founder]

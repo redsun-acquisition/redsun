@@ -82,11 +82,7 @@ def test_a_reading_reaches_the_slot(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
-    """Subscribing delivers the reading the device already holds, then the rest.
-
-    So a component starts from the current value rather than from nothing, and
-    does not have to wait for the next change to know where things stand.
-    """
+    """Deliver a signal's current reading to a subscribed slot, then each change."""
     signal, setter = counter
 
     class Wired(App):
@@ -103,6 +99,7 @@ def test_the_subscription_is_recorded_by_both_ends(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
+    """Record a subscription with the signal as publisher and the slot as consumer."""
     signal, _ = counter
 
     class Wired(App):
@@ -123,6 +120,7 @@ def test_the_subscription_is_recorded_by_both_ends(
 def test_a_signal_of_a_device_is_recorded_under_the_device(
     build: BuildSession,
 ) -> None:
+    """Record the subscription of a device signal under the device's name."""
     session = build(Following)
 
     assert [str(link) for link in session.connections] == [
@@ -135,7 +133,7 @@ def test_the_record_uses_the_port_name_the_slot_declares(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
-    """A configuration addresses the port, so the record must name it too."""
+    """Record a subscription under the port name the slot declares."""
     signal, _ = counter
 
     class Wired(App):
@@ -151,6 +149,7 @@ def test_a_slot_that_is_not_marked_is_refused(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
+    """Refuse to subscribe a method not marked as a slot."""
     signal, _ = counter
 
     class Wired(App):
@@ -165,7 +164,7 @@ def test_shutdown_stops_the_readings(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
-    """A reading delivered after teardown reaches a component being finalized."""
+    """Stop delivering readings to a slot once the session shuts down."""
     signal, setter = counter
 
     class Wired(App):
@@ -186,6 +185,7 @@ def test_shutdown_forgets_the_subscriptions(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
+    """Forget the subscriptions when the session shuts down."""
     signal, _ = counter
 
     class Wired(App):
@@ -202,7 +202,7 @@ def test_a_subscribed_port_is_not_reported_as_unconnected(
     counter: tuple[SignalR[int], Callable[[int], None]],
     build: BuildSession,
 ) -> None:
-    """A subscription is a connection, so the wiring report counts it as one."""
+    """Count a subscribed slot as connected in the wiring report."""
     signal, _ = counter
     session = build(App)
     assert "watcher.on_reading" in session.unconnected.slots

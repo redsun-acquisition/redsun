@@ -157,13 +157,16 @@ def _make_spec(*params: ParamDescription) -> PlanSpec:
 def test_the_annotation_predicates(
     predicate: Callable[[object], bool], annotation: object, expected: bool
 ) -> None:
+    """Classify annotations as device, device sequence, device set or sequence."""
     assert predicate(annotation) is expected
 
 
 class TestCreatePlanSpec:
-    """Tests for ``create_plan_spec`` across the supported annotation shapes."""
+    """Tests for `create_plan_spec` across the supported annotation shapes."""
 
     def test_int_param(self) -> None:
+        """Describe an int parameter with no choices and no device protocol."""
+
         def plan(x: int) -> MsgGenerator[None]:
             yield from ()
 
@@ -175,6 +178,8 @@ class TestCreatePlanSpec:
         assert p.device_proto is None
 
     def test_float_param_with_default(self) -> None:
+        """Keep the default value of a float parameter."""
+
         def plan(step: float = 1.0) -> MsgGenerator[None]:
             yield from ()
 
@@ -184,6 +189,8 @@ class TestCreatePlanSpec:
         assert p.default == pytest.approx(1.0)
 
     def test_literal_produces_string_choices(self) -> None:
+        """Turn a Literal of strings into single-select choices."""
+
         def plan(egu: Literal["um", "mm", "nm"] = "um") -> MsgGenerator[None]:
             yield from ()
 
@@ -197,6 +204,8 @@ class TestCreatePlanSpec:
     def test_an_empty_sequence_default_is_not_an_action_list(
         self, default: Any
     ) -> None:
+        """Keep an empty sequence default as a default, not as a list of actions."""
+
         def plan(label: Sequence[str] = default) -> MsgGenerator[None]:
             yield from ()
 
@@ -206,7 +215,7 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].default == default
 
     def test_an_already_evaluated_annotation_is_taken_as_it_is(self) -> None:
-        """A module without the annotations future import evaluates them itself."""
+        """Accept annotations already evaluated, as without the annotations import."""
 
         def plan(n=1):  # type: ignore[no-untyped-def]
             yield from ()
@@ -218,6 +227,8 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].annotation is int
 
     def test_literal_values_are_kept_as_they_are(self) -> None:
+        """Keep Literal values as they are, without turning them into strings."""
+
         def plan(n: Literal[1, 2, 3] = 1) -> MsgGenerator[None]:
             yield from ()
 
@@ -227,6 +238,8 @@ class TestCreatePlanSpec:
     def test_single_device_param_populates_choices(
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
+        """Offer the names of matching devices as the choices of a device parameter."""
+
         def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
             yield from ()
 
@@ -237,12 +250,7 @@ class TestCreatePlanSpec:
         assert p.device_proto is _MotorProtocol
 
     def test_single_device_no_registry_match_raises(self) -> None:
-        """A required PDevice parameter with no matching devices is unresolvable.
-
-        The plan cannot be driven from the UI without at least one matching
-        device in the registry, so ``create_plan_spec`` raises rather than
-        producing a param with ``choices=None`` that would silently break.
-        """
+        """Refuse a required device parameter that no registered device matches."""
 
         def plan(motor: _MotorProtocol) -> MsgGenerator[None]:
             yield from ()
@@ -252,7 +260,7 @@ class TestCreatePlanSpec:
         assert exc_info.value.param_name == "motor"
 
     def test_single_device_no_registry_match_ok_with_default(self) -> None:
-        """A PDevice param with a default is fine even with an empty registry."""
+        """Accept a device parameter with a default when no device matches."""
 
         def plan(motor: _MotorProtocol = None) -> MsgGenerator[None]:  # type: ignore[assignment]
             yield from ()
@@ -263,6 +271,8 @@ class TestCreatePlanSpec:
     def test_sequence_device_param_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
+        """Make a sequence of devices a multiple choice of the matching devices."""
+
         def plan(dets: Sequence[_DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
@@ -275,6 +285,8 @@ class TestCreatePlanSpec:
     def test_set_device_param_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
+        """Make a set of devices a multiple choice of the matching devices."""
+
         def plan(dets: set[_DetectorProtocol]) -> MsgGenerator[None]:
             yield from ()
 
@@ -287,6 +299,8 @@ class TestCreatePlanSpec:
     def test_var_positional_device_is_multiselect(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
+        """Make a variadic positional device parameter a multiple choice."""
+
         def plan(*dets: _DetectorProtocol) -> MsgGenerator[None]:
             yield from ()
 
@@ -297,6 +311,8 @@ class TestCreatePlanSpec:
         assert p.multiselect
 
     def test_action_param_has_no_choices_and_stores_meta(self) -> None:
+        """Store a PlanAction default as the parameter's action, with no choices."""
+
         def plan(
             frames: int = 1, /, snap: PlanAction = PlanAction(name="snap")
         ) -> MsgGenerator[None]:
@@ -309,6 +325,8 @@ class TestCreatePlanSpec:
         assert action_p.choices is None
 
     def test_action_sequence_param(self) -> None:
+        """Store a list of PlanAction defaults as the parameter's actions."""
+
         def plan(
             frames: int = 1,
             /,
@@ -322,6 +340,8 @@ class TestCreatePlanSpec:
         assert len(p.actions) == 2
 
     def test_two_actions_of_one_name_are_refused(self) -> None:
+        """Refuse a plan declaring two actions with the same name."""
+
         def plan(
             snap: PlanAction = PlanAction(name="snap"),
             again: PlanAction = PlanAction(name="snap", description="another"),
@@ -348,6 +368,8 @@ class TestCreatePlanSpec:
         ],
         pausable: bool,
     ) -> None:
+        """Report a plan marked continuous, and whether it can be paused."""
+
         @mark
         def plan() -> MsgGenerator[None]:
             yield from ()
@@ -357,6 +379,8 @@ class TestCreatePlanSpec:
         assert spec.pausable is pausable
 
     def test_an_unmarked_plan_is_not_continuous(self) -> None:
+        """Report an unmarked plan as neither continuous nor pausable."""
+
         def plan(x: int) -> MsgGenerator[None]:
             yield from ()
 
@@ -365,6 +389,8 @@ class TestCreatePlanSpec:
         assert spec.pausable is False
 
     def test_self_is_stripped_from_method_signature(self) -> None:
+        """Leave self out of the parameters of a plan defined as a method."""
+
         class Presenter:
             def plan(self, x: int) -> MsgGenerator[None]:
                 yield from ()
@@ -374,6 +400,8 @@ class TestCreatePlanSpec:
         assert spec.parameters[0].name == "x"
 
     def test_non_generator_raises_type_error(self) -> None:
+        """Raise TypeError for a plan that is not a generator function."""
+
         def not_a_plan(x: int) -> int:
             return x
 
@@ -381,6 +409,8 @@ class TestCreatePlanSpec:
             create_plan_spec(not_a_plan, {})  # type: ignore[arg-type]
 
     def test_missing_return_annotation_raises(self) -> None:
+        """Raise TypeError for a plan with no return annotation."""
+
         def plan(x: int):  # type: ignore[no-untyped-def]
             yield from ()
 
@@ -388,6 +418,8 @@ class TestCreatePlanSpec:
             create_plan_spec(plan, {})
 
     def test_wrong_return_type_raises(self) -> None:
+        """Raise TypeError for a plan whose return type is not MsgGenerator."""
+
         def plan(x: int) -> list[int]:  # type: ignore[misc]
             yield x
 
@@ -402,6 +434,8 @@ class TestUnresolvableAnnotation:
         """A type magicgui has no idea how to handle."""
 
     def test_required_exotic_param_raises(self) -> None:
+        """Refuse a required parameter whose type has no widget."""
+
         def bad_plan(thing: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
             yield from ()
 
@@ -414,7 +448,7 @@ class TestUnresolvableAnnotation:
         assert err.annotation is TestUnresolvableAnnotation._Exotic
 
     def test_optional_exotic_param_does_not_raise(self) -> None:
-        """A param with a default value is never required - plan should succeed."""
+        """Accept a parameter whose type has no widget when it has a default."""
         default_val = TestUnresolvableAnnotation._Exotic()
 
         def ok_plan(
@@ -426,7 +460,7 @@ class TestUnresolvableAnnotation:
         assert spec.parameters[0].name == "thing"
 
     def test_var_keyword_exotic_does_not_raise(self) -> None:
-        """**kwargs are never turned into widgets; no probe needed."""
+        """Accept a **kwargs parameter whose type has no widget."""
 
         def ok_plan(**kw: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
             yield from ()
@@ -435,6 +469,8 @@ class TestUnresolvableAnnotation:
         assert spec.parameters[0].kind is ParamKind.VAR_KEYWORD
 
     def test_error_message_contains_plan_and_param_name(self) -> None:
+        """Name the plan and the parameter in the error message."""
+
         def broken(widget: TestUnresolvableAnnotation._Exotic) -> MsgGenerator[None]:
             yield from ()
 
@@ -449,6 +485,8 @@ class TestTypeCheckingOnlyAnnotation:
     """A name available only to a type checker is reported, not raised as NameError."""
 
     def test_required_param_raises_unresolvable(self) -> None:
+        """Refuse a parameter annotated with a name imported for type checking only."""
+
         def plan(amount: Decimal) -> MsgGenerator[None]:
             yield from ()
 
@@ -461,6 +499,8 @@ class TestTypeCheckingOnlyAnnotation:
         assert err.annotation == "Decimal"
 
     def test_unresolvable_return_raises_unresolvable(self) -> None:
+        """Refuse a return annotation naming a type imported for type checking only."""
+
         def plan(count: int) -> Decimal:  # type: ignore[misc]
             yield from ()
 
@@ -470,7 +510,7 @@ class TestTypeCheckingOnlyAnnotation:
         assert exc_info.value.param_name == "return"
 
     def test_resolvable_siblings_do_not_mask_the_bad_one(self) -> None:
-        """The failure names the offending parameter, not the first one."""
+        """Name the unresolvable parameter in the error, not the first parameter."""
 
         def plan(count: int, path: Path, amount: Decimal) -> MsgGenerator[None]:
             yield from ()
@@ -481,7 +521,7 @@ class TestTypeCheckingOnlyAnnotation:
         assert exc_info.value.param_name == "amount"
 
     def test_optional_unresolvable_param_still_raises(self) -> None:
-        """Strict by design: a default does not make an unreadable name acceptable."""
+        """Refuse an unresolvable annotation even when the parameter has a default."""
 
         def plan(amount: Decimal | None = None) -> MsgGenerator[None]:
             yield from ()
@@ -491,47 +531,55 @@ class TestTypeCheckingOnlyAnnotation:
 
 
 class TestCollectArguments:
-    """Tests for ``collect_arguments``."""
+    """Tests for `collect_arguments`."""
 
     def test_positional_only(self) -> None:
+        """Pass a positional-only parameter positionally."""
         spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_ONLY))
         args, kwargs = collect_arguments(spec, {"x": 42})
         assert args == (42,)
         assert kwargs == {}
 
     def test_positional_or_keyword(self) -> None:
+        """Pass a positional-or-keyword parameter positionally."""
         spec = _make_spec(_param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD))
         args, kwargs = collect_arguments(spec, {"x": 7})
         assert args == (7,)
         assert kwargs == {}
 
     def test_keyword_only(self) -> None:
+        """Pass a keyword-only parameter by keyword."""
         spec = _make_spec(_param("n", kind=ParamKind.KEYWORD_ONLY))
         args, kwargs = collect_arguments(spec, {"n": 3})
         assert args == ()
         assert kwargs == {"n": 3}
 
     def test_var_positional_sequence_expanded(self) -> None:
+        """Expand a sequence given for *args into separate positional arguments."""
         spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": [1, 2, 3]})
         assert args == (1, 2, 3)
 
     def test_var_positional_single_value_wrapped(self) -> None:
+        """Pass a single value given for *args as one positional argument."""
         spec = _make_spec(_param("vals", kind=ParamKind.VAR_POSITIONAL))
         args, _kwargs = collect_arguments(spec, {"vals": 99})
         assert args == (99,)
 
     def test_var_keyword_mapping_merged(self) -> None:
+        """Merge a mapping given for **kwargs into the keyword arguments."""
         spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
         _args, kwargs = collect_arguments(spec, {"kw": {"a": 1, "b": 2}})
         assert kwargs == {"a": 1, "b": 2}
 
     def test_var_keyword_non_mapping_raises(self) -> None:
+        """Raise TypeError when **kwargs is given something other than a mapping."""
         spec = _make_spec(_param("kw", kind=ParamKind.VAR_KEYWORD))
         with pytest.raises(TypeError, match="Mapping"):
             collect_arguments(spec, {"kw": "not_a_mapping"})
 
     def test_missing_param_skipped(self) -> None:
+        """Skip a parameter that has no value."""
         spec = _make_spec(
             _param("x", kind=ParamKind.POSITIONAL_OR_KEYWORD),
             _param("y", kind=ParamKind.POSITIONAL_OR_KEYWORD),
@@ -540,6 +588,7 @@ class TestCollectArguments:
         assert args == (1,)
 
     def test_ordering_preserved(self) -> None:
+        """Keep positional arguments in the order the plan declares them."""
         spec = _make_spec(
             _param("a", kind=ParamKind.POSITIONAL_OR_KEYWORD),
             _param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
@@ -550,9 +599,10 @@ class TestCollectArguments:
 
 
 class TestResolveArguments:
-    """Tests for ``resolve_arguments``."""
+    """Tests for `resolve_arguments`."""
 
     def test_non_device_param_passed_through(self) -> None:
+        """Pass a parameter that is not a device through unchanged."""
         spec = _make_spec(
             ParamDescription(
                 name="frames",
@@ -565,6 +615,7 @@ class TestResolveArguments:
         assert resolved["frames"] == 5
 
     def test_action_injected_when_absent(self) -> None:
+        """Fill in a missing action parameter with its declared action."""
         action_instance = PlanAction(name="go")
         spec = _make_spec(
             ParamDescription(
@@ -579,6 +630,7 @@ class TestResolveArguments:
         assert resolved["go"] is action_instance
 
     def test_action_not_overwritten_when_present(self) -> None:
+        """Keep an action given for an action parameter."""
         a1 = PlanAction(name="go")
         a2 = PlanAction(name="go")
         spec = _make_spec(
@@ -596,6 +648,7 @@ class TestResolveArguments:
     def test_single_device_label_resolved(
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
+        """Replace a device name with the device it names."""
         spec = _make_spec(
             ParamDescription(
                 name="motor",
@@ -612,6 +665,7 @@ class TestResolveArguments:
     def test_device_sequence_labels_resolved(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
+        """Replace a list of device names with a list of the devices."""
         spec = _make_spec(
             ParamDescription(
                 name="dets",
@@ -629,6 +683,7 @@ class TestResolveArguments:
     def test_device_set_labels_resolved(
         self, one_detector: dict[str, _MockDetector]
     ) -> None:
+        """Replace device names with a set of the devices for a set parameter."""
         spec = _make_spec(
             ParamDescription(
                 name="dets",
@@ -646,6 +701,7 @@ class TestResolveArguments:
     def test_unknown_label_resolves_to_none_for_single(
         self, one_motor: dict[str, MockMotorDevice]
     ) -> None:
+        """Resolve an unknown device name to None."""
         spec = _make_spec(
             ParamDescription(
                 name="motor",
@@ -662,30 +718,35 @@ class TestResolveArguments:
 
 @pytest.mark.qt
 class TestCreateParamWidget:
-    """Tests for ``create_param_widget``, which builds Qt widgets."""
+    """Tests for `create_param_widget`, which builds Qt widgets."""
 
     @pytest.fixture(autouse=True)
     def _application(self, qapp: QApplication) -> None:
         """Hold the session's application, so magicgui makes none of its own."""
 
     def test_int_creates_spinbox(self) -> None:
+        """Build a SpinBox for an int parameter."""
         w = create_param_widget(_param("n", int))
         assert isinstance(w, mgw.SpinBox)
 
     def test_float_creates_float_spinbox(self) -> None:
+        """Build a FloatSpinBox for a float parameter."""
         w = create_param_widget(_param("x", float))
         assert isinstance(w, mgw.FloatSpinBox)
 
     def test_bool_creates_checkbox(self) -> None:
+        """Build a CheckBox for a bool parameter."""
         w = create_param_widget(_param("flag", bool, default=False))
         assert isinstance(w, mgw.CheckBox)
 
     def test_literal_creates_combobox(self) -> None:
+        """Build a ComboBox for a Literal parameter."""
         p = _param("egu", Literal["um", "mm"], choices=["um", "mm"])
         w = create_param_widget(p)
         assert isinstance(w, mgw.ComboBox)
 
     def test_single_device_creates_combobox(self) -> None:
+        """Build a ComboBox for a single device parameter."""
         p = _param(
             "motor",
             _MotorProtocol,
@@ -696,6 +757,7 @@ class TestCreateParamWidget:
         assert isinstance(w, mgw.ComboBox)
 
     def test_multiselect_device_creates_device_sequence_edit(self) -> None:
+        """Build a DeviceSequenceEdit for a multiple-choice device parameter."""
         p = _param(
             "dets",
             Sequence[_DetectorProtocol],
@@ -707,19 +769,23 @@ class TestCreateParamWidget:
         assert isinstance(w, DeviceSequenceEdit)
 
     def test_path_creates_file_edit(self) -> None:
+        """Build a FileEdit for a Path parameter."""
         w = create_param_widget(_param("output", Path))
         assert isinstance(w, mgw.FileEdit)
 
     def test_sequence_int_creates_list_edit(self) -> None:
+        """Build a ListEdit for a sequence of ints."""
         w = create_param_widget(_param("vals", Sequence[int]))
         assert isinstance(w, mgw.ListEdit)
 
     def test_hidden_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for a hidden parameter."""
         p = _param("secret", int, hidden=True)
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
 
     def test_action_param_creates_line_edit_placeholder(self) -> None:
+        """Build a LineEdit placeholder for an action parameter."""
         p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)

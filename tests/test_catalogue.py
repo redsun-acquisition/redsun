@@ -153,7 +153,7 @@ class ListeningToAView(Session):
 def test_the_catalogue_holds_every_router_in_declaration_order(
     build: BuildSession,
 ) -> None:
-    """`second` is built before `first`, and both before the listener."""
+    """List routers in declaration order, though `second` is built before `first`."""
     app = build(DeclaredAboveTheRouters)
     assert list(app.listener.callbacks.items()) == [
         ("first", app.first),
@@ -164,7 +164,7 @@ def test_the_catalogue_holds_every_router_in_declaration_order(
 def test_a_listener_writing_the_type_out_receives_the_same_catalogue(
     build: BuildSession,
 ) -> None:
-    """Without importing `CallbackType`, it is ordered and answered the same way."""
+    """Give a listener spelling out the callback type the same catalogue."""
     app = build(SpelledOutAboveTheRouters)
     assert list(app.listener.callbacks.items()) == [
         ("first", app.first),
@@ -173,13 +173,13 @@ def test_a_listener_writing_the_type_out_receives_the_same_catalogue(
 
 
 def test_a_router_that_fails_to_build_is_absent(build: BuildSession) -> None:
-    """The listener still builds, with the routers that did."""
+    """Leave out a router that fails to build, and still build the listener."""
     app = build(WithABrokenRouter)
     assert list(app.listener.callbacks) == ["plain"]
 
 
 def test_a_router_asking_for_the_catalogue_is_in_it(build: BuildSession) -> None:
-    """Every router exists before any setup runs, the asker included."""
+    """Include in the catalogue the router that asks for it."""
     app = build(WithACuriousRouter)
     assert dict(app.curious.callbacks) == {"curious": app.curious, "plain": app.plain}
 
@@ -187,12 +187,13 @@ def test_a_router_asking_for_the_catalogue_is_in_it(build: BuildSession) -> None
 def test_a_router_in_the_catalogue_is_not_reported_unused(
     caplog: pytest.LogCaptureFixture, build: BuildSession
 ) -> None:
+    """Do not report a router in the catalogue as sharing nothing."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         build(WithAPlainRouter)
     assert "'plain' shares nothing" not in caplog.text
 
 
 def test_a_presenter_asking_for_a_view_router_is_refused() -> None:
-    """The view is built after the presenter, so its catalogue would lack it."""
+    """Refuse a presenter asking for routers when one is a view built after it."""
     with pytest.raises(TypeError, match="'display', which is a view"):
         ListeningToAView().build()

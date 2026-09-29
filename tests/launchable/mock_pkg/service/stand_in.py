@@ -1,6 +1,6 @@
 """A service standing in for a real one, its behaviour chosen on the command line.
 
-Run as ``python -m mock_pkg.service.stand_in``. By default it prints its
+Run as `python -m mock_pkg.service.stand_in`. By default it prints its
 readiness line and runs until its standard input closes, then cleans up and
 exits 0, the way a service written for redsun does.
 """

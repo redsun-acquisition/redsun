@@ -52,7 +52,7 @@ def test_a_typed_number_is_sent_once_it_is_entered(
     editor: type[QtWidgets.QAbstractSpinBox],
     expected: float,
 ) -> None:
-    """Typing "100" sends 100, not 1 then 10 then 100."""
+    """Send a typed number once when it is entered, not at each keystroke."""
     view = DescriptorTreeView(
         {"cam-gain": {"dtype": dtype, "source": "cam", "shape": []}},
         {"cam-gain": {"value": 1, "timestamp": 0.0}},
@@ -80,7 +80,7 @@ def labels(item: QtWidgets.QTreeWidgetItem) -> list[str]:
 def test_rows_are_grouped_by_device_and_by_a_property_group(
     qapp: QApplication,
 ) -> None:
-    """``cam-properties-Binning`` sits under ``properties`` under ``cam``."""
+    """Group rows by device, then by the property group in the key."""
     descriptor: DataKey = {"dtype": "string", "source": "pva://x", "shape": []}
     view = DescriptorTreeView(
         {
@@ -108,6 +108,7 @@ def test_rows_are_grouped_by_device_and_by_a_property_group(
 def test_a_read_only_source_gives_a_label_not_an_editor(
     qapp: QApplication, source: str
 ) -> None:
+    """Show a value from a read-only source as a label, not an editor."""
     view = DescriptorTreeView(
         {"cam-dtype": {"dtype": "string", "source": source, "shape": []}},
         {"cam-dtype": {"value": "uint8", "timestamp": 0.0}},
@@ -119,7 +120,7 @@ def test_a_read_only_source_gives_a_label_not_an_editor(
 
 
 def test_an_edit_shows_what_the_device_read_back(qapp: QApplication) -> None:
-    """The device clips 100 to 64, and a refusal arriving late changes nothing."""
+    """Show the value the device read back and ignore a late refusal."""
     view, sent = edited_tree()
 
     view.set_value("cam-gain", 64)
@@ -130,6 +131,7 @@ def test_an_edit_shows_what_the_device_read_back(qapp: QApplication) -> None:
 
 
 def test_a_refused_edit_shows_the_value_before_it(qapp: QApplication) -> None:
+    """Show the previous value again when an edit is refused."""
     view, sent = edited_tree()
 
     view.revert("cam-gain")
@@ -139,6 +141,7 @@ def test_a_refused_edit_shows_the_value_before_it(qapp: QApplication) -> None:
 
 
 def test_a_value_changing_with_no_edit_pending_is_shown(qapp: QApplication) -> None:
+    """Show a new value with no edit pending and ignore an unknown key."""
     view = DescriptorTreeView(
         {"cam-gain": {"dtype": "integer", "source": "cam", "shape": []}},
         {"cam-gain": {"value": 1, "timestamp": 0.0}},

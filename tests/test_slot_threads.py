@@ -120,12 +120,14 @@ class AwaitingApp(Session):
 def test_a_link_runs_where_the_nearest_declaration_says(
     session: type[Session], thread: SlotThread, build: BuildSession
 ) -> None:
+    """Run a link on the thread the slot, else its class, else the frontend names."""
     [link] = build(session).connections
 
     assert link.thread == thread
 
 
 def test_a_slot_held_for_the_main_thread_waits_for_it(build: BuildSession) -> None:
+    """Queue a main-thread slot emitted from another thread until the queue is run."""
     app = build(SaidByTheClass)
     emitting = threading.Thread(target=app.talker.sig_said.emit, args=("hi",))
 
@@ -140,6 +142,7 @@ def test_a_slot_held_for_the_main_thread_waits_for_it(build: BuildSession) -> No
 def test_a_session_with_no_frontend_connects_a_coroutine_slot(
     build: BuildSession, wait_until: Callable[..., bool]
 ) -> None:
+    """Connect a coroutine slot in a session with no frontend and run it."""
     app = build(AwaitingApp)
 
     app.talker.sig_said.emit("hi")

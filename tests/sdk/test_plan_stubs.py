@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
-    """The stub polls at `poll_interval` until a latch is set."""
+    """Poll at `poll_interval` until a latch is set, then return it."""
     events = {"go": SRLatch()}
     results: list[tuple[str, bool]] = []
 
@@ -41,7 +41,7 @@ def test_wait_for_actions_set_after_several_polls(RE: RunEngine) -> None:
 
 
 def test_wait_for_actions_reset(RE: RunEngine) -> None:
-    """wait_for='reset' unblocks when the latch transitions back to reset."""
+    """Return once a set latch is reset when waiting for `reset`."""
     events = {"go": SRLatch()}
     results: list[str] = []
 
@@ -65,6 +65,7 @@ def test_wait_for_actions_reset(RE: RunEngine) -> None:
 
 
 def test_wait_for_actions_refuses_an_empty_mapping(RE: RunEngine) -> None:
+    """Refuse to wait on an empty mapping of actions."""
     with pytest.raises(ValueError, match="no actions to wait on"):
         RE(rps.wait_for_actions({})).result(timeout=10)
 
@@ -73,6 +74,7 @@ def test_wait_for_actions_refuses_an_empty_mapping(RE: RunEngine) -> None:
 def test_wait_for_actions_returns_the_latch_set_first(
     RE: RunEngine, order: tuple[str, str]
 ) -> None:
+    """Return the latch set first, whatever its place in the mapping."""
     latches = {"early": SRLatch(), "late": SRLatch()}
     latches["early"].set()
     # longer than the coarsest step of time.monotonic, 16 ms on Windows
@@ -93,6 +95,7 @@ def test_wait_for_actions_returns_the_latch_set_first(
 def test_wait_for_reset_on_unchanged_latches_returns_the_first_in_the_mapping(
     RE: RunEngine, order: tuple[str, str]
 ) -> None:
+    """Return the first latch in the mapping when all are already reset."""
     events = {name: SRLatch() for name in order}
     results: list[str] = []
 
@@ -105,6 +108,8 @@ def test_wait_for_reset_on_unchanged_latches_returns_the_first_in_the_mapping(
 
 
 def test_describe_stub_returns_signal_descriptor(RE: RunEngine) -> None:
+    """Return the descriptor of a signal from `describe`."""
+
     async def _make_signal() -> Any:
         return soft_signal_rw(float, initial_value=1.0, name="pos")
 
@@ -120,6 +125,8 @@ def test_describe_stub_returns_signal_descriptor(RE: RunEngine) -> None:
 
 
 def test_describe_collect_stub(RE: RunEngine) -> None:
+    """Return the descriptors of a collectable from `describe_collect`."""
+
     class _Collectable:
         name: str = "collectable"
 
@@ -137,6 +144,7 @@ def test_describe_collect_stub(RE: RunEngine) -> None:
 
 
 def test_register_bound_command(RE: RunEngine) -> None:
+    """Call a registered command with the engine and its message."""
     seen: list[str] = []
 
     async def custom_command(engine: RunEngine, msg: Msg) -> None:

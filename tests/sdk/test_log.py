@@ -60,6 +60,7 @@ def restore_level() -> Iterator[None]:
 def test_loggable_records_carry_level_class_and_name(
     cls: type[Loggable], clsname: str, uid: str | None, caplog: LogCaptureFixture
 ) -> None:
+    """Tag each record from a component with its level, class and name if any."""
     obj = cls()
 
     with caplog.at_level(logging.DEBUG, logger="redsun"):
@@ -106,14 +107,14 @@ def _formatted(obj: Loggable, caplog: LogCaptureFixture) -> str:
 def test_the_owner_is_named_as_far_as_it_can_be(
     obj: Loggable, expected: str, caplog: LogCaptureFixture
 ) -> None:
-    """The name is dropped when the component declares none, or declares it empty."""
+    """Name the class and, when it declares a non-empty one, the component name."""
     assert _formatted(obj, caplog).endswith(f"{expected}: hello")
 
 
 def test_a_record_from_the_bare_logger_names_no_owner(
     caplog: LogCaptureFixture,
 ) -> None:
-    """Nothing went through the adapter, so there is no class and no name to show."""
+    """Format a record from the package logger with no class or name."""
     with caplog.at_level(logging.INFO, logger="redsun"):
         logger.info("hello")
 
@@ -132,7 +133,7 @@ def test_a_record_from_the_bare_logger_names_no_owner(
 def test_only_an_info_record_omits_its_origin(
     level: int, carries_origin: bool, caplog: LogCaptureFixture
 ) -> None:
-    """An INFO line is running commentary; anything else is worth locating."""
+    """Append the file and line to every record except those at INFO level."""
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         logger.log(level, "hello")
 
@@ -144,22 +145,22 @@ def test_only_an_info_record_omits_its_origin(
 
 
 def test_one_stream_handler_is_installed() -> None:
-    """One destination, through the shared formatter.
-
-    The stream it holds is whatever ``sys.stdout`` was when `redsun.log` was
-    imported, so it is not the object this process has now.
-    """
+    """Install exactly one stream handler, using the shared formatter."""
     installed = [
         handler
         for handler in logger.handlers
         if isinstance(handler, logging.StreamHandler)
     ]
 
+    # The stream is not compared with `sys.stdout`: the handler holds whatever
+    # `sys.stdout` was when `redsun.log` was imported, not the object this process
+    # has now.
     assert len(installed) == 1
     assert isinstance(installed[0].formatter, GlobalFormatter)
 
 
 def test_a_handler_receives_what_the_logger_passes() -> None:
+    """Pass records to an added handler only until it is removed."""
     handler = RecordingHandler()
     add_handler(handler)
     try:
@@ -172,6 +173,7 @@ def test_a_handler_receives_what_the_logger_passes() -> None:
 
 
 def test_a_handler_is_given_the_shared_formatter() -> None:
+    """Give an added handler without a formatter the shared one."""
     handler = RecordingHandler()
 
     add_handler(handler)
@@ -182,6 +184,7 @@ def test_a_handler_is_given_the_shared_formatter() -> None:
 
 
 def test_a_handler_keeps_a_formatter_of_its_own() -> None:
+    """Keep the formatter an added handler already has."""
     handler = RecordingHandler()
     own = logging.Formatter("%(message)s")
     handler.setFormatter(own)
@@ -194,6 +197,7 @@ def test_a_handler_keeps_a_formatter_of_its_own() -> None:
 
 
 def test_removing_a_handler_that_was_never_added_is_harmless() -> None:
+    """Leave the handlers unchanged when removing one that was never added."""
     before = list(logger.handlers)
 
     remove_handler(RecordingHandler())
@@ -212,6 +216,7 @@ def test_removing_a_handler_that_was_never_added_is_harmless() -> None:
 def test_set_level_takes_a_constant_or_a_name(
     restore_level: None, level: int | str, expected: int
 ) -> None:
+    """Accept a level as a constant or as its name in any case."""
     set_level(level)
 
     assert logger.level == expected
@@ -227,12 +232,13 @@ def test_set_level_takes_a_constant_or_a_name(
 def test_set_level_refuses_what_names_no_level(
     restore_level: None, level: object, error: type[Exception]
 ) -> None:
+    """Refuse a level name that does not exist and a value of any other type."""
     with pytest.raises(error):
         set_level(level)  # type: ignore[arg-type]
 
 
 def test_an_exception_carries_its_traceback(caplog: LogCaptureFixture) -> None:
-    """A record logged from an except block is formatted with the traceback."""
+    """Format a record logged from an except block with its traceback."""
     with caplog.at_level(logging.ERROR, logger="redsun"):
         try:
             raise RuntimeError("the detector answered nothing")
@@ -246,7 +252,7 @@ def test_an_exception_carries_its_traceback(caplog: LogCaptureFixture) -> None:
 
 
 def test_a_record_carrying_a_stack_shows_it(caplog: LogCaptureFixture) -> None:
-    """``stack_info=True`` reaches the reader rather than being dropped."""
+    """Include the stack in a record logged with `stack_info=True`."""
     with caplog.at_level(logging.WARNING, logger="redsun"):
         logger.warning("where did this come from", stack_info=True)
 

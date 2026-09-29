@@ -43,7 +43,7 @@ def drain_state(
 
     Named on the assertion so that a failure on a machine nobody can reach
     says which stage stalled and what the shared loop's thread was running,
-    rather than ``assert False``.
+    rather than `assert False`.
     """
     task = backend._run_task
     thread = _ensure_event_loop_running.loop_to_thread[get_shared_loop()]  # type: ignore[attr-defined]
@@ -94,24 +94,28 @@ def backend() -> CulsansAsyncioBackend:
 def test_set_async_backend_installs_into_psygnal(
     backend: CulsansAsyncioBackend,
 ) -> None:
+    """Install the culsans backend as psygnal's async backend."""
     assert get_async_backend() is backend
     assert backend._backend == "culsans"
     assert backend.name == "psygnal-culsans"
 
 
 def test_set_async_backend_returns_a_running_backend() -> None:
-    """The drain starts on another thread, so this must not be observably async."""
+    """Return a backend whose drain is already running."""
     for _ in range(50):
         installed = set_async_backend()
+        # The drain starts on another thread, so this must not be observably async.
         assert installed.running.is_set()
         clear_async_backend()
 
 
 def test_set_async_backend_is_idempotent(backend: CulsansAsyncioBackend) -> None:
+    """Return the installed backend when called again."""
     assert set_async_backend() is backend
 
 
 def test_set_async_backend_refuses_a_foreign_backend() -> None:
+    """Refuse to install over an async backend redsun did not install."""
     psygnal._async._ASYNC_BACKEND = ForeignBackend()
     with pytest.raises(RuntimeError, match="already set to: trio"):
         set_async_backend()
@@ -121,6 +125,7 @@ def test_set_async_backend_refuses_a_foreign_backend() -> None:
 def test_psygnal_cannot_replace_our_backend(
     backend: CulsansAsyncioBackend, name: SupportedBackend
 ) -> None:
+    """Refuse psygnal's own backends once the redsun backend is installed."""
     with pytest.raises(RuntimeError, match="already set to: culsans"):
         psygnal._async.set_async_backend(name)
 
@@ -128,6 +133,7 @@ def test_psygnal_cannot_replace_our_backend(
 def test_backend_is_subclass_and_virtual_subclass(
     backend: CulsansAsyncioBackend,
 ) -> None:
+    """Make the backend an _AsyncBackend subclass and a virtual AsyncioBackend."""
     # real inheritance keeps the ABC contract and mypy happy...
     assert issubclass(CulsansAsyncioBackend, _AsyncBackend)
     # ...while the virtual registration is what psygnal's teardown dispatches on
@@ -139,6 +145,7 @@ def test_clear_async_backend_closes_the_queue(
     backend: CulsansAsyncioBackend,
     wait_until: Callable[..., bool],
 ) -> None:
+    """Uninstall the backend and shut its queue down on clear_async_backend."""
     clear_async_backend()
 
     assert get_async_backend() is None
@@ -148,6 +155,8 @@ def test_clear_async_backend_closes_the_queue(
 
 
 def test_connecting_a_coroutine_without_a_backend_raises() -> None:
+    """Raise RuntimeError when a coroutine slot is connected with no backend."""
+
     async def on_move(motor: str, axis: str, position: float) -> None: ...
 
     with pytest.raises(RuntimeError, match="No async backend set"):
@@ -157,6 +166,8 @@ def test_connecting_a_coroutine_without_a_backend_raises() -> None:
 def test_connect_coroutine_method_does_not_warn(
     backend: CulsansAsyncioBackend,
 ) -> None:
+    """Connect a coroutine method without a RuntimeWarning."""
+
     class Presenter:
         async def move(self, motor: str, axis: str, position: float) -> None: ...
 
@@ -171,6 +182,7 @@ def test_connect_coroutine_method_does_not_warn(
 def test_emit_from_foreign_thread_reaches_an_idle_loop(
     backend: CulsansAsyncioBackend,
 ) -> None:
+    """Deliver an emit from another thread to the idle shared loop."""
     delivered = threading.Event()
     seen: list[tuple[Any, ...]] = []
 
@@ -182,7 +194,7 @@ def test_emit_from_foreign_thread_reaches_an_idle_loop(
     emitter.sig_motor_move.connect(on_move)
 
     # the loop has nothing else to do - this is the case a non-threadsafe
-    # ``put_nowait`` never wakes up
+    # `put_nowait` never wakes up
     emitter.sig_motor_move.emit("stage", "x", 10.0)
 
     assert delivered.wait(TIMEOUT)
@@ -194,6 +206,7 @@ def test_emit_from_foreign_thread_reaches_an_idle_loop(
 def test_slots_run_concurrently_not_serialized(
     backend: CulsansAsyncioBackend,
 ) -> None:
+    """Run coroutine slots concurrently, so a slow one does not delay the others."""
     done = threading.Event()
     order: list[str] = []
 
@@ -224,6 +237,7 @@ def test_raising_slot_is_logged_and_dispatch_survives(
     caplog: pytest.LogCaptureFixture,
     wait_until: Callable[..., bool],
 ) -> None:
+    """Log a slot that raises and keep delivering later emits."""
     delivered = threading.Event()
     seen: list[float] = []
 
@@ -255,6 +269,7 @@ def test_cancelled_slot_is_not_logged(
     caplog: pytest.LogCaptureFixture,
     wait_until: Callable[..., bool],
 ) -> None:
+    """Log nothing for a slot cancelled when the backend closes."""
     started, cancelled = threading.Event(), threading.Event()
 
     async def on_move(motor: str, axis: str, position: float) -> None:
@@ -284,6 +299,7 @@ def test_queue_shutdown_is_not_an_error(
     caplog: pytest.LogCaptureFixture,
     wait_until: Callable[..., bool],
 ) -> None:
+    """Log no error when the queue shuts down on close."""
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         backend.close()
         assert wait_until(lambda: not backend.running.is_set()), drain_state(
@@ -301,14 +317,11 @@ def test_drain_cancellation_is_not_an_error(
     caplog: pytest.LogCaptureFixture,
     wait_until: Callable[..., bool],
 ) -> None:
-    """A cancelled drain unwinds and stops the backend, reporting no error.
-
-    The drain's state is what is asserted, not the line it logs: a message
-    written from the loop thread and read from this one adds a race to a test
-    about cancellation, and this one was skipped on macOS for exactly that.
-    """
+    """Stop the backend without logging an error when the drain is cancelled."""
     with caplog.at_level(logging.DEBUG, logger="redsun"):
         assert backend._run_task.cancel()
+        # The drain's state is asserted, not the line it logs: a message written from
+        # the loop thread and read from this one adds a race, which showed on macOS.
         assert wait_until(backend._run_task.cancelled), drain_state(backend, caplog)
         assert wait_until(lambda: not backend.running.is_set()), drain_state(
             backend, caplog
@@ -322,6 +335,7 @@ def test_unexpected_drain_failure_is_logged(
     caplog: pytest.LogCaptureFixture,
     wait_until: Callable[..., bool],
 ) -> None:
+    """Log an unexpected drain failure with its traceback and stop the backend."""
     calls: list[int] = []
     real_get_shared_loop = aio.get_shared_loop
 
@@ -346,6 +360,7 @@ def test_unexpected_drain_failure_is_logged(
 
 
 def test_dead_weak_callback_is_skipped(backend: CulsansAsyncioBackend) -> None:
+    """Skip a slot whose owner was collected and keep delivering to live slots."""
     delivered = threading.Event()
 
     class Presenter:
@@ -375,7 +390,7 @@ def test_dead_weak_callback_is_skipped(backend: CulsansAsyncioBackend) -> None:
 async def test_delivery_survives_per_test_event_loops(
     backend: CulsansAsyncioBackend, run: int
 ) -> None:
-    """An ``asyncio.Queue`` would bind to the first loop and fail the second."""
+    """Deliver emits across tests that each run their own event loop."""
     delivered = threading.Event()
 
     async def on_move(motor: str, axis: str, position: float) -> None:
@@ -392,7 +407,7 @@ async def test_delivery_survives_per_test_event_loops(
 
 
 def test_run_does_not_start_a_second_drain(backend: CulsansAsyncioBackend) -> None:
-    """A second ``run()`` must return, not park on the queue alongside the first."""
+    """Return from a second run() instead of starting another drain."""
     run_coro(asyncio.wait_for(backend.run(), TIMEOUT))
     assert backend.running.is_set()
 
@@ -400,6 +415,7 @@ def test_run_does_not_start_a_second_drain(backend: CulsansAsyncioBackend) -> No
 def test_close_stops_the_drain(
     backend: CulsansAsyncioBackend, wait_until: Callable[..., bool]
 ) -> None:
+    """Stop the drain and shut the queue down on close."""
     backend.close()
 
     assert wait_until(lambda: not backend.running.is_set())
@@ -410,12 +426,14 @@ def test_close_stops_the_drain(
 def test_close_is_idempotent(
     backend: CulsansAsyncioBackend, wait_until: Callable[..., bool]
 ) -> None:
+    """Accept a second close without error."""
     backend.close()
     backend.close()
     assert wait_until(lambda: not backend.running.is_set())
 
 
 def test_backend_buffers_items_put_before_the_drain_runs() -> None:
+    """Hold items emitted before the drain starts and deliver them once it runs."""
     delivered = threading.Event()
 
     async def on_move(motor: str, axis: str, position: float) -> None:
@@ -432,6 +450,7 @@ def test_backend_buffers_items_put_before_the_drain_runs() -> None:
 
 
 def test_awaitable_event_set_and_clear() -> None:
+    """Report the state set and cleared on an AwaitableEvent."""
     event = AwaitableEvent()
     assert not event.is_set()
     event.set()
@@ -441,12 +460,14 @@ def test_awaitable_event_set_and_clear() -> None:
 
 
 async def test_awaitable_event_wait_returns_when_already_set() -> None:
+    """Return from wait at once when the event is already set."""
     event = AwaitableEvent()
     event.set()
     await asyncio.wait_for(event.wait(), TIMEOUT)
 
 
 async def test_awaitable_event_wait_wakes_on_a_cross_thread_set() -> None:
+    """Wake a waiter when the event is set from another thread."""
     event = AwaitableEvent()
     threading.Timer(0.05, event.set).start()
     await asyncio.wait_for(event.wait(), TIMEOUT)
@@ -454,19 +475,22 @@ async def test_awaitable_event_wait_wakes_on_a_cross_thread_set() -> None:
 
 
 def test_shared_loop_is_a_running_singleton() -> None:
+    """Return the same running loop on every call."""
     loop = get_shared_loop()
     assert get_shared_loop() is loop
     assert loop.is_running()
 
 
 def test_shared_loop_runs_on_a_thread_bluesky_knows() -> None:
-    """A RunEngine given the loop finds the thread it runs on."""
+    """Run the shared loop on a separate thread that a RunEngine can find."""
     thread = _ensure_event_loop_running.loop_to_thread[get_shared_loop()]  # type: ignore[attr-defined]
     assert thread.is_alive()
     assert thread is not threading.current_thread()
 
 
 def test_run_coro_returns_the_result() -> None:
+    """Return the coroutine's result."""
+
     async def answer() -> int:
         await asyncio.sleep(0)
         return 42
@@ -475,6 +499,8 @@ def test_run_coro_returns_the_result() -> None:
 
 
 def test_run_coro_runs_on_the_shared_loop() -> None:
+    """Run the coroutine on the shared loop."""
+
     async def which_loop() -> asyncio.AbstractEventLoop:
         return asyncio.get_running_loop()
 
@@ -482,6 +508,8 @@ def test_run_coro_runs_on_the_shared_loop() -> None:
 
 
 def test_run_coro_returns_a_future() -> None:
+    """Return a future instead of blocking when return_future is set."""
+
     async def answer() -> int:
         return 42
 
@@ -490,6 +518,8 @@ def test_run_coro_returns_a_future() -> None:
 
 
 def test_run_coro_propagates_exceptions() -> None:
+    """Raise the coroutine's exception in the caller."""
+
     async def boom() -> None:
         raise ValueError("out of range")
 

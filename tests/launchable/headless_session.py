@@ -1,6 +1,6 @@
 """Build, use and close a session with no toolkit, then ask for one that is missing.
 
-Run as a script by ``test_headless``, in an interpreter where the Qt packages
+Run as a script by `test_headless`, in an interpreter where the Qt packages
 cannot be imported.
 """
 

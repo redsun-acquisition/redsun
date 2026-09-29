@@ -1,6 +1,6 @@
 """A caproto IOC serving one camera setting, stopped when its standard input closes.
 
-Run as ``python -m mock_pkg.service.camera_ioc --prefix CAM:``.
+Run as `python -m mock_pkg.service.camera_ioc --prefix CAM:`.
 """
 
 from __future__ import annotations

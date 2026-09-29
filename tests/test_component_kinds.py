@@ -41,7 +41,7 @@ class Stage(StandardReadable):
 class Behaviour:
     """What the presenters below do, whichever way their constructor is made.
 
-    It has no ``__slots__``, so a subclass has a ``__dict__``; `SlottedCtrl`
+    It has no `__slots__`, so a subclass has a `__dict__`; `SlottedCtrl`
     repeats these members instead of inheriting them.
     """
 
@@ -194,7 +194,7 @@ class ModelApp(Session):
 def test_every_kind_of_class_takes_part_in_the_whole_session(
     app: type[Session], build: BuildSession
 ) -> None:
-    """Configuration, devices, `setup`, `provides`, wiring and saving alike."""
+    """Configure, set up, share from, wire and save a presenter of every class kind."""
     session = build(app, CONFIG)
     ctrl = cast("Behaviour | SlottedCtrl", session.presenters["ctrl"])
     listener = cast("Listener", session.presenters["listener"])
@@ -214,6 +214,7 @@ def test_every_kind_of_class_takes_part_in_the_whole_session(
 def test_a_model_refusing_its_configuration_is_skipped(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Skip a pydantic presenter whose model refuses its configuration, logging why."""
     session = build(ModelApp, {"presenters": {"ctrl": {"gain": "not a number"}}})
 
     assert "ctrl" not in session.presenters

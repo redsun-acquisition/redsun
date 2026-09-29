@@ -283,7 +283,7 @@ class Watched(Session):
 def test_setup_is_answered_by_type_and_by_protocol(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A shared object answers its own type and every protocol it satisfies."""
+    """Answer `setup` by a shared object's type and by each protocol it satisfies."""
     app = build(AnswersApp)
     imager = app.presenters["imager"]
     overlay = app.presenters["overlay"]
@@ -314,6 +314,7 @@ def test_setup_is_answered_by_type_and_by_protocol(
 def test_a_question_the_session_cannot_answer_is_refused(
     app: type[Session], match: str
 ) -> None:
+    """Refuse a protocol in `setup` answered by nothing, by several or by a view."""
     with pytest.raises(TypeError, match=match):
         app().build()
 
@@ -321,6 +322,7 @@ def test_a_question_the_session_cannot_answer_is_refused(
 def test_a_question_only_a_failed_component_answers_leaves_the_asker_not_set_up(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Leave a component not set up when only a failed component answers its `setup`."""
     app = build(BrokenCameraApp)
 
     assert "snapper" in app.presenters
@@ -356,6 +358,7 @@ def test_a_question_asked_where_it_cannot_be_answered_skips_the_component(
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    """Skip a component asking for a protocol where the session cannot answer it."""
     session = build(app)
 
     assert "ctrl" not in session.presenters
@@ -365,7 +368,7 @@ def test_a_question_asked_where_it_cannot_be_answered_skips_the_component(
 def test_a_constructor_taking_another_component_stops_the_session_before_it_starts() -> (
     None
 ):
-    """Only classes are read, so no service is started for a session that cannot run."""
+    """Refuse a constructor taking another component before any service starts."""
     with pytest.raises(
         TypeError, match="'ctrl' takes 'camera' in its 'camera' parameter"
     ):

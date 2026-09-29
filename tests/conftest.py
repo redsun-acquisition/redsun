@@ -1,7 +1,7 @@
 """Root test configuration for redsun.
 
-Defines the ``qt`` marker and automatically skips Qt-dependent tests
-when no display is available (headless CI without ``QT_QPA_PLATFORM=offscreen``).
+Defines the `qt` marker and automatically skips Qt-dependent tests
+when no display is available (headless CI without `QT_QPA_PLATFORM=offscreen`).
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ SessionT = TypeVar("SessionT", bound=Session)
 
 @pytest.fixture
 def wait_until() -> Callable[..., bool]:
-    """Return a poll that holds until ``predicate`` is true or ``timeout`` runs out.
+    """Return a poll that holds until `predicate` is true or `timeout` runs out.
 
     For a thread or a process that offers nothing to wait on. Where an event,
     a future or a task exists, wait on that instead.
@@ -70,7 +70,7 @@ def qapp() -> QApplication:
 
 @pytest.fixture
 def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Let a launched service import ``mock_pkg``, and restore the CA address list.
+    """Let a launched service import `mock_pkg`, and restore the CA address list.
 
     The transport's port map is left alone: libca reads the address list once per
     process, so a service keeps the port it first got from test to test.
@@ -189,7 +189,7 @@ def build() -> Generator[BuildSession, None, None]:
         Laid over what the class declares, for a container built here.
 
     Every session it built is shut down in reverse order once the test ends,
-    and a test may shut one down itself, ``shutdown`` running nothing the
+    and a test may shut one down itself, `shutdown` running nothing the
     second time.
     """
     built: list[Session] = []
@@ -220,10 +220,10 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 @pytest.fixture
 def mock_plugin() -> Generator[None, None, None]:
-    """Present ``mock_bundle`` as an installed ``redsun.plugins`` entry point.
+    """Present `mock_bundle` as an installed `redsun.plugins` entry point.
 
-    The loader resolves a manifest through ``entry_points`` and
-    ``importlib.resources``; both are redirected at the on-disk package so
+    The loader resolves a manifest through `entry_points` and
+    `importlib.resources`; both are redirected at the on-disk package so
     that discovery runs for real rather than being stubbed out.
     """
     entry = mock.Mock(spec=EntryPoint)

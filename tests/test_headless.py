@@ -18,6 +18,7 @@ WITHOUT_QT = (
 
 
 def test_a_session_runs_where_no_toolkit_is_installed() -> None:
+    """Run a session with no Qt installed, reporting the `qt` frontend as missing."""
     ran = subprocess.run(
         [sys.executable, "-c", WITHOUT_QT],
         capture_output=True,

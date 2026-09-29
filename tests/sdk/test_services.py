@@ -123,7 +123,7 @@ def launch_pva(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Servic
 
 @pytest.fixture
 def service_log(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:
-    """Capture everything the ``redsun`` logger tree records, services included."""
+    """Capture everything the `redsun` logger tree records, services included."""
     caplog.set_level(logging.DEBUG, logger="redsun")
     return caplog
 
@@ -144,6 +144,7 @@ def test_a_service_logs_its_output_and_cleans_up_when_stopped(
     service_log: pytest.LogCaptureFixture,
     tmp_path: Path,
 ) -> None:
+    """Log a service's output and let it clean up when stopped."""
     marker = tmp_path / "cleaned"
     stand_in = launch("--marker", str(marker))
 
@@ -166,6 +167,7 @@ def test_a_service_not_ready_in_time_is_stopped_with_its_output_logged(
     service_log: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Stop a service not ready in time and log its last output."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 0.5)
     stand_in = launch("--no-ready")
 
@@ -183,7 +185,7 @@ def test_a_service_exiting_before_it_is_ready_is_reported_at_once(
     service_log: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The exit ends the wait rather than the startup timeout."""
+    """Raise as soon as a service exits before it is ready, not at the timeout."""
     monkeypatch.setattr(_service, "STARTUP_TIMEOUT", 10.0)
     stand_in = launch("--no-ready", "--exit", "3")
     started = time.monotonic()
@@ -216,6 +218,7 @@ def test_a_service_ignoring_the_stop_request_is_stopped_by_the_next_step(
     options: tuple[str, ...],
     cleans_up: bool,
 ) -> None:
+    """Stop a service that ignores the stop request by the next, stronger step."""
     marker = tmp_path / "cleaned"
     stand_in = launch(*options, "--marker", str(marker))
     stand_in.start()
@@ -231,6 +234,7 @@ def test_a_service_ignoring_the_stop_request_is_stopped_by_the_next_step(
 def test_a_ready_service_exiting_unasked_emits_its_name_and_code(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
+    """Emit the name and exit code of a ready service that exits unasked."""
     exits: list[tuple[str, int]] = []
     emitted = threading.Event()
 
@@ -249,6 +253,7 @@ def test_a_ready_service_exiting_unasked_emits_its_name_and_code(
 
 
 def test_a_stopped_service_emits_no_exit(launch: Callable[..., Service]) -> None:
+    """Emit no exit for a service stopped on request."""
     exits: list[tuple[str, int]] = []
     stand_in = launch()
     stand_in.sig_exited.connect(lambda name, code: exits.append((name, code)))
@@ -264,7 +269,7 @@ def test_a_port_another_service_holds_is_not_given_again(
     service_log: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The system may hand out one port twice; the second service draws again."""
+    """Draw a new port when the one drawn is held by another service."""
     drawn = iter([40001, 40001, 40002])
     monkeypatch.setattr(_transports, "free_udp_port", lambda: next(drawn))
     first, second = launch(name="first"), launch(name="second")
@@ -278,6 +283,7 @@ def test_a_port_another_service_holds_is_not_given_again(
 def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
+    """Give each service its own CA port and list them all in the address list."""
     first, second = launch(name="first"), launch(name="second")
 
     first.start()
@@ -293,7 +299,7 @@ def test_each_launched_service_gets_a_ca_port_of_its_own_in_the_address_list(
 def test_two_pva_services_answer_on_the_loopback(
     launch_pva: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    """Both are kept local, and a client is told where to find them."""
+    """Bind two PVA services to the loopback and list it in the address list."""
     p4p = pytest.importorskip("p4p.client.thread")
 
     first = launch_pva("first", "SIM:FIRST", 1.0)
@@ -371,6 +377,7 @@ def test_a_line_of_output_becomes_the_record_it_describes(
     created: float | None,
     traceback: str | None,
 ) -> None:
+    """Turn a line of service output into the record it describes."""
     record = service_record("cam", line)
 
     assert (record.name, record.levelno, record.getMessage()) == (name, level, message)
@@ -380,6 +387,7 @@ def test_a_line_of_output_becomes_the_record_it_describes(
 
 
 def test_a_rebuilt_record_names_its_service_and_no_location() -> None:
+    """Format a service record with its service and logger names, no location."""
     text = GlobalFormatter(datefmt="%H").format(service_record("cam", STDLIB_WARNING))
 
     assert text.endswith(
@@ -390,17 +398,15 @@ def test_a_rebuilt_record_names_its_service_and_no_location() -> None:
 def test_non_ascii_output_arrives_intact(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    """The child writes UTF-8 whatever the platform's console encoding.
-
-    The stand-in prints this line before its readiness one, so ``start``
-    cannot return until the drain has logged it.
-    """
+    """Log non-ASCII service output unchanged."""
     message = "température 21 °C \u2713"
     line = json.dumps(
         {**json.loads(STDLIB_WARNING), "msg": message}, ensure_ascii=False
     )
     stand_in = launch("--say", line)
 
+    # The stand-in prints this line before its readiness one, so `start` cannot
+    # return until the drain has logged it.
     stand_in.start()
 
     assert message in messages(service_log, logging.WARNING)
@@ -409,7 +415,7 @@ def test_non_ascii_output_arrives_intact(
 def test_a_service_started_again_keeps_its_port(
     launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
 ) -> None:
-    """The address list the process read first still reaches it."""
+    """Keep the same port when a service is started again."""
     stand_in = launch()
 
     stand_in.start()
@@ -423,6 +429,7 @@ def test_a_service_started_again_keeps_its_port(
 
 
 def test_an_attached_service_has_nothing_to_start_or_stop() -> None:
+    """Launch no process for a service with no module."""
     attached = Service("beamline", prefix="BL01:")
 
     attached.start()
@@ -433,6 +440,7 @@ def test_an_attached_service_has_nothing_to_start_or_stop() -> None:
 
 
 def test_arguments_without_a_module_are_refused() -> None:
+    """Refuse arguments given without a module to run."""
     with pytest.raises(TypeError, match="no module to run"):
         Service("beamline", args=["--prefix", "BL01:"])
 
@@ -440,7 +448,7 @@ def test_arguments_without_a_module_are_refused() -> None:
 def test_a_service_ends_when_the_process_that_launched_it_dies(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The service sees its standard input close, and cleans up, with no stop call."""
+    """Clean up and exit a service once the process that launched it dies."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     marker = tmp_path / "cleaned"
     parent = subprocess.Popen(
@@ -475,6 +483,7 @@ def test_a_launched_service_reads_its_name_and_prefix_from_the_environment(
     launch: Callable[..., Service],
     service_log: pytest.LogCaptureFixture,
 ) -> None:
+    """Pass a launched service its name and prefix through the environment."""
     stand_in = launch(name="camera", prefix="SIM:")
 
     stand_in.start()

@@ -35,15 +35,17 @@ def _record(
 
 
 def test_the_buffer_is_installed_on_the_redsun_logger() -> None:
-    """It is installed alongside the stdout handler, not by a caller."""
+    """Install the buffer on the `redsun` logger at import."""
     assert log_buffer() in logging.getLogger("redsun").handlers
 
 
 def test_the_buffer_is_the_same_object_every_time() -> None:
+    """Return the same buffer on every call."""
     assert log_buffer() is log_buffer()
 
 
 def test_records_are_retained_in_order(buffer: BufferHandler) -> None:
+    """Keep records in the order they were logged."""
     logging.getLogger("redsun").info("first")
     logging.getLogger("redsun").warning("second")
 
@@ -51,7 +53,7 @@ def test_records_are_retained_in_order(buffer: BufferHandler) -> None:
 
 
 def test_every_level_is_retained(buffer: BufferHandler) -> None:
-    """The buffer carries no filter: the stdout handlers split levels, it does not."""
+    """Keep records of every level, with no filtering."""
     logger = logging.getLogger("redsun")
     for level in (
         logging.DEBUG,
@@ -72,7 +74,7 @@ def test_every_level_is_retained(buffer: BufferHandler) -> None:
 
 
 def test_the_buffer_is_bounded() -> None:
-    """A long session drops the oldest records rather than growing without limit."""
+    """Drop the oldest records once the buffer is at capacity."""
     handler = BufferHandler(capacity=3)
 
     for i in range(5):
@@ -82,7 +84,7 @@ def test_the_buffer_is_bounded() -> None:
 
 
 def test_a_service_logging_heavily_drops_only_its_own_records() -> None:
-    """An application warning outlives a flood of service records."""
+    """Drop only service records when a service exceeds its own capacity."""
     handler = BufferHandler(capacity=10_000, service_capacity=2_000)
     handler.emit(_record(logging.WARNING, "application warning"))
 
@@ -96,6 +98,7 @@ def test_a_service_logging_heavily_drops_only_its_own_records() -> None:
 
 
 def test_service_records_are_read_per_service_or_merged_by_time() -> None:
+    """Return service records for one service, or for all merged by time."""
     handler = BufferHandler(capacity=10, service_capacity=10)
     handler.emit(_record(logging.INFO, "stage 1", "redsun.service.stage", 1.0))
     handler.emit(_record(logging.INFO, "cam 2", "redsun.service.cam.caproto", 2.0))
@@ -127,10 +130,12 @@ def test_service_records_are_read_per_service_or_merged_by_time() -> None:
 def test_a_record_names_the_service_it_came_from(
     name: str, service: str | None
 ) -> None:
+    """Read the service name from a record's logger name, or None outside one."""
     assert service_of(_record(logging.INFO, "", name)) == service
 
 
 def test_each_record_is_announced() -> None:
+    """Emit each record the buffer receives."""
     handler = BufferHandler(capacity=10)
     seen: list[logging.LogRecord] = []
     handler.sig_record.connect(seen.append)
@@ -141,6 +146,7 @@ def test_each_record_is_announced() -> None:
 
 
 def test_clear_drops_every_record() -> None:
+    """Drop every application and service record on clear."""
     handler = BufferHandler(capacity=10)
     handler.emit(_record(logging.INFO, "gone"))
     handler.emit(_record(logging.INFO, "gone too", "redsun.service.cam"))

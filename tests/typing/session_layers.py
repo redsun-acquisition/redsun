@@ -1,7 +1,7 @@
 """A layer marker types the attribute as the component, not as a wrapper.
 
 Never imported or executed: pytest skips it and mypy checks it through
-``files = "."``. Whether a class satisfies `AttachableComponent` or
+`files = "."`. Whether a class satisfies `AttachableComponent` or
 `NamedComponent` is a
 structural question, so only a type checker observes the answer here; the
 container asks the same question again at runtime.
@@ -57,7 +57,7 @@ def check(app: App) -> None:
 
 
 def check_structurally(app: App) -> None:
-    """Pin that a class attribute and a property both answer ``placement``."""
+    """Pin that a class attribute and a property both answer `placement`."""
     from_attribute: AttachableComponent = app.panel
     from_property: AttachableComponent = app.canvas
     presenter: NamedComponent = app.ctrl
@@ -67,7 +67,7 @@ def check_structurally(app: App) -> None:
 
 
 def check_undeclared(app: App) -> None:
-    """Pin that a name the session never declared is refused, not ``Any``.
+    """Pin that a name the session never declared is refused, not `Any`.
 
     A session answering any attribute would also satisfy every protocol
     structurally, which is why `BuildableSession` is inherited rather than

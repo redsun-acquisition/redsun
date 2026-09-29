@@ -49,7 +49,7 @@ def test_every_session_pins_the_control_to_a_toolbar(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """It is part of the session, so a session declaring nothing still has it."""
+    """Put the control on a toolbar of every session, even one declaring nothing."""
     app = build(PlainApp)
     control = _control(app)
 
@@ -61,11 +61,9 @@ def test_the_configuration_says_which_mode_to_start_in(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """The scheme Qt reports is not asserted.
-
-    The offscreen platform the suite runs on ignores ``setColorScheme`` and
-    keeps reporting ``Unknown``, so only the mode asked for can be pinned.
-    """
+    """Start the control in the configured mode, not checking the scheme Qt reports."""
+    # Only the mode asked for can be pinned: the offscreen platform the suite runs on
+    # ignores `setColorScheme` and keeps reporting `Unknown`.
     assert _control(build(DarkApp)).mode is ColorSchemeMode.DARK
 
 
@@ -73,7 +71,7 @@ def test_clicking_cycles_system_light_dark_and_round(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """One button reaches all three, which the glyph has to keep up with."""
+    """Cycle the mode system -> light -> dark -> system, with a new glyph each time."""
     control = _control(build(PlainApp))
     seen = []
 
@@ -94,7 +92,7 @@ def test_the_control_is_pushed_to_the_right_edge(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """An expanding spacer before it is what pins it, so the toolbar holds two."""
+    """Push the control to the right edge of its toolbar with an expanding spacer."""
     control = _control(build(PlainApp))
     bar = control.parent()
     assert isinstance(bar, QToolBar)
@@ -112,7 +110,7 @@ def test_a_session_from_a_file_carries_it_too(
     qapp: QApplication,
     build: Callable[..., QtSession],
 ) -> None:
-    """The mode is an ordinary configuration key, so a file may set it."""
+    """Read the starting mode from a session file too."""
     unbuilt = Session.from_config(
         {"session": "lab", "frontend": "qt", "color_scheme": "light"}
     )
@@ -122,7 +120,7 @@ def test_a_session_from_a_file_carries_it_too(
 
 
 def test_a_mode_the_control_does_not_offer_is_refused() -> None:
-    """The mode comes from a configuration file, so it is checked."""
+    """Refuse a configured mode the control does not offer."""
 
     class Sepia(QtSession):
         config: ClassVar[dict[str, Any]] = {"color_scheme": "sepia"}
@@ -132,6 +130,7 @@ def test_a_mode_the_control_does_not_offer_is_refused() -> None:
 
 
 def test_the_control_says_it_can_be_clicked() -> None:
+    """End the control's tooltip by saying a click changes the mode."""
     assert (
         ColorSchemeButton(ColorSchemeMode.DARK).toolTip().endswith("(click to change)")
     )

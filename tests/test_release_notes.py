@@ -37,6 +37,7 @@ Intro.
 
 
 def test_a_release_section_is_written_above_the_last_and_read_back() -> None:
+    """Write a release section above the previous one and read both back."""
     new = section("0.14.0", datetime.date(2026, 10, 1), NOTES, breaking={141})
     link = "[0.14.0]: https://github.com/o/r/compare/v0.13.0...v0.14.0"
 
@@ -74,6 +75,7 @@ Intro.
 
 
 def test_the_first_section_goes_below_the_introduction() -> None:
+    """Put the first section below the introduction, without contributors or links."""
     new = section("0.14.0", datetime.date(2026, 10, 1), NOTES, breaking=set())
 
     changelog = insert("# Changelog\n\nIntro.\n", new, "[0.14.0]: https://x")
@@ -100,4 +102,5 @@ def test_the_first_section_goes_below_the_introduction() -> None:
 def test_an_entry_drops_the_type_its_section_already_says(
     title: str, entry: str
 ) -> None:
+    """Drop the commit type and scope from an entry and capitalise a leading letter."""
     assert worded(title) == entry

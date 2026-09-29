@@ -33,6 +33,7 @@ def keys_of(schema: dict[str, Any]) -> set[str]:
 def test_the_page_lists_every_key_of_the_file(
     page: str, schema: dict[str, Any]
 ) -> None:
+    """List on each reference page every key its file can hold."""
     text = (REFERENCE / page).read_text(encoding="utf-8")
     listed = {cell.rpartition(".")[2] for cell in FIRST_CELL.findall(text)}
 

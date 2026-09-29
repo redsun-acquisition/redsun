@@ -68,7 +68,7 @@ class Renamed:
 
 
 class Anything:
-    """Presenter whose constructor accepts every key, through ``**kwargs``."""
+    """Presenter whose constructor accepts every key, through `**kwargs`."""
 
     def __init__(self, name: str, **kwargs: object) -> None:
         self.name = name
@@ -101,6 +101,7 @@ class App(Session):
 def test_a_changed_session_rebuilds_from_what_it_wrote(
     build: BuildSession,
 ) -> None:
+    """Rebuild a changed session from what it serializes, and serialize the same."""
     session = build(App)
     session.ctrl.step = 9.0
 
@@ -121,6 +122,7 @@ def test_a_changed_session_rebuilds_from_what_it_wrote(
 def test_serialize_writes_a_parameter_no_source_named(
     build: BuildSession,
 ) -> None:
+    """Write a constructor default that no configuration source named."""
     entry = build(App).serialize()["presenters"]["ctrl"]
 
     assert entry == {"step": 7.5, "timeout": 2.0}
@@ -129,6 +131,7 @@ def test_serialize_writes_a_parameter_no_source_named(
 def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
     build: BuildSession,
 ) -> None:
+    """Keep the loaded entry of a component that serializes nothing."""
     session = build(App)
     session.quiet.gain = 8.0
 
@@ -138,6 +141,7 @@ def test_a_component_serializing_nothing_keeps_the_entry_it_loaded(
 def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
+    """Keep the loaded entry and warn when a component saves a key it cannot take."""
     session = build(App)
 
     with caplog.at_level(logging.WARNING, logger="redsun"):
@@ -152,6 +156,7 @@ def test_an_entry_the_constructor_would_refuse_is_dropped_whole(
 def test_a_constructor_taking_kwargs_accepts_every_key(
     build: BuildSession,
 ) -> None:
+    """Write any key for a component whose constructor takes `**kwargs`."""
     entry = build(App).serialize()["presenters"]["anything"]
 
     assert entry == {"whatever": 1}
@@ -160,12 +165,14 @@ def test_a_constructor_taking_kwargs_accepts_every_key(
 def test_a_session_nobody_has_touched_has_no_changes(
     build: BuildSession,
 ) -> None:
+    """Report no changes for a session nothing has changed."""
     assert not build(App).has_changes()
 
 
 def test_a_component_asking_to_be_written_differently_is_a_change(
     build: BuildSession,
 ) -> None:
+    """Report a change when a component would serialize a different value."""
     session = build(App)
     session.ctrl.step = 9.0
 
@@ -175,6 +182,7 @@ def test_a_component_asking_to_be_written_differently_is_a_change(
 def test_a_value_changed_and_changed_back_reads_as_unchanged(
     build: BuildSession,
 ) -> None:
+    """Report no changes once a value is changed and then changed back."""
     session = build(App)
     session.ctrl.step = 9.0
     session.ctrl.step = 7.5
@@ -185,6 +193,7 @@ def test_a_value_changed_and_changed_back_reads_as_unchanged(
 def test_a_component_that_serializes_nothing_never_changes(
     build: BuildSession,
 ) -> None:
+    """Report no changes from a component that serializes nothing."""
     session = build(App)
     session.quiet.gain = 8.0
 
@@ -194,6 +203,7 @@ def test_a_component_that_serializes_nothing_never_changes(
 def test_a_refused_key_still_counts_as_a_change(
     build: BuildSession,
 ) -> None:
+    """Report a change from a component whose saved key would be refused."""
     session = build(App)
     session.renamed.step = 9.0
 
@@ -203,6 +213,7 @@ def test_a_refused_key_still_counts_as_a_change(
 def test_a_written_session_comes_back_from_the_file(
     tmp_path: Path, build: BuildSession
 ) -> None:
+    """Rebuild a session from the file it wrote."""
     session = build(App)
     session.ctrl.step = 9.0
     written = session.write(tmp_path / "session.yaml")
@@ -217,7 +228,7 @@ def test_a_written_session_comes_back_from_the_file(
 def test_the_written_file_is_one_flat_session(
     tmp_path: Path, build: BuildSession
 ) -> None:
-    """A session layered from several sources writes what the merge produced."""
+    """Write the merged result of a layered session as one flat file."""
     base = tmp_path / "instrument.yaml"
     base.write_text(yaml.safe_dump({"presenters": {"ctrl": {"step": 1.5}}}))
 
@@ -232,7 +243,7 @@ def test_the_written_file_is_one_flat_session(
 def test_the_written_file_keeps_the_transport(
     tmp_path: Path, build: BuildSession
 ) -> None:
-    """The key names no service, and is still what the file says they speak."""
+    """Write the services transport to the file, and rebuild a session speaking it."""
     source = {"services": {"transport": "pv-access", "beamline": {"prefix": "BL:"}}}
 
     written = build(App, source).write(tmp_path / "out.yaml")
@@ -244,7 +255,7 @@ def test_the_written_file_keeps_the_transport(
 
 
 def test_writing_over_a_source_is_refused(tmp_path: Path, build: BuildSession) -> None:
-    """Overwriting one replaces what every session sharing it reads."""
+    """Refuse to write over a file the session was loaded from, leaving it unchanged."""
     source = tmp_path / "shared.yaml"
     source.write_text(yaml.safe_dump({"session": "shared"}))
     session = build(App, str(source))

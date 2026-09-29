@@ -84,6 +84,7 @@ class App(Session):
 def test_a_session_wired_to_nothing_reports_every_port(
     build: BuildSession,
 ) -> None:
+    """Report every port of a session with no wiring as unconnected."""
     report = build(App).unconnected
 
     assert set(report.signals) == {"stage.sig_moved", "other.sig_moved"}
@@ -91,6 +92,8 @@ def test_a_session_wired_to_nothing_reports_every_port(
 
 
 def test_a_connected_pair_leaves_the_report(build: BuildSession) -> None:
+    """Drop both ends of a connection from the unconnected report."""
+
     class HalfWired(App):
         def wire(self) -> Iterator[Link]:
             yield self.stage.sig_moved, self.other.halt
@@ -105,6 +108,8 @@ def test_a_connected_pair_leaves_the_report(build: BuildSession) -> None:
 def test_a_fully_wired_session_reports_nothing(
     build: BuildSession,
 ) -> None:
+    """Report nothing unconnected once every port is wired."""
+
     class FullyWired(App):
         def wire(self) -> Iterator[Link]:
             yield self.stage.sig_moved, self.other.halt
@@ -120,6 +125,8 @@ def test_a_fully_wired_session_reports_nothing(
 def test_a_port_of_an_object_a_presenter_holds_is_recorded_under_the_presenter(
     build: BuildSession,
 ) -> None:
+    """Record a port of an object a presenter holds under the presenter's name."""
+
     class Held(Session):
         config: ClassVar[dict[str, Any]] = {"session": "reporting"}
 
@@ -142,6 +149,7 @@ def test_a_port_of_an_object_a_presenter_holds_is_recorded_under_the_presenter(
 
 
 def test_the_report_says_which_end_is_missing() -> None:
+    """Show `nothing` at the missing end of each unconnected port."""
     report = Unconnected(signals=["stage.sig_moved"], slots=["panel.refresh"])
 
     assert str(report).splitlines() == [
@@ -151,13 +159,13 @@ def test_the_report_says_which_end_is_missing() -> None:
 
 
 def test_a_group_member_is_a_port_of_the_component_that_holds_it() -> None:
-    """A signal group is a way of writing ports, not a component of its own."""
+    """Count a signal group member as a port of the component holding the group."""
     surface = ports(Grouped("grouped"))
 
     assert set(surface.signals) == {"started", "finished"}
 
 
 def test_one_port_name_may_not_come_from_two_places() -> None:
-    """A path in a wiring rule has to mean one signal, so the clash is refused."""
+    """Refuse a component exposing two signals under one port name."""
     with pytest.raises(WiringError, match="exposes two signals named 'started'"):
         ports(Clashing("clashing"))

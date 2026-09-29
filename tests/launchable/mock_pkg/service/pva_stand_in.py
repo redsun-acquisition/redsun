@@ -1,6 +1,6 @@
 """A p4p server standing in for a service that speaks PVAccess.
 
-Run as ``python -m mock_pkg.service.pva_stand_in --pv SIM:VALUE --value 1``.
+Run as `python -m mock_pkg.service.pva_stand_in --pv SIM:VALUE --value 1`.
 It serves one PV, prints its readiness line, and stops when its standard input
 closes, the way a service written for redsun does.
 """
