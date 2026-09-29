@@ -144,6 +144,10 @@ class ConfigurationInUse(OSError):
 
 logger = logging.getLogger("redsun")
 
+# the injector logs a traceback of a refused component before reraising it,
+# which the session reports itself; without a handler that reaches stderr
+logging.getLogger("in_n_out").addHandler(logging.NullHandler())
+
 
 def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     """Return the keys of *entry* that *cls* would refuse to be built from.
@@ -1489,7 +1493,7 @@ class Session(BuildableSession):
             try:
                 instance = store.inject(factory(declaration, self._on_built, passed))()
             except Exception as e:  # noqa: BLE001 - a missing component must not abort the app
-                self._skip(declaration, e)
+                self._skip(declaration, unwrapped(e))
                 continue
             store.register_provider(constant(instance), type_hint=declaration.key)
             if self._is_unique(declaration):
@@ -2006,6 +2010,18 @@ class Session(BuildableSession):
             if declaration.key in wanted or declaration.cls in wanted
         }
         return names
+
+
+def unwrapped(error: Exception) -> BaseException:
+    """Return *error* without the `TypeError` the injector wraps around one.
+
+    The injector reraises a `TypeError` naming what it injected, chained to the
+    one the constructor raised, which is the one that names the problem.
+    """
+    cause = error.__cause__
+    if isinstance(error, TypeError) and isinstance(cause, TypeError):
+        return cause
+    return error
 
 
 def unanswered(store: Store, params: Mapping[str, Any]) -> list[tuple[str, object]]:

@@ -56,11 +56,10 @@ reason after the colon. Search for the name:
 
 A component that does not have the members of its layer, such as a presenter
 whose constructor takes `name` and never stores it, is refused before it is
-built, and reported the same way. A traceback from the library that fills
-constructors is printed first, outside the log:
+built, and reported the same way:
 
 ```text
-Failed to build presenter 'odd': After injecting dependencies for NO arguments, 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
+Failed to build presenter 'odd': 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
 ```
 
 ## Follow a failure back to its cause
@@ -148,7 +147,7 @@ redsun.session._base.BuildError: A strict session is missing components:
   broken: serial port COM3 not found
   remote: position: NotConnectedError: ca://NOPE:Position
   helper: no calibration file
-  odd: After injecting dependencies for NO arguments, 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
+  odd: 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
   ctrl: 'helper' was not built
 ```
 

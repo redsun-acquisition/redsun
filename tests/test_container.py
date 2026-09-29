@@ -1241,13 +1241,16 @@ def test_a_component_that_drops_its_name_is_skipped(
     protocol: str,
     build: BuildSession,
     caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Skip a component whose constructor takes a name but does not store it."""
+    """Skip a component that drops its name, logging only the reason."""
     built = build(app)
 
     assert not built.presenters
     assert not built.views
     assert f"does not satisfy {protocol!r}: 'name'" in caplog.text
+    assert "After injecting" not in caplog.text
+    assert "Traceback" not in capsys.readouterr().err
 
 
 def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
