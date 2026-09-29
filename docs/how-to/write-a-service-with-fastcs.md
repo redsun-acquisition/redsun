@@ -58,6 +58,10 @@ it holds.
   variable `REDSUN_SERVICE_PREFIX`, and the controller is served under it.
 - The service prints a line when it is ready, and stops when its standard
   input closes, as every service a session launches must.
+- Run alone, the service listens on every network interface of the machine.
+  Launched by a session, it listens on `127.0.0.1` only, since the session
+  sets `EPICS_PVAS_INTF_ADDR_LIST`; see
+  [Environment variables](../reference/environment.md).
 - `fastcs` takes a prefix of letters, digits, `-` and `_`. `STAGE:` is
   accepted, since the last colon is taken off. `LAB:STAGE:` is refused.
 - Over PVAccess a prefix has to be the only one of its name on the machine:

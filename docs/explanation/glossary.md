@@ -49,7 +49,8 @@ component records it there.
 ### Channel Access
 
 Channel Access is the older of the two network protocols of [EPICS](#epics).
-A program uses it to read and set [process variables](#process-variable).
+A program uses it to read, set and subscribe to
+[process variables](#process-variable).
 
 ### Checkpoint
 
@@ -139,8 +140,8 @@ session with no frontend calls none.
 ### IOC
 
 An IOC (input/output controller) is the server program of [EPICS](#epics). It
-usually owns one or more pieces of hardware, and offers their values as
-[process variables](#process-variable).
+offers values as [process variables](#process-variable). Most IOCs read them
+from hardware they own; a soft IOC owns none and only holds its values.
 
 ### Layer
 
@@ -223,7 +224,10 @@ to devices and sends signals, but never touches a widget.
 ### Process variable
 
 A process variable, often written PV, is one named value that an [IOC](#ioc)
-offers, such as `CAM:Exposure`. The term comes from [EPICS](#epics).
+offers, such as `CAM:Exposure`, together with its time stamp, its alarm state
+and, for a number, its units and limits. A program can read it, set it, or
+subscribe to it to be told of every change. The term comes from
+[EPICS](#epics).
 
 ### Protocol
 
@@ -329,7 +333,8 @@ their data to a program or a browser over the network. See the
 
 The transport is the network protocol that the services of a session speak:
 `channel-access` for [Channel Access](#channel-access), or `pv-access` for
-[PVAccess](#pvaccess).
+[PVAccess](#pvaccess). The word is the one `fastcs` uses; EPICS clients call
+the same choice a provider.
 
 ### View
 

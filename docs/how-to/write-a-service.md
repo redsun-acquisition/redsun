@@ -62,8 +62,12 @@ if __name__ == "__main__":
   on Ctrl+C. Use a daemon thread for it.
 - If the session crashes, nobody reads the service's output any more, and
   printing raises. Clean up before printing, or do not print.
-- `127.0.0.1` keeps a local service off the network. A service other machines
-  must reach leaves `interfaces` alone.
+- `127.0.0.1` keeps a launched service off the network.
+
+A launched service listens on a port the session chooses when its process
+starts, and no other program is told which one, so `caget` from another
+terminal does not find it. A service other programs or machines must reach
+runs on its own, on the ports it is set to, and the session attaches to it.
 
 ## Declare it
 
@@ -97,11 +101,42 @@ that reads `REDSUN_SERVICE_PREFIX` needs no `args` for it.
 
 `Launch` is a service the session starts and stops. `Attach` is one already
 running elsewhere: nothing starts or stops, and its devices only get its
-[prefix](../explanation/glossary.md#prefix).
+[prefix](../explanation/glossary.md#prefix). Its devices find it through the
+address list of your environment, `EPICS_CA_ADDR_LIST` or
+`EPICS_PVA_ADDR_LIST`, and by searching the network unless
+`EPICS_CA_AUTO_ADDR_LIST` or `EPICS_PVA_AUTO_ADDR_LIST` is `NO`. The session
+keeps what the list holds; see
+[Environment variables](../reference/environment.md).
 
 The device gets the service's prefix as its `prefix` argument, so giving the
 device a `prefix` of its own is refused. A device whose service did not start
 is left out.
+
+## Serve several devices from one service
+
+Every device naming a service gets the same prefix. The devices tell their
+process variables apart by the rest of the name, which a constructor keyword
+can carry:
+
+```python
+from ophyd_async.core import StandardReadable
+from ophyd_async.epics.core import epics_signal_rw
+
+
+class Axis(StandardReadable):
+    def __init__(self, prefix: str, axis: str, name: str = "") -> None:
+        with self.add_children_as_readables():
+            self.position = epics_signal_rw(float, f"{prefix}{axis}:Position")
+        super().__init__(name=name)
+
+
+class MyApp(QtSession):
+    stage_ioc: Annotated[AsService, Launch("mylab.iocs.stage", prefix="ST:")]
+    x: Annotated[AsDevice[Axis], Declare(service="stage_ioc", axis="X")]
+    y: Annotated[AsDevice[Axis], Declare(service="stage_ioc", axis="Y")]
+```
+
+`x` reads `ST:X:Position`, and `y` reads `ST:Y:Position`.
 
 A bundle can write the declaration once and share it:
 
@@ -163,7 +198,8 @@ class MyApp(QtSession):
 ```
 
 An unknown transport, or two sources naming different ones, raises when the
-configuration is read.
+configuration is read. The transport holds for every device of the session, so
+no device speaks both.
 [Services](../explanation/services.md#one-transport-per-session) says what a
 session does for each transport.
 
