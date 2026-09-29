@@ -160,7 +160,7 @@ and the build summary lists it under `Not built`:
 
 ```text
 [29-09-26|08:42:44][ERROR]: Failed to build view 'panel': plugin 'mylab' declares no view 'motor-viwe'. Its views: motor-view
-[29-09-26|08:42:44][WARNING]: Container built: 1/1 devices, 1/1 presenters, 0/1 views
+[29-09-26|08:42:44][WARNING]: Session built: 1/1 devices, 1/1 presenters, 0/1 views
 Not built: panel (view)
 ```
 

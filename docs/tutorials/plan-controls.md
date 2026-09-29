@@ -125,7 +125,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 2/2 devices, 3/3 presenters, 2/2 views
+Session built: 2/2 devices, 3/3 presenters, 2/2 views
 ```
 
 ![The window of the session: the rows of the two stages on the left, and on

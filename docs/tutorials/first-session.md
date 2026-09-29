@@ -105,7 +105,7 @@ uv run first_session.py
 The terminal says what the session built:
 
 ```text
-Container built: 1/1 devices, 0/0 presenters, 1/1 views
+Session built: 1/1 devices, 0/0 presenters, 1/1 views
 ```
 
 In your terminal the line starts with the time and the word `INFO`. These
@@ -164,7 +164,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 1/1 devices, 1/1 presenters, 1/1 views
+Session built: 1/1 devices, 1/1 presenters, 1/1 views
 ```
 
 Press the button: the position counts up by one each time.

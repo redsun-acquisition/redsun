@@ -103,7 +103,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 3/3 devices, 4/4 presenters, 2/2 views
+Session built: 3/3 devices, 4/4 presenters, 2/2 views
 ```
 
 The list of the plans has a second entry, `snap`. Choose it: the view shows
@@ -151,7 +151,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 3/3 devices, 4/4 presenters, 3/3 views
+Session built: 3/3 devices, 4/4 presenters, 3/3 views
 ```
 
 Choose `snap` in the list of the plans and press **Run**. After a moment the

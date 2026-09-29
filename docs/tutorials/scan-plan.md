@@ -49,7 +49,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 3/3 devices, 5/5 presenters, 3/3 views
+Session built: 3/3 devices, 5/5 presenters, 3/3 views
 ```
 
 The list of the plans has a third entry, `scan`.

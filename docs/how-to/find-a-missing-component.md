@@ -31,7 +31,7 @@ When something is missing it is logged at `WARNING`, with a line for each kind
 of failure:
 
 ```text
-[29-09-26|08:42:44][WARNING]: Container built: 1/3 devices, 1/3 presenters, 0/0 views
+[29-09-26|08:42:44][WARNING]: Session built: 1/3 devices, 1/3 presenters, 0/0 views
 Not built: odd (presenter), broken (device), remote (device, not connected), helper (presenter)
 Not set up: ctrl (presenter)
 ```

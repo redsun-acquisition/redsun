@@ -138,6 +138,6 @@ lines end with the file and line they were logged from:
 
 ```text
 [29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
-[29-09-26|08:42:44][WARNING]: Container built: 0/0 devices, 0/0 presenters, 0/1 views
+[29-09-26|08:42:44][WARNING]: Session built: 0/0 devices, 0/0 presenters, 0/1 views
 Not built: snap (view)
 ```

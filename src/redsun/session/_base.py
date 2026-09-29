@@ -632,7 +632,7 @@ class Session(BuildableSession):
         before the exception leaves.
         """
         if self._is_built:
-            logger.warning("Container already built, skipping rebuild")
+            logger.warning("Session already built, skipping rebuild")
             return self
         try:
             self.read_configuration()
@@ -860,7 +860,7 @@ class Session(BuildableSession):
             declared = [d for d in self._declarations.values() if d.kind is layer]
             built = sum(1 for d in declared if d.instance is not None)
             counted.append(f"{built}/{len(declared)} {layer}s")
-        summary = f"Container built: {', '.join(counted)}"
+        summary = f"Session built: {', '.join(counted)}"
         for heading, names in (
             ("Not built", self._failed),
             ("Not set up", self._not_set_up),
@@ -923,7 +923,7 @@ class Session(BuildableSession):
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
-        logger.info("Container shutdown complete")
+        logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
         """Return the configuration that would rebuild this session.
@@ -1672,8 +1672,12 @@ class Session(BuildableSession):
                 logger.error("Failed to start service '%s': %s", name, error)
             elif self._services[name].launched:
                 self.on_release(self._services[name].stop)
-        started = len(self._services) - len(self._failed_services)
-        summary = f"Services started: {started}/{len(self._services)}"
+        launched = sum(service.launched for service in self._services.values())
+        attached = len(self._services) - launched
+        started = launched - len(self._failed_services)
+        counts = [f"started: {started}/{launched}"] if launched else []
+        counts += [f"attached: {attached}"] if attached else []
+        summary = f"Services {', '.join(counts)}"
         failed = ", ".join(f"{n} ({e})" for n, e in self._failed_services.items())
         if failed:
             logger.warning("%s\nNot started: %s", summary, failed)

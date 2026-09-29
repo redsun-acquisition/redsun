@@ -150,7 +150,7 @@ uv run first_session.py
 ```
 
 ```text
-Container built: 2/2 devices, 1/1 presenters, 1/1 views
+Session built: 2/2 devices, 1/1 presenters, 1/1 views
 ```
 
 ![The window of the session, with a row for each stage: a Nudge button and a

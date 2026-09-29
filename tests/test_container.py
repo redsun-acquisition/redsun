@@ -1671,9 +1671,7 @@ def test_the_closing_line_names_what_is_missing(
     with caplog.at_level(logging.INFO, logger="redsun"):
         ToleratedApp().build().shutdown()
 
-    closing = [
-        r for r in caplog.records if r.getMessage().startswith("Container built")
-    ]
+    closing = [r for r in caplog.records if r.getMessage().startswith("Session built")]
     assert [r.levelno for r in closing] == [logging.WARNING]
     assert "bad (presenter)" in closing[0].getMessage()
     assert "broken_panel (view)" in closing[0].getMessage()

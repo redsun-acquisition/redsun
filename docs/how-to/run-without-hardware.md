@@ -83,7 +83,7 @@ summary:
 
 ```text
 [29-09-26|08:43:21][INFO]: Services not started: the session is mocked
-[29-09-26|08:43:21][INFO]: Container built: 1/1 devices, 0/0 presenters, 0/0 views
+[29-09-26|08:43:21][INFO]: Session built: 1/1 devices, 0/0 presenters, 0/0 views
 ```
 
 Every device the build connects is on a simulated backend, including one

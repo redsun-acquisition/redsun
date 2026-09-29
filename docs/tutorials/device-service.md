@@ -140,7 +140,7 @@ says so in the terminal:
 ```text
 Service 'stage_ioc' started
 Services started: 1/1
-Container built: 4/4 devices, 5/5 presenters, 3/3 views
+Session built: 4/4 devices, 5/5 presenters, 3/3 views
 ```
 
 The window is the one of the last tutorial, with one more stage: the view of

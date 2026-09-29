@@ -158,7 +158,7 @@ def errors_in(caplog: pytest.LogCaptureFixture) -> list[str]:
 
 
 def summary_in(caplog: pytest.LogCaptureFixture) -> str:
-    (summary,) = [m for m in caplog.messages if m.startswith("Container built")]
+    (summary,) = [m for m in caplog.messages if m.startswith("Session built")]
     return summary
 
 
@@ -372,8 +372,8 @@ def test_a_device_whose_service_is_missing_is_skipped(
         "Failed to build device 'bare': service 'unprefixed' gives no prefix" in errors
     )
     assert (
-        "Services started: 2/3\nNot started: broken (exited with code 3 before it "
-        "was ready)"
+        "Services started: 0/1, attached: 2\nNot started: broken (exited with code 3 "
+        "before it was ready)"
     ) in caplog.messages
     assert summary_in(caplog).splitlines()[-1] == "Unused: unprefixed (no device built)"
 
@@ -451,8 +451,8 @@ def test_a_session_built_again_starts_its_services_again(
     app.build()
     app.shutdown()
 
-    started = [r for r in caplog.records if r.getMessage() == "Services started: 1/1"]
-    assert len(started) == 2
+    attached = [r for r in caplog.records if r.getMessage() == "Services attached: 1"]
+    assert len(attached) == 2
 
 
 def test_the_build_connects_devices_declared_with_autoconnect(
