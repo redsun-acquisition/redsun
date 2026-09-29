@@ -23,6 +23,11 @@ variables it sets, the API and the release notes.
 - [Environment variables](environment.md): what a session sets for its
   services and for itself, and what it reads
 
+### Log files
+
+- [Log files](log-files.md): where a session writes its records, and what a
+  record looks like
+
 ### API by task
 
 | To | Look up |

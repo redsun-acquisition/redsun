@@ -12,16 +12,7 @@ icon: lucide/scroll-text
 [29-08-26|14:02:46][DEBUG][MyMotor -> stage]: setpoint=1.5 (motor.py:88)
 ```
 
-Each record starts with the timestamp and level. What follows depends on what
-wrote it:
-
-| Written by | Shape |
-| --- | --- |
-| A [`Loggable`][redsun.log.Loggable] declaring a `name` | `[Class -> name]` |
-| A `Loggable` declaring none, or an empty one | `[Class]` |
-| `logging.getLogger("redsun")` directly | neither, just the message |
-
-A record at any level but `INFO` also shows the file and line it came from.
+[Log files](../reference/log-files.md) describes the shape of a record.
 
 ## Set the level for a session
 
@@ -71,32 +62,9 @@ unknown name raises `ValueError`.
 ## Find a session's log file
 
 A session also writes a run's records to a file, opened when the build reads
-the configuration and closed by `shutdown()`. It sits under `logs` in the
-session's root, `storage.base_dir` in the session file, in a folder named after
-the session, then `app`. Without a `storage.base_dir` the root is the user's
-data directory, as `platformdirs` reports it:
-
-| Platform | Folder |
-| --- | --- |
-| Windows | `%LOCALAPPDATA%\redsun\logs\<session>\app\` |
-| macOS | `~/Library/Application Support/redsun/logs/<session>/app/` |
-| Linux | `~/.local/share/redsun/logs/<session>/app/` |
-
-When the root changes during a run, through the path provider's
-`set_base_dir`, the run's files move along and writing continues under the new
-root.
-
-Each run has its own file, named after its start time and process id, such as
-`2026-09-13T14-02-46_8120.log`. At 10 MB a file rotates to `.log.1`, `.log.2`
-and so on, keeping 5 older files. Starting a run deletes the files of all but
-the session's 20 most recent runs.
-
-Each launched service writes its own file under `logs/<session>/services/`,
-named after the run and the service, such as
-`2026-09-13T14-02-46_8120.camera_ioc.log`, rotated the same way and deleted
-with the run's application file. The application's file holds no service
-records, so a service logging heavily rotates only its own file. The file is
-created when the service first logs something.
+the configuration and closed by `shutdown()`, and each launched service to a
+file of its own. [Log files](../reference/log-files.md) says where they are,
+what they are called and how long they are kept.
 
 [`session_log`][redsun.log.session_log] returns the handler writing the current
 run, and `session_log("camera_ioc")` the one writing that service's file. A

@@ -118,6 +118,7 @@ nav = [
             "reference/plugin-manifest.md",
         ]},
         "reference/environment.md",
+        "reference/log-files.md",
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",

@@ -115,7 +115,7 @@ parameter `| None` and a default of `None`, as
 ## Open the log file
 
 Each run also writes its records to a file.
-[How to configure logging](configure-logging.md#find-a-sessions-log-file)
+[Log files](../reference/log-files.md)
 says where it is.
 
 To read the records in the window instead, add
