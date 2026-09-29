@@ -124,7 +124,8 @@ when it is declared.
 A session started with `run` saves where the user left the docks when it
 ends, and puts them back the next time. A dock that was saved keeps its
 saved place, so a new placement for it does not show; a view under a name
-not saved before takes its placement. To start every dock from its placement
+not saved before takes its placement. The log says which docks the saved layout
+keeps away from their placement. To start every dock from its placement
 again, close the session and remove the `window.state` key from its settings
 file, listed in
 [The session's settings](save-a-session.md#the-sessions-settings).

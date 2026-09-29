@@ -74,6 +74,24 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
 
 
+def test_a_dock_kept_away_from_its_placement_is_logged(
+    qapp: QApplication,
+    config_home: Path,
+    build: Callable[..., QtSession],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log each dock the saved layout keeps away from the edge its placement asks for."""
+    first = build(LayoutApp)
+    first.main_window.addDockWidget(RIGHT, _dock(first, "charts"))
+    first.save_layout()
+    first.shutdown()
+
+    build(LayoutApp)
+
+    assert "'charts' stays on the right, where it was left" in caplog.text
+    assert "'panel'" not in caplog.text
+
+
 def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
     qapp: QApplication, config_home: Path, build: Callable[..., QtSession]
 ) -> None:

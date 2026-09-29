@@ -472,7 +472,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         Runs once every dock exists, since Qt places a dock by object name and
         ignores one it has not seen. A session this user has never run finds
-        nothing saved and keeps the layout its views asked for.
+        nothing saved and keeps the layout its views asked for. Each dock the
+        saved layout keeps away from the edge its placement asks for is logged.
         """
         for key, restore in (
             ("window.geometry", self.main_window.restoreGeometry),
@@ -481,6 +482,28 @@ class QtSession(DesktopSession[QMainWindow], Session):
             saved = self.settings.get(key)
             if isinstance(saved, str):
                 restore(QByteArray(base64.b64decode(saved)))
+        if isinstance(self.settings.get("window.state"), str):
+            self._log_moved_docks()
+
+    def _log_moved_docks(self) -> None:
+        """Log each dock that is not on the edge its placement asks for."""
+        edges = {area: edge for edge, area in AREAS.items()}
+        for name, view in self.views.items():
+            placement = view.placement
+            dock = self.main_window.findChild(QDockWidget, name)
+            if not isinstance(placement, Dock) or dock is None:
+                continue
+            edge = edges.get(self.main_window.dockWidgetArea(dock))
+            if edge != placement.area:
+                logger.info(
+                    "Dock %r stays %s, where it was left, not on the %s its "
+                    "placement asks for; remove window.state from %s to use the "
+                    "placement",
+                    name,
+                    f"on the {edge}" if edge else "floating",
+                    placement.area,
+                    self.settings.path,
+                )
 
     def save_layout(self) -> None:
         """Remember where this user left the window.
