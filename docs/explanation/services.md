@@ -188,10 +188,11 @@ services:
     plugin_id: camera-ioc
 ```
 
-| name | protocol | what a session does for it |
-| --- | --- | --- |
-| `channel-access` | Channel Access | gives each launched service a server port of its own and lists `127.0.0.1:<port>` in `EPICS_CA_ADDR_LIST` |
-| `pv-access` | PVAccess | binds each launched service to `127.0.0.1` on a free TCP port and puts that address in `EPICS_PVA_ADDR_LIST` |
+Under `channel-access`, a session gives each launched service a server port
+of its own, and tells its own process where that port is. Under `pv-access`,
+it binds each launched service to `127.0.0.1` on a free port, and tells its
+own process to look there.
+[Environment variables](../reference/environment.md) lists what it sets.
 
 `channel-access` is what a session speaks unless it says otherwise, and a file
 layered over another cannot change it. The variables both protocols read hold
@@ -215,12 +216,7 @@ and `ophyd-async[ca]` or `ophyd-async[pva]` for the device side; see
 ## What a launched service is told
 
 Besides its transport's variables, a launched process reads its name and prefix
-from its environment:
-
-| variable | value |
-| --- | --- |
-| `REDSUN_SERVICE_NAME` | the name the service is declared under |
-| `REDSUN_SERVICE_PREFIX` | the `prefix` of the declaration, empty when it has none |
+from its environment, as `REDSUN_SERVICE_NAME` and `REDSUN_SERVICE_PREFIX`.
 
 A module serving several sessions names its channels from these rather than
 taking arguments for them.

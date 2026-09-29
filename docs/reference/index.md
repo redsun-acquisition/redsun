@@ -5,7 +5,7 @@ icon: lucide/book-open
 # Reference
 
 Technical reference material: the glossary, the files a session reads, the
-API and the release notes.
+variables it sets, the API and the release notes.
 
 ### Glossary
 
@@ -17,6 +17,11 @@ API and the release notes.
 - [Session file](session-file.md): every key of a session file
 - [Plugin manifest](plugin-manifest.md): every key of the manifest of a
   plugin
+
+### Environment
+
+- [Environment variables](environment.md): what a session sets for its
+  services and for itself, and what it reads
 
 ### API
 
