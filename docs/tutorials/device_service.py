@@ -281,6 +281,7 @@ class ScanPlans:
 
 # --8<-- [start:session]
 class FirstSession(QtSession):
+    config = "session.yaml"
     stage_ioc: Annotated[
         AsService,
         Launch("stage_ioc", ready="Server startup complete.", prefix="STAGE:"),

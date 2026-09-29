@@ -27,9 +27,9 @@ Open `first_session.py`, and add a presenter below `ImageView`:
 --8<-- "docs/tutorials/scan_plan.py:scan_plans"
 ```
 
-`scan` wraps [`scan`][bluesky.plans.scan], a plan `bluesky` already has: it
-moves through `points` positions from `start` to `stop`, and reads the camera
-at each one.
+`scan` wraps a plan `bluesky` already has, also called
+[`scan`][bluesky.plans.scan]. It moves through `points` positions from
+`start` to `stop`, and reads the camera at each one.
 
 The plan asks for a stage and a camera through the two protocols you wrote,
 `HasPosition` and `Camera`. It names no device, and the presenter holds none.
@@ -38,7 +38,7 @@ The plan asks for a stage and a camera through the two protocols you wrote,
 
 Add the highlighted line:
 
-```{.python hl_lines="9"}
+```{.python hl_lines="10"}
 --8<-- "docs/tutorials/scan_plan.py:session"
 ```
 
@@ -72,16 +72,22 @@ millimetre at a time, and the last frame appears below.
 
 Open the folder of the camera, where the last tutorial left its files. It
 has a new one, `scan_00000.h5`, named after the plan. It holds six frames,
-one for each position. To count them, give the path of the file to this
-command:
+one for each position.
+
+To count them, run this command with the path of the file in the place of
+the last word:
 
 ```bash
-uv run python -c "import h5py, sys; print(h5py.File(sys.argv[1])['entry/data/data'].shape)" scan_00000.h5
+uv run python -c "import h5py, sys; print(h5py.File(sys.argv[1])['entry/data/data'].shape)" PATH
 ```
 
 ```text
 (6, 240, 320)
 ```
+
+The file holds the frames and not the positions. The positions are in the
+documents of the run, and nothing in this session keeps them.
+[How to keep a catalog of runs](../how-to/keep-a-catalog.md) does.
 
 ## 5. Scan the other stage
 

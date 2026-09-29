@@ -5,8 +5,8 @@ icon: lucide/shapes
 # Describing a device with a protocol
 
 In this tutorial you add a second stage to the session, of another class. The
-presenter and the view you wrote control it too, and you edit two lines of
-the first and none of the second. It continues from
+presenter and the view you wrote control it too: you change how the presenter
+asks for its devices, and nothing in the view. It continues from
 [Writing your first session](first-session.md).
 
 You will check the types of the script, write a
@@ -25,10 +25,10 @@ devices that satisfy it, and add the stage.
     uv add --dev mypy
     ```
 
-Open `first_session.py` as you left it at the end of the first tutorial. You
-keep working in this file until the last tutorial. Each one adds to what is
-there, and where a line you wrote has to change, the page shows it
-highlighted.
+Open `first_session.py` as you left it at the end of
+[Writing your first session](first-session.md). You keep working in this
+file until the last tutorial. Each one adds to what is there, and where a
+line you wrote has to change, the page shows it highlighted.
 
 ## 1. Check the types
 
@@ -60,7 +60,8 @@ Write that down as a protocol, above `StagePresenter`:
 --8<-- "docs/tutorials/device_protocols.py:protocol"
 ```
 
-Add the imports it needs to the ones at the top of the file:
+Add the imports it needs below the imports the file has. The line
+`from __future__ import annotations` stays the first of the file:
 
 ```python
 from typing import Protocol, runtime_checkable
@@ -78,20 +79,22 @@ the program runs, which the next tutorial relies on.
 
 Change the constructor of `StagePresenter` as highlighted. It asks for
 [`DevicesOf[HasPosition]`][redsun.DevicesOf] under the name `stages`, where it
-asked for a `DeviceMapping` under the name `devices`:
+asked for a `DeviceMapping` under the name `devices`. The rest of the class
+stays:
 
-```{.python hl_lines="1-3 5"}
+```{.python hl_lines="2-4 6"}
 --8<-- "docs/tutorials/device_protocols.py:constructor"
 ```
 
-Add one more import:
+Add one more import, below the others:
 
 ```python
 from redsun import DevicesOf
 ```
 
 The session now passes the devices that satisfy `HasPosition`, by name, and
-leaves the others out.
+leaves the others out. It reads the question from the type of the parameter.
+The name of the parameter is yours to choose.
 
 !!! tip "Imports on more than one line"
 
@@ -135,7 +138,7 @@ It satisfies the protocol all the same.
 Add the highlighted lines to the session: the stage, and the link that sends
 its position to the view.
 
-```{.python hl_lines="3 10"}
+```{.python hl_lines="4 11"}
 --8<-- "docs/tutorials/device_protocols.py:session"
 ```
 
@@ -154,7 +157,7 @@ Container built: 2/2 devices, 1/1 presenters, 1/1 views
 position](images/device-protocols.png)
 
 The view has a second row, for `fast_stage`, which starts at `5.0`. Press its
-button: `fast_stage` moves, and `stage` stays where it is.
+button: `fast_stage` moves to `5.5`, and `stage` stays where it is.
 
 One presenter and one view now control two stages of different classes. You
 wrote neither of them for `FastStage`.
@@ -168,9 +171,9 @@ wrote neither of them for `FastStage`.
 ## What you built
 
 A session with two stages of different classes, both shown and moved by the
-presenter and the view of the first tutorial. The script passes the type
-checker. Every stage you add in the next tutorials takes a line in the
-session and a link, and no new presenter or view.
+presenter and the view you already had. The script passes the type checker.
+Every stage you add in the next tutorials takes a line in the session and a
+link, and no new presenter or view.
 
 ## Next steps
 

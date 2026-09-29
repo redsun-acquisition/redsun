@@ -18,7 +18,7 @@ them, and find out what the window remembers between two runs.
 
     The project folder as you left it, and nothing else.
 
-Open `first_session.py`, and add this import to the ones it has:
+Open `first_session.py`, and add this import below the ones it has:
 
 ```python
 from redsun.qt import Central
@@ -28,11 +28,11 @@ from redsun.qt import Central
 
 Every view you wrote so far is a [`Dock`][redsun.qt.Dock]: a panel against
 one edge of the window. [`Central`][redsun.qt.Central] is the main area of
-the window. Change the placement of `ImageView` as highlighted:
+the window. In the class `ImageView`, change the line of the placement to
+this one, and leave the rest of the class as it is:
 
-```{.python hl_lines="2"}
-class ImageView(QWidget):
-    placement: Placement = Central()
+```python
+placement: Placement = Central()
 ```
 
 Run the script:
@@ -42,29 +42,23 @@ uv run first_session.py
 ```
 
 The image has the middle of the window, with the stages on its left and the
-plans on its right. Choose `snap` in the list of the plans and press **Run**:
-
-![The window of the session: an image of concentric rings in the centre, the
-rows of the stages below it and the plan widget of snap on the
-right](images/window-layout.png)
-
-In the picture the stages are already below the image. In your window they
-are still on the left, and the next step moves them.
+plans on its right.
 
 ## 2. Move the stages to the bottom
 
-Change the placement of `StageView` as highlighted:
+In the class `StageView`, change the line of the placement to this one:
 
-```{.python hl_lines="2"}
-class StageView(QWidget):
-    placement: Placement = Dock("bottom")
+```python
+placement: Placement = Dock("bottom")
 ```
 
 Run the script again. The stages are still on the left.
 
 Nothing is wrong with the line. The window saves where its docks are when
 you close it, and puts them back the next time. A placement says where a
-view goes when the window has nothing saved.
+view goes when the window has nothing saved for it. The image moved at once
+in step 1 because it stopped being a dock, and the window saves where its
+docks are.
 
 ## 3. Forget the saved layout
 
@@ -83,7 +77,12 @@ Run the script once more:
 uv run first_session.py
 ```
 
-The stages are below the image, as in the picture.
+The stages are below the image. Choose `snap` in the list of the plans and
+press **Run**:
+
+![The window of the session: an image of concentric rings in the centre, the
+rows of the stages below it and the plan widget of snap on the
+right](images/window-layout.png)
 
 ## 4. Move a dock by hand
 

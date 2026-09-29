@@ -69,6 +69,9 @@ sends with the name of a stage when its button is pressed. `show_reading` is a
 receives a reading: the value of a device signal, under the name of that
 signal.
 
+You never call the constructor yourself: the session does. It gives every
+view its `name` and its `parent`, and every component keeps its name.
+
 ## 3. The session
 
 Add a session below the view. For now it holds the stage and the view, and
@@ -87,6 +90,12 @@ if __name__ == "__main__":
     FirstSession().run()
 ```
 
+Each line in the class body is a component: its name on the left, its
+[layer](../explanation/glossary.md#layer) and its class on the right.
+[`wire`][redsun.Session.wire] yields the
+[links](../explanation/glossary.md#link) of the session: what sends, then the
+slot that receives.
+
 Run the script:
 
 ```bash
@@ -99,13 +108,18 @@ The terminal says what the session built:
 Container built: 1/1 devices, 0/0 presenters, 1/1 views
 ```
 
-and a window opens with the view docked on the left:
+In your terminal the line starts with the time and the word `INFO`. These
+pages leave both out.
+
+A window opens with the view docked on the left:
 
 ![The first session's window, with a row for the stage: a Nudge button and
 its position](images/first-session.png)
 
-The view has one row, for `stage`. Press the button: nothing happens yet,
-since nobody listens to it. Close the window.
+The view has one row, for `stage`. A link from a device signal sends the
+value the signal has now, then every new one, and that first value made the
+row. Press the button: nothing happens yet, since nobody listens to it.
+Close the window.
 
 ## 4. The presenter
 
@@ -116,10 +130,9 @@ this one between `MyStage` and `StageView`. It moves a stage by one step:
 --8<-- "docs/tutorials/first_session.py:presenter"
 ```
 
-You never call the constructor yourself: the session does, and finds a value
-for each parameter. `devices` is a
-[`DeviceMapping`][redsun.DeviceMapping], so it receives every device of the
-session, by name. [Components](../explanation/components.md) explains the
+The session finds a value for each parameter of the constructor. `devices`
+is a [`DeviceMapping`][redsun.DeviceMapping], so it receives every device of
+the session, by name. [Components](../explanation/components.md) explains the
 rules.
 
 `nudge` is a slot that takes the name of a stage. It is `async` because a
@@ -141,9 +154,8 @@ sends the press of a button to it.
 --8<-- "docs/tutorials/first_session.py:session"
 ```
 
-[`wire`][redsun.Session.wire] is where the session connects its components.
 The view knows nothing about the presenter, and the presenter knows nothing
-about the view.
+about the view. The session is what joins them.
 
 Run the script again:
 
@@ -159,7 +171,7 @@ Press the button: the position counts up by one each time.
 
 ## 6. Change a setting without touching the code
 
-Make a file called `session.yaml` beside the script:
+Make a file called `session.yaml` in the project folder, beside the script:
 
 ```yaml
 session: first-session
@@ -169,24 +181,26 @@ presenters:
     step: 0.5
 ```
 
-Tell the session to read it, by adding the highlighted line to the class:
+The first line gives the session a name. The rest gives a value to the
+parameter `step` of the component `stage_ctrl`.
 
-```{.python hl_lines="2"}
-class FirstSession(QtSession):
-    config = "session.yaml"
-    stage: AsDevice[MyStage]
+Tell the session to read the file. Add this line to the class
+`FirstSession`, as its first:
+
+```python
+config = "session.yaml"
 ```
 
-Run it again. Each press now moves the stage by `0.5`: the session found
-`step` in the file and passed it to the presenter's constructor.
+Run the script again. Each press now moves the stage by `0.5`: the session
+found `step` in the file and passed it to the constructor of the presenter.
 
-Keep the file and the line. The pages of the next tutorials do not show the
-`config` line, and your session has it all the same.
+The session looks for the file in the folder you run the command from, which
+is the project folder. Keep the file and the line: the next tutorials count
+on both.
 
 ??? example "The whole script"
 
-    The script leaves out the `config` line of step 6, which needs
-    `session.yaml`.
+    The script leaves out the `config` line of step 6.
 
     ```{.python}
     --8<-- "docs/tutorials/first_session.py"

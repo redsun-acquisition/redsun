@@ -30,7 +30,7 @@ an entry in the plan widgets of `walk` and `scan`.
     uv add caproto "ophyd-async[ca]"
     ```
 
-Open `first_session.py`, and add these imports to the ones it has:
+Open `first_session.py`, and add these imports below the ones it has:
 
 ```python
 from typing import Annotated
@@ -42,8 +42,8 @@ from redsun import AsService, Declare, Launch
 
 ## 1. Write the service
 
-Make a second file beside the first, called `stage_ioc.py`. Start it with
-these imports:
+Make a second file in the project folder, beside the first, called
+`stage_ioc.py`. Start it with these imports:
 
 ```{.python}
 --8<-- "docs/tutorials/stage_ioc.py:imports"
@@ -61,9 +61,13 @@ two protocols of [EPICS](../explanation/glossary.md#epics). A program of this
 kind is called an [IOC](../explanation/glossary.md#ioc), and a value it serves
 a [process variable](../explanation/glossary.md#process-variable).
 
+This stage keeps a number. The service of a real stage would talk to its
+controller in the same place: `caproto` can call a function each time
+`Position` is set.
+
 A service that a session starts has to do two more things. It stops when the
-session closes its input, and it listens on this machine only. Add both
-below the stage:
+session closes the standard input of the service, and it listens on this
+machine only. Add both below the stage:
 
 ```{.python}
 --8<-- "docs/tutorials/stage_ioc.py:stop"
@@ -73,13 +77,22 @@ below the stage:
 --8<-- "docs/tutorials/stage_ioc.py:main"
 ```
 
+The first of the last lines reads the
+[prefix](../explanation/glossary.md#prefix) of the process variables, which
+the session hands to the service in `REDSUN_SERVICE_PREFIX`. Run alone, the
+service falls back on `STAGE:`.
+
 Try it alone:
 
 ```bash
 uv run stage_ioc.py
 ```
 
-It prints `Server startup complete.` and waits. Stop it with ++ctrl+c++.
+It prints `Server startup complete.` and waits. Stop it with ++ctrl+c++, and
+do not leave it running: the session starts its own.
+
+On Windows the service may print a few lines that end with
+`OSError: [WinError 995]` as it stops. It has stopped all the same.
 
 ## 2. Write the device
 
@@ -91,22 +104,25 @@ process variable of the service:
 ```
 
 The device names only the end of the process variable, `Position`. The
-beginning, the [prefix](../explanation/glossary.md#prefix), comes from the
-service it is declared with.
+beginning, the prefix, comes from the service it is declared with.
 
 ## 3. Declare the service
 
 Add the highlighted lines to the session: the service, the stage, and the
 link that sends its position to the view.
 
-```{.python hl_lines="2-5 8 23"}
+```{.python hl_lines="3-6 9 24"}
 --8<-- "docs/tutorials/device_service.py:session"
 ```
 
-[`AsService`][redsun.AsService] declares a service, and
-[`Launch`][redsun.Launch] says how to start it: the module to run, the line it
-prints when it is ready, and its prefix. [`Declare`][redsun.Declare] ties the
-stage to the service by its name.
+[`AsService`][redsun.AsService] declares a service, under the name on the
+left of its line. [`Launch`][redsun.Launch] says how to start it: the module
+to run, which is the name of the file, then the line it prints when it is
+ready, and its prefix. [`Declare`][redsun.Declare] ties the stage to the
+service, by the name the session gave it.
+
+The prefix is written once, here. The session hands it to the service and to
+the device.
 
 ## 4. Run it
 
@@ -124,14 +140,15 @@ Container built: 4/4 devices, 5/5 presenters, 3/3 views
 ```
 
 The window is the one of the last tutorial, with one more stage: the view of
-the stages has a row for `remote_stage`, and the plan widget of `walk` lists
-it. Press its button, or choose it in the list of stages and press **Run**:
-its position counts up, in a program that is not the one drawing the window.
+the stages has a row for `remote_stage`, and the plan widgets of `walk` and
+`scan` list it. Press its button, or choose it in a list of stages and press
+**Run**: its position counts up, in a program that is not the one drawing the
+window.
 
 !!! note "Two messages you can ignore"
 
-    On a machine with no EPICS installed, Channel Access prints two messages
-    that look like errors:
+    Channel Access may print one or both of these messages, which look like
+    errors:
 
     ```text
     Failed to start executable - "caRepeater".
@@ -142,9 +159,24 @@ its position counts up, in a program that is not the one drawing the window.
         Warning: "Virtual circuit disconnect"
     ```
 
-    The first says that a helper program of EPICS is missing, which a single
-    machine does not need. The second appears when the service stops, and
-    says that the connection to it closed.
+    The first says that a helper program of EPICS is missing. The helper
+    shares the announcements of servers between the programs of one machine,
+    and without it a program takes longer to notice that a server has
+    started again. The second says that the connection to the service
+    closed. It is expected when you close the window. At any other time it
+    means that the service went away.
+
+!!! warning "One message you should not ignore"
+
+    ```text
+    CA.Client.Exception...
+        Warning: "Identical process variable names on multiple servers"
+    ```
+
+    Another program the machine can reach serves `STAGE:Position` too, and
+    the stage may be talking to that one. Look for a `stage_ioc.py` left
+    running in another terminal. On a network shared with others, choose a
+    prefix nobody else uses.
 
 ## 5. Stop it
 
@@ -173,9 +205,9 @@ Services not started: the session is mocked
 Container built: 4/4 devices, 5/5 presenters, 3/3 views
 ```
 
-The window opens with no service behind it. Every device is a stand-in that
-remembers what it is set to, so the buttons and the plan widgets still work.
-Change the line back when you want the service again.
+The window opens with no service behind it. Every device, the camera
+included, is a stand-in that remembers what it is set to, so the buttons and
+the plans still work. Change the line back when you want the service again.
 
 ??? example "The whole script"
 

@@ -55,8 +55,8 @@ class HasPosition(Protocol):
 # --8<-- [end:protocol]
 
 
+# --8<-- [start:constructor]
 class StagePresenter:
-    # --8<-- [start:constructor]
     def __init__(
         self, name: str, *, stages: DevicesOf[HasPosition], step: float = 1.0
     ) -> None:
@@ -98,6 +98,7 @@ class StageView(QWidget):
 
 # --8<-- [start:session]
 class FirstSession(QtSession):
+    config = "session.yaml"
     stage: AsDevice[MyStage]
     fast_stage: AsDevice[FastStage]
     stage_ctrl: AsPresenter[StagePresenter]

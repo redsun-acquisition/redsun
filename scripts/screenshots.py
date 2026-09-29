@@ -15,6 +15,7 @@ needs; CI provides one with a virtual display.
 
 from __future__ import annotations
 
+import os
 import runpy
 import subprocess
 import sys
@@ -108,7 +109,13 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
 def capture(
     script: Path, target: Path, size: tuple[int, int], press: str | None
 ) -> None:
-    """Run *script* as ``__main__`` and photograph the window it shows."""
+    """Run *script* as ``__main__`` and photograph the window it shows.
+
+    The script runs from its own folder, where a reader runs it and where the
+    session file it names is.
+    """
+    script, target = script.resolve(), target.resolve()
+    os.chdir(script.parent)
     with tempfile.TemporaryDirectory() as home:
 
         def elsewhere(*_: object, **__: object) -> str:
@@ -135,7 +142,8 @@ def main(arguments: list[str]) -> None:
     """Photograph the script named in *arguments*, or each script in a process."""
     if arguments:
         script = Path(arguments[0])
-        capture(script, *SCREENSHOTS[script])
+        target, size, press = SCREENSHOTS[script]
+        capture(script, target, size, press)
         return
     for script in SCREENSHOTS:
         subprocess.run([sys.executable, __file__, script.as_posix()], check=True)

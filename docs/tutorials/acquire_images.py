@@ -263,6 +263,7 @@ class ImageView(QWidget):
 
 # --8<-- [start:session]
 class FirstSession(QtSession):
+    config = "session.yaml"
     stage: AsDevice[MyStage]
     fast_stage: AsDevice[FastStage]
     camera: AsDevice[SimBlobDetector]

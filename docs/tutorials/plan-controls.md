@@ -4,17 +4,18 @@ icon: lucide/list-checks
 
 # Building controls for a plan
 
-In this tutorial you write a plan, and the window gains the controls to run it:
-a list of the plans to choose from, and for the plan chosen a list of stages,
-an input for each parameter, and a **Run** button. `redsun` builds them from
-the plan, as a [plan widget](../explanation/glossary.md#plan-widget). It
-continues from [Describing a device with a protocol](device-protocols.md).
+In this tutorial you write a plan, and the window gains the controls to run
+it: a list of the plans to choose from, and for the plan chosen a list of
+stages, an input for each parameter, and a **Run** button. `redsun` builds
+them from the plan, as a
+[plan widget](../explanation/glossary.md#plan-widget). It continues from
+[Describing a device with a protocol](device-protocols.md).
 
 You will write three components: one that offers a
 [plan](../explanation/glossary.md#plan), one that runs plans on a
 [`RunEngine`](../explanation/glossary.md#runengine), and one that shows the
-plan widget of the plan you choose. The last two never name the first. They ask
-the session who offers plans, and the session answers.
+plan widget of the plan you choose. The last two never name the first. They
+ask the session who offers plans, and the session answers.
 
 ## Before you start
 
@@ -22,7 +23,7 @@ the session who offers plans, and the session answers.
 
     The project folder as you left it, and nothing else.
 
-Open `first_session.py`, and add these imports to the ones it has:
+Open `first_session.py`, and add these imports below the ones it has:
 
 ```python
 from collections.abc import Mapping
@@ -85,9 +86,17 @@ its parameters:
 signature of a plan and describes it, as a
 [`PlanSpec`][redsun.presenter.plan_spec.PlanSpec].
 
-`run` takes the name of a plan and the values the user chose, and starts the
-plan. It does not wait for the plan to end: `sig_finished` tells the view
-when it is over.
+`run` takes the name of a plan and the values the user chose. The user
+chooses a stage by its name, so
+[`resolve_arguments`][redsun.presenter.plan_spec.resolve_arguments] puts the
+device in the place of the name, and
+[`collect_arguments`][redsun.presenter.plan_spec.collect_arguments] puts the
+values in the order the plan takes them.
+
+Calling the engine starts the plan and does not wait for it to end. It
+returns a future, which stands for the result to come. The presenter asks
+the future to send `sig_finished` once the plan is over. Nothing listens to
+`sig_started` yet: the next tutorial links it.
 
 ## 3. Build the controls
 
@@ -104,11 +113,14 @@ plan widget from the description of the plan. The view disables itself while
 a plan runs, and enables itself again when the presenter says the plan has
 finished.
 
+`redsun` does not ship these two components. How plans are run and shown is
+for each application to decide, and you write it once.
+
 ## 4. Add them to the session
 
 Add the highlighted lines:
 
-```{.python hl_lines="5 6 8 14 15"}
+```{.python hl_lines="6 7 9 15 16"}
 --8<-- "docs/tutorials/plan_controls.py:session"
 ```
 
@@ -126,8 +138,8 @@ Container built: 2/2 devices, 3/3 presenters, 2/2 views
 ```
 
 ![The window of the session: the rows of the two stages on the left, and on
-the right a list of plans that shows walk, above the plan widget of walk:
-a list of stages, an input for steps, an input for size and a Run
+the right a list of plans that shows walk, above the plan widget of walk: a
+list of stages, an input for steps, an input for size and a Run
 button](images/plan-controls.png)
 
 The view on the right starts with the list of the plans, which holds `walk`
@@ -135,11 +147,19 @@ alone for now. Below it is the plan widget of `walk`: a list with the two
 stages, an input for `steps` and one for `size` with the defaults you wrote,
 and a **Run** button.
 
+The list of stages holds the devices that satisfy `HasPosition`. That check
+is made while the program runs, which is what `runtime_checkable` allowed.
+
 ## 5. Run the plan
 
-Leave `stage` selected in the list of stages and press **Run**. The view greys
-out, the position of `stage` counts up on the left, and the view comes back:
-the stage has moved five steps.
+Leave `stage` selected in the list of stages and press **Run**. The view of
+the plans greys out, the position of `stage` counts up on the left, and the
+view comes back: the stage has moved five steps of one millimetre, to `5.0`.
+
+`walk` moves by its own `size`. The `step` of `session.yaml` belongs to the
+buttons of the stages.
+
+If a plan fails, the terminal says why, and the view comes back.
 
 ## 6. Change the parameters
 
@@ -160,9 +180,9 @@ signature of `walk`.
 
 Controls that run a plan on the stage you choose, with the number of steps
 and their size you type in. The window shows the stage moving while the plan
-runs, and stays usable meanwhile. Any component that offers a plan adds an
-entry to the list of the plans, with no change to the presenter or the view
-you wrote here.
+runs. Only the view of the plans is greyed out meanwhile. Any component that
+offers a plan adds an entry to the list of the plans, with no change to the
+presenter or the view you wrote here.
 
 ## Next steps
 

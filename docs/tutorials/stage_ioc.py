@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 # --8<-- [start:imports]
+import os
 import signal
 import sys
 import threading
@@ -27,7 +28,8 @@ def stop_when_stdin_closes() -> None:
 # --8<-- [end:stop]
 # --8<-- [start:main]
 if __name__ == "__main__":
-    options, run_options = ioc_arg_parser(default_prefix="STAGE:", desc="stage")
+    prefix = os.environ.get("REDSUN_SERVICE_PREFIX", "STAGE:")
+    options, run_options = ioc_arg_parser(default_prefix=prefix, desc="stage")
     threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
     run(Stage(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 # --8<-- [end:main]
