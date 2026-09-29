@@ -64,7 +64,7 @@ It prints the version that was installed:
 
 ## What you built
 
-A project folder, `my-microscope`, with `redsun` and PyQt6 installed in an
+A project folder, `my-microscope`, with `redsun` and `pyqt6` installed in an
 environment of its own.
 
 ## Next steps

@@ -73,7 +73,11 @@ SETTLE = 3.0
 
 
 def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
-    """Save the visible main window to *target*, and close every window."""
+    """Save the visible main window to *target*, and close every window.
+
+    With *press*, given as ``view:plan``, that plan is chosen in that view
+    and run before the picture is taken.
+    """
     app = QApplication.instance()
     assert isinstance(app, QApplication)
     window = next(

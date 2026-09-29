@@ -23,7 +23,7 @@ function setUpInstallTable(table) {
     });
     const name = table.dataset.package;
     const target = extras.length ? `"${name}[${extras.join(",")}]"` : name;
-    output.textContent = `${command} ${target}`;
+    output.textContent = [command, target].filter(Boolean).join(" ");
   };
 
   rows.forEach((row) => {
@@ -46,13 +46,17 @@ function setUpInstallTable(table) {
   });
 
   const copy = table.querySelector(".install-copy");
-  if (copy) {
+  // the clipboard exists on a page served over HTTPS or from this machine
+  if (copy && navigator.clipboard) {
     copy.hidden = false;
     copy.addEventListener("click", () => {
-      navigator.clipboard.writeText(output.textContent).then(() => {
-        copy.textContent = "Copied";
-        setTimeout(() => (copy.textContent = "Copy"), 1500);
-      });
+      navigator.clipboard
+        .writeText(output.textContent)
+        .then(() => {
+          copy.textContent = "Copied";
+          setTimeout(() => (copy.textContent = "Copy"), 1500);
+        })
+        .catch(() => (copy.hidden = true));
     });
   }
 

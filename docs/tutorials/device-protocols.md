@@ -39,8 +39,8 @@ uv run mypy first_session.py
 The script runs, and still `mypy` finds two errors in it:
 
 ```text
-first_session.py:27: error: "Device" has no attribute "position"  [attr-defined]
-first_session.py:28: error: "Device" has no attribute "position"  [attr-defined]
+first_session.py:29: error: "Device" has no attribute "position"  [attr-defined]
+first_session.py:30: error: "Device" has no attribute "position"  [attr-defined]
 Found 2 errors in 1 file (checked 1 source file)
 ```
 
