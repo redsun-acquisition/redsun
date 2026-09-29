@@ -80,7 +80,9 @@ machine only. Add both below the stage:
 The first of the last lines reads the
 [prefix](../explanation/glossary.md#prefix) of the process variables, which
 the session hands to the service in `REDSUN_SERVICE_PREFIX`. Run alone, the
-service falls back on `STAGE:`.
+service falls back on `STAGE:`. The session also sets `REDSUN_SERVICE_NAME`,
+and the service watches its standard input only then, so that run alone
+without a terminal it does not stop at once.
 
 Try it alone:
 

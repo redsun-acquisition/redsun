@@ -33,6 +33,7 @@ standard input closes, and listen only on the local machine:
 
 ```python
 # mylab/iocs/camera.py
+import os
 import signal
 import sys
 import threading
@@ -51,7 +52,8 @@ class Camera(PVGroup):
 
 if __name__ == "__main__":
     options, run_options = ioc_arg_parser(default_prefix="CAM:", desc="camera")
-    threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
+    if "REDSUN_SERVICE_NAME" in os.environ:
+        threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
     run(Camera(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 ```
 
@@ -60,6 +62,11 @@ if __name__ == "__main__":
 - Closing standard input is how a session asks a service to stop, on every
   platform. The watcher raises `SIGINT`, so the service shuts down as it would
   on Ctrl+C. Use a daemon thread for it.
+- Start the watcher only when a session launched the service, which sets
+  `REDSUN_SERVICE_NAME`. Run on its own without a terminal, in the
+  background, under a service manager or in a container run without `-i`, a
+  service has its standard input closed from the start, and the watcher would
+  stop it at once.
 - If the session crashes, nobody reads the service's output any more, and
   printing raises. Clean up before printing, or do not print.
 - `127.0.0.1` keeps a launched service off the network.
@@ -70,12 +77,6 @@ chooses when its process starts, and no other program is told which one, so
 program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. A
 service other machines must reach runs on its own, on the ports it is set to,
 and the session attaches to it.
-
-The watcher stops the service as soon as its standard input closes, which is
-at once when it starts without one: in the background, under a service
-manager, or in a container run without `-i`. A module that also runs on its
-own that way starts the watcher only when a session launched it, which it can
-tell from `REDSUN_SERVICE_NAME` being set.
 
 ## Declare it
 

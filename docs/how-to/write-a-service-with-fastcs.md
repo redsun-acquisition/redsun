@@ -57,7 +57,9 @@ it holds.
   [prefix](../explanation/glossary.md#prefix) through the environment
   variable `REDSUN_SERVICE_PREFIX`, and the controller is served under it.
 - The service prints a line when it is ready, and stops when its standard
-  input closes, as every service a session launches must.
+  input closes, as every service a session launches must. It watches its
+  standard input only when a session launched it, which sets
+  `REDSUN_SERVICE_NAME`, so that it also runs on its own without a terminal.
 - Run alone, the service listens on every network interface of the machine.
   Launched by a session, it listens on `127.0.0.1` only, since the session
   sets `EPICS_PVAS_INTF_ADDR_LIST`; see

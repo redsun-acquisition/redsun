@@ -22,7 +22,7 @@ Open a terminal in the place where you keep your work, and make a project
 called `my-microscope`:
 
 ```bash
-uv init --bare --pin-python --python 3.12 my-microscope
+uv init --bare --pin-python --python 3.11 my-microscope
 ```
 
 ```text

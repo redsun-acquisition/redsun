@@ -45,8 +45,9 @@ async def serve(prefix: str) -> None:
     serving = asyncio.ensure_future(served.serve(interactive=False))
     await until_served(prefix, serving)
     print(READY, flush=True)
-    await asyncio.to_thread(sys.stdin.read)
-    serving.cancel()
+    if "REDSUN_SERVICE_NAME" in os.environ:
+        await asyncio.to_thread(sys.stdin.read)
+        serving.cancel()
     await asyncio.gather(serving, return_exceptions=True)
 
 

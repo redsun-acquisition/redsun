@@ -30,6 +30,7 @@ def stop_when_stdin_closes() -> None:
 if __name__ == "__main__":
     prefix = os.environ.get("REDSUN_SERVICE_PREFIX", "STAGE:")
     options, run_options = ioc_arg_parser(default_prefix=prefix, desc="stage")
-    threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
+    if "REDSUN_SERVICE_NAME" in os.environ:
+        threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
     run(Stage(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 # --8<-- [end:main]
