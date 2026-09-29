@@ -4,8 +4,9 @@ icon: lucide/file-code
 
 # How to write a session file
 
-A [session file](../explanation/glossary.md#session-file) is a YAML file with a
-session's settings. This page lists every key it can hold.
+Write a [session file](../explanation/glossary.md#session-file), a YAML file
+with the settings of a session, have an editor check it, and split it over
+several files.
 
 ## Let your editor check it
 
@@ -16,98 +17,31 @@ as you type:
 # yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/session-file.schema.json
 ```
 
-## The keys
+## Write the sections you need
+
+Every key is optional, so a file holds only what differs from what the
+session class declares. This one names the session, gives an argument to a
+presenter the class declares, and moves the files of the session:
 
 ```yaml
-schema_version: 1.0     # the format of this file; 1.0 is the only one
-session: my-lab         # the session's name
-frontend: qt            # the registered frontend to build on
-strict: false           # stop if a component fails to build
-mock: false             # connect devices to simulated backends
-metadata:               # anything you want recorded with the session
-  user: Ada
-  setup: iSCAT
+session: my-lab
 
-services: ...           # processes and servers devices talk to
-devices: ...            # the device layer
-presenters: ...         # the presenter layer
-views: ...              # the view layer
-providers: ...          # shared values from plugins
-storage: ...            # where files go, and the catalog
-wiring: ...             # which signal reaches which slot
-hooks: ...              # objects acting on the toolkit
-actions: ...            # menu and toolbar commands (Qt)
-color_scheme: dark      # system, light or dark (Qt)
-```
-
-Every key is optional. Without `session`, a session is named after its class;
-a file given to `Session.from_config` must set it. Without `frontend`, the
-session builds on the class it was made from.
-
-### Components
-
-`devices`, `presenters` and `views` map each component's name to its
-settings:
-
-```yaml
 presenters:
   motor_ctrl:
-    plugin_name: my-plugin   # the plugin offering the class
-    plugin_id: motor         # its id in that plugin's manifest
-    step: 2.0                # every other key goes to the constructor
-```
+    step: 2.0
 
-For a component the session class already declares, leave out `plugin_name`
-and `plugin_id`: the entry only gives constructor arguments.
-
-A device entry also takes `service`, the service whose
-[prefix](../explanation/glossary.md#prefix) it gets, and `autoconnect: false`,
-to leave it unconnected.
-
-### Services
-
-```yaml
-services:
-  transport: pv-access       # channel-access (the default) or pv-access
-  camera_ioc:
-    plugin_name: mylab
-    plugin_id: camera-ioc
-    prefix: "CAM:"
-  beamline:
-    prefix: "BL01:"          # no module: an attached service
-```
-
-A launched service entry may also give `module`, `args`, `ready` and
-`stop_timeout`. See [Write a service](write-a-service.md).
-
-### Storage
-
-```yaml
 storage:
-  base_dir: "D:/experiments/2026-09"   # the session's root folder
-  max_digits: 5                        # width of the file counter
-  catalog:                             # keep a catalog of runs
-    readable: [/data/camera]           # other folders it may read
+  base_dir: "D:/experiments/2026-09"
 ```
 
-See [Keep a catalog of runs](keep-a-catalog.md).
+[Session file](../reference/session-file.md) lists every key, with its type
+and its default. For the sections that have a guide of their own:
 
-### Wiring
-
-```yaml
-wiring:
-  motor_ctrl.sig_moved: motor_widget.refresh
-```
-
-A signal maps to one slot or a list of them. Layered files merge `wiring` by
-signal: a later file naming a new signal adds it, and naming one already
-wired replaces its slots.
-
-See [Wire components together](wire-components.md).
-
-### Hooks and actions
-
-See [Install hooks](install-hooks.md) and [Add menu actions](add-menu-actions.md).
+- `services`: [Write a service](write-a-service.md)
+- `storage.catalog`: [Keep a catalog of runs](keep-a-catalog.md)
+- `wiring`: [Wire components together](wire-components.md)
+- `hooks`: [Install hooks](install-hooks.md)
+- `actions`: [Add menu actions](add-menu-actions.md)
 
 ## Split a configuration over several files
 
@@ -125,6 +59,9 @@ mapping, which is handy for one setting:
 ```python
 app = Simulation({"session": "morning-run"})
 ```
+
+Layered files merge `wiring` by signal: a later file naming a new signal adds
+it, and naming one already wired replaces its slots.
 
 Two rules stop a later source from changing what kind of session this is:
 `schema_version`, `frontend` and `services.transport` must be the same in every

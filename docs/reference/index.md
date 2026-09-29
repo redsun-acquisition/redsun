@@ -4,12 +4,19 @@ icon: lucide/book-open
 
 # Reference
 
-Technical reference material: the glossary, the API and the release notes.
+Technical reference material: the glossary, the files a session reads, the
+API and the release notes.
 
 ### Glossary
 
 - [Glossary](../explanation/glossary.md): the words the documentation uses,
   each defined once
+
+### Files
+
+- [Session file](session-file.md): every key of a session file
+- [Plugin manifest](plugin-manifest.md): every key of the manifest of a
+  plugin
 
 ### API
 

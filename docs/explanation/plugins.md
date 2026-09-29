@@ -67,6 +67,8 @@ my-plugin = "redsun.yaml"
 The entry point's name is the `plugin_name` a session file uses. Check that
 your build tool puts `redsun.yaml` in the package.
 
+[Plugin manifest](../reference/plugin-manifest.md) lists every key.
+
 An editor that reads JSON schemas can check a manifest as you write it, if its
 first line names the published schema:
 

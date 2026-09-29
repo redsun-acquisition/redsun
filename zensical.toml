@@ -104,6 +104,10 @@ nav = [
     { "Reference" = [
         "reference/index.md",
         "explanation/glossary.md",
+        { "Files" = [
+            "reference/session-file.md",
+            "reference/plugin-manifest.md",
+        ]},
         { "API" = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
