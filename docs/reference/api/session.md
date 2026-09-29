@@ -9,10 +9,85 @@ icon: lucide/code
 ::: redsun.Session
     options:
       show_root_heading: true
+      filters: ["!^_", "!^(read_configuration|start_runtime|start_services|build_devices|connect_built_devices|open_registry|build_presenters|build_views|setup_components|seal|apply_wiring|present|log_summary)$"]
+
+### Build steps
+
+`build` runs these methods of `Session` in this order. A subclass replaces one
+by overriding it.
+
+::: redsun.Session.read_configuration
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.start_runtime
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.start_services
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.build_devices
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.connect_built_devices
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.open_registry
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.build_presenters
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.build_views
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.setup_components
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.seal
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.apply_wiring
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.present
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: redsun.Session.log_summary
+    options:
+      show_root_heading: true
+      heading_level: 4
 
 ::: redsun.BuildableSession
     options:
       show_root_heading: true
+      members: false
+
+[`BuildableSession`][redsun.BuildableSession] lists the same methods; they
+are described above, with [`Session`][redsun.Session].
 
 ::: redsun.DesktopSession
     options:
