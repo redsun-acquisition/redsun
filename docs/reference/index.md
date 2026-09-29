@@ -23,7 +23,26 @@ variables it sets, the API and the release notes.
 - [Environment variables](environment.md): what a session sets for its
   services and for itself, and what it reads
 
-### API
+### API by task
+
+| To | Look up |
+| --- | --- |
+| declare the components of a session | [Declaring components](api/session.md#declaring-components) |
+| check what a component must have | [What a component is held to](api/session.md#what-a-component-is-held-to) |
+| act at a moment of the build | [Hook points](api/session.md#hook-points) |
+| change one step of the build | [Build steps](api/session.md#build-steps) |
+| share a value, or ask the session for one | [`redsun.injection`](api/injection.md), [`redsun.registry`](api/registry.md) |
+| connect a signal to a slot | [`redsun.ports`](api/ports.md) |
+| describe a plan and build its controls | [`redsun.presenter`](api/presenter.md), [Qt widgets](api/view.md#qt-widgets) |
+| run a plan, or one that runs until stopped | [`redsun.engine`](api/engine.md) |
+| place a view in the window | [Placements](api/qt.md#placements) |
+| keep a setting between runs | [Settings](api/session.md#settings) |
+| choose where files go | [`redsun.path_provider`](api/path_provider.md) |
+| launch or attach to a service | [`redsun.services`](api/services.md) |
+| log from a component | [`redsun.log`](api/log.md) |
+| catch what a session raises | [`redsun.errors`](api/errors.md) |
+
+### API by module
 
 Look up a class or a function by the module it is imported from.
 
