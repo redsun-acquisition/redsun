@@ -191,29 +191,6 @@ Close the window. The session stops the service it started:
 Service 'stage_ioc' stopped with exit code 0
 ```
 
-## 6. Run without the service
-
-Tell the session to mock its devices, by changing the last line of the
-script:
-
-```{.python hl_lines="2"}
-if __name__ == "__main__":
-    FirstSession({"mock": True}).run()
-```
-
-```bash
-uv run first_session.py
-```
-
-```text
-Services not started: the session is mocked
-Container built: 4/4 devices, 5/5 presenters, 3/3 views
-```
-
-The window opens with no service behind it. Every device, the camera
-included, is a stand-in that remembers what it is set to, so the buttons and
-the plans still work. Change the line back when you want the service again.
-
 ??? example "The whole script"
 
     The service, `stage_ioc.py`:
@@ -232,7 +209,7 @@ the plans still work. Change the line back when you want the service again.
 
 A service that serves a stage, and a session that starts it, talks to it and
 stops it. The application now has three stages, a camera, five presenters
-and three views, and the same window runs with the service or without it.
+and three views.
 
 This is the last tutorial.
 
@@ -243,5 +220,7 @@ This is the last tutorial.
   library, over another protocol.
 - [How to write a service](../how-to/write-a-service.md) covers services that
   already run elsewhere, and what to do when one exits.
+- [How to run a session without hardware](../how-to/run-without-hardware.md)
+  runs the same window with no service behind it.
 - [Services](../explanation/services.md) explains why devices and services
   are kept apart.

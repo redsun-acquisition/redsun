@@ -72,27 +72,18 @@ Add a presenter below `PlanView`:
 --8<-- "docs/tutorials/acquire_images.py:camera_ctrl"
 ```
 
-It does two things.
+It offers a plan, as `StagePlans` does: `snap` wraps
+[`count`][bluesky.plans.count], a plan `bluesky` already has.
 
-It offers a plan, as `StagePlans` does. `snap` wraps
-[`count`][bluesky.plans.count], a plan `bluesky` already has, and returns what
-`count` returns.
-
-It follows the plan while it runs. The
+It also follows the plan while it runs. The
 [`RunEngine`][redsun.engine.RunEngine] describes what happens in
 [documents](../explanation/glossary.md#document), and a `DocumentRouter`
-receives each kind in a method of its name. This one listens for
+receives each kind in a method of its name. This one reads
 [`StreamResource`](../explanation/glossary.md#streamresource), in which a
-device says which file it wrote, and where in it.
-
-The camera sends two of them in a run: one for its frames, and one for the
-sum of each frame. It names the first after itself, `camera`, so the
-presenter keeps the documents named after a camera. `show_last` opens the
-file and sends the last frame with `sig_frame`. The document gives the file
-as a URI, which the two functions of `urllib` turn into a path.
-
-The frame is read once the plan has ended, which keeps this page short.
-Showing frames while they arrive takes more than it covers.
+device says which file it wrote. Of the two the camera sends in a run, the one
+named `camera` holds its frames. `show_last` turns the URI of that file into a
+path with the two functions of `urllib`, opens it, and sends the last frame
+with `sig_frame`, once the plan has ended.
 
 ## 3. Run it
 

@@ -74,29 +74,20 @@ plans the session holds:
 --8<-- "docs/tutorials/plan_controls.py:plan_ctrl"
 ```
 
-Look at `setup`. It runs once every component exists, and the session fills
-its parameters:
+`setup` runs once every component exists, and the session fills its
+parameters. `providers` asks for every component that satisfies `HasPlans`,
+so `PlanPresenter` receives `StagePlans` without naming it. `callbacks` asks
+for the components that follow a plan while it runs; the next tutorial adds
+one. [`create_plan_spec`][redsun.presenter.plan_spec.create_plan_spec]
+describes each plan from its signature.
 
-- `providers` asks for every component that satisfies `HasPlans`, by name.
-  `PlanPresenter` does not name `StagePlans`, and receives it.
-- `callbacks` asks for the components that follow a plan while it runs. The
-  session has none yet, and the next tutorial adds one.
-
-[`create_plan_spec`][redsun.presenter.plan_spec.create_plan_spec] reads the
-signature of a plan and describes it, as a
-[`PlanSpec`][redsun.presenter.plan_spec.PlanSpec].
-
-`run` takes the name of a plan and the values the user chose. The user
+`run` receives the name of a plan and the values the user chose. The user
 chooses a stage by its name, so
 [`resolve_arguments`][redsun.presenter.plan_spec.resolve_arguments] puts the
-device in the place of the name, and
-[`collect_arguments`][redsun.presenter.plan_spec.collect_arguments] puts the
-values in the order the plan takes them.
-
-Calling the engine starts the plan and does not wait for it to end. It
-returns a future, which stands for the result to come. The presenter asks
-the future to send `sig_finished` once the plan is over. Nothing listens to
-`sig_started` yet: the next tutorial links it.
+device in its place, and
+[`collect_arguments`][redsun.presenter.plan_spec.collect_arguments] orders the
+values as the plan takes them. The engine starts the plan without waiting for
+it to end, and the presenter sends `sig_finished` when it has.
 
 ## 3. Build the controls
 
