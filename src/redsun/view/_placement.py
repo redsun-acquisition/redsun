@@ -14,7 +14,7 @@ class Placement:
     it understands in its own package, next to the code that attaches them, so
     a window concept such as a dock never reaches a session that has no
     window. A frontend attaches the placements it lists in
-    `redsun.Frontend.placements` and refuses the rest.
+    `redsun.Frontend.requires` and refuses the rest.
 
     Declaring one is what makes a component a view. A presenter attaches
     nowhere and declares none.

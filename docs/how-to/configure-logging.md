@@ -21,7 +21,7 @@ wrote it:
 | A `Loggable` declaring none, or an empty one | `[Class]` |
 | `logging.getLogger("redsun")` directly | neither, just the message |
 
-A record below `INFO` also shows the file and line it came from.
+A record at any level but `INFO` also shows the file and line it came from.
 
 ## Set the level for a session
 
