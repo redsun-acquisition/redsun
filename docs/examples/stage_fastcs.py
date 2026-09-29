@@ -25,14 +25,15 @@ class Stage(Controller):
 
 # --8<-- [end:controller]
 # --8<-- [start:ready]
-async def until_served(prefix: str) -> None:
+async def until_served(prefix: str, serving: asyncio.Future[None]) -> None:
     with Context("pva", conf={"EPICS_PVA_ADDR_LIST": "127.0.0.1"}) as client:
-        while True:
+        while not serving.done():
             try:
                 await asyncio.wait_for(client.get(f"{prefix}:PVI"), timeout=1.0)
             except TimeoutError:
                 continue
             return
+    serving.result()
 
 
 # --8<-- [end:ready]
@@ -42,7 +43,7 @@ async def serve(prefix: str) -> None:
     controller.set_path([prefix])
     served = FastCS(controller, [EpicsPVATransport()])
     serving = asyncio.ensure_future(served.serve(interactive=False))
-    await until_served(prefix)
+    await until_served(prefix, serving)
     print(READY, flush=True)
     await asyncio.to_thread(sys.stdin.read)
     serving.cancel()
