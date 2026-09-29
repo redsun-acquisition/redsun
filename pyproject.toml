@@ -210,6 +210,8 @@ extend-select = [
     "I", # enable imports checks
     "TC", # enable type check imports
     "FA102", # force __future__ imports
+    "E402", # imports at the top of the module
+    "PLC0415", # no import inside a function
 ]
 ignore = ["D100","D104"] # https://docs.astral.sh/ruff/rules/undocumented-public-package/
 

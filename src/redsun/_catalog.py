@@ -42,9 +42,9 @@ def start_catalog(
     """
     # imported here: the tiled extra is optional, and require_tiled has
     # already refused a session asking for a catalog without it
-    from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter
-    from ome_tiled.bluesky import register_consolidator
-    from tiled.server.simple import SimpleTiledServer
+    from ome_tiled import OME_ZARR_MIMETYPE, OmeZarrAdapter  # noqa: PLC0415
+    from ome_tiled.bluesky import register_consolidator  # noqa: PLC0415
+    from tiled.server.simple import SimpleTiledServer  # noqa: PLC0415
 
     session_dir = provider.session_dir
     server = SimpleTiledServer(

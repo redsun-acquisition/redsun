@@ -87,7 +87,7 @@ class ChannelAccess:
     async def release(self) -> None:
         """Close every Channel Access channel this process holds, if it holds any."""
         try:
-            from aioca import purge_channel_caches
+            from aioca import purge_channel_caches  # noqa: PLC0415
         except ImportError:
             return
         # a channel left to a stopped service waits out libca's reconnect

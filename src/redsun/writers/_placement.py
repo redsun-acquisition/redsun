@@ -87,6 +87,6 @@ def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:
 
 def open_sibling(path: Path, arrays: Mapping[str, ArrayShape]) -> Stream:
     """Open an OME-Zarr store at *path*; its package is imported here, on first use."""
-    from ._ome_writers import Stream
+    from ._ome_writers import Stream  # noqa: PLC0415
 
     return Stream(path, arrays)

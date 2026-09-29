@@ -227,6 +227,12 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 - **No comments in the import block.** Not above an import, not above a group,
   and not to explain a `# noqa`. The suppression code already names the rule.
   If a runtime import is surprising, say why at the annotation that needs it.
+- **All imports at the top of the module**, in `src/` and `tests/` alike: no
+  import inside a function or method, and none after module code. ruff's
+  `E402` and `PLC0415` enforce it. The one exception is a dependency that
+  only an extra installs (`tiled`, `ome-writers`, `aioca`): it is imported
+  where the feature needing it runs, marked `# noqa: PLC0415`, so a session
+  without the extra never imports it.
 - asyncio only, no threads for I/O. Hardware goes through `ophyd-async`.
 - Public API change -> docstring, and a changelog label on the pull request.
   The changelog is written from the labels at release time
@@ -287,9 +293,8 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   components, the container classes declaring them, fixtures, helpers, in that
   order, before the first test. A test body is then the case it exercises and
   nothing else. A class used by exactly one test may stay inside it.
-- **All imports live at the top of the module**, in tests too. No
-  function-level or method-level imports; runtime-unneeded imports go under the
-  module's `if TYPE_CHECKING:` block.
+- **All imports live at the top of the module**, as in `src/`; runtime-unneeded
+  imports go under the module's `if TYPE_CHECKING:` block.
 - Prefer the public interface. For a multi-step lifecycle (register -> write ->
   close) write one happy-path test driving the whole sequence and asserting the
   observable end state, then small focused tests for unhappy paths.
