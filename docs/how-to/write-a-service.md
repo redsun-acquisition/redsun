@@ -91,6 +91,10 @@ class MyApp(QtSession):
     camera: Annotated[AsDevice[MyCamera], Declare(service="camera_ioc")]
 ```
 
+`prefix` is what the devices of the service receive. `args` is what the
+process is started with, and is how this IOC learns the same prefix: an IOC
+that reads `REDSUN_SERVICE_PREFIX` needs no `args` for it.
+
 `Launch` is a service the session starts and stops. `Attach` is one already
 running elsewhere: nothing starts or stops, and its devices only get its
 [prefix](../explanation/glossary.md#prefix).

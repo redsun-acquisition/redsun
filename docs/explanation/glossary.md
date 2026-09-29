@@ -72,7 +72,8 @@ session it is must be the same in every source: a disagreement is an error.
 ### Data key
 
 A data key is the name under which one measured value is recorded in a
-[run](#run), such as `camera-image`. The term comes from
+[run](#run), such as `camera-sum`. A device chooses the data keys of what it
+measures, and often starts them with its own name. The term comes from
 [`bluesky`](#bluesky).
 
 ### Declaration
@@ -138,7 +139,7 @@ session with no frontend calls none.
 ### IOC
 
 An IOC (input/output controller) is the server program of [EPICS](#epics). It
-owns one or more pieces of hardware and offers their values as
+usually owns one or more pieces of hardware, and offers their values as
 [process variables](#process-variable).
 
 ### Layer
@@ -147,6 +148,12 @@ A layer is one of the three groups a component belongs to: devices, presenters
 or views. Layers are built in that order, and a component may only use what
 its own layer or an earlier one owns.
 
+### Link
+
+A link is a pair made in [`wire`][redsun.Session.wire]: what sends, then the
+[slot](#slot) that receives. What sends is a [signal](#signal) or a
+[device signal](#device-signal).
+
 ### Manifest
 
 A manifest is the `redsun.yaml` file that a [plugin](#plugin) ships. It lists
@@ -154,7 +161,7 @@ the components of the plugin under ids that a session file can name.
 
 ### Mocked session
 
-A mocked session is a session whose file sets `mock: true`. Its devices
+A mocked session is a session whose configuration sets `mock: true`. Its devices
 connect to simulated backends that `ophyd-async` provides in place of the
 hardware, and the session launches no service, so it runs with no hardware
 present.
