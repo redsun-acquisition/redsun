@@ -30,7 +30,7 @@ OME_ZARR: Final = "application/x-ome-zarr"
 class Placement:
     """Where a product goes, and how to open a stream there.
 
-    ``streamed`` is false for an OME-Zarr store of its own: its frame count
+    `streamed` is false for an OME-Zarr store of its own: its frame count
     is fixed at open, so it is written whole.
     """
 
@@ -48,10 +48,10 @@ class Placement:
 
 
 def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:
-    """Return where *data_key* goes against the store at *uri*, or ``None`` for an unknown *mimetype*.
+    """Return where *data_key* goes against the store at *uri*, or `None` for an unknown *mimetype*.
 
     A plain root takes the product as a key. A root carrying OME-Zarr
-    metadata (an image, a plate, a ``bioformats2raw`` layout) would lose it
+    metadata (an image, a plate, a `bioformats2raw` layout) would lose it
     to a new key, so the product becomes a store beside it, named after both.
 
     Raises

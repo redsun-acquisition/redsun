@@ -2,7 +2,7 @@
 
 Paths are `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`,
 `base_dir` defaulting to the user data directory. The container builds one
-provider per session and passes it to every device taking a ``path_provider``
+provider per session and passes it to every device taking a `path_provider`
 keyword.
 """
 
@@ -54,7 +54,7 @@ class PlanFilenameProvider(FilenameProvider):
 
     Parameters
     ----------
-    max_digits : int
+    max_digits
         Zero-padding width of the counter, as in `00001` for 5.
     """
 
@@ -117,12 +117,12 @@ class SessionPathProvider(PathProvider):
 
     Parameters
     ----------
-    base_dir : Path | None
+    base_dir
         Base directory, with `~` expanded. Defaults to the user data
         directory, as `session_directory` gives it.
-    session : str
+    session
         Session name, fixed for the provider's lifetime.
-    max_digits : int
+    max_digits
         Zero-padding width of the counter, as in `00001` for 5.
     now: Callable[[], datetime] | None
         Clock giving the date directory, for tests. Defaults to `datetime.now`.

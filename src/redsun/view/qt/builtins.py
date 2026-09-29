@@ -1,4 +1,4 @@
-"""Views shipped with ``redsun``.
+"""Views shipped with `redsun`.
 
 Declare them on a session like any other view.
 """

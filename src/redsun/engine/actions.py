@@ -83,7 +83,7 @@ class SRLatch:
     def changed_at(self) -> float:
         """When the latch last changed state, as `time.monotonic` reads it.
 
-        ``0.0`` for a latch that never changed.
+        `0.0` for a latch that never changed.
         """
         return self._changed_at
 
@@ -130,7 +130,7 @@ def continuous(
     ```
 
     The signature is untouched; what was asked is stored on the function as
-    ``__continuous__``, a `Continuous`.
+    `__continuous__`, a `Continuous`.
     """
 
     def decorator(plan: F) -> F:
@@ -161,7 +161,7 @@ class PlanAction:
     """Labels of a button that stays pressed until it is released.
 
     The first is shown while it is released and the second while it is
-    pressed. ``None`` for a button that is clicked.
+    pressed. `None` for a button that is clicked.
     """
 
 
@@ -197,7 +197,7 @@ class ActionManager:
 
     @slot
     def request(self, name: str, on: bool = True) -> None:
-        """Ask for the action *name*, or with ``on=False`` ask a running one to end.
+        """Ask for the action *name*, or with `on=False` ask a running one to end.
 
         Safe from any thread. Asking for an action no plan offers, or asking
         one that is not running to end, changes nothing and raises nothing:
@@ -224,8 +224,8 @@ class ActionManager:
         earlier wait cannot start an action of this one. The action returned
         runs until `done`. The others go back to idle, as all of them do when
         the plan is stopped while it waits. A checkpoint is yielded every
-        *poll_interval* seconds, so it cannot be used between ``create`` and
-        ``save``.
+        *poll_interval* seconds, so it cannot be used between `create` and
+        `save`.
 
         Raises
         ------

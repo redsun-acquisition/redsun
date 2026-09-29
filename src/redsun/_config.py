@@ -82,8 +82,8 @@ IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
 """Keys naming what kind of session this is, which every layered source must agree on.
 
 Everything else describes the session's content, where a later source
-legitimately overrides an earlier one. ``session`` is content by this rule: a
-caller laying ``{"session": "run-2"}`` over a shared file is renaming that
+legitimately overrides an earlier one. `session` is content by this rule: a
+caller laying `{"session": "run-2"}` over a shared file is renaming that
 session, not contradicting it.
 """
 
@@ -149,8 +149,8 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
     mappings, which merge in turn. Anything that is not a mapping - a list, a
     scalar - is replaced rather than combined.
 
-    A component entry is the exception: under ``services``, ``devices``,
-    ``presenters`` and ``views`` the section merges by component name, but a
+    A component entry is the exception: under `services`, `devices`,
+    `presenters` and `views` the section merges by component name, but a
     component *named* in *overlay* is taken from it whole. Those entries are
     the keyword arguments of a constructor call rather than a tree of settings,
     so one source owns one component's arguments and a reader stops at the
@@ -179,7 +179,7 @@ def refuse_identity_conflict(
     """Refuse a source that contradicts what an earlier one said the session is.
 
     The transport its services speak is part of that identity, although it
-    sits under ``services``: every service of a session speaks the one it
+    sits under `services`: every service of a session speaks the one it
     names.
 
     Raises
@@ -249,7 +249,7 @@ class ConfigurationError(ValueError):
 
 
 def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
-    """Say each problem as ``section.key: what``, a hook entry by its hook points.
+    """Say each problem as `section.key: what`, a hook entry by its hook points.
 
     The model holds hook entries as a list of groups, so a problem in one is
     located by its position there, which the file does not show.
@@ -279,7 +279,7 @@ def nonempty_path(value: Any) -> Any:
 UserPath = Annotated[
     Path, BeforeValidator(nonempty_path), AfterValidator(Path.expanduser)
 ]
-"""A path as a session file writes it, with ``~`` expanded."""
+"""A path as a session file writes it, with `~` expanded."""
 
 
 class CatalogConfig(
@@ -292,7 +292,7 @@ class CatalogConfig(
 
 
 def with_empty_catalog(section: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Return a ``storage`` section whose present but empty ``catalog`` is a mapping.
+    """Return a `storage` section whose present but empty `catalog` is a mapping.
 
     An empty key asks for a catalog with every default, which only the raw
     section can tell apart from an absent one.
@@ -314,7 +314,7 @@ class StorageConfig(
     """Width of the counter in file names."""
 
     catalog: CatalogConfig | None = None
-    """The session's catalog, needing the ``tiled`` extra; `None` for none."""
+    """The session's catalog, needing the `tiled` extra; `None` for none."""
 
 
 def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> SessionFile:
@@ -399,7 +399,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """Whether devices connect to simulated backends and no service is launched."""
 
     transport: str | None = None
-    """What the session's services speak, from the ``services`` section."""
+    """What the session's services speak, from the `services` section."""
 
     services: dict[str, ComponentEntry] = {}
     """Services by name."""
@@ -417,7 +417,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """Where the session writes; the defaults when absent."""
 
     wiring: dict[str, str | list[str]] = {}
-    """The slots each signal reaches, both written as ``component.port``."""
+    """The slots each signal reaches, both written as `component.port`."""
 
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
@@ -490,7 +490,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
 def session_file_schema() -> dict[str, Any]:
     """Return the JSON schema of a session file as written, not as `SessionFile` holds it.
 
-    The model lifts ``services.transport`` out of the ``services`` section and
+    The model lifts `services.transport` out of the `services` section and
     groups hook entries into a list; a file keeps both where it wrote them,
     and may leave a section empty.
     """
@@ -530,7 +530,7 @@ def refusal(loc: tuple[str, ...], message: str) -> InitErrorDetails:
 def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDetails]]:
     """Return a session file shaped as `SessionFile` holds it, and what stops that.
 
-    Empty sections are read as empty, ``services.transport`` is lifted beside
+    Empty sections are read as empty, `services.transport` is lifted beside
     the sections, and hook entries are grouped. A problem found on the way is
     returned rather than raised, and the part it concerns left out, so the
     rest of the file is still validated.

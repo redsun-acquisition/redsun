@@ -2,7 +2,7 @@
 
 `wait_for_actions` waits on user actions; `lock`, `unlock` and `lock_wrapper`
 lock devices against the user. Every stub is a generator yielding `Msg`
-objects, used inside larger plans with ``yield from``.
+objects, used inside larger plans with `yield from`.
 """
 
 from __future__ import annotations
@@ -39,28 +39,23 @@ def wait_for_actions(
     poll_interval: float = SIXTY_FPS,
     wait_for: Literal["set", "reset"] = "set",
 ) -> MsgGenerator[tuple[str, SRLatch]]:
-    """Wait until one of the given latches is in the wanted state.
+    """Wait until one of the given latches is in the wanted state, and return it.
 
-    Returns as soon as a latch is set, or reset with ``wait_for="reset"``,
-    whether it was already or changed meanwhile. It waits as long as that
+    Returns the name and the latch as soon as a latch is set, or reset with
+    `wait_for="reset"`, whether it was already or changed meanwhile. Of several
+    in the wanted state, the one that reached it first is returned, and of
+    those that reached it together, the first in *events*. It waits as long as that
     takes. A checkpoint is yielded every *poll_interval* seconds, where the
-    plan can be paused, so it cannot be used between ``create`` and ``save``.
+    plan can be paused, so it cannot be used between `create` and `save`.
 
     Parameters
     ----------
-    events : Mapping[str, SRLatch]
+    events
         Mapping of action names to their `SRLatch` objects.
-    poll_interval : float, optional
+    poll_interval
         Seconds between two checkpoints, 1/60 s by default.
-    wait_for : Literal["set", "reset"], optional
+    wait_for
         Whether to wait for a latch to be set or reset.
-
-    Returns
-    -------
-    tuple[str, SRLatch]
-        The name and the latch. Of several in the wanted state, the one that
-        reached it first, and of those that reached it together, the first in
-        *events*.
 
     Raises
     ------
@@ -85,18 +80,7 @@ def wait_for_actions(
 def describe(
     obj: Readable[Any],
 ) -> MsgGenerator[dict[str, Descriptor]]:
-    """Gather the descriptor from a `Readable` device.
-
-    Parameters
-    ----------
-    obj : Readable[Any]
-        The device to describe.
-
-    Returns
-    -------
-    dict[str, Descriptor]
-        The descriptor dict returned by ``obj.describe()``.
-    """
+    """Return what `obj.describe()` returns, from inside a plan."""
 
     async def _describe() -> dict[str, Descriptor]:
         return await maybe_await(obj.describe())
@@ -111,18 +95,7 @@ def describe(
 def describe_collect(
     obj: Collectable,
 ) -> MsgGenerator[dict[str, Descriptor] | dict[str, dict[str, Descriptor]]]:
-    """Gather descriptors from a `Collectable` device.
-
-    Parameters
-    ----------
-    obj : Collectable
-        The device to describe.
-
-    Returns
-    -------
-    dict[str, Descriptor] | dict[str, dict[str, Descriptor]]
-        The descriptor dict returned by ``obj.describe_collect()``.
-    """
+    """Return what `obj.describe_collect()` returns, from inside a plan."""
 
     async def _describe_collect() -> (
         dict[str, Descriptor] | dict[str, dict[str, Descriptor]]

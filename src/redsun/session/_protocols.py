@@ -88,10 +88,10 @@ class NamedComponent(Protocol):
 class AttachableComponent(NamedComponent, Protocol):
     """A component the frontend can attach, and where it asks to go.
 
-    ``placement`` is the whole of the difference between a view and a
+    `placement` is the whole of the difference between a view and a
     presenter, and it is what the frontend reads to attach the view.
     Answering it from the class rather than from a value assigned in
-    ``__init__`` lets a session refuse a view its frontend cannot attach
+    `__init__` lets a session refuse a view its frontend cannot attach
     before anything is built.
     """
 
@@ -105,9 +105,9 @@ class AttachableComponent(NamedComponent, Protocol):
 class BuildableSession(Protocol):
     """The steps a session's build runs, each one a method of its own.
 
-    ``build`` calls them in the order they are written here and does nothing
+    `build` calls them in the order they are written here and does nothing
     else, so what a session varies is a step rather than the sequence. A
-    session bound to no toolkit answers ``start_runtime`` and ``present`` with
+    session bound to no toolkit answers `start_runtime` and `present` with
     nothing, and one bound to a toolkit fills exactly those two: what has to
     exist before a component can be constructed, and how what was built is
     assembled into whatever shows it.
@@ -124,7 +124,7 @@ class BuildableSession(Protocol):
     abstract, so a session missing one is refused when it is constructed and a
     type checker refuses it too.
 
-    ``__slots__`` is empty here because a body omitting it gives a ``__dict__``
+    `__slots__` is empty here because a body omitting it gives a `__dict__`
     to every class that inherits it, and `redsun.Session` declares
     its own.
     """
@@ -203,7 +203,7 @@ class BuildableSession(Protocol):
 
     @abstractmethod
     def make_store(self) -> Store:
-        """Return the registry ``open_registry`` fills and builds out of."""
+        """Return the registry `open_registry` fills and builds out of."""
         ...
 
     @abstractmethod
@@ -228,11 +228,11 @@ class DesktopSession(BuildableSession, Protocol[WindowT_co]):
 
     The window's type is the parameter, since it is the toolkit's and no two
     toolkits share one: a session built on Qt satisfies
-    ``DesktopSession[QMainWindow]``.
+    `DesktopSession[QMainWindow]`.
 
-    ``main_window`` is a property here, so it is a data descriptor in every
+    `main_window` is a property here, so it is a data descriptor in every
     implementer's method resolution order: answer it with a property of its
-    own, never by assigning ``self.main_window`` in ``__init__``.
+    own, never by assigning `self.main_window` in `__init__`.
     """
 
     __slots__ = ()
@@ -253,7 +253,7 @@ class DesktopSession(BuildableSession, Protocol[WindowT_co]):
 class Serializable(Protocol):
     """A component that supplies the configuration entry rebuilding it.
 
-    ``serialize`` returns the keyword arguments the component's own entry
+    `serialize` returns the keyword arguments the component's own entry
     would carry. The session writes them under that component's name and
     nowhere else, so a component reaches no entry but its own, and the next
     session reads back what this one wrote.

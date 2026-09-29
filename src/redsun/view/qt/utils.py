@@ -41,15 +41,15 @@ __all__ = [
 
 
 class ActionButton(QtW.QPushButton):
-    """A ``QPushButton`` carrying a ``PlanAction``.
+    """A `QPushButton` carrying a `PlanAction`.
 
-    Its label follows the toggle state, using the action's ``toggle_states``.
+    Its label follows the toggle state, using the action's `toggle_states`.
 
     Parameters
     ----------
-    action : PlanAction
+    action
         The button's action.
-    parent : QtWidgets.QWidget | None, optional
+    parent
         The parent widget.
 
     Attributes
@@ -72,7 +72,7 @@ class ActionButton(QtW.QPushButton):
             self._update_text(False)
 
     def release(self) -> None:
-        """Show the button released, without emitting ``toggled``.
+        """Show the button released, without emitting `toggled`.
 
         For an action that ended by itself: unchecking the button any other
         way reads as the user asking the action to end.
@@ -103,12 +103,12 @@ class PlanWidget:
     """The button running or stopping the plan."""
 
     container: mgw.Container[mgw_bases.ValueWidget[Any]]
-    """The ``magicgui`` Container of parameter widgets."""
+    """The `magicgui` Container of parameter widgets."""
 
     device_widgets: list[mgw_bases.ValueWidget[Any]]
-    """Device parameter widgets (``DeviceSequenceEdit`` or ``ComboBox``).
+    """Device parameter widgets (`DeviceSequenceEdit` or `ComboBox`).
 
-    Exposed so callers can connect validation to each widget's ``changed``
+    Exposed so callers can connect validation to each widget's `changed`
     signal.
     """
 
@@ -137,11 +137,11 @@ class PlanWidget:
         """Update the widgets when a continuous plan starts or stops.
 
         The run and pause buttons are set to match *status* without emitting
-        ``toggled``, so a plan that ended by itself can be shown as stopped.
+        `toggled`, so a plan that ended by itself can be shown as stopped.
 
         Parameters
         ----------
-        status : bool
+        status
             `True` when the plan is starting; `False` when stopping.
         """
         with QtCore.QSignalBlocker(self.run_button):
@@ -163,7 +163,7 @@ class PlanWidget:
 
         Parameters
         ----------
-        status : bool
+        status
             `True` when pausing; `False` when resuming.
         """
         if self.pause_button:
@@ -175,8 +175,8 @@ class PlanWidget:
 
         Parameters
         ----------
-        enabled : bool
-            ``True`` to enable; ``False`` to disable.
+        enabled
+            `True` to enable; `False` to disable.
         """
         self.group_box.setEnabled(enabled)
         self.run_button.setEnabled(enabled)
@@ -187,8 +187,8 @@ class PlanWidget:
 
         Parameters
         ----------
-        enabled : bool, optional
-            ``True`` to enable; ``False`` to disable.
+        enabled
+            `True` to enable; `False` to disable.
         """
         if self.actions_group:
             self.actions_group.setEnabled(enabled)
@@ -198,7 +198,7 @@ class PlanWidget:
 
         Parameters
         ----------
-        action_name : str
+        action_name
             The name of the action.
         """
         return self.action_buttons.get(action_name)
@@ -212,7 +212,7 @@ class PlanWidget:
         """Current parameter values by name.
 
         The presenter turns them into positional and keyword arguments with
-        ``collect_arguments`` / ``resolve_arguments``.
+        `collect_arguments` / `resolve_arguments`.
         """
         return {w.name: w.value for w in self.container}
 
@@ -259,16 +259,10 @@ def _build_param_widgets(
 ]:
     """Split *spec*'s parameters into device widgets and plain parameter widgets.
 
-    Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``,
-    ``*args: PDevice`` and ``PDevice`` parameters; scalars, Literals and the
-    rest are plain parameters.
-
-    Returns
-    -------
-    device_widgets : list
-        One ``magicgui`` widget per device parameter, in signature order.
-    param_widgets : list
-        One ``magicgui`` widget per other parameter, in signature order.
+    Device widgets cover `Sequence[PDevice]`, `Set[PDevice]`,
+    `*args: PDevice` and `PDevice` parameters; scalars, Literals and the
+    rest are plain parameters. Each list holds one `magicgui` widget per
+    parameter, in signature order.
     """
     device_widgets: list[mgw_bases.ValueWidget[Any]] = []
     param_widgets: list[mgw_bases.ValueWidget[Any]] = []
@@ -295,8 +289,8 @@ def _build_devices_group(
     """Build the *Devices* group box.
 
     Each device parameter gets a titled group box holding its widget, a
-    ``DeviceSequenceEdit`` for several devices or a ``ComboBox`` for one.
-    Returns ``None`` without device parameters.
+    `DeviceSequenceEdit` for several devices or a `ComboBox` for one.
+    Returns `None` without device parameters.
     """
     if not device_widgets:
         return None
@@ -321,9 +315,9 @@ def _build_devices_group(
 def _build_params_group(
     param_widgets: list[mgw_bases.ValueWidget[Any]],
 ) -> QtW.QGroupBox | None:
-    """Build the *Parameters* group box using a ``QFormLayout``.
+    """Build the *Parameters* group box using a `QFormLayout`.
 
-    Each plain parameter is a labelled form row. Returns ``None`` without plain
+    Each plain parameter is a labelled form row. Returns `None` without plain
     parameters.
     """
     if not param_widgets:
@@ -437,7 +431,7 @@ def _build_callbacks_group(
 ) -> QtW.QListWidget | None:
     """Build the *Callbacks* group box and add it to *params_layout* if needed.
 
-    Returns ``None`` when the plan carries no callback and the user may attach
+    Returns `None` when the plan carries no callback and the user may attach
     none.
     """
     optional = (
@@ -522,44 +516,39 @@ def create_plan_widget(
     attached_callbacks: Sequence[str] | None = None,
     selection_callback: Callable[[list[str]], None] | None = None,
 ) -> PlanWidget:
-    """Build a complete ``PlanWidget`` for *spec*.
+    """Build a complete `PlanWidget` for *spec*.
 
     Parameters
     ----------
-    spec : PlanSpec
+    spec
         The plan's specification.
-    run_callback : Callable[[], None] | None, optional
-        Connected to ``run_button.clicked`` for plans that are not continuous.
-    toggle_callback : Callable[[bool], None] | None, optional
-        Connected to ``run_button.toggled`` for continuous plans.
-    pause_callback : Callable[[bool], None] | None, optional
-        Connected to ``pause_button.toggled`` for pausable plans.
-    action_clicked_callback : Callable[[str], None] | None, optional
-        Called with ``action_name`` when an action's button is clicked.
-    action_toggled_callback : Callable[[bool, str], None] | None, optional
-        Called with ``(checked, action_name)`` when an action's button is
+    run_callback
+        Connected to `run_button.clicked` for plans that are not continuous.
+    toggle_callback
+        Connected to `run_button.toggled` for continuous plans.
+    pause_callback
+        Connected to `pause_button.toggled` for pausable plans.
+    action_clicked_callback
+        Called with `action_name` when an action's button is clicked.
+    action_toggled_callback
+        Called with `(checked, action_name)` when an action's button is
         pressed or released.
-    plan_callbacks : Sequence[CallbackType], optional
+    plan_callbacks
         The document callbacks the plan requires, in the order they run. They
         are listed first, checked, and cannot be unchecked or moved.
-    extendable : bool, optional
+    extendable
         Whether the user may attach callbacks after *plan_callbacks*.
-    available_callbacks : Mapping[str, CallbackType] | None, optional
+    available_callbacks
         The document callbacks the user may attach, by the name each row is
         labelled with, in the order offered. Ignored when *extendable* is
-        ``False``.
-    attached_callbacks : Sequence[str] | None, optional
+        `False`.
+    attached_callbacks
         Names the user attached before, in their order. The other available
         callbacks are listed unchecked after them, and a name not available is
-        ignored. ``None`` checks every available callback.
-    selection_callback : Callable[[list[str]], None] | None, optional
-        Called with ``PlanWidget.attached_callbacks`` when the user checks,
+        ignored. `None` checks every available callback.
+    selection_callback
+        Called with `PlanWidget.attached_callbacks` when the user checks,
         unchecks or moves a callback.
-
-    Returns
-    -------
-    PlanWidget
-        The widget, ready for a ``QStackedWidget``.
     """
     page = QtW.QWidget()
     page_layout = QtW.QVBoxLayout(page)
@@ -628,11 +617,11 @@ class PlanInfoDialog(QtW.QDialog):
 
     Parameters
     ----------
-    title : str
+    title
         The title of the dialog window.
-    text : str
+    text
         Text shown, rendered as Markdown.
-    parent : QtWidgets.QWidget | None, optional
+    parent
         The parent widget.
     """
 
@@ -669,21 +658,6 @@ class PlanInfoDialog(QtW.QDialog):
     def show_dialog(
         cls, title: str, text: str, parent: QtW.QWidget | None = None
     ) -> int:
-        """Create and show the dialog in one step.
-
-        Parameters
-        ----------
-        title : str
-            The title of the dialog window.
-        text : str
-            Text shown.
-        parent : QtWidgets.QWidget | None, optional
-            The parent widget.
-
-        Returns
-        -------
-        int
-            Dialog result code (``QDialog.Accepted`` or ``QDialog.Rejected``).
-        """
+        """Create and show the dialog, and return `QDialog.Accepted` or `QDialog.Rejected`."""
         dialog = cls(title, text, parent)
         return dialog.exec()

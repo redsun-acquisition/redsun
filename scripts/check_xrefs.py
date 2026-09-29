@@ -1,6 +1,6 @@
 """Fail if the built documentation contains syntax the build left unread.
 
-``zensical build`` reports "No issues found" even when a ``[`Name`][target]``
+`zensical build` reports "No issues found" even when a ``[`Name`][target]``
 reference matched nothing, when a snippet marker is misspelt, or when a link
 names a part of a page that does not exist. The first two are emitted verbatim
 into the page and the third leads to the top of it. This script scans the
@@ -36,7 +36,7 @@ ID = re.compile(r'(?<![-\w])id="([^"]+)"')
 
 @cache
 def ids(page: Path) -> frozenset[str]:
-    """Return the ``id`` of every element of *page*."""
+    """Return the `id` of every element of *page*."""
     return frozenset(ID.findall(page.read_text(encoding="utf-8")))
 
 

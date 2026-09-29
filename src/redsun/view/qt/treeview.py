@@ -1,9 +1,9 @@
 """Tree view showing and editing device settings from their descriptors.
 
-`DescriptorTreeView`, a `QTreeWidget`, shows ``bluesky`` ``describe()`` /
-``read()`` dicts as a two-column property tree.
+`DescriptorTreeView`, a `QTreeWidget`, shows `bluesky` `describe()` /
+`read()` dicts as a two-column property tree.
 
-The design follows the ``ParameterTree`` widget of
+The design follows the `ParameterTree` widget of
 [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph) (MIT licence,
 (c) 2012 University of North Carolina at Chapel Hill, Luke Campagnola).
 """
@@ -41,17 +41,17 @@ def _make_value_widget(
 
     Parameters
     ----------
-    key : str
-        ``name-property`` key, emitted with changes.
-    descriptor : Descriptor
-        ``bluesky`` descriptor of the setting.
-    initial_value : Any
+    key
+        `name-property` key, emitted with changes.
+    descriptor
+        `bluesky` descriptor of the setting.
+    initial_value
         Current reading value.
-    on_changed : Callable[[str, Any], None]
+    on_changed
         Called when the user commits a change.
-    readonly : bool
+    readonly
         Return a greyed label instead.
-    parent : QtWidgets.QWidget
+    parent
         Qt parent for the created widget.
     """
     if readonly or descriptor.get("dtype") == "array":
@@ -164,9 +164,9 @@ def _set_label_text(
 
     Parameters
     ----------
-    label : QtWidgets.QLabel
+    label
         Label widget to update.
-    value : Any
+    value
         New value to display.
     """
     if isinstance(value, (list, tuple)):
@@ -180,9 +180,9 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 
     Parameters
     ----------
-    widget : QtWidgets.QWidget
+    widget
         The editor or display widget to update.
-    value : Any
+    value
         New value to display or set.
     """
     if isinstance(widget, QtWidgets.QLabel):
@@ -216,18 +216,18 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 class DescriptorTreeView(QtWidgets.QTreeWidget):
     """Two-column property tree for browsing and editing device settings.
 
-    Rows are grouped by their ``name-property`` key: one header per device
+    Rows are grouped by their `name-property` key: one header per device
     name, and under it a header per group a property names with a dash of its
-    own, so ``cam-properties-Binning`` is ``Binning`` under ``properties``
-    under ``cam``.
+    own, so `cam-properties-Binning` is `Binning` under `properties`
+    under `cam`.
 
     Parameters
     ----------
-    descriptors : dict[str, Descriptor]
-        Descriptors by ``name-property`` key.
-    readings : dict[str, Reading[Any]]
-        Initial readings for the same keys; only ``reading["value"]`` is read.
-    parent : QtWidgets.QWidget, optional
+    descriptors
+        Descriptors by `name-property` key.
+    readings
+        Initial readings for the same keys; only `reading["value"]` is read.
+    parent
         Parent widget.
 
     Signals
@@ -284,8 +284,8 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
         Parameters
         ----------
-        key : str
-            ``name-property`` key.
+        key
+            `name-property` key.
         """
         self._pending.pop(key, None)
         self._show(key, value)

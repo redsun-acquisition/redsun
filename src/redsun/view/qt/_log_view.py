@@ -71,7 +71,7 @@ class LogView(QtW.QWidget):
 
     Application and service records have their own tabs. The Services tab
     appears once a service logs, and its selector narrows it to one service.
-    ``Clear log window`` and ``Save logs...`` act on the tab and service shown.
+    `Clear log window` and `Save logs...` act on the tab and service shown.
 
     Records are coloured by level, with one palette for light and one for dark
     backgrounds, chosen from the console's background and redrawn when the
@@ -80,8 +80,8 @@ class LogView(QtW.QWidget):
     New records are drawn in batches, so a burst does not stall the window, and
     each console keeps no more lines than the buffer holds for it.
 
-    With session log files open, ``Save logs...`` copies the files of the tab
-    shown and ``Open log folder`` opens their folder in the file browser;
+    With session log files open, `Save logs...` copies the files of the tab
+    shown and `Open log folder` opens their folder in the file browser;
     without them the folder button is disabled.
     """
 
@@ -191,7 +191,7 @@ class LogView(QtW.QWidget):
 
     @property
     def service(self) -> str | None:
-        """The service the Services tab shows, ``None`` for every service."""
+        """The service the Services tab shows, `None` for every service."""
         data = self._service_combo.currentData()
         return None if data is None else str(data)
 
@@ -215,7 +215,7 @@ class LogView(QtW.QWidget):
     def clear(self) -> None:
         """Empty the console of the tab shown.
 
-        The buffer is untouched, so ``Save logs...`` still writes everything and
+        The buffer is untouched, so `Save logs...` still writes everything and
         changing the level brings records back.
         """
         if self._tabs.currentIndex() == _SERVICES_TAB:

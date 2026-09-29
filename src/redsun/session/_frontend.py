@@ -14,7 +14,7 @@ __all__ = ["Frontend"]
 class Frontend:
     """The toolkit an application is built against.
 
-    ``requires`` pairs each `redsun.Placement` the frontend
+    `requires` pairs each `redsun.Placement` the frontend
     attaches with the toolkit type it demands of the view asking for it. A view
     asking for a placement the frontend does not list, or one whose class is
     not the type its placement demands, is refused before it is built. The
@@ -26,7 +26,7 @@ class Frontend:
 
     `thread_of` says where the slots of a component run when the component
     does not say. A slot held for a thread is called there once that thread
-    calls ``psygnal.emit_queued``, which a session built on the frontend does
+    calls `psygnal.emit_queued`, which a session built on the frontend does
     from the toolkit's event loop.
     """
 
@@ -50,7 +50,7 @@ class Frontend:
     def thread_of(cls, consumer: object) -> SlotThread:
         """Return the thread the slots of *consumer* run on when nothing else says.
 
-        Asked after the slot itself and the class of *consumer*. ``None``
+        Asked after the slot itself and the class of *consumer*. `None`
         here: the slot runs on the thread that emits.
         """
         return None
@@ -63,14 +63,14 @@ class Frontend:
 
         Parameters
         ----------
-        view : type | object
+        view
             The class before anything is built and the instance afterwards.
             Either answers the question, the demand being on the class.
-        placement : Placement
+        placement
             Where the view asks to be attached.
-        where : str
+        where
             How to name the view in a refusal, such as
-            ``"view 'panel'"``.
+            `"view 'panel'"`.
 
         Raises
         ------

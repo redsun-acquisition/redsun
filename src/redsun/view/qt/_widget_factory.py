@@ -1,7 +1,7 @@
 """Widgets for plan parameter forms.
 
-`create_param_widget` maps a `ParamDescription` to a ``magicgui`` widget. It
-walks `_WIDGET_FACTORY_MAP`, an ordered list of ``(predicate, factory)`` pairs,
+`create_param_widget` maps a `ParamDescription` to a `magicgui` widget. It
+walks `_WIDGET_FACTORY_MAP`, an ordered list of `(predicate, factory)` pairs,
 and calls the first factory whose predicate matches.
 
 Extending the system
@@ -131,9 +131,9 @@ def _make_list_edit(p: ParamDescription) -> mgw.Widget:
 
 
 def _make_generic(p: ParamDescription) -> mgw.Widget:
-    """Return ``magicgui.create_widget``'s widget for any other annotation.
+    """Return `magicgui.create_widget`'s widget for any other annotation.
 
-    Raises TypeError or ValueError if ``magicgui`` does not support it.
+    Raises TypeError or ValueError if `magicgui` does not support it.
     """
     options: dict[str, Any] = {}
     # a parameter with no default gets magicgui's sentinel rather than None:
@@ -180,22 +180,12 @@ def _try_factory_entry(
 
 
 def create_param_widget(param: ParamDescription) -> mgw.Widget:
-    """Create a ``magicgui`` widget for *param*.
-
-    Parameters
-    ----------
-    param : ParamDescription
-        The parameter specification.
-
-    Returns
-    -------
-    mgw.Widget
-        The created widget.
+    """Create a `magicgui` widget for *param*.
 
     Raises
     ------
     RuntimeError
-        If every entry in ``_WIDGET_FACTORY_MAP`` fails.
+        If every entry in `_WIDGET_FACTORY_MAP` fails.
     """
     for predicate, factory in _WIDGET_FACTORY_MAP:
         widget = _try_factory_entry(predicate, factory, param)

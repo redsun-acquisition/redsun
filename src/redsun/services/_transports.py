@@ -24,7 +24,7 @@ PV_ACCESS: Final = "pv-access"
 """The other protocol a session may name."""
 
 TRANSPORT_KEY: Final = "transport"
-"""The key of the ``services`` section naming what its services speak."""
+"""The key of the `services` section naming what its services speak."""
 
 LOOPBACK: Final = "127.0.0.1"
 """Where a launched service listens, and where this process looks for it."""
@@ -60,7 +60,7 @@ class Transport(Protocol):
 class ChannelAccess:
     """Channel Access, each service answering on a port of its own.
 
-    A client reads ``EPICS_CA_ADDR_LIST`` once, when it first uses Channel
+    A client reads `EPICS_CA_ADDR_LIST` once, when it first uses Channel
     Access, so a service restarted by a rebuilt container keeps the port the
     list already holds.
     """
@@ -114,7 +114,7 @@ class ChannelAccess:
 class PVAccess:
     """PVAccess, every service of the session on the loopback interface.
 
-    A service picks its own ports: ``pvxs`` takes another TCP port when the
+    A service picks its own ports: `pvxs` takes another TCP port when the
     default one is busy, and local servers share the search port, so several
     answer without the session assigning anything. What a client cannot do by
     itself is reach a service bound to the loopback, which its defaults never
@@ -138,7 +138,7 @@ class PVAccess:
     def publish(self, service: str) -> None:
         """Add the loopback to this process's address list, once for them all.
 
-        ``EPICS_PVA_AUTO_ADDR_LIST`` is left alone, so a session still reaches
+        `EPICS_PVA_AUTO_ADDR_LIST` is left alone, so a session still reaches
         the servers of its site.
         """
         if self._published:
@@ -158,9 +158,9 @@ TRANSPORTS: dict[str, Transport] = {
 
 
 def transport_of(config: Mapping[str, Any]) -> Any:
-    """Return what a configuration names under ``services.transport``.
+    """Return what a configuration names under `services.transport`.
 
-    ``None`` when it names nothing. Whatever it wrote otherwise, a string
+    `None` when it names nothing. Whatever it wrote otherwise, a string
     or not: the caller says what a mapping there means.
     """
     services = config.get("services") or {}

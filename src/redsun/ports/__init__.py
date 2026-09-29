@@ -1,6 +1,6 @@
 """The connectors a session binds between its components.
 
-A component declares a port and names no peer; the session, or the ``wiring``
+A component declares a port and names no peer; the session, or the `wiring`
 section of its configuration, binds one component's signal to another's slot.
 `redsun` re-exports what is here alongside the rest of the layer.
 """

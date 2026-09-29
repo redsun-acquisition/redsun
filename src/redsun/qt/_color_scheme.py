@@ -18,7 +18,7 @@ __all__ = ["ColorSchemeButton", "ColorSchemeMode"]
 class ColorSchemeMode(StrEnum):
     """What a session asks the platform for, in the order the control cycles.
 
-    ``SYSTEM`` asks for nothing, which is Qt's unset state rather than a
+    `SYSTEM` asks for nothing, which is Qt's unset state rather than a
     scheme of its own: the platform keeps deciding, and a user changing their
     own setting is followed.
     """
@@ -34,7 +34,7 @@ class ColorSchemeMode(StrEnum):
 
     @classmethod
     def from_config(cls, declared: str | None) -> Self:
-        """Return the mode the ``color_scheme`` key names, or `SYSTEM` for ``None``.
+        """Return the mode the `color_scheme` key names, or `SYSTEM` for `None`.
 
         Raises
         ------
@@ -88,7 +88,7 @@ class ColorSchemeButton(QToolButton):
     """Cycles the colour scheme, system to light to dark and back.
 
     The glyph is the mode asked for rather than the scheme in force, so it
-    stays right while ``system`` follows a user changing their own setting.
+    stays right while `system` follows a user changing their own setting.
     """
 
     TOOLBAR: ClassVar[str] = "redsun.color-scheme"

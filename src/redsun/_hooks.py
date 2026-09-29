@@ -32,7 +32,7 @@ logger = logging.getLogger("redsun")
 
 
 class HookError(RuntimeError):
-    """A ``hooks`` configuration entry cannot be turned into a provider."""
+    """A `hooks` configuration entry cannot be turned into a provider."""
 
 
 def known_points(moments: Iterable[str]) -> str:
@@ -85,7 +85,7 @@ class ConfirmsClose(Protocol):
     """Decides whether the session may close, and can refuse.
 
     The session acts on this point's answer, where it only tells the other
-    points what happened. ``False`` leaves the session running.
+    points what happened. `False` leaves the session running.
     """
 
     @abstractmethod
@@ -117,7 +117,7 @@ class WrapsBuild(Protocol[AppT_contra]):
 def refuse_unknown_points(
     specs: Iterable[HookGroup], moments: Mapping[str, type], owner: str
 ) -> None:
-    """Refuse an entry of the ``hooks`` section under a key *owner* does not call.
+    """Refuse an entry of the `hooks` section under a key *owner* does not call.
 
     Raises
     ------
@@ -209,13 +209,13 @@ def distinct(objects: Iterable[object]) -> tuple[object, ...]:
 
 
 class HookGroup(BaseModel, extra="forbid", frozen=True, use_attribute_docstrings=True):
-    """One provider of the ``hooks`` section, and every hook point it serves."""
+    """One provider of the `hooks` section, and every hook point it serves."""
 
     moments: tuple[str, ...]
     """The hook points the entry appeared under."""
 
     provider: ClassPath
-    """The provider's class, as ``module:ClassName``."""
+    """The provider's class, as `module:ClassName`."""
 
     kwargs: dict[str, Any] = {}
     """Keywords the provider is constructed with."""

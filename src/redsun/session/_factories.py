@@ -40,11 +40,11 @@ def synthesize(
     returns: Key,
     name: str,
 ) -> Callable[..., Any]:
-    """Give *fn* the public signature ``(**params) -> returns``.
+    """Give *fn* the public signature `(**params) -> returns`.
 
-    Both ``__annotations__`` and ``__signature__`` are set: the graph reads the
+    Both `__annotations__` and `__signature__` are set: the graph reads the
     signature to learn each parameter's kind and the annotations to learn its
-    type, so a closure taking ``**kwargs`` would otherwise present no
+    type, so a closure taking `**kwargs` would otherwise present no
     dependencies at all.
 
     Every name appearing in *params* or *returns* must resolve at runtime; the
@@ -104,17 +104,17 @@ def injectable(
     """Return the constructor parameters the session is responsible for.
 
     Excludes anything the configuration supplied, variadics, *passed*, and
-    ``name`` when the session binds it. A shared service is given no name, so
+    `name` when the session binds it. A shared service is given no name, so
     every parameter of one is the session's to answer.
 
-    A parameter carrying a default is widened to ``X | None``, so the session
-    fills it when something provides ``X`` and leaves the default alone when
-    nothing does. A parameter asking for devices with ``DevicesOf`` is left
+    A parameter carrying a default is widened to `X | None`, so the session
+    fills it when something provides `X` and leaves the default alone when
+    nothing does. A parameter asking for devices with `DevicesOf` is left
     out, the session passing the devices itself.
 
-    Annotations are read from the signature rather than from ``__init__``,
-    because a class may synthesize one: a pydantic model's real ``__init__``
-    takes ``**data``, and its fields appear only in the signature.
+    Annotations are read from the signature rather than from `__init__`,
+    because a class may synthesize one: a pydantic model's real `__init__`
+    takes `**data`, and its fields appear only in the signature.
 
     Raises
     ------
@@ -126,7 +126,7 @@ def injectable(
 
 
 def get_setup_params(cls: type[HasSetup[...]]) -> dict[str, TypeForm[Any]]:
-    """Return the parameters of ``cls.setup`` the session is responsible for.
+    """Return the parameters of `cls.setup` the session is responsible for.
 
     Raises
     ------
@@ -191,7 +191,7 @@ def defaulted(cls: type, names: Iterable[str]) -> set[str]:
 
 
 def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
-    """Return ``X`` for ``X | None``, or ``None`` for anything else."""
+    """Return `X` for `X | None`, or `None` for anything else."""
     if not is_union(hint):
         return None
     args = [arg for arg in get_args(hint) if arg is not type(None)]
@@ -199,7 +199,7 @@ def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
 
 
 def is_union(hint: TypeForm[Any]) -> bool:
-    """Return whether *hint* is a union, written as ``X | Y`` or ``Union[X, Y]``."""
+    """Return whether *hint* is a union, written as `X | Y` or `Union[X, Y]`."""
     return get_origin(hint) in (Union, UnionType)
 
 
@@ -214,8 +214,8 @@ def factory(
     order components are created in observable: the graph, not the caller,
     decides it.
 
-    Optional parameters stay in the signature: the store fills ``X | None``
-    with ``None`` when nothing provides ``X``. A parameter answered that way is
+    Optional parameters stay in the signature: the store fills `X | None`
+    with `None` when nothing provides `X`. A parameter answered that way is
     left out of the call, so its own default applies. *passed* reaches the
     constructor by keyword, untouched.
     """
@@ -261,7 +261,7 @@ def provider(cls: type, name: str) -> Callable[..., Any]:
     """Return the callable the store fills to build the shared service *cls*.
 
     A provider takes no name of its own, so every annotated parameter of its
-    constructor is the store's to answer, ``name`` included.
+    constructor is the store's to answer, `name` included.
     """
     params = injectable(cls, {}, binds_name=False)
 

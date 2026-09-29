@@ -30,17 +30,12 @@ def get_choice_list(
 
     Parameters
     ----------
-    devices : Mapping[str, OADevice]
+    devices
         Devices by name.
-    proto : type[D]
-        Class checked with ``isinstance``.
-    choices : Sequence[str]
+    proto
+        Class checked with `isinstance`.
+    choices
         Names of the devices to consider.
-
-    Returns
-    -------
-    list[D]
-        The matching devices.
     """
     return [
         model
@@ -50,12 +45,12 @@ def get_choice_list(
 
 
 def _is_device_annotation(ann: Any) -> bool:
-    """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a ``@runtime_checkable Protocol``.
+    """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a `@runtime_checkable Protocol`.
 
     A Protocol cannot inherit a concrete class, so a device protocol such as
-    ``_MotorProtocol`` cannot inherit ``Device``. Any ``@runtime_checkable``
+    `_MotorProtocol` cannot inherit `Device`. Any `@runtime_checkable`
     Protocol is therefore accepted here; each device is checked later with
-    ``isinstance(device, proto)``.
+    `isinstance(device, proto)`.
     """
     try:
         if issubclass(ann, OADevice):
@@ -83,23 +78,23 @@ def _single_device_arg(ann: Any) -> bool:
 
 
 def issequence(ann: Any) -> bool:
-    """Return True if *ann* is a ``Sequence[...]`` generic alias.
+    """Return True if *ann* is a `Sequence[...]` generic alias.
 
     Notes
     -----
-    ``str`` and ``bytes`` are sequences, but not generic aliases
-    (``get_origin(str)`` is ``None``), so they are excluded.
+    `str` and `bytes` are sequences, but not generic aliases
+    (`get_origin(str)` is `None`), so they are excluded.
     """
     return _origin_subclasses(ann, Sequence)
 
 
 def isdevicesequence(ann: Any) -> bool:
-    """Return True if *ann* is ``Sequence[T]`` where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
+    """Return True if *ann* is `Sequence[T]` where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
     return issequence(ann) and _single_device_arg(ann)
 
 
 def isdeviceset(ann: Any) -> bool:
-    """Return True if *ann* is ``Set[T]`` (or ``AbstractSet[T]``, ``FrozenSet[T]``) where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
+    """Return True if *ann* is `Set[T]` (or `AbstractSet[T]`, `FrozenSet[T]`) where *T* is a [`Device`][ophyd_async.core.Device] subtype."""
     return _origin_subclasses(ann, AbstractSet) and _single_device_arg(ann)
 
 

@@ -49,7 +49,7 @@ SlotThread: TypeAlias = "Literal['main', 'current'] | Thread | None"
 """Thread a slot is delivered on, as accepted by `psygnal`."""
 
 Link: TypeAlias = "tuple[SignalInstance | SignalR[Any], Callable[..., Any]]"
-"""A signal and the slot it reaches, as a session's ``wire`` yields it."""
+"""A signal and the slot it reaches, as a session's `wire` yields it."""
 
 
 class WiringError(RuntimeError):
@@ -59,7 +59,7 @@ class WiringError(RuntimeError):
 class ComponentNotBuilt(WiringError):
     """Raised when a port path names a component that is not there.
 
-    ``component`` is the name the path used, so a caller that knows which
+    `component` is the name the path used, so a caller that knows which
     components failed to build can tell one of those from a name that was
     never declared.
     """
@@ -98,13 +98,13 @@ def slot(
 
     Parameters
     ----------
-    fn : F | None
-        The method, when the decorator is written bare. ``None`` when it is
+    fn
+        The method, when the decorator is written bare. `None` when it is
         written with arguments, which returns the decorator itself.
-    name : str | None
+    name
         Port name a configuration file addresses the method by. Defaults to
         the method name without leading underscores.
-    thread : SlotThread
+    thread
         Delivery thread, overriding the affinity the class declares.
     """
 
@@ -116,7 +116,7 @@ def slot(
 
 
 def marker_of(method: object) -> Slot | None:
-    """Return what `slot` recorded on *method*, ``None`` for one it did not mark."""
+    """Return what `slot` recorded on *method*, `None` for one it did not mark."""
     marker = getattr(method, SLOT_ATTR, None)
     return marker if isinstance(marker, Slot) else None
 
@@ -149,13 +149,8 @@ def ports(component: object) -> Ports:
 
     Parameters
     ----------
-    component : object
+    component
         The built component to inspect.
-
-    Returns
-    -------
-    Ports
-        Its signals and slots, keyed by port name.
 
     Raises
     ------
@@ -192,7 +187,7 @@ def ports(component: object) -> Ports:
 class Connection:
     """A recorded link between a signal and a slot.
 
-    The signal is a ``psygnal`` signal of a component, or a signal of a
+    The signal is a `psygnal` signal of a component, or a signal of a
     device, whose publisher is the device and whose port is the signal's name
     within it.
     """
@@ -210,7 +205,7 @@ class Connection:
     """Port name of the slot within the consumer."""
 
     thread: SlotThread = None
-    """Thread the slot runs on. ``None`` is the thread that emits."""
+    """Thread the slot runs on. `None` is the thread that emits."""
 
     def __str__(self) -> str:
         thread = f"  [thread={self.thread}]" if self.thread else ""
@@ -224,7 +219,7 @@ class Connection:
 class Unconnected:
     """Ports of the built components that no connection reaches.
 
-    Each entry is a ``component.port`` path. A signal listed here emits into
+    Each entry is a `component.port` path. A signal listed here emits into
     nothing; a slot listed here is never called.
     """
 

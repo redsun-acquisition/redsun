@@ -48,13 +48,13 @@ unfiltered.
 
 
 def devices_protocol(hint: object) -> type | None:
-    """Return the protocol a ``DevicesOf`` annotation names, or ``None`` for another hint.
+    """Return the protocol a `DevicesOf` annotation names, or `None` for another hint.
 
     Raises
     ------
     TypeError
         If *hint* carries the `Devices` marker on anything but
-        ``Mapping[str, P]`` with ``P`` a protocol.
+        `Mapping[str, P]` with `P` a protocol.
     """
     if get_origin(hint) is not Annotated:
         return None

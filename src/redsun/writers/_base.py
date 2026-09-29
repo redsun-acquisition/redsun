@@ -108,7 +108,7 @@ def root_attributes(path: Path) -> Mapping[str, Any]:
 def carries_ngff(attributes: Mapping[str, Any]) -> bool:
     """Return whether *attributes* hold NGFF metadata of their own.
 
-    An image, a plate or a ``bioformats2raw`` layout all do. Adding a key to
+    An image, a plate or a `bioformats2raw` layout all do. Adding a key to
     such a group drops that metadata.
     """
     return "ome" in attributes or "multiscales" in attributes

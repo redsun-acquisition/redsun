@@ -1,4 +1,4 @@
-"""The plugin manifest a bundle registers under the ``redsun.plugins`` group."""
+"""The plugin manifest a bundle registers under the `redsun.plugins` group."""
 
 from __future__ import annotations
 
@@ -25,18 +25,18 @@ ENTRY_POINT_GROUP: Final = "redsun.plugins"
 
 
 def class_path(value: str) -> str:
-    """Refuse text that does not name a class as ``module:ClassName``."""
+    """Refuse text that does not name a class as `module:ClassName`."""
     if not re.fullmatch(r"[A-Za-z_][\w.]*:[A-Za-z_]\w*", value):
         raise ValueError(f"{value!r} is not a class path; expected 'module:ClassName'")
     return value
 
 
 ClassPath = Annotated[str, AfterValidator(class_path)]
-"""A class named as ``module:ClassName``, imported only when a session uses it."""
+"""A class named as `module:ClassName`, imported only when a session uses it."""
 
 
 def import_class(path: str) -> type:
-    """Import the class *path* names as ``module:ClassName``.
+    """Import the class *path* names as `module:ClassName`.
 
     Raises
     ------
@@ -66,7 +66,7 @@ def problem_lines(
     error: ValidationError,
     locate: Callable[[list[str | int]], list[str | int]] | None = None,
 ) -> list[str]:
-    """Say each problem of *error* as ``section.key: what``.
+    """Say each problem of *error* as `section.key: what`.
 
     *locate* rewrites a problem's location first, for a model that holds
     something differently from the file it was read from.
@@ -85,7 +85,7 @@ class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     """How a manifest launches a service; a session file may override any of it."""
 
     module: str
-    """Module run as ``python -m <module>``."""
+    """Module run as `python -m <module>`."""
 
     args: list[str] = []
     """Arguments after the module."""

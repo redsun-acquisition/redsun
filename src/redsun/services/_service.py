@@ -45,7 +45,7 @@ PVXS_LINE: Final = re.compile(
     r"^(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\.(?P<fraction>\d+) "
     r"(?P<level>CRIT|ERR|WARN|INFO|DEBUG) (?P<name>pvxs(?:\.\w+)*) (?P<message>.*)$"
 )
-"""A line ``pvxs``, the library under a PVAccess server, writes to standard error.
+"""A line `pvxs`, the library under a PVAccess server, writes to standard error.
 
 It bypasses Python logging, so the level, time and logger name are read
 back from the text.
@@ -64,27 +64,27 @@ class Service:
     """A server devices talk to, and its process if the session owns it.
 
     A container makes one per declared service. A service with a *module* is
-    launched as ``python -m <module> <args>``; one without is attached to, runs
+    launched as `python -m <module> <args>`; one without is attached to, runs
     elsewhere, and `start` and `stop` do nothing. Each output line is logged
-    under ``redsun.service.<name>``: as the record it describes if it is a JSON
-    log record, at ``DEBUG`` otherwise; see `service_record`.
+    under `redsun.service.<name>`: as the record it describes if it is a JSON
+    log record, at `DEBUG` otherwise; see `service_record`.
 
     Parameters
     ----------
-    name : str
+    name
         Name of the service.
-    prefix : str
+    prefix
         Prefix given to each device naming the service.
-    module : str | None
-        Module to run. ``None`` attaches to a service that is already running.
-    args : Sequence[str]
+    module
+        Module to run. `None` attaches to a service that is already running.
+    args
         Command-line arguments following the module.
-    ready : str | None
-        Text of the output line marking the service ready. ``None`` counts it
+    ready
+        Text of the output line marking the service ready. `None` counts it
         ready once its process starts.
-    stop_timeout : float
+    stop_timeout
         Seconds each step of `stop` waits for the process to exit.
-    transport : str
+    transport
         Protocol the service is reached over, as `redsun.services._transports`
         names them. The session settles it for every service it holds.
 
@@ -162,8 +162,8 @@ class Service:
         transport gives it the environment it is reached on and tells this
         process where to look, so devices find it among several local
         services. What a transport reserves lasts for every start in this
-        process. It also reads ``REDSUN_SERVICE_NAME`` and
-        ``REDSUN_SERVICE_PREFIX`` from its environment, so a module serving
+        process. It also reads `REDSUN_SERVICE_NAME` and
+        `REDSUN_SERVICE_PREFIX` from its environment, so a module serving
         several sessions needs no arguments to name its channels. The process
         writes UTF-8, and each output line is logged as `service_record`
         rebuilds it.
@@ -237,7 +237,7 @@ class Service:
 
         First its standard input is closed, the one request that lets a service
         clean up on every platform. On POSIX a service still running after
-        `stop_timeout` gets ``SIGINT``; one still running after that, or after
+        `stop_timeout` gets `SIGINT`; one still running after that, or after
         the first step on Windows, is killed.
         """
         process = self._process
@@ -300,13 +300,13 @@ class Service:
 def service_record(service: str, line: str) -> logging.LogRecord:
     """Rebuild the log record one line of *service*'s output describes.
 
-    Two JSON layouts are read: ``loguru``'s with ``serialize=True``, and an
-    object with a `logging.LogRecord`'s ``name``, ``levelno``, ``created``,
-    ``msg`` and ``exc_text``. Such a record keeps its level, time and traceback,
-    under ``redsun.service.<service>.<its logger>``. A line ``pvxs`` writes,
-    ``<time> <LEVEL> <logger> <message>``, keeps its level, time and logger
-    the same way. Any other line, such as a ``print``, becomes a ``DEBUG``
-    record under ``redsun.service.<service>``.
+    Two JSON layouts are read: `loguru`'s with `serialize=True`, and an
+    object with a `logging.LogRecord`'s `name`, `levelno`, `created`,
+    `msg` and `exc_text`. Such a record keeps its level, time and traceback,
+    under `redsun.service.<service>.<its logger>`. A line `pvxs` writes,
+    `<time> <LEVEL> <logger> <message>`, keeps its level, time and logger
+    the same way. Any other line, such as a `print`, becomes a `DEBUG`
+    record under `redsun.service.<service>`.
     """
     base = f"{SERVICE_LOGGER}.{service}"
     fields: dict[str, Any] = {

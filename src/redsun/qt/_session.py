@@ -159,18 +159,18 @@ class QtHook(StrEnum):
     """The points a Qt session calls a hook at.
 
     A member is its own string, so the attribute name declaring a hook, the key
-    of a ``hooks`` configuration entry and a member here are the same thing
+    of a `hooks` configuration entry and a member here are the same thing
     said three ways.
     """
 
     CREATE_APPLICATION = "create_application"
-    """Makes the ``QApplication`` from the command-line arguments, when none exists yet."""
+    """Makes the `QApplication` from the command-line arguments, when none exists yet."""
 
     CONFIGURE_APPLICATION = "configure_application"
-    """Receives the ``QApplication`` before any view is made."""
+    """Receives the `QApplication` before any view is made."""
 
     DURING_BUILD = "during_build"
-    """Receives the ``QApplication`` and wraps the build steps."""
+    """Receives the `QApplication` and wraps the build steps."""
 
     CONFIGURE_MAIN_VIEW = "configure_main_view"
     """Receives the main window once it is made, before it is shown."""
@@ -191,10 +191,10 @@ class Qt(Frontend):
 
     @classmethod
     def check_view(cls, view: type, where: str) -> None:
-        """Refuse a view whose constructor does not start ``(name: str, parent: QWidget``.
+        """Refuse a view whose constructor does not start `(name: str, parent: QWidget`.
 
-        The session passes both by keyword, so neither may sit after a ``/``,
-        and neither may sit after a ``*``, so a missing ``parent`` shows in the
+        The session passes both by keyword, so neither may sit after a `/`,
+        and neither may sit after a `*`, so a missing `parent` shows in the
         first line of the signature.
 
         Raises
@@ -294,7 +294,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     @property
     def view_arguments(self) -> Mapping[str, object]:
-        """The main window, as every view's ``parent``."""
+        """The main window, as every view's `parent`."""
         return {"parent": self.main_window}
 
     @property
@@ -302,7 +302,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """The toolkit application this session runs on, and keeps alive.
 
         Nothing else holds one that the session created, and a collected
-        ``QApplication`` takes the next widget built with it, so the session
+        `QApplication` takes the next widget built with it, so the session
         keeps the reference until it is released.
 
         Raises
@@ -330,17 +330,17 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def start_runtime(self) -> None:
         """Put the toolkit in place, before the first component is built.
 
-        A ``QApplication`` has to exist before any widget is constructed, so it
+        A `QApplication` has to exist before any widget is constructed, so it
         is made here. The hooks were resolved by the step before this one, so one
-        may supply the ``QApplication`` itself. The session's own application
+        may supply the `QApplication` itself. The session's own application
         follows, because the components are built out of its store, and the
-        ``actions`` section is registered on it at once, so a hook dressing the
+        `actions` section is registered on it at once, so a hook dressing the
         window finds every command it may put in a menu. The window comes next,
         since every view is built as its child. The colour scheme is
         asked for before any widget exists to be painted in the wrong one, and
-        a ``configure_application`` hook runs last, so one restyling the
+        a `configure_application` hook runs last, so one restyling the
         application does so over a scheme already in force. Each of them
-        registers how it is given back as it is taken, so ``shutdown`` frees
+        registers how it is given back as it is taken, so `shutdown` frees
         the name without this class defining one.
         """
         super().start_runtime()
@@ -461,12 +461,12 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
 
-        A ``QWidget`` outlives its last Python reference whenever C++ owns it,
-        so dropping a component does not end its widget and ``deleteLater`` is
+        A `QWidget` outlives its last Python reference whenever C++ owns it,
+        so dropping a component does not end its widget and `deleteLater` is
         what does. It is closed first because that is the only way its
-        ``closeEvent`` runs: deleting a widget does not send one, and closing
+        `closeEvent` runs: deleting a widget does not send one, and closing
         the window does not send one to a view docked inside it. A component
-        written here has ``shutdown`` for its own teardown and needs none of
+        written here has `shutdown` for its own teardown and needs none of
         this; a view that *is* a third-party widget, wrapping a viewer whose
         cleanup it inherits, has nowhere else for that cleanup to happen.
 
@@ -474,7 +474,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         the window after the views it docks. Reading it afterwards
         reports an unbuilt session rather than handing back a wrapper whose
         widget is gone. A reference taken before the shutdown is left wrapping
-        a destroyed widget, and using it raises ``RuntimeError``.
+        a destroyed widget, and using it raises `RuntimeError`.
 
         Emissions still queued for a slot on the main thread are delivered
         first, while the widgets can receive them.
@@ -584,9 +584,9 @@ class QtSession(DesktopSession[QMainWindow], Session):
         return True
 
     def _register_actions(self) -> None:
-        """Register what the ``actions`` section declares on the application.
+        """Register what the `actions` section declares on the application.
 
-        The disposer is registered with ``on_release``, which runs before the
+        The disposer is registered with `on_release`, which runs before the
         application is destroyed, so a second session under the same name
         starts against a registry holding nothing of the first.
 
@@ -618,7 +618,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Open the span a `QtHook.DURING_BUILD` hook wraps the build in.
 
         Without one, reporting stays where it was and nothing brackets the
-        build. The ``runtime`` step has run by now, so the ``QApplication`` a
+        build. The `runtime` step has run by now, so the `QApplication` a
         hook is handed exists.
         """
         hook = self.hooks.get(QtHook.DURING_BUILD)

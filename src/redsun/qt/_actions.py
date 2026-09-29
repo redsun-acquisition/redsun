@@ -1,4 +1,4 @@
-"""The ``actions`` configuration section, read into the actions it declares."""
+"""The `actions` configuration section, read into the actions it declares."""
 
 from __future__ import annotations
 
@@ -11,22 +11,22 @@ __all__ = ["ActionError", "action_from_entry", "read_actions"]
 
 
 class ActionError(RuntimeError):
-    """An ``actions`` configuration entry cannot be turned into an action."""
+    """An `actions` configuration entry cannot be turned into an action."""
 
 
 def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
-    """Read the ``actions`` section of *owner*'s configuration, one per entry.
+    """Read the `actions` section of *owner*'s configuration, one per entry.
 
     Parameters
     ----------
-    raw : object
+    raw
         The section as the configuration carried it, which need not be a list.
-    owner : str
+    owner
         How to name the configuration in a refusal, usually the session's own
         name.
 
-    Reading imports nothing a session did not already import: a ``callback``
-    stays the ``module:function`` string it was written as, and app-model
+    Reading imports nothing a session did not already import: a `callback`
+    stays the `module:function` string it was written as, and app-model
     imports it when the command first runs.
 
     Raises
@@ -45,7 +45,7 @@ def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
 
 
 def action_from_entry(entry: object, position: int) -> Action[..., Any]:
-    """Read one ``actions`` entry, named by its id or by where it appears.
+    """Read one `actions` entry, named by its id or by where it appears.
 
     Raises
     ------

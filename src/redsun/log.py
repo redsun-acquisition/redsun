@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 DEFAULT_LEVEL: Final = "INFO"
-"""The level the ``redsun`` logger starts at."""
+"""The level the `redsun` logger starts at."""
 
 DATE_FORMAT: Final = "%d-%m-%y|%H:%M:%S"
 """How a record's timestamp is written."""
@@ -62,7 +62,7 @@ logger = logging.getLogger("redsun")
 
 
 class GlobalFormatter(logging.Formatter):
-    """Formatter of ``redsun`` log records."""
+    """Formatter of `redsun` log records."""
 
     _format: ClassVar[str] = "[%(asctime)s][%(levelname)s]"
 
@@ -132,7 +132,7 @@ class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
 
 
 def service_of(record: logging.LogRecord) -> str | None:
-    """Return the name of the service *record* came from, ``None`` for the application."""
+    """Return the name of the service *record* came from, `None` for the application."""
     prefix = f"{SERVICE_LOGGER}."
     if not record.name.startswith(prefix):
         return None
@@ -148,9 +148,9 @@ class BufferHandler(logging.Handler):
 
     Parameters
     ----------
-    capacity : int
+    capacity
         How many application records to retain.
-    service_capacity : int
+    service_capacity
         How many records of each service to retain.
     """
 
@@ -217,30 +217,30 @@ class BufferHandler(logging.Handler):
 class SessionFileHandler(RotatingFileHandler):
     """Write the records of one run of a session to a file of its own.
 
-    The file is under ``logs`` in the session's root, in a folder named after
-    the session, then in ``app`` for the application or ``services`` for a
+    The file is under `logs` in the session's root, in a folder named after
+    the session, then in `app` for the application or `services` for a
     service, and named after the run: its start time and process. It rotates
     at `LOG_MAX_BYTES`, keeping `LOG_BACKUPS` older files. `move` carries the
     run's files to another root and keeps writing there.
 
-    The application's file, ``<run>.log``, takes no service records, and
+    The application's file, `<run>.log`, takes no service records, and
     opening it deletes the files of all but the session's `LOG_RUNS_KEPT` most
-    recent runs. A service's file, ``<run>.<service>.log``, belongs to *run*,
-    is installed with ``add_handler(handler, service)``, and is created when
+    recent runs. A service's file, `<run>.<service>.log`, belongs to *run*,
+    is installed with `add_handler(handler, service)`, and is created when
     the service first logs.
 
     Parameters
     ----------
-    session : str
+    session
         Name of the session.
-    service : str | None
-        The service whose records the file holds, ``None`` for the application.
-    run : str | None
-        The run, as the application handler's `run`. ``None`` starts a new
+    service
+        The service whose records the file holds, `None` for the application.
+    run
+        The run, as the application handler's `run`. `None` starts a new
         run.
-    root : Path | None
+    root
         Root the session writes under, as the path provider's `base_dir`.
-        ``None`` is the user data directory.
+        `None` is the user data directory.
     """
 
     def __init__(
@@ -333,7 +333,7 @@ def _delete_old_runs(folder: Path, keep: int) -> None:
 
 
 def set_level(level: int | str) -> None:
-    """Set the level of the ``redsun`` logger.
+    """Set the level of the `redsun` logger.
 
     Level names are case-insensitive.
 
@@ -346,7 +346,7 @@ def set_level(level: int | str) -> None:
 
 
 def add_handler(handler: logging.Handler, service: str | None = None) -> None:
-    """Send the ``redsun`` logger's records to *handler* as well.
+    """Send the `redsun` logger's records to *handler* as well.
 
     With a *service*, only that service's records reach *handler*. A handler
     without a formatter gets the shared one, so records read the same
@@ -366,7 +366,7 @@ def remove_handler(handler: logging.Handler, service: str | None = None) -> None
 
 
 def _logger_for(service: str | None) -> logging.Logger:
-    """Return the ``redsun`` logger, or the one a *service*'s records arrive on."""
+    """Return the `redsun` logger, or the one a *service*'s records arrive on."""
     return (
         logger if service is None else logging.getLogger(f"{SERVICE_LOGGER}.{service}")
     )

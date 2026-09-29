@@ -1,6 +1,6 @@
 """Where the session's catalog is served.
 
-Imports nothing from ``tiled``, so any component can ask, extra or not.
+Imports nothing from `tiled`, so any component can ask, extra or not.
 """
 
 from __future__ import annotations
@@ -22,4 +22,4 @@ class CatalogAddress:
     """
 
     uri: str = field(repr=False)
-    """URI of the server, with its API key. Left out of the ``repr``."""
+    """URI of the server, with its API key. Left out of the `repr`."""

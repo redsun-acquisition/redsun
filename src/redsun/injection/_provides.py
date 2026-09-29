@@ -27,7 +27,7 @@ def provides(method: F) -> F:
             return MotorReadings(...)
     ```
 
-    Anything asking for ``MotorReadings`` in its `setup` receives the result
+    Anything asking for `MotorReadings` in its `setup` receives the result
     of calling this method on the built component. The return annotation is
     the key, so it must be distinct across the application.
     """
@@ -36,7 +36,7 @@ def provides(method: F) -> F:
 
 
 def shared_keys(cls: type) -> dict[str, Key]:
-    """Return the ``provides``-marked members of *cls*, as name to type.
+    """Return the `provides`-marked members of *cls*, as name to type.
 
     Raises
     ------

@@ -30,12 +30,12 @@ __all__ = [
 # these three are dependency keys, so every name in them must resolve at runtime:
 # the graph evaluates the annotation, and a TYPE_CHECKING-only import fails there
 CallbackType: TypeAlias = Callable[[str, Document], None] | DocumentRouter
-"""A document callback: a `DocumentRouter`, or anything callable as ``(name, doc)``."""
+"""A document callback: a `DocumentRouter`, or anything callable as `(name, doc)`."""
 
 DeviceMapping: TypeAlias = Mapping[str, Device]
 """Every device an application built, by name.
 
-Not ophyd-async's ``DeviceMap``, which is a device holding string-keyed
+Not ophyd-async's `DeviceMap`, which is a device holding string-keyed
 children; this is the application's own set.
 """
 
@@ -60,7 +60,7 @@ class SessionConfig:
 class PlanEntry(TypedDict, total=False):
     """A plan a component offers, and the document callbacks it requires.
 
-    Only ``plan`` is required.
+    Only `plan` is required.
     """
 
     plan: Required[Callable[..., MsgGenerator[Any]]]
@@ -70,7 +70,7 @@ class PlanEntry(TypedDict, total=False):
     """Callbacks the plan requires, run in this order before any a user attaches."""
 
     extendable: bool
-    """Whether a user may attach callbacks. ``True`` when absent."""
+    """Whether a user may attach callbacks. `True` when absent."""
 
 
 @runtime_checkable

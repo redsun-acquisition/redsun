@@ -28,19 +28,19 @@ class PluginError(RuntimeError):
 
 
 def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type | None:
-    """Return the class a configuration entry names, or ``None``.
+    """Return the class a configuration entry names, or `None`.
 
-    An entry naming no plugin is not a plugin entry and yields ``None``.
+    An entry naming no plugin is not a plugin entry and yields `None`.
 
     Parameters
     ----------
-    plugin_name : str | None
-        The entry's ``plugin_name``, ``None`` when it gives none.
-    plugin_id : str | None
-        The entry's ``plugin_id``, ``None`` when it gives none.
-    group : str
-        Manifest section to look in: ``devices``, ``presenters``, ``views`` or
-        ``providers``.
+    plugin_name
+        The entry's `plugin_name`, `None` when it gives none.
+    plugin_id
+        The entry's `plugin_id`, `None` when it gives none.
+    group
+        Manifest section to look in: `devices`, `presenters`, `views` or
+        `providers`.
 
     Raises
     ------
@@ -57,12 +57,12 @@ def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type 
 
 
 def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
-    """Return the shared-service classes a ``providers`` section names, by entry name.
+    """Return the shared-service classes a `providers` section names, by entry name.
 
     A session assembled from a file gets a plugin's shared services this way,
     without naming them in Python. A provider is an ordinary class: its
     constructor is filled from the session the way a component's is, and every
-    method it marks with ``provides`` registers a value under the type that
+    method it marks with `provides` registers a value under the type that
     method returns.
 
     An entry that does not resolve is logged and left out.
@@ -82,10 +82,10 @@ def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
 
 
 def service_entry(entry: ComponentEntry) -> dict[str, Any]:
-    """Return the keywords a ``services`` entry gives, its plugin's included.
+    """Return the keywords a `services` entry gives, its plugin's included.
 
-    An entry naming a plugin takes ``module``, ``args``, ``ready`` and
-    ``stop_timeout`` from the plugin's manifest, under anything the entry
+    An entry naming a plugin takes `module`, `args`, `ready` and
+    `stop_timeout` from the plugin's manifest, under anything the entry
     itself gives.
 
     Raises

@@ -1,12 +1,12 @@
 """Run the documentation's example sessions and save a picture of each window.
 
-``QApplication.exec`` is replaced by a function that photographs the main
-window, so a script calling ``run()`` stops there instead of starting the event
+`QApplication.exec` is replaced by a function that photographs the main
+window, so a script calling `run()` stops there instead of starting the event
 loop. Settings and log files go to a temporary folder, so a layout saved on this
 machine does not change the picture. Run from the repository root.
 
 Each script runs in a process of its own, as a session does when a user starts
-it: a second Qt application in one process finds the timer ``psygnal`` made for
+it: a second Qt application in one process finds the timer `psygnal` made for
 the first, which was deleted with it.
 
 The window opens on the platform's own display, which has the fonts the text
@@ -66,7 +66,7 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
     ),
 }
 """Each example script, with where its picture is written, the size of the
-window, and the plan run before the picture, if any, as ``view:plan``."""
+window, and the plan run before the picture, if any, as `view:plan`."""
 
 SETTLE = 3.0
 """Seconds a plan started for a picture is given to finish."""
@@ -75,7 +75,7 @@ SETTLE = 3.0
 def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
     """Save the visible main window to *target*, and close every window.
 
-    With *press*, given as ``view:plan``, that plan is chosen in that view
+    With *press*, given as `view:plan`, that plan is chosen in that view
     and run before the picture is taken.
     """
     app = QApplication.instance()
@@ -113,7 +113,7 @@ def photograph(target: Path, size: tuple[int, int], press: str | None) -> int:
 def capture(
     script: Path, target: Path, size: tuple[int, int], press: str | None
 ) -> None:
-    """Run *script* as ``__main__`` and photograph the window it shows.
+    """Run *script* as `__main__` and photograph the window it shows.
 
     The script runs from its own folder, where a reader runs it and where the
     session file it names is.

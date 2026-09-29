@@ -151,7 +151,7 @@ def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
     The constructor's parameters decide this, not the keys the configuration
     carried. A component serializes every parameter it has, including one
     that took its default and that no source named, and that key is correct.
-    A constructor taking ``**kwargs`` accepts anything, so it refuses none.
+    A constructor taking `**kwargs` accepts anything, so it refuses none.
     """
     params = constructor(cls).parameters
     if any(p.kind is p.VAR_KEYWORD for p in params.values()):
@@ -206,7 +206,7 @@ class NotBuilt:
     """Stands in for a component that failed to build, while `Session.wire` runs.
 
     Any attribute read on it is another stand-in for the same component, so
-    a link yielding ``self.stage.readback`` is recognised and skipped.
+    a link yielding `self.stage.readback` is recognised and skipped.
     """
 
     component: str
@@ -246,7 +246,7 @@ class Session(BuildableSession):
     instance, typed by its annotation.
 
     A component that failed to build is set on nothing, so reading its name
-    raises ``AttributeError`` rather than answering ``None``. Inside `wire` it
+    raises `AttributeError` rather than answering `None`. Inside `wire` it
     reads as a stand-in instead, and a link naming it is skipped with a
     warning.
     """
@@ -327,8 +327,8 @@ class Session(BuildableSession):
 
         *config* layers over whatever the class declares rather than replacing
         it, so a caller naming one key changes that key and leaves the rest.
-        *log_level*, a `logging` constant or its name, sets the ``redsun``
-        logger's level; ``None`` leaves it as it is.
+        *log_level*, a `logging` constant or its name, sets the `redsun`
+        logger's level; `None` leaves it as it is.
         """
         if log_level is not None:
             set_level(log_level)
@@ -385,7 +385,7 @@ class Session(BuildableSession):
 
         Every component the configuration names is declared, its layer coming
         from the section it appears under, so a session needs no class
-        of its own. The ``frontend`` key chooses the class to build
+        of its own. The `frontend` key chooses the class to build
         on; naming none builds on this one, which is what a session with no
         toolkit wants.
 
@@ -423,7 +423,7 @@ class Session(BuildableSession):
     def transport(self) -> str:
         """What the session's services speak, one for all of them.
 
-        Named once under ``services`` in the configuration; ``channel-access``
+        Named once under `services` in the configuration; `channel-access`
         when it names nothing.
         """
         return self._transport
@@ -513,7 +513,7 @@ class Session(BuildableSession):
 
         A subclass firing a point calls this rather than resolving again, so
         that every point of one build acts on one set of providers. A provider
-        with a ``shutdown`` method is shut down with the session, once however
+        with a `shutdown` method is shut down with the session, once however
         many points it serves, the last built first.
 
         Raises
@@ -573,7 +573,7 @@ class Session(BuildableSession):
     def name(self) -> str:
         """What this session is called.
 
-        The configuration's ``session``, or this session's own class name when
+        The configuration's `session`, or this session's own class name when
         the configuration says nothing. A class name is distinct per session
         where a shared constant would not be.
         """
@@ -609,7 +609,7 @@ class Session(BuildableSession):
         """Return the registry this session builds its components out of.
 
         Named after the session and constructed rather than registered:
-        ``Store.create`` would enter it in the process-wide registry, where a
+        `Store.create` would enter it in the process-wide registry, where a
         second session of one name refuses to start and an unfinished one
         keeps the name until it is destroyed. Nothing here looks a store up by
         name, so the registry buys nothing and costs a teardown obligation on
@@ -618,7 +618,7 @@ class Session(BuildableSession):
         A session owning an application of its own overrides this to share
         that application's store, which is what lets a command reach a
         component. That one *is* registered, by app-model, and freed by
-        ``Application.destroy``.
+        `Application.destroy`.
         """
         return Store(self.name)
 
@@ -859,7 +859,7 @@ class Session(BuildableSession):
         Raises
         ------
         BuildError
-            If the configuration sets ``strict`` and a component could not be
+            If the configuration sets `strict` and a component could not be
             built or set up, naming each one and why.
         """
         summary = self._summarise_build()
@@ -919,7 +919,7 @@ class Session(BuildableSession):
         ```
 
         A signal is a `psygnal` signal of a component, or a signal of an
-        ``ophyd-async`` device, whose reading dictionary the slot is called
+        `ophyd-async` device, whose reading dictionary the slot is called
         with. A slot is a bound method marked with `slot`, which may be a
         coroutine function, and is delivered on the thread it declares, then
         the one its class declares, then the one the frontend gives it.
@@ -934,7 +934,7 @@ class Session(BuildableSession):
         """Run every registered release, in the reverse of the order taken.
 
         Connections go first, so nothing is delivered to a component that is
-        already finalizing. The releases follow: the ``shutdown`` method of
+        already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
         Calling it a second time, or on a session that was never built, runs
         nothing: a release is dropped as it runs.
@@ -1033,7 +1033,7 @@ class Session(BuildableSession):
     def _entry_for(self, declaration: Declaration) -> dict[str, Any] | None:
         """Return the entry *declaration*'s component asks to be written.
 
-        ``None`` where there is nothing to write, which leaves the entry the
+        `None` where there is nothing to write, which leaves the entry the
         session loaded in place. One refused key discards the whole entry
         rather than only itself: dropping the key alone would leave an entry
         the component never asked for, where a renamed setting writes the new
@@ -1211,7 +1211,7 @@ class Session(BuildableSession):
         logger.debug(f"Connected {link}")
 
     def _connect_paths(self, source: str, target: str) -> None:
-        """Connect two ports addressed as ``component.port``.
+        """Connect two ports addressed as `component.port`.
 
         A path naming a component that failed to build is logged and skipped.
 
@@ -1237,7 +1237,7 @@ class Session(BuildableSession):
         self._connect(cast("SignalInstance", signal), cast("Callable[..., Any]", slot))
 
     def _resolve_port(self, path: str, kind: str) -> object:
-        """Look up the signal or slot a ``component.port`` path names."""
+        """Look up the signal or slot a `component.port` path names."""
         component_name, _, port = path.partition(".")
         if not component_name or not port or "." in port:
             raise WiringError(f"{path!r} is not a port path; expected 'component.port'")
@@ -1630,8 +1630,8 @@ class Session(BuildableSession):
     def _verify(self, declaration: Declaration, instance: object) -> None:
         """Check a component just built against the protocol of its layer.
 
-        A member assigned in ``__init__`` is invisible on the class, so a view
-        answering ``placement`` from anything but a class attribute is only
+        A member assigned in `__init__` is invisible on the class, so a view
+        answering `placement` from anything but a class attribute is only
         checkable now.
 
         Raises
@@ -1674,7 +1674,7 @@ class Session(BuildableSession):
         declared first, then drops what the transport caches about them so a
         rebuilt session reconnects at once.
 
-        A session whose configuration sets ``mock`` starts none: its devices
+        A session whose configuration sets `mock` starts none: its devices
         connect to simulated backends, which reach no service.
         """
         self._failed_services = {}
@@ -1731,7 +1731,7 @@ class Session(BuildableSession):
 
         They come before the store because a device is made from its own
         declaration and asks the session for nothing. A device naming a service
-        receives that service's prefix as ``prefix``, and is skipped when the
+        receives that service's prefix as `prefix`, and is skipped when the
         service is not declared, did not start, or gives no prefix.
         """
         for declaration in self._declarations.values():
@@ -1756,7 +1756,7 @@ class Session(BuildableSession):
                 self._register_teardown(device)
 
     def _prefix_for(self, declaration: Declaration) -> dict[str, str]:
-        """Return the ``prefix`` keyword from *declaration*'s service, if it names one.
+        """Return the `prefix` keyword from *declaration*'s service, if it names one.
 
         Raises
         ------
@@ -1779,7 +1779,7 @@ class Session(BuildableSession):
         return {"prefix": service.prefix}
 
     def _path_provider_for(self, declaration: Declaration) -> dict[str, object]:
-        """Return the ``path_provider`` keyword, for a device whose constructor takes it."""
+        """Return the `path_provider` keyword, for a device whose constructor takes it."""
         parameter = inspect.signature(declaration.cls).parameters.get("path_provider")
         if parameter is None or parameter.kind not in (
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
@@ -1791,11 +1791,11 @@ class Session(BuildableSession):
     def connect_built_devices(self) -> None:
         """Connect every autoconnect device at once.
 
-        To a simulated backend when the configuration sets ``mock``, to what
+        To a simulated backend when the configuration sets `mock`, to what
         the device names otherwise. A device not connected within
         `CONNECT_TIMEOUT` is dropped and recorded as failed, like one that
-        fails to build, and its ``shutdown`` is never called. One that
-        connected has its ``shutdown`` registered as a release.
+        fails to build, and its `shutdown` is never called. One that
+        connected has its `shutdown` registered as a release.
         """
         mock = self._configuration().mock
         targets = {
@@ -1871,7 +1871,7 @@ class Session(BuildableSession):
     def _register_teardown(self, component: object) -> None:
         """Hand the session's own teardown to the one owner of it.
 
-        A component that declares ``shutdown`` is finalized without having to
+        A component that declares `shutdown` is finalized without having to
         ask for it; one that does not needs no teardown at all.
         """
         if not isinstance(component, HasShutdown):
@@ -1890,7 +1890,7 @@ class Session(BuildableSession):
         self.on_release(close)
 
     def _apply_wiring_config(self, wiring: Mapping[str, str | list[str]]) -> None:
-        """Connect each signal the ``wiring`` section names to its slots.
+        """Connect each signal the `wiring` section names to its slots.
 
         A path naming a component the build failed on is warned about and
         skipped, so one component that could not be made does not keep the
@@ -2083,7 +2083,7 @@ def refuse_backwards(
 
 
 def as_protocol(instance: object, protocol: TypeForm[P]) -> P | None:
-    """Return *instance* typed as the runtime-checkable *protocol*, or ``None``.
+    """Return *instance* typed as the runtime-checkable *protocol*, or `None`.
 
     Returning the value rather than a `TypeIs` keeps narrowing out of the
     caller: mypy reports a check of a union of a class and a protocol against
@@ -2124,7 +2124,7 @@ def skipped(*ends: object) -> bool:
 
 
 def frontend_of(cls: type) -> str | None:
-    """Return the registered name of the frontend *cls* builds on, ``None`` for none.
+    """Return the registered name of the frontend *cls* builds on, `None` for none.
 
     Only a frontend whose module is already imported is looked at: a class
     built on it has imported it, so nothing else needs loading.

@@ -35,7 +35,7 @@ def is_protocol_class(candidate: object) -> TypeIs[type]:
 
 
 def protocol_of(hint: object) -> type | None:
-    """Return the protocol *hint* names, subscripted or not, or ``None``."""
+    """Return the protocol *hint* names, subscripted or not, or `None`."""
     if is_protocol_class(hint):
         return hint
     origin = get_origin(hint)
@@ -84,7 +84,7 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
     checker does that.
 
     Data members are read from an instance, since a value assigned in
-    ``__init__`` is not on the class. A class leaves them unchecked; an
+    `__init__` is not on the class. A class leaves them unchecked; an
     instance checks everything.
     """
     cls = candidate if isinstance(candidate, type) else type(candidate)
@@ -139,7 +139,7 @@ def _defined(owner: type, name: str) -> Any:
     """Return *name* as *owner* or one of its bases defines it.
 
     Unlike `inspect.getattr_static`, the metaclass is not searched: every class
-    reaches ``type.__call__`` through it, which says nothing about whether its
+    reaches `type.__call__` through it, which says nothing about whether its
     instances can be called.
     """
     for klass in owner.__mro__:
@@ -151,9 +151,9 @@ def _defined(owner: type, name: str) -> Any:
 def _call_signature(owner: type, name: str) -> inspect.Signature | None:
     """How *name* is called on an instance of *owner*, if that is knowable.
 
-    ``None`` for a data member or an unreadable signature. Binding through the
-    descriptor protocol drops ``self`` from a method and leaves a
-    ``staticmethod`` as is.
+    `None` for a data member or an unreadable signature. Binding through the
+    descriptor protocol drops `self` from a method and leaves a
+    `staticmethod` as is.
     """
     static = _defined(owner, name)
     if static is _MISSING or isinstance(static, property):

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def require_tiled() -> None:
-    """Raise `RuntimeError` naming each package of the ``tiled`` extra that is missing."""
+    """Raise `RuntimeError` naming each package of the `tiled` extra that is missing."""
     missing = [
         package
         for package in ("tiled", "ome_tiled", "bluesky_tiled_plugins")
@@ -32,10 +32,10 @@ def require_tiled() -> None:
 def start_catalog(
     config: CatalogConfig, provider: SessionPathProvider
 ) -> SimpleTiledServer:
-    """Start a session's catalog in ``provider.session_dir / "catalog"``.
+    """Start a session's catalog in `provider.session_dir / "catalog"`.
 
     The server reads from the session's directory and every one *config* adds,
-    serves OME-Zarr images with their axis names, and has a ``TiledWriter`` in
+    serves OME-Zarr images with their axis names, and has a `TiledWriter` in
     this process store them as their store holds them. *provider*'s root is
     locked once it runs. A server that started and then failed its setup is
     stopped before the error is raised.

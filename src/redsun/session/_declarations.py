@@ -64,9 +64,9 @@ __all__ = [
 Key: TypeAlias = Any
 """A dependency key.
 
-Not ``TypeForm``: a `NewType` built at runtime is a type expression only at
+Not `TypeForm`: a `NewType` built at runtime is a type expression only at
 runtime, and no type checker can model one. Hints read from an annotation stay
-``TypeForm[Any]``; keys the session synthesises are this.
+`TypeForm[Any]`; keys the session synthesises are this.
 """
 
 
@@ -75,7 +75,7 @@ class Layer(StrEnum):
 
     Carried as the metadata of a declaration's annotation. `redsun.session.components`
     spells the three out. A member is its own name in a message, so it needs no
-    ``.value``, and its ``section`` is that name pluralised.
+    `.value`, and its `section` is that name pluralised.
     """
 
     DEVICE = "device"
@@ -145,9 +145,9 @@ class ServiceMark:
 
 @dataclass(frozen=True)
 class Launch:
-    """A service the session runs as ``python -m <module> <args>``.
+    """A service the session runs as `python -m <module> <args>`.
 
-    A keyword left as ``None`` is taken from the service's ``services`` entry,
+    A keyword left as `None` is taken from the service's `services` entry,
     and otherwise from `redsun.services.Service`.
     """
 
@@ -206,19 +206,19 @@ MARKERS = (Declare, FromConfig, Alias, Serves, Launch, Attach)
 class Declaration:
     """A declared component, before and after it is built.
 
-    ``key`` is a distinct type per component name, so two instances of one
-    class stay separable in a type-keyed graph. A device's ``service`` and
-    ``autoconnect`` keywords are kept here, not passed to its constructor.
-    ``refusal`` is why the class cannot be built in its layer, or ``None``; a
-    refused declaration is never built. ``attribute`` is the annotation the
-    session class declares it under and ``source`` the configuration entry its
+    `key` is a distinct type per component name, so two instances of one
+    class stay separable in a type-keyed graph. A device's `service` and
+    `autoconnect` keywords are kept here, not passed to its constructor.
+    `refusal` is why the class cannot be built in its layer, or `None`; a
+    refused declaration is never built. `attribute` is the annotation the
+    session class declares it under and `source` the configuration entry its
     keywords are read from; both are the name unless a marker says otherwise.
 
     Raises
     ------
     TypeError
         If a device's keywords name its service ambiguously, or give an
-        ``autoconnect`` that is not a bool.
+        `autoconnect` that is not a bool.
     """
 
     __slots__ = (
@@ -260,9 +260,9 @@ class Declaration:
 def take_device_keys(
     declaration: Declaration, kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    """Move ``service`` and ``autoconnect`` from *kwargs* onto *declaration*.
+    """Move `service` and `autoconnect` from *kwargs* onto *declaration*.
 
-    ``path_provider`` is reserved too: a device taking one gets the session's.
+    `path_provider` is reserved too: a device taking one gets the session's.
 
     Returns the keywords left for the device's constructor.
 
@@ -270,7 +270,7 @@ def take_device_keys(
     ------
     TypeError
         If the device's class takes one of the keywords itself, a service and a
-        prefix are both given, or ``autoconnect`` is not a bool.
+        prefix are both given, or `autoconnect` is not a bool.
     """
     params = inspect.signature(declaration.cls).parameters
     for key in ("service", "autoconnect", "path_provider"):
@@ -304,18 +304,18 @@ def check(
 
     Parameters
     ----------
-    target : object
+    target
         What the annotation named, which need not be a class.
-    layer : Layer
+    layer
         The layer the annotation declared it in.
-    where : str
+    where
         How to name the declaration in a refusal, such as
-        ``"'panel' on MyApp"``.
-    frontend : type[Frontend]
+        `"'panel' on MyApp"`.
+    frontend
         The toolkit to check a placement against. The default attaches
         nothing and constrains no view.
 
-    A view is a class declaring a ``placement``; a presenter is one that does
+    A view is a class declaring a `placement`; a presenter is one that does
     not. When the placement is a value on the class it is checked against the
     frontend here, and when it is a property only the built instance can
     answer, so `redsun.Session` asks again then.
@@ -400,17 +400,17 @@ def check_questions(cls: type, where: str) -> None:
     """Refuse a question *cls* asks where the session cannot answer it.
 
     A constructor runs before the other components exist, so it asks no
-    protocol question beyond the devices it takes with ``DevicesOf``. A
+    protocol question beyond the devices it takes with `DevicesOf`. A
     `setup` asks no question about a device protocol, the devices being
     asked for in the constructor, and names one protocol per parameter. A
-    value shared with ``provides`` is a concrete object, so its type is not a
+    value shared with `provides` is a concrete object, so its type is not a
     protocol.
 
     Raises
     ------
     TypeError
         Naming the parameter or shared value and what to write instead, or a
-        ``DevicesOf`` marker on the wrong shape.
+        `DevicesOf` marker on the wrong shape.
     """
     label = f"the constructor of {cls.__qualname__}"
     for pname, param in resolved(cls, label).parameters.items():
@@ -466,7 +466,7 @@ def is_device_protocol(protocol: type) -> bool:
 
 
 def owns_signal(cls: type) -> bool:
-    """Whether *cls* or a base declares a psygnal ``Signal``."""
+    """Whether *cls* or a base declares a psygnal `Signal`."""
     return any(
         isinstance(member, Signal)
         for klass in cls.__mro__
@@ -486,7 +486,7 @@ def is_frozen(cls: type) -> bool:
 def refusal(
     target: object, layer: Layer, where: str, frontend: type[Frontend] = Frontend
 ) -> TypeError | None:
-    """Return why the class *target* cannot be declared in *layer*, or ``None``.
+    """Return why the class *target* cannot be declared in *layer*, or `None`.
 
     Raises
     ------
@@ -509,9 +509,9 @@ NAME_KINDS: Final = frozenset(
 
 
 def accepts_name(cls: type) -> bool:
-    """Whether *cls* takes a ``name`` parameter a keyword argument can fill.
+    """Whether *cls* takes a `name` parameter a keyword argument can fill.
 
-    A name arriving inside ``**kwargs`` does not count. A class whose
+    A name arriving inside `**kwargs` does not count. A class whose
     signature cannot be read does not accept one either.
     """
     try:
@@ -544,7 +544,7 @@ def read(
     """Collect the component declarations of *cls*.
 
     Declarations are annotations, so nothing is collected at class creation
-    and no attribute is replaced by a descriptor. ``get_type_hints`` walks the
+    and no attribute is replaced by a descriptor. `get_type_hints` walks the
     MRO, so inheritance needs no merge of its own.
 
     An annotation is a declaration only if it carries a layer, which is what
@@ -610,7 +610,7 @@ def service_attributes(cls: type) -> dict[str, str]:
 def read_services(
     cls: type, section: Mapping[str, ComponentEntry], transport: str = CHANNEL_ACCESS
 ) -> dict[str, Service]:
-    """Make the services *cls* annotates and the ``services`` section lists.
+    """Make the services *cls* annotates and the `services` section lists.
 
     A `Launch` or `Attach` marker overrides the section's entry, and the last
     marker wins, so one written where an alias is used replaces the alias's.
@@ -767,7 +767,7 @@ def from_config(
 ) -> dict[str, Declaration]:
     """Collect the components named only in *config*.
 
-    A configuration entry carrying ``plugin_name`` and ``plugin_id`` is a
+    A configuration entry carrying `plugin_name` and `plugin_id` is a
     component even when the session class never annotates it; the annotation
     only adds a typed attribute to reach it by. An entry a declared component
     reads is left alone, so a class-body declaration wins. An entry whose
@@ -825,10 +825,10 @@ def from_config(
 def hints(cls: type) -> dict[str, Any]:
     """Resolve the annotations of *cls* and its bases, one class at a time.
 
-    ``from __future__ import annotations`` makes every annotation a string,
+    `from __future__ import annotations` makes every annotation a string,
     resolved against the defining module's globals. Resolving the whole MRO in
     one call fails entirely if any single class references a name that is only
-    imported under ``TYPE_CHECKING``, so each is resolved on its own and the
+    imported under `TYPE_CHECKING`, so each is resolved on its own and the
     one at fault is named.
 
     Raises
@@ -881,7 +881,7 @@ def is_service(hint: Any) -> bool:
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
     """Return the keywords *entry* gives its component, none for no entry.
 
-    A device's ``service`` and ``autoconnect`` are among them where the entry
+    A device's `service` and `autoconnect` are among them where the entry
     gives them.
     """
     if entry is None:

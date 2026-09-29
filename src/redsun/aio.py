@@ -1,7 +1,7 @@
 """Shared background event loop, and dispatch of coroutines connected to signals.
 
-``redsun`` runs one background `asyncio` event loop per process. Device I/O and
-coroutines connected to ``psygnal`` signals run there, off the emitting GUI
+`redsun` runs one background `asyncio` event loop per process. Device I/O and
+coroutines connected to `psygnal` signals run there, off the emitting GUI
 thread.
 
 `run_coro` is for general use: synchronous code, such as a presenter method or
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 class AwaitableEvent:
-    """Resettable event whose ``wait`` is a coroutine.
+    """Resettable event whose `wait` is a coroutine.
 
     Wraps `aiologic.REvent`, so the event can be set and cleared from any thread
     and awaited from a coroutine.
@@ -45,7 +45,7 @@ class AwaitableEvent:
         self._event = aiol.REvent()
 
     def is_set(self) -> bool:
-        """Return ``True`` if the event is set."""
+        """Return `True` if the event is set."""
         return self._event.is_set()
 
     def set(self) -> None:
@@ -77,7 +77,7 @@ def get_shared_loop() -> asyncio.AbstractEventLoop:
 
 
 class CulsansAsyncioBackend(_AsyncBackend, Loggable):
-    """``psygnal`` async backend draining a ``culsans`` queue on the shared loop.
+    """`psygnal` async backend draining a `culsans` queue on the shared loop.
 
     Queued callbacks run as tasks on the loop from `get_shared_loop`, so signals
     emitted on any thread are delivered.
@@ -155,15 +155,10 @@ AsyncioBackend.register(CulsansAsyncioBackend)
 
 
 def set_async_backend() -> CulsansAsyncioBackend:
-    """Install the ``culsans`` backend as ``psygnal``'s async backend.
+    """Install the `culsans` backend as `psygnal`'s async backend, and return it.
 
     Call it before connecting a coroutine to a signal. A second call returns the
-    installed backend; tear it down with ``psygnal``'s ``clear_async_backend``.
-
-    Returns
-    -------
-    CulsansAsyncioBackend
-        The active backend.
+    installed backend; tear it down with `psygnal`'s `clear_async_backend`.
 
     Raises
     ------
@@ -199,15 +194,10 @@ def run_coro(
 
     Parameters
     ----------
-    coro : collections.abc.Coroutine
+    coro
         The coroutine to run.
-    return_future : bool, optional
+    return_future
         Return the `Future` instead of waiting for the result.
-
-    Returns
-    -------
-    R
-        The result of the coroutine.
     """
     future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
     return future if return_future else future.result()

@@ -1,6 +1,6 @@
 """Write the JSON schemas of a session file and a plugin manifest.
 
-They land in ``docs/reference/schemas/``, which the docs build publishes, so an
+They land in `docs/reference/schemas/`, which the docs build publishes, so an
 editor can check a file against them while it is written.
 """
 

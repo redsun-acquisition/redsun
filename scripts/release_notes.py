@@ -1,11 +1,11 @@
 """Write a release's changelog section from GitHub's generated release notes.
 
-``prepare VERSION`` asks GitHub for the notes of the pull requests merged since
+`prepare VERSION` asks GitHub for the notes of the pull requests merged since
 the last final release, turns them into a Keep a Changelog section, and writes
-it with its compare link into ``docs/reference/changelog.md``.
-``extract VERSION`` prints that section's body, for the GitHub release.
+it with its compare link into `docs/reference/changelog.md`.
+`extract VERSION` prints that section's body, for the GitHub release.
 
-Both need the ``gh`` command, logged in, and run from the repository root.
+Both need the `gh` command, logged in, and run from the repository root.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ FINAL_TAG = re.compile(r"^v\d+\.\d+\.\d+$")
 
 
 def gh(*args: str) -> str:
-    """Run ``gh`` and return what it prints."""
+    """Run `gh` and return what it prints."""
     return subprocess.run(
         ["gh", *args], check=True, capture_output=True, text=True
     ).stdout
@@ -146,7 +146,7 @@ def prepare(version: str) -> None:
 
 
 def main() -> None:
-    """Run ``prepare`` or ``extract`` for the version given."""
+    """Run `prepare` or `extract` for the version given."""
     command, version = sys.argv[1], sys.argv[2]
     if command == "prepare":
         prepare(version)

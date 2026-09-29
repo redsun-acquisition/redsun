@@ -43,39 +43,39 @@ R = TypeVar("R")
 class RunEngine(BlueskyRunEngine):
     """Runs plans and emits documents without blocking the calling thread.
 
-    Wraps `bluesky.run_engine.RunEngine`: ``__call__`` runs the plan on a
+    Wraps `bluesky.run_engine.RunEngine`: `__call__` runs the plan on a
     separate thread and returns a concurrent.futures.Future of its result.
 
     Parameters
     ----------
-    md : dict[str, Any], optional
-        Metadata store, a ``dict`` by default. Any object with `__getitem__`,
+    md
+        Metadata store, a `dict` by default. Any object with `__getitem__`,
         `__setitem__` and `clear` works, such as historydict.HistoryDict,
         which persists history in a sqlite file.
 
     loop: asyncio.AbstractEventLoop, optional
         Event loop plans run on. Defaults to the shared background loop.
 
-    preprocessors : list, optional
+    preprocessors
         Generator functions modifying a plan's messages, such as the
-        ``bluesky.plans`` functions ending in 'wrapper'. ``[f, g]`` applies as
-        ``f(g(plan))``.
+        `bluesky.plans` functions ending in 'wrapper'. `[f, g]` applies as
+        `f(g(plan))`.
 
-    md_validator : Callable[dict[str, Any], None], optional
+    md_validator
         Raises to prevent a run whose metadata it finds invalid; its return
         value is ignored.
 
-    md_normalizer : Callable[dict[str, Any], dict[str, Any]], optional
+    md_normalizer
         Like md_validator, raises for invalid metadata; otherwise returns the
         normalized metadata.
 
-    scan_id_source : Callable[dict[str, Any], int | Awaitable[int]], optional
+    scan_id_source
         Function, possibly async, returning the next scan_id. By default
         scan_id increments by 1.
 
-    call_returns_result : bool, default True
-        What the Future ``__call__`` returns holds: a ``RunEngineResult``
-        describing the run if ``True``, a tuple of uids if ``False``.
+    call_returns_result
+        What the Future `__call__` returns holds: a `RunEngineResult`
+        describing the run if `True`, a tuple of uids if `False`.
 
 
     Attributes
@@ -88,8 +88,8 @@ class RunEngine(BlueskyRunEngine):
         (pauses, suspensions).
 
     state
-        One of ``idle``, ``running``, ``pausing``, ``paused``, ``halting``,
-        ``stopping``, ``aborting``, ``suspending`` and ``panicked``.
+        One of `idle`, `running`, `pausing`, `paused`, `halting`,
+        `stopping`, `aborting`, `suspending` and `panicked`.
 
     suspenders
         Read-only collection of `bluesky.suspenders.SuspenderBase` objects
@@ -99,31 +99,31 @@ class RunEngine(BlueskyRunEngine):
         The preprocessors described above.
 
     msg_hook
-        ``f(msg)`` called with every ``bluesky.Msg`` before it is processed,
+        `f(msg)` called with every `bluesky.Msg` before it is processed,
         for logging or debugging. None by default.
 
     state_hook
-        ``f(new_state, old_state)`` called on every state change. None by
+        `f(new_state, old_state)` called on every state change. None by
         default.
 
     waiting_hook
-        ``f(status_object)`` called while waiting for long-running commands
+        `f(status_object)` called while waiting for long-running commands
         (trigger, set, kickoff, complete), for example to show progress.
 
     ignore_callback_exceptions
         Boolean, False by default.
 
     loop : asyncio event loop
-        e.g., ``asyncio.get_event_loop()`` or ``asyncio.new_event_loop()``
+        e.g., `asyncio.get_event_loop()` or `asyncio.new_event_loop()`
 
     max_depth
         Maximum stack depth, preventing calls to the RunEngine from inside a
         function, which breaks introspection. None by default; 2 suits the
-        Python interpreter and 11 ``IPython`` (tested on 5.1.0).
+        Python interpreter and 11 `IPython` (tested on 5.1.0).
 
     pause_msg : str
         Message printed when a run is interrupted, with instructions for
-        changing the RunEngine's state. ``bluesky.run_engine.PAUSE_MSG`` by
+        changing the RunEngine's state. `bluesky.run_engine.PAUSE_MSG` by
         default.
 
     commands:
@@ -201,9 +201,9 @@ class RunEngine(BlueskyRunEngine):
 
         Parameters
         ----------
-        plan : typing.Iterable[`bluesky.utils.Msg`]
-            A generator yielding ``Msg`` objects, or an iterable returning one.
-        subs : `bluesky.utils.Subscribers`, optional (positional only)
+        plan
+            A generator yielding `Msg` objects, or an iterable returning one.
+        subs
             Callbacks subscribed for this run only, given as:
 
             * a callable, which will be subscribed to 'all'
@@ -211,29 +211,14 @@ class RunEngine(BlueskyRunEngine):
             * a dictionary, mapping specific subscriptions to callables or
               lists of callables; valid keys are {'all', 'start', 'stop',
               'event', 'descriptor'}
-
-        Returns
-        -------
-        Future[RunEngineResult | tuple[str, ...]]
-            Future of the plan's result, which is either:
-        uids : tuple
-            list of uids (i.e. RunStart Document uids) of run(s)
-            if :attr:`RunEngine._call_returns_result` is ``False``
-        result : :class:`RunEngineResult`
-            if :attr:`RunEngine._call_returns_result` is ``True``
         """
         return self._run_in_thread(partial(super().__call__, plan, subs, **metadata_kw))
 
     def resume(self) -> Future[RunEngineResult | tuple[str, ...]]:
         """Resume the paused plan on a separate thread.
 
-        Pausing completes the future ``__call__`` returned, so this returns a
-        new one.
-
-        Returns
-        -------
-        ``Future[RunEngineResult | tuple[str, ...]]``
-            Future of the resumed plan's result.
+        Returns a future of the resumed plan's result. Pausing completes the
+        future `__call__` returned, so this is a new one.
         """
         return self._run_in_thread(super().resume)
 
@@ -276,7 +261,7 @@ class RunEngine(BlueskyRunEngine):
     def _on_state_change(self, new: str, old: str) -> None:
         """Announce the state, releasing every lock on idle first.
 
-        A halted plan skips its cleanup, so its ``unlock`` messages never run.
+        A halted plan skips its cleanup, so its `unlock` messages never run.
         """
         if new == "idle":
             self._release_locks()
@@ -302,21 +287,18 @@ class RunEngine(BlueskyRunEngine):
             self.sig_locks_changed.emit(after)
 
     async def _wait_for_actions(self, msg: Msg) -> tuple[str, SRLatch] | None:
-        """Wait for any of the given latches to be set or reset.
+        """Wait for any of the given latches to be set or reset, and return it.
+
+        Returns the name and latch in the wanted state, the one that reached it
+        first of several, or `None` if none did within the interval.
 
         Parameters
         ----------
-        msg: Msg
+        msg
             Carries a map of SRLatch in `msg.args`, and in `msg.kwargs` how
             long to wait and for which state:
 
             Msg("wait_for_actions", None, latches, poll_interval=0.1, wait_for="set")
-
-        Returns
-        -------
-        tuple[str, SRLatch] | None
-            Name and latch in the wanted state, the one that reached it first
-            of several; None if none did within the interval.
         """
         latch_map: Mapping[str, SRLatch] = msg.args[0]
         interval: float | None = msg.kwargs.get("poll_interval", None)

@@ -34,13 +34,13 @@ AsDevice: TypeAlias = Annotated[T, Layer.DEVICE]
 """An `ophyd_async.core.Device`, built before every other layer."""
 
 AsPresenter: TypeAlias = Annotated[T, Layer.PRESENTER]
-"""A component holding application logic, taking ``name`` first.
+"""A component holding application logic, taking `name` first.
 
 Satisfies `redsun.NamedComponent`, and declares no placement.
 """
 
 AsView: TypeAlias = Annotated[T, Layer.VIEW]
-"""A component presenting an interface, taking ``name`` first.
+"""A component presenting an interface, taking `name` first.
 
 Satisfies `redsun.AttachableComponent`, so it declares the
 `redsun.Placement` it asks the frontend to attach it at.
@@ -52,7 +52,7 @@ AsService: TypeAlias = Annotated[Service, ServiceMark()]
 
 `redsun.Launch` describes a service the session runs, and
 `redsun.Attach` one already running elsewhere. Without either,
-the service comes from the session's ``services`` entry for it. An alias
+the service comes from the session's `services` entry for it. An alias
 carrying the marker can be declared once and used by several sessions:
 
 ```python

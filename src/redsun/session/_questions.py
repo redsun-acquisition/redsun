@@ -32,10 +32,10 @@ def is_protocol_union(hint: TypeForm[Any]) -> bool:
 def shape_of(hint: TypeForm[Any]) -> tuple[Shape, type] | None:
     """Return how many answers *hint* asks for, and about which protocol.
 
-    A protocol ``P`` asks for exactly one object satisfying it, ``P | None``
-    for at most one, and ``Mapping[str, P]`` for every component satisfying
+    A protocol `P` asks for exactly one object satisfying it, `P | None`
+    for at most one, and `Mapping[str, P]` for every component satisfying
     it. A subscripted generic protocol is matched as its unsubscripted class.
-    ``None`` for any other hint, which names a value.
+    `None` for any other hint, which names a value.
     """
     protocol = protocol_of(hint)
     if protocol is not None:

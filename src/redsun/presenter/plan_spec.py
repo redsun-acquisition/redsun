@@ -1,11 +1,11 @@
 """Describe a plan's signature as a `PlanSpec`.
 
-`create_plan_spec` inspects a ``bluesky`` ``MsgGenerator`` function and returns
+`create_plan_spec` inspects a `bluesky` `MsgGenerator` function and returns
 a `PlanSpec` describing its parameters, from which a view builds the controls
 of the plan.
 
-`_ANN_HANDLER_MAP` lists ``(predicate, handler)`` pairs turning annotations into
-`ParamDescription` fields (choices, ``device_proto``, ``multiselect``).
+`_ANN_HANDLER_MAP` lists `(predicate, handler)` pairs turning annotations into
+`ParamDescription` fields (choices, `device_proto`, `multiselect`).
 """
 
 from __future__ import annotations
@@ -50,11 +50,11 @@ class UnresolvableAnnotationError(TypeError):
 
     Parameters
     ----------
-    plan_name : str
+    plan_name
         Name of the plan.
-    param_name : str
+    param_name
         Name of the parameter.
-    annotation : Any
+    annotation
         The unresolvable annotation.
     """
 
@@ -75,7 +75,7 @@ class UnresolvableAnnotationError(TypeError):
 class ParamKind(IntEnum):
     """`inspect._ParameterKind` as a public `IntEnum`.
 
-    Usable in ``match``/``case`` without importing private standard library
+    Usable in `match`/`case` without importing private standard library
     names.
     """
 
@@ -86,13 +86,13 @@ class ParamKind(IntEnum):
     """Given by position or by name."""
 
     VAR_POSITIONAL = 2
-    """Any number of values given by position, as ``*args``."""
+    """Any number of values given by position, as `*args`."""
 
     KEYWORD_ONLY = 3
     """Given by name only."""
 
     VAR_KEYWORD = 4
-    """Any number of values given by name, as ``**kwargs``."""
+    """Any number of values given by name, as `**kwargs`."""
 
 
 # Mapping from inspect.Parameter.kind to our ParamKind
@@ -138,7 +138,7 @@ class ParamDescription:
 
     @property
     def has_default(self) -> bool:
-        """Return ``True`` if the parameter has a default."""
+        """Return `True` if the parameter has a default."""
         return self.default is not _empty
 
 
@@ -147,7 +147,7 @@ class PlanSpec:
     """Description of a plan's signature and type hints."""
 
     name: str
-    """Plan name, the callable's ``__name__``."""
+    """Plan name, the callable's `__name__`."""
 
     docs: str
     """Plan docstring, or a default message without one."""
@@ -220,7 +220,7 @@ def _handle_var_positional_device(
 _AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, OADevice]], _FieldsFromAnnotation]
 _AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
 
-#: ``(predicate, handler)`` pairs, tried in order; the first match wins.
+#: `(predicate, handler)` pairs, tried in order; the first match wins.
 _ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
     (
         # get_origin returns Literal at runtime, which mypy cannot prove
@@ -253,7 +253,7 @@ def _try_dispatch_entry(
     kind: ParamKind,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation | None:
-    """Try one ``(predicate, handler)`` entry; return ``None`` if it raises."""
+    """Try one `(predicate, handler)` entry; return `None` if it raises."""
     try:
         if predicate(ann, kind):
             return handler(ann, devices)
@@ -267,7 +267,7 @@ def _dispatch_annotation(
     kind: ParamKind,
     devices: cabc.Mapping[str, OADevice],
 ) -> _FieldsFromAnnotation:
-    """Walk ``_ANN_HANDLER_MAP`` and call the first matching handler.
+    """Walk `_ANN_HANDLER_MAP` and call the first matching handler.
 
     An entry whose predicate or handler raises is skipped; an annotation no
     entry matches gives empty fields.
@@ -283,11 +283,11 @@ def _extract_action_meta(
     param: Parameter,
     ann: Any,
 ) -> Sequence[PlanAction] | PlanAction | None:
-    """Extract ``PlanAction`` instances from a parameter's default value.
+    """Extract `PlanAction` instances from a parameter's default value.
 
-    Returns the ``PlanAction``, or list of them, if the default holds actions, and
-    ``None`` otherwise. Also checks the annotation is ``PlanAction``,
-    ``Sequence[PlanAction]`` or a union containing ``PlanAction``.
+    Returns the `PlanAction`, or list of them, if the default holds actions, and
+    `None` otherwise. Also checks the annotation is `PlanAction`,
+    `Sequence[PlanAction]` or a union containing `PlanAction`.
 
     Raises
     ------
@@ -336,7 +336,7 @@ def _is_action_type(ann: Any) -> bool:
 
 
 def _safe_issubclass(cls: Any, parent: type) -> bool:
-    """``issubclass`` returning ``False`` instead of raising ``TypeError``."""
+    """`issubclass` returning `False` instead of raising `TypeError`."""
     try:
         return issubclass(cls, parent)
     except TypeError:
@@ -344,13 +344,7 @@ def _safe_issubclass(cls: Any, parent: type) -> bool:
 
 
 def _iterate_signature(sig: inspect.Signature) -> cabc.Iterator[tuple[str, Parameter]]:
-    """Iterate a signature's parameters, skipping ``self``/``cls``.
-
-    Yields
-    ------
-    Iterator[tuple[str, Parameter]]
-        (name, ``Parameter``) pairs.
-    """
+    """Yield `(name, Parameter)` for each parameter of *sig*, skipping `self`/`cls`."""
     items = list(sig.parameters.items())
     if items:
         first_name, first_param = items[0]
@@ -380,7 +374,7 @@ _PRIMITIVE_TYPES: frozenset[type] = frozenset(
 
 
 def _is_renderable(ann: Any) -> bool:
-    """Return ``True`` if a view layer can be expected to build a control for *ann*.
+    """Return `True` if a view layer can be expected to build a control for *ann*.
 
     Imports no toolkit, so it can run before any application object exists.
 
@@ -433,32 +427,27 @@ def create_plan_spec(
     plan: cabc.Callable[..., cabc.Generator[Any, Any, Any]],
     devices: cabc.Mapping[str, OADevice],
 ) -> PlanSpec:
-    """Inspect *plan* and return a ``PlanSpec`` with one ``ParamDescription`` per parameter.
+    """Inspect *plan* and return a `PlanSpec` with one `ParamDescription` per parameter.
 
     Parameters
     ----------
-    plan : Callable[..., Any]
+    plan
         The plan function or bound method, a generator function annotated to
-        return a ``MsgGenerator``.
-    devices : Mapping[str, OADevice]
-        The session's devices, giving ``choices`` for parameters annotated
-        with an ``OADevice`` subtype.
-
-    Returns
-    -------
-    PlanSpec
-        The plan specification.
+        return a `MsgGenerator`.
+    devices
+        The session's devices, giving `choices` for parameters annotated
+        with an `OADevice` subtype.
 
     Raises
     ------
     TypeError
         If *plan* is not a generator function or its return type is not a
-        ``MsgGenerator`` (``Generator[Msg, Any, Any]``).
+        `MsgGenerator` (`Generator[Msg, Any, Any]`).
     UnresolvableAnnotationError
         If an annotation names something missing at runtime, or no view can
         build a control for it.
     RuntimeError
-        On an unexpected ``inspect.Parameter.kind``.
+        On an unexpected `inspect.Parameter.kind`.
     ValueError
         If *plan* declares two actions of one name.
     """
@@ -580,27 +569,20 @@ def collect_arguments(
     spec: PlanSpec,
     values: cabc.Mapping[str, Any],
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    """Build the ``(args, kwargs)`` calling a plan, from its ``PlanSpec``.
+    """Build the `(args, kwargs)` calling a plan, from its `PlanSpec`.
 
     Parameters
     ----------
-    spec : PlanSpec
-        The plan specification.
-    values : Mapping[str, Any]
+    values
         Resolved values by parameter name.
-
-    Returns
-    -------
-    tuple[tuple[Any, ...], dict[str, Any]]
-        Positional and keyword arguments for the plan.
 
     Notes
     -----
-    * ``POSITIONAL_ONLY`` and ``POSITIONAL_OR_KEYWORD`` -> ``args``, in
+    * `POSITIONAL_ONLY` and `POSITIONAL_OR_KEYWORD` -> `args`, in
       declaration order.
-    * ``KEYWORD_ONLY`` -> ``kwargs``.
-    * ``VAR_POSITIONAL`` (``*args``) -> sequence expanded into ``args``.
-    * ``VAR_KEYWORD`` (``**kwargs``) -> mapping merged into ``kwargs``.
+    * `KEYWORD_ONLY` -> `kwargs`.
+    * `VAR_POSITIONAL` (`*args`) -> sequence expanded into `args`.
+    * `VAR_KEYWORD` (`**kwargs`) -> mapping merged into `kwargs`.
     """
     args: list[Any] = []
     kwargs: dict[str, Any] = {}
@@ -642,23 +624,16 @@ def resolve_arguments(
 
     * **Action parameters** are filled from the spec when the interface lacks
       them.
-    * **Device parameters**: names become ``OADevice`` instances from
-      ``devices``.
+    * **Device parameters**: names become `OADevice` instances from
+      `devices`.
     * **Everything else** passes unchanged.
 
     Parameters
     ----------
-    spec : PlanSpec
+    spec
         The plan specification.
-    param_values : Mapping[str, Any]
+    param_values
         Parameter values from the interface.
-    devices : Mapping[str, OADevice]
-        The session's devices.
-
-    Returns
-    -------
-    dict[str, Any]
-        Resolved arguments for ``collect_arguments``.
     """
     values: dict[str, Any] = dict(param_values)
 
