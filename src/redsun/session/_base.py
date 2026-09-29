@@ -654,8 +654,8 @@ class Session(BuildableSession):
         are not announced, a hook covering the build being a toolkit object
         that cannot exist before the runtime it is shown on. A step that
         raises stops the build, which is the one failure a session does not
-        carry on past, and `shutdown` gives back what the finished steps took
-        before the exception leaves.
+        carry on past: the exception is logged, and `shutdown` gives back what
+        the finished steps took before it leaves.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -680,6 +680,10 @@ class Session(BuildableSession):
                 ):
                     self._report(step)
                     run()
+        except Exception as e:
+            logger.error("Build stopped: %s", e)
+            self.shutdown()
+            raise
         except BaseException:
             self.shutdown()
             raise

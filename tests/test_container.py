@@ -1584,10 +1584,18 @@ def test_a_component_whose_collaborator_failed_is_not_set_up(
     assert app.dependent.other is None
 
 
-def test_asking_for_something_nothing_ever_declared_still_raises() -> None:
+def test_asking_for_something_nothing_ever_declared_still_raises(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Only a component the session tried and failed to build is tolerated."""
-    with pytest.raises(TypeError, match="which nothing in the session provides"):
+    with (
+        caplog.at_level(logging.ERROR, logger="redsun"),
+        pytest.raises(TypeError, match="which nothing in the session provides"),
+    ):
         NamedServicesApp().build()
+
+    assert "Build stopped: " in caplog.text
+    assert "which nothing in the session provides" in caplog.text
 
 
 def test_the_closing_line_names_what_is_missing(

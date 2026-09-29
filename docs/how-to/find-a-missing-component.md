@@ -102,10 +102,11 @@ not built`.
 
 A constructor or a `setup` asking for a value that nothing in the session
 declares is a mistake in the session, not a component that failed. The build
-stops with a `TypeError`, and no summary is logged:
+logs the reason, gives back what it had started, and raises a `TypeError`; no
+summary is logged:
 
 ```text
-TypeError: 'ctrl.setup' asks for 'cal' (Calibration), which nothing in the session provides. ...
+[29-09-26|08:42:44][ERROR]: Build stopped: 'ctrl.setup' asks for 'cal' (Calibration), which nothing in the session provides. ...
 ```
 
 Declare the component or provider that shares the value, or give the
