@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 
 def test_a_locked_plan_announces_its_devices_until_it_ends(RE: RunEngine) -> None:
+    """Announce the locked devices when a plan locks them and again when it ends."""
     seen: list[frozenset[str]] = []
     RE.sig_locks_changed.connect(seen.append)
 
@@ -27,6 +28,7 @@ def test_a_locked_plan_announces_its_devices_until_it_ends(RE: RunEngine) -> Non
 
 
 def test_nested_locks_release_on_the_last_unlock(RE: RunEngine) -> None:
+    """Keep a device locked until the last of its nested locks is released."""
     stage, camera = Device(name="stage"), Device(name="camera")
     during: list[frozenset[str]] = []
 
@@ -48,6 +50,8 @@ def test_nested_locks_release_on_the_last_unlock(RE: RunEngine) -> None:
 
 
 def test_a_failing_plan_unlocks(RE: RunEngine) -> None:
+    """Release every lock when a locked plan raises."""
+
     def fail() -> MsgGenerator[None]:
         yield from bps.null()
         raise RuntimeError("the plan failed")
@@ -59,7 +63,7 @@ def test_a_failing_plan_unlocks(RE: RunEngine) -> None:
 
 
 def test_a_lock_replayed_after_a_rewind_is_released_once(RE: RunEngine) -> None:
-    """Resuming a pause replays the lock message the checkpoint cached."""
+    """Release once a lock that resuming a paused plan replays."""
 
     def plan() -> MsgGenerator[None]:
         yield from bps.checkpoint()
@@ -75,7 +79,7 @@ def test_a_lock_replayed_after_a_rewind_is_released_once(RE: RunEngine) -> None:
 
 
 def test_a_halted_plan_unlocks(RE: RunEngine) -> None:
-    """A halt skips the plan's cleanup, so the engine releases what it held."""
+    """Release every lock of a paused plan when it is halted."""
     seen: list[frozenset[str]] = []
     RE.sig_locks_changed.connect(seen.append)
 

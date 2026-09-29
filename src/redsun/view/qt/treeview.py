@@ -1,22 +1,20 @@
 """Tree view showing and editing device settings from their descriptors.
 
-`DescriptorTreeView`, a `QTreeWidget`, shows ``bluesky`` ``describe()`` /
-``read()`` dicts as a two-column property tree.
+`DescriptorTreeView`, a `QTreeWidget`, shows `bluesky` `describe()` /
+`read()` dicts as a two-column property tree.
 
-The design follows the ``ParameterTree`` widget of
+The design follows the `ParameterTree` widget of
 [pyqtgraph](https://github.com/pyqtgraph/pyqtgraph) (MIT licence,
 (c) 2012 University of North Carolina at Chapel Hill, Luke Campagnola).
 """
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
-
-from redsun.virtual import Signal
 
 if TYPE_CHECKING:
     from typing import Never
@@ -25,8 +23,6 @@ if TYPE_CHECKING:
     from event_model import Dtype
 
 __all__ = ["DescriptorTreeView"]
-
-_log = logging.getLogger("redsun")
 
 
 def assert_never(_: Dtype) -> Never:
@@ -45,17 +41,17 @@ def _make_value_widget(
 
     Parameters
     ----------
-    key : str
-        ``name-property`` key, emitted with changes.
-    descriptor : Descriptor
-        ``bluesky`` descriptor of the setting.
-    initial_value : Any
+    key
+        `name-property` key, emitted with changes.
+    descriptor
+        `bluesky` descriptor of the setting.
+    initial_value
         Current reading value.
-    on_changed : Callable[[str, Any], None]
+    on_changed
         Called when the user commits a change.
-    readonly : bool
+    readonly
         Return a greyed label instead.
-    parent : QtWidgets.QWidget
+    parent
         Qt parent for the created widget.
     """
     if readonly or descriptor.get("dtype") == "array":
@@ -168,9 +164,9 @@ def _set_label_text(
 
     Parameters
     ----------
-    label : QtWidgets.QLabel
+    label
         Label widget to update.
-    value : Any
+    value
         New value to display.
     """
     if isinstance(value, (list, tuple)):
@@ -184,9 +180,9 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 
     Parameters
     ----------
-    widget : QtWidgets.QWidget
+    widget
         The editor or display widget to update.
-    value : Any
+    value
         New value to display or set.
     """
     if isinstance(widget, QtWidgets.QLabel):
@@ -220,24 +216,25 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
 class DescriptorTreeView(QtWidgets.QTreeWidget):
     """Two-column property tree for browsing and editing device settings.
 
-    Rows are grouped by their ``name-property`` key: one header per device
+    Rows are grouped by their `name-property` key: one header per device
     name, and under it a header per group a property names with a dash of its
-    own, so ``cam-properties-Binning`` is ``Binning`` under ``properties``
-    under ``cam``.
+    own, so `cam-properties-Binning` is `Binning` under `properties`
+    under `cam`.
 
     Parameters
     ----------
-    descriptors : dict[str, Descriptor]
-        Descriptors by ``name-property`` key.
-    readings : dict[str, Reading[Any]]
-        Initial readings for the same keys; only ``reading["value"]`` is read.
-    parent : QtWidgets.QWidget, optional
+    descriptors
+        Descriptors by `name-property` key.
+    readings
+        Initial readings for the same keys; only `reading["value"]` is read.
+    parent
         Parent widget.
 
     Signals
     -------
     sig_property_changed : Signal[str, str, Any]
-        Emitted when the user commits an edit.
+        Emitted when the user commits an edit, which stays pending until
+        `set_value` or `revert` settles it.
         - str: object name
         - str: property name
         - Any: new value
@@ -278,45 +275,36 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
 
         self._build()
 
-    def update_reading(self, key: str, reading: Reading[Any]) -> None:
-        """Show a new reading for *key*.
+    def set_value(self, key: str, value: Any) -> None:
+        """Show *value* for *key*, the value the device holds.
+
+        Settles an edit pending on *key*, so the row shows what the device
+        read back rather than what was typed. Emits nothing. A *key* the tree
+        has no row for is ignored.
 
         Parameters
         ----------
-        key : str
-            ``name-property`` key.
-        reading : Reading[Any]
-            New reading; only ``reading["value"]`` is read.
+        key
+            `name-property` key.
         """
-        value = reading["value"]
-        self._readings[key] = value
+        self._pending.pop(key, None)
+        self._show(key, value)
+
+    def revert(self, key: str) -> None:
+        """Put back the value *key* had before the edit pending on it.
+
+        For an edit the device refused. Emits nothing, and does nothing when
+        no edit is pending on *key*.
+        """
+        if key in self._pending:
+            self._show(key, self._pending.pop(key))
+
+    def _show(self, key: str, value: Any) -> None:
         widget = self._widgets.get(key)
-        if widget is not None:
-            desc = self._descriptors.get(key)
-            if desc is not None:
-                _update_widget_value(widget, value)
-
-    def confirm_change(self, key: str, success: bool) -> None:
-        """Confirm or revert a pending user edit.
-
-        Parameters
-        ----------
-        key : str
-            Key of the edited setting.
-        success : bool
-            ``True`` keeps the new value; ``False`` restores the previous one
-            and refreshes the widget.
-        """
-        old = self._pending.pop(key, None)
-        if old is None:
+        if widget is None:
             return
-        if not success:
-            self._readings[key] = old
-            widget = self._widgets.get(key)
-            desc = self._descriptors.get(key)
-            if widget is not None and desc is not None:
-                _update_widget_value(widget, old)
-            _log.info("Reverted '%s' to previous value.", key)
+        self._readings[key] = value
+        _update_widget_value(widget, value)
 
     def _on_changed(self, key: str, value: Any) -> None:
         """Handle a change from any editor widget."""

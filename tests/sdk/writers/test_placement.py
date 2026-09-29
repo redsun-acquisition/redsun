@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from redsun.writers import WriterError
-from redsun.writers._placement import OME_ZARR, ZARR, placement
+from redsun.writers import OME_ZARR, ZARR, WriterError
+from redsun.writers._placement import placement
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,7 +36,7 @@ def plate_store(tmp_path: Path) -> Path:
 def test_a_plain_root_takes_the_product_as_a_key(
     request: pytest.FixtureRequest, store: str, mimetype: str
 ) -> None:
-    """The stream opens on the store itself, and the product's URI is the store's."""
+    """Stream a product into a plain root as a new key with the store's URI."""
     path: Path = request.getfixturevalue(store)
 
     placed = placement(path.as_uri(), mimetype, "det_median")
@@ -51,7 +51,7 @@ def test_a_plain_root_takes_the_product_as_a_key(
 def test_an_ngff_root_sends_the_product_beside_it(
     request: pytest.FixtureRequest, store: str
 ) -> None:
-    """A store of its own, named after the acquisition and the product, written whole."""
+    """Place a product for an image root in a sibling store, written whole."""
     path: Path = request.getfixturevalue(store)
 
     placed = placement(path.as_uri(), OME_ZARR, "det_median")
@@ -63,10 +63,11 @@ def test_an_ngff_root_sends_the_product_beside_it(
 
 
 def test_a_plain_zarr_store_with_an_ngff_root_is_refused(image_store: Path) -> None:
-    """The refusal protects the root's metadata, and names the mimetype to use."""
+    """Refuse a plain Zarr mimetype for an OME-Zarr root, naming the right one."""
     with pytest.raises(WriterError, match=OME_ZARR):
         placement(image_store.as_uri(), ZARR, "det_median")
 
 
 def test_an_unknown_mimetype_has_no_placement(plain_store: Path) -> None:
+    """Return no placement for a mimetype no writer handles."""
     assert placement(plain_store.as_uri(), "image/tiff", "det_median") is None

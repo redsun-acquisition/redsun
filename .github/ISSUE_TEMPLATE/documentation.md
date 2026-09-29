@@ -1,7 +1,7 @@
 ---
 name: Documentation
 about: Provide feedback for existing or new documentation
-title: "[DOC] Documentation feedback"
+title: "docs: <what is missing or wrong>"
 labels: documentation
 assignees: ''
 

@@ -1,40 +1,59 @@
-# Explanation
+---
+icon: lucide/lightbulb
+---
 
-- **[Statement of need](statement.md)**
+# Explanations
 
-## Architecture & design
+Explanations of how `redsun` works and why it works that way. The words these
+pages use are defined in the [glossary](glossary.md), which is listed under
+Reference.
 
-- **[Container architecture](container-architecture.md)**
-- **[Component system](component-system.md)**
-- **[Services](services.md)**
-- **[The session catalog](catalog.md)**
-- **[Derived products](derived-products.md)**
+### Purpose
 
-## SDK
+Learn about the problem `redsun` answers, what it gives and what it leaves to
+you.
 
-- **[Devices](architecture/devices.md)**
-- **[Presenters](architecture/presenters.md)**
-- **[Plans](architecture/plans.md)**
-- **[Qt widgets](architecture/qt-widgets.md)**
-- **[Virtual container](architecture/virtual.md)**
+- [Why redsun exists](statement.md)
 
-## Decisions
+### Sessions and components
 
-Architectural decisions are recorded as ADRs, following the lightweight format
-described in [Michael Nygard's blog](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions):
-Status, Context, Decision, Consequences.
+Learn about the build of a [session](glossary.md#session) and
+the [components](glossary.md#component) it is made of.
 
-- **[1. Record architecture decisions](decisions/0001-record-architecture-decisions.md)**
-- **[2. Storage dual-context redesign](decisions/0002-storage-dual-context-redesign.md)** (superseded by 13)
-- **[3. Structural subtyping for presenters and views](decisions/0003-structural-subtyping-for-presenters-and-views.md)**
-- **[4. Owner-scoped signal lookup](decisions/0004-owner-scoped-signal-lookup.md)**
-- **[5. Culsans-backed psygnal async backend](decisions/0005-culsans-psygnal-async-backend.md)**
-- **[6. Application-declared wiring](decisions/0006-application-declared-wiring.md)**
-- **[7. Typed provider keys](decisions/0007-typed-provider-keys.md)**
-- **[8. Container hooks and the build phase registry](decisions/0008-container-hooks-and-the-phase-registry.md)**
-- **[9. Inherited and layered component configuration](decisions/0009-inherited-component-configuration.md)**
-- **[10. Toolkit hook points](decisions/0010-toolkit-hook-points.md)**
-- **[11. Tolerating a component that fails to build](decisions/0011-tolerating-a-component-that-fails-to-build.md)**
-- **[12. Services and two connection levels](decisions/0012-services-and-two-connection-levels.md)**
-- **[13. Acquisition storage belongs to the device](decisions/0013-acquisition-storage-belongs-to-the-device.md)**
-- **[14. Typed session files and plugin manifests](decisions/0014-typed-session-files-and-manifests.md)**
+- [How a session build sequence works](session.md)
+- [How devices, presenters and views fit together](components.md)
+- [How a component asks the session what it holds](questions.md)
+- [How plugins provide components](plugins.md)
+- [What a running session cannot change](limits.md)
+
+### Hardware and plans
+
+Learn about the [services](glossary.md#service) a session
+reaches hardware through, and the [plans](glossary.md#plan) it
+runs.
+
+- [How a session runs and talks to services](services.md)
+- [How presenters run plans](plans.md)
+
+### Frontends
+
+Learn about the [frontend](glossary.md#frontend) that shows a
+session on screen.
+
+- [How a frontend shows a session on screen](frontends.md)
+- [How the Qt widgets of redsun work](qt-widgets.md)
+
+### Data
+
+Learn about the [catalog](glossary.md#catalog) of runs and the
+products derived from them.
+
+- [How the session catalog works](catalog.md)
+- [How derived products are stored](derived-products.md)
+
+### Decisions
+
+Learn about the decisions behind the design, each with its context and its
+consequences.
+
+- [Architectural Decision Records](decisions/index.md)

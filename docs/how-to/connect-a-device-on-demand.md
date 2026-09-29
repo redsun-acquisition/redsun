@@ -1,0 +1,78 @@
+---
+icon: lucide/plug
+---
+
+# How to connect a device on demand
+
+Build a device without connecting it, and connect it from a component when
+the user asks. [Connecting](../explanation/components.md#connecting) explains
+what the build does with the other devices.
+
+## Prerequisites
+
+A session declaring the device, and a component that uses it. The blocks
+below are parts of one script; the whole script is at the end.
+
+## Declare the device unconnected
+
+Give the declaration `autoconnect=False`:
+
+```{.python}
+--8<-- "docs/examples/connect_on_demand.py:declare"
+```
+
+`MyMotor` is in the whole script at the end. It names no service, so its
+`prefix` is given here.
+
+Or in the session file:
+
+```yaml
+devices:
+  motor:
+    plugin_name: mylab
+    plugin_id: motor
+    autoconnect: false
+```
+
+The device is built and is in `devices`, but the build does not connect it.
+[Session file](../reference/session-file.md#components) lists what `autoconnect` accepts.
+
+## Connect it from a component
+
+Ask for the devices and connect in an `async` slot:
+
+```{.python}
+--8<-- "docs/examples/connect_on_demand.py:controller"
+```
+
+The controller reads `mock` from [`SessionConfig`][redsun.SessionConfig], so
+in a [mocked session](../explanation/glossary.md#mocked-session) it connects
+the device to a simulated backend, as the build does with the others.
+
+## Ask for it from a view
+
+Give the view a signal to ask with and slots for the answers:
+
+```{.python}
+--8<-- "docs/examples/connect_on_demand.py:view"
+```
+
+Link them in the session:
+
+```{.python}
+--8<-- "docs/examples/connect_on_demand.py:session"
+```
+
+## Shut it down unconnected
+
+The session calls the device's `shutdown` when it ends, whether or not a
+component connected it. A `shutdown` that writes to the hardware has to cope
+with a device that never connected.
+
+## The example in full
+
+??? example "The whole script"
+
+    ```{.python}
+    --8<-- "docs/examples/connect_on_demand.py"
+    ```

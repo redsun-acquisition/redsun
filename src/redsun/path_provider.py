@@ -2,7 +2,7 @@
 
 Paths are `<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>`,
 `base_dir` defaulting to the user data directory. The container builds one
-provider per session and passes it to every device taking a ``path_provider``
+provider per session and passes it to every device taking a `path_provider`
 keyword.
 """
 
@@ -11,13 +11,13 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
-import dependency_injector.providers as dip
 from ophyd_async.core import FilenameProvider, PathInfo, PathProvider
 from platformdirs import user_data_dir
+from psygnal import Signal
 
-from redsun.virtual import Signal, slot
+from redsun.ports import slot
 
 from .utils._paths import session_folder
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 __all__ = [
-    "PATH_PROVIDER",
+    "PATH_PROVIDER_PORT",
     "PlanFilenameProvider",
     "SessionPathProvider",
     "session_directory",
@@ -54,7 +54,7 @@ class PlanFilenameProvider(FilenameProvider):
 
     Parameters
     ----------
-    max_digits : int
+    max_digits
         Zero-padding width of the counter, as in `00001` for 5.
     """
 
@@ -111,17 +111,18 @@ class SessionPathProvider(PathProvider):
     level out.
 
     The date is read on each request, not at construction. The counter belongs
-    to `(session, plan, datakey)` and only increases: date directories group
-    files but do not reset the counter.
+    to `(session, plan, datakey)`, starts one past the highest number already
+    on disk, and only increases: date directories group files but do not reset
+    the counter.
 
     Parameters
     ----------
-    base_dir : Path | None
+    base_dir
         Base directory, with `~` expanded. Defaults to the user data
         directory, as `session_directory` gives it.
-    session : str
+    session
         Session name, fixed for the provider's lifetime.
-    max_digits : int
+    max_digits
         Zero-padding width of the counter, as in `00001` for 5.
     now: Callable[[], datetime] | None
         Clock giving the date directory, for tests. Defaults to `datetime.now`.
@@ -250,17 +251,17 @@ class SessionPathProvider(PathProvider):
         """Return the `PathInfo` of the next file for *datakey_name*.
 
         Each call returns a new path, since it increments that data key's
-        counter for the active plan.
+        counter for the active plan. The folder of the path is created if it
+        does not exist.
         """
         directory = self.session_dir / self._now().strftime("%Y-%m-%d")
         if datakey_name:
             directory = directory / datakey_name
+        directory.mkdir(parents=True, exist_ok=True)
         return PathInfo(
             directory_path=directory, filename=self._filenames(datakey_name)
         )
 
 
-PATH_PROVIDER: dip.Dependency[SessionPathProvider] = dip.Dependency(
-    instance_of=SessionPathProvider
-)
-"""Key for the session's path provider, bound by the container."""
+PATH_PROVIDER_PORT: Final = "path_provider"
+"""Name the session's path provider is wired under."""

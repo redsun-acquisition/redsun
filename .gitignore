@@ -124,3 +124,6 @@ CLAUDE.local.md
 
 # images written by local runs and the docs build
 *.png
+
+# graphify
+graphify-out/

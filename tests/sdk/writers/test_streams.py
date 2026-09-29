@@ -26,7 +26,7 @@ def read(store: Path, key: str) -> np.ndarray[Any, Any]:
 
 
 def test_a_stream_appends_to_each_of_its_keys_in_turn(tmp_path: Path) -> None:
-    """Every key is declared at open; frames then land in their own arrays."""
+    """Append each frame to the array of its key, all keys declared at open."""
     stream = _acquire_zarr.Stream(
         tmp_path / "run.zarr", {"a": FRAME, "b": FRAME}, is_ngff=False
     )
@@ -53,7 +53,7 @@ def test_a_stream_appends_to_each_of_its_keys_in_turn(tmp_path: Path) -> None:
 def test_a_stream_refuses_what_it_was_not_opened_with(
     tmp_path: Path, data_key: str, data: Any, phrase: str
 ) -> None:
-    """A key, dtype or shape the stream does not know is named in the refusal."""
+    """Refuse an unknown key, dtype or shape, naming what the stream expects."""
     stream = _acquire_zarr.Stream(tmp_path / "run.zarr", {"a": FRAME}, is_ngff=False)
     try:
         with pytest.raises(WriterError, match=re.escape(phrase)):
@@ -63,7 +63,7 @@ def test_a_stream_refuses_what_it_was_not_opened_with(
 
 
 def test_an_ome_stream_holds_the_frames_it_was_told(tmp_path: Path) -> None:
-    """The layout is the whole image; four frames come back as ``(4, y, x)``."""
+    """Write an OME stream with the layout it was given, axes included."""
     store = tmp_path / "product.ome.zarr"
     stream = _ome_writers.Stream(
         store, {"det_sum": ArrayShape.of((4, 4, 4), np.uint16)}
@@ -80,7 +80,7 @@ def test_an_ome_stream_holds_the_frames_it_was_told(tmp_path: Path) -> None:
 
 
 def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
-    """``c`` is a channel: two time axes would not be valid OME-Zarr."""
+    """Give each NGFF axis its type, with `c` as a channel."""
     store = tmp_path / "ngff.zarr"
     layout = ArrayShape.of((2, 1, 4, 4), np.uint16)
 
@@ -99,7 +99,7 @@ def test_every_ngff_axis_gets_its_type(tmp_path: Path) -> None:
 
 
 def test_two_streams_open_on_one_store_at_once_keep_both_keys(tmp_path: Path) -> None:
-    """A product written while the acquisition's stream is still open survives its close."""
+    """Keep the keys of two streams open on one store at the same time."""
     store = tmp_path / "run.zarr"
     acquisition = _acquire_zarr.Stream(store, {"cam": FRAME}, is_ngff=False)
     product = _acquire_zarr.Stream(store, {"cam_median": FRAME}, is_ngff=False)

@@ -1,10 +1,15 @@
-# Change a setting while a plan runs
+---
+icon: lucide/sliders-horizontal
+---
+
+# How to change a device setting while a plan runs
 
 A user changes a device setting from a view while the engine runs a plan. A
-camera's region of interest is the usual case: applied halfway through a
-point, one event stream carries frames of two shapes, and the store the
-service writes no longer matches the `StreamResource` describing it. Any
-setting a plan's readings depend on has the same problem.
+camera's region of interest is the usual case: applied halfway through a point,
+one event stream carries frames of two shapes, and the store the service writes
+no longer matches the
+[`StreamResource`](../explanation/glossary.md#streamresource) describing it.
+Any setting a plan's readings depend on has the same problem.
 
 [`Deferrals`][redsun.engine.Deferrals] applies such a change between two
 messages of the plan instead: once the message under way completes, every
@@ -17,34 +22,41 @@ finds it applied.
 ## Build one beside the engine
 
 Whoever owns the [`RunEngine`][redsun.engine.RunEngine] builds the
-`Deferrals` and provides it under [`DEFERRALS`][redsun.engine.DEFERRALS]:
+`Deferrals` and [shares](../explanation/glossary.md#shared-value) it:
 
 ```python
-from redsun.engine import DEFERRALS, Deferrals, RunEngine
+from redsun import provides
+from redsun.engine import Deferrals, RunEngine
 
 
-class AcquisitionPresenter(Presenter):
-    def __init__(self, name: str, devices: dict[str, Device]) -> None:
-        super().__init__(name, devices)
+class AcquisitionPresenter:
+    def __init__(self, name: str) -> None:
+        self.name = name
         self.engine = RunEngine()
-        self.deferrals = Deferrals(self.engine)
+        self._deferrals = Deferrals(self.engine)
 
-    def register_providers(self, container: VirtualContainer) -> None:
-        container.provide(DEFERRALS, self.deferrals)
+    @provides
+    def deferrals(self) -> Deferrals:
+        return self._deferrals
 ```
 
 ## Ask for it where the setting is written
 
-A component writing a setting takes the key in `inject_dependencies` and
-hands the write over as a coroutine function:
+A component writing a setting asks for `Deferrals` in `setup`, and hands the
+write over as a coroutine function:
 
 ```python
-from redsun.engine import DEFERRALS
+from redsun import DevicesOf, slot
+from redsun.engine import Deferrals
 
 
-class DetectorPresenter(Presenter):
-    def inject_dependencies(self, container: VirtualContainer) -> None:
-        self._deferrals = container.require(DEFERRALS)
+class DetectorPresenter:
+    def __init__(self, name: str, *, detectors: DevicesOf[HasRoi]) -> None:
+        self.name = name
+        self.detectors = detectors
+
+    def setup(self, deferrals: Deferrals) -> None:
+        self._deferrals = deferrals
 
     @slot
     async def set(self, detector: str, value: str) -> None:
@@ -67,8 +79,9 @@ it still run.
 ## What a plan sees
 
 Nothing. `Deferrals` is a preprocessor on the engine, and it runs each queued
-change as a `wait_for` inserted before the plan's next message. No message
-runs twice: a `bluesky` suspension would rewind to the last checkpoint and
-replay what came after it, which is why one is not used. A change waits as
-long as the message under way takes, so a plan that sleeps or waits for a
-long move delays it by that much.
+change as a `wait_for` inserted before the plan's next message. No message runs
+twice: a [`bluesky`](../explanation/glossary.md#bluesky) suspension would
+rewind to the last [checkpoint](../explanation/glossary.md#checkpoint) and
+replay what came after it, which is why one is not used. A change waits as long
+as the message under way takes, so a plan that sleeps or waits for a long move
+delays it by that much.

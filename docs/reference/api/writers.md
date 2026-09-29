@@ -1,4 +1,8 @@
-# Writers
+---
+icon: lucide/code
+---
+
+# redsun.writers
 
 ::: redsun.writers
     options:
@@ -6,3 +10,5 @@
         - Writer
         - ArrayShape
         - WriterError
+        - ZARR
+        - OME_ZARR

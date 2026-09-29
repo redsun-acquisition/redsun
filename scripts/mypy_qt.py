@@ -1,9 +1,9 @@
-"""Run mypy with the flags qtpy computes for the binding ``QT_API`` names.
+"""Run mypy with the flags qtpy computes for the binding `QT_API` names.
 
-``qtpy mypy-args`` prints the ``--always-true`` / ``--always-false`` flags that
+`qtpy mypy-args` prints the `--always-true` / `--always-false` flags that
 pin which of its own branches mypy reads, and those flags depend on the binding
 selected at import. Composing the two needs command substitution, which
-``cmd.exe`` does not have and no tox ``commands`` line can express, so this
+`cmd.exe` does not have and no tox `commands` line can express, so this
 does it in one process instead.
 
 Arguments are passed to mypy after the flags.

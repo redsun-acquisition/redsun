@@ -1,8 +1,0 @@
-schema_version: 1.0
-frontend: pyqt
-session: mock-hooks-session
-hooks:
-  greet:
-    provider: "mock_pkg.hooks:GreetingHook"
-    kwargs:
-      name: custom

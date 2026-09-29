@@ -104,7 +104,7 @@ validates once, after the merge, naming every file that took part.
 `schema_version` and `frontend` name the session's identity rather than its
 content, so a later file giving a different value is a contradiction rather
 than an override, and raises. Restating an identical value is legal. Everything
-else, `session` included, follows the ordinary rule that the later file wins -
+else, `name` included, follows the ordinary rule that the later file wins -
 naming the session per layer is the point of layering it.
 
 `frontend` earns the rule twice over: on a declarative container it is already

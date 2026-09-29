@@ -1,4 +1,8 @@
-# Services
+---
+icon: lucide/code
+---
+
+# redsun.services
 
 ::: redsun.services
     options:

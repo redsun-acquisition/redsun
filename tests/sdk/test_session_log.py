@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 import pytest
 import yaml
 
-from redsun import log
-from redsun.containers import AppContainer
+from redsun import AsService, Attach, Launch, Session, log
 from redsun.log import SessionFileHandler, add_handler, remove_handler, session_log
 
 if TYPE_CHECKING:
@@ -20,13 +19,13 @@ if TYPE_CHECKING:
 RUN_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_\d+\.log$")
 
 
-class Empty(AppContainer):
+class Empty(Session):
     pass
 
 
 @pytest.fixture
 def redsun_logger() -> Iterator[logging.Logger]:
-    """Yield the ``redsun`` logger at ``DEBUG``, restoring its level afterwards."""
+    """Yield the `redsun` logger at `DEBUG`, restoring its level afterwards."""
     logger = logging.getLogger("redsun")
     level = logger.level
     logger.setLevel(logging.DEBUG)
@@ -48,7 +47,7 @@ def close_handler(handler: SessionFileHandler) -> None:
 def test_a_run_is_written_to_a_file_in_the_session_folder(
     log_directory: Path, redsun_logger: logging.Logger
 ) -> None:
-    """The folder is the session's name made safe for a path."""
+    """Write a run to a file in a folder named after the session, made path-safe."""
     handler = open_handler("my lab: day 1")
     redsun_logger.warning("stage homed")
     close_handler(handler)
@@ -62,6 +61,7 @@ def test_a_run_is_written_to_a_file_in_the_session_folder(
 def test_a_session_name_cannot_climb_out_of_the_log_directory(
     log_directory: Path, session: str, folder: str
 ) -> None:
+    """Keep the folder of a session named `..` or `.hidden` in the log directory."""
     handler = open_handler(session)
     close_handler(handler)
 
@@ -73,6 +73,7 @@ def test_a_rotated_run_lists_its_files_oldest_first(
     redsun_logger: logging.Logger,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """List the files of a rotated run with the oldest records first."""
     monkeypatch.setattr(log, "LOG_MAX_BYTES", 300)
     monkeypatch.setattr(log, "LOG_BACKUPS", 2)
     handler = open_handler("rotation")
@@ -94,6 +95,7 @@ def test_a_rotated_run_lists_its_files_oldest_first(
 def test_opening_a_run_deletes_all_but_the_most_recent_runs(
     log_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Delete the files of all but the most recent runs when a new run opens."""
     monkeypatch.setattr(log, "LOG_RUNS_KEPT", 3)
     app_folder = log_directory / "pruned" / "app"
     services_folder = log_directory / "pruned" / "services"
@@ -126,7 +128,7 @@ def test_opening_a_run_deletes_all_but_the_most_recent_runs(
 def test_a_service_writes_a_file_of_its_own_under_services(
     log_directory: Path, redsun_logger: logging.Logger
 ) -> None:
-    """The application's file takes no service record; a silent service has no file."""
+    """Write each service's records to its own file, created at its first record."""
     application = open_handler("lab")
     camera = SessionFileHandler("lab", "cam", application.run)
     silent = SessionFileHandler("lab", "stage", application.run)
@@ -153,26 +155,52 @@ def test_a_service_writes_a_file_of_its_own_under_services(
     assert "frame dropped" in files[f"{application.run}.cam.log"]
 
 
-def test_a_container_opens_the_log_and_shutdown_closes_it(log_directory: Path) -> None:
-    """Open from construction, closed by shutdown whether or not it was built."""
-    app = Empty(session="lab")
-    handler = session_log()
-    assert handler is not None
-    assert (log_directory / "lab" / "app").is_dir()
-
-    app.shutdown()
+def test_the_build_opens_the_log_and_shutdown_closes_it(data_directory: Path) -> None:
+    """Open the log under the data directory on build and close it on shutdown."""
+    app = Empty({"session": "lab"})
     assert session_log() is None
 
     app.build()
-    assert session_log() is not None
+    handler = session_log()
+    assert handler is not None
+    assert (data_directory / "logs" / "lab" / "app" / f"{handler.run}.log").is_file()
+
     app.shutdown()
     assert session_log() is None
+
+
+def test_a_launched_service_gets_a_file_of_its_own_in_the_same_run() -> None:
+    """Open a log for each launched service in the run of the application log."""
+
+    class App(Session):
+        camera: Annotated[AsService, Launch("mock_pkg.service.stand_in", ready="x")]
+        beamline: Annotated[AsService, Attach("BL01:")]
+
+    app = App({"session": "lab"})
+    app.read_configuration()
+    application, camera = session_log(), session_log("camera")
+
+    assert application is not None
+    assert camera is not None
+    assert camera.run == application.run
+    assert session_log("beamline") is None
+
+    app.shutdown()
+    assert session_log() is None
+    assert session_log("camera") is None
+
+
+def test_a_session_sets_the_level_it_is_given(redsun_logger: logging.Logger) -> None:
+    """Set the logger to the level the session is given."""
+    Session.from_config({"session": "lab"}, log_level="WARNING")
+
+    assert redsun_logger.level == logging.WARNING
 
 
 def test_a_run_moves_with_the_root(
     tmp_path: Path, redsun_logger: logging.Logger
 ) -> None:
-    """Records before and after the move end in one file under the new root."""
+    """Move a run's files to the new root, keeping records from before and after."""
     application = SessionFileHandler("lab", root=tmp_path / "a")
     camera = SessionFileHandler("lab", "cam", application.run, root=tmp_path / "a")
     silent = SessionFileHandler("lab", "stage", application.run, root=tmp_path / "a")
@@ -212,27 +240,21 @@ def test_a_run_moves_with_the_root(
     assert "stage after" in services[f"{application.run}.stage.log"]
 
 
-def test_a_container_moves_the_log_when_the_root_changes(
-    log_directory: Path, tmp_path: Path
-) -> None:
-    """The log follows storage.base_dir at build and set_base_dir afterwards."""
+def test_a_session_moves_the_log_when_the_root_changes(tmp_path: Path) -> None:
+    """Open the log under the configured root and move it when the root changes."""
     cfg_file = tmp_path / "session.yaml"
     cfg_file.write_text(
         yaml.dump(
             {
                 "schema_version": 1.0,
-                "frontend": "pyqt",
                 "session": "lab",
                 "storage": {"base_dir": str(tmp_path / "root")},
             }
         )
     )
-    app = AppContainer.from_config(str(cfg_file))
+    app = Session.from_config(str(cfg_file)).build()
     handler = session_log()
     assert handler is not None
-    assert handler.root == log_directory.parent
-
-    app.build()
     assert (tmp_path / "root" / "logs" / "lab" / "app" / f"{handler.run}.log").is_file()
 
     app.path_provider.set_base_dir(tmp_path / "other")

@@ -1,12 +1,14 @@
-# View
+---
+icon: lucide/code
+---
 
-## Base classes
+# redsun.view
 
-::: redsun.view.View
+## Placement
 
-::: redsun.view.PView
-
-::: redsun.view.ViewPosition
+::: redsun.Placement
+    options:
+      show_root_heading: true
 
 ## Qt widgets
 
@@ -14,18 +16,14 @@
     options:
       members:
         - create_plan_widget
+        - create_param_widget
         - ActionButton
         - PlanInfoDialog
 
 ::: redsun.view.qt.utils.PlanWidget
     options:
+      show_root_heading: true
       show_docstring_parameters: false
-
-::: redsun.view.qt._widget_factory
-    options:
-      members:
-        - create_param_widget
-      filters: ["!^_"]
 
 ::: redsun.view.qt.treeview
     options:
@@ -35,3 +33,5 @@
 ## Built-ins
 
 ::: redsun.view.qt.builtins.LogView
+    options:
+      show_root_heading: true

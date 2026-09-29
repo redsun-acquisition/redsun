@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Report a bug in Redsun to help us improve
-title: "[BUG] Bug report"
+title: "fix: <what goes wrong>"
 labels: bug
 assignees: ''
 

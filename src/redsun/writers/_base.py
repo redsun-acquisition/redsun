@@ -28,7 +28,10 @@ class ArrayShape:
     """Shape and dtype of one frame; a stream appends frames along a leading axis."""
 
     shape: tuple[int, ...]
+    """Size of one frame along each axis."""
+
     dtype: np.dtype[Any]
+    """Type of the elements."""
 
     @classmethod
     def of(cls, shape: tuple[int, ...], dtype: DTypeLike) -> ArrayShape:
@@ -87,8 +90,7 @@ def sibling_uri(uri: str, name: str) -> str:
 def root_attributes(path: Path) -> Mapping[str, Any]:
     """Return the attributes of a Zarr store's root group, empty when it has none.
 
-    Reads the metadata file directly, so neither `zarr` nor a reader package
-    is needed to tell a root carrying NGFF metadata from a plain group.
+    Reads the metadata file directly, without `zarr` or a reader package.
     """
     v3 = path / "zarr.json"
     if v3.is_file():
@@ -105,7 +107,7 @@ def root_attributes(path: Path) -> Mapping[str, Any]:
 def carries_ngff(attributes: Mapping[str, Any]) -> bool:
     """Return whether *attributes* hold NGFF metadata of their own.
 
-    An image, a plate or a ``bioformats2raw`` layout all do. Adding a key to
+    An image, a plate or a `bioformats2raw` layout all do. Adding a key to
     such a group drops that metadata.
     """
     return "ome" in attributes or "multiscales" in attributes

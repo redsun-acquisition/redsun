@@ -1,0 +1,314 @@
+---
+icon: lucide/arrow-right-left
+---
+
+# How to migrate from 0.13
+
+The next release replaces the container layer (`redsun.containers`,
+`redsun.virtual`, `AppContainer`) with the session layer that 0.13 did not
+ship. Nothing of the old layer is kept under its old name. This page lists
+each change and what to write instead.
+
+## Imports
+
+| 0.13 | now |
+| --- | --- |
+| `redsun.AppContainer` | `redsun.Session` |
+| `redsun.qt.QtAppContainer` | `redsun.qt.QtSession` |
+| `redsun.containers.declare_device`, `declare_presenter`, `declare_view` | `AsDevice`, `AsPresenter`, `AsView` annotations |
+| `redsun.containers.declare_service` | `AsService` with `Launch` or `Attach` |
+| `redsun.containers.declare_hook` | `AsHook` |
+| `redsun.containers.ConfigurationError`, `HookError` | `redsun.ConfigurationError`, `redsun.HookError` |
+| `redsun.virtual.slot` | `redsun.slot` |
+| `redsun.virtual.Signal` | `psygnal.Signal` |
+| `redsun.virtual.CallbackType` | `redsun.CallbackType` |
+| `redsun.virtual.WiringError`, `ports` | `redsun.WiringError`, `redsun.ports.ports` |
+| `redsun.virtual.Connection`, `ComponentNotBuilt`, `HasShutdown` | `redsun.Connection`, `redsun.ComponentNotBuilt`, `redsun.HasShutdown` |
+| `redsun.virtual.Ports`, `Unconnected`, `SlotThread` | the same names in `redsun.ports` |
+| `redsun.virtual.Subscription` | removed: a `redsun.Connection` records a link from a device signal too |
+| `redsun.virtual.RedSunConfig` | `redsun.SessionConfig`, a frozen dataclass with the same four fields |
+| `redsun.virtual.IsProvider`, `IsInjectable`, `ProviderKey` | removed: see [Sharing values between components](#sharing-values-between-components) |
+| `redsun.virtual.VirtualContainer`, `SignalCache` | removed: see [Wiring](#wiring) |
+| `redsun.presenter.PPresenter`, `Presenter` | nothing to inherit: see [Presenters](#presenters) |
+| `redsun.view.PView`, `View`, `ViewPosition`, `redsun.view.qt.QtView` | a `QWidget` with a `placement`: see [Views](#views) |
+| `redsun.utils.find_signals` | removed: yield a link in `wire` |
+
+## Declaring components
+
+```python
+# 0.13
+class MyApp(QtAppContainer):
+    motor = declare_device(MyStage, axis=["X", "Y"])
+    motor_ctrl = declare_presenter(MotorPresenter)
+    motor_widget = declare_view(MotorView, step_size=5.0)
+
+
+# now
+class MyApp(QtSession):
+    motor: Annotated[AsDevice[MyStage], Declare(axis=["X", "Y"])]
+    motor_ctrl: AsPresenter[MotorPresenter]
+    motor_widget: Annotated[AsView[MotorView], Declare(step_size=5.0)]
+```
+
+- The `config=` class keyword is now a class attribute: `config = "session.yaml"`.
+- `from_config="key"` is `FromConfig("key")`, and a different registered name
+  is `Alias("name")`, both inside `Annotated`.
+- `MyApp(session="lab")` is `MyApp({"session": "lab"})`: a session takes its
+  settings as a configuration source.
+
+## Presenters
+
+A presenter no longer starts with `(name, devices)`, and inherits nothing. The
+session calls it with every argument by keyword, and fills each parameter by
+type:
+
+```python
+# 0.13
+class MotorPresenter(Presenter):
+    def __init__(
+        self, name: str, devices: Mapping[str, Device], /, step: float = 1.0
+    ) -> None:
+        super().__init__(name, devices)
+        self.step = step
+
+
+# now
+class MotorPresenter:
+    def __init__(self, name: str, *, devices: DeviceMapping, step: float = 1.0) -> None:
+        self.name = name
+        self.devices = devices
+        self.step = step
+```
+
+Ask for `DevicesOf[P]` to get only the devices satisfying a protocol.
+
+## Views
+
+A view is a `QWidget` whose constructor starts with `(name: str, parent:
+QWidget)`, and which says where it goes with a `placement`:
+
+```python
+# 0.13
+class MotorView(QtView):
+    def __init__(self, name: str, /, **kwargs: Any) -> None:
+        super().__init__(name)
+
+    @property
+    def view_position(self) -> ViewPosition:
+        return ViewPosition.LEFT
+
+
+# now
+class MotorView(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+```
+
+`ViewPosition.CENTER` is `Central()`. A view's slots run on the main thread,
+as `QtView`'s did.
+
+## Sharing values between components
+
+`register_providers`, `inject_dependencies`, `ProviderKey` and the
+`provide`/`require`/`try_require` calls are gone. The type is the key:
+
+```python
+# 0.13
+MOTOR_READINGS = ProviderKey(instance_of=MotorReadings)
+
+
+def register_providers(self, container):
+    container.provide(MOTOR_READINGS, self._readings)
+
+
+def inject_dependencies(self, container):
+    self.readings = container.require(MOTOR_READINGS)
+
+
+# now
+@provides
+def readings(self) -> MotorReadings:
+    return self._readings
+
+
+def setup(self, readings: MotorReadings) -> None:
+    self.readings = readings
+```
+
+`try_require(KEY)` is a parameter `x: X | None = None`. See
+[Share a value](share-a-value.md).
+
+The keys `redsun.path_provider.PATH_PROVIDER`, `redsun.catalog.CATALOG` and
+`redsun.engine.DEFERRALS` are removed. Ask for the type instead: a
+`SessionPathProvider` or `CatalogAddress | None` parameter, and `Deferrals`
+from the component that [shares it](change-a-setting-while-a-plan-runs.md).
+
+## Wiring
+
+`wire` no longer connects anything itself: it is a generator that yields each
+link as a signal and the slot it reaches, and the session makes the
+connection. `connect`, `subscribe` and `connect_paths` are gone; a `psygnal`
+signal and an `ophyd-async` device signal are yielded the same way, and the
+session tells them apart:
+
+```python
+# 0.13
+def wire(self) -> None:
+    self.connect(self.ctrl.sig_moved, self.widget.refresh)
+    self.virtual_container.subscribe(self.stage.readback, self.widget.on_reading)
+
+
+# now
+def wire(self) -> Iterator[Link]:
+    yield self.ctrl.sig_moved, self.widget.refresh
+    yield self.stage.readback, self.widget.on_reading
+```
+
+The `wiring` section of a session file is now a mapping from a signal path to
+one slot path or a list of them, not a list of `from:`/`to:` entries:
+
+```yaml
+# 0.13
+wiring:
+  - from: ctrl.sig_moved
+    to: widget.refresh
+
+# now
+wiring:
+  ctrl.sig_moved: widget.refresh
+```
+
+The virtual container's other members moved too:
+
+| 0.13 | now |
+| --- | --- |
+| `container.virtual_container.connections`, `.unconnected`, `.disconnect_all` | the same names on the session |
+| `container.virtual_container.subscriptions` | removed: `connections` lists a link from a device signal with the others |
+| `register_callbacks` | a component that is a `DocumentRouter` is collected; ask for `Mapping[str, CallbackType]` in `setup` |
+| `register_signals`, `signals`, `find_signals` | removed |
+
+A link to a component that failed to build is skipped and logged, rather than
+raising.
+
+## Hooks
+
+```python
+# 0.13
+class MyApp(QtAppContainer):
+    configure_application = declare_hook(DarkTheme, accent="#d47f4c")
+
+
+# now
+class MyApp(QtSession):
+    configure_application: Annotated[AsHook[DarkTheme], Declare(accent="#d47f4c")]
+```
+
+- A hook can no longer be given as a built object; pass the class and its
+  arguments.
+- One provider for several points uses `Serves(...)`, not the same object
+  declared twice.
+- `QtCreatesApplication`, `QtConfiguresApplication`, `QtWrapsBuild` and
+  `QtConfiguresMainView` are removed. `QtHook` names the points, and their
+  protocols are [`CreatesApplication`][redsun.CreatesApplication],
+  [`ConfiguresApplication`][redsun.ConfiguresApplication],
+  [`WrapsBuild`][redsun.WrapsBuild] and
+  [`ConfiguresMainView`][redsun.ConfiguresMainView], imported from `redsun`.
+- `during_build` now covers the build steps only, not the window's first
+  paint.
+
+## Services
+
+```python
+# 0.13
+class MyApp(AppContainer):
+    transport = "pv-access"
+    camera_ioc = declare_service(
+        module="mylab.iocs.camera", ready="serving", prefix="CAM:"
+    )
+
+
+# now
+class MyApp(Session):
+    config = {"services": {"transport": "pv-access"}}
+    camera_ioc: Annotated[
+        AsService, Launch("mylab.iocs.camera", ready="serving", prefix="CAM:")
+    ]
+```
+
+A service without a module is `Attach("BL01:")`. Services start in the first
+build step; `start_services` can no longer be called before `build`.
+
+## Session files
+
+| 0.13 | now |
+| --- | --- |
+| `frontend: pyqt` or `pyside` | `frontend: qt`, or no key; `QT_API` picks the binding |
+| `schema_version` and `frontend` required | both optional |
+| `from_config` accepted a file without `session` | `session` is required |
+| an entry that did not resolve raised `PluginError` | it is logged and left out; set `strict: true` to stop instead |
+| an entry naming no plugin and no declared component was ignored | it is logged and left out |
+
+New keys: `strict`, `mock`, `providers`, `actions`, `color_scheme`. See
+[Write a session file](write-a-session-file.md).
+
+## Plans
+
+```python
+# 0.13
+@continous(togglable=True, pausable=True)
+def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
+
+
+# now
+@continuous(pausable=True)
+def live(detectors: Sequence[DetectorProtocol]) -> MsgGenerator[None]: ...
+```
+
+| 0.13 | now |
+| --- | --- |
+| `redsun.engine.actions.continous` | `redsun.engine.actions.continuous`; the old spelling is not kept |
+| `continous(togglable=...)` | removed: a continuous plan always has a toggle to start and stop it |
+| `redsun.engine.actions.ContinousPlan` | removed: read `__continuous__` from the plan |
+| `__togglable__`, `__pausable__` on a plan | `__continuous__`, a `Continuous` with a `pausable` field |
+| `PlanSpec.togglable` | `PlanSpec.continuous` |
+| `wait_for_actions(events, timeout=...)` | `wait_for_actions(events, poll_interval=...)` |
+| `Action` | `PlanAction` |
+| `Action(togglable=True, toggle_states=...)` | `PlanAction(toggle_states=...)` |
+| `Action.togglable` | removed: `toggle_states` is `None` for a button that is clicked |
+| `action.event_map` | removed: a `PlanAction` holds no latch |
+| `name, latch = yield from wait_for_actions(action.event_map)` | `name = yield from actions.wait(action)` |
+| `wait_for_actions(action.event_map, wait_for="reset")` | `actions.wait_released(action)` |
+| `latch.reset()` once the plan has acted | `actions.done(name)` |
+| a latch set from a slot | `actions.request(name)`, linked in `wire` to the signal of the view |
+
+- `wait_for_actions` never timed out, and still does not: the argument is the
+  time between two checkpoints.
+- `wait_for_actions` raises `ValueError` when `events` is empty.
+- `actions` is an `ActionManager` from `redsun.engine.actions`, made by whoever owns
+  the plans. See [In-flight actions](../explanation/plans.md#in-flight-actions).
+- `PlanAction` is frozen, and `PlanAction.toggle_states` defaults to `None` where it
+  defaulted to `("On", "Off")`.
+- `create_plan_spec` raises `ValueError` for a plan declaring two actions of
+  one name.
+
+## Other changes
+
+- The `experimental` extra is gone; `in-n-out` is a dependency of `redsun`,
+  and `dependency-injector` is no longer one.
+- The session opens its log files when the build reads the configuration, not
+  when the session object is made.
+- The main window no longer starts maximised; it opens where the user last
+  left it.
+- `AppContainer.config`, the merged configuration, is `Session.serialize()`.
+- `run` exists only on a session with a frontend.
+- `DescriptorTreeView.update_reading` and `confirm_change` are replaced by
+  `set_value(key, value)`, which shows what the device read back and settles
+  a pending edit, and `revert(key)`, for an edit the device refused.
+- `redsun.engine.Status` is removed; import it from `bluesky.protocols`.
+- `connect_devices` is removed. A session file setting `mock: true` connects
+  every `autoconnect` device to a simulated backend during the build, and a
+  device declared with `autoconnect: false` is connected by the component
+  that uses it.

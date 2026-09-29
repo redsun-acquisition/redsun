@@ -1,4 +1,8 @@
-# Path provider
+---
+icon: lucide/code
+---
+
+# redsun.path_provider
 
 ::: redsun.path_provider
     options:
@@ -6,4 +10,4 @@
         - SessionPathProvider
         - PlanFilenameProvider
         - session_directory
-        - PATH_PROVIDER
+        - PATH_PROVIDER_PORT

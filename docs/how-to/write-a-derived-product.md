@@ -1,12 +1,17 @@
-# Write a derived product
+---
+icon: lucide/layers
+---
 
-A component computing something from a run, a median over a scan or a
-filtered copy of each frame, writes it against the store the device wrote.
-The acquisition belongs to the service and its device
+# How to write a derived product
+
+A component computing something from a [run](../explanation/glossary.md#run), a
+median over a scan or a filtered copy of each frame, writes it against the
+store the device wrote. The acquisition belongs to the service and its device
 ([ADR 0013](../explanation/decisions/0013-acquisition-storage-belongs-to-the-device.md));
 a derived product is the one thing `redsun` writes.
 [Derived products](../explanation/derived-products.md) says why a product is
-handed over rather than carried by a document.
+handed over rather than carried by a
+[document](../explanation/glossary.md#document).
 
 ## Install the extra
 
@@ -15,8 +20,8 @@ handed over rather than carried by a document.
 image.
 
 ```bash
-pip install redsun[zarr]
-pip install redsun[ome-zarr]
+pip install "redsun[zarr]"
+pip install "redsun[ome-zarr]"
 ```
 
 Without `acquire-zarr`, importing `redsun.writers` raises
@@ -30,17 +35,27 @@ writes. Declare them in the constructor, since a store's arrays are all sized
 when its stream opens:
 
 ```python
+from collections.abc import Sequence
+
+from event_model import DocumentRouter
+
 from redsun.writers import Writer
 
 
-class MyPresenter(Presenter, DocumentRouter):
-    def __init__(self, name: str, devices: Mapping[str, Device]) -> None:
-        super().__init__(name, devices)
+class MedianPresenter(DocumentRouter):
+    def __init__(self, name: str, *, sources: Sequence[str]) -> None:
+        super().__init__()
+        self.name = name
+        self._sources = tuple(sources)
         self._writer = Writer()
-        for detector in self.detectors:
-            self._writer.derive(f"{detector}_median", source=detector)
-            self._writer.derive(f"{detector}_filtered", source=detector)
+        for source in self._sources:
+            self._writer.derive(f"{source}_median", source=source)
+            self._writer.derive(f"{source}_filtered", source=source)
 ```
+
+`sources` holds the [data keys](../explanation/glossary.md#data-key) to
+compute from. It comes from the session file, like any other argument of a
+component.
 
 `derive` takes the layout and the store from the run: the `descriptor`
 naming `source` gives the frame shape and dtype, the `stream_resource`
@@ -68,19 +83,19 @@ def __call__(self, name: str, doc: dict[str, Any], validate: bool = False) -> An
 ## Hand the data over
 
 `append` takes one frame, or a stack of frames, of a product written as the
-run goes; `write` takes the whole of one computed at the end:
+run goes; `write` takes the whole of one computed at the end. Below, `source`
+is one of the data keys, and `filtered` and `median` are the arrays the
+component computed for it:
 
 ```python
 def event(self, doc: Event) -> Event:
     ...
-    self._writer.append(f"{detector}_filtered", filtered)
+    self._writer.append(f"{source}_filtered", filtered)
     return doc
 
 
 def stop(self, doc: RunStop) -> RunStop:
-    self._writer.write(
-        f"{detector}_median", median, metadata={"derived_from": detector}
-    )
+    self._writer.write(f"{source}_median", median, metadata={"derived_from": source})
     return doc
 
 
@@ -100,7 +115,9 @@ readable.
 ## Where the product goes
 
 The `stream_resource` document names the format and the store; the writer
-reads the store's root and decides:
+reads the store's root and decides. `redsun.writers` exports the two
+mimetypes it knows as `ZARR` and `OME_ZARR`, for a device writing either into
+its documents:
 
 | Mimetype | Store root | Product goes | `write` returns |
 | --- | --- | --- | --- |
@@ -123,7 +140,7 @@ which a stream closing on the store rewrites: the `metadata` given to
 | Key | Value |
 | --- | --- |
 | `run_start` | the uid of the run, `null` for a product written outside one |
-| `source` | the data key a `derive`d product was laid out and stored as |
+| `source` | the [data key](../explanation/glossary.md#data-key) a `derive`d product was laid out and stored as |
 | `resource_uri` | the URI of the store the `stream_resource` named |
 | `written` | when the product's stream closed, ISO 8601, UTC |
 

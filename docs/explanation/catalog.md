@@ -1,14 +1,18 @@
-# The session catalog
+---
+icon: lucide/database
+---
 
-A session whose `storage` section has a `catalog` key runs a `tiled` server on
-this machine, from build to shutdown.
+# How the session catalog works
+
+A session whose `storage` section has a `catalog` key runs a
+[`tiled`](glossary.md#tiled) server on this machine, from build to shutdown.
 [Keep a catalog of runs](../how-to/keep-a-catalog.md) shows how to use it.
 
 ## What `redsun` does
 
 It starts the server, keeps its database in `<base_dir>/<session>/catalog`,
-and provides its address under [`CATALOG`][redsun.catalog.CATALOG]. It
-registers nothing: acquisition bytes belong to the service and its device
+and gives its address to any component asking for a
+[`CatalogAddress`][redsun.catalog.CatalogAddress]. It registers nothing: acquisition bytes belong to the service and its device
 ([ADR 0013](decisions/0013-acquisition-storage-belongs-to-the-device.md)), and
 the session's components decide whether runs are recorded. Each opens its own
 client with `tiled`'s `from_uri` and gets the whole client API.
@@ -17,7 +21,7 @@ The server reads `application/x-ome-zarr` files with `ome-tiled`, which serves
 an OME-Zarr image as one array whose `dims` are its axis names. The session
 also registers `ome-tiled`'s consolidator for `TiledWriter`, so the writer
 stores an image with its store's shape rather than one derived from the
-documents.
+[documents](glossary.md#document).
 
 ## One catalog per session
 

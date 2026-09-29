@@ -1,3 +1,0 @@
-# Virtual container
-
-::: redsun.virtual

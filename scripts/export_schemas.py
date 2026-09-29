@@ -1,6 +1,6 @@
 """Write the JSON schemas of a session file and a plugin manifest.
 
-They land in ``docs/reference/schemas/``, which the docs build publishes, so an
+They land in `docs/reference/schemas/`, which the docs build publishes, so an
 editor can check a file against them while it is written.
 """
 
@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from redsun.containers._config import session_file_schema
-from redsun.containers._manifest import PluginManifest
+from redsun._config import session_file_schema
+from redsun._manifest import PluginManifest
 
 TARGET = Path(__file__).parent.parent / "docs" / "reference" / "schemas"
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from bluesky.protocols import Status
-
-from ._deferrals import DEFERRALS, Deferrals
+from ._deferrals import Deferrals
 from ._wrapper import (
     RunEngine,
     RunEngineResult,
@@ -10,10 +8,8 @@ from ._wrapper import (
 )
 
 __all__ = [
-    "DEFERRALS",
     "Deferrals",
     "RunEngine",
     "RunEngineResult",
-    "Status",
     "register_bound_command",
 ]

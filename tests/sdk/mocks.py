@@ -10,8 +10,8 @@ from ophyd_async.core import SignalRW, StandardReadable, soft_signal_rw
 class MockDetector(StandardReadable):
     """Mock detector device using soft signals.
 
-    The EGU for ``exposure`` is embedded in the descriptor document
-    (``describe()["<name>-exposure"]["units"]``), not as a separate signal.
+    The EGU for `exposure` is embedded in the descriptor document
+    (`describe()["<name>-exposure"]["units"]`), not as a separate signal.
     """
 
     exposure: SignalRW[float]

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from event_model import DocumentRouter
 
 from ._base import ArrayShape, WriterError, merge_attributes
-from ._placement import placement
+from ._placement import ZARR, placement
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -59,7 +59,7 @@ class Open:
 class Run:
     """What a run's documents said, keyed by source data key, and its open streams.
 
-    ``uid`` is ``None`` outside any run.
+    `uid` is `None` outside any run.
     """
 
     uid: str | None
@@ -75,10 +75,10 @@ class Writer(DocumentRouter):
     Declare each product before the run: `declare` gives its layout and
     store, `derive` takes both from the run's `descriptor` and
     `stream_resource` naming a source data key. The component forwards every
-    document with ``writer(name, doc)`` and hands data over with `append`
+    document with `writer(name, doc)` and hands data over with `append`
     per frame or `write` for the whole product. A run's `stop` closes its
     streams and writes each product's metadata: the mapping given to `write`,
-    and a ``redsun`` mapping with the run, source, store and time.
+    and a `redsun` mapping with the run, source, store and time.
 
     A store's stream opens on the first `append` or `write`, with every
     product of that store known by then. A product resolves against the
@@ -99,7 +99,7 @@ class Writer(DocumentRouter):
         self._products[data_key] = Product(
             data_key,
             layout=ArrayShape.of(shape, dtype),
-            store=(store, "application/x-zarr"),
+            store=(store, ZARR),
         )
 
     def derive(self, data_key: str, *, source: str) -> None:
@@ -254,7 +254,7 @@ class Writer(DocumentRouter):
     def _stream_for(self, data_key: str, *, whole: NDArray[Any] | None) -> Open | None:
         """Return the stream *data_key* goes to, opened on the first call.
 
-        ``None`` for a mimetype no writer knows, logged once per run. *whole*
+        `None` for a mimetype no writer knows, logged once per run. *whole*
         is the whole product when the caller has it, as a store of its own
         needs.
         """

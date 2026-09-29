@@ -1,0 +1,24 @@
+name: Changelog Label
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+jobs:
+  label:
+    name: Require a changelog label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the labels
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          python3 - <<'EOF'
+          import json
+          import os
+          import sys
+
+          allowed = {"added", "changed", "deprecated", "removed", "fixed", "security", "skip-changelog"}
+          if not set(json.loads(os.environ["LABELS"])) & allowed:
+              sys.exit("Add one of these labels: " + ", ".join(sorted(allowed)))
+          EOF

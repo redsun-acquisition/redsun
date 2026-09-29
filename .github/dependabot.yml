@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels: [dependencies, skip-changelog]
     groups:
       python:
         patterns: ["*"]
@@ -12,6 +13,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    labels: [dependencies, skip-changelog]
     groups:
       actions:
         patterns: ["*"]

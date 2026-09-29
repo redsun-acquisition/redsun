@@ -1,15 +1,15 @@
-"""Checkbox list widget for ``Sequence[PDevice]`` and ``Set[PDevice]`` parameters.
+"""Checkbox list widget for `Sequence[PDevice]` and `Set[PDevice]` parameters.
 
-``DeviceSequenceEdit`` subclasses ``magicgui.widgets.bases.ValueWidget`` and is
-backed by a Qt ``_CheckboxListWidget``. Its backend, ``_QCheckboxBackend``,
-implements ``ValueWidgetProtocol``, so ``magicgui`` containers accept the widget
-as is, without ``_explicitly_hidden`` or ``_LabeledWidget`` errors.
+`DeviceSequenceEdit` subclasses `magicgui.widgets.bases.ValueWidget` and is
+backed by a Qt `_CheckboxListWidget`. Its backend, `_QCheckboxBackend`,
+implements `ValueWidgetProtocol`, so `magicgui` containers accept the widget
+as is, without `_explicitly_hidden` or `_LabeledWidget` errors.
 
-Every device is shown as a ``QCheckBox`` in a vertical list; a checked box is a
+Every device is shown as a `QCheckBox` in a vertical list; a checked box is a
 selected device.
 
-``value`` is a ``list[str]`` of checked device names, in registry order;
-``resolve_arguments`` turns it into a ``set`` for a ``Set[PDevice]``
+`value` is a `list[str]` of checked device names, in registry order;
+`resolve_arguments` turns it into a `set` for a `Set[PDevice]`
 annotation.
 """
 
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 
 
 class _QCheckboxBackend(QBaseValueWidget):
-    """Qt backend for ``DeviceSequenceEdit``.
+    """Qt backend for `DeviceSequenceEdit`.
 
-    Wraps ``_CheckboxListWidget`` and satisfies ``ValueWidgetProtocol``, so
-    ``magicgui`` containers accept it like any widget.
+    Wraps `_CheckboxListWidget` and satisfies `ValueWidgetProtocol`, so
+    `magicgui` containers accept it like any widget.
     """
 
     _qwidget: _CheckboxListWidget
@@ -52,13 +52,13 @@ class _QCheckboxBackend(QBaseValueWidget):
         """Connect unconditionally.
 
         The inherited version first tests the signal's truth value, which works
-        for a Qt signal but not a ``psygnal`` one: without connections it is
+        for a Qt signal but not a `psygnal` one: without connections it is
         falsy, and the callback would be dropped.
         """
         self._qwidget.selection_changed.connect(callback)
 
     def _mgui_set_value(self, value: Any) -> None:
-        """Accept any iterable of names, and treat ``None`` as an empty selection."""
+        """Accept any iterable of names, and treat `None` as an empty selection."""
         if isinstance(value, (list, tuple, set, frozenset)):
             self._qwidget.set_value(list(value))
         elif value is None:
@@ -74,20 +74,20 @@ class _QCheckboxBackend(QBaseValueWidget):
 
 
 class DeviceSequenceEdit(ValueWidget[list[str]]):
-    """Checkbox-list ``ValueWidget`` for ``Sequence[PDevice]`` / ``Set[PDevice]``.
+    """Checkbox-list `ValueWidget` for `Sequence[PDevice]` / `Set[PDevice]`.
 
-    Subclasses ``magicgui.widgets.bases.ValueWidget``, so ``mgw.Container``
-    accepts it like any ``magicgui`` widget.
+    Subclasses `magicgui.widgets.bases.ValueWidget`, so `mgw.Container`
+    accepts it like any `magicgui` widget.
 
     Parameters
     ----------
-    name : str
+    name
         Widget / parameter name.
-    choices : list[str]
+    choices
         Every device name, in registry order.
-    value : list[str], optional
+    value
         Names checked initially. None by default.
-    label : str | None, optional
+    label
         Label shown in the parent container. Defaults to *name*.
     """
 
@@ -117,10 +117,10 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
 
 
 class _CheckboxListWidget(QtW.QWidget):
-    """Vertical stack of ``QCheckBox`` widgets plus a count label.
+    """Vertical stack of `QCheckBox` widgets plus a count label.
 
-    Choices are supplied after construction through ``set_choices``, since
-    ``magicgui``'s backend base instantiates the Qt widget itself.
+    Choices are supplied after construction through `set_choices`, since
+    `magicgui`'s backend base instantiates the Qt widget itself.
     """
 
     selection_changed = Signal(list)
@@ -144,7 +144,7 @@ class _CheckboxListWidget(QtW.QWidget):
         """Replace the device pool, above the count label.
 
         A removed checkbox is disconnected first; otherwise it would keep
-        emitting selections ``get_value`` no longer reports.
+        emitting selections `get_value` no longer reports.
         """
         for stale in self._checkboxes.values():
             stale.toggled.disconnect(self._emit)

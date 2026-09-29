@@ -6,14 +6,25 @@ from typing import TYPE_CHECKING, Final, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import Any
 
-__all__ = ["CHANNEL_ACCESS", "PV_ACCESS", "TRANSPORTS", "Transport"]
+__all__ = [
+    "CHANNEL_ACCESS",
+    "PV_ACCESS",
+    "TRANSPORTS",
+    "TRANSPORT_KEY",
+    "Transport",
+    "transport_of",
+]
 
 CHANNEL_ACCESS: Final = "channel-access"
 """The protocol a session's services speak unless it says otherwise."""
 
 PV_ACCESS: Final = "pv-access"
 """The other protocol a session may name."""
+
+TRANSPORT_KEY: Final = "transport"
+"""The key of the `services` section naming what its services speak."""
 
 LOOPBACK: Final = "127.0.0.1"
 """Where a launched service listens, and where this process looks for it."""
@@ -22,9 +33,7 @@ LOOPBACK: Final = "127.0.0.1"
 class Transport(Protocol):
     """What a control-system protocol needs of the process on each side.
 
-    A session has one, which every service of it uses: the variables the
-    protocols read are per process, so two of them in one session would leave
-    each unable to say which service a variable is for.
+    A session has one, which every service of it uses.
     """
 
     name: str
@@ -49,7 +58,7 @@ class Transport(Protocol):
 class ChannelAccess:
     """Channel Access, each service answering on a port of its own.
 
-    A client reads ``EPICS_CA_ADDR_LIST`` once, when it first uses Channel
+    A client reads `EPICS_CA_ADDR_LIST` once, when it first uses Channel
     Access, so a service restarted by a rebuilt container keeps the port the
     list already holds.
     """
@@ -76,30 +85,31 @@ class ChannelAccess:
         add_to_env("EPICS_CA_ADDR_LIST", f"127.0.0.1:{self._port(service)}")
 
     async def release(self) -> None:
-        """Close every Channel Access channel this process holds, if it holds any.
-
-        Otherwise a channel to a stopped service waits out libca's reconnect
-        delay, about ten seconds, before a rebuilt device reaches the restarted
-        service. Every channel in the process is closed, since libca offers
-        nothing narrower.
-        """
+        """Close every Channel Access channel this process holds, if it holds any."""
         try:
-            from aioca import purge_channel_caches
+            from aioca import purge_channel_caches  # noqa: PLC0415
         except ImportError:
             return
+        # a channel left to a stopped service waits out libca's reconnect
+        # delay, about ten seconds, before a rebuilt device reaches the
+        # restarted one; libca offers nothing narrower than every channel
         purge_channel_caches()
 
     def _port(self, service: str) -> int:
         """Return the service's port, taking a free one the first time."""
         if service not in self._ports:
-            self._ports[service] = free_udp_port()
+            # the system may hand out a port it already gave another service
+            port = free_udp_port()
+            while port in self._ports.values():
+                port = free_udp_port()
+            self._ports[service] = port
         return self._ports[service]
 
 
 class PVAccess:
     """PVAccess, every service of the session on the loopback interface.
 
-    A service picks its own ports: ``pvxs`` takes another TCP port when the
+    A service picks its own ports: `pvxs` takes another TCP port when the
     default one is busy, and local servers share the search port, so several
     answer without the session assigning anything. What a client cannot do by
     itself is reach a service bound to the loopback, which its defaults never
@@ -123,7 +133,7 @@ class PVAccess:
     def publish(self, service: str) -> None:
         """Add the loopback to this process's address list, once for them all.
 
-        ``EPICS_PVA_AUTO_ADDR_LIST`` is left alone, so a session still reaches
+        `EPICS_PVA_AUTO_ADDR_LIST` is left alone, so a session still reaches
         the servers of its site.
         """
         if self._published:
@@ -142,13 +152,27 @@ TRANSPORTS: dict[str, Transport] = {
 """The transports a session may name, by the name a session file writes."""
 
 
+def transport_of(config: Mapping[str, Any]) -> Any:
+    """Return what a configuration names under `services.transport`.
+
+    `None` when it names nothing. Whatever it wrote otherwise, a string
+    or not: the caller says what a mapping there means.
+    """
+    services = config.get("services") or {}
+    return services.get(TRANSPORT_KEY) if isinstance(services, dict) else None
+
+
 def add_to_env(name: str, value: str) -> None:
     """Append *value* to the environment variable *name*, space separated."""
     os.environ[name] = " ".join(filter(None, [os.environ.get(name), value]))
 
 
 def free_udp_port() -> int:
-    """Return a UDP port on the loopback interface that nothing is bound to."""
+    """Return a UDP port on the loopback interface that nothing is bound to.
+
+    The port is free when read; nothing holds it for the caller, so another
+    program can bind it first, and a later call may return it again.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
         port: int = sock.getsockname()[1]

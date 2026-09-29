@@ -5,8 +5,9 @@ tools: Read, Edit, Bash, Grep, Glob
 model: sonnet
 ---
 
-Mirror the source layout under `tests/sdk/`. Match the style of neighbouring
-test modules and reuse existing fixtures (`RE`, `bus`, `config_path`, `qapp`).
+Where a test goes is in CLAUDE.md (Testing conventions). Match the style of
+neighbouring test modules and reuse existing fixtures (`build`, `RE`,
+`config_path`, `mock_plugin`, `wait_until`, `qapp`).
 
 Rules:
 - asyncio_mode is "auto" - never add `@pytest.mark.asyncio`.
@@ -19,5 +20,6 @@ Rules:
 - Don't write tests against `src/redsun/view/**` for coverage's sake - it's
   excluded from coverage.
 
-Iterate `uv run pytest <scope> -x -q` until green.
+Iterate `uv run pytest <scope> -x -q` until green, then confirm with
+`uv run tox -e tests -- <scope>`.
 Report only: files changed, pass/fail count.

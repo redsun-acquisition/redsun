@@ -1,11 +1,16 @@
-# Run tests
+---
+icon: lucide/flask-conical
+---
 
-Run the `redsun` test suite, type-check it against both Qt bindings, and
-produce coverage reports.
+# How to run the tests
+
+Run the `redsun` test suite, type-check it against both
+[Qt bindings](../explanation/glossary.md#qt-binding), and produce coverage
+reports.
 
 ## Prerequisites
 
-[Install `redsun` with development dependencies](installation.md#install-development-dependencies).
+[Set up a development environment](set-up-development.md).
 
 ## Run everything
 
@@ -35,11 +40,11 @@ uv run tox -e mypy-pyqt
 Arguments after `--` go to `pytest`:
 
 ```bash
-# SDK tests only
+# the tests of the shared modules only
 uv run tox -e tests -- tests/sdk/
 
 # a specific test function
-uv run tox -e tests -- tests/container/test_container.py::test_function_name
+uv run tox -e tests -- tests/test_container.py::test_function_name
 
 # everything matching a pattern
 uv run tox -e tests -- -k "test_wiring"
@@ -55,7 +60,8 @@ Tests marked `@pytest.mark.qt` are skipped when no display is available.
 
 ## Run the tests against a service outside the process
 
-Tests marked `@pytest.mark.compose` talk to an IOC in a container started from
+Tests marked `@pytest.mark.compose` talk to an
+[IOC](../explanation/glossary.md#ioc) in a container started from
 `tests/compose/compose.yaml`. They are skipped unless `REDSUN_COMPOSE` is set,
 so the rest of the suite needs no container runtime. With Docker running:
 
@@ -65,9 +71,9 @@ REDSUN_COMPOSE=1 uv run pytest -m compose
 docker compose -f tests/compose/compose.yaml down
 ```
 
-The IOC listens on `127.0.0.1` port 5064, the default Channel Access port, so
-stop any other IOC on that port first. CI runs these tests in their own job on
-Ubuntu.
+The IOC listens on `127.0.0.1` port 5064, the default
+[Channel Access](../explanation/glossary.md#channel-access) port, so stop any
+other IOC on that port first. CI runs these tests in their own job on Ubuntu.
 
 ## Type-check against both Qt bindings
 
@@ -92,7 +98,8 @@ its own and can miss errors CI catches.
 `pyproject.toml` configures the coverage sources:
 
 ```bash
-uv run pytest --cov --cov-report=html
+uv run coverage run -m pytest
+uv run coverage html
 ```
 
 Open `htmlcov/index.html` in a browser.

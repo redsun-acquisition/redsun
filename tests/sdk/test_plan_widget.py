@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from decimal import Decimal
 from inspect import Parameter
 from pathlib import Path
@@ -9,9 +8,10 @@ from typing import Any, Literal
 
 import pytest
 from bluesky.utils import MsgGenerator
+from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine.actions import Action, continous
+from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
@@ -20,9 +20,11 @@ from redsun.presenter.plan_spec import (
     create_plan_spec,
 )
 from redsun.view.qt._widget_factory import create_param_widget
-from redsun.view.qt.utils import ActionButton, create_plan_widget
+from redsun.view.qt.utils import ActionButton, PlanWidget, create_plan_widget
 
 pytestmark = pytest.mark.qt
+
+STREAM = PlanAction(name="stream", toggle_states=("Start", "Stop"))
 
 
 @pytest.fixture(autouse=True)
@@ -32,6 +34,22 @@ def _application(qapp: QtW.QApplication) -> None:
     The widgets are built without asking for one, so run alone the module
     made and lost its own, and the interpreter died between tests.
     """
+
+
+class Recorder:
+    """A document callback of the ordinary shape."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __call__(self, name: str, doc: Any) -> None: ...
+
+
+CALLBACKS = {name: Recorder(name) for name in ("a", "b", "c", "own")}
+"""Every callback the tests hand a plan widget, by name."""
+
+CATALOGUE = {name: CALLBACKS[name] for name in ("a", "b", "c")}
+"""The callbacks a user may attach; `own` is only ever carried by a plan."""
 
 
 def _simple_spec() -> PlanSpec:
@@ -70,10 +88,10 @@ def _int_literal_spec() -> PlanSpec:
     return create_plan_spec(plan, {})
 
 
-def _togglable_spec() -> PlanSpec:
-    """Build a togglable plan spec (no pause)."""
+def _continuous_spec() -> PlanSpec:
+    """Build a continuous plan spec (no pause)."""
 
-    @continous(togglable=True, pausable=False)
+    @continuous
     def plan() -> MsgGenerator[None]:
         yield from ()
 
@@ -81,9 +99,9 @@ def _togglable_spec() -> PlanSpec:
 
 
 def _pausable_spec() -> PlanSpec:
-    """Build a togglable and pausable plan spec."""
+    """Build a continuous and pausable plan spec."""
 
-    @continous(togglable=True, pausable=True)
+    @continuous(pausable=True)
     def plan() -> MsgGenerator[None]:
         yield from ()
 
@@ -93,26 +111,9 @@ def _pausable_spec() -> PlanSpec:
 def _action_spec() -> PlanSpec:
     """Build a plan spec with an action parameter."""
 
-    @dataclass
-    class Snap(Action):
-        name: str = "snap"
-
-    def plan(frames: int = 1, /, snap: Action = Snap()) -> MsgGenerator[None]:
-        yield from ()
-
-    return create_plan_spec(plan, {})
-
-
-def _togglable_action_spec() -> PlanSpec:
-    """Build a plan spec with a togglable action."""
-
-    @dataclass
-    class Stream(Action):
-        name: str = "stream"
-        togglable: bool = True
-        toggle_states: tuple[str, str] = ("Start", "Stop")
-
-    def plan(frames: int = 1, /, stream: Action = Stream()) -> MsgGenerator[None]:
+    def plan(
+        frames: int = 1, /, snap: PlanAction = PlanAction(name="snap")
+    ) -> MsgGenerator[None]:
         yield from ()
 
     return create_plan_spec(plan, {})
@@ -122,143 +123,148 @@ class TestActionButton:
     """Tests for ActionButton."""
 
     def test_initial_label_is_capitalised_name(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-
-        btn = ActionButton(Go())
+        """Label the button with the action name, capitalised."""
+        btn = ActionButton(PlanAction(name="go"))
         assert btn.text() == "Go"
 
     def test_tooltip_set_when_description_present(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-            description: str = "Start acquisition"
-
-        btn = ActionButton(Go())
+        """Use the action description as the tooltip."""
+        btn = ActionButton(PlanAction(name="go", description="Start acquisition"))
         assert btn.toolTip() == "Start acquisition"
 
-    def test_not_checkable_for_non_togglable_action(self) -> None:
-        @dataclass
-        class Go(Action):
-            name: str = "go"
-            togglable: bool = False
-
-        btn = ActionButton(Go())
+    def test_not_checkable_for_a_clicked_action(self) -> None:
+        """Make the button of a clicked action not checkable."""
+        btn = ActionButton(PlanAction(name="go"))
         assert not btn.isCheckable()
 
-    def test_checkable_for_togglable_action(self) -> None:
-        @dataclass
-        class Stream(Action):
-            name: str = "stream"
-            togglable: bool = True
-            toggle_states: tuple[str, str] = ("Start", "Stop")
-
-        btn = ActionButton(Stream())
+    def test_checkable_for_an_action_with_toggle_states(self) -> None:
+        """Make the button of an action with toggle states checkable."""
+        btn = ActionButton(STREAM)
         assert btn.isCheckable()
 
     def test_label_updates_on_toggle(self) -> None:
-        @dataclass
-        class Stream(Action):
-            name: str = "stream"
-            togglable: bool = True
-            toggle_states: tuple[str, str] = ("Start", "Stop")
-
-        btn = ActionButton(Stream())
+        """Switch the button label between the two toggle states."""
+        btn = ActionButton(STREAM)
         assert btn.text() == "Stream (Start)"
         btn.setChecked(True)
         assert btn.text() == "Stream (Stop)"
         btn.setChecked(False)
         assert btn.text() == "Stream (Start)"
 
+    def test_release_shows_the_button_released_and_emits_nothing(self) -> None:
+        """Uncheck the button on release without emitting toggled."""
+        btn = ActionButton(STREAM)
+        btn.setChecked(True)
+        toggled: list[bool] = []
+        btn.toggled.connect(toggled.append)
+
+        btn.release()
+
+        assert not btn.isChecked()
+        assert btn.text() == "Stream (Start)"
+        assert toggled == []
+
 
 class TestCreatePlanWidget:
     """Tests for create_plan_widget output structure."""
 
     def test_simple_plan_has_no_pause_button(self) -> None:
+        """Give a plain plan no pause button."""
         pw = create_plan_widget(_simple_spec())
         assert pw.pause_button is None
 
     def test_simple_plan_has_no_actions_group(self) -> None:
+        """Give a plain plan no actions group and no action buttons."""
         pw = create_plan_widget(_simple_spec())
         assert pw.actions_group is None
         assert pw.action_buttons == {}
 
     def test_simple_plan_run_button_not_checkable(self) -> None:
+        """Make the run button of a plain plan not checkable."""
         pw = create_plan_widget(_simple_spec())
         assert not pw.run_button.isCheckable()
 
-    def test_togglable_plan_run_button_is_checkable(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+    def test_continuous_plan_run_button_is_checkable(self) -> None:
+        """Make the run button of a continuous plan checkable."""
+        pw = create_plan_widget(_continuous_spec())
         assert pw.run_button.isCheckable()
 
-    def test_togglable_plan_has_no_pause_button(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+    def test_continuous_plan_has_no_pause_button(self) -> None:
+        """Give a continuous plan that cannot pause no pause button."""
+        pw = create_plan_widget(_continuous_spec())
         assert pw.pause_button is None
 
     def test_pausable_plan_has_pause_button(self) -> None:
+        """Give a pausable plan a pause button."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
 
     def test_pausable_plan_pause_button_initially_disabled(self) -> None:
+        """Disable the pause button until the plan runs."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         assert not pw.pause_button.isEnabled()
 
     def test_action_plan_has_actions_group(self) -> None:
+        """Give a plan with an action parameter an actions group."""
         pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
 
     def test_action_plan_actions_group_initially_disabled(self) -> None:
+        """Disable the actions group until the plan runs."""
         pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
         assert not pw.actions_group.isEnabled()
 
     def test_action_plan_has_action_button(self) -> None:
+        """Add a button for the plan's action, keyed by its name."""
         pw = create_plan_widget(_action_spec())
         assert "snap" in pw.action_buttons
 
     def test_has_actions_true_when_actions_present(self) -> None:
+        """Report has_actions for a plan with an action."""
         assert create_plan_widget(_action_spec()).has_actions()
 
     def test_has_actions_false_when_no_actions(self) -> None:
+        """Report no actions for a plan without any."""
         assert not create_plan_widget(_simple_spec()).has_actions()
 
     def test_run_callback_connected(self) -> None:
-        """run_callback fires when run_button is clicked on a non-togglable plan."""
+        """Call run_callback when the run button of a plain plan is clicked."""
         fired: list[bool] = []
         pw = create_plan_widget(_simple_spec(), run_callback=lambda: fired.append(True))
         pw.run_button.click()
         assert fired == [True]
 
     def test_toggle_callback_connected(self) -> None:
-        """toggle_callback fires when run_button is toggled on a togglable plan."""
+        """Call toggle_callback when the run button of a continuous plan toggles."""
         states: list[bool] = []
         pw = create_plan_widget(
-            _togglable_spec(), toggle_callback=lambda checked: states.append(checked)
+            _continuous_spec(), toggle_callback=lambda checked: states.append(checked)
         )
         pw.run_button.setChecked(True)
         assert True in states
 
     def test_parameters_returns_current_values(self) -> None:
+        """Return the current parameter values by name."""
         assert create_plan_widget(_simple_spec()).parameters == {"frames": 1}
 
     def test_literal_param_in_parameters(self) -> None:
+        """Return the selected value of a Literal parameter."""
         assert create_plan_widget(_literal_spec()).parameters == {"egu": "um"}
 
     def test_a_literal_of_integers_yields_an_integer(self) -> None:
+        """Return an int, not a string, for a Literal of integers."""
         assert create_plan_widget(_int_literal_spec()).parameters == {"mode": 2}
 
     def test_a_bool_parameter_shows_its_name_once(self) -> None:
-        """The form row carries the name; the checkbox itself carries none.
-
-        magicgui gives a CheckBox its name as text too, which rendered every
-        bool parameter as "write forever [ ] write forever".
-        """
+        """Show a bool parameter's name in its form row only, not on the checkbox."""
         pw = create_plan_widget(_bool_spec())
         checkbox = pw.group_box.findChild(QtW.QCheckBox)
 
         assert checkbox is not None
+        # magicgui gives a CheckBox its name as text too, which rendered every bool
+        # parameter as "write forever [ ] write forever".
         assert checkbox.text() == ""
         labels = [
             label.text()
@@ -269,27 +275,148 @@ class TestCreatePlanWidget:
         assert pw.parameters == {"write_forever": False}
 
     def test_get_action_button_returns_button(self) -> None:
+        """Return the ActionButton for a known action name."""
         pw = create_plan_widget(_action_spec())
         btn = pw.get_action_button("snap")
         assert btn is not None
         assert isinstance(btn, ActionButton)
 
     def test_get_action_button_returns_none_for_unknown(self) -> None:
+        """Return None for an unknown action name."""
         pw = create_plan_widget(_action_spec())
         assert pw.get_action_button("nonexistent") is None
+
+
+def _listed(pw: PlanWidget) -> list[str]:
+    """Return every entry of the callbacks list, checked or not, in order."""
+    assert pw.callbacks_list is not None
+    items = map(pw.callbacks_list.item, range(pw.callbacks_list.count()))
+    return [item.text() for item in items if item is not None]
+
+
+class TestCallbacksList:
+    """Tests for the document callbacks a plan widget offers."""
+
+    @pytest.mark.parametrize(
+        ("carried", "extendable", "listed"),
+        [
+            ((), True, ["a", "b", "c"]),
+            (("b",), True, ["b", "a", "c"]),
+            (("b",), False, ["b"]),
+            (("own",), True, ["own", "a", "b", "c"]),
+        ],
+    )
+    def test_the_plans_own_callbacks_are_listed_first(
+        self, carried: tuple[str, ...], extendable: bool, listed: list[str]
+    ) -> None:
+        """List the plan's callbacks, then the catalogue's if extendable, once each."""
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS[name] for name in carried],
+            extendable=extendable,
+            available_callbacks=CATALOGUE,
+        )
+        assert _listed(pw) == listed
+        assert pw.callbacks == [CALLBACKS[name] for name in listed]
+
+    def test_a_plan_running_with_no_callbacks_has_no_list(self) -> None:
+        """Show no callbacks list for a plan not extendable that carries none."""
+        pw = create_plan_widget(
+            _simple_spec(), extendable=False, available_callbacks=CATALOGUE
+        )
+        assert pw.callbacks_list is None
+        assert pw.callbacks == []
+
+    @pytest.mark.parametrize(
+        ("attached", "expected"),
+        [
+            (None, ["a", "b", "c"]),
+            (["c", "a"], ["c", "a"]),
+            (["gone", "b"], ["b"]),
+        ],
+    )
+    def test_a_previous_choice_is_restored(
+        self, attached: list[str] | None, expected: list[str]
+    ) -> None:
+        """Restore the attached callbacks in the given order, dropping unknown names."""
+        pw = create_plan_widget(
+            _simple_spec(), available_callbacks=CATALOGUE, attached_callbacks=attached
+        )
+        assert pw.attached_callbacks == expected
+        assert pw.callbacks == [CALLBACKS[name] for name in expected]
+
+    def test_the_plans_own_callback_cannot_be_unchecked(self) -> None:
+        """Make the plan's own callback uncheckable and omit it from attached names."""
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS["own"]],
+            available_callbacks=CATALOGUE,
+        )
+        assert pw.callbacks_list is not None
+        item = pw.callbacks_list.item(0)
+        assert item is not None
+        assert not item.flags() & QtCore.Qt.ItemFlag.ItemIsUserCheckable
+        assert pw.attached_callbacks == ["a", "b", "c"]
+
+    def test_unchecking_a_callback_reports_the_attached_names(self) -> None:
+        """Report the remaining attached names when a callback is unchecked."""
+        reported: list[list[str]] = []
+        pw = create_plan_widget(
+            _simple_spec(),
+            available_callbacks=CATALOGUE,
+            selection_callback=reported.append,
+        )
+        assert pw.callbacks_list is not None
+        item = pw.callbacks_list.item(0)
+        assert item is not None
+        item.setCheckState(QtCore.Qt.CheckState.Unchecked)
+        assert reported == [["b", "c"]]
+
+    def test_a_callback_moved_above_the_plans_own_is_put_after_it(self) -> None:
+        """Put a callback moved above the plan's own callback back after it."""
+        reported: list[list[str]] = []
+        pw = create_plan_widget(
+            _simple_spec(),
+            plan_callbacks=[CALLBACKS["own"]],
+            available_callbacks=CATALOGUE,
+            selection_callback=reported.append,
+        )
+        assert pw.callbacks_list is not None
+        model = pw.callbacks_list.model()
+        assert model is not None
+        model.moveRow(QtCore.QModelIndex(), 3, QtCore.QModelIndex(), 0)
+        assert _listed(pw) == ["own", "c", "a", "b"]
+        assert reported[-1] == ["c", "a", "b"]
 
 
 class TestPlanWidgetControlAPI:
     """Tests for PlanWidget.toggle / pause / setEnabled / enable_actions."""
 
     def test_toggle_swaps_the_run_button_text(self) -> None:
-        pw = create_plan_widget(_togglable_spec())
+        """Switch the run button text between Run and Stop on toggle."""
+        pw = create_plan_widget(_continuous_spec())
         pw.toggle(True)
         assert pw.run_button.text() == "Stop"
         pw.toggle(False)
         assert pw.run_button.text() == "Run"
 
+    def test_toggle_off_releases_a_plan_that_ended_while_paused(self) -> None:
+        """Reset the run and pause buttons, calling nothing, when a paused plan ends."""
+        toggled: list[bool] = []
+        pw = create_plan_widget(_pausable_spec(), toggle_callback=toggled.append)
+        assert pw.pause_button is not None
+        pw.run_button.click()
+        pw.pause_button.click()
+        pw.pause(True)
+        pw.toggle(False)
+        assert toggled == [True]
+        assert not pw.run_button.isChecked()
+        assert pw.run_button.isEnabled()
+        assert not pw.pause_button.isChecked()
+        assert pw.pause_button.text() == "Pause"
+
     def test_toggle_enables_the_pause_button_while_running(self) -> None:
+        """Enable the pause button only while the plan runs."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         pw.toggle(True)
@@ -298,6 +425,7 @@ class TestPlanWidgetControlAPI:
         assert not pw.pause_button.isEnabled()
 
     def test_toggle_freezes_the_parameters_while_running(self) -> None:
+        """Disable the parameter inputs while the plan runs."""
         pw = create_plan_widget(_simple_spec())
         pw.toggle(True)
         assert not pw.params_widget.isEnabled()
@@ -305,12 +433,14 @@ class TestPlanWidgetControlAPI:
         assert pw.params_widget.isEnabled()
 
     def test_toggle_enables_actions_group(self) -> None:
+        """Enable the actions group when the plan starts."""
         pw = create_plan_widget(_action_spec())
         pw.toggle(True)
         assert pw.actions_group is not None
         assert pw.actions_group.isEnabled()
 
     def test_pause_swaps_the_pause_button_text(self) -> None:
+        """Switch the pause button text between Pause and Resume."""
         pw = create_plan_widget(_pausable_spec())
         assert pw.pause_button is not None
         pw.toggle(True)
@@ -319,13 +449,19 @@ class TestPlanWidgetControlAPI:
         pw.pause(False)
         assert pw.pause_button.text() == "Pause"
 
-    def test_pause_true_disables_run_button(self) -> None:
-        pw = create_plan_widget(_pausable_spec())
+    def test_a_paused_plan_can_be_stopped(self) -> None:
+        """Keep the stop button enabled while the plan is paused, and report its press."""
+        toggled: list[bool] = []
+        pw = create_plan_widget(_pausable_spec(), toggle_callback=toggled.append)
+        pw.run_button.click()
         pw.toggle(True)
         pw.pause(True)
-        assert not pw.run_button.isEnabled()
+        assert pw.run_button.isEnabled()
+        pw.run_button.click()
+        assert toggled == [True, False]
 
     def test_set_enabled_reaches_the_group_box(self) -> None:
+        """Apply setEnabled to the group box."""
         pw = create_plan_widget(_simple_spec())
         pw.setEnabled(False)
         assert not pw.group_box.isEnabled()
@@ -333,6 +469,7 @@ class TestPlanWidgetControlAPI:
         assert pw.group_box.isEnabled()
 
     def test_enable_actions_reaches_the_actions_group(self) -> None:
+        """Apply enable_actions to the actions group."""
         pw = create_plan_widget(_action_spec())
         assert pw.actions_group is not None
         pw.enable_actions(True)
@@ -341,7 +478,7 @@ class TestPlanWidgetControlAPI:
         assert not pw.actions_group.isEnabled()
 
     def test_enable_actions_noop_when_no_actions(self) -> None:
-        """enable_actions should not raise when there is no actions_group."""
+        """Accept enable_actions without error when the plan has no actions."""
         pw = create_plan_widget(_simple_spec())
         pw.enable_actions(True)
         pw.enable_actions(False)
@@ -365,12 +502,7 @@ _ANNOTATIONS = [
 
 @pytest.mark.parametrize("annotation", _ANNOTATIONS)
 def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
-    """What the presenter admits is what the Qt view can render, and vice versa.
-
-    The two live in different layers and neither imports the other, so a type
-    added to one and not the other goes unnoticed: a plan is either skipped
-    though it was renderable, or admitted and then crashes the form.
-    """
+    """Accept a parameter type in a plan only when the Qt view can build its widget."""
     # required, as the gate only refuses a parameter with no default
     param = ParamDescription(
         name="x",

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def closes(monkeypatch: pytest.MonkeyPatch) -> list[Stream]:
-    """Record every ``acquire-zarr`` stream as it closes."""
+    """Record every `acquire-zarr` stream as it closes."""
     closed: list[Stream] = []
     close = Stream.close
 
@@ -41,7 +41,7 @@ def shape_of(path: Path) -> list[int]:
 
 
 def run(writer: Writer, store: Path, mimetype: str, *, start: bool = True) -> str:
-    """Send *writer* a descriptor and a resource naming ``det`` and its store.
+    """Send *writer* a descriptor and a resource naming `det` and its store.
 
     A run is started first unless *start* is false. Returns the run's uid.
     """
@@ -81,7 +81,7 @@ def run(writer: Writer, store: Path, mimetype: str, *, start: bool = True) -> st
 def test_a_derived_product_lands_in_its_source_store_with_both_mappings(
     plain_store: Path,
 ) -> None:
-    """The run gives the layout and the store; the component gives the data and its mapping."""
+    """Write a derived product into its source store with its and the run's metadata."""
     writer = Writer()
     writer.derive("det_median", source="det")
     uid = run(writer, plain_store, "application/x-zarr")
@@ -106,7 +106,7 @@ def test_a_derived_product_lands_in_its_source_store_with_both_mappings(
 
 
 def test_a_streamed_product_holds_one_frame_per_append(plain_store: Path) -> None:
-    """Appended per event, the product is one array of as many frames."""
+    """Write one frame of a streamed product per append."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     run(writer, plain_store, "application/x-zarr")
@@ -119,7 +119,7 @@ def test_a_streamed_product_holds_one_frame_per_append(plain_store: Path) -> Non
 
 
 def test_a_declared_product_needs_no_documents(tmp_path: Path) -> None:
-    """A layout and a store given up front are enough to write."""
+    """Write a product declared with a layout and a store, with no documents."""
     store = tmp_path / "products.zarr"
     writer = Writer()
     writer.declare("mask", shape=(4, 4), dtype=np.uint8, store=store.as_uri())
@@ -135,7 +135,7 @@ def test_a_declared_product_needs_no_documents(tmp_path: Path) -> None:
 def test_an_ome_zarr_store_with_a_plain_root_takes_the_product_as_an_image(
     ngff_store: Path,
 ) -> None:
-    """A plain root holds one image per key, so the product joins them as one."""
+    """Add a product to an OME-Zarr store with a plain root as a new image."""
     writer = Writer()
     writer.derive("det_median", source="det")
     run(writer, ngff_store, "application/x-ome-zarr")
@@ -151,7 +151,7 @@ def test_an_ome_zarr_store_with_a_plain_root_takes_the_product_as_an_image(
 
 
 def test_an_image_root_gets_a_sibling_written_whole(image_store: Path) -> None:
-    """A store of its own, finished at once, keeps the acquisition's metadata intact."""
+    """Write a product for an image root whole into a sibling store."""
     writer = Writer()
     writer.derive("det_median", source="det")
     run(writer, image_store, "application/x-ome-zarr")
@@ -180,6 +180,7 @@ def test_an_image_root_gets_a_sibling_written_whole(image_store: Path) -> None:
 def test_a_product_without_its_layout_or_store_is_refused_naming_what_is_missing(
     plain_store: Path, documents: str, phrase: str
 ) -> None:
+    """Refuse a product with no declaration, layout or store, naming what is missing."""
     writer = Writer()
     if documents != "none":
         writer.derive("det_median", source="det")
@@ -210,7 +211,7 @@ def test_a_product_without_its_layout_or_store_is_refused_naming_what_is_missing
 def test_a_product_declared_after_its_store_opened_is_refused(
     plain_store: Path,
 ) -> None:
-    """Every array of a store is sized at open, so a late product cannot join."""
+    """Refuse a product declared after its store was opened."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     run(writer, plain_store, "application/x-zarr")
@@ -224,7 +225,7 @@ def test_a_product_declared_after_its_store_opened_is_refused(
 
 
 def test_a_second_run_reuses_the_writer(tmp_path: Path) -> None:
-    """What one run filled in is forgotten at its stop, and the next run fills it again."""
+    """Write a second run's product into that run's store."""
     writer = Writer()
     writer.derive("det_median", source="det")
     first, second = tmp_path / "first.zarr", tmp_path / "second.zarr"
@@ -247,6 +248,7 @@ def test_a_second_run_reuses_the_writer(tmp_path: Path) -> None:
 
 
 def test_shutdown_mid_run_leaves_the_store_readable(plain_store: Path) -> None:
+    """Close the store on shutdown mid-run, keeping what was written."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     run(writer, plain_store, "application/x-zarr")
@@ -261,7 +263,7 @@ def test_shutdown_mid_run_leaves_the_store_readable(plain_store: Path) -> None:
 def test_an_unknown_mimetype_is_logged_and_the_product_skipped(
     plain_store: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A store no writer knows loses the product, once and audibly, not the run."""
+    """Log once and skip a product whose store has no writer for its mimetype."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     run(writer, plain_store, "image/tiff")
@@ -280,7 +282,7 @@ def test_an_unknown_mimetype_is_logged_and_the_product_skipped(
 def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
     plain_store: Path,
 ) -> None:
-    """A product computed at a nested run's stop lands in the outer run's store."""
+    """Write a nested run's product into the outer run's store at the outer stop."""
     writer = Writer()
     writer.derive("det_median", source="det")
     run(writer, plain_store, "application/x-zarr")
@@ -305,7 +307,7 @@ def test_a_nested_run_writes_into_the_store_the_run_around_it_named(
 def test_a_second_store_for_a_source_leaves_the_first_stream_open(
     tmp_path: Path, closes: list[Stream]
 ) -> None:
-    """A stream closes at its run's stop, so a run naming two stores holds both open."""
+    """Keep a run's streams to two stores open until the run stops."""
     writer = Writer()
     writer.derive("det_filtered", source="det")
     first, second = tmp_path / "first.zarr", tmp_path / "second.zarr"

@@ -1,6 +1,6 @@
 """Qt widgets for interfaces that run plans.
 
-- `ActionButton`: a `QPushButton` carrying an `Action`, its label following
+- `ActionButton`: a `QPushButton` carrying a `PlanAction`, its label following
   the toggle state.
 - `PlanWidget`: a frozen dataclass owning one plan's widgets (parameter form,
   run and pause buttons, action buttons).
@@ -17,17 +17,19 @@ from typing import TYPE_CHECKING, Any, cast
 
 import magicgui.widgets as mgw
 import magicgui.widgets.bases as mgw_bases
+from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
-from redsun.engine.actions import Action
+from redsun.engine.actions import PlanAction
 from redsun.presenter.plan_spec import ParamKind
 
 from ._widget_factory import create_param_widget
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
 
     from redsun.presenter.plan_spec import PlanSpec
+    from redsun.registry import CallbackType
 
 __all__ = [
     "ActionButton",
@@ -39,24 +41,24 @@ __all__ = [
 
 
 class ActionButton(QtW.QPushButton):
-    """A ``QPushButton`` carrying an ``Action``.
+    """A `QPushButton` carrying a `PlanAction`.
 
-    Its label follows the toggle state, using the action's ``toggle_states``.
+    Its label follows the toggle state, using the action's `toggle_states`.
 
     Parameters
     ----------
-    action : Action
+    action
         The button's action.
-    parent : QtWidgets.QWidget | None, optional
+    parent
         The parent widget.
 
     Attributes
     ----------
-    action : Action
+    action : PlanAction
         The button's action.
     """
 
-    def __init__(self, action: Action, parent: QtW.QWidget | None = None) -> None:
+    def __init__(self, action: PlanAction, parent: QtW.QWidget | None = None) -> None:
         self.name_capital = action.name.capitalize()
         super().__init__(self.name_capital, parent)
         self.action = action
@@ -64,17 +66,27 @@ class ActionButton(QtW.QPushButton):
         if action.description:
             self.setToolTip(action.description)
 
-        if action.togglable:
+        if action.toggle_states is not None:
             self.setCheckable(True)
             self.toggled.connect(self._update_text)
             self._update_text(False)
 
+    def release(self) -> None:
+        """Show the button released, without emitting `toggled`.
+
+        For an action that ended by itself: unchecking the button any other
+        way reads as the user asking the action to end.
+        """
+        self.blockSignals(True)
+        self.setChecked(False)
+        self.blockSignals(False)
+        self._update_text(False)
+
     def _update_text(self, checked: bool) -> None:
         """Update the label to the toggle state."""
-        state_text = (
-            self.action.toggle_states[1] if checked else self.action.toggle_states[0]
-        )
-        self.setText(f"{self.name_capital} ({state_text})")
+        states = self.action.toggle_states
+        if states is not None:
+            self.setText(f"{self.name_capital} ({states[1] if checked else states[0]})")
 
 
 @dataclass(frozen=True)
@@ -91,12 +103,12 @@ class PlanWidget:
     """The button running or stopping the plan."""
 
     container: mgw.Container[mgw_bases.ValueWidget[Any]]
-    """The ``magicgui`` Container of parameter widgets."""
+    """The `magicgui` Container of parameter widgets."""
 
     device_widgets: list[mgw_bases.ValueWidget[Any]]
-    """Device parameter widgets (``DeviceSequenceEdit`` or ``ComboBox``).
+    """Device parameter widgets (`DeviceSequenceEdit` or `ComboBox`).
 
-    Exposed so callers can connect validation to each widget's ``changed``
+    Exposed so callers can connect validation to each widget's `changed`
     signal.
     """
 
@@ -114,16 +126,33 @@ class PlanWidget:
     pause_button: QtW.QPushButton | None = None
     """The pause/resume button, or None if the plan is not pausable."""
 
+    callbacks_list: QtW.QListWidget | None = None
+    """The document callbacks to run the plan with, or None if it runs with none.
+
+    The callbacks the plan requires come first, checked and fixed in place; the
+    rest can be checked and dragged into a different order.
+    """
+
     def toggle(self, status: bool) -> None:
-        """Update the widgets when a togglable plan starts or stops.
+        """Update the widgets when a continuous plan starts or stops.
+
+        The run and pause buttons are set to match *status* without emitting
+        `toggled`, so a plan that ended by itself can be shown as stopped.
 
         Parameters
         ----------
-        status : bool
+        status
             `True` when the plan is starting; `False` when stopping.
         """
+        with QtCore.QSignalBlocker(self.run_button):
+            self.run_button.setChecked(status)
+        self.run_button.setEnabled(True)
         self.run_button.setText("Stop" if status else "Run")
         if self.pause_button:
+            if not status:
+                with QtCore.QSignalBlocker(self.pause_button):
+                    self.pause_button.setChecked(False)
+                self.pause_button.setText("Pause")
             self.pause_button.setEnabled(status)
         if self.actions_group:
             self.actions_group.setEnabled(status)
@@ -132,22 +161,23 @@ class PlanWidget:
     def pause(self, status: bool) -> None:
         """Update the widgets when a plan pauses or resumes.
 
+        The stop button stays enabled, so a paused plan can be stopped.
+
         Parameters
         ----------
-        status : bool
+        status
             `True` when pausing; `False` when resuming.
         """
         if self.pause_button:
             self.pause_button.setText("Resume" if status else "Pause")
-            self.run_button.setEnabled(not status)
 
     def setEnabled(self, enabled: bool) -> None:
         """Enable or disable the whole plan widget.
 
         Parameters
         ----------
-        enabled : bool
-            ``True`` to enable; ``False`` to disable.
+        enabled
+            `True` to enable; `False` to disable.
         """
         self.group_box.setEnabled(enabled)
         self.run_button.setEnabled(enabled)
@@ -158,8 +188,8 @@ class PlanWidget:
 
         Parameters
         ----------
-        enabled : bool, optional
-            ``True`` to enable; ``False`` to disable.
+        enabled
+            `True` to enable; `False` to disable.
         """
         if self.actions_group:
             self.actions_group.setEnabled(enabled)
@@ -169,7 +199,7 @@ class PlanWidget:
 
         Parameters
         ----------
-        action_name : str
+        action_name
             The name of the action.
         """
         return self.action_buttons.get(action_name)
@@ -183,9 +213,43 @@ class PlanWidget:
         """Current parameter values by name.
 
         The presenter turns them into positional and keyword arguments with
-        ``collect_arguments`` / ``resolve_arguments``.
+        `collect_arguments` / `resolve_arguments`.
         """
         return {w.name: w.value for w in self.container}
+
+    @property
+    def callbacks(self) -> list[CallbackType]:
+        """The checked document callbacks, in the order the run uses."""
+        return [
+            item.data(QtCore.Qt.ItemDataRole.UserRole)
+            for item in _checked(self.callbacks_list)
+        ]
+
+    @property
+    def attached_callbacks(self) -> list[str]:
+        """Names of the checked callbacks the user attached, in order."""
+        return _attached(self.callbacks_list)
+
+
+def _checked(callbacks_list: QtW.QListWidget | None) -> list[QtW.QListWidgetItem]:
+    """Return the checked rows of *callbacks_list*, in order."""
+    if callbacks_list is None:
+        return []
+    items = (callbacks_list.item(row) for row in range(callbacks_list.count()))
+    return [
+        item
+        for item in items
+        if item is not None and item.checkState() == QtCore.Qt.CheckState.Checked
+    ]
+
+
+def _attached(callbacks_list: QtW.QListWidget | None) -> list[str]:
+    """Return the names of the checked rows the user may uncheck, in order."""
+    return [
+        item.text()
+        for item in _checked(callbacks_list)
+        if item.flags() & QtCore.Qt.ItemFlag.ItemIsUserCheckable
+    ]
 
 
 def _build_param_widgets(
@@ -196,16 +260,10 @@ def _build_param_widgets(
 ]:
     """Split *spec*'s parameters into device widgets and plain parameter widgets.
 
-    Device widgets cover ``Sequence[PDevice]``, ``Set[PDevice]``,
-    ``*args: PDevice`` and ``PDevice`` parameters; scalars, Literals and the
-    rest are plain parameters.
-
-    Returns
-    -------
-    device_widgets : list
-        One ``magicgui`` widget per device parameter, in signature order.
-    param_widgets : list
-        One ``magicgui`` widget per other parameter, in signature order.
+    Device widgets cover `Sequence[PDevice]`, `Set[PDevice]`,
+    `*args: PDevice` and `PDevice` parameters; scalars, Literals and the
+    rest are plain parameters. Each list holds one `magicgui` widget per
+    parameter, in signature order.
     """
     device_widgets: list[mgw_bases.ValueWidget[Any]] = []
     param_widgets: list[mgw_bases.ValueWidget[Any]] = []
@@ -232,8 +290,8 @@ def _build_devices_group(
     """Build the *Devices* group box.
 
     Each device parameter gets a titled group box holding its widget, a
-    ``DeviceSequenceEdit`` for several devices or a ``ComboBox`` for one.
-    Returns ``None`` without device parameters.
+    `DeviceSequenceEdit` for several devices or a `ComboBox` for one.
+    Returns `None` without device parameters.
     """
     if not device_widgets:
         return None
@@ -258,9 +316,9 @@ def _build_devices_group(
 def _build_params_group(
     param_widgets: list[mgw_bases.ValueWidget[Any]],
 ) -> QtW.QGroupBox | None:
-    """Build the *Parameters* group box using a ``QFormLayout``.
+    """Build the *Parameters* group box using a `QFormLayout`.
 
-    Each plain parameter is a labelled form row. Returns ``None`` without plain
+    Each plain parameter is a labelled form row. Returns `None` without plain
     parameters.
     """
     if not param_widgets:
@@ -295,7 +353,7 @@ def _build_run_buttons(
     run_container = QtW.QWidget(parent)
 
     run_button = QtW.QPushButton("Run")
-    if spec.togglable:
+    if spec.continuous:
         run_button.setCheckable(True)
         run_button.toggled.connect(toggle_callback)
     else:
@@ -303,7 +361,7 @@ def _build_run_buttons(
     run_layout.addWidget(run_button)
 
     pause_button: QtW.QPushButton | None = None
-    if spec.togglable and spec.pausable:
+    if spec.pausable:
         pause_button = QtW.QPushButton("Pause")
         pause_button.setEnabled(False)
         pause_button.setCheckable(True)
@@ -334,12 +392,12 @@ def _build_actions_group(
     for p in actions_params:
         if p.actions is None:
             continue
-        action_list: list[Action] = (
-            [p.actions] if isinstance(p.actions, Action) else list(p.actions)
+        action_list: list[PlanAction] = (
+            [p.actions] if isinstance(p.actions, PlanAction) else list(p.actions)
         )
         for action in action_list:
             btn = ActionButton(action)
-            if action.togglable:
+            if action.toggle_states is not None:
                 btn.toggled.connect(
                     lambda checked, name=action.name: action_toggled_callback(
                         checked, name
@@ -356,6 +414,96 @@ def _build_actions_group(
     return actions_group, action_buttons
 
 
+def _label(callback: CallbackType, available: Mapping[str, CallbackType]) -> str:
+    """Return the name *callback* has in *available*, or one it carries."""
+    for name, entry in available.items():
+        if entry is callback:
+            return name
+    return str(getattr(callback, "name", type(callback).__name__))
+
+
+def _build_callbacks_group(
+    params_layout: QtW.QVBoxLayout,
+    own: Sequence[CallbackType],
+    extendable: bool,
+    available: Mapping[str, CallbackType],
+    attached: Sequence[str] | None,
+    selection_callback: Callable[[list[str]], None],
+) -> QtW.QListWidget | None:
+    """Build the *Callbacks* group box and add it to *params_layout* if needed.
+
+    Returns `None` when the plan carries no callback and the user may attach
+    none.
+    """
+    optional = (
+        {
+            name: entry
+            for name, entry in available.items()
+            if all(entry is not carried for carried in own)
+        }
+        if extendable
+        else {}
+    )
+    if not own and not optional:
+        return None
+    order = list(optional)
+    if attached is not None:
+        chosen = [name for name in attached if name in optional]
+        order = chosen + [name for name in optional if name not in chosen]
+
+    flags = QtCore.Qt.ItemFlag
+    role = QtCore.Qt.ItemDataRole.UserRole
+    checked, unchecked = QtCore.Qt.CheckState.Checked, QtCore.Qt.CheckState.Unchecked
+    callbacks_list = QtW.QListWidget()
+    callbacks_list.setDragDropMode(QtW.QAbstractItemView.DragDropMode.InternalMove)
+    pinned: list[QtW.QListWidgetItem] = []
+    for callback in own:
+        item = QtW.QListWidgetItem(_label(callback, available))
+        item.setData(role, callback)
+        item.setFlags(flags.ItemIsEnabled)
+        item.setCheckState(checked)
+        item.setToolTip("Required by the plan")
+        callbacks_list.addItem(item)
+        pinned.append(item)
+    for name in order:
+        item = QtW.QListWidgetItem(name)
+        item.setData(role, optional[name])
+        item.setFlags(
+            flags.ItemIsEnabled
+            | flags.ItemIsSelectable
+            | flags.ItemIsUserCheckable
+            | flags.ItemIsDragEnabled
+        )
+        item.setCheckState(
+            checked if attached is None or name in attached else unchecked
+        )
+        callbacks_list.addItem(item)
+
+    def keep_own_first() -> None:
+        # a drop may land above the plan's own callbacks, which run first
+        # whatever the list shows, so the rows are put back to match
+        for row, item in enumerate(pinned):
+            current = callbacks_list.row(item)
+            if current != row and model is not None:
+                model.moveRow(QtCore.QModelIndex(), current, QtCore.QModelIndex(), row)
+
+    def notify() -> None:
+        selection_callback(_attached(callbacks_list))
+
+    model = callbacks_list.model()
+    if model is not None:
+        model.rowsMoved.connect(keep_own_first)
+        model.rowsMoved.connect(notify)
+    callbacks_list.itemChanged.connect(notify)
+
+    group = QtW.QGroupBox("Callbacks")
+    layout = QtW.QVBoxLayout(group)
+    layout.setContentsMargins(4, 6, 4, 4)
+    layout.addWidget(callbacks_list)
+    params_layout.addWidget(group)
+    return callbacks_list
+
+
 def create_plan_widget(
     spec: PlanSpec,
     run_callback: Callable[[], None] | None = None,
@@ -363,28 +511,45 @@ def create_plan_widget(
     pause_callback: Callable[[bool], None] | None = None,
     action_clicked_callback: Callable[[str], None] | None = None,
     action_toggled_callback: Callable[[bool, str], None] | None = None,
+    plan_callbacks: Sequence[CallbackType] = (),
+    extendable: bool = True,
+    available_callbacks: Mapping[str, CallbackType] | None = None,
+    attached_callbacks: Sequence[str] | None = None,
+    selection_callback: Callable[[list[str]], None] | None = None,
 ) -> PlanWidget:
-    """Build a complete ``PlanWidget`` for *spec*.
+    """Build a complete `PlanWidget` for *spec*.
 
     Parameters
     ----------
-    spec : PlanSpec
+    spec
         The plan's specification.
-    run_callback : Callable[[], None] | None, optional
-        Connected to ``run_button.clicked`` for non-togglable plans.
-    toggle_callback : Callable[[bool], None] | None, optional
-        Connected to ``run_button.toggled`` for togglable plans.
-    pause_callback : Callable[[bool], None] | None, optional
-        Connected to ``pause_button.toggled`` for pausable plans.
-    action_clicked_callback : Callable[[str], None] | None, optional
-        Called with ``action_name`` when a non-togglable action fires.
-    action_toggled_callback : Callable[[bool, str], None] | None, optional
-        Called with ``(checked, action_name)`` when a togglable action fires.
-
-    Returns
-    -------
-    PlanWidget
-        The widget, ready for a ``QStackedWidget``.
+    run_callback
+        Connected to `run_button.clicked` for plans that are not continuous.
+    toggle_callback
+        Connected to `run_button.toggled` for continuous plans.
+    pause_callback
+        Connected to `pause_button.toggled` for pausable plans.
+    action_clicked_callback
+        Called with `action_name` when an action's button is clicked.
+    action_toggled_callback
+        Called with `(checked, action_name)` when an action's button is
+        pressed or released.
+    plan_callbacks
+        The document callbacks the plan requires, in the order they run. They
+        are listed first, checked, and cannot be unchecked or moved.
+    extendable
+        Whether the user may attach callbacks after *plan_callbacks*.
+    available_callbacks
+        The document callbacks the user may attach, by the name each row is
+        labelled with, in the order offered. Ignored when *extendable* is
+        `False`.
+    attached_callbacks
+        Names the user attached before, in their order. The other available
+        callbacks are listed unchecked after them, and a name not available is
+        ignored. `None` checks every available callback.
+    selection_callback
+        Called with `PlanWidget.attached_callbacks` when the user checks,
+        unchecks or moves a callback.
     """
     page = QtW.QWidget()
     page_layout = QtW.QVBoxLayout(page)
@@ -408,6 +573,14 @@ def create_plan_widget(
         params_layout.addWidget(devices_group)
     if params_group is not None:
         params_layout.addWidget(params_group)
+    callbacks_list = _build_callbacks_group(
+        params_layout,
+        plan_callbacks,
+        extendable,
+        available_callbacks or {},
+        attached_callbacks,
+        selection_callback or (lambda names: None),
+    )
     page_layout.addWidget(params_widget)
 
     run_button, pause_button = _build_run_buttons(
@@ -436,6 +609,7 @@ def create_plan_widget(
         params_widget=params_widget,
         actions_group=actions_group,
         action_buttons=action_buttons,
+        callbacks_list=callbacks_list,
     )
 
 
@@ -444,11 +618,11 @@ class PlanInfoDialog(QtW.QDialog):
 
     Parameters
     ----------
-    title : str
+    title
         The title of the dialog window.
-    text : str
+    text
         Text shown, rendered as Markdown.
-    parent : QtWidgets.QWidget | None, optional
+    parent
         The parent widget.
     """
 
@@ -485,21 +659,6 @@ class PlanInfoDialog(QtW.QDialog):
     def show_dialog(
         cls, title: str, text: str, parent: QtW.QWidget | None = None
     ) -> int:
-        """Create and show the dialog in one step.
-
-        Parameters
-        ----------
-        title : str
-            The title of the dialog window.
-        text : str
-            Text shown.
-        parent : QtWidgets.QWidget | None, optional
-            The parent widget.
-
-        Returns
-        -------
-        int
-            Dialog result code (``QDialog.Accepted`` or ``QDialog.Rejected``).
-        """
+        """Create and show the dialog, and return `QDialog.Accepted` or `QDialog.Rejected`."""
         dialog = cls(title, text, parent)
         return dialog.exec()

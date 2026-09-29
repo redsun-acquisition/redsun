@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from qtpy import QtCore, QtGui
+from qtpy.QtWidgets import QDockWidget, QWidget
 
 from redsun.log import (
     BufferHandler,
@@ -17,7 +18,7 @@ from redsun.log import (
     remove_handler,
     set_level,
 )
-from redsun.view import ViewPosition
+from redsun.qt import QtSession
 from redsun.view.qt import _log_view
 from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
 from redsun.view.qt.builtins import LogView
@@ -27,12 +28,14 @@ if TYPE_CHECKING:
 
     from qtpy.QtWidgets import QApplication
 
+    from ...conftest import BuildSession
+
 pytestmark = pytest.mark.qt
 
 
 @pytest.fixture
 def logs() -> Iterator[logging.Logger]:
-    """Yield the ``redsun`` logger at ``DEBUG``, over an emptied buffer."""
+    """Yield the `redsun` logger at `DEBUG`, over an emptied buffer."""
     logger = logging.getLogger("redsun")
     buffer = log_buffer()
     buffer.clear()
@@ -46,16 +49,19 @@ def logs() -> Iterator[logging.Logger]:
 @pytest.fixture
 def make_view(qapp: QApplication) -> Iterator[Callable[[], LogView]]:
     """Build views and take them down again, detaching each from the buffer."""
-    built: list[LogView] = []
+    built: list[tuple[LogView, QWidget]] = []
 
     def build() -> LogView:
-        view = LogView("logs")
-        built.append(view)
+        parent = QWidget()
+        view = LogView("logs", parent)
+        built.append((view, parent))
         return view
 
     yield build
-    for view in built:
+    # closing the parent sends no closeEvent to its children
+    for view, parent in built:
         view.close()
+        parent.close()
 
 
 @pytest.fixture
@@ -99,7 +105,7 @@ def _draw_pending(view: LogView) -> None:
 def test_records_logged_before_the_view_existed_are_shown(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """A device or presenter logging during build is on screen when the view opens."""
+    """Show records logged before the view was created."""
     logs.warning("built before the view")
 
     view = make_view()
@@ -107,16 +113,10 @@ def test_records_logged_before_the_view_existed_are_shown(
     assert "built before the view" in view._console.toPlainText()
 
 
-def test_the_view_sits_at_the_bottom(
-    make_view: Callable[[], LogView], logs: logging.Logger
-) -> None:
-    assert make_view().view_position is ViewPosition.BOTTOM
-
-
 def test_a_later_record_is_drawn_after_the_logging_call(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """Logging never waits for the console, which catches up on its next batch."""
+    """Draw a new record on the next batch, not during the logging call."""
     view = make_view()
 
     logs.error("after the view")
@@ -132,7 +132,7 @@ def test_a_burst_is_drawn_a_batch_at_a_time(
     logs: logging.Logger,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Each tick draws at most a batch, so a burst cannot hold the window."""
+    """Draw at most one batch of records per tick."""
     monkeypatch.setattr(_log_view, "_BATCH_SIZE", 10)
     view = make_view()
 
@@ -152,7 +152,7 @@ def test_the_console_keeps_no_more_lines_than_the_buffer(
     small_buffer: BufferHandler,
     logs: logging.Logger,
 ) -> None:
-    """Lines past the buffer's capacity are dropped from the top."""
+    """Drop the oldest console lines past the buffer's capacity."""
     view = make_view()
 
     for burst in range(2):
@@ -180,6 +180,7 @@ def test_the_level_buttons_choose_what_is_displayed(
     shown: str,
     hidden: str | None,
 ) -> None:
+    """Show records at or above the chosen level and hide those below it."""
     logs.debug("a debug line")
     logs.info("an info line")
     logs.warning("a warning line")
@@ -198,7 +199,7 @@ def test_the_level_buttons_choose_what_is_displayed(
 def test_lowering_the_level_brings_records_back(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """Filtering redraws from the buffer, so nothing is lost by raising it."""
+    """Show again the records a higher level hid once the level is lowered."""
     logs.debug("a debug line")
     view = make_view()
 
@@ -212,6 +213,7 @@ def test_lowering_the_level_brings_records_back(
 def test_clear_empties_the_console_but_not_the_buffer(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
+    """Empty the console on clear and keep the buffered records."""
     logs.info("still buffered")
     view = make_view()
 
@@ -224,6 +226,7 @@ def test_clear_empties_the_console_but_not_the_buffer(
 def test_save_writes_every_record_whatever_is_displayed(
     make_view: Callable[[], LogView], logs: logging.Logger, tmp_path: Path
 ) -> None:
+    """Save every record, including those the level hides."""
     logs.debug("a debug line")
     logs.critical("a critical line")
     view = make_view()
@@ -240,7 +243,7 @@ def test_save_writes_every_record_whatever_is_displayed(
 def test_the_services_tab_appears_once_a_service_logs(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """A session without services shows only the Application tab."""
+    """Show the services tab only once a service logs."""
     view = make_view()
     assert not view._tabs.isTabVisible(_log_view._SERVICES_TAB)
 
@@ -255,6 +258,7 @@ def test_the_services_tab_appears_once_a_service_logs(
 def test_the_service_selector_narrows_the_services_console(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
+    """Show only the selected service's records in the services console."""
     _service("cam").warning("from the camera")
     _service("stage").warning("from the stage")
     view = make_view()
@@ -289,6 +293,7 @@ def test_save_writes_the_records_of_the_tab_shown(
     saved: list[str],
     left_out: list[str],
 ) -> None:
+    """Save the records of the tab and service shown."""
     logs.warning("from the application")
     _service("cam").warning("from the camera")
     _service("stage").warning("from the stage")
@@ -307,7 +312,7 @@ def test_save_writes_the_records_of_the_tab_shown(
 def test_clear_empties_only_the_tab_shown(
     make_view: Callable[[], LogView], logs: logging.Logger, shown: str
 ) -> None:
-    """Records still waiting to be drawn are cleared with the tab they belong to."""
+    """Clear the shown tab, including its undrawn records, and keep the other."""
     logs.warning("from the application")
     _service("cam").warning("from the camera")
     view = make_view()
@@ -327,7 +332,7 @@ def test_clear_empties_only_the_tab_shown(
 def test_a_burst_from_several_services_is_kept_for_each(
     make_view: Callable[[], LogView], small_service_buffer: BufferHandler
 ) -> None:
-    """The services console and its queue grow with each service that logs."""
+    """Keep a burst of records from each of several services."""
     view = make_view()
 
     for i in range(10):
@@ -344,6 +349,7 @@ def test_a_burst_from_several_services_is_kept_for_each(
 def test_save_copies_the_services_log_file_rather_than_the_buffer(
     make_view: Callable[[], LogView], logs: logging.Logger, tmp_path: Path
 ) -> None:
+    """Save a service's log file, including records the buffer dropped."""
     application = SessionFileHandler("saved")
     camera = SessionFileHandler("saved", "cam", application.run)
     add_handler(application)
@@ -369,7 +375,7 @@ def test_save_copies_the_services_log_file_rather_than_the_buffer(
 def test_save_copies_the_session_log_rather_than_the_buffer(
     make_view: Callable[[], LogView], logs: logging.Logger, tmp_path: Path
 ) -> None:
-    """A record the buffer has dropped is still in the saved file."""
+    """Save the session log file, including records the buffer dropped."""
     handler = SessionFileHandler("saved")
     add_handler(handler)
     try:
@@ -391,6 +397,7 @@ def test_the_folder_button_opens_the_session_log_folder(
     log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Open the session log folder, and disable the button with no log file."""
     opened: list[QtCore.QUrl] = []
 
     def open_url(url: QtCore.QUrl) -> bool:
@@ -418,7 +425,7 @@ def test_the_folder_button_opens_the_session_log_folder(
 def test_the_level_selector_follows_the_displayed_level(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """Whichever way the level is set, the combo box shows the one in force."""
+    """Show the level set through `set_level` in the level selector."""
     view = make_view()
     assert view._level_combo.currentData() == logging.INFO
 
@@ -430,6 +437,7 @@ def test_the_level_selector_follows_the_displayed_level(
 def test_choosing_a_level_in_the_selector_filters_the_console(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
+    """Hide records below the level chosen in the level selector."""
     logs.info("an info line")
     logs.critical("a critical line")
     view = make_view()
@@ -459,7 +467,7 @@ def test_the_colours_follow_the_console_background(
     expected: dict[int, str],
     make_view: Callable[[], LogView],
 ) -> None:
-    """A light console and a dark one need different colours to stay legible."""
+    """Pick the level colours for a light or a dark console background."""
     view = make_view()
 
     _repaint(view, background)
@@ -477,7 +485,7 @@ def _rendered(view: LogView) -> str:
 def test_a_palette_change_redraws_what_is_on_screen(
     make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """A record drawn for a light console is repainted for a dark one."""
+    """Redraw the shown records in the new colours when the palette changes."""
     view = make_view()
     _repaint(view, "#ffffff")
     logs.error("the detector answered nothing")
@@ -489,3 +497,18 @@ def test_a_palette_change_redraws_what_is_on_screen(
     html = _rendered(view)
     assert _ON_DARK[logging.ERROR] in html
     assert _ON_LIGHT[logging.ERROR] not in html
+
+
+def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Dock the built-in log view at the bottom of the main window."""
+    views = {"logs": {"plugin_name": "redsun", "plugin_id": "logs"}}
+    session = build(QtSession.from_config({"session": "lab", "views": views}))
+
+    view = session.views["logs"]
+    assert isinstance(view, LogView)
+    dock = view.parentWidget()
+    assert isinstance(dock, QDockWidget)
+    area = session.main_window.dockWidgetArea(dock)
+    assert area == QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
