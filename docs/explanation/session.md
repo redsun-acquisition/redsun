@@ -40,7 +40,9 @@ A line without `AsDevice`, `AsPresenter` or `AsView` is an ordinary attribute,
 not a component.
 
 `self.motor_ctrl` is typed as a `MotorPresenter` for your editor and for mypy.
-`AsPresenter` wraps the class without replacing it.
+`AsPresenter` wraps the class without replacing it. The markers start with `As` so that
+each says what it marks, and so that none has the name of a class a component
+may itself subclass, such as `Device`.
 
 ## Devices, presenters, views
 
@@ -102,6 +104,11 @@ A [strict](glossary.md#strict-session) session stops instead, whenever
 something is missing.
 [How to find out why a component is missing](../how-to/find-a-missing-component.md)
 reads the summary and the log, and makes a session strict.
+
+A component nothing reaches, or a value nobody asks for, is logged as a
+warning and kept. Neither is a mistake: a session under construction has
+components nothing reaches yet, and a plugin may ship one a particular session
+does not use.
 
 ## Shutting down
 

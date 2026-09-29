@@ -12,7 +12,9 @@ The core of `redsun` knows nothing about windows. It builds components and
 connects them. A frontend adds two things:
 
 - a session class to subclass, such as [`QtSession`][redsun.qt.QtSession],
-  which knows how to start the toolkit and put views on screen;
+  which knows how to start the toolkit and put views on screen. It lives in
+  the package of the frontend, `redsun.qt`, because importing it imports the
+  toolkit, which a session without a window does not install;
 - a [`Frontend`][redsun.Frontend] class, which lists the
   [placements](glossary.md#placement) it can show.
 
@@ -54,7 +56,9 @@ constructor with each placement.
 - saves where the user left the docks, and puts them back next time;
 - asks before closing when a component has unsaved changes;
 - closes and deletes every view at shutdown, delivering any signal still
-  waiting for one first.
+  waiting for one first. Closing runs the `closeEvent` of each view, which is
+  the only place a view that is a third-party widget can clean up: it
+  inherits its cleanup from the widget, and has no `shutdown` of its own.
 
 `QT_API` chooses the [Qt binding](glossary.md#qt-binding), as `qtpy` reads it.
 A session file never names one.
