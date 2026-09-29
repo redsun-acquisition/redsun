@@ -136,13 +136,23 @@ class PlanWidget:
     def toggle(self, status: bool) -> None:
         """Update the widgets when a continuous plan starts or stops.
 
+        The run and pause buttons are set to match *status* without emitting
+        ``toggled``, so a plan that ended by itself can be shown as stopped.
+
         Parameters
         ----------
         status : bool
             `True` when the plan is starting; `False` when stopping.
         """
+        with QtCore.QSignalBlocker(self.run_button):
+            self.run_button.setChecked(status)
+        self.run_button.setEnabled(True)
         self.run_button.setText("Stop" if status else "Run")
         if self.pause_button:
+            if not status:
+                with QtCore.QSignalBlocker(self.pause_button):
+                    self.pause_button.setChecked(False)
+                self.pause_button.setText("Pause")
             self.pause_button.setEnabled(status)
         if self.actions_group:
             self.actions_group.setEnabled(status)
