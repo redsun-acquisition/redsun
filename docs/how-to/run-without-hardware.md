@@ -14,7 +14,16 @@ connects its devices.
 ## Prerequisites
 
 A session that builds with its hardware present, such as `MyApp` below. It
-launches a service and points a device at it:
+launches a service and points a device at it.
+
+A mocked device still needs the package of its protocol installed: for the
+signals below, `ophyd-async[ca]`:
+
+```bash
+uv add "ophyd-async[ca]"
+```
+
+The session:
 
 ```python
 from typing import Annotated
@@ -117,7 +126,8 @@ class MySimulation(MyApp):
     simulation: AsPresenter[SimulatedStage]
 ```
 
-Run `MySimulation().run()` to open the window with those values. Presenters
+Run `MySimulation().run()` to open the window: a view of `MyApp` that shows
+the stage reads those values. Presenters
 are built after the devices connect, so the values are in place before any
 view shows them. Both functions raise on a device not connected with
 `mock=True`, so keep `SimulatedStage` out of `MyApp`.

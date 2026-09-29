@@ -30,8 +30,9 @@ adds the toggle, the pause button and the action buttons. The attributes of
 ### Document callbacks
 
 A plan may require document callbacks of its own, and may let the user attach
-more. Given both, and the callbacks the user may attach by name,
-`create_plan_widget` lists them in a *Callbacks* group:
+more. `create_plan_widget` lists both in a *Callbacks* group, given the plan's
+own callbacks, whether the plan is extendable, and the callbacks the user may
+attach, by name:
 
 ```python
 widget = create_plan_widget(
@@ -47,8 +48,9 @@ widget.attached_callbacks  # ["table"]
 ```
 
 The plan's own callbacks come first, checked and fixed in place. Each is
-labelled with the name it has in `available_callbacks`, and listed once, or
-with its `name` attribute or class name when it is not there. The others can be
+labelled with the name it has in `available_callbacks`. One that is not there
+is labelled with its `name` attribute, or else its class name. A callback is
+listed once, even when it is both the plan's and available. The others can be
 checked and dragged into a different order. `callbacks` returns the checked
 callbacks in that order, and `attached_callbacks` the names of the ones the
 user attached. `attached_callbacks=None` checks every available callback, and a
@@ -62,16 +64,12 @@ engine is left to the presenter.
 
 ## Parameter widget factory
 
-`create_param_widget` maps a `ParamDescription` to a `magicgui` widget:
-
-| Annotation | Widget |
-|-----------|--------|
-| `Literal["a", "b"]` | `ComboBox` |
-| `MyDevice` (single) | `ComboBox` |
-| `Sequence[MyDevice]` | `Select` (multi-select) |
-| `Sequence[T]` (non-device) | `ListEdit` |
-| `Path` | `FileEdit` |
-| `int`, `float`, `str`, ... | `create_widget` (`magicgui` default) |
+`create_param_widget` maps a `ParamDescription` to a `magicgui` widget, one
+for each parameter of a plan: a list to choose from for a `Literal` or a
+device, a multiple choice for a sequence of devices, and the `magicgui`
+default for the rest.
+[How an annotation is read](../reference/api/presenter.md#how-an-annotation-is-read)
+lists every annotation a plan widget can show.
 
 ---
 
@@ -101,7 +99,10 @@ To enable and disable a button as the plan offers and takes its action, see
 ## Descriptor tree view
 
 `DescriptorTreeView` renders a device's `describe_configuration` /
-`read_configuration` output as an editable two-column tree:
+`read_configuration` output as an editable two-column tree. It shows settings
+and reports edits; a presenter writes them, through `Deferrals` while a plan
+runs, as [How to change a device setting while a plan runs](../how-to/change-a-setting-while-a-plan-runs.md)
+shows:
 
 ```python
 from redsun.view.qt.treeview import DescriptorTreeView

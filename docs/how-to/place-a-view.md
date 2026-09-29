@@ -77,6 +77,10 @@ class StopAction(QAction):
         self.name = name
 ```
 
+`qtpy` exports `QAction` from `QtGui` only for the binding it selects, so
+`mypy` needs the flags `qtpy mypy-args` prints, with `QT_API` set, to check a
+class built on it.
+
 The session creates the menu or toolbar the first time a view names it, and
 adds every later view naming it to the same one. For a command that needs no
 view of its own, see [Add menu actions](add-menu-actions.md).
@@ -129,7 +133,8 @@ file, listed in
 
 A view that asks for a placement Qt does not show, or is not the type its
 placement needs, is left out, and the build summary lists it under
-`Not built`. Here `MyView`, a `QWidget`, asks for a `MenuItem`:
+`Not built`. Here `MyView`, a `QWidget`, asks for a `MenuItem`; the real
+lines end with the file and line they were logged from:
 
 ```text
 [29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one

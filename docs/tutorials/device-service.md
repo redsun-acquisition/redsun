@@ -89,7 +89,9 @@ uv run stage_ioc.py
 ```
 
 It prints `Server startup complete.` and waits. Stop it with ++ctrl+c++, and
-do not leave it running: the session starts its own.
+do not leave it running: the session starts its own. The service listens on
+this machine only, so to read it with `caget` from another terminal, set
+`EPICS_CA_ADDR_LIST=127.0.0.1` there first.
 
 On Windows the service may print a few lines that end with
 `OSError: [WinError 995]` as it stops. It has stopped all the same.
@@ -174,9 +176,10 @@ window.
     ```
 
     Another program the machine can reach serves `STAGE:Position` too, and
-    the stage may be talking to that one. Look for a `stage_ioc.py` left
-    running in another terminal. On a network shared with others, choose a
-    prefix nobody else uses.
+    the stage may be talking to that one: another IOC on the network, or,
+    when your own `EPICS_CA_ADDR_LIST` names `127.0.0.1`, a `stage_ioc.py`
+    left running in another terminal. On a network shared with others,
+    choose a prefix nobody else uses.
 
 ## 5. Stop it
 

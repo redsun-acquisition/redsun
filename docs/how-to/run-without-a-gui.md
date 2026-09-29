@@ -49,6 +49,11 @@ app.shutdown()
 that method exists only on a session with a frontend, since it also shows a
 window and starts that frontend's event loop.
 
+Without an event loop, a signal sent to a slot that runs on the main thread,
+as every slot of a view does, waits in a queue. Deliver what waits by calling
+`psygnal.emit_queued()` on the main thread, for example in a test after the
+action that sends the signal.
+
 ## Load one from a session file
 
 A session file that names no `frontend` builds on the class

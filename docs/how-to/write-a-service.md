@@ -64,10 +64,18 @@ if __name__ == "__main__":
   printing raises. Clean up before printing, or do not print.
 - `127.0.0.1` keeps a launched service off the network.
 
-A launched service listens on a port the session chooses when its process
-starts, and no other program is told which one, so `caget` from another
-terminal does not find it. A service other programs or machines must reach
-runs on its own, on the ports it is set to, and the session attaches to it.
+Under `channel-access`, a launched service listens on a port the session
+chooses when its process starts, and no other program is told which one, so
+`caget` from another terminal does not find it. Under `pv-access`, another
+program on the machine reaches it with `EPICS_PVA_ADDR_LIST=127.0.0.1`. A
+service other machines must reach runs on its own, on the ports it is set to,
+and the session attaches to it.
+
+The watcher stops the service as soon as its standard input closes, which is
+at once when it starts without one: in the background, under a service
+manager, or in a container run without `-i`. A module that also runs on its
+own that way starts the watcher only when a session launched it, which it can
+tell from `REDSUN_SERVICE_NAME` being set.
 
 ## Declare it
 
@@ -98,6 +106,11 @@ class MyApp(QtSession):
 `prefix` is what the devices of the service receive. `args` is what the
 process is started with, and is how this IOC learns the same prefix: an IOC
 that reads `REDSUN_SERVICE_PREFIX` needs no `args` for it.
+
+`ready` is text the session waits for in the output of the service: the
+first line containing it marks the service ready, so give text an error
+message would not contain. Without `ready`, the session does not wait, and
+connects the devices of a service that may not serve yet.
 
 `Launch` is a service the session starts and stops. `Attach` is one already
 running elsewhere: nothing starts or stops, and its devices only get its
@@ -131,7 +144,10 @@ class Axis(StandardReadable):
 
 
 class MyApp(QtSession):
-    stage_ioc: Annotated[AsService, Launch("mylab.iocs.stage", prefix="ST:")]
+    stage_ioc: Annotated[
+        AsService,
+        Launch("mylab.iocs.stage", ready="Server startup complete.", prefix="ST:"),
+    ]
     x: Annotated[AsDevice[Axis], Declare(service="stage_ioc", axis="X")]
     y: Annotated[AsDevice[Axis], Declare(service="stage_ioc", axis="Y")]
 ```

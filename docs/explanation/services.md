@@ -208,6 +208,11 @@ service picks its own ports, and `pvxs` takes a free one when the default is
 busy, so a session assigns nothing. A client does not search the loopback
 unless it is told to, which is what the address list is for.
 
+A port is free when it is chosen, and nothing holds it until the service binds
+it, so another program on the host can take it in between. The service then
+fails to start, or its devices do not connect. The service keeps that port for
+the life of the session process, so only a new process picks another one.
+
 `redsun` depends on `ophyd-async` and on nothing either protocol needs. A
 component brings what its own service speaks, `caproto` or `p4p` or `fastcs`,
 and `ophyd-async[ca]` or `ophyd-async[pva]` for the device side; see
@@ -220,11 +225,6 @@ from its environment, as `REDSUN_SERVICE_NAME` and `REDSUN_SERVICE_PREFIX`.
 
 A module serving several sessions names its channels from these rather than
 taking arguments for them.
-
-A port is free when it is chosen, and nothing holds it until the service binds
-it, so another program on the host can take it in between. The service then
-fails to start, or its devices do not connect. The service keeps that port for
-the life of the session process, so only a new process picks another one.
 
 ## A service exiting
 

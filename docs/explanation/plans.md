@@ -70,8 +70,8 @@ a component adds its plans to the presenter, which is not edited.
 
 Calling the engine does not wait for the plan to end: the plan runs on a
 thread of its own, and the call returns a `Future`. The presenter uses it to
-tell a view that the plan ended, so that the view can disable its controls
-while the plan runs.
+tell a view that the plan ended, so that the view can enable the controls it
+disabled when the plan started.
 
 ---
 
@@ -84,14 +84,16 @@ presenter asks, and describes the plans itself.
 The presenter cannot hand its descriptions over as a
 [shared value](glossary.md#shared-value): the session reads a shared value
 when it makes the component, and the presenter learns which plans exist
-later, in `setup`. The view holds the devices for the description alone,
-which names those that can fill a parameter.
+later, in `setup`. So the view asks for the devices of the session too,
+although it moves none: a description lists, for each device parameter, the
+devices that can fill it, and needs the devices to find them.
 
 ### Plans that are refused
 
 A required parameter whose annotation no input can show makes
 `create_plan_spec` raise `UnresolvableAnnotationError`, so a plan is never
-shown with a control nobody can fill in. The component describing the plans
+shown with a control nobody can fill in. Two actions of one name make it
+raise `ValueError`. The component describing the plans
 decides what follows: one that catches the error for each plan leaves that
 plan out and keeps the others, and one that does not fails its whole `setup`.
 `Any` is refused on purpose: it would accept everything and show as a bare
@@ -126,12 +128,15 @@ describe it:
   button.
 - `ActionManager` keeps the state of each action while a plan runs.
 
-A `PlanAction` is a frozen dataclass and holds no latch. A plan names it as the
-default of a parameter, and `create_plan_spec` reads it there to make the
-button. The component that offers the plans owns an `ActionManager`, and the
-plans wait on it.
+A `PlanAction` is a frozen dataclass and holds no state. A plan names it as
+the default of a parameter, such as `snap: PlanAction = SNAP`, and
+`create_plan_spec` reads it there to make the button. The component that
+offers the plans owns an `ActionManager`, and the plans wait on it. What
+follows names methods of `ActionManager`.
 
-`wait` offers the actions it is given, waits until one is asked for, and
+A latch is an object a plan waits on until another thread sets it; the
+[engine reference](../reference/api/engine.md#waiting-on-a-latch) describes the one
+`redsun` uses. `wait` offers the actions it is given, waits until one is asked for, and
 returns the name of the one asked for first. That action runs until the plan
 calls `done`. The others go back to idle, as all of them do when the plan is
 stopped while it waits. An action that is running when the plan is stopped

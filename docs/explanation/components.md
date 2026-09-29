@@ -19,7 +19,10 @@ by keyword. It fills each parameter from one of these places:
 - Any other parameter is looked up **by its type**, among the values the
   session holds before any component exists: `SessionConfig`, `Settings`,
   `DeviceMapping`, `DevicesOf[P]`, the path provider, the catalog address,
-  and whatever a plugin's providers share.
+  and whatever the providers of the session share, whether the session class
+  lists them or a plugin does.
+- A Qt view's `parent` is the main window, which the frontend passes; see
+  [Frontends](frontends.md#the-qt-frontend).
 - A parameter with a default keeps it when nothing else fills it.
 
 ```python
@@ -68,7 +71,10 @@ built, and the error tells you to move the parameter to `setup`.
 
 A `setup` that raises is logged, and the component stays in the session
 without what `setup` was going to give it. The build summary lists it under
-`Not set up`.
+`Not set up`, as it lists a `setup` asking for a component that was declared
+and failed to build. A `setup` asking for something nothing in the session
+declares is a mistake in the session itself, and stops the build with
+`TypeError`.
 
 ### Sharing a value
 

@@ -23,18 +23,22 @@ of failure:
 
 ```text
 [29-09-26|08:42:44][WARNING]: Container built: 1/3 devices, 1/3 presenters, 0/0 views
-Not built: broken (device), remote (device, not connected), helper (presenter), odd (presenter)
+Not built: odd (presenter), broken (device), remote (device, not connected), helper (presenter)
 Not set up: ctrl (presenter)
 ```
 
 - `Not built` lists the components left out. `not connected` marks a device
   that was made but did not connect within ten seconds.
 - `Not set up` lists components that were built, and counted as built, but
-  whose `setup` raised or asked for a component that is missing. They are in
+  whose `setup` raised or asked for a component that was declared and not
+  built. They are in
   the session and may not work.
 - `Unused` lists services no built device names, when there are any.
 
 A summary with no second line, logged at `INFO`, means nothing is missing.
+
+The samples on this page leave out the end of each `WARNING` and `ERROR`
+line, which names the file and line it was logged from.
 
 ## Find the reason
 
@@ -51,7 +55,9 @@ reason after the colon. Search for the name:
 - `Failed to start service 'stage_ioc': ...`: the service did not start.
 
 A component that does not have the members of its layer, such as a presenter
-with no `name`, is reported the same way:
+whose constructor takes `name` and never stores it, is refused before it is
+built, and reported the same way. A traceback from the library that fills
+constructors is printed first, outside the log:
 
 ```text
 Failed to build presenter 'odd': After injecting dependencies for NO arguments, 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
@@ -91,6 +97,20 @@ Not connecting stage.readback: component 'stage' was not built
 A link from the `wiring` section of a session file is logged with both ends,
 as `Not connecting stage.readback -> panel.on_position: component 'stage' was
 not built`.
+
+## When the build stops instead
+
+A constructor or a `setup` asking for a value that nothing in the session
+declares is a mistake in the session, not a component that failed. The build
+stops with a `TypeError`, and no summary is logged:
+
+```text
+TypeError: 'ctrl.setup' asks for 'cal' (Calibration), which nothing in the session provides. ...
+```
+
+Declare the component or provider that shares the value, or give the
+parameter `| None` and a default of `None`, as
+[Make it optional](share-a-value.md#make-it-optional) shows.
 
 ## Open the log file
 

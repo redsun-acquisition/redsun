@@ -51,7 +51,11 @@ after it.
 A session leaves `EPICS_CA_AUTO_ADDR_LIST` and `EPICS_PVA_AUTO_ADDR_LIST` as
 they are. Unless you set them to `NO`, a device also searches the network the
 machine is on, and a server there that answers to the same name can be the
-one it connects to.
+one it connects to. Setting them to `NO` does not keep out a server on the
+same machine that the address list reaches: under Channel Access, one on the
+default port when your own list names `127.0.0.1`; under PVAccess, any server
+listening on `127.0.0.1`. A prefix no other server uses is the only way to be
+sure.
 
 ## What the session reads
 

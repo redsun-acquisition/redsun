@@ -18,7 +18,8 @@ Components that already work when a session class declares them. See
 ## Lay out the package
 
 Put the components in modules of an ordinary package, with a manifest file
-beside them:
+beside them. The package depends on `redsun`, and on what its components
+import:
 
 ```text
 mylab/
@@ -85,10 +86,18 @@ as an editable dependency of your session's project:
 uv add --editable ../mylab
 ```
 
+An editable install reads the entry points once. After changing them, install
+the package again:
+
+```bash
+uv sync --reinstall-package mylab
+```
+
 ## Name the components in a session file
 
 Each entry takes `plugin_name` and `plugin_id`. Every other key is passed to
-the constructor:
+the constructor, so here `MyMotor` takes `units` and `MyController` takes
+`step`:
 
 ```yaml
 session: my-lab

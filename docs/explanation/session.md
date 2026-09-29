@@ -159,8 +159,7 @@ class Simulation(Instrument):
 
 The merged result is checked before anything is built. A misspelled key or a
 value of the wrong type raises [`ConfigurationError`][redsun.ConfigurationError],
-which lists every problem as `section.key: what`. The
-[session file guide](../how-to/write-a-session-file.md) lists every key.
+which lists every problem as `section.key: what`. [Session file](../reference/session-file.md) lists every key.
 
 ### A session with no class
 
@@ -199,12 +198,13 @@ data folder if it moves while the session runs, and close last at shutdown.
 A session is written against two [protocols](glossary.md#protocol):
 
 - [`BuildableSession`][redsun.BuildableSession] lists every build step as a
-  method. [`Session`][redsun.Session] implements them all, and does nothing
-  in the two that belong to a frontend: `start_runtime` and `present`.
+  method. [`Session`][redsun.Session] implements them all. In the two that
+  belong to a frontend it does the least a session needs: `start_runtime`
+  sets the backend coroutine slots run on, and `present` does nothing.
 - [`DesktopSession`][redsun.DesktopSession] adds a window and `run`, which
   builds, shows the window, and starts the event loop.
 
-`QtSession` fills `start_runtime` with the `QApplication`, and `present` with
+`QtSession` adds the `QApplication` to `start_runtime`, and fills `present` with
 the main window and its views. A session with no frontend shows nothing,
 which is what a test wants: `build()` alone gives you every component without
 opening a window.

@@ -90,7 +90,7 @@ class PlanPresenter(Loggable):
             for plan, entry in component.plan_map().items():
                 try:
                     self.specs[plan] = create_plan_spec(entry["plan"], self.devices)
-                except UnresolvableAnnotationError as error:
+                except (UnresolvableAnnotationError, ValueError) as error:
                     self.logger.warning(error)
                     continue
                 self.plans[plan] = entry
@@ -106,7 +106,8 @@ class PlanPresenter(Loggable):
 - `providers` is answered with every component that satisfies `HasPlans`, by
   name. See [Questions](../explanation/questions.md).
 - Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
-  plan widget can show, and keeps the others.
+  plan widget can show, and `ValueError` one declaring two actions of one
+  name. The other plans are kept.
 - `sig_finished` is sent when the plan ends, whether it succeeded or failed.
 
 To run the plans with document callbacks, ask `setup` for
@@ -146,7 +147,7 @@ class PlanView(QWidget):
             for entry in component.plan_map().values():
                 try:
                     self.add_plan(create_plan_spec(entry["plan"], devices))
-                except UnresolvableAnnotationError:
+                except (UnresolvableAnnotationError, ValueError):
                     continue
 
     def add_plan(self, spec: PlanSpec) -> None:

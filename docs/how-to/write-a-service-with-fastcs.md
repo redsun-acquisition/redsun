@@ -70,7 +70,8 @@ it holds.
 ## Say when it is ready
 
 `fastcs` prints no line of its own when it starts to serve, so the service
-finds out by asking. It asks for the record in which `fastcs` lists the
+finds out by asking. Any server of that name can answer, which is one more
+reason for a prefix of its own. It asks for the record in which `fastcs` lists the
 attributes of the controller, until it gets an answer. If serving has failed
 meanwhile, it raises what made it fail:
 
