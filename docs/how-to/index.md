@@ -21,6 +21,10 @@ Learn how to write the parts of a
 - [How to write a session file](write-a-session-file.md)
 - [How to wire components together](wire-components.md)
 - [How to share a value between components](share-a-value.md)
+- [How to package components as a plugin](package-a-plugin.md)
+- [How to connect a device on demand](connect-a-device-on-demand.md)
+- [How to run a plan from a presenter](run-a-plan.md)
+- [How to write a plan that runs until stopped](write-a-continuous-plan.md)
 - [How to follow a plan action from a view](follow-a-plan-action.md)
 
 ### Extend the window
@@ -28,6 +32,7 @@ Learn how to write the parts of a
 Learn how to change what a Qt session shows, without changing what it
 builds.
 
+- [How to place a view in the window](place-a-view.md)
 - [How to install hooks](install-hooks.md)
 - [How to add menu actions to a Qt session](add-menu-actions.md)
 
@@ -36,6 +41,8 @@ builds.
 Learn how to run a session, follow what it does and keep its settings.
 
 - [How to run a session without a GUI](run-without-a-gui.md)
+- [How to run a session without hardware](run-without-hardware.md)
+- [How to find out why a component is missing](find-a-missing-component.md)
 - [How to configure logging](configure-logging.md)
 - [How to change a device setting while a plan runs](change-a-setting-while-a-plan-runs.md)
 - [How to save a session](save-a-session.md)
@@ -45,6 +52,7 @@ Learn how to run a session, follow what it does and keep its settings.
 Learn how to keep a [catalog](../explanation/glossary.md#catalog) of runs and
 write what is computed from them.
 
+- [How to choose where acquisition files go](choose-where-files-go.md)
 - [How to keep a catalog of runs](keep-a-catalog.md)
 - [How to write a derived product](write-a-derived-product.md)
 
