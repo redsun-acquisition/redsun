@@ -23,6 +23,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from redsun.errors import ConfigurationError
 from redsun.services._transports import TRANSPORT_KEY, TRANSPORTS, transport_of
 
 from ._hooks import HookGroup, group_hook_entries
@@ -47,7 +48,6 @@ __all__ = [
     "SCHEMA_VERSIONS",
     "CatalogConfig",
     "ComponentEntry",
-    "ConfigurationError",
     "DeviceEntry",
     "SessionFile",
     "Source",
@@ -239,15 +239,6 @@ def load(
     return data
 
 
-class ConfigurationError(ValueError):
-    """A session file, once its layers are merged, says what a session cannot."""
-
-    def __init__(self, sources: Sequence[Source], problems: Sequence[str]) -> None:
-        named = ", ".join(label(source) for source in sources)
-        lines = "\n".join(f"  {problem}" for problem in problems)
-        super().__init__(f"Configuration ({named}) is invalid:\n{lines}")
-
-
 def problems_of(error: ValidationError, data: Mapping[str, Any]) -> list[str]:
     """Say each problem as `section.key: what`, a hook entry by its hook points.
 
@@ -328,7 +319,9 @@ def validate_session(sources: Sequence[Source], data: Mapping[str, Any]) -> Sess
     try:
         return SessionFile.model_validate(data)
     except ValidationError as e:
-        raise ConfigurationError(sources, problems_of(e, data)) from None
+        raise ConfigurationError(
+            [label(source) for source in sources], problems_of(e, data)
+        ) from None
 
 
 class ComponentEntry(BaseModel, extra="allow", use_attribute_docstrings=True):

@@ -143,7 +143,7 @@ raises [`BuildError`][redsun.BuildError] listing each missing component and
 its reason:
 
 ```text
-redsun.session._base.BuildError: A strict session is missing components:
+redsun.errors.BuildError: A strict session is missing components:
   broken: serial port COM3 not found
   remote: position: NotConnectedError: ca://NOPE:Position
   helper: no calibration file

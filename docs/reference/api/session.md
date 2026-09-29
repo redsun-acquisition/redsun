@@ -139,25 +139,7 @@ The protocol of each hook point, in the order a session reaches them.
 
 ## Errors
 
-::: redsun.BuildError
-    options:
-      show_root_heading: true
-
-::: redsun.ConfigurationError
-    options:
-      show_root_heading: true
-
-::: redsun.ConfigurationInUse
-    options:
-      show_root_heading: true
-
-::: redsun.HookError
-    options:
-      show_root_heading: true
-
-::: redsun.PluginError
-    options:
-      show_root_heading: true
+The exceptions a session raises are in [`redsun.errors`](errors.md).
 
 ## Build steps
 

@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
+from redsun.errors import HookError
+
 from ._manifest import ClassPath, import_class
 
 if TYPE_CHECKING:
@@ -20,7 +22,6 @@ __all__ = [
     "ConfiguresMainView",
     "ConfirmsClose",
     "CreatesApplication",
-    "HookError",
     "WrapsBuild",
 ]
 
@@ -29,10 +30,6 @@ AppT_contra = TypeVar("AppT_contra", contravariant=True)
 ViewT_contra = TypeVar("ViewT_contra", contravariant=True)
 
 logger = logging.getLogger("redsun")
-
-
-class HookError(RuntimeError):
-    """A `hooks` configuration entry cannot be turned into a provider."""
 
 
 def known_points(moments: Iterable[str]) -> str:

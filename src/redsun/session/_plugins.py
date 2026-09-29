@@ -4,6 +4,8 @@ import logging
 from functools import cache
 from typing import TYPE_CHECKING, Any
 
+from redsun.errors import PluginError
+
 from .._manifest import PluginManifest, ServiceEntry, discover, import_class
 
 if TYPE_CHECKING:
@@ -12,7 +14,6 @@ if TYPE_CHECKING:
     from .._config import ComponentEntry
 
 __all__ = [
-    "PluginError",
     "installed",
     "load_providers",
     "manifest",
@@ -21,10 +22,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger("redsun")
-
-
-class PluginError(RuntimeError):
-    """A configuration entry names a plugin, group or id that does not resolve."""
 
 
 def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type | None:

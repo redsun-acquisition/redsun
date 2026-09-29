@@ -14,7 +14,7 @@ from redsun.session.components import (
     AsView,
 )
 
-from ._base import BUILD_STEPS, BuildError, ConfigurationInUse, Session
+from ._base import BUILD_STEPS, Session
 from ._declarations import (
     Alias,
     Attach,
@@ -26,7 +26,6 @@ from ._declarations import (
     Serves,
 )
 from ._frontend import Frontend
-from ._plugins import PluginError
 from ._protocols import (
     AttachableComponent,
     BuildableSession,
@@ -48,9 +47,7 @@ __all__ = [
     "AsView",
     "Attach",
     "AttachableComponent",
-    "BuildError",
     "BuildableSession",
-    "ConfigurationInUse",
     "Declaration",
     "Declare",
     "DesktopSession",
@@ -62,7 +59,6 @@ __all__ = [
     "Launch",
     "Layer",
     "NamedComponent",
-    "PluginError",
     "Serializable",
     "Serves",
     "Session",

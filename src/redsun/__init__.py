@@ -22,6 +22,13 @@ class MyApp(QtSession):
 
 from importlib.metadata import PackageNotFoundError, version
 
+from redsun.errors import (
+    BuildError,
+    ConfigurationError,
+    ConfigurationInUse,
+    HookError,
+    PluginError,
+)
 from redsun.injection import (
     DevicesOf,
     provides,
@@ -52,8 +59,6 @@ from redsun.session import (
     Attach,
     AttachableComponent,
     BuildableSession,
-    BuildError,
-    ConfigurationInUse,
     Declare,
     DesktopSession,
     FromConfig,
@@ -64,20 +69,17 @@ from redsun.session import (
     Launch,
     Layer,
     NamedComponent,
-    PluginError,
     Serializable,
     Serves,
     Session,
 )
 from redsun.view import Placement
 
-from ._config import ConfigurationError
 from ._hooks import (
     ConfiguresApplication,
     ConfiguresMainView,
     ConfirmsClose,
     CreatesApplication,
-    HookError,
     WrapsBuild,
 )
 from ._settings import Settings

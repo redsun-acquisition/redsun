@@ -19,18 +19,19 @@ from typing import (
 from ophyd_async.core import Device
 from psygnal import Signal
 
+from redsun.errors import HookError, PluginError
 from redsun.services import Service
 from redsun.view import Placement
 
 from .._config import DeviceEntry
-from .._hooks import HookError, known_points
+from .._hooks import known_points
 from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
 from ._factories import resolved
 from ._frontend import Frontend
-from ._plugins import PluginError, resolve, service_entry
+from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
 
 if TYPE_CHECKING:

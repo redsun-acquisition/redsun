@@ -69,6 +69,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from redsun.errors import ConfigurationInUse
 from redsun.view import Placement
 
 from .._hooks import (
@@ -78,7 +79,7 @@ from .._hooks import (
     CreatesApplication,
     WrapsBuild,
 )
-from ..session._base import ConfigurationInUse, Session
+from ..session._base import Session
 from ..session._declarations import Layer
 from ..session._factories import resolved
 from ..session._frontend import Frontend

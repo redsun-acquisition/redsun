@@ -21,6 +21,7 @@ redsun/
 |   |-- presenter/             plan spec: plan signatures read into widget descriptions
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
+|   |-- errors.py              the exceptions a session raises
 |   |-- _config.py             session file loading, merging and validation
 |   |-- _catalog.py            require_tiled, start_catalog
 |   |-- writers/               Writer for derived products, one stream per format

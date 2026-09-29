@@ -32,6 +32,7 @@ from psygnal._async import clear_async_backend
 
 from redsun.aio import run_coro, set_async_backend
 from redsun.catalog import CatalogAddress
+from redsun.errors import BuildError, ConfigurationError, ConfigurationInUse, HookError
 from redsun.injection import rejected, satisfying
 from redsun.log import SessionFileHandler, add_handler, remove_handler, set_level
 from redsun.path_provider import PATH_PROVIDER_PORT, SessionPathProvider
@@ -51,7 +52,6 @@ from redsun.registry import (
 from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
-    ConfigurationError,
     SessionFile,
     Source,
     StorageConfig,
@@ -62,7 +62,6 @@ from .._config import (
     validate_session,
 )
 from .._hooks import (
-    HookError,
     HookGroup,
     distinct,
     refuse_ambiguous,
@@ -118,28 +117,12 @@ if TYPE_CHECKING:
     from ._declarations import Key
     from ._questions import Shape
 
-__all__ = ["BUILD_STEPS", "BuildError", "ConfigurationInUse", "Session"]
+__all__ = ["BUILD_STEPS", "Session"]
 
 P = TypeVar("P")
 
 CallbackCatalogue: TypeAlias = Mapping[str, CallbackType]
 """The key a component asks for to receive every document router the session built."""
-
-
-class BuildError(RuntimeError):
-    """Raised when a strict session could not build or set up a component."""
-
-
-class ConfigurationInUse(OSError):
-    """Raised when a session is asked to write over a source it was built from.
-
-    A saved file is one flat session, where a source may be shared by several
-    and hand-written. Overwriting one replaces what those other sessions read.
-    """
-
-    def __init__(self, path: Path) -> None:
-        super().__init__(f"{path} is a source this session was built from")
-        self.path = path
 
 
 logger = logging.getLogger("redsun")
@@ -412,7 +395,7 @@ class Session(BuildableSession):
         config = load(source)
         if not config.get("session"):
             raise ConfigurationError(
-                as_sources(source),
+                [label(s) for s in as_sources(source)],
                 ["session: a session built with from_config must name itself"],
             )
         session = base_for(cls, config.get("frontend"))(config, log_level=log_level)

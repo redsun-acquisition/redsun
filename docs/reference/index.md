@@ -37,6 +37,7 @@ Look up a class or a function by the module it is imported from.
           until stopped, and the actions a user takes while they run
         - [`redsun.engine.plan_stubs`](api/engine.md#plan-stubs): steps a
           plan uses to wait for an action
+    - [`redsun.errors`](api/errors.md): the exceptions a session raises
     - [`redsun.injection`](api/injection.md): how a component says what it
       needs and what it offers
     - [`redsun.log`](api/log.md): the logger, and the records of a session

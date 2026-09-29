@@ -122,6 +122,7 @@ nav = [
             "reference/api/aio.md",
             "reference/api/catalog.md",
             "reference/api/engine.md",
+            "reference/api/errors.md",
             "reference/api/injection.md",
             "reference/api/log.md",
             "reference/api/path_provider.md",
