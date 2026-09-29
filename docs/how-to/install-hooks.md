@@ -26,13 +26,17 @@ both. Picking a tab switches every tab on the site to the same form.
 
 ## Pick a hook point
 
-| point | receives | runs |
-| --- | --- | --- |
-| `create_application` | `argv` | first, and only when no `QApplication` exists yet |
-| `configure_application` | the application | before any view is made |
-| `during_build` | the application | around the build steps |
-| `configure_main_view` | the main window | when the window is made, before it is shown |
-| `confirm_close` | nothing | when the window is asked to close |
+| point | receives | runs | protocol |
+| --- | --- | --- | --- |
+| `create_application` | `argv` | first, and only when no `QApplication` exists yet | [`CreatesApplication`][redsun.CreatesApplication] |
+| `configure_application` | the application | before any view is made | [`ConfiguresApplication`][redsun.ConfiguresApplication] |
+| `during_build` | the application | around the build steps | [`WrapsBuild`][redsun.WrapsBuild] |
+| `configure_main_view` | the main window | when the window is made, before it is shown | [`ConfiguresMainView`][redsun.ConfiguresMainView] |
+| `confirm_close` | nothing | when the window is asked to close | [`ConfirmsClose`][redsun.ConfirmsClose] |
+
+A provider serves a point by having the method of its protocol. It may
+inherit from the protocol too, which lets a type checker hold it to the
+signature.
 
 All five belong to the Qt frontend, so they work on a
 [`QtSession`][redsun.qt.QtSession]. A plain [`Session`][redsun.Session] calls

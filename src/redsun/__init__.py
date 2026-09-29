@@ -72,7 +72,14 @@ from redsun.session import (
 from redsun.view import Placement
 
 from ._config import ConfigurationError
-from ._hooks import ConfirmsClose, HookError
+from ._hooks import (
+    ConfiguresApplication,
+    ConfiguresMainView,
+    ConfirmsClose,
+    CreatesApplication,
+    HookError,
+    WrapsBuild,
+)
 from ._settings import Settings
 from ._structural import satisfies
 
@@ -96,8 +103,11 @@ __all__ = [
     "ComponentNotBuilt",
     "ConfigurationError",
     "ConfigurationInUse",
+    "ConfiguresApplication",
+    "ConfiguresMainView",
     "ConfirmsClose",
     "Connection",
+    "CreatesApplication",
     "Declare",
     "DesktopSession",
     "DeviceMapping",
@@ -122,6 +132,7 @@ __all__ = [
     "SessionConfig",
     "Settings",
     "WiringError",
+    "WrapsBuild",
     "__version__",
     "provides",
     "rejected",

@@ -68,6 +68,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.session.Declaration
+    options:
+      show_root_heading: true
+
 ## What a component is held to
 
 ::: redsun.NamedComponent
@@ -94,6 +98,26 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Hook points
+
+The protocol of each hook point, in the order a session reaches them.
+
+::: redsun.CreatesApplication
+    options:
+      show_root_heading: true
+
+::: redsun.ConfiguresApplication
+    options:
+      show_root_heading: true
+
+::: redsun.WrapsBuild
+    options:
+      show_root_heading: true
+
+::: redsun.ConfiguresMainView
+    options:
+      show_root_heading: true
+
 ::: redsun.ConfirmsClose
     options:
       show_root_heading: true
@@ -104,9 +128,8 @@ icon: lucide/code
     options:
       show_root_heading: true
 
-::: redsun.Placement
-    options:
-      show_root_heading: true
+[`Placement`][redsun.Placement] is described with
+[`redsun.view`](view.md#placement).
 
 ## Settings
 

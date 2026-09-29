@@ -13,6 +13,7 @@ from redsun import (
     AsHook,
     AsPresenter,
     AsView,
+    ConfiguresApplication,
     Declare,
     HookError,
     Serves,
@@ -77,6 +78,17 @@ class Founder:
         """Record *argv* and return the application the test session owns."""
         type(self).seen.append(argv)
         return cast("QApplication", QApplication.instance())
+
+
+class Heir(ConfiguresApplication[QApplication]):
+    """Serves ``configure_application`` by inheriting the protocol of the point."""
+
+    def __init__(self) -> None:
+        self.seen: list[QApplication] = []
+
+    def configure_application(self, app: QApplication) -> None:
+        """Record *app*."""
+        self.seen.append(app)
 
 
 class NotAHook:
@@ -161,6 +173,20 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
 
     app = build(App)
     installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
+    assert installed.seen == [qapp]
+
+
+def test_a_provider_may_inherit_the_protocol_of_its_point(
+    qapp: QApplication,
+    build: Callable[..., QtSession],
+) -> None:
+    """The protocol of a point is a base class as well as a shape."""
+
+    class App(QtSession):
+        configure_application: AsHook[Heir]
+
+    app = build(App)
+    installed = cast("Heir", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.seen == [qapp]
 
 

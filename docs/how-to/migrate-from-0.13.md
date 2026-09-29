@@ -211,7 +211,11 @@ class MyApp(QtSession):
 - One provider for several points uses `Serves(...)`, not the same object
   declared twice.
 - `QtCreatesApplication`, `QtConfiguresApplication`, `QtWrapsBuild` and
-  `QtConfiguresMainView` are removed. `QtHook` names the points.
+  `QtConfiguresMainView` are removed. `QtHook` names the points, and their
+  protocols are [`CreatesApplication`][redsun.CreatesApplication],
+  [`ConfiguresApplication`][redsun.ConfiguresApplication],
+  [`WrapsBuild`][redsun.WrapsBuild] and
+  [`ConfiguresMainView`][redsun.ConfiguresMainView], imported from `redsun`.
 - `during_build` now covers the build steps only, not the window's first
   paint.
 
