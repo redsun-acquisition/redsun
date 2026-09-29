@@ -449,12 +449,16 @@ class TestPlanWidgetControlAPI:
         pw.pause(False)
         assert pw.pause_button.text() == "Pause"
 
-    def test_pause_true_disables_run_button(self) -> None:
-        """Disable the run button while the plan is paused."""
-        pw = create_plan_widget(_pausable_spec())
+    def test_a_paused_plan_can_be_stopped(self) -> None:
+        """Keep the stop button enabled while the plan is paused, and report its press."""
+        toggled: list[bool] = []
+        pw = create_plan_widget(_pausable_spec(), toggle_callback=toggled.append)
+        pw.run_button.click()
         pw.toggle(True)
         pw.pause(True)
-        assert not pw.run_button.isEnabled()
+        assert pw.run_button.isEnabled()
+        pw.run_button.click()
+        assert toggled == [True, False]
 
     def test_set_enabled_reaches_the_group_box(self) -> None:
         """Apply setEnabled to the group box."""

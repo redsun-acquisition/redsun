@@ -81,7 +81,8 @@ the toggle and one for the pause button, and stop the plan at shutdown:
   Pausing completes the `Future` with a `RunEngineInterrupted` exception,
   and the engine stays in the state `paused`. `resume` returns a new `Future`, which `watch` keeps.
 - `stop` also returns a `Future`, which completes once the plan has cleaned
-  up. `finished` sends `sig_finished` when the last `Future` kept is
+  up. The stop button stays enabled while the plan is paused, so a paused
+  plan is stopped the same way. `finished` sends `sig_finished` when the last `Future` kept is
   complete and the engine is not paused, so once for each plan.
 - `request_pause` comes from `bluesky` without type annotations, so
   `mypy --strict` reports it as `no-untyped-call`.

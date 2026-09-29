@@ -161,6 +161,8 @@ class PlanWidget:
     def pause(self, status: bool) -> None:
         """Update the widgets when a plan pauses or resumes.
 
+        The stop button stays enabled, so a paused plan can be stopped.
+
         Parameters
         ----------
         status
@@ -168,7 +170,6 @@ class PlanWidget:
         """
         if self.pause_button:
             self.pause_button.setText("Resume" if status else "Pause")
-            self.run_button.setEnabled(not status)
 
     def setEnabled(self, enabled: bool) -> None:
         """Enable or disable the whole plan widget.
