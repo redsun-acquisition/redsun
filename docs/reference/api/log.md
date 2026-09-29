@@ -37,9 +37,15 @@ the application.
 ## Logging from a component
 
 ::: redsun.log.Loggable
+    options:
+      show_root_heading: true
 
 ## Session records
 
 ::: redsun.log.BufferHandler
+    options:
+      show_root_heading: true
 
 ::: redsun.log.SessionFileHandler
+    options:
+      show_root_heading: true

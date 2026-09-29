@@ -73,4 +73,5 @@ engine(my_plan(*args, **kwargs))
         - get_choice_list
         - isdevice
         - isdevicesequence
+        - isdeviceset
         - issequence

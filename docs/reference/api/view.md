@@ -16,11 +16,13 @@ icon: lucide/code
     options:
       members:
         - create_plan_widget
+        - create_param_widget
         - ActionButton
         - PlanInfoDialog
 
 ::: redsun.view.qt.utils.PlanWidget
     options:
+      show_root_heading: true
       show_docstring_parameters: false
 
 ::: redsun.view.qt.treeview
@@ -31,3 +33,5 @@ icon: lucide/code
 ## Built-ins
 
 ::: redsun.view.qt.builtins.LogView
+    options:
+      show_root_heading: true

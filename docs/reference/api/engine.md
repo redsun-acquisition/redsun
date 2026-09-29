@@ -11,7 +11,10 @@ icon: lucide/code
       members:
         - RunEngine
         - Deferrals
-        - RunEngineResult
+        - register_bound_command
+
+`RunEngineResult` is the class of `bluesky`,
+[`RunEngineResult`][bluesky.run_engine.RunEngineResult].
 
 ## Actions
 

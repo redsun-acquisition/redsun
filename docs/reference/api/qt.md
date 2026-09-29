@@ -24,6 +24,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.qt.Area
+    options:
+      show_root_heading: true
+
 ::: redsun.qt.Central
     options:
       show_root_heading: true

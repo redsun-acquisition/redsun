@@ -10,7 +10,15 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.ports.SlotThread
+    options:
+      show_root_heading: true
+
 ## Connections
+
+::: redsun.Link
+    options:
+      show_root_heading: true
 
 ::: redsun.Connection
     options:
