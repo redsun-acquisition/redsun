@@ -88,8 +88,9 @@ uv run tox -e mypy-pyqt,mypy-pyside
 `docs/` (pages, ADRs, changelogs, `zensical.toml`) can only break the docs
 build, so validate it with `uv run tox -e docs` alone. A change to docstrings
 in `src/` also runs `lint`, since ruff's `D` rules check docstrings and the
-reference pages render them: `uv run tox -e lint,docs`. Anything touching code
-or tests runs the full `uv run tox`.
+reference pages render them: `uv run tox -e lint,docs`. A change to docstrings
+or comments in `tests/` alone runs `lint`; no test can change with it.
+Anything else touching code or tests runs the full `uv run tox`.
 
 The project `.venv` still works for a quick loop (`uv run pytest -q`), but it
 is not authoritative: it holds every group any `uv sync` has installed, both Qt
@@ -242,6 +243,19 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
   meaning the name and type already carry. A `Parameters`, `Returns` or
   `Raises` section earns its place when it says something the signature cannot:
   units, accepted values, what `None` means, which exception and when.
+- **numpydoc format**: a one-line summary, a blank line, an optional extended
+  description, then only the sections that add something, each with its
+  dashed underline. Exceptions a caller should handle go in `Raises`, not in
+  running prose.
+- **No types in docstrings when the signature is annotated.** A `Parameters`
+  entry is the bare name (`name`, not `name : type`), and what a function
+  returns or yields is said in the summary or the extended description, not
+  in a typed `Returns` or `Yields` entry: mkdocstrings renders the type from
+  the annotation. Write a type only where the signature has none.
+- **Cross-references are Markdown, never reStructuredText**:
+  `` [`Session.build`][redsun.Session.build] `` or `` [`build`][] `` for
+  another object, single backticks for inline code. No `:meth:`, `:class:`
+  or `:func:` roles, and no double backticks.
 - **Attributes are documented where they are declared**, by a docstring on the
   line after each one, never by a `Parameters` or `Attributes` section in the
   class docstring. This holds for everything declared as fields: dataclasses,
@@ -252,7 +266,7 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
       """How a manifest launches a service."""
 
       module: str
-      """Module run as ``python -m <module>``."""
+      """Module run as `python -m <module>`."""
   ```
 - No section-divider or banner comments, and no comment blocks describing the
   code that follows. A comment earns its place only by explaining why a
@@ -260,6 +274,10 @@ both. `QWidget.closeEvent` takes `QCloseEvent | None` under pyqt6 and
 
 ## Testing conventions
 
+- **Every test has a one-line docstring**: an imperative sentence saying what
+  it checks, such as `"""Return partial data when the timeout expires."""`.
+  No numpydoc sections in tests; a parametrised test gets one sentence
+  covering all its cases.
 - Mirror the source layout under `tests/sdk/`. Session and plugin-discovery
   tests live directly under `tests/` and use the `mock_bundle/` fixture
   package; a service a test launches lives in `tests/launchable/mock_pkg/`.
@@ -300,9 +318,9 @@ mkdocstrings mistakes a green `zensical build` will not catch.
 - **Library and package names are code spans.** In docs pages write
   `` `redsun` ``, `` `ophyd-async` ``, `` `bluesky` ``, `` `psygnal` ``,
   `` `caproto` ``, `` `pyqt6` ``, at every mention, `redsun` included.
-  Docstrings do the same with double backticks (``` ``ophyd-async`` ```), the
-  form they use for literals. Headings, link text and a name inside a code
-  block stay as they are.
+  Docstrings do the same, with the single backticks they use for every
+  literal. Headings, link text and a name inside a code block stay as they
+  are.
 
 ## Response style (agents)
 
