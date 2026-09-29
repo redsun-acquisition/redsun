@@ -55,6 +55,8 @@ constructor with each placement.
   a main window built from it;
 - saves where the user left the docks, and puts them back next time;
 - asks before closing when a component has unsaved changes;
+- logs an exception no slot caught, with its traceback, and keeps the window
+  open, where the Qt binding would otherwise end the process without a word;
 - closes and deletes every view at shutdown, delivering any signal still
   waiting for one first. Closing runs the `closeEvent` of each view, which is
   the only place a view that is a third-party widget can clean up: it

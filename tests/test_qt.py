@@ -202,6 +202,59 @@ class CommandApp(QtSession):
     gain: AsPresenter[Gain]
 
 
+SLOT_RAISES = """
+import sys
+from collections.abc import Iterator
+
+from psygnal import Signal
+from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QApplication, QWidget
+
+import redsun._settings
+import redsun.log
+from redsun import AsPresenter, AsView, Link, Placement, slot
+from redsun.qt import Dock, QtSession
+
+redsun._settings.user_config_dir = lambda *a, **k: sys.argv[1]
+redsun.log.user_data_dir = lambda *a, **k: sys.argv[1]
+
+
+class Ticker:
+    sig_tick = Signal()
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class Panel(QWidget):
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+
+    @slot
+    def on_tick(self) -> None:
+        raise RuntimeError("the panel failed")
+
+
+class Raising(QtSession):
+    ticker: AsPresenter[Ticker]
+    panel: AsView[Panel]
+
+    def wire(self) -> Iterator[Link]:
+        yield self.ticker.sig_tick, self.panel.on_tick
+
+
+qt = QApplication([])
+session = Raising()
+QTimer.singleShot(200, lambda: session.ticker.sig_tick.emit())
+QTimer.singleShot(600, lambda: print("still running", flush=True))
+QTimer.singleShot(800, qt.quit)
+session.run()
+"""
+
+
 BUILDS_ITS_OWN = """
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -646,6 +699,24 @@ def test_a_session_that_makes_its_own_application_keeps_it_alive() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_an_exception_in_a_slot_is_logged_and_the_window_carries_on(
+    tmp_path: Path,
+) -> None:
+    """Log an exception a view slot raised while the window runs, and keep running."""
+    # Run in a subprocess: the exception has to reach the Qt event loop, which only
+    # `run` starts.
+    result = subprocess.run(
+        [sys.executable, "-c", SLOT_RAISES, str(tmp_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "the panel failed" in output
+    assert "still running" in output
+
+
 def test_shutdown_destroys_the_widgets_the_session_built() -> None:
     """Destroy the main window and every view widget on shutdown."""
     app = QtApp().build()
@@ -937,6 +1008,12 @@ def test_a_refused_close_leaves_the_window_open(
 
     assert not session.main_window.close()
     assert session.main_window.isVisible()
+
+
+def test_a_dock_on_an_unknown_edge_is_refused() -> None:
+    """Refuse a dock on an edge Qt has no area for, naming the edges it has."""
+    with pytest.raises(ValueError, match="'bottm'.*left, right, top, bottom"):
+        Dock("bottm")  # type: ignore[arg-type]
 
 
 def test_a_failed_view_leaves_its_reason_where_it_would_have_been(

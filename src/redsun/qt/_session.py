@@ -43,6 +43,7 @@ from typing import (
     NoReturn,
     TypeVar,
     cast,
+    get_args,
 )
 
 from app_model import Action, Application
@@ -92,6 +93,7 @@ from ._color_scheme import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from contextlib import AbstractContextManager
+    from types import TracebackType
     from typing import TypeAlias
 
     from in_n_out import Store
@@ -128,10 +130,23 @@ T = TypeVar("T", bound=QObject)
 
 @dataclass(frozen=True)
 class Dock(Placement):
-    """A panel against one edge of the window."""
+    """A panel against one edge of the window.
+
+    Raises
+    ------
+    ValueError
+        If `area` names no edge of the window.
+    """
 
     area: Area
     """Edge the panel sits against."""
+
+    def __post_init__(self) -> None:
+        if self.area not in get_args(Area):
+            raise ValueError(
+                f"Dock({self.area!r}) names no edge of the window; "
+                f"use one of {', '.join(get_args(Area))}"
+            )
 
 
 @dataclass(frozen=True)
@@ -644,7 +659,14 @@ class QtSession(DesktopSession[QMainWindow], Session):
         return nullcontext(self._report)
 
     def run(self) -> NoReturn:
-        """Build, show the window, and hand over to the event loop."""
+        """Build, show the window, and hand over to the event loop.
+
+        An exception no slot caught is logged with its traceback, and the
+        window carries on.
+        """
+        # without a hook of its own, the Qt binding ends the process on an
+        # exception raised from a slot, and prints nothing
+        sys.excepthook = log_unhandled
         self.build()
         # here rather than in build: a session built for a test never shows
         # its window, and that geometry means nothing
@@ -653,6 +675,18 @@ class QtSession(DesktopSession[QMainWindow], Session):
         start_emitting_from_queue()
         self.main_window.show()
         sys.exit(self.app.exec())
+
+
+def log_unhandled(
+    kind: type[BaseException], error: BaseException, trace: TracebackType | None
+) -> None:
+    """Log an exception nothing caught, and let an interrupt end the process."""
+    if issubclass(kind, KeyboardInterrupt):
+        sys.__excepthook__(kind, error, trace)
+        return
+    logger.error(
+        "Unhandled %s: %s", kind.__name__, error, exc_info=(kind, error, trace)
+    )
 
 
 class CloseGuard(QObject):
