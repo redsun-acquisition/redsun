@@ -144,6 +144,7 @@ nav = [
     ]},
     { "Contributing" = [
         "how-to/contribute.md",
+        "how-to/ai-contribution-policy.md",
         { "Change the code" = [
             "how-to/set-up-development.md",
             "how-to/run-tests.md",

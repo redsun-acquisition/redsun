@@ -33,3 +33,6 @@ session or a plugin that uses `redsun`, start with the
 - [How to write documentation](write-docs.md)
 - [How to record a decision](record-a-decision.md)
 - [How to make a release](make-a-release.md)
+
+A change written with the help of an AI tool follows the
+[AI contribution policy](ai-contribution-policy.md).
