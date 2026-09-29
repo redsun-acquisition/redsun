@@ -33,6 +33,7 @@ Learn how to change what a Qt session shows, without changing what it
 builds.
 
 - [How to place a view in the window](place-a-view.md)
+- [How to write a frontend](write-a-frontend.md)
 - [How to install hooks](install-hooks.md)
 - [How to add menu actions to a Qt session](add-menu-actions.md)
 

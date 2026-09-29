@@ -43,6 +43,7 @@ nav = [
         ]},
         { "Extend the window" = [
             "how-to/place-a-view.md",
+            "how-to/write-a-frontend.md",
             "how-to/install-hooks.md",
             "how-to/add-menu-actions.md",
         ]},

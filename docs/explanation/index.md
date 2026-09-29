@@ -41,7 +41,7 @@ Learn about the [frontend](glossary.md#frontend) that shows a
 session on screen.
 
 - [How a frontend shows a session on screen](frontends.md)
-- [How the Qt plan widgets work](qt-widgets.md)
+- [How the Qt widgets of redsun work](qt-widgets.md)
 
 ### Data
 

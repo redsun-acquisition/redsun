@@ -148,18 +148,11 @@ why the device, and not `redsun`, writes the data.
 ### Standby
 
 A service holding hardware, such as a camera, can let go of it while it keeps
-running, if it offers a command for that. A presenter triggers it:
-
-```python
-class HardwarePresenter:
-    @slot
-    async def standby(self) -> None:
-        await asyncio.gather(
-            *(camera.close_camera.trigger() for camera in self.cameras.values())
-        )
-```
-
-The devices stay connected; the service decides what letting go means.
+running, if it offers a command for that as a process variable. A device
+exposes the command as a signal, and a presenter triggers it on every device
+of the service when the user asks. The devices stay connected; the service
+decides what letting go means, and takes the hardware back on another
+command.
 
 ## Presenters
 

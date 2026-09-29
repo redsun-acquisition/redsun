@@ -105,42 +105,8 @@ frontend.
 ## Writing a frontend
 
 A frontend for something other than a desktop window defines its own
-placements and its own `Frontend`:
-
-```python
-from dataclasses import dataclass
-
-from redsun import Frontend, Placement, Session
-from redsun.ports import SlotThread
-
-
-class Page:
-    """What this frontend renders."""
-
-
-@dataclass(frozen=True)
-class Route(Placement):
-    path: str
-
-
-class Web(Frontend):
-    requires = {Route: Page}
-
-    @classmethod
-    def thread_of(cls, consumer: object) -> SlotThread:
-        return "main" if isinstance(consumer, Page) else None
-
-
-class WebSession(Session):
-    frontend = Web
-
-    def start_runtime(self) -> None:
-        super().start_runtime()
-        ...  # start the web server
-
-    def present(self) -> None: ...  # serve each view at its route
-```
-
+placements, its own `Frontend` and a session class that shows the views.
+[How to write a frontend](../how-to/write-a-frontend.md) writes one.
 `Frontend.check_view` refuses a view class the frontend cannot build, and
 `Session.view_arguments` adds arguments to every view's constructor. Neither
 does anything unless a frontend overrides it.
@@ -160,20 +126,7 @@ thread only. A frontend settles that in three places:
 `thread_of` is asked only when neither the slot nor its class names a
 thread. A call to a slot held for another thread waits in a queue until that
 thread calls `psygnal.emit_queued`, so the session calls it from the
-toolkit's event loop, as often as the views should follow the presenters:
-
-```python
-import psygnal
-
-
-class WebSession(Session):
-    frontend = Web
-
-    def run(self) -> None:
-        self.build()
-        server.every(0.01, psygnal.emit_queued)
-        server.serve()
-```
+toolkit's event loop, as often as the views should follow the presenters.
 
 Coroutine slots need nothing from the frontend: every session sets the
 backend that runs them when it starts its runtime, which is why a frontend's

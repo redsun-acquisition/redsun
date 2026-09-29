@@ -192,5 +192,5 @@ presenter or the view you wrote here.
   session what it holds.
 - [How presenters run plans](../explanation/plans.md) covers plans that run
   until they are stopped, and actions the user takes while they run.
-- [How the Qt plan widgets work](../explanation/qt-widgets.md) lists what a
+- [How the Qt widgets of redsun work](../explanation/qt-widgets.md) lists what a
   plan widget can hold.

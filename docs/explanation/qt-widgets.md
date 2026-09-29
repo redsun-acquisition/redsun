@@ -2,9 +2,10 @@
 icon: lucide/layout-panel-left
 ---
 
-# How the Qt plan widgets work
+# How the Qt widgets of redsun work
 
-`redsun.view.qt` provides Qt widgets for interfaces that run plans.
+`redsun.view.qt` provides Qt widgets for the views of a session: the controls
+of a plan, and a tree of the settings of a device.
 
 ---
 
@@ -132,35 +133,10 @@ tree.revert("stage-position")  # the device refused: show the value before
 the device rounds or clips it. It also shows a value that changed with no
 edit pending. Neither call emits `sig_property_changed`.
 
-A presenter setting the device announces the value it reads back afterwards,
-and the view hands it to the tree:
-
-```python
-class MyController:
-    sig_new_configuration = Signal(str, object)
-    sig_refused = Signal(str)
-
-    @slot
-    async def set(self, device: str, property: str, value: object) -> None:
-        signal = self.settings[device][property]
-        try:
-            await signal.set(value)
-        except Exception:
-            self.sig_refused.emit(signal.name)
-            return
-        reading = await signal.read()
-        self.sig_new_configuration.emit(signal.name, reading[signal.name]["value"])
-
-
-class MyView(QWidget):
-    @slot
-    def on_new_configuration(self, key: str, value: object) -> None:
-        self.tree.set_value(key, value)
-
-    @slot
-    def on_refused(self, key: str) -> None:
-        self.tree.revert(key)
-```
+A presenter that sets the device reads the value back afterwards and
+announces it, and the view hands it to the tree with `set_value`, or calls
+`revert` when the device refused the value. The tree never writes to a device
+itself, so the value it shows is always one the device reported.
 
 ---
 
