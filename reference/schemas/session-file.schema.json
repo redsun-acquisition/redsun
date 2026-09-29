@@ -105,15 +105,6 @@
       "title": "DeviceEntry",
       "type": "object"
     },
-    "Frontend": {
-      "description": "Supported frontend types.",
-      "enum": [
-        "pyqt",
-        "pyside"
-      ],
-      "title": "Frontend",
-      "type": "string"
-    },
     "StorageConfig": {
       "additionalProperties": false,
       "description": "Where a session writes, and whether it keeps a catalog of its runs.",
@@ -148,40 +139,18 @@
             }
           ],
           "default": null,
-          "description": "The session's catalog, needing the ``tiled`` extra; `None` for none."
+          "description": "The session's catalog, needing the `tiled` extra; `None` for none."
         }
       },
       "title": "StorageConfig",
       "type": "object"
     },
-    "WiringRule": {
-      "additionalProperties": false,
-      "description": "One connection a session file declares, from a signal to a slot.",
-      "properties": {
-        "from": {
-          "description": "The signal, as ``component.signal``.",
-          "title": "From",
-          "type": "string"
-        },
-        "to": {
-          "description": "The slot, as ``component.slot``.",
-          "title": "To",
-          "type": "string"
-        }
-      },
-      "required": [
-        "from",
-        "to"
-      ],
-      "title": "WiringRule",
-      "type": "object"
-    },
     "HookEntry": {
       "additionalProperties": false,
-      "description": "One provider of the ``hooks`` section, and every hook point it serves.",
+      "description": "One provider of the `hooks` section, and every hook point it serves.",
       "properties": {
         "provider": {
-          "description": "The provider's class, as ``module:ClassName``.",
+          "description": "The provider's class, as `module:ClassName`.",
           "title": "Provider",
           "type": "string"
         },
@@ -204,6 +173,7 @@
   "description": "A session file, after its layers are merged.",
   "properties": {
     "schema_version": {
+      "default": 1.0,
       "description": "The schema the file is written for, one of `SCHEMA_VERSIONS`.",
       "title": "Schema Version",
       "type": "number",
@@ -212,14 +182,33 @@
       ]
     },
     "frontend": {
-      "$ref": "#/$defs/Frontend",
-      "description": "The toolkit the session runs on."
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "qt"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The registered frontend the session builds on; the calling class if unset.",
+      "title": "Frontend"
     },
     "session": {
-      "default": "Redsun",
-      "description": "The session's display name.",
-      "title": "Session",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The session's name, which also names its application; its class's name if unset.",
+      "title": "Session"
     },
     "metadata": {
       "anyOf": [
@@ -234,6 +223,18 @@
           "type": "null"
         }
       ]
+    },
+    "strict": {
+      "default": false,
+      "description": "Whether a component that fails to build or set up stops the session.",
+      "title": "Strict",
+      "type": "boolean"
+    },
+    "mock": {
+      "default": false,
+      "description": "Whether devices connect to simulated backends and no service is launched.",
+      "title": "Mock",
+      "type": "boolean"
     },
     "services": {
       "anyOf": [
@@ -319,13 +320,23 @@
     "wiring": {
       "anyOf": [
         {
-          "default": [],
-          "description": "Connections the session declares.",
-          "items": {
-            "$ref": "#/$defs/WiringRule"
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
           },
+          "default": {},
+          "description": "The slots each signal reaches, both written as `component.port`.",
           "title": "Wiring",
-          "type": "array"
+          "type": "object"
         },
         {
           "type": "null"
@@ -344,12 +355,25 @@
           "type": "null"
         }
       ]
+    },
+    "providers": {
+      "additionalProperties": true,
+      "default": {},
+      "description": "Classes registering values the session hands to components, by name.",
+      "title": "Providers",
+      "type": "object"
+    },
+    "actions": {
+      "default": null,
+      "description": "Menu actions the Qt session registers, checked when it reads them.",
+      "title": "Actions"
+    },
+    "color_scheme": {
+      "default": null,
+      "description": "The Qt session's color scheme, checked when it reads it.",
+      "title": "Color Scheme"
     }
   },
-  "required": [
-    "schema_version",
-    "frontend"
-  ],
   "title": "SessionFile",
   "type": "object"
 }

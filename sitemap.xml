@@ -10,34 +10,10 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/catalog/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/component-system/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/components/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/container-architecture/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/services/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/devices/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/plans/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/presenters/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/qt-widgets/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/explanation/architecture/virtual/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0001-record-architecture-decisions/</loc>
@@ -82,7 +58,58 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0014-typed-session-files-and-manifests/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0015-collaborators-arrive-in-setup/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0016-a-component-refused-at-declaration-is-skipped/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0017-questions-read-from-the-annotation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0018-wire-yields-links/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/frontends/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/glossary/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/limits/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/plans/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/plugins/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/qt-widgets/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/questions/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/services/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/session/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/statement/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/add-menu-actions/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/ai-contribution-policy/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/build-docs/</loc>
@@ -91,16 +118,52 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/change-a-setting-while-a-plan-runs/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/choose-where-files-go/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/commits-and-prs/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/configure-logging/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/connect-a-device-on-demand/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/contribute/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/find-a-missing-component/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/follow-a-plan-action/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/install-hooks/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/how-to/installation/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/install-redsun/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/keep-a-catalog/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/make-a-release/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/migrate-from-0.13/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/package-a-plugin/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/place-a-view/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/record-a-decision/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-a-plan/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-commit-checks/</loc>
@@ -109,22 +172,49 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/run-tests/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-without-a-gui/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/run-without-hardware/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/save-a-session/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/set-up-development/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/share-a-value/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/wire-components/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-component/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-continuous-plan/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-derived-product/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-frontend/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-service-with-fastcs/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-service/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-a-session-file/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/write-docs/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/changelog/</loc>
-      </url>
-      <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/glossary/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/aio/</loc>
@@ -133,10 +223,13 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/catalog/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/container/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/engine/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/engine/</loc>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/errors/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/injection/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/log/</loc>
@@ -145,10 +238,22 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/path_provider/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/ports/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/presenter/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/qt/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/registry/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/services/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/session/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/utils/</loc>
@@ -157,12 +262,51 @@
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/view/</loc>
       </url>
       <url>
-        <loc>https://redsun-acquisition.github.io/redsun/reference/api/virtual/</loc>
-      </url>
-      <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/writers/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/changelog/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/environment/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/log-files/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/plugin-manifest/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/previous-changelog/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/session-file/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/acquire-images/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/device-protocols/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/device-service/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/first-session/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/installation/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/plan-controls/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/scan-plan/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/window-layout/</loc>
       </url>
 </urlset>

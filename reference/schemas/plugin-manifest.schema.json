@@ -5,7 +5,7 @@
       "description": "How a manifest launches a service; a session file may override any of it.",
       "properties": {
         "module": {
-          "description": "Module run as ``python -m <module>``.",
+          "description": "Module run as `python -m <module>`.",
           "title": "Module",
           "type": "string"
         },
@@ -99,6 +99,15 @@
       "default": {},
       "description": "View classes by id.",
       "title": "Views",
+      "type": "object"
+    },
+    "providers": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Classes registering shared values, by id.",
+      "title": "Providers",
       "type": "object"
     },
     "services": {

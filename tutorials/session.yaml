@@ -1,0 +1,5 @@
+session: first-session
+
+presenters:
+  stage_ctrl:
+    step: 0.5
