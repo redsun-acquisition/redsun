@@ -21,78 +21,29 @@ argument to its constructor.
 
 ## The manifest
 
-A plugin lists what it offers in a [manifest](glossary.md#manifest),
-a YAML file inside the package:
+A plugin lists what it offers in a [manifest](glossary.md#manifest), a YAML
+file inside the package, registered in the entry point group
+`redsun.plugins`. The name of the entry point is the `plugin_name` a session
+file uses. Each entry of the manifest maps an id to a class, written as
+`module:ClassName`. A class is imported only when a session names it, so a
+plugin with Qt views costs nothing to a session that does not use them.
 
-```yaml
-# my_plugin/redsun.yaml
-devices:
-  stage: "my_plugin.devices:MyStage"
+Besides the three layers, a manifest has two more groups. `providers` lists
+classes that share values with every component without being components
+themselves: each method a provider marks with [`provides`][redsun.provides]
+shares a value, and its constructor receives shared values only, never the
+keys of a session file. `services` lists [services](services.md) a session
+can launch.
 
-presenters:
-  motor: "my_plugin.presenters:MotorPresenter"
+A manifest is checked when a session reads it, against a schema: one that
+does not validate is left out whole. A session file entry that cannot be
+resolved is left out on its own, and the session builds without it.
+[ADR 14](decisions/0014-typed-session-files-and-manifests.md) records why
+both files are typed.
 
-views:
-  motor-view: "my_plugin.views:MotorView"
-
-providers:
-  calibration: "my_plugin.services:Calibrations"
-
-services:
-  stage-ioc:
-    module: my_plugin.iocs.stage
-    ready: "Server startup complete."
-```
-
-Each entry maps an id to a class, written as `module:ClassName`. A class is
-imported only when a session names it, so a plugin with Qt views costs nothing
-to a session that does not use them.
-
-The `providers` group lists classes that share values with every component,
-without being components themselves. A provider's constructor is filled like
-a component's, and each method it marks with [`provides`][redsun.provides]
-shares a value.
-
-The `services` group lists services a session can launch: the `module` to run
-and, optionally, its `args`, the `ready` line it prints, and its
-`stop_timeout`. See [Services](services.md).
-
-The package registers the manifest as an entry point:
-
-```toml
-[project.entry-points."redsun.plugins"]
-my-plugin = "redsun.yaml"
-```
-
-The entry point's name is the `plugin_name` a session file uses. Check that
-your build tool puts `redsun.yaml` in the package.
-
-[Plugin manifest](../reference/plugin-manifest.md) lists every key.
-
-An editor that reads JSON schemas can check a manifest as you write it, if its
-first line names the published schema:
-
-```yaml
-# yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/plugin-manifest.schema.json
-```
-
-## When something does not resolve
-
-A manifest is checked when a session reads it. One with an unknown group, an
-unknown key, or a class path not written as `module:ClassName` is left out
-whole, and the log names the file and every problem.
-
-A session file entry that cannot be resolved is left out on its own, and the
-session builds without it:
-
-- the plugin is not installed, or its manifest was left out;
-- the manifest has no such id;
-- the class cannot be imported;
-- the entry names no plugin, and the session class declares no component of
-  that name.
-
-Each shows in the log and in the build summary under `Not built`. To stop the
-session instead, make it [strict](glossary.md#strict-session).
+[How to package components as a plugin](../how-to/package-a-plugin.md) writes
+and registers a manifest, and [Plugin manifest](../reference/plugin-manifest.md)
+lists every key.
 
 ## Components from a file and from a class
 

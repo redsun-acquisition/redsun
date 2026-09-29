@@ -18,25 +18,8 @@ connects them. A frontend adds two things:
 
 ## Placements
 
-A view says where it wants to be shown, and the frontend decides whether it
-can:
-
-```python
-from redsun import Placement
-from redsun.qt import Central, Dock, MenuItem
-
-
-class MotorView(QWidget):
-    placement: Placement = Dock("left")
-
-
-class ImageView(QWidget):
-    placement: Placement = Central()
-
-
-class SaveAction(QAction):
-    placement: Placement = MenuItem("File")
-```
+A view says where it wants to be shown, such as `Dock("left")`,
+`Central()` or `MenuItem("File")`, and the frontend decides whether it can.
 
 The core defines only the `Placement` base class. Docks and menus are window
 ideas, so the Qt frontend defines them, next to the code that shows them. A
@@ -57,19 +40,10 @@ made, since only the object can answer.
 
 A Qt view's constructor starts with `(name: str, parent: QWidget)`, written
 exactly like that. `QtSession` passes its main window as the parent, so a view
-is part of the window from the moment it exists:
-
-```python
-class MotorView(QWidget):
-    placement: Placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-```
-
-A view whose constructor starts differently is left out before anything is
-built.
+is part of the window from the moment it exists. A view whose constructor
+starts differently is left out before anything is built.
+[How to place a view in the window](../how-to/place-a-view.md) shows the
+constructor with each placement.
 
 `QtSession` also:
 

@@ -92,28 +92,16 @@ which steps run.
 
 A device that does not connect, or a presenter whose constructor raises, is
 logged and left out. The session carries on without it, and the summary at
-the end says what is missing:
-
-```text
-Container built: 1/2 devices, 1/3 presenters, 0/0 views
-Not built: stage (device, not connected), broken (presenter)
-```
-
-Anything built from a missing component is left out too. A mistake in the
-session itself, such as a malformed `wiring` section, still stops the build.
+the end says what is missing. Anything built from a missing component is left
+out too. A mistake in the session itself, such as a malformed `wiring`
+section, still stops the build.
 [ADR 11](decisions/0011-tolerating-a-component-that-fails-to-build.md) records
 why.
 
-To stop instead whenever something is missing, make the session
-[strict](glossary.md#strict-session):
-
-```yaml
-strict: true
-```
-
-A strict session gives back everything it had started, then raises
-[`BuildError`][redsun.BuildError] naming each missing component and the
-reason.
+A [strict](glossary.md#strict-session) session stops instead, whenever
+something is missing.
+[How to find out why a component is missing](../how-to/find-a-missing-component.md)
+reads the summary and the log, and makes a session strict.
 
 ## Shutting down
 

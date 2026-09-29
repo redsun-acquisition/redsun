@@ -1,8 +1,8 @@
 """Describe a plan's signature as a `PlanSpec`.
 
 `create_plan_spec` inspects a ``bluesky`` ``MsgGenerator`` function and returns
-a `PlanSpec` describing its parameters, from which a view builds a parameter
-form.
+a `PlanSpec` describing its parameters, from which a view builds the controls
+of the plan.
 
 `_ANN_HANDLER_MAP` lists ``(predicate, handler)`` pairs turning annotations into
 `ParamDescription` fields (choices, ``device_proto``, ``multiselect``).
@@ -68,7 +68,7 @@ class UnresolvableAnnotationError(TypeError):
             f"A required parameter must be a Literal, a device protocol, a "
             f"sequence of them, a sequence of any other renderable type, or one "
             f"of int, float, str, bool, bytes, range, Path, an Enum or a "
-            f"datetime type. The plan will be skipped."
+            f"datetime type."
         )
 
 
@@ -386,7 +386,7 @@ def _is_renderable(ann: Any) -> bool:
 
     `Any` is excluded: it says nothing about the value, so no view can choose a
     control. Refusing here names the plan and parameter, which a failure while
-    building the form would not.
+    building the controls would not.
     """
     if ann is Any:
         return False

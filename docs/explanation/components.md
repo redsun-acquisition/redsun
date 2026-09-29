@@ -116,22 +116,10 @@ that failed to build, and the summary lists it as `camera (device, not
 connected)`.
 
 A device declared with `autoconnect=False` is left unconnected, for the
-session's code to connect when it chooses:
-
-```python
-class StagePresenter:
-    sig_connected = Signal(str)
-
-    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
-        self.name = name
-        self.devices = devices
-
-    @slot
-    async def connect_stage(self) -> None:
-        stage = self.devices["stage"]
-        await stage.connect()
-        self.sig_connected.emit(stage.name)
-```
+session's code to connect when it chooses. The build then cannot leave it out
+for hardware that is missing, and a component decides what to do when the
+connection fails. See
+[How to connect a device on demand](../how-to/connect-a-device-on-demand.md).
 
 ### Talking to a service
 
@@ -141,36 +129,13 @@ not declared, did not start, or has no prefix, the device is left out.
 
 ### Where a device writes
 
-A device writes its own data files. A device whose constructor takes
-`path_provider` gets the session's
-[path provider](glossary.md#path-provider), which puts every file
-of a session under one folder, and creates the folder of a file when it
-names it:
-
-```
-<base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
-```
-
-`base_dir` comes from the `storage` section of the session file. When left
-out, it is the folder `redsun` keeps for the user: `%LOCALAPPDATA%\redsun` on
-Windows, `~/Library/Application Support/redsun` on macOS and
-`~/.local/share/redsun` on Linux. A declaration cannot give `path_provider`
-itself. A device that does not take it picks its own paths.
-
-The path provider has three slots for the wiring. In this example
-`acquisition` is a presenter that runs plans, and `output_dir_widget` a view
-where the user picks a folder:
-
-```yaml
-wiring:
-  acquisition.sig_pre_launch_notify: path_provider.set_plan
-  acquisition.sig_plan_done: path_provider.reset_plan
-  output_dir_widget.sig_directory_chosen: path_provider.set_base_dir
-```
-
-`set_plan` names the files after the next run, and `reset_plan` goes back to
-`unknown`. `set_base_dir` raises `RuntimeError` while a plan runs, and once
-the session's catalog has started.
+A device writes its own data files, in the format it or its service chooses.
+A device whose constructor takes `path_provider` gets the session's
+[path provider](glossary.md#path-provider), which puts every file of a
+session under one folder, named after the session, the day, the data key and
+the plan. The files of a session are then found in one place, whatever wrote
+them. [How to choose where acquisition files go](../how-to/choose-where-files-go.md)
+sets the folder and the names.
 [ADR 13](decisions/0013-acquisition-storage-belongs-to-the-device.md) records
 why the device, and not `redsun`, writes the data.
 
@@ -203,28 +168,14 @@ whose instances keep that `name`. It inherits nothing from `redsun`.
 
 ## Views
 
-A [view](glossary.md#view) holds the widgets. It says where it
-wants to be shown with a [placement](glossary.md#placement):
-
-```python
-from qtpy.QtWidgets import QWidget
-
-from redsun import Placement
-from redsun.qt import Dock
-
-
-class MotorView(QWidget):
-    placement: Placement = Dock("left")
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-```
+A [view](glossary.md#view) holds the widgets. It says where it wants to be
+shown with a [placement](glossary.md#placement), such as `Dock("left")`.
 
 The placement is what makes a class a view: a view has one and a presenter
 does not. The frontend checks, before anything is built, that it can show the
 placement and that the view is the right kind of object for it.
-[Frontends](frontends.md) covers placements and the Qt rules.
+[Frontends](frontends.md) covers placements and the Qt rules, and
+[How to place a view in the window](../how-to/place-a-view.md) sets one.
 
 ## Signals and slots
 

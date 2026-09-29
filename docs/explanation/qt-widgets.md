@@ -11,125 +11,21 @@ icon: lucide/layout-panel-left
 ## Plan widgets
 
 `create_plan_widget` builds a [plan widget](glossary.md#plan-widget) for a
-`PlanSpec`. A view asks the session for the components that offer plans,
-describes each plan, and builds a plan widget from each description. It shows
-the plan widget of the plan the user chooses, and when the user presses
-**Run** it sends the name of that plan and the values the user chose:
+`PlanSpec`: an input for each parameter and a button to run the plan, and for
+a continuous plan a toggle, a pause button and a button for each action. It
+returns a `PlanWidget`, a frozen dataclass owning the widget tree, whose
+`group_box` is the page a view adds to its layout.
 
-```python
-from collections.abc import Mapping
+A plan widget runs nothing. It calls the view back when a button is pressed,
+and the view sends the name of the plan and `PlanWidget.parameters` to the
+presenter that runs it. The view then sets the widget as the plan starts,
+pauses and ends, with `toggle` and `pause`. The widget depends on no
+presenter, and the `PlanSpec` it is built from depends on no toolkit.
 
-from psygnal import Signal
-from qtpy.QtWidgets import QComboBox, QStackedWidget, QVBoxLayout, QWidget
-
-from redsun import DeviceMapping, HasPlans, Placement, slot
-from redsun.presenter.plan_spec import PlanSpec, create_plan_spec
-from redsun.qt import Dock
-from redsun.view.qt.utils import PlanWidget, create_plan_widget
-
-
-class PlanView(QWidget):
-    placement: Placement = Dock("right")
-    sig_run = Signal(str, dict)
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-        self.chooser = QComboBox()
-        self.pages = QStackedWidget()
-        self.chooser.currentIndexChanged.connect(self.pages.setCurrentIndex)
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.chooser)
-        layout.addWidget(self.pages)
-        self.widgets: dict[str, PlanWidget] = {}
-
-    def setup(self, providers: Mapping[str, HasPlans], devices: DeviceMapping) -> None:
-        for component in providers.values():
-            for entry in component.plan_map().values():
-                self.add_plan(create_plan_spec(entry["plan"], devices))
-
-    def add_plan(self, spec: PlanSpec) -> None:
-        widget = create_plan_widget(
-            spec, run_callback=lambda: self.ask_to_run(spec.name)
-        )
-        self.widgets[spec.name] = widget
-        self.chooser.addItem(spec.name)
-        self.pages.addWidget(widget.group_box)
-
-    def ask_to_run(self, plan: str) -> None:
-        self.setEnabled(False)
-        self.sig_run.emit(plan, self.widgets[plan].parameters)
-
-    @slot
-    def on_finished(self) -> None:
-        self.setEnabled(True)
-```
-
-The plans come from the components of
-[A plan that ends by itself](plans.md#a-plan-that-ends-by-itself), and
-[From a plan to its widget](plans.md#from-a-plan-to-its-widget) says why the
-view
-describes them itself. The session connects the view to the presenter that
-runs the plans:
-
-```python
-class MyApp(QtSession):
-    stage: AsDevice[MyStage]
-    stage_plans: AsPresenter[StagePlans]
-    plan_ctrl: AsPresenter[PlanPresenter]
-    plan_view: AsView[PlanView]
-
-    def wire(self) -> Iterator[Link]:
-        yield self.plan_view.sig_run, self.plan_ctrl.run
-        yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
-```
-
-A plan that is continuous, can be paused or offers actions takes more
-callbacks, one for each kind of button:
-
-```python
-widget = create_plan_widget(
-    spec,
-    toggle_callback=on_toggle,
-    pause_callback=on_pause,
-    action_clicked_callback=on_action,
-    action_toggled_callback=on_action_toggled,
-)
-```
-
-It returns a `PlanWidget`, a frozen dataclass owning the widget tree:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `group_box` | `QWidget` | top-level page for a `QStackedWidget` |
-| `container` | `mgw.Container` | the inputs of the parameters, a `magicgui` container |
-| `run_button` | `QPushButton` | run / stop button |
-| `pause_button` | `QPushButton \| None` | pause / resume (pausable plans only) |
-| `actions_group` | `QGroupBox \| None` | action buttons (if any) |
-| `action_buttons` | `dict[str, ActionButton]` | per-action button access |
-| `callbacks_list` | `QListWidget \| None` | document callbacks to run the plan with (if any) |
-
-### Runtime control
-
-The presenter sets the widget's state through its methods:
-
-```python
-widget.toggle(True)  # plan started  -> "Stop", enables actions
-widget.toggle(False)  # plan stopped  -> "Run", disables actions
-widget.pause(True)  # paused        -> "Resume", disables run button
-widget.pause(False)  # resumed       -> "Pause", enables run button
-widget.setEnabled(False)  # disable whole widget during setup
-widget.enable_actions(True)  # enable action buttons independently
-```
-
-### Reading parameter values
-
-```python
-args, kwargs = collect_arguments(spec, widget.parameters)
-```
-
-`widget.parameters` returns `{name: value}` for every input of the plan
-widget.
+[How to run a plan from a presenter](../how-to/run-a-plan.md) builds the view,
+and [How to write a plan that runs until stopped](../how-to/write-a-continuous-plan.md)
+adds the toggle, the pause button and the action buttons. The attributes of
+`PlanWidget` are in the [reference](../reference/api/view.md#qt-widgets).
 
 ### Document callbacks
 
