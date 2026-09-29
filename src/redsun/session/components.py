@@ -14,8 +14,7 @@ class MyApp(Session):
 ```
 
 A declaration must carry one: an annotation without a layer is an ordinary
-attribute. The names are prefixed so that they say what they mark, and so that
-they collide with nothing a component may itself subclass.
+attribute.
 """
 
 from __future__ import annotations

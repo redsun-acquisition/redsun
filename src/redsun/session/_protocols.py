@@ -69,15 +69,14 @@ class HasAsyncShutdown(Protocol):
 class NamedComponent(Protocol):
     """A component that knows the name it was declared under.
 
-    Every component clears this, presenters and views alike. A session may
-    declare two components of one class, and the declared name is the only
-    thing telling them apart, so one that discards the name it was constructed
-    with cannot be identified in anything it emits.
+    Every component must satisfy this, presenters and views alike, and keep
+    the name it was constructed with.
 
-    Declared as a read-only property because the framework only reads it: a
-    plain instance attribute, a class attribute or a property all satisfy it.
+    A plain instance attribute, a class attribute or a property all satisfy
+    it.
     """
 
+    # read-only, since the framework only reads it
     @property
     def name(self) -> str:
         """Identity key of the component."""
@@ -88,10 +87,9 @@ class NamedComponent(Protocol):
 class AttachableComponent(NamedComponent, Protocol):
     """A component the frontend can attach, and where it asks to go.
 
-    `placement` is the whole of the difference between a view and a
-    presenter, and it is what the frontend reads to attach the view.
-    Answering it from the class rather than from a value assigned in
-    `__init__` lets a session refuse a view its frontend cannot attach
+    `placement` is the only difference between a view and a presenter, and
+    it is what the frontend reads to attach the view. When it is answered
+    from the class, a session refuses a view its frontend cannot attach
     before anything is built.
     """
 
@@ -106,29 +104,24 @@ class BuildableSession(Protocol):
     """The steps a session's build runs, each one a method of its own.
 
     `build` calls them in the order they are written here and does nothing
-    else, so what a session varies is a step rather than the sequence. A
-    session bound to no toolkit answers `start_runtime` and `present` with
-    nothing, and one bound to a toolkit fills exactly those two: what has to
-    exist before a component can be constructed, and how what was built is
-    assembled into whatever shows it.
+    else. A session bound to no toolkit answers `start_runtime` and `present`
+    with nothing, and one bound to a toolkit fills exactly those two: what
+    has to exist before a component can be constructed, and how what was
+    built is assembled into whatever shows it.
 
     Every step takes nothing and returns nothing. What a step needs it reads
-    from the session, and what it leaves it leaves on the session, so a step
-    can be replaced without the ones around it knowing. A step taking
-    something that has to be given back registers how with `on_release` at the
-    moment it takes it, and `shutdown` runs those in reverse, so a teardown is
-    the build read backwards and a build that fails runs the releases its
-    finished steps earned.
+    from the session, and what it leaves it leaves on the session. A step
+    taking something that has to be given back registers how with
+    `on_release` at the moment it takes it, and `shutdown` runs those in
+    reverse, after a finished build or one that failed partway.
 
     Inherit it rather than satisfying it structurally. The members are
     abstract, so a session missing one is refused when it is constructed and a
     type checker refuses it too.
-
-    `__slots__` is empty here because a body omitting it gives a `__dict__`
-    to every class that inherits it, and `redsun.Session` declares
-    its own.
     """
 
+    # a body without __slots__ would give every subclass a __dict__, and
+    # Session declares its own slots
     __slots__ = ()
 
     @abstractmethod

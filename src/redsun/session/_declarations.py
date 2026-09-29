@@ -62,12 +62,13 @@ __all__ = [
     "read_services",
 ]
 
+# not TypeForm: a NewType built at runtime is a type expression only at
+# runtime, which no type checker can model
 Key: TypeAlias = Any
 """A dependency key.
 
-Not `TypeForm`: a `NewType` built at runtime is a type expression only at
-runtime, and no type checker can model one. Hints read from an annotation stay
-`TypeForm[Any]`; keys the session synthesises are this.
+Hints read from an annotation stay `TypeForm[Any]`; keys the session
+synthesises are this.
 """
 
 
@@ -544,9 +545,9 @@ def read(
 ) -> dict[str, Declaration]:
     """Collect the component declarations of *cls*.
 
-    Declarations are annotations, so nothing is collected at class creation
-    and no attribute is replaced by a descriptor. `get_type_hints` walks the
-    MRO, so inheritance needs no merge of its own.
+    Declarations are read from the annotations of *cls* and its bases.
+    Nothing is collected at class creation and no attribute is replaced by a
+    descriptor.
 
     An annotation is a declaration only if it carries a layer, which is what
     `redsun.session.components` adds; anything else is an ordinary attribute.
@@ -826,11 +827,8 @@ def from_config(
 def hints(cls: type) -> dict[str, Any]:
     """Resolve the annotations of *cls* and its bases, one class at a time.
 
-    `from __future__ import annotations` makes every annotation a string,
-    resolved against the defining module's globals. Resolving the whole MRO in
-    one call fails entirely if any single class references a name that is only
-    imported under `TYPE_CHECKING`, so each is resolved on its own and the
-    one at fault is named.
+    Each class's annotations are resolved against its own module's globals,
+    and an error names the class at fault.
 
     Raises
     ------
@@ -838,6 +836,8 @@ def hints(cls: type) -> dict[str, Any]:
         If a class declares an annotation that cannot be resolved at runtime.
     """
     resolved: dict[str, Any] = {}
+    # resolving the whole MRO in one call fails for every class when a single
+    # one annotates a name imported only under TYPE_CHECKING
     for klass in reversed(cls.__mro__):
         if not getattr(klass, "__annotations__", None):
             continue

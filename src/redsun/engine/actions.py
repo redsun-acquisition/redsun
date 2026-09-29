@@ -182,10 +182,9 @@ class ActionManager:
     """The actions a running plan offers, and the state each is in.
 
     Whoever owns the plans owns one. A plan waits on it with `wait`, a user
-    asks through `request`, and `sig_changed` reports every change of state,
-    so the engine running the plan needs to know nothing of actions. Only the
-    plan changes a state, so the changes are reported in the order they
-    happen.
+    asks through `request`, and `sig_changed` reports every change of state.
+    Only the plan changes a state, so the changes are reported in the order
+    they happen.
     """
 
     sig_changed = Signal(str, str)

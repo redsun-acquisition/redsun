@@ -33,13 +33,10 @@ STOP_TIMEOUT: Final = 10.0
 TAIL_LINES: Final = 20
 """Lines of a service's latest output kept to explain an unexpected exit."""
 
+# without it, services started from several threads at once could draw one
+# port twice, lose an address list entry, or copy a changing environment
 launch_lock = threading.Lock()
-"""Held while a service reserves its transport and copies the environment.
-
-Services started from several threads at once would otherwise draw one port
-twice, lose an entry of an address list, or copy the environment while
-another thread changes it.
-"""
+"""Held while a service reserves its transport and copies the environment."""
 
 PVXS_LINE: Final = re.compile(
     r"^(?P<time>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\.(?P<fraction>\d+) "

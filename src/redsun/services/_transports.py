@@ -33,9 +33,7 @@ LOOPBACK: Final = "127.0.0.1"
 class Transport(Protocol):
     """What a control-system protocol needs of the process on each side.
 
-    A session has one, which every service of it uses: the variables the
-    protocols read are per process, so two of them in one session would leave
-    each unable to say which service a variable is for.
+    A session has one, which every service of it uses.
     """
 
     name: str
@@ -87,17 +85,14 @@ class ChannelAccess:
         add_to_env("EPICS_CA_ADDR_LIST", f"127.0.0.1:{self._port(service)}")
 
     async def release(self) -> None:
-        """Close every Channel Access channel this process holds, if it holds any.
-
-        Otherwise a channel to a stopped service waits out libca's reconnect
-        delay, about ten seconds, before a rebuilt device reaches the restarted
-        service. Every channel in the process is closed, since libca offers
-        nothing narrower.
-        """
+        """Close every Channel Access channel this process holds, if it holds any."""
         try:
             from aioca import purge_channel_caches
         except ImportError:
             return
+        # a channel left to a stopped service waits out libca's reconnect
+        # delay, about ten seconds, before a rebuilt device reaches the
+        # restarted one; libca offers nothing narrower than every channel
         purge_channel_caches()
 
     def _port(self, service: str) -> int:

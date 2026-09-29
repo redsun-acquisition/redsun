@@ -81,10 +81,9 @@ EMPTY_AS_MAPPING: Final = frozenset(
 IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
 """Keys naming what kind of session this is, which every layered source must agree on.
 
-Everything else describes the session's content, where a later source
-legitimately overrides an earlier one. `session` is content by this rule: a
-caller laying `{"session": "run-2"}` over a shared file is renaming that
-session, not contradicting it.
+On every other key a later source overrides an earlier one. `session` is not
+among them, so laying `{"session": "run-2"}` over a shared file renames the
+session.
 """
 
 FRONTEND_GROUP: Final = "redsun.frontends"
@@ -151,10 +150,7 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
 
     A component entry is the exception: under `services`, `devices`,
     `presenters` and `views` the section merges by component name, but a
-    component *named* in *overlay* is taken from it whole. Those entries are
-    the keyword arguments of a constructor call rather than a tree of settings,
-    so one source owns one component's arguments and a reader stops at the
-    last source naming it.
+    component *named* in *overlay* is taken from it whole.
     """
     merged = dict(base)
     for key, value in overlay.items():
@@ -167,6 +163,8 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
                     f"Component '{shadowed}' in '{key}' is taken from a later "
                     f"configuration source, replacing the entry under it"
                 )
+            # an entry is a constructor's keyword arguments, not a tree of
+            # settings, so the last source naming a component owns them all
             merged[key] = {**current, **value}
         else:
             merged[key] = merge_config(current, value)
@@ -527,9 +525,6 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
     the sections, and hook entries are grouped. A problem found on the way is
     returned rather than raised, and the part it concerns left out, so the
     rest of the file is still validated.
-
-    Hook entries are grouped here, before anything is copied, since the
-    entries a YAML anchor shares are known only by being one object.
     """
     data = {
         key: {} if value is None and key in EMPTY_AS_MAPPING else value
@@ -561,6 +556,8 @@ def prepared(data: Mapping[str, Any]) -> tuple[dict[str, Any], list[InitErrorDet
             refusal(("hooks",), "'hooks' must be a mapping of hook points to entries")
         )
     else:
+        # before anything is copied: entries a YAML anchor shares are known
+        # only by being one object
         try:
             data["hooks"] = group_hook_entries(hooks)
         except ValueError as e:

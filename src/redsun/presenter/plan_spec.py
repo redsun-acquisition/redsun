@@ -377,11 +377,11 @@ def _is_renderable(ann: Any) -> bool:
     """Return `True` if a view layer can be expected to build a control for *ann*.
 
     Imports no toolkit, so it can run before any application object exists.
-
-    `Any` is excluded: it says nothing about the value, so no view can choose a
-    control. Refusing here names the plan and parameter, which a failure while
-    building the controls would not.
+    `Any` is excluded.
     """
+    # Any says nothing about the value, so no view can choose a control;
+    # refusing it here names the plan and parameter, where building the
+    # controls would not
     if ann is Any:
         return False
     if ann in _PRIMITIVE_TYPES:

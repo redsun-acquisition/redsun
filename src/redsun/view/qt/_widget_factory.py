@@ -11,10 +11,8 @@ at the right priority in `_WIDGET_FACTORY_MAP`.
 
 Unresolvable annotations
 ------------------------
-`create_plan_spec` already checks that every required parameter maps to a
-widget: a plan failing that raises `UnresolvableAnnotationError` and is skipped.
-`create_param_widget` therefore raises `RuntimeError` if every entry fails,
-instead of falling back silently.
+`create_param_widget` raises `RuntimeError` if every entry fails, instead of
+falling back silently.
 """
 
 from __future__ import annotations

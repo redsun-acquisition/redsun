@@ -39,11 +39,7 @@ class ConfigurationError(ValueError):
 
 
 class ConfigurationInUse(OSError):
-    """Raised when a session is asked to write over a source it was built from.
-
-    A saved file is one flat session, where a source may be shared by several
-    and hand-written. Overwriting one replaces what those other sessions read.
-    """
+    """Raised when a session is asked to write over a source it was built from."""
 
     def __init__(self, path: Path) -> None:
         super().__init__(f"{path} is a source this session was built from")

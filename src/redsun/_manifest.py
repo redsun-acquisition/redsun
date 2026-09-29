@@ -126,8 +126,7 @@ def discover() -> dict[str, PluginManifest]:
     """Read every installed manifest, by entry point name.
 
     A manifest that cannot be read, or does not validate, is logged with its
-    file and every error, and left out whole: one bundle's mistake must not
-    fail the sessions that do not use it.
+    file and every error, and left out whole.
     """
     manifests: dict[str, PluginManifest] = {}
     for plugin in entry_points(group=ENTRY_POINT_GROUP):

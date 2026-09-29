@@ -1,10 +1,8 @@
 """The Qt frontend: the placements it attaches, and a container to subclass.
 
-Qt is a windowing toolkit, so the placements it understands are window
-concepts and are defined here rather than in the core: a docked panel, the
-central area, a menu entry, a toolbar entry. Each demands a toolkit type of
-the view asking for it, and that pairing is the frontend's alone, which is why
-no toolkit type appears in `redsun.Placement` or in a container.
+The placements Qt attaches are defined here: a docked panel, the central
+area, a menu entry, a toolbar entry. Each demands a toolkit type of the view
+asking for it.
 
 ```python
 from redsun import AsView
@@ -230,8 +228,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
     Subclass this rather than `redsun.Session` to build
     against Qt: it accepts the placements Qt attaches and refuses the rest
-    when the declarations are read. Importing it needs the Qt bindings, which
-    is why it lives here and not beside the container it extends.
+    when the declarations are read. Importing it needs the Qt bindings.
 
     The base container builds the components; this one puts them in a window.
     Constructing the container touches no toolkit object and reads no file:
@@ -302,9 +299,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def app(self) -> QApplication:
         """The toolkit application this session runs on, and keeps alive.
 
-        Nothing else holds one that the session created, and a collected
-        `QApplication` takes the next widget built with it, so the session
-        keeps the reference until it is released.
+        The session keeps a reference to one it created until it is released.
 
         Raises
         ------
@@ -451,8 +446,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         """Remember where this user left the window.
 
         `run` asks for this as the session ends, so a window that was shown is
-        the only one that writes: a session built for a test never displayed
-        one, and its geometry means nothing.
+        the only one that writes.
         """
         if self._main_window is None:
             return
@@ -462,14 +456,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def _destroy_widgets(self) -> None:
         """Close and delete the views, then the window that holds them.
 
-        A `QWidget` outlives its last Python reference whenever C++ owns it,
-        so dropping a component does not end its widget and `deleteLater` is
-        what does. It is closed first because that is the only way its
-        `closeEvent` runs: deleting a widget does not send one, and closing
-        the window does not send one to a view docked inside it. A component
-        written here has `shutdown` for its own teardown and needs none of
-        this; a view that *is* a third-party widget, wrapping a viewer whose
-        cleanup it inherits, has nowhere else for that cleanup to happen.
+        Each widget is closed before it is deleted, so its `closeEvent` runs.
 
         The views go in reverse build order, as their own teardowns did, and
         the window after the views it docks. Reading it afterwards
@@ -486,7 +473,11 @@ class QtSession(DesktopSession[QMainWindow], Session):
             logger.exception("Failed to deliver the queued emissions")
         for view in reversed(list(self.views.values())):
             if isinstance(view, QWidget):
+                # the only way closeEvent runs: deleting sends none, and
+                # closing the window sends none to a view docked inside it
                 view.close()
+                # C++ may own the widget, so dropping the last Python
+                # reference would not end it
                 view.deleteLater()
         if self._main_window is not None:
             self._main_window.close()
@@ -498,6 +489,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
             # it out
             self._qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
+    # underscored: a hook is declared under its hook point's key, which a
+    # public method of that name would collide with
     def _confirm_close(self) -> bool:
         """Return whether the session may close, asking about unsaved changes.
 
@@ -509,9 +502,6 @@ class QtSession(DesktopSession[QMainWindow], Session):
         differently from closes without a word, and so does one whose user has
         ticked "don't ask again". Otherwise the prompt offers Save, Discard and
         Cancel.
-
-        Underscored because a hook point's key is the attribute a hook is
-        declared under, which a public method of that name would collide with.
         """
         confirmer = self.hooks.get(QtHook.CONFIRM_CLOSE)
         if isinstance(confirmer, ConfirmsClose):
@@ -566,8 +556,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
 
         The dialog says comments are not kept, the file being written rather
         than edited. A path the session was built from is refused after the
-        dialog has accepted it, since only the session knows which files those
-        are and what else reads them.
+        dialog has accepted it.
         """
         path, _ = QFileDialog.getSaveFileName(
             self._main_window,
@@ -577,6 +566,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
         if not path:
             return False
+        # only the session knows which files it was built from, so the dialog
+        # accepts them and write refuses them
         try:
             self.write(path)
         except ConfigurationInUse as reason:
@@ -630,6 +621,8 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def run(self) -> NoReturn:
         """Build, show the window, and hand over to the event loop."""
         self.build()
+        # here rather than in build: a session built for a test never shows
+        # its window, and that geometry means nothing
         self.on_release(self.save_layout)
         self.app.aboutToQuit.connect(self.shutdown)
         start_emitting_from_queue()

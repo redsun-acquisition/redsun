@@ -47,16 +47,16 @@ def get_choice_list(
 def _is_device_annotation(ann: Any) -> bool:
     """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a `@runtime_checkable Protocol`.
 
-    A Protocol cannot inherit a concrete class, so a device protocol such as
-    `_MotorProtocol` cannot inherit `Device`. Any `@runtime_checkable`
-    Protocol is therefore accepted here; each device is checked later with
-    `isinstance(device, proto)`.
+    Any `@runtime_checkable` Protocol is accepted; each device is checked
+    later with `isinstance(device, proto)`.
     """
     try:
         if issubclass(ann, OADevice):
             return True
     except TypeError:
         return False
+    # a Protocol cannot inherit a concrete class, so a device protocol cannot
+    # inherit Device
     return isinstance(ann, type) and getattr(ann, "_is_runtime_protocol", False)
 
 

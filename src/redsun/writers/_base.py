@@ -90,8 +90,7 @@ def sibling_uri(uri: str, name: str) -> str:
 def root_attributes(path: Path) -> Mapping[str, Any]:
     """Return the attributes of a Zarr store's root group, empty when it has none.
 
-    Reads the metadata file directly, so neither `zarr` nor a reader package
-    is needed to tell a root carrying NGFF metadata from a plain group.
+    Reads the metadata file directly, without `zarr` or a reader package.
     """
     v3 = path / "zarr.json"
     if v3.is_file():

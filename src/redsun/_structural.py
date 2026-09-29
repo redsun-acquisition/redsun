@@ -138,10 +138,10 @@ def _rendered(name: str, signature: inspect.Signature) -> str:
 def _defined(owner: type, name: str) -> Any:
     """Return *name* as *owner* or one of its bases defines it.
 
-    Unlike `inspect.getattr_static`, the metaclass is not searched: every class
-    reaches `type.__call__` through it, which says nothing about whether its
-    instances can be called.
+    Unlike `inspect.getattr_static`, the metaclass is not searched.
     """
+    # every class reaches type.__call__ through its metaclass, which says
+    # nothing about whether its instances can be called
     for klass in owner.__mro__:
         if name in vars(klass):
             return vars(klass)[name]

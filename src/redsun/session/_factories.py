@@ -42,16 +42,15 @@ def synthesize(
 ) -> Callable[..., Any]:
     """Give *fn* the public signature `(**params) -> returns`.
 
-    Both `__annotations__` and `__signature__` are set: the graph reads the
-    signature to learn each parameter's kind and the annotations to learn its
-    type, so a closure taking `**kwargs` would otherwise present no
-    dependencies at all.
+    Both `__annotations__` and `__signature__` are set.
 
     Every name appearing in *params* or *returns* must resolve at runtime; the
     graph evaluates them, and an import made only for type checking fails there.
     """
     fn.__name__ = name
     fn.__qualname__ = name
+    # the graph reads each parameter's kind from the signature and its type
+    # from the annotations; a closure taking **kwargs shows neither
     fn.__annotations__ = {**params, "return": returns}
     fn.__signature__ = inspect.Signature(  # type: ignore[attr-defined]
         parameters=[
@@ -112,9 +111,8 @@ def injectable(
     nothing does. A parameter asking for devices with `DevicesOf` is left
     out, the session passing the devices itself.
 
-    Annotations are read from the signature rather than from `__init__`,
-    because a class may synthesize one: a pydantic model's real `__init__`
-    takes `**data`, and its fields appear only in the signature.
+    Annotations are read from the class signature rather than from
+    `__init__`.
 
     Raises
     ------
@@ -122,6 +120,8 @@ def injectable(
         If a remaining parameter carries no annotation.
     """
     bound = ("self", "name", *passed) if binds_name else ("self", *passed)
+    # a pydantic model's own __init__ takes **data; its fields appear only in
+    # the class signature
     return wanted_from(constructor(cls), cls.__name__, cfg_kwargs, bound)
 
 

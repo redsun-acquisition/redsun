@@ -149,8 +149,7 @@ def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
 def silent(step: str) -> None:
     """Take a build step's name and do nothing with it.
 
-    What a session reports progress to when no hook asked for it, so the
-    build has one path whether or not anything is watching.
+    What a session reports progress to when no hook asked for it.
     """
 
 
@@ -172,16 +171,10 @@ BUILD_STEPS: Final[tuple[str, ...]] = (
 )
 """The steps a build reports, in order, to whatever is watching it.
 
-A `during_build` hook is told one of these names as each step starts, so a
-progress display that counts them needs the total in advance to show how far
-along it is. `redsun` does not re-export it: it names the steps of
-this session class rather than the layer's surface.
+A `during_build` hook is told one of these names as each step starts.
 
 `Session.build` runs two steps before the first of these, reading the
-configuration and starting the toolkit's runtime, and reports neither. A hook
-covering the build is a toolkit object itself, a splash screen being the case
-it was written for, so nothing can be watching until the runtime that shows it
-exists.
+configuration and starting the toolkit's runtime, and reports neither.
 """
 
 CONNECT_TIMEOUT: Final = 10.0
@@ -561,9 +554,9 @@ class Session(BuildableSession):
         """What this session is called.
 
         The configuration's `session`, or this session's own class name when
-        the configuration says nothing. A class name is distinct per session
-        where a shared constant would not be.
+        the configuration says nothing.
         """
+        # the class name differs between sessions where a fixed default would not
         return self._configuration().session or type(self).__name__
 
     @property
@@ -595,18 +588,16 @@ class Session(BuildableSession):
     def make_store(self) -> Store:
         """Return the registry this session builds its components out of.
 
-        Named after the session and constructed rather than registered:
-        `Store.create` would enter it in the process-wide registry, where a
-        second session of one name refuses to start and an unfinished one
-        keeps the name until it is destroyed. Nothing here looks a store up by
-        name, so the registry buys nothing and costs a teardown obligation on
-        every session that ends without one.
+        Named after the session, and not entered in the process-wide registry
+        `Store.create` keeps.
 
-        A session owning an application of its own overrides this to share
-        that application's store, which is what lets a command reach a
-        component. That one *is* registered, by app-model, and freed by
-        `Application.destroy`.
+        A session owning an application of its own overrides this to return
+        that application's store, which app-model registers and
+        `Application.destroy` frees.
         """
+        # Store.create would register the name process-wide: a second session
+        # of one name could not start, and an unfinished one would keep the
+        # name. Nothing looks a store up by name.
         return Store(self.name)
 
     def _share(self, store: Store, providers: Mapping[str, Any]) -> None:
@@ -629,20 +620,16 @@ class Session(BuildableSession):
     def build(self) -> Self:
         """Run each step of `BuildableSession` in turn, announcing all but two.
 
-        Devices are built first and on their own, so that one which fails is
-        logged and skipped rather than stopping the build. The components
-        follow in layer order, and within a layer in the order they are built
-        from one another.
+        Devices are built first and on their own; one that fails is logged
+        and skipped. The components follow in layer order, and within a layer
+        in the order they are built from one another.
 
         A session built against a toolkit fills `start_runtime` and
-        `present` rather than overriding this method, so the order the steps
-        run in is written once and a toolkit can act between two of them.
+        `present` rather than overriding this method.
         `read_configuration` and `start_runtime` run before the span opens and
-        are not announced, a hook covering the build being a toolkit object
-        that cannot exist before the runtime it is shown on. A step that
-        raises stops the build, which is the one failure a session does not
-        carry on past: the exception is logged, and `shutdown` gives back what
-        the finished steps took before it leaves.
+        are not announced. A step that raises stops the build: the exception
+        is logged, and `shutdown` gives back what the finished steps took
+        before the exception leaves.
         """
         if self._is_built:
             logger.warning("Container already built, skipping rebuild")
@@ -650,6 +637,8 @@ class Session(BuildableSession):
         try:
             self.read_configuration()
             self.start_runtime()
+            # a hook watching the build is a toolkit object, which cannot exist
+            # before the runtime that shows it
             with self.open_span() as report:
                 self._report = report
                 for step, run in (
@@ -680,17 +669,16 @@ class Session(BuildableSession):
     def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
         """Return the span the build announces its steps to.
 
-        Nothing watches by default, so this is the reporter already in place
-        and the build has one path whether or not a hook opened a span.
+        By default this yields the reporter already in place, which does
+        nothing.
         """
         return nullcontext(self._report)
 
     def on_release(self, release: Callable[[], None]) -> None:
         """Register how to give something back, as the step takes it.
 
-        Registering at the moment of taking is what lets one teardown serve a
-        finished session and a build that stopped halfway: either way what
-        runs is what was actually taken.
+        `shutdown` runs the releases registered so far, so a build that
+        stopped halfway gives back only what it took.
         """
         self._releases.callback(release)
 
@@ -1022,10 +1010,7 @@ class Session(BuildableSession):
 
         `None` where there is nothing to write, which leaves the entry the
         session loaded in place. One refused key discards the whole entry
-        rather than only itself: dropping the key alone would leave an entry
-        the component never asked for, where a renamed setting writes the new
-        key, loses it, and keeps the old one beside values that assume the
-        rename.
+        rather than only itself.
         """
         serializable = as_protocol(declaration.instance, Serializable)
         if serializable is None:
@@ -1041,6 +1026,9 @@ class Session(BuildableSession):
             ", ".join(refused),
             type(serializable).__name__,
         )
+        # dropping only the refused key would write an entry the component
+        # never asked for: a renamed setting would lose its new key and keep
+        # the old one
         return None
 
     def _register_framework_values(
@@ -1089,10 +1077,10 @@ class Session(BuildableSession):
     def _set_components(self, components: Mapping[str, object]) -> None:
         """Record the names built components are known by.
 
-        Both mappings are filled in place rather than rebound: a live view
-        handed to a component holds the mapping itself, and rebinding would
-        leave it looking at the empty one it was given during the build.
+        Both mappings are filled in place rather than rebound.
         """
+        # a live view handed to a component during the build holds this
+        # mapping itself; rebinding would leave it with the empty one
         self._built_components.clear()
         self._built_components.update(components)
         self._names.clear()
@@ -1547,9 +1535,8 @@ class Session(BuildableSession):
     def _check_layers(self, declarations: list[Declaration]) -> None:
         """Refuse a component whose `setup` reaches into a later layer.
 
-        Every component exists when `setup` runs, so this is a rule about
-        direction rather than a consequence of the build order: a presenter
-        does not know about views.
+        The refusal holds although every component exists when `setup` runs:
+        a presenter's `setup` cannot take a view.
 
         Raises
         ------
@@ -1717,8 +1704,8 @@ class Session(BuildableSession):
     def build_devices(self) -> None:
         """Construct the devices, which are built from no other component.
 
-        They come before the store because a device is made from its own
-        declaration and asks the session for nothing. A device naming a service
+        They are built before the store opens, each from its own declaration
+        alone. A device naming a service
         receives that service's prefix as `prefix`, and is skipped when the
         service is not declared, did not start, or gives no prefix.
         """
@@ -1907,12 +1894,8 @@ class Session(BuildableSession):
     def _warn_unused(self) -> None:
         """Report a component and a shared value the session never uses.
 
-        Both are legal, so neither stops the build: a session under
-        construction has components nothing reaches yet, and a bundle may ship
-        one a particular session does not need.
-
-        Runs after the wiring, which is the last thing that can put a
-        component to use.
+        Neither stops the build. Runs after the wiring, the last step that can
+        put a component to use.
         """
         declarations = [d for d in self._components() if d.instance is not None]
         wanted = {
@@ -2092,13 +2075,10 @@ def refuse_backwards(
 
 
 def as_protocol(instance: object, protocol: TypeForm[P]) -> P | None:
-    """Return *instance* typed as the runtime-checkable *protocol*, or `None`.
-
-    Returning the value rather than a `TypeIs` keeps narrowing out of the
-    caller: mypy reports a check of a union of a class and a protocol against
-    another protocol as unreachable.
-    """
-    # the protocols passed are classes at runtime
+    """Return *instance* typed as the runtime-checkable *protocol*, or `None`."""
+    # a value rather than a TypeIs keeps narrowing out of the caller, where
+    # mypy reports a union of a class and a protocol checked against another
+    # protocol as unreachable; the protocols passed are classes at runtime
     return cast("P", instance) if isinstance(instance, cast("type", protocol)) else None
 
 

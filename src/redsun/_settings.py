@@ -26,9 +26,7 @@ logger = logging.getLogger("redsun")
 class Settings:
     """What a session remembers about how one user likes to run it.
 
-    Per user and per machine, which is why it is not the session file: two
-    microscopes may share a configuration, and neither should inherit the
-    other's window layout or the answer someone gave a prompt once.
+    Kept per user and per machine, apart from the session file.
 
     A session builds one for itself and registers it, so an action asks for it
     by type. Reading a session that has never written one gives the defaults
@@ -51,9 +49,9 @@ class Settings:
     def for_session(cls, name: str) -> Self:
         """Return the settings of the session called *name*.
 
-        Sessions do not share a file: a name is what tells one user's two
-        sessions apart, and a layout saved by one means nothing to the other.
+        Sessions do not share a file.
         """
+        # a layout saved by one session means nothing to another
         return cls(Path(user_config_dir("redsun", appauthor=False)) / f"{name}.json")
 
     @property
@@ -68,8 +66,7 @@ class Settings:
     def set(self, key: str, value: JsonValue) -> None:
         """Remember *value* under *key*, and write the file.
 
-        Written as it is set rather than at shutdown, so a session that ends
-        badly still remembers what the user chose before it did.
+        Written as it is set rather than at shutdown.
 
         Raises
         ------
@@ -77,6 +74,7 @@ class Settings:
             If *value* is not JSON-serializable.
         """
         self._values[key] = value
+        # now, so a session that crashes later keeps what the user chose
         self._write()
 
     def __contains__(self, key: str) -> bool:
@@ -98,14 +96,15 @@ class Settings:
 def read(path: Path) -> dict[str, JsonValue]:
     """Return what *path* holds, or nothing when it is absent or unreadable.
 
-    A settings file is written by the program and read by it, so one that
-    cannot be parsed is damage rather than a mistake a user should be stopped
-    for. It is reported and the session comes up with defaults.
+    A file that cannot be parsed is logged as a warning and read as empty,
+    so the session comes up with defaults.
     """
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
+    # only the program writes this file, so a broken one is damage rather
+    # than a mistake to stop the user for
     except (OSError, json.JSONDecodeError) as e:
         logger.warning("Ignoring unreadable settings at %s: %s", path, e)
         return {}
