@@ -25,6 +25,16 @@ class Writer(Device):
         super().__init__(name=name)
 
 
+class PositionalWriter(Device):
+    """A device taking the provider by position only, which the session cannot pass."""
+
+    def __init__(
+        self, path_provider: PathProvider | None = None, /, name: str = ""
+    ) -> None:
+        self.provider = path_provider
+        super().__init__(name=name)
+
+
 class Announcer:
     """Presenter announcing the plan that is about to run."""
 
@@ -46,6 +56,10 @@ class WriterApp(Session):
     writer: AsDevice[Writer]
 
 
+class PositionalWriterApp(Session):
+    writer: AsDevice[PositionalWriter]
+
+
 class AnnouncerApp(Session):
     announcer: AsPresenter[Announcer]
 
@@ -62,6 +76,16 @@ def test_a_device_taking_one_gets_the_sessions_provider(build: BuildSession) -> 
 
     assert provider is app.path_provider
     assert provider().directory_path.parent.name == "its-own-session"
+
+
+def test_a_device_taking_the_provider_by_position_only_is_skipped(
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Skip a device that takes `path_provider` by position only, naming why."""
+    app = build(PositionalWriterApp)
+    assert "writer" not in app.devices
+    assert "takes 'path_provider' by position only" in caplog.text
 
 
 def test_the_root_comes_from_the_storage_section(

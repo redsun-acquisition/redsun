@@ -1767,13 +1767,22 @@ class Session(BuildableSession):
         return {"prefix": service.prefix}
 
     def _path_provider_for(self, declaration: Declaration) -> dict[str, object]:
-        """Return the `path_provider` keyword, for a device whose constructor takes it."""
+        """Return the `path_provider` keyword, for a device whose constructor takes it.
+
+        Raises
+        ------
+        TypeError
+            If the constructor takes `path_provider` by position only, where
+            the session, passing it by keyword, cannot reach it.
+        """
         parameter = inspect.signature(declaration.cls).parameters.get("path_provider")
-        if parameter is None or parameter.kind not in (
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            inspect.Parameter.KEYWORD_ONLY,
-        ):
+        if parameter is None or parameter.kind is inspect.Parameter.VAR_POSITIONAL:
             return {}
+        if parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
+            raise TypeError(
+                f"{declaration.cls.__name__} takes 'path_provider' by position "
+                "only; the session passes it by keyword"
+            )
         return {"path_provider": self.path_provider}
 
     def connect_built_devices(self) -> None:

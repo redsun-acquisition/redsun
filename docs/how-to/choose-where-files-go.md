@@ -26,7 +26,8 @@ Name a constructor parameter `path_provider`:
 
 The session passes its
 [`SessionPathProvider`][redsun.path_provider.SessionPathProvider] to every
-device with that parameter, by keyword, so it may not be positional-only. A
+device with that parameter, by keyword; a device taking it by position only
+is left out. A
 declaration or session file giving `path_provider` itself is refused. A device
 without the parameter chooses its own paths.
 
