@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping  # noqa: TC003
-from concurrent.futures import Future  # noqa: TC003
+from concurrent.futures import Future, wait
 from typing import Any, Protocol, runtime_checkable
 
 import bluesky.plan_stubs as bps
@@ -113,6 +113,7 @@ class PlanPresenter(Loggable):
         self.engine = RunEngine()
         self.plans: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
+        self.futures: set[Future[Any]] = set()
 
     def setup(self, providers: Mapping[str, HasPlans]) -> None:
         for component in providers.values():
@@ -127,28 +128,39 @@ class PlanPresenter(Loggable):
     # --8<-- [start:presenter-slots]
     @slot
     def run(self, plan: str, values: dict[str, Any]) -> None:
+        if self.futures:
+            self.logger.warning(f"A plan is running; {plan!r} not started")
+            return
         resolved = resolve_arguments(self.specs[plan], values, self.devices)
         args, kwargs = collect_arguments(self.specs[plan], resolved)
-        future = self.engine(self.plans[plan]["plan"](*args, **kwargs))
-        future.add_done_callback(self.finished)
+        self.watch(self.engine(self.plans[plan]["plan"](*args, **kwargs)))
 
     @slot
     def toggle(self, plan: str, on: bool, values: dict[str, Any]) -> None:
         if on:
             self.run(plan, values)
-        else:
-            self.engine.stop()
+        elif self.engine.state != "idle":
+            self.watch(self.engine.stop())
 
     @slot
     def pause(self, paused: bool) -> None:
         if paused:
-            self.engine.request_pause()
+            self.engine.request_pause(defer=True)
         else:
-            self.engine.resume().add_done_callback(self.finished)
+            self.watch(self.engine.resume())
 
-    def finished(self, _: Future[Any]) -> None:
-        if self.engine.state != "paused":
+    def watch(self, future: Future[Any]) -> None:
+        self.futures.add(future)
+        future.add_done_callback(self.finished)
+
+    def finished(self, future: Future[Any]) -> None:
+        self.futures.discard(future)
+        if not self.futures and self.engine.state != "paused":
             self.sig_finished.emit()
+
+    def shutdown(self) -> None:
+        if self.futures or self.engine.state == "paused":
+            wait([self.engine.stop()], timeout=10)
 
     # --8<-- [end:presenter-slots]
 

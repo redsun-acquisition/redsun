@@ -67,17 +67,24 @@ name of its own, or `create_plan_spec` raises `ValueError`.
 
 ## Start, pause and stop it
 
-In `PlanPresenter`, run the plan with a callback that reports its end, and
-add a slot for the toggle and one for the pause button:
+In `PlanPresenter`, keep the futures of the plan that runs, add a slot for
+the toggle and one for the pause button, and stop the plan at shutdown:
 
 ```{.python}
 --8<-- "docs/examples/continuous_plan.py:presenter-slots"
 ```
 
-Pausing ends the `Future` the engine returned, and `resume` returns a new
-one. `finished` sends `sig_finished` only when the plan has ended, not when
-it paused. `request_pause` comes from `bluesky` without type annotations, so
-`mypy --strict` reports it as `no-untyped-call`.
+- The engine returns a `Future` for each plan it starts. `watch` keeps it in
+  `self.futures`, an empty set made in `__init__`, until it completes, and
+  `run` refuses a second plan while one is kept.
+- `request_pause(defer=True)` pauses at the next checkpoint of the plan.
+  Pausing completes the `Future` with a `RunEngineInterrupted` exception,
+  and the engine stays in the state `paused`. `resume` returns a new `Future`, which `watch` keeps.
+- `stop` also returns a `Future`, which completes once the plan has cleaned
+  up. `finished` sends `sig_finished` when the last `Future` kept is
+  complete and the engine is not paused, so once for each plan.
+- `request_pause` comes from `bluesky` without type annotations, so
+  `mypy --strict` reports it as `no-untyped-call`.
 
 In `PlanView`, pass `create_plan_widget` a callback for each button, and
 update the plan widget when they are pressed and when the plan ends:
