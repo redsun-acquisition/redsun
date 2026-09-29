@@ -1090,6 +1090,7 @@ class Session(BuildableSession):
             schema_version=config.schema_version,
             frontend=frontend_of(type(self)),
             session=name if config.session is None else config.session,
+            mock=config.mock,
             metadata=dict(config.metadata),
         )
 

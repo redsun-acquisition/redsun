@@ -18,6 +18,7 @@ from redsun import (
     DeviceMapping,
     Link,
     Placement,
+    SessionConfig,
     slot,
 )
 from redsun.qt import Dock, QtSession
@@ -35,15 +36,18 @@ class MyController:
     sig_connected = Signal(str)
     sig_not_connected = Signal(str, str)
 
-    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
+    def __init__(
+        self, name: str, *, devices: DeviceMapping, config: SessionConfig
+    ) -> None:
         self.name = name
         self.devices = devices
+        self.mock = config.mock
 
     @slot
     async def connect_motor(self) -> None:
         motor = self.devices["motor"]
         try:
-            await motor.connect(timeout=5)
+            await motor.connect(mock=self.mock, timeout=5)
         except NotConnectedError as e:
             self.sig_not_connected.emit(motor.name, str(e))
             return

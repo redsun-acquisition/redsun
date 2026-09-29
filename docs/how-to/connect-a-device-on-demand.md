@@ -45,9 +45,9 @@ Ask for the devices and connect in an `async` slot:
 --8<-- "docs/examples/connect_on_demand.py:controller"
 ```
 
-A component is not told that the session is
-[mocked](../explanation/glossary.md#mocked-session). To connect the device to
-a simulated backend, pass `mock=True` to `connect` yourself.
+The controller reads `mock` from [`SessionConfig`][redsun.SessionConfig], so
+in a [mocked session](../explanation/glossary.md#mocked-session) it connects
+the device to a simulated backend, as the build does with the others.
 
 ## Ask for it from a view
 

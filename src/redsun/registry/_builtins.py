@@ -53,6 +53,9 @@ class SessionConfig:
     session: str = "Redsun"
     """Name of the session."""
 
+    mock: bool = False
+    """Whether the devices connect to simulated backends and no service starts."""
+
     metadata: dict[str, object] = field(default_factory=dict)
     """What the session file asks to have recorded with the session."""
 

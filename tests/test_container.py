@@ -846,6 +846,18 @@ class ScaleReader:
         self.scale = scale
 
 
+class ConfigReader:
+    """Presenter keeping the configuration the session was built from."""
+
+    def __init__(self, name: str, *, config: SessionConfig) -> None:
+        self.name = name
+        self.config = config
+
+
+class ConfigReaderApp(Session):
+    reader: AsPresenter[ConfigReader]
+
+
 class DefaultedServicesApp(Session):
     providers: ClassVar[list[type]] = [DefaultedServices]
 
@@ -1564,6 +1576,14 @@ def test_a_shared_service_may_be_any_kind_of_class(
     # The first value is derived from the session, which is how the injected
     # `SessionConfig` shows up in what the component receives.
     assert app.served.values == (len(app.name) / 10, 1.5, 2.5)
+
+
+@pytest.mark.parametrize("mock", [True, False])
+def test_a_component_is_told_whether_the_session_is_mocked(mock: bool) -> None:
+    """Tell a component asking for `SessionConfig` whether the session is mocked."""
+    app = ConfigReaderApp({"mock": mock}).build()
+    assert app.reader.config.mock is mock
+    app.shutdown()
 
 
 def test_a_shared_service_is_given_no_name() -> None:
