@@ -14,3 +14,11 @@ breaks existing code is marked **Breaking**, and
 a migration guide such as [How to migrate from 0.13](../how-to/migrate-from-0.13.md)
 shows how to move code across it.
 Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
+
+## [0.14.0] - 29-09-2026
+
+### Changed
+
+- **Breaking:** Replace the container layer with sessions ([#85](https://github.com/redsun-acquisition/redsun/pull/85))
+
+[0.14.0]: https://github.com/redsun-acquisition/redsun/compare/v0.13.2...v0.14.0
