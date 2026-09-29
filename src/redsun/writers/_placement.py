@@ -35,9 +35,16 @@ class Placement:
     """
 
     path: Path
+    """Path of the store the product is written to."""
+
     uri: str
+    """URI of that store."""
+
     streamed: bool
+    """Whether frames are appended as they come."""
+
     open_stream: Callable[[Mapping[str, ArrayShape]], Stream]
+    """Opens a stream there, given the layout of each array by data key."""
 
 
 def placement(uri: str, mimetype: str, data_key: str) -> Placement | None:

@@ -131,6 +131,7 @@ class Dock(Placement):
     """A panel against one edge of the window."""
 
     area: Area
+    """Edge the panel sits against."""
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,7 @@ class MenuItem(Placement):
     """An entry in a named menu of the menu bar."""
 
     menu: str
+    """Name of the menu."""
 
 
 @dataclass(frozen=True)
@@ -150,6 +152,7 @@ class ToolBarItem(Placement):
     """An entry in a named toolbar."""
 
     toolbar: str
+    """Name of the toolbar."""
 
 
 class QtHook(StrEnum):
@@ -161,10 +164,19 @@ class QtHook(StrEnum):
     """
 
     CREATE_APPLICATION = "create_application"
+    """Makes the ``QApplication`` from the command-line arguments, when none exists yet."""
+
     CONFIGURE_APPLICATION = "configure_application"
+    """Receives the ``QApplication`` before any view is made."""
+
     DURING_BUILD = "during_build"
+    """Receives the ``QApplication`` and wraps the build steps."""
+
     CONFIGURE_MAIN_VIEW = "configure_main_view"
+    """Receives the main window once it is made, before it is shown."""
+
     CONFIRM_CLOSE = "confirm_close"
+    """Answers whether the window may close."""
 
 
 class Qt(Frontend):

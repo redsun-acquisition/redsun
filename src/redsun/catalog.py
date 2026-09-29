@@ -19,11 +19,7 @@ class CatalogAddress:
 
     client = from_uri(address.uri)
     ```
-
-    Attributes
-    ----------
-    uri : str
-        URI of the server, with its API key. Left out of the ``repr``.
     """
 
     uri: str = field(repr=False)
+    """URI of the server, with its API key. Left out of the ``repr``."""

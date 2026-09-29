@@ -45,22 +45,32 @@ class SessionConfig:
     """The configuration an application was built from."""
 
     schema_version: float = 1.0
+    """Format of the session file."""
+
     frontend: str | None = None
+    """Registered name of the frontend the session is built on, if any."""
+
     session: str = "Redsun"
+    """Name of the session."""
+
     metadata: dict[str, object] = field(default_factory=dict)
+    """What the session file asks to have recorded with the session."""
 
 
 class PlanEntry(TypedDict, total=False):
     """A plan a component offers, and the document callbacks it requires.
 
-    ``callbacks`` run in the order given, before any callback a user attaches.
-    ``extendable`` is whether a user may attach any, and is ``True`` when
-    absent. Only ``plan`` is required.
+    Only ``plan`` is required.
     """
 
     plan: Required[Callable[..., MsgGenerator[Any]]]
+    """The plan, a generator function."""
+
     callbacks: Sequence[CallbackType]
+    """Callbacks the plan requires, run in this order before any a user attaches."""
+
     extendable: bool
+    """Whether a user may attach callbacks. ``True`` when absent."""
 
 
 @runtime_checkable

@@ -28,7 +28,10 @@ class ArrayShape:
     """Shape and dtype of one frame; a stream appends frames along a leading axis."""
 
     shape: tuple[int, ...]
+    """Size of one frame along each axis."""
+
     dtype: np.dtype[Any]
+    """Type of the elements."""
 
     @classmethod
     def of(cls, shape: tuple[int, ...], dtype: DTypeLike) -> ArrayShape:

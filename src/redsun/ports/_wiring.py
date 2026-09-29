@@ -134,7 +134,10 @@ class Ports:
     """The connectable surface of a component."""
 
     signals: dict[str, SignalInstance] = field(default_factory=dict)
+    """Signals, by port name."""
+
     slots: dict[str, Callable[..., Any]] = field(default_factory=dict)
+    """Slots, by port name."""
 
 
 def ports(component: object) -> Ports:
@@ -195,10 +198,19 @@ class Connection:
     """
 
     publisher: str
+    """Name of the component or device that sends."""
+
     publisher_port: str
+    """Name of the signal within the publisher."""
+
     consumer: str
+    """Name of the component that receives."""
+
     consumer_port: str
+    """Port name of the slot within the consumer."""
+
     thread: SlotThread = None
+    """Thread the slot runs on. ``None`` is the thread that emits."""
 
     def __str__(self) -> str:
         thread = f"  [thread={self.thread}]" if self.thread else ""
@@ -217,7 +229,10 @@ class Unconnected:
     """
 
     signals: list[str] = field(default_factory=list)
+    """Paths of the signals nothing listens to."""
+
     slots: list[str] = field(default_factory=list)
+    """Paths of the slots nothing reaches."""
 
     def __bool__(self) -> bool:
         return bool(self.signals or self.slots)

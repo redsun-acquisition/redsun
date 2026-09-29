@@ -24,8 +24,13 @@ class ColorSchemeMode(StrEnum):
     """
 
     SYSTEM = "system"
+    """The platform decides."""
+
     LIGHT = "light"
+    """The light scheme."""
+
     DARK = "dark"
+    """The dark scheme."""
 
     @classmethod
     def from_config(cls, declared: str | None) -> Self:

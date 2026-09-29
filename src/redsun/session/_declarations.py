@@ -79,8 +79,13 @@ class Layer(StrEnum):
     """
 
     DEVICE = "device"
+    """The layer of the devices."""
+
     PRESENTER = "presenter"
+    """The layer of the presenters."""
+
     VIEW = "view"
+    """The layer of the views."""
 
     @property
     def section(self) -> str:
@@ -93,6 +98,7 @@ class Declare:
     """Inline keyword arguments, overriding anything the configuration gives."""
 
     kwargs: dict[str, Any] = field(default_factory=dict)
+    """Keyword arguments for the constructor of the component."""
 
     def __init__(self, **kwargs: Any) -> None:
         object.__setattr__(self, "kwargs", kwargs)
@@ -107,6 +113,7 @@ class FromConfig:
     """
 
     key: str
+    """Key of the configuration entry the component is read from."""
 
 
 @dataclass(frozen=True)
@@ -114,6 +121,7 @@ class Alias:
     """Component name, when it must differ from the attribute name."""
 
     name: str
+    """Name the component is known by."""
 
 
 @dataclass(frozen=True)
@@ -144,11 +152,20 @@ class Launch:
     """
 
     module: str
+    """Module to run."""
+
     _: KW_ONLY
     ready: str | None = None
+    """Text of the output line marking the service ready."""
+
     prefix: str | None = None
+    """Prefix given to each device naming the service."""
+
     args: Sequence[str] | None = None
+    """Command-line arguments following the module."""
+
     stop_timeout: float | None = None
+    """Seconds each step of stopping waits for the process to exit."""
 
 
 @dataclass(frozen=True)
@@ -156,6 +173,7 @@ class Attach:
     """A service already running elsewhere, which only lends its prefix."""
 
     prefix: str
+    """Prefix given to each device naming the service."""
 
 
 @dataclass(frozen=True)
@@ -167,6 +185,7 @@ class Serves:
     """
 
     moments: tuple[str, ...]
+    """Names of the hook points served."""
 
     def __init__(self, *moments: str) -> None:
         object.__setattr__(self, "moments", tuple(moments))

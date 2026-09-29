@@ -80,10 +80,19 @@ class ParamKind(IntEnum):
     """
 
     POSITIONAL_ONLY = 0
+    """Given by position only."""
+
     POSITIONAL_OR_KEYWORD = 1
+    """Given by position or by name."""
+
     VAR_POSITIONAL = 2
+    """Any number of values given by position, as ``*args``."""
+
     KEYWORD_ONLY = 3
+    """Given by name only."""
+
     VAR_KEYWORD = 4
+    """Any number of values given by name, as ``**kwargs``."""
 
 
 # Mapping from inspect.Parameter.kind to our ParamKind

@@ -88,7 +88,8 @@ class RunEngine(BlueskyRunEngine):
         (pauses, suspensions).
 
     state
-        {'idle', 'running', 'paused'}
+        One of ``idle``, ``running``, ``pausing``, ``paused``, ``halting``,
+        ``stopping``, ``aborting``, ``suspending`` and ``panicked``.
 
     suspenders
         Read-only collection of `bluesky.suspenders.SuspenderBase` objects
@@ -134,7 +135,7 @@ class RunEngine(BlueskyRunEngine):
     """The names of the locked devices, whenever that set changes."""
 
     sig_state_changed = Signal(str, str)
-    """The engine's new and old state on every change, as ``bluesky`` names them: ``idle``, ``running``, ``pausing``, ``paused``."""
+    """The engine's new and old state on every change, named as `state` names them."""
 
     def __init__(
         self,
