@@ -82,55 +82,45 @@ declared with `service=`: it still gets the service's prefix, but nothing
 answers on it. A signal of a mocked device keeps the last value written to
 it, and starts at the default of its type, `0.0` for a `float`.
 
-A device declared with `autoconnect=False` is not connected by the build,
-mocked or not. Code that connects it later passes `mock=True` itself:
-
-```python
-await stage.connect(mock=True)
-```
+A device declared with `autoconnect=False` is not connected by the build; see
+[How to connect a device on demand](connect-a-device-on-demand.md).
 
 ## Give a mocked device its values
 
-Build the session, then set a signal with
+Set its signals from a component that only a mocked session declares, with
 [`set_mock_value`][ophyd_async.core.set_mock_value]. It works on signals the
-device only reads, such as a readback:
+device only reads, such as a readback, and
+[`callback_on_mock_put`][ophyd_async.core.callback_on_mock_put] has the
+readback follow each value written to the setpoint:
 
 ```python
-from ophyd_async.core import set_mock_value
+from typing import Any, ClassVar
 
-from redsun import Session
-from redsun.aio import run_coro
+from ophyd_async.core import callback_on_mock_put, set_mock_value
 
-
-class MyHeadlessApp(Session):
-    stage_ioc: Annotated[
-        AsService,
-        Launch("mylab.iocs.stage", ready="Server startup complete", prefix="STAGE:"),
-    ]
-    stage: Annotated[AsDevice[MyMotor], Declare(service="stage_ioc")]
+from redsun import AsPresenter, DeviceMapping
 
 
-app = MyHeadlessApp({"mock": True}).build()
-set_mock_value(app.stage.readback, 2.5)
-assert run_coro(app.stage.readback.get_value()) == 2.5
+class SimulatedStage:
+    def __init__(self, name: str, *, devices: DeviceMapping) -> None:
+        self.name = name
+        stage = devices["stage"]
+        assert isinstance(stage, MyMotor)
+        set_mock_value(stage.readback, 2.5)
+        callback_on_mock_put(
+            stage.setpoint, lambda value: set_mock_value(stage.readback, value)
+        )
+
+
+class MySimulation(MyApp):
+    config: ClassVar[dict[str, Any]] = {"mock": True}
+    simulation: AsPresenter[SimulatedStage]
 ```
 
-To have a readback follow its setpoint, register a callback with
-[`callback_on_mock_put`][ophyd_async.core.callback_on_mock_put]. It runs with
-each value written to the setpoint:
-
-```python
-from ophyd_async.core import callback_on_mock_put
-
-callback_on_mock_put(
-    app.stage.setpoint, lambda value: set_mock_value(app.stage.readback, value)
-)
-```
-
-Both only work on a device connected with `mock=True`. `QtSession.run()`
-builds the session itself, so set values like this from a script or a test
-that builds a plain [`Session`][redsun.Session], as
-[How to run a session without a GUI](run-without-a-gui.md) shows.
+Run `MySimulation().run()` to open the window with those values. Presenters
+are built after the devices connect, so the values are in place before any
+view shows them. Both functions raise on a device not connected with
+`mock=True`, so keep `SimulatedStage` out of `MyApp`.
 
 ## Go back to the hardware
 

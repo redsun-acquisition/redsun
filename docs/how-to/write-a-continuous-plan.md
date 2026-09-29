@@ -51,6 +51,7 @@ class MyController:
     def live(self, camera: Camera) -> MsgGenerator[None]:
         yield from bps.open_run()
         while True:
+            yield from bps.checkpoint()
             yield from bps.trigger_and_read([camera])
 
     def plan_map(self) -> Mapping[str, PlanEntry]:
@@ -60,6 +61,7 @@ class MyController:
 The **Run** button of its plan widget becomes a toggle that starts and
 stops the plan, and `pausable=True` adds a button to pause and resume it.
 Stopping the plan closes the run it opened, with the exit status `success`.
+The checkpoint is where the plan starts again after a pause.
 
 ## Declare actions
 
@@ -95,13 +97,12 @@ class MyController:
         return {"live": {"plan": self.live}, "snapshots": {"plan": self.snapshots}}
 ```
 
-- `wait` offers the actions it is given, waits until the user asks for one,
-  and returns its name. It does not time out, so the loop does nothing else
-  while it waits.
-- `done` ends the action. Call it in a `finally` block, so that an action the
-  plan was running when it was stopped goes back to idle too.
-- Each action of a plan needs a name of its own, or `create_plan_spec` raises
-  `ValueError`.
+`wait` returns the name of the action the user asked for, and does not time
+out. Call `done` in a `finally` block, so that an action running when the
+plan is stopped goes back to idle too. Give each action of a plan a name of
+its own, or `create_plan_spec` raises `ValueError`.
+[In-flight actions](../explanation/plans.md#in-flight-actions) describes
+the states an action goes through.
 
 The plan widget shows a button for each action.
 
@@ -147,8 +148,18 @@ Give the presenter that runs the plans a slot for the toggle and one for the
 pause button:
 
 ```python
+from concurrent.futures import Future
+
+
 class PlanPresenter(Loggable):
     ...
+
+    @slot
+    def run(self, plan: str, values: dict[str, Any]) -> None:
+        resolved = resolve_arguments(self.specs[plan], values, self.devices)
+        args, kwargs = collect_arguments(self.specs[plan], resolved)
+        future = self.engine(self.plans[plan]["plan"](*args, **kwargs))
+        future.add_done_callback(self.finished)
 
     @slot
     def toggle(self, plan: str, on: bool, values: dict[str, Any]) -> None:
@@ -162,12 +173,16 @@ class PlanPresenter(Loggable):
         if paused:
             self.engine.request_pause()
         else:
-            future = self.engine.resume()
-            future.add_done_callback(lambda _: self.sig_finished.emit())
+            self.engine.resume().add_done_callback(self.finished)
+
+    def finished(self, _: Future[Any]) -> None:
+        if self.engine.state != "paused":
+            self.sig_finished.emit()
 ```
 
-Pausing ends the `Future` the engine returned, so `sig_finished` is sent
-when the plan pauses as well as when it ends. `resume` returns a new one.
+Pausing ends the `Future` the engine returned, and `resume` returns a new
+one. `finished` sends `sig_finished` only when the plan has ended, not when
+it paused.
 
 In the view, pass `create_plan_widget` a callback for each of the two
 buttons, and update the plan widget when they are pressed:
@@ -201,13 +216,27 @@ class PlanView(QWidget):
     def ask_to_pause(self, plan: str, paused: bool) -> None:
         self.widgets[plan].pause(paused)
         self.sig_pause.emit(paused)
+
+    @slot
+    def on_finished(self) -> None:
+        self.setEnabled(True)
+        self.chooser.setEnabled(True)
+        self.widgets[self.chooser.currentText()].toggle(False)
+
+    @slot
+    def on_action_changed(self, name: str, state: str) -> None:
+        for widget in self.widgets.values():
+            if name in widget.action_buttons:
+                self.set_action_button(widget.action_buttons[name], state)
 ```
 
 `PlanWidget.toggle` sets the label of the toggle, enables the action buttons
 and the pause button while the plan runs, and locks the inputs of the
 parameters. Disabling the combo box keeps the user from starting a second
-plan meanwhile. `ask`, `ask_or_release` and the slot that sets each action
-button are in
+plan meanwhile. `on_finished` calls `toggle(False)` so that a plan that
+fails or ends by itself shows as stopped. `on_action_changed` finds the
+button in the plan widget that has it; `ask`, `ask_or_release` and the
+`match` on the state that `set_action_button` holds are in
 [How to follow a plan action from a view](follow-a-plan-action.md).
 
 Link the view to the presenter, and to the `ActionManager` of the component

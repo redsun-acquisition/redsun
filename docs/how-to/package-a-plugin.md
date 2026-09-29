@@ -64,7 +64,9 @@ mylab = "redsun.yaml"
 The session looks for the manifest in the package whose import name is the
 entry point's name, with each `-` read as `_`. So `mylab` finds `mylab`, and
 `my-lab` would look for a package `my_lab`. The entry point's name is also the
-`plugin_name` a session file uses.
+`plugin_name` a session file uses. Leave the `name` key out of the manifest,
+or give it the entry point's name: a manifest naming itself otherwise is
+skipped.
 
 The manifest must be in the built package. `hatchling` includes every file
 under the package folder; other build tools may need it listed as package
@@ -113,9 +115,9 @@ views:
 Build the session from the file:
 
 ```python
-from redsun import Session
+from redsun.qt import QtSession
 
-Session.from_config("session.yaml").run()
+QtSession.from_config("session.yaml").run()
 ```
 
 A session class can also name the file in `config` and declare some of the
@@ -125,24 +127,8 @@ and needs no `plugin_name`. See
 
 ## Share a value from the plugin
 
-A class that shares values without being a component goes under `providers`.
-Mark each method returning a shared value with
-[`provides`][redsun.provides]:
-
-```python
-# mylab/providers.py
-from typing import NewType
-
-from redsun import provides
-
-Scale = NewType("Scale", float)
-
-
-class MyCalibration:
-    @provides
-    def current_scale(self) -> Scale:
-        return Scale(2.5)
-```
+List a provider class under `providers`, and name it in the session file as
+[Share a value](share-a-value.md#share-a-value-no-component-owns) shows:
 
 ```yaml
 # mylab/redsun.yaml
@@ -150,19 +136,7 @@ providers:
   calibration: "mylab.providers:MyCalibration"
 ```
 
-The session file names it in its own `providers` section:
-
-```yaml
-providers:
-  calibration:
-    plugin_name: mylab
-    plugin_id: calibration
-```
-
-A component then asks for a `Scale` in its constructor. The provider's own
-constructor is filled from the shared values only; other keys of its entry are
-not passed to it. [Share a value](share-a-value.md) shows how a component
-asks for one.
+Other keys of the session file's entry are not passed to the provider.
 
 ## List a service
 
@@ -176,10 +150,10 @@ file and each problem. An entry that does not resolve is left out on its own,
 and the build summary lists it under `Not built`:
 
 ```text
-[ERROR]: Failed to build view 'panel': plugin 'mylab' declares no view 'motor-viwe'. Its views: motor-view
-[WARNING]: Container built: 1/1 devices, 1/1 presenters, 0/1 views
+[29-09-26|08:42:44][ERROR]: Failed to build view 'panel': plugin 'mylab' declares no view 'motor-viwe'. Its views: motor-view
+[29-09-26|08:42:44][WARNING]: Container built: 1/1 devices, 1/1 presenters, 0/1 views
 Not built: panel (view)
 ```
 
-To stop the build instead, make the session
-[strict](../explanation/glossary.md#strict-session).
+[How to find out why a component is missing](find-a-missing-component.md)
+covers reading the log, and making the session stop instead.

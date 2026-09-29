@@ -105,14 +105,9 @@ class PlanPresenter(Loggable):
 
 - `providers` is answered with every component that satisfies `HasPlans`, by
   name. See [Questions](../explanation/questions.md).
-- A plan with a parameter no plan widget can show raises
-  `UnresolvableAnnotationError`. Catching it leaves that plan out and keeps
-  the others.
-- `resolve_arguments` replaces the device names the user chose with the
-  devices, and `collect_arguments` orders the values as the plan takes them.
-- Calling the engine starts the plan on a thread of its own and returns a
-  `Future` at once. `sig_finished` is sent when the plan ends, whether it
-  succeeded or failed.
+- Catching `UnresolvableAnnotationError` leaves out a plan whose parameters no
+  plan widget can show, and keeps the others.
+- `sig_finished` is sent when the plan ends, whether it succeeded or failed.
 
 To run the plans with document callbacks, ask `setup` for
 `callbacks: Mapping[str, CallbackType]` as well, and pass each one to

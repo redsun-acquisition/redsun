@@ -117,20 +117,22 @@ when it is declared.
 
 ## See a changed placement take effect
 
-The window saves where the user left its docks when the session ends, and
-puts them back the next time. A new placement for a dock shows only for a
-session with nothing saved. To start from the placements again, close the
-session and delete its settings file, listed in
+A session started with `run` saves where the user left the docks when it
+ends, and puts them back the next time. A dock that was saved keeps its
+saved place, so a new placement for it does not show; a view under a name
+not saved before takes its placement. To start every dock from its placement
+again, close the session and remove the `window.state` key from its settings
+file, listed in
 [The session's settings](save-a-session.md#the-sessions-settings).
 
 ## Read a failure
 
 A view that asks for a placement Qt does not show, or is not the type its
 placement needs, is left out, and the build summary lists it under
-`Not built`:
+`Not built`. Here `MyView`, a `QWidget`, asks for a `MenuItem`:
 
 ```text
-[ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but SnapView is not one
-[WARNING]: Container built: 0/0 devices, 0/0 presenters, 0/1 views
+[29-09-26|08:42:44][ERROR]: Failed to build view 'snap': MyApp.snap asks to be attached as 'MenuItem', which needs a QAction, but MyView is not one
+[29-09-26|08:42:44][WARNING]: Container built: 0/0 devices, 0/0 presenters, 0/1 views
 Not built: snap (view)
 ```

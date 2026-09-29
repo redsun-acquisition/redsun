@@ -111,8 +111,9 @@ class SessionPathProvider(PathProvider):
     level out.
 
     The date is read on each request, not at construction. The counter belongs
-    to `(session, plan, datakey)` and only increases: date directories group
-    files but do not reset the counter.
+    to `(session, plan, datakey)`, starts one past the highest number already
+    on disk, and only increases: date directories group files but do not reset
+    the counter.
 
     Parameters
     ----------

@@ -38,6 +38,8 @@ storage:
 and its default. For the sections that have a guide of their own:
 
 - `services`: [Write a service](write-a-service.md)
+- `storage.base_dir`, `storage.max_digits`:
+  [Choose where acquisition files go](choose-where-files-go.md)
 - `storage.catalog`: [Keep a catalog of runs](keep-a-catalog.md)
 - `wiring`: [Wire components together](wire-components.md)
 - `hooks`: [Install hooks](install-hooks.md)

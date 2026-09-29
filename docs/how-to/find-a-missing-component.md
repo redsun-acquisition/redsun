@@ -24,7 +24,7 @@ of failure:
 ```text
 [29-09-26|08:42:44][WARNING]: Container built: 1/3 devices, 1/3 presenters, 0/0 views
 Not built: broken (device), remote (device, not connected), helper (presenter), odd (presenter)
-Not set up: ctrl (presenter) (_base.py:865)
+Not set up: ctrl (presenter)
 ```
 
 - `Not built` lists the components left out. `not connected` marks a device
@@ -63,10 +63,10 @@ A failure often causes others after it. Read the records from the first one
 down:
 
 ```text
-[29-09-26|08:42:57][ERROR]: Failed to start service 'stage_ioc': exited with code 1 before it was ready (_base.py:1693)
+[29-09-26|08:42:57][ERROR]: Failed to start service 'stage_ioc': exited with code 1 before it was ready
 [29-09-26|08:42:57][WARNING]: Services started: 0/1
-Not started: stage_ioc (exited with code 1 before it was ready) (_base.py:1700)
-[29-09-26|08:42:57][ERROR]: Failed to build device 'stage': service 'stage_ioc' was not started (_base.py:1745)
+Not started: stage_ioc (exited with code 1 before it was ready)
+[29-09-26|08:42:57][ERROR]: Failed to build device 'stage': service 'stage_ioc' was not started
 ```
 
 Here the device is missing because its service is. A service that exits
@@ -88,19 +88,15 @@ that does nothing is often explained by a line such as:
 Not connecting stage.readback: component 'stage' was not built
 ```
 
+A link from the `wiring` section of a session file is logged with both ends,
+as `Not connecting stage.readback -> panel.on_position: component 'stage' was
+not built`.
+
 ## Open the log file
 
 Each run also writes its records to a file.
 [How to configure logging](configure-logging.md#find-a-sessions-log-file)
-says where it is. While a session runs,
-[`session_log`][redsun.log.session_log] gives the handler writing it, and its
-`files` property the paths:
-
-```python
-from redsun.log import session_log
-
-print(session_log().files)
-```
+says where it is.
 
 To read the records in the window instead, add
 [`LogView`][redsun.view.qt.builtins.LogView] to the session, as
@@ -131,13 +127,16 @@ redsun.session._base.BuildError: A strict session is missing components:
   broken: serial port COM3 not found
   remote: position: NotConnectedError: ca://NOPE:Position
   helper: no calibration file
+  odd: After injecting dependencies for NO arguments, 'odd' is declared as a presenter, but does not satisfy 'NamedComponent': 'name' is missing
   ctrl: 'helper' was not built
 ```
 
-A test that builds the session strict and mocked fails with that list when
-a component is missing:
+In a test, build strict and mocked a `MyHeadlessApp`: a plain
+[`Session`][redsun.Session] subclass with the declarations of `MyApp`, as
+[How to write a component](write-a-component.md#test-it) does. It fails with
+that list when a component is missing:
 
 ```python
 def test_every_component_builds() -> None:
-    MyApp({"strict": True, "mock": True}).build().shutdown()
+    MyHeadlessApp({"strict": True, "mock": True}).build().shutdown()
 ```

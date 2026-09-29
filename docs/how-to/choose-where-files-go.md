@@ -13,9 +13,7 @@ explains the layout.
 ## Prerequisites
 
 A device that writes its own files and asks an `ophyd-async` `PathProvider`
-where to put them, as the file-writing detectors of `ophyd-async` do. `redsun`
-writes no acquisition data: the device, or the service behind it, chooses the
-format and writes the bytes.
+where to put them, as the file-writing detectors of `ophyd-async` do.
 
 ## Take the path provider
 
@@ -88,8 +86,8 @@ class MyApp(QtSession):
         yield self.ctrl.sig_finished, self.path_provider.reset_plan
 ```
 
-`sig_started` carries the plan's name. In a session file the provider is the
-component `path_provider`:
+Emit the plan's name from `sig_started`. In a session file the provider is
+the component `path_provider`:
 
 ```yaml
 wiring:
@@ -99,10 +97,10 @@ wiring:
 
 Without these links, every file is named `unknown_<counter>`.
 
-The counter is zero-padded to five digits; `storage.max_digits` changes the
-width. It counts per plan and data key, continues from the highest number
-already on disk, and does not start again on a new day. `reset_plan` reads the
-disk again, so a name a device asked for and never wrote is given out again.
+To change the width of the counter, five digits by default, set
+`storage.max_digits`.
+[`SessionPathProvider`][redsun.path_provider.SessionPathProvider] describes
+how the counter is kept.
 
 ## Let the user change the folder
 

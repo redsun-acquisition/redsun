@@ -37,12 +37,8 @@ devices:
     autoconnect: false
 ```
 
-`autoconnect` takes `true` or `false` only. The session keeps it and does not
-pass it to the constructor, so it cannot be given to a device class whose
-constructor takes an `autoconnect` of its own.
-
-The device is built, and is in `devices` like any other, but the build does
-not connect it and does not leave it out when its hardware is missing.
+The device is built and is in `devices`, but the build does not connect it.
+[Session file](../reference/session-file.md#components) lists what `autoconnect` accepts.
 
 ## Connect it from a component
 
@@ -74,15 +70,40 @@ class MyController:
         self.sig_connected.emit(motor.name)
 ```
 
-A [mocked session](../explanation/glossary.md#mocked-session) connects the
-other devices to simulated backends, but does not tell a component it is
-mocked. To connect this device to one, pass `mock=True` to `connect` yourself.
+A component is not told that the session is
+[mocked](../explanation/glossary.md#mocked-session). To connect the device to
+a simulated backend, pass `mock=True` to `connect` yourself.
 
 ## Ask for it from a view
 
-Link the view's signal to the slot, and the answers back:
+Give the view a signal to ask with and slots for the answers, then link them:
 
 ```python
+from collections.abc import Iterator
+
+from qtpy.QtWidgets import QPushButton, QWidget
+
+from redsun import AsPresenter, AsView, Link
+
+
+class MyView(QWidget):
+    sig_connect_clicked = Signal()
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.name = name
+        self.button = QPushButton("Connect", self)
+        self.button.clicked.connect(lambda: self.sig_connect_clicked.emit())
+
+    @slot
+    def on_connected(self, device: str) -> None:
+        self.button.setEnabled(False)
+
+    @slot
+    def on_not_connected(self, device: str, reason: str) -> None:
+        self.button.setToolTip(reason)
+
+
 class MyApp(QtSession):
     motor: Annotated[AsDevice[MyMotor], Declare(autoconnect=False)]
     ctrl: AsPresenter[MyController]
