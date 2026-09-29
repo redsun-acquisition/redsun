@@ -13,20 +13,15 @@ explains the layout.
 ## Prerequisites
 
 A device that writes its own files and asks an `ophyd-async` `PathProvider`
-where to put them, as the file-writing detectors of `ophyd-async` do.
+where to put them, as the file-writing detectors of `ophyd-async` do. The
+blocks below are parts of one script; the whole script is at the end.
 
 ## Take the path provider
 
 Name a constructor parameter `path_provider`:
 
-```python
-from ophyd_async.core import PathProvider, StandardReadable
-
-
-class MyCamera(StandardReadable):
-    def __init__(self, path_provider: PathProvider, name: str = "") -> None:
-        self.path_provider = path_provider
-        super().__init__(name=name)
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:device"
 ```
 
 The session passes its
@@ -41,7 +36,8 @@ Each file then goes to
 <base_dir>/<session>/<YYYY-MM-DD>/<datakey>/<plan>_<counter>
 ```
 
-and the folder is created when the device asks for the path.
+and the folder is created when the device asks for the path. The session
+also writes its log files under `<base_dir>/logs/<session>`.
 
 ## Choose the folder
 
@@ -55,15 +51,13 @@ storage:
 
 In a session class, put it in `config`:
 
-```python
-class MyApp(QtSession):
-    config: ClassVar[dict[str, Any]] = {
-        "session": "my-lab",
-        "storage": {"base_dir": "~/experiments"},
-    }
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:config"
 ```
 
-`~` is expanded. Without `base_dir`, the root is the `redsun` folder in the
+Give an absolute folder, or one starting with `~`, which is expanded. A
+relative folder is accepted here, and refused only when a device asks for its
+first path. Without `base_dir`, the root is the `redsun` folder in the
 user data folder of the platform.
 
 The `<session>` folder is the `session` name, or the name of the session class
@@ -72,22 +66,22 @@ when none is given. Each run of characters other than letters, digits, `.`,
 
 ## Name the files after the plan
 
-Link the signals of the component running plans to
+Give the component that runs plans a signal it emits with the plan's name
+when a plan starts, and one it emits when the plan ends:
+
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:controller"
+```
+
+In `wire`, link them to
 [`set_plan`][redsun.path_provider.SessionPathProvider.set_plan] and
 [`reset_plan`][redsun.path_provider.SessionPathProvider.reset_plan]:
 
-```python
-class MyApp(QtSession):
-    ctrl: AsPresenter[MyController]
-    camera: AsDevice[MyCamera]
-
-    def wire(self) -> Iterator[Link]:
-        yield self.ctrl.sig_started, self.path_provider.set_plan
-        yield self.ctrl.sig_finished, self.path_provider.reset_plan
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:wire-plan"
 ```
 
-Emit the plan's name from `sig_started`. In a session file the provider is
-the component `path_provider`:
+In a session file the provider is the component `path_provider`:
 
 ```yaml
 wiring:
@@ -104,12 +98,17 @@ how the counter is kept.
 
 ## Let the user change the folder
 
-Link a signal carrying the new folder to
+Give a view a signal carrying the folder the user chose:
+
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:view"
+```
+
+In `wire`, link it to
 [`set_base_dir`][redsun.path_provider.SessionPathProvider.set_base_dir]:
 
-```python
-def wire(self) -> Iterator[Link]:
-    yield self.folder_view.sig_directory_chosen, self.path_provider.set_base_dir
+```{.python}
+--8<-- "docs/examples/acquisition_files.py:wire-folder"
 ```
 
 The next path is under the new folder, and the session's log files move there
@@ -119,19 +118,8 @@ when it starts.
 
 ## Find the folder from code
 
-A component reads the provider by asking for it by type:
-
-```python
-from redsun.path_provider import SessionPathProvider
-
-
-class MyController:
-    def __init__(self, name: str, *, paths: SessionPathProvider) -> None:
-        self.name = name
-        self.paths = paths
-```
-
-`paths.session_dir` is `<base_dir>/<session>`. Outside a session,
+A component reads the provider by asking for it by type, as `MyController`
+above does with `paths: SessionPathProvider`. `paths.session_dir` is `<base_dir>/<session>`. Outside a session,
 [`session_directory`][redsun.path_provider.session_directory] gives the same
 folder under the default root:
 
@@ -140,3 +128,11 @@ from redsun.path_provider import session_directory
 
 session_directory("my-lab")
 ```
+
+## The example in full
+
+??? example "The whole script"
+
+    ```{.python}
+    --8<-- "docs/examples/acquisition_files.py"
+    ```
