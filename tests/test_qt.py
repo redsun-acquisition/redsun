@@ -23,6 +23,7 @@ from qtpy.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QTabWidget,
     QToolBar,
     QWidget,
@@ -150,6 +151,28 @@ class QtApp(QtSession):
     canvas: AsView[Canvas]
     save: AsView[Save]
     acquire: AsView[Acquire]
+
+
+class BrokenPanel(QWidget):
+    """A docked view whose constructor raises."""
+
+    placement: Placement = Dock("left")
+
+    def __init__(self, name: str, parent: QWidget) -> None:
+        raise RuntimeError("no detector attached")
+
+
+class BrokenPresenter:
+    """A presenter whose constructor raises."""
+
+    def __init__(self, name: str) -> None:
+        raise RuntimeError("no calibration file")
+
+
+class BrokenApp(QtSession):
+    panel: AsView[Panel]
+    broken_panel: AsView[BrokenPanel]
+    broken_ctrl: AsPresenter[BrokenPresenter]
 
 
 @pytest.fixture
@@ -914,6 +937,28 @@ def test_a_refused_close_leaves_the_window_open(
 
     assert not session.main_window.close()
     assert session.main_window.isVisible()
+
+
+def test_a_failed_view_leaves_its_reason_where_it_would_have_been(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Put a widget naming a failed view and its reason in the dock it asked for."""
+    session = build(BrokenApp)
+    docks = {d.objectName(): d for d in session.main_window.findChildren(QDockWidget)}
+    labels = [
+        label.text() for label in _widget(docks["broken_panel"]).findChildren(QLabel)
+    ]
+    assert labels == ["broken_panel could not be built:\nno detector attached"]
+
+
+def test_the_status_bar_counts_the_components_that_failed(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Show in the status bar how many components failed to build."""
+    session = build(BrokenApp)
+    bar = session.main_window.statusBar()
+    assert bar is not None
+    assert [b.text() for b in bar.findChildren(QPushButton)] == ["2 components failed"]
 
 
 def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(

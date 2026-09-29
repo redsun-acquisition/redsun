@@ -82,6 +82,7 @@ from ..session._declarations import Layer
 from ..session._factories import resolved
 from ..session._frontend import Frontend
 from ..session._protocols import DesktopSession
+from ..view.qt._failed import FailedView, FailuresButton
 from ._actions import read_actions
 from ._color_scheme import (
     ColorSchemeButton,
@@ -409,9 +410,10 @@ class QtSession(DesktopSession[QMainWindow], Session):
     def present(self) -> None:
         """Make the window, put every view where it asks to be, and dress it.
 
-        The colour-scheme toolbar goes on before the views are attached, and
-        is added rather than set, so it neither replaces a menu bar nor takes
-        a dock area a view asked for.
+        A view that failed to build and asked for a dock or the centre is
+        replaced there by a widget naming it and the reason. When any
+        component failed to build or to be set up, a button in the status bar
+        counts them and lists them with their tracebacks.
         """
         window = self.main_window
         # the guard outlives the window only if something holds it, and the
@@ -421,11 +423,34 @@ class QtSession(DesktopSession[QMainWindow], Session):
         ColorSchemeButton.pin_to(
             window, ColorSchemeMode.from_config(self._configuration().color_scheme)
         )
-        attach(window, self.views)
+        attach(window, self._with_placeholders())
+        failures = {**self._failed, **self._not_set_up}
+        bar = window.statusBar()
+        if failures and bar is not None:
+            bar.addPermanentWidget(FailuresButton(failures))
         dresser = self.hooks.get(QtHook.CONFIGURE_MAIN_VIEW)
         if isinstance(dresser, ConfiguresMainView):
             dresser.configure_main_view(window)
         self.restore_layout()
+
+    def _with_placeholders(self) -> dict[str, AttachableComponent]:
+        """Return the views in declaration order, a placeholder for each failed one.
+
+        Only a view whose class names a dock or the centre gets one; a menu or
+        toolbar item has no place to show it in.
+        """
+        built = self.views
+        views: dict[str, AttachableComponent] = {}
+        for name, declaration in self.declarations.items():
+            if declaration.kind is not Layer.VIEW:
+                continue
+            if name in built:
+                views[name] = built[name]
+                continue
+            placement = getattr(declaration.cls, "placement", None)
+            if name in self._failed and isinstance(placement, (Dock, Central)):
+                views[name] = FailedView(name, self._failed[name], placement)
+        return views
 
     def restore_layout(self) -> None:
         """Put the window back where this user last left it.

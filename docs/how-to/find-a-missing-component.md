@@ -15,6 +15,15 @@ explains why a session carries on without it.
 A session that builds but lacks something: a view with no dock, a button that
 does nothing, a device missing from `app.devices`.
 
+## Look at the window
+
+In a Qt session, a view that failed to build and asked for a dock or the
+centre is replaced there by a message naming it and the reason, with a
+**Show traceback** button. When any component failed to build or to be set
+up, a button at the right of the status bar counts them, such as
+`2 components failed`; pressing it lists each one with its reason, and the
+tracebacks under **Show Details**.
+
 ## Read the build summary
 
 The last line of the build counts what was made against what was declared.
