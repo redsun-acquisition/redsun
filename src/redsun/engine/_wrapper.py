@@ -14,6 +14,7 @@ from bluesky.utils import IllegalMessageSequence
 from psygnal import Signal
 
 from redsun.aio import get_shared_loop
+from redsun.log import logger
 
 from ._progress import PlanProgress, ProgressState, depth, empty_state, snapshot
 
@@ -342,9 +343,12 @@ class RunEngine(BlueskyRunEngine):
         """Finish *scope* and stop listing it, unless it has finished already."""
         if scope.done or self._progress_scopes.get(scope.name) is not scope:
             return
-        scope.finish()
+        # removed first, so a view failing on the last update cannot keep it
         del self._progress_scopes[scope.name]
-        self._rebuild_progress_hook()
+        try:
+            scope.finish()
+        finally:
+            self._rebuild_progress_hook()
 
     async def _monitor_progress(self, msg: Msg) -> PlanProgress:
         """Open the scope a `monitor_progress` message names, following its status.
@@ -384,10 +388,16 @@ class RunEngine(BlueskyRunEngine):
             return
         # the device's own name; the scope keeps the one the plan gave
         update.pop("name", None)
-        scope._notify(**update)
+        try:
+            scope._notify(**update)
+        except Exception:  # noqa: BLE001 - a failing view must not fail the device
+            logger.exception("Progress of %r not shown", scope.name)
 
     def _status_done(self, scope: PlanProgress, status: Status) -> None:
-        self._finish_scope(scope)
+        try:
+            self._finish_scope(scope)
+        except Exception:  # noqa: BLE001 - a failing view must not fail the device
+            logger.exception("End of progress %r not shown", scope.name)
 
     async def _update_progress(self, msg: Msg) -> None:
         """Update, or finish with `done=True`, the scope an `update_progress` names.

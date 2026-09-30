@@ -452,3 +452,23 @@ def test_a_paused_monitored_plan_resumes(RE: RunEngine) -> None:
     RE.resume().result(timeout=10)
 
     assert seen[-1] == ()
+
+
+def test_a_failing_progress_display_leaves_the_move_alone(RE: RunEngine) -> None:
+    """Complete a followed move, and free its scope, when a progress display raises."""
+
+    def display(scopes: tuple[ProgressState, ...]) -> None:
+        if scopes and scopes[0].current is not None:
+            raise RuntimeError("the display failed")
+
+    RE.sig_progress.connect(display)
+
+    def plan() -> MsgGenerator[None]:
+        status = yield from bps.abs_set(
+            WatchedMover(name="stage"), 3.0, wait=False, group="move"
+        )
+        yield from rps.monitor_progress("move", status)
+        yield from bps.wait(group="move")
+        yield from rps.declare_progress("move")
+
+    RE(plan()).result(timeout=10)

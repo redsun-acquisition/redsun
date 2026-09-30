@@ -70,10 +70,16 @@ it, and finishes the scope when the status is done:
 ```
 
 A status that reports its progress, such as a detector's `complete` or a
-motor's `set` in `ophyd-async`, fills the bar. The shutter's status here
-reports nothing, so its bar has no end and moves back and forth until the
-shutter is open. The plan still waits on the status itself: a status that
-fails closes its scope, and the failure reaches the plan through its `wait`.
+motor's `set` in `ophyd-async`, fills the bar. A status that reports nothing
+gets a bar with no end, which moves back and forth until the status is done.
+The example's shutter is a soft signal and opens at once, so its bar is gone
+almost as soon as it appears; a real shutter or motor keeps it on the page
+for as long as it moves.
+
+The plan still waits on the status itself: a status that fails closes its
+scope, and the failure reaches the plan through its `wait`. The scope belongs
+to the status, so the plan neither updates nor finishes it with
+`update_progress`.
 
 ## What a bar shows
 

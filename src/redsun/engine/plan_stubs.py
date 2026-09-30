@@ -206,7 +206,9 @@ def monitor_progress(
     A status reporting updates, such as a detector's `complete` or a motor's
     `set` in `ophyd-async`, fills the scope; any other shows it without an
     end. The scope finishes when the status is done, whether it succeeds or
-    not; the plan still waits on the status itself. Returns the scope.
+    not; the plan still waits on the status itself, and does not update or
+    finish the scope with [`update_progress`][redsun.engine.plan_stubs.update_progress].
+    Returns the scope.
     """
     scope: PlanProgress = yield Msg(
         "monitor_progress", status, name=name, parent=parent
