@@ -20,7 +20,7 @@ from redsun import (
 )
 
 if TYPE_CHECKING:
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 Readings = NewType("Readings", "dict[str, float]")
 Label = NewType("Label", str)

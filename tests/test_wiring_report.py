@@ -14,8 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from redsun import Link
-
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Moves(SignalGroup):

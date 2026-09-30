@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from redsun import Launch
 from redsun.log import GlobalFormatter
 from redsun.services import Service, _service, _transports
 from redsun.services._service import service_record
@@ -29,6 +30,8 @@ from redsun.services._transports import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from redsun.testing import StartService
 
 STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
@@ -62,6 +65,31 @@ LOGURU_ERROR = json.dumps(
         },
     }
 )
+
+
+class RecordingTransport(PVAccess):
+    """PVAccess, recording whether it was released."""
+
+    def __init__(self) -> None:
+        self.released = False
+
+    async def release(self) -> None:
+        self.released = True
+
+
+@pytest.fixture
+def recording_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[RecordingTransport]:
+    """Register a `recording` transport, and check it was released once the test ends.
+
+    A test asks for it before `start_service`, so its teardown runs after the
+    services were stopped.
+    """
+    transport = RecordingTransport()
+    monkeypatch.setitem(TRANSPORTS, "recording", transport)
+    yield transport
+    assert transport.released
 
 
 @pytest.fixture
@@ -313,6 +341,81 @@ def test_two_pva_services_answer_on_the_loopback(
     with p4p.Context("pva") as client:
         assert float(client.get("SIM:FIRST", timeout=10.0)) == 1.0
         assert float(client.get("SIM:SECOND", timeout=10.0)) == 2.0
+
+
+@pytest.mark.parametrize(
+    ("transport", "variable", "before"),
+    [
+        (PVAccess(), "EPICS_PVA_ADDR_LIST", ""),
+        (ChannelAccess(), "EPICS_CA_ADDR_LIST", ""),
+        (PVAccess(), "EPICS_PVA_ADDR_LIST", "10.0.0.1"),
+    ],
+)
+def test_a_transport_lists_its_address_again_once_the_list_is_cleared(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: PVAccess | ChannelAccess,
+    variable: str,
+    before: str,
+) -> None:
+    """List the address once, again after a reset, and keep what the list held."""
+    monkeypatch.setenv(variable, before)
+    transport.publish("first")
+    transport.publish("first")
+    listed = os.environ[variable].split()
+    monkeypatch.setenv(variable, before)
+    transport.publish("first")
+
+    assert os.environ[variable].split() == listed
+    assert listed[: len(before.split())] == before.split()
+    assert len(listed) == len(before.split()) + 1
+
+
+@pytest.mark.parametrize("value", [1.0, 2.0])
+def test_a_pva_service_started_in_each_test_answers(
+    start_service: StartService,
+    monkeypatch: pytest.MonkeyPatch,
+    value: float,
+) -> None:
+    """Reach a PVA service started in each of two tests of one process."""
+    p4p = pytest.importorskip("p4p.client.thread")
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+
+    start_service(
+        "started",
+        Launch(
+            PVA_STAND_IN,
+            args=("--pv", "SIM:STARTED", "--value", str(value)),
+            ready=PVA_READY,
+            stop_timeout=0.5,
+        ),
+        transport="pv-access",
+    )
+
+    with p4p.Context("pva") as client:
+        assert float(client.get("SIM:STARTED", timeout=10.0)) == value
+
+
+def test_a_started_service_releases_its_transport_once_it_stops(
+    recording_transport: RecordingTransport,
+    start_service: StartService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release a started service's transport after the test, as a session does."""
+    pytest.importorskip("p4p")
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+
+    start_service(
+        "released",
+        Launch(
+            PVA_STAND_IN,
+            args=("--pv", "SIM:RELEASED", "--value", "1.0"),
+            ready=PVA_READY,
+            stop_timeout=0.5,
+        ),
+        transport="recording",
+    )
+
+    assert not recording_transport.released
 
 
 @pytest.mark.parametrize(

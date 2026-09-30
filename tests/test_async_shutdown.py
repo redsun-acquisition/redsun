@@ -14,7 +14,7 @@ from ophyd_async.core import (
 from redsun import AsDevice, AsPresenter, Declare, Session
 
 if TYPE_CHECKING:
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Laser(StandardReadable):

@@ -19,8 +19,7 @@ if TYPE_CHECKING:
     from ophyd_async.core import SignalR
 
     from redsun import Link
-
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Watcher:

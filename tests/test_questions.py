@@ -18,7 +18,7 @@ from redsun import (
 )
 
 if TYPE_CHECKING:
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 T_co = TypeVar("T_co", covariant=True)
 

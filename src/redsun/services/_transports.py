@@ -67,21 +67,17 @@ class ChannelAccess:
 
     def __init__(self) -> None:
         self._ports: dict[str, int] = {}
-        self._published: set[str] = set()
 
     def reserve(self, service: str) -> Mapping[str, str]:
         """Return the service's own Channel Access server port."""
         return {"EPICS_CA_SERVER_PORT": str(self._port(service))}
 
     def publish(self, service: str) -> None:
-        """Add the service's port to this process's address list, once.
+        """Add the service's port to this process's address list, unless listed.
 
         A restarted service keeps its port, so the list it is already in needs
         nothing added: a client read it when it first used Channel Access.
         """
-        if service in self._published:
-            return
-        self._published.add(service)
         add_to_env("EPICS_CA_ADDR_LIST", f"127.0.0.1:{self._port(service)}")
 
     async def release(self) -> None:
@@ -118,9 +114,6 @@ class PVAccess:
 
     name = PV_ACCESS
 
-    def __init__(self) -> None:
-        self._published = False
-
     def reserve(self, service: str) -> Mapping[str, str]:
         """Keep the service on the loopback, on any free TCP port.
 
@@ -131,14 +124,11 @@ class PVAccess:
         return {"EPICS_PVAS_INTF_ADDR_LIST": LOOPBACK, "EPICS_PVAS_SERVER_PORT": "0"}
 
     def publish(self, service: str) -> None:
-        """Add the loopback to this process's address list, once for them all.
+        """Add the loopback to this process's address list, unless listed.
 
         `EPICS_PVA_AUTO_ADDR_LIST` is left alone, so a session still reaches
         the servers of its site.
         """
-        if self._published:
-            return
-        self._published = True
         add_to_env("EPICS_PVA_ADDR_LIST", LOOPBACK)
 
     async def release(self) -> None:
@@ -163,8 +153,10 @@ def transport_of(config: Mapping[str, Any]) -> Any:
 
 
 def add_to_env(name: str, value: str) -> None:
-    """Append *value* to the environment variable *name*, space separated."""
-    os.environ[name] = " ".join(filter(None, [os.environ.get(name), value]))
+    """Append *value* to the space-separated variable *name*, unless it is listed."""
+    listed = os.environ.get(name, "").split()
+    if value not in listed:
+        os.environ[name] = " ".join([*listed, value])
 
 
 def free_udp_port() -> int:

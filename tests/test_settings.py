@@ -14,7 +14,7 @@ from redsun.qt import QtSession
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Recorder:

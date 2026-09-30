@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
     from redsun import Link
     from redsun.ports import SlotThread
-
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Talker:
