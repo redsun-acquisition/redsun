@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 CATALOG: dict[str, Any] = {"session": "catalog-session", "storage": {"catalog": None}}
 

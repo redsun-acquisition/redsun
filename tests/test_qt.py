@@ -32,7 +32,7 @@ from qtpy.QtWidgets import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 from redsun import (
     AsHook,

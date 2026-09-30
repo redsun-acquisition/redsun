@@ -21,7 +21,7 @@ from redsun import (
 )
 
 if TYPE_CHECKING:
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 Gain = NewType("Gain", float)
