@@ -316,6 +316,33 @@ def test_two_pva_services_answer_on_the_loopback(
 
 
 @pytest.mark.parametrize(
+    ("transport", "variable", "before"),
+    [
+        (PVAccess(), "EPICS_PVA_ADDR_LIST", ""),
+        (ChannelAccess(), "EPICS_CA_ADDR_LIST", ""),
+        (PVAccess(), "EPICS_PVA_ADDR_LIST", "10.0.0.1"),
+    ],
+)
+def test_a_transport_lists_its_address_again_once_the_list_is_cleared(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: PVAccess | ChannelAccess,
+    variable: str,
+    before: str,
+) -> None:
+    """List the address once, again after a reset, and keep what the list held."""
+    monkeypatch.setenv(variable, before)
+    transport.publish("first")
+    transport.publish("first")
+    listed = os.environ[variable].split()
+    monkeypatch.setenv(variable, before)
+    transport.publish("first")
+
+    assert os.environ[variable].split() == listed
+    assert listed[: len(before.split())] == before.split()
+    assert len(listed) == len(before.split()) + 1
+
+
+@pytest.mark.parametrize(
     ("line", "name", "level", "message", "created", "traceback"),
     [
         (
