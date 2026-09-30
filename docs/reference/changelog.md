@@ -15,6 +15,16 @@ a migration guide such as [How to migrate from 0.13](../how-to/migrate-from-0.13
 shows how to move code across it.
 Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
+## [0.14.1] - 30-09-2026
+
+### Added
+
+- Add `redsun.testing`, fixtures for testing a plugin ([#147](https://github.com/redsun-acquisition/redsun/pull/147))
+
+### Fixed
+
+- List a service again once its address list is cleared ([#145](https://github.com/redsun-acquisition/redsun/pull/145))
+
 ## [0.14.0] - 29-09-2026
 
 ### Changed
@@ -22,3 +32,4 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 - **Breaking:** Replace the container layer with sessions ([#85](https://github.com/redsun-acquisition/redsun/pull/85))
 
 [0.14.0]: https://github.com/redsun-acquisition/redsun/compare/v0.13.2...v0.14.0
+[0.14.1]: https://github.com/redsun-acquisition/redsun/compare/v0.14.0...v0.14.1
