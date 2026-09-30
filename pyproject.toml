@@ -106,6 +106,9 @@ coverage = [
 tox = [
     "tox-uv-bare>=1.36.0",
 ]
+testing = [
+    "pytest>=9.1.1",
+]
 
 [project.optional-dependencies]
 qt-common = [
@@ -130,6 +133,9 @@ tiled = [
 ]
 ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
+]
+testing = [
+    "pytest>=9.1.1",
 ]
 
 [project.entry-points."redsun.plugins"]
@@ -292,7 +298,7 @@ testpaths = [
     "tests",
 ]
 pythonpath = ["."]
-addopts = "-p no:warnings"
+addopts = "-p no:warnings -p redsun.testing"
 asyncio_mode = "auto"
 markers = [
     "qt: marks tests that require a Qt display (skipped in headless environments)",

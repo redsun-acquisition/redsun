@@ -7,27 +7,21 @@ when no display is available (headless CI without `QT_QPA_PLATFORM=offscreen`).
 from __future__ import annotations
 
 import contextlib
-import logging
 import os
 import sys
 import time
 from importlib.metadata import EntryPoint
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, TypeVar
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
-from psygnal._queue import QueuedCallback
 from psygnal.qt import start_emitting_from_queue
 from qtpy.QtWidgets import QApplication
 
-from redsun import Session
-from redsun._config import Source
-from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
-
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator, Sequence
+    from collections.abc import Callable, Generator
 
 # the module imports tiled, which the extra does not install on every Python
 collect_ignore = [] if find_spec("tiled") else ["test_catalog.py"]
@@ -37,8 +31,6 @@ if _TESTS_DIR not in sys.path:
     sys.path.insert(0, _TESTS_DIR)
 
 _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
-
-SessionT = TypeVar("SessionT", bound=Session)
 
 
 @pytest.fixture
@@ -79,54 +71,6 @@ def launchable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EPICS_CA_ADDR_LIST", "")
 
 
-@pytest.fixture(autouse=True)
-def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Write session log files under *tmp_path*, and close any a test left open.
-
-    A session opens a log file when it builds; without this, every test
-    building one would write to the user's own log directory.
-    """
-    monkeypatch.setattr("redsun.log.user_data_dir", lambda *a, **k: str(tmp_path))
-    yield tmp_path / "logs"
-    loggers = [
-        logging.getLogger(name)
-        for name in list(logging.Logger.manager.loggerDict)
-        if name.startswith(SERVICE_LOGGER)
-    ]
-    for owner in (logger, *loggers):
-        for handler in [h for h in owner.handlers if isinstance(h, SessionFileHandler)]:
-            owner.removeHandler(handler)
-            handler.close()
-
-
-@pytest.fixture(autouse=True)
-def data_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Put the default root of acquisition files and catalogs under *tmp_path*.
-
-    Without this, every test building a session with a catalog would start
-    one in the user's own data directory.
-    """
-    root = tmp_path / "data"
-    monkeypatch.setattr("redsun.path_provider.user_data_dir", lambda *a, **k: str(root))
-    return root
-
-
-@pytest.fixture(autouse=True)
-def empty_emission_queue() -> Iterator[None]:
-    """Drop every psygnal emission a test left queued for a thread.
-
-    A slot with a thread affinity receives an emission from another thread
-    through a queue that only the event loop drains. Left there, it is
-    delivered by the next test that runs the loop, to whatever its target has
-    become, and a destroyed widget ends the interpreter.
-    """
-    yield
-    # psygnal offers no public way to drop queued emissions
-    for queue in QueuedCallback._GLOBAL_QUEUE.values():
-        while not queue.empty():
-            queue.get_nowait()
-
-
 def _has_display() -> bool:
     """Return True if a Qt display environment is available."""
     # offscreen platform works everywhere - check first
@@ -160,62 +104,10 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(_SKIP_COMPOSE)
 
 
-class BuildSession(Protocol):
-    """Build a session, and hand it back typed as what was asked for."""
-
-    def __call__(
-        self,
-        container: type[SessionT] | SessionT,
-        config: Source | Sequence[Source] | None = ...,
-        /,
-    ) -> SessionT: ...
-
-
 @pytest.fixture
 def config_path() -> Path:
     """Return the directory holding the test session configurations."""
     return Path(__file__).parent / "configs"
-
-
-@pytest.fixture
-def build() -> Generator[BuildSession, None, None]:
-    """Return a function building a session and shutting it down afterwards.
-
-    Parameters
-    ----------
-    container : type[SessionT] | SessionT
-        A container class, or a container already in hand.
-    config : Source | None
-        Laid over what the class declares, for a container built here.
-
-    Every session it built is shut down in reverse order once the test ends,
-    and a test may shut one down itself, `shutdown` running nothing the
-    second time.
-    """
-    built: list[Session] = []
-
-    def build_one(
-        container: type[SessionT] | SessionT,
-        config: Source | Sequence[Source] | None = None,
-        /,
-    ) -> SessionT:
-        unbuilt = container(config) if isinstance(container, type) else container
-        session = unbuilt.build()
-        built.append(session)
-        return session
-
-    yield build_one
-    for session in reversed(built):
-        session.shutdown()
-
-
-@pytest.fixture
-def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """Point the settings store at *tmp_path*, off the user's own directory."""
-    monkeypatch.setattr(
-        "redsun._settings.user_config_dir", lambda *a, **k: str(tmp_path)
-    )
-    return tmp_path
 
 
 @pytest.fixture

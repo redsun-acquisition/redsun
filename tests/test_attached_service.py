@@ -39,8 +39,7 @@ if TYPE_CHECKING:
     from qtpy.QtWidgets import QApplication
 
     from redsun import Link
-
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.compose
 

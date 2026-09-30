@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from redsun import Launch
 from redsun.log import GlobalFormatter
 from redsun.services import Service, _service, _transports
 from redsun.services._service import service_record
@@ -29,6 +30,8 @@ from redsun.services._transports import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from redsun.testing import StartService
 
 STAND_IN = "mock_pkg.service.stand_in"
 PVA_STAND_IN = "mock_pkg.service.pva_stand_in"
@@ -340,6 +343,31 @@ def test_a_transport_lists_its_address_again_once_the_list_is_cleared(
     assert os.environ[variable].split() == listed
     assert listed[: len(before.split())] == before.split()
     assert len(listed) == len(before.split()) + 1
+
+
+@pytest.mark.parametrize("value", [1.0, 2.0])
+def test_a_pva_service_started_in_each_test_answers(
+    start_service: StartService,
+    monkeypatch: pytest.MonkeyPatch,
+    value: float,
+) -> None:
+    """Reach a PVA service started in each of two tests of one process."""
+    p4p = pytest.importorskip("p4p.client.thread")
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+
+    start_service(
+        "started",
+        Launch(
+            PVA_STAND_IN,
+            args=("--pv", "SIM:STARTED", "--value", str(value)),
+            ready=PVA_READY,
+            stop_timeout=0.5,
+        ),
+        transport="pv-access",
+    )
+
+    with p4p.Context("pva") as client:
+        assert float(client.get("SIM:STARTED", timeout=10.0)) == value
 
 
 @pytest.mark.parametrize(

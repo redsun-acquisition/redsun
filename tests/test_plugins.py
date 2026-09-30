@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 SESSION = "mock_session.yaml"
 

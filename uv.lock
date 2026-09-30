@@ -5307,6 +5307,9 @@ qt-common = [
     { name = "magicgui" },
     { name = "qtpy" },
 ]
+testing = [
+    { name = "pytest" },
+]
 tiled = [
     { name = "ome-tiled", extra = ["bluesky"], marker = "python_full_version < '3.14'" },
     { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
@@ -5380,6 +5383,9 @@ qt-common = [
     { name = "magicgui" },
     { name = "qtpy" },
 ]
+testing = [
+    { name = "pytest" },
+]
 tiled = [
     { name = "ome-tiled", extra = ["bluesky"], marker = "python_full_version < '3.14'" },
     { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
@@ -5411,6 +5417,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pyqt6", marker = "extra == 'pyqt'", specifier = ">=6.11.0" },
     { name = "pyside6", marker = "extra == 'pyside'", specifier = ">=6.11.2" },
+    { name = "pytest", marker = "extra == 'testing'", specifier = ">=9.1.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "qtpy", marker = "extra == 'pyqt'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'pyside'", specifier = ">=2.4.3" },
@@ -5418,7 +5425,7 @@ requires-dist = [
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.18" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["ome-zarr", "pyqt", "pyside", "qt-common", "tiled", "zarr"]
+provides-extras = ["ome-zarr", "pyqt", "pyside", "qt-common", "testing", "tiled", "zarr"]
 
 [package.metadata.requires-dev]
 coverage = [{ name = "coverage", specifier = ">=7.16.2" }]
@@ -5482,6 +5489,7 @@ qt-common = [
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
 ]
+testing = [{ name = "pytest", specifier = ">=9.1.1" }]
 tiled = [
     { name = "ome-tiled", extras = ["bluesky"], marker = "python_full_version < '3.14'", specifier = ">=0.2.0" },
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14'", specifier = ">=0.2.18" },

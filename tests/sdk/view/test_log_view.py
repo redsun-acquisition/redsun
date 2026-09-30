@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from qtpy.QtWidgets import QApplication
 
-    from ...conftest import BuildSession
+    from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
 

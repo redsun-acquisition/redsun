@@ -14,7 +14,7 @@ from redsun.path_provider import SessionPathProvider
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 class Writer(Device):

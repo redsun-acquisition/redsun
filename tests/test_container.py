@@ -51,8 +51,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from redsun import Link
-
-    from .conftest import BuildSession
+    from redsun.testing import BuildSession
 
 
 Readings = NewType("Readings", "dict[str, float]")

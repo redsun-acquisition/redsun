@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-NOT_OFFERED = {"qt-common"}
+NOT_OFFERED = {"qt-common", "testing"}
 EXTRA_ROW = re.compile(r'data-role="extra".*?</div>', re.DOTALL)
 VALUE = re.compile(r'data-value="([^"]+)"')
 
