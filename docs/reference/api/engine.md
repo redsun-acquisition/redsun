@@ -11,6 +11,8 @@ icon: lucide/code
       members:
         - RunEngine
         - Deferrals
+        - PlanProgress
+        - ProgressState
         - register_bound_command
 
 `RunEngineResult` is the class of `bluesky`,
@@ -103,6 +105,21 @@ While it waits it yields a checkpoint every `poll_interval` seconds, 1/60 s by
 default. A checkpoint is where the plan can be paused, so the stub cannot sit
 between `create` and `save`. An empty map raises `ValueError`.
 
+### Progress stubs
+
+A plan opens a progress scope, moves it and finishes it. The run engine
+announces every open scope on `RunEngine.sig_progress`, which a view connects
+to. [How to show a plan's progress](../../how-to/show-plan-progress.md) shows
+the whole path.
+
+```python
+import redsun.engine.plan_stubs as rps
+
+yield from rps.declare_progress("series")
+yield from rps.update_progress("series", current=3, initial=0, target=10, unit="frames")
+yield from rps.update_progress("series", done=True)
+```
+
 
 ::: redsun.engine.plan_stubs
     options:
@@ -113,3 +130,5 @@ between `create` and `save`. An empty map raises `ValueError`.
         - lock
         - unlock
         - lock_wrapper
+        - declare_progress
+        - update_progress

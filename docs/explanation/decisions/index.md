@@ -27,3 +27,4 @@ never edited; a later one replaces it.
 - [16. A component refused at declaration is skipped](0016-a-component-refused-at-declaration-is-skipped.md)
 - [17. Questions read from the annotation](0017-questions-read-from-the-annotation.md)
 - [18. Wire yields links](0018-wire-yields-links.md)
+- [19. Copy plan progress from bluesky](0019-copy-plan-progress-from-bluesky.md)
