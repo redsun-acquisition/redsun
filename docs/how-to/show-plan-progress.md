@@ -59,6 +59,22 @@ The view hands what it receives to the page of the plan that is running:
 and the session links the two, with
 `yield self.plan_ctrl.sig_progress, self.plan_view.on_progress` in `wire`.
 
+## Follow a device's progress
+
+A step the plan starts without waiting, such as a move or a detector
+completing, returns a status. `monitor_progress` opens a scope that follows
+it, and finishes the scope when the status is done:
+
+```{.python}
+--8<-- "docs/examples/continuous_plan.py:monitor"
+```
+
+A status that reports its progress, such as a detector's `complete` or a
+motor's `set` in `ophyd-async`, fills the bar. The shutter's status here
+reports nothing, so its bar has no end and moves back and forth until the
+shutter is open. The plan still waits on the status itself: a status that
+fails closes its scope, and the failure reaches the plan through its `wait`.
+
 ## What a bar shows
 
 Each scope is a row of the page's "Progress" group, indented under its

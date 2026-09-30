@@ -118,6 +118,7 @@ import redsun.engine.plan_stubs as rps
 yield from rps.declare_progress("series")
 yield from rps.update_progress("series", current=3, initial=0, target=10, unit="frames")
 yield from rps.update_progress("series", done=True)
+yield from rps.monitor_progress("frames", status)  # follow a device status
 ```
 
 
@@ -132,3 +133,4 @@ yield from rps.update_progress("series", done=True)
         - lock_wrapper
         - declare_progress
         - update_progress
+        - monitor_progress

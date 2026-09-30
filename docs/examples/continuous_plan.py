@@ -106,6 +106,13 @@ class MyController:
         yield from bps.open_run()
         yield from rps.declare_progress("repeats")
         for repeat in range(repeats):
+            # --8<-- [start:monitor]
+            status = yield from bps.abs_set(
+                camera.shutter, True, wait=False, group="shutter"
+            )
+            yield from rps.monitor_progress("shutter", status, parent="repeats")
+            yield from bps.wait(group="shutter")
+            # --8<-- [end:monitor]
             yield from rps.declare_progress("series", parent="repeats")
             for frame in range(frames):
                 yield from bps.trigger_and_read([camera])

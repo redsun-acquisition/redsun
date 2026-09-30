@@ -27,8 +27,9 @@ find its scope still open and be refused. This follows a review comment on
 the pull request.
 
 On top of the copy, `redsun` adds `ProgressState`, a snapshot of one scope,
-and `RunEngine.sig_progress`, which carries the open scopes to views, and a
-"Progress" group on each plan page. The engine finishes every scope a plan
+and `RunEngine.sig_progress`, which carries the open scopes to views, a
+"Progress" group on each plan page, and `monitor_progress`, which follows a
+device status with a scope. The engine finishes every scope a plan
 left open when it goes back to idle, which the pull request does in parts of
 the `RunEngine` a subclass cannot reach.
 
@@ -40,4 +41,5 @@ When `bluesky` releases plan progress:
   re-export `bluesky`'s stubs and `PlanProgress` under the same names;
 - keep `ProgressState`, `sig_progress`, the engine's own `progress_hook` and
   the widget, which then follow `bluesky`'s objects;
-- keep the two messages out of the replay if `bluesky` has not done so.
+- keep the two messages out of the replay if `bluesky` has not done so;
+- rebuild `monitor_progress`, which is `redsun`'s own, on `bluesky`'s scopes.
