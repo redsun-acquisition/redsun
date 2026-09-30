@@ -11,6 +11,7 @@ from bluesky.utils import MsgGenerator
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 
+from redsun.engine import ProgressState
 from redsun.engine.actions import PlanAction, continuous
 from redsun.presenter.plan_spec import (
     ParamDescription,
@@ -117,6 +118,39 @@ def _action_spec() -> PlanSpec:
         yield from ()
 
     return create_plan_spec(plan, {})
+
+
+def _scope(
+    name: str,
+    *,
+    parent: str | None = None,
+    current: float | None = None,
+    target: float | None = None,
+    fraction: float | None = None,
+    unit: str = "frames",
+    precision: int | None = None,
+    time_remaining: float | None = None,
+) -> ProgressState:
+    """Build the state of one progress scope."""
+    return ProgressState(
+        name=name,
+        parent=parent,
+        current=current,
+        initial=0.0 if target is not None else None,
+        target=target,
+        unit=unit,
+        precision=precision,
+        fraction=fraction,
+        time_elapsed=None,
+        time_remaining=time_remaining,
+    )
+
+
+def _texts(widget: PlanWidget) -> list[str]:
+    """Return the text of every progress row, top to bottom."""
+    assert widget.progress_group is not None
+    labels = widget.progress_group.findChildren(QtW.QLabel, "progress-text")
+    return [label.text() for label in labels]
 
 
 class TestActionButton:
@@ -519,3 +553,67 @@ def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
         renderable = True
 
     assert _is_renderable(annotation) is renderable
+
+
+@pytest.mark.parametrize(
+    ("scope", "busy", "text"),
+    [
+        (_scope("s", current=37, target=100, fraction=0.37), False, "37 / 100 frames"),
+        (_scope("s", fraction=0.42), False, "42 %"),
+        (_scope("s", current=412), True, "412 frames"),
+        (_scope("s", unit=""), True, ""),
+        (
+            _scope("s", current=3.5, target=10, fraction=0.35, precision=1),
+            False,
+            "3.5 / 10.0 frames",
+        ),
+        (
+            _scope("s", current=1, target=4, fraction=0.25, time_remaining=12.4),
+            False,
+            "1 / 4 frames, 12 s left",
+        ),
+    ],
+    ids=["counted", "fraction", "no end", "nothing yet", "precision", "time left"],
+)
+def test_a_scope_shows_a_bar_and_what_it_counts(
+    scope: ProgressState, busy: bool, text: str
+) -> None:
+    """Fill a bar from a known fraction, or keep it busy, and say what is counted."""
+    widget = create_plan_widget(_simple_spec())
+    assert widget.progress_group is not None
+
+    widget.show_progress((scope,))
+
+    bar = widget.progress_group.findChildren(QtW.QProgressBar)[0]
+    assert (bar.maximum() == 0) is busy
+    if not busy:
+        assert scope.fraction is not None
+        assert bar.value() == round(scope.fraction * bar.maximum())
+    assert _texts(widget) == [text]
+    assert not widget.progress_group.isHidden()
+
+
+def test_a_nested_scope_is_indented_and_a_finished_one_removed() -> None:
+    """Indent a child under its parent, drop a finished row, and hide on nothing."""
+    widget = create_plan_widget(_simple_spec())
+    assert widget.progress_group is not None
+    outer = _scope("repeats", current=1, target=3, fraction=1 / 3, unit="repeats")
+    inner = _scope("series", parent="repeats", current=4, target=10, fraction=0.4)
+
+    widget.show_progress((outer, inner))
+    names = widget.progress_group.findChildren(QtW.QLabel, "progress-name")
+    indents = {label.text(): label.indent() for label in names}
+    assert indents["series"] > indents["repeats"]
+
+    widget.show_progress((outer,))
+    assert _texts(widget) == ["1 / 3 repeats"]
+
+    widget.show_progress(())
+    assert widget.progress_group.isHidden()
+
+
+def test_a_new_page_hides_its_progress() -> None:
+    """Hide the progress group of a page whose plan has reported nothing."""
+    widget = create_plan_widget(_simple_spec())
+    assert widget.progress_group is not None
+    assert widget.progress_group.isHidden()
