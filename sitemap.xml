@@ -187,6 +187,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/how-to/share-a-value/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/test-a-plugin/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/wire-components/</loc>
       </url>
       <url>
@@ -254,6 +257,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/session/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/reference/api/testing/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/reference/api/utils/</loc>
