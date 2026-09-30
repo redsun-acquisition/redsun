@@ -48,7 +48,7 @@ redsun/
 |                              mypy_qt.py (tox mypy legs),
 |                              release_notes.py (changelog sections),
 |                              screenshots.py (tutorial window pictures, docs build)
-|-- .github/workflows/         CI, changelog label check, prepare-release
+|-- .github/workflows/         CI, changelog label check, docs
 |-- .claude/                   agents, commands, docs-conventions skill
 |-- pyproject.toml             dependencies and all tool config: pytest, ruff, mypy, coverage, tox
 |-- zensical.toml              docs site and navigation
