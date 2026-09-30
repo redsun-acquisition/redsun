@@ -12,36 +12,36 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/explanation/decisions/0019-copy-plan-progress-from-bluesky/">
       
       
-        <link rel="prev" href="../derived-products/">
+        <link rel="prev" href="../0018-wire-yields-links/">
       
       
-        <link rel="next" href="./0001-record-architecture-decisions/">
+        <link rel="next" href="../../../reference/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.66">
     
     
       
-        <title>Architectural Decision Records - Redsun</title>
+        <title>19. Copy plan progress from bluesky - Redsun</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.1502b751.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.1502b751.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.812a03bb.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/install-table.css">
+      <link rel="stylesheet" href="../../../stylesheets/install-table.css">
     
-    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architectural-decision-records" class="md-skip">
+        <a href="#19-copy-plan-progress-from-bluesky" class="md-skip">
           Skip to content
         </a>
       
@@ -101,7 +101,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-header__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sunrise" viewBox="0 0 24 24"><path d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0"/></svg>
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architectural Decision Records
+              19. Copy plan progress from bluesky
             
           </span>
         </div>
@@ -205,7 +205,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   redsun
@@ -248,7 +248,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../tutorials/" class="md-tabs__link">
+        <a href="../../../tutorials/" class="md-tabs__link">
           
   
   Tutorials
@@ -288,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../how-to/" class="md-tabs__link">
+        <a href="../../../how-to/" class="md-tabs__link">
           
   
   How-to Guides
@@ -330,7 +330,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+        <a href="../../" class="md-tabs__link">
           
   
   Explanations
@@ -370,7 +370,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   Reference
@@ -402,7 +402,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../how-to/contribute/" class="md-tabs__link">
+        <a href="../../../how-to/contribute/" class="md-tabs__link">
           
   
   Contributing
@@ -435,7 +435,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
+    <a href="../../.." title="Redsun" class="md-nav__button md-logo" aria-label="Redsun" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sunrise" viewBox="0 0 24 24"><path d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0"/></svg>
@@ -465,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -532,7 +532,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tutorials/" class="md-nav__link ">
+            <a href="../../../tutorials/" class="md-nav__link ">
               
   
   
@@ -577,7 +577,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/installation/" class="md-nav__link">
+      <a href="../../../tutorials/installation/" class="md-nav__link">
         
   
   
@@ -606,7 +606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/first-session/" class="md-nav__link">
+      <a href="../../../tutorials/first-session/" class="md-nav__link">
         
   
   
@@ -635,7 +635,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/device-protocols/" class="md-nav__link">
+      <a href="../../../tutorials/device-protocols/" class="md-nav__link">
         
   
   
@@ -664,7 +664,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/plan-controls/" class="md-nav__link">
+      <a href="../../../tutorials/plan-controls/" class="md-nav__link">
         
   
   
@@ -693,7 +693,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/acquire-images/" class="md-nav__link">
+      <a href="../../../tutorials/acquire-images/" class="md-nav__link">
         
   
   
@@ -722,7 +722,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/scan-plan/" class="md-nav__link">
+      <a href="../../../tutorials/scan-plan/" class="md-nav__link">
         
   
   
@@ -751,7 +751,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/window-layout/" class="md-nav__link">
+      <a href="../../../tutorials/window-layout/" class="md-nav__link">
         
   
   
@@ -780,7 +780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tutorials/device-service/" class="md-nav__link">
+      <a href="../../../tutorials/device-service/" class="md-nav__link">
         
   
   
@@ -852,7 +852,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../how-to/" class="md-nav__link ">
+            <a href="../../../how-to/" class="md-nav__link ">
               
   
   
@@ -952,7 +952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/install-redsun/" class="md-nav__link">
+      <a href="../../../how-to/install-redsun/" class="md-nav__link">
         
   
   
@@ -1069,7 +1069,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-component/" class="md-nav__link">
+      <a href="../../../how-to/write-a-component/" class="md-nav__link">
         
   
   
@@ -1098,7 +1098,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-service/" class="md-nav__link">
+      <a href="../../../how-to/write-a-service/" class="md-nav__link">
         
   
   
@@ -1127,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-service-with-fastcs/" class="md-nav__link">
+      <a href="../../../how-to/write-a-service-with-fastcs/" class="md-nav__link">
         
   
   
@@ -1156,7 +1156,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-session-file/" class="md-nav__link">
+      <a href="../../../how-to/write-a-session-file/" class="md-nav__link">
         
   
   
@@ -1185,7 +1185,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/wire-components/" class="md-nav__link">
+      <a href="../../../how-to/wire-components/" class="md-nav__link">
         
   
   
@@ -1214,7 +1214,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/share-a-value/" class="md-nav__link">
+      <a href="../../../how-to/share-a-value/" class="md-nav__link">
         
   
   
@@ -1243,7 +1243,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/package-a-plugin/" class="md-nav__link">
+      <a href="../../../how-to/package-a-plugin/" class="md-nav__link">
         
   
   
@@ -1272,7 +1272,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/test-a-plugin/" class="md-nav__link">
+      <a href="../../../how-to/test-a-plugin/" class="md-nav__link">
         
   
   
@@ -1301,7 +1301,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/connect-a-device-on-demand/" class="md-nav__link">
+      <a href="../../../how-to/connect-a-device-on-demand/" class="md-nav__link">
         
   
   
@@ -1330,7 +1330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-a-plan/" class="md-nav__link">
+      <a href="../../../how-to/run-a-plan/" class="md-nav__link">
         
   
   
@@ -1359,7 +1359,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-continuous-plan/" class="md-nav__link">
+      <a href="../../../how-to/write-a-continuous-plan/" class="md-nav__link">
         
   
   
@@ -1388,7 +1388,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/follow-a-plan-action/" class="md-nav__link">
+      <a href="../../../how-to/follow-a-plan-action/" class="md-nav__link">
         
   
   
@@ -1417,7 +1417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/show-plan-progress/" class="md-nav__link">
+      <a href="../../../how-to/show-plan-progress/" class="md-nav__link">
         
   
   
@@ -1516,7 +1516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/place-a-view/" class="md-nav__link">
+      <a href="../../../how-to/place-a-view/" class="md-nav__link">
         
   
   
@@ -1545,7 +1545,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-frontend/" class="md-nav__link">
+      <a href="../../../how-to/write-a-frontend/" class="md-nav__link">
         
   
   
@@ -1574,7 +1574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/install-hooks/" class="md-nav__link">
+      <a href="../../../how-to/install-hooks/" class="md-nav__link">
         
   
   
@@ -1603,7 +1603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/add-menu-actions/" class="md-nav__link">
+      <a href="../../../how-to/add-menu-actions/" class="md-nav__link">
         
   
   
@@ -1706,7 +1706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-without-a-gui/" class="md-nav__link">
+      <a href="../../../how-to/run-without-a-gui/" class="md-nav__link">
         
   
   
@@ -1735,7 +1735,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-without-hardware/" class="md-nav__link">
+      <a href="../../../how-to/run-without-hardware/" class="md-nav__link">
         
   
   
@@ -1764,7 +1764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/find-a-missing-component/" class="md-nav__link">
+      <a href="../../../how-to/find-a-missing-component/" class="md-nav__link">
         
   
   
@@ -1793,7 +1793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/configure-logging/" class="md-nav__link">
+      <a href="../../../how-to/configure-logging/" class="md-nav__link">
         
   
   
@@ -1822,7 +1822,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/change-a-setting-while-a-plan-runs/" class="md-nav__link">
+      <a href="../../../how-to/change-a-setting-while-a-plan-runs/" class="md-nav__link">
         
   
   
@@ -1851,7 +1851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/save-a-session/" class="md-nav__link">
+      <a href="../../../how-to/save-a-session/" class="md-nav__link">
         
   
   
@@ -1948,7 +1948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/choose-where-files-go/" class="md-nav__link">
+      <a href="../../../how-to/choose-where-files-go/" class="md-nav__link">
         
   
   
@@ -1977,7 +1977,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/keep-a-catalog/" class="md-nav__link">
+      <a href="../../../how-to/keep-a-catalog/" class="md-nav__link">
         
   
   
@@ -2006,7 +2006,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-a-derived-product/" class="md-nav__link">
+      <a href="../../../how-to/write-a-derived-product/" class="md-nav__link">
         
   
   
@@ -2099,7 +2099,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/migrate-from-0.13/" class="md-nav__link">
+      <a href="../../../how-to/migrate-from-0.13/" class="md-nav__link">
         
   
   
@@ -2185,7 +2185,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -2288,7 +2288,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../statement/" class="md-nav__link">
+      <a href="../../statement/" class="md-nav__link">
         
   
   
@@ -2392,7 +2392,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../session/" class="md-nav__link">
+      <a href="../../session/" class="md-nav__link">
         
   
   
@@ -2421,7 +2421,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../components/" class="md-nav__link">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -2450,7 +2450,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../questions/" class="md-nav__link">
+      <a href="../../questions/" class="md-nav__link">
         
   
   
@@ -2479,7 +2479,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plugins/" class="md-nav__link">
+      <a href="../../plugins/" class="md-nav__link">
         
   
   
@@ -2508,7 +2508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../limits/" class="md-nav__link">
+      <a href="../../limits/" class="md-nav__link">
         
   
   
@@ -2606,7 +2606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../services/" class="md-nav__link">
+      <a href="../../services/" class="md-nav__link">
         
   
   
@@ -2635,7 +2635,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../plans/" class="md-nav__link">
+      <a href="../../plans/" class="md-nav__link">
         
   
   
@@ -2733,7 +2733,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../frontends/" class="md-nav__link">
+      <a href="../../frontends/" class="md-nav__link">
         
   
   
@@ -2762,7 +2762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../qt-widgets/" class="md-nav__link">
+      <a href="../../qt-widgets/" class="md-nav__link">
         
   
   
@@ -2860,7 +2860,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../catalog/" class="md-nav__link">
+      <a href="../../catalog/" class="md-nav__link">
         
   
   
@@ -2889,7 +2889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../derived-products/" class="md-nav__link">
+      <a href="../../derived-products/" class="md-nav__link">
         
   
   
@@ -2993,7 +2993,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="././" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -3012,7 +3012,7 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_4_7" id="__nav_4_7_label" tabindex="">
+              <label class="md-nav__link " for="__nav_4_7" id="__nav_4_7_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -3038,7 +3038,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0001-record-architecture-decisions/" class="md-nav__link">
+      <a href="../0001-record-architecture-decisions/" class="md-nav__link">
         
   
   
@@ -3065,7 +3065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0002-storage-dual-context-redesign/" class="md-nav__link">
+      <a href="../0002-storage-dual-context-redesign/" class="md-nav__link">
         
   
   
@@ -3092,7 +3092,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
+      <a href="../0003-structural-subtyping-for-presenters-and-views/" class="md-nav__link">
         
   
   
@@ -3119,7 +3119,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0004-owner-scoped-signal-lookup/" class="md-nav__link">
+      <a href="../0004-owner-scoped-signal-lookup/" class="md-nav__link">
         
   
   
@@ -3146,7 +3146,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0005-culsans-psygnal-async-backend/" class="md-nav__link">
+      <a href="../0005-culsans-psygnal-async-backend/" class="md-nav__link">
         
   
   
@@ -3173,7 +3173,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0006-application-declared-wiring/" class="md-nav__link">
+      <a href="../0006-application-declared-wiring/" class="md-nav__link">
         
   
   
@@ -3200,7 +3200,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0007-typed-provider-keys/" class="md-nav__link">
+      <a href="../0007-typed-provider-keys/" class="md-nav__link">
         
   
   
@@ -3227,7 +3227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
+      <a href="../0008-container-hooks-and-the-phase-registry/" class="md-nav__link">
         
   
   
@@ -3254,7 +3254,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0009-inherited-component-configuration/" class="md-nav__link">
+      <a href="../0009-inherited-component-configuration/" class="md-nav__link">
         
   
   
@@ -3281,7 +3281,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0010-toolkit-hook-points/" class="md-nav__link">
+      <a href="../0010-toolkit-hook-points/" class="md-nav__link">
         
   
   
@@ -3308,7 +3308,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
+      <a href="../0011-tolerating-a-component-that-fails-to-build/" class="md-nav__link">
         
   
   
@@ -3335,7 +3335,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0012-services-and-two-connection-levels/" class="md-nav__link">
+      <a href="../0012-services-and-two-connection-levels/" class="md-nav__link">
         
   
   
@@ -3362,7 +3362,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
+      <a href="../0013-acquisition-storage-belongs-to-the-device/" class="md-nav__link">
         
   
   
@@ -3389,7 +3389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0014-typed-session-files-and-manifests/" class="md-nav__link">
+      <a href="../0014-typed-session-files-and-manifests/" class="md-nav__link">
         
   
   
@@ -3416,7 +3416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0015-collaborators-arrive-in-setup/" class="md-nav__link">
+      <a href="../0015-collaborators-arrive-in-setup/" class="md-nav__link">
         
   
   
@@ -3443,7 +3443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0016-a-component-refused-at-declaration-is-skipped/" class="md-nav__link">
+      <a href="../0016-a-component-refused-at-declaration-is-skipped/" class="md-nav__link">
         
   
   
@@ -3470,7 +3470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0017-questions-read-from-the-annotation/" class="md-nav__link">
+      <a href="../0017-questions-read-from-the-annotation/" class="md-nav__link">
         
   
   
@@ -3497,7 +3497,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./0018-wire-yields-links/" class="md-nav__link">
+      <a href="../0018-wire-yields-links/" class="md-nav__link">
         
   
   
@@ -3521,10 +3521,36 @@
                   
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="./0019-copy-plan-progress-from-bluesky/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  19. Copy plan progress from bluesky
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -3539,6 +3565,71 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Context
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -3603,7 +3694,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../../../reference/" class="md-nav__link ">
               
   
   
@@ -3648,7 +3739,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../glossary/" class="md-nav__link">
+      <a href="../../glossary/" class="md-nav__link">
         
   
   
@@ -3734,7 +3825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/session-file/" class="md-nav__link">
+      <a href="../../../reference/session-file/" class="md-nav__link">
         
   
   
@@ -3763,7 +3854,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/plugin-manifest/" class="md-nav__link">
+      <a href="../../../reference/plugin-manifest/" class="md-nav__link">
         
   
   
@@ -3801,7 +3892,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/environment/" class="md-nav__link">
+      <a href="../../../reference/environment/" class="md-nav__link">
         
   
   
@@ -3830,7 +3921,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/log-files/" class="md-nav__link">
+      <a href="../../../reference/log-files/" class="md-nav__link">
         
   
   
@@ -3946,7 +4037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/aio/" class="md-nav__link">
+      <a href="../../../reference/api/aio/" class="md-nav__link">
         
   
   
@@ -3975,7 +4066,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/catalog/" class="md-nav__link">
+      <a href="../../../reference/api/catalog/" class="md-nav__link">
         
   
   
@@ -4004,7 +4095,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/engine/" class="md-nav__link">
+      <a href="../../../reference/api/engine/" class="md-nav__link">
         
   
   
@@ -4033,7 +4124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/errors/" class="md-nav__link">
+      <a href="../../../reference/api/errors/" class="md-nav__link">
         
   
   
@@ -4062,7 +4153,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/injection/" class="md-nav__link">
+      <a href="../../../reference/api/injection/" class="md-nav__link">
         
   
   
@@ -4091,7 +4182,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/log/" class="md-nav__link">
+      <a href="../../../reference/api/log/" class="md-nav__link">
         
   
   
@@ -4120,7 +4211,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/path_provider/" class="md-nav__link">
+      <a href="../../../reference/api/path_provider/" class="md-nav__link">
         
   
   
@@ -4149,7 +4240,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/ports/" class="md-nav__link">
+      <a href="../../../reference/api/ports/" class="md-nav__link">
         
   
   
@@ -4178,7 +4269,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/presenter/" class="md-nav__link">
+      <a href="../../../reference/api/presenter/" class="md-nav__link">
         
   
   
@@ -4207,7 +4298,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/qt/" class="md-nav__link">
+      <a href="../../../reference/api/qt/" class="md-nav__link">
         
   
   
@@ -4236,7 +4327,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/registry/" class="md-nav__link">
+      <a href="../../../reference/api/registry/" class="md-nav__link">
         
   
   
@@ -4265,7 +4356,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/services/" class="md-nav__link">
+      <a href="../../../reference/api/services/" class="md-nav__link">
         
   
   
@@ -4294,7 +4385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/session/" class="md-nav__link">
+      <a href="../../../reference/api/session/" class="md-nav__link">
         
   
   
@@ -4323,7 +4414,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/testing/" class="md-nav__link">
+      <a href="../../../reference/api/testing/" class="md-nav__link">
         
   
   
@@ -4352,7 +4443,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/utils/" class="md-nav__link">
+      <a href="../../../reference/api/utils/" class="md-nav__link">
         
   
   
@@ -4381,7 +4472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/view/" class="md-nav__link">
+      <a href="../../../reference/api/view/" class="md-nav__link">
         
   
   
@@ -4410,7 +4501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/api/writers/" class="md-nav__link">
+      <a href="../../../reference/api/writers/" class="md-nav__link">
         
   
   
@@ -4505,7 +4596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/changelog/" class="md-nav__link">
+      <a href="../../../reference/changelog/" class="md-nav__link">
         
   
   
@@ -4534,7 +4625,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/previous-changelog/" class="md-nav__link">
+      <a href="../../../reference/previous-changelog/" class="md-nav__link">
         
   
   
@@ -4641,7 +4732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/contribute/" class="md-nav__link">
+      <a href="../../../how-to/contribute/" class="md-nav__link">
         
   
   
@@ -4670,7 +4761,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/ai-contribution-policy/" class="md-nav__link">
+      <a href="../../../how-to/ai-contribution-policy/" class="md-nav__link">
         
   
   
@@ -4764,7 +4855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/set-up-development/" class="md-nav__link">
+      <a href="../../../how-to/set-up-development/" class="md-nav__link">
         
   
   
@@ -4793,7 +4884,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-tests/" class="md-nav__link">
+      <a href="../../../how-to/run-tests/" class="md-nav__link">
         
   
   
@@ -4822,7 +4913,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/run-commit-checks/" class="md-nav__link">
+      <a href="../../../how-to/run-commit-checks/" class="md-nav__link">
         
   
   
@@ -4851,7 +4942,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/commits-and-prs/" class="md-nav__link">
+      <a href="../../../how-to/commits-and-prs/" class="md-nav__link">
         
   
   
@@ -4880,7 +4971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/record-a-decision/" class="md-nav__link">
+      <a href="../../../how-to/record-a-decision/" class="md-nav__link">
         
   
   
@@ -4909,7 +5000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/make-a-release/" class="md-nav__link">
+      <a href="../../../how-to/make-a-release/" class="md-nav__link">
         
   
   
@@ -5004,7 +5095,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/write-docs/" class="md-nav__link">
+      <a href="../../../how-to/write-docs/" class="md-nav__link">
         
   
   
@@ -5033,7 +5124,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/build-docs/" class="md-nav__link">
+      <a href="../../../how-to/build-docs/" class="md-nav__link">
         
   
   
@@ -5089,6 +5180,11 @@
                       
                     
                     
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
                   
                   <div class="md-sidebar__inner">
                     
@@ -5100,6 +5196,58 @@
   
     
   
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Status
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Context
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Decision
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Consequences
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -5124,7 +5272,7 @@
   
   
     <li class="md-path__item">
-      <a href="../.." class="md-path__link">
+      <a href="../../.." class="md-path__link">
         
   
   <span class="md-ellipsis">
@@ -5164,7 +5312,7 @@
     
     
       <li class="md-path__item">
-        <a href="../" class="md-path__link">
+        <a href="../../" class="md-path__link">
           
   
   <span class="md-ellipsis">
@@ -5230,7 +5378,7 @@
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   
   <span class="md-ellipsis">
@@ -5254,31 +5402,40 @@
   
 
 
-<h1 id="architectural-decision-records">Architectural Decision Records<a class="headerlink" href="#architectural-decision-records" title="Permanent link">&para;</a></h1>
-<p>Each record states one decision about how <code>redsun</code> is built, in the format
-<a href="http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions">Michael Nygard</a>
-describes: status, context, decision, consequences. An accepted record is
-never edited; a later one replaces it.</p>
+<h1 id="19-copy-plan-progress-from-bluesky">19. Copy plan progress from bluesky<a class="headerlink" href="#19-copy-plan-progress-from-bluesky" title="Permanent link">&para;</a></h1>
+<p>Date: 2026-10-01</p>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p>Accepted. Temporary: superseded once <code>bluesky</code> releases plan progress.</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>A plan widget should show how far a running plan has got. <code>bluesky</code> has no
+released way for a plan to say so. Pull request
+<a href="https://github.com/bluesky/bluesky/pull/2078">bluesky#2078</a>, resolving
+<a href="https://github.com/bluesky/bluesky/issues/2047">bluesky#2047</a>, adds one: two
+messages, <code>declare_progress</code> and <code>update_progress</code>, their plan stubs, a
+<code>PlanProgress</code> status and a <code>RunEngine.progress_hook</code>. It is a draft.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><code>redsun</code> copies that interface from the pull request at commit <code>c2040e7</code>,
+with the same names, signatures and messages, so that a plan written against
+<code>redsun.engine.plan_stubs</code> runs unchanged once <code>bluesky</code> ships its own.</p>
+<p>One difference: <code>redsun</code> does not replay the two messages when a paused plan
+resumes, which the pull request does. A replayed <code>declare_progress</code> would
+find its scope still open and be refused. This follows a review comment on
+the pull request.</p>
+<p>On top of the copy, <code>redsun</code> adds <code>ProgressState</code>, a snapshot of one scope,
+and <code>RunEngine.sig_progress</code>, which carries the open scopes to views, a
+"Progress" group on each plan page, and <code>monitor_progress</code>, which follows a
+device status with a scope. The engine finishes every scope a plan
+left open when it goes back to idle, which the pull request does in parts of
+the <code>RunEngine</code> a subclass cannot reach.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>When <code>bluesky</code> releases plan progress:</p>
 <ul>
-<li><a href="0001-record-architecture-decisions/">1. Record architecture decisions</a></li>
-<li><a href="0002-storage-dual-context-redesign/">2. Storage dual-context redesign</a> (superseded by 13)</li>
-<li><a href="0003-structural-subtyping-for-presenters-and-views/">3. Structural subtyping for presenters and views</a></li>
-<li><a href="0004-owner-scoped-signal-lookup/">4. Owner-scoped signal lookup</a></li>
-<li><a href="0005-culsans-psygnal-async-backend/">5. Culsans-backed psygnal async backend</a></li>
-<li><a href="0006-application-declared-wiring/">6. Application-declared wiring</a></li>
-<li><a href="0007-typed-provider-keys/">7. Typed provider keys</a></li>
-<li><a href="0008-container-hooks-and-the-phase-registry/">8. Container hooks and the build phase registry</a></li>
-<li><a href="0009-inherited-component-configuration/">9. Inherited and layered component configuration</a></li>
-<li><a href="0010-toolkit-hook-points/">10. Toolkit hook points</a></li>
-<li><a href="0011-tolerating-a-component-that-fails-to-build/">11. Tolerating a component that fails to build</a></li>
-<li><a href="0012-services-and-two-connection-levels/">12. Services and two connection levels</a></li>
-<li><a href="0013-acquisition-storage-belongs-to-the-device/">13. Acquisition storage belongs to the device</a></li>
-<li><a href="0014-typed-session-files-and-manifests/">14. Typed session files and plugin manifests</a></li>
-<li><a href="0015-collaborators-arrive-in-setup/">15. Collaborators arrive in <code>setup</code></a></li>
-<li><a href="0016-a-component-refused-at-declaration-is-skipped/">16. A component refused at declaration is skipped</a></li>
-<li><a href="0017-questions-read-from-the-annotation/">17. Questions read from the annotation</a></li>
-<li><a href="0018-wire-yields-links/">18. Wire yields links</a></li>
-<li><a href="0019-copy-plan-progress-from-bluesky/">19. Copy plan progress from bluesky</a></li>
+<li>delete <code>redsun</code>'s <code>PlanProgress</code>, the two commands and the two stubs, and
+  re-export <code>bluesky</code>'s stubs and <code>PlanProgress</code> under the same names;</li>
+<li>keep <code>ProgressState</code>, <code>sig_progress</code>, the engine's own <code>progress_hook</code> and
+  the widget, which then follow <code>bluesky</code>'s objects;</li>
+<li>keep the two messages out of the replay if <code>bluesky</code> has not done so;</li>
+<li>rebuild <code>monitor_progress</code>, which is <code>redsun</code>'s own, on <code>bluesky</code>'s scopes.</li>
 </ul>
 
 
@@ -5288,9 +5445,6 @@ never edited; a later one replaces it.</p>
 
 
 
-
-  
-  
 
 
 
@@ -5322,7 +5476,7 @@ never edited; a later one replaces it.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../derived-products/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How derived products are stored">
+          <a href="../0018-wire-yields-links/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 18. Wire yields links">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -5332,20 +5486,20 @@ never edited; a later one replaces it.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                How derived products are stored
+                18. Wire yields links
               </div>
             </div>
           </a>
         
         
           
-          <a href="./0001-record-architecture-decisions/" class="md-footer__link md-footer__link--next" aria-label="Next: 1. Record architecture decisions">
+          <a href="../../../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                1. Record architecture decisions
+                Reference
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -5413,12 +5567,12 @@ never edited; a later one replaces it.</p>
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":null,"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["navigation.tabs","navigation.sections","navigation.indexes","navigation.path","navigation.top","navigation.footer","search.suggest","search.highlight","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","toc.follow"],"redirect":null,"search":"../../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.b7d3f789.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.b7d3f789.min.js"></script>
       
-        <script src="../../javascripts/install-table.js"></script>
+        <script src="../../../javascripts/install-table.js"></script>
       
     
   </body>

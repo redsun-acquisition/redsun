@@ -13,6 +13,7 @@ from ophyd_async.core import AsyncStatus, SignalRW, StandardReadable, soft_signa
 from psygnal import Signal
 from qtpy.QtWidgets import QComboBox, QStackedWidget, QVBoxLayout, QWidget
 
+import redsun.engine.plan_stubs as rps
 from redsun import (
     AsDevice,
     AsPresenter,
@@ -24,7 +25,7 @@ from redsun import (
     PlanEntry,
     slot,
 )
-from redsun.engine import RunEngine
+from redsun.engine import ProgressState, RunEngine
 from redsun.engine.actions import ActionManager, ActionState, PlanAction, continuous
 from redsun.log import Loggable
 from redsun.presenter.plan_spec import (
@@ -98,14 +99,49 @@ class MyController:
                 self.actions.done(name)
 
     # --8<-- [end:snapshots]
+    # --8<-- [start:series]
+    def series(
+        self, camera: Camera, frames: int = 10, repeats: int = 2
+    ) -> MsgGenerator[None]:
+        yield from bps.open_run()
+        yield from rps.declare_progress("repeats")
+        for repeat in range(repeats):
+            # --8<-- [start:monitor]
+            status = yield from bps.abs_set(
+                camera.shutter, True, wait=False, group="shutter"
+            )
+            yield from rps.monitor_progress("shutter", status, parent="repeats")
+            yield from bps.wait(group="shutter")
+            # --8<-- [end:monitor]
+            yield from rps.declare_progress("series", parent="repeats")
+            for frame in range(frames):
+                yield from bps.trigger_and_read([camera])
+                yield from rps.update_progress(
+                    "series", current=frame + 1, initial=0, target=frames, unit="frames"
+                )
+            yield from rps.update_progress("series", done=True)
+            yield from rps.update_progress(
+                "repeats", current=repeat + 1, initial=0, target=repeats, unit="repeats"
+            )
+        yield from rps.update_progress("repeats", done=True)
+        yield from bps.close_run()
+
+    # --8<-- [end:series]
     def plan_map(self) -> Mapping[str, PlanEntry]:
-        return {"live": {"plan": self.live}, "snapshots": {"plan": self.snapshots}}
+        return {
+            "live": {"plan": self.live},
+            "snapshots": {"plan": self.snapshots},
+            "series": {"plan": self.series},
+        }
 
 
 # --8<-- [end:controller]
 # --8<-- [start:presenter]
 class PlanPresenter(Loggable):
     sig_finished = Signal()
+    # --8<-- [start:progress-relay]
+    sig_progress = Signal(tuple)
+    # --8<-- [end:progress-relay]
 
     def __init__(self, name: str, *, devices: DeviceMapping) -> None:
         self.name = name
@@ -114,6 +150,9 @@ class PlanPresenter(Loggable):
         self.plans: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
         self.futures: set[Future[Any]] = set()
+        # --8<-- [start:progress-connect]
+        self.engine.sig_progress.connect(self.sig_progress.emit)
+        # --8<-- [end:progress-connect]
 
     def setup(self, providers: Mapping[str, HasPlans]) -> None:
         for component in providers.values():
@@ -251,6 +290,12 @@ class PlanView(QWidget):
                 button.setEnabled(button.isCheckable())
 
     # --8<-- [end:view-actions]
+    # --8<-- [start:progress-view]
+    @slot
+    def on_progress(self, scopes: tuple[ProgressState, ...]) -> None:
+        self.widgets[self.chooser.currentText()].show_progress(scopes)
+
+    # --8<-- [end:progress-view]
 
 
 # --8<-- [end:view]
@@ -268,6 +313,7 @@ class MyApp(QtSession):
         yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
         yield self.plan_view.sig_action_request, self.ctrl.actions.request
         yield self.ctrl.actions.sig_changed, self.plan_view.on_action_changed
+        yield self.plan_ctrl.sig_progress, self.plan_view.on_progress
 
 
 if __name__ == "__main__":
