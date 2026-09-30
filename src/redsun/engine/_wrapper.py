@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
     from typing import Literal, TypeAlias
 
+    from bluesky.protocols import Status
     from bluesky.utils import Msg, Subscribers
 
     from redsun.engine.actions import SRLatch
@@ -156,6 +157,7 @@ class RunEngine(BlueskyRunEngine):
         *BlueskyRunEngine._UNCACHEABLE_COMMANDS,
         "declare_progress",
         "update_progress",
+        "monitor_progress",
     ]
 
     def __init__(
@@ -210,6 +212,7 @@ class RunEngine(BlueskyRunEngine):
                 "unlock": self._unlock,
                 "declare_progress": self._declare_progress,
                 "update_progress": self._update_progress,
+                "monitor_progress": self._monitor_progress,
             }
         )
 
@@ -308,12 +311,20 @@ class RunEngine(BlueskyRunEngine):
         IllegalMessageSequence
             If the scope is already open, or its parent is not.
         """
-        name = msg.kwargs["name"]
+        return self._open_scope(msg.kwargs["name"], msg.kwargs.get("parent"))
+
+    def _open_scope(self, name: str, parent_name: str | None) -> PlanProgress:
+        """Open the progress scope *name*, nested under *parent_name* when given.
+
+        Raises
+        ------
+        IllegalMessageSequence
+            If the scope is already open, or its parent is not.
+        """
         if name in self._progress_scopes:
             raise IllegalMessageSequence(
                 f"A progress scope named {name!r} is already open."
             )
-        parent_name = msg.kwargs.get("parent")
         parent = None
         if parent_name is not None:
             parent = self._progress_scopes.get(parent_name)
@@ -326,6 +337,57 @@ class RunEngine(BlueskyRunEngine):
         self._progress_scopes[name] = scope
         self._rebuild_progress_hook()
         return scope
+
+    def _finish_scope(self, scope: PlanProgress) -> None:
+        """Finish *scope* and stop listing it, unless it has finished already."""
+        if scope.done or self._progress_scopes.get(scope.name) is not scope:
+            return
+        scope.finish()
+        del self._progress_scopes[scope.name]
+        self._rebuild_progress_hook()
+
+    async def _monitor_progress(self, msg: Msg) -> PlanProgress:
+        """Open the scope a `monitor_progress` message names, following its status.
+
+        Raises
+        ------
+        IllegalMessageSequence
+            If the scope is already open, or its parent is not.
+        """
+        status = msg.obj
+        scope = self._open_scope(msg.kwargs["name"], msg.kwargs.get("parent"))
+        if status.done:
+            self._finish_scope(scope)
+            return scope
+        if callable(getattr(status, "watch", None)):
+            status.watch(partial(self._on_engine_loop, self._follow_status, scope))
+        status.add_callback(partial(self._on_engine_loop, self._status_done, scope))
+        return scope
+
+    def _on_engine_loop(
+        self, call: Callable[..., None], *args: Any, **kwargs: Any
+    ) -> None:
+        """Run *call* on the engine's loop, now when already there."""
+        # a status from another library may call back from a worker thread,
+        # and scopes are only changed on the loop the engine runs plans on
+        try:
+            running = asyncio.get_running_loop()
+        except RuntimeError:
+            running = None
+        if running is self.loop:
+            call(*args, **kwargs)
+        else:
+            self.loop.call_soon_threadsafe(partial(call, *args, **kwargs))
+
+    def _follow_status(self, scope: PlanProgress, **update: Any) -> None:
+        if scope.done:
+            return
+        # the device's own name; the scope keeps the one the plan gave
+        update.pop("name", None)
+        scope._notify(**update)
+
+    def _status_done(self, scope: PlanProgress, status: Status) -> None:
+        self._finish_scope(scope)
 
     async def _update_progress(self, msg: Msg) -> None:
         """Update, or finish with `done=True`, the scope an `update_progress` names.
@@ -343,9 +405,7 @@ class RunEngine(BlueskyRunEngine):
                 "Use 'declare_progress' first."
             )
         if msg.kwargs.get("done", False):
-            scope.finish()
-            del self._progress_scopes[name]
-            self._rebuild_progress_hook()
+            self._finish_scope(scope)
             return
         scope._notify(
             current=msg.kwargs.get("current"),

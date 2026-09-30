@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         Descriptor,
         HasName,
         Readable,
+        Status,
     )
     from bluesky.utils import MsgGenerator
 
@@ -195,3 +196,19 @@ def update_progress(
         time_remaining=time_remaining,
         done=done,
     )
+
+
+def monitor_progress(
+    name: str, status: Status, *, parent: str | None = None
+) -> MsgGenerator[PlanProgress]:
+    """Open the progress scope *name* and keep it in step with *status*.
+
+    A status reporting updates, such as a detector's `complete` or a motor's
+    `set` in `ophyd-async`, fills the scope; any other shows it without an
+    end. The scope finishes when the status is done, whether it succeeds or
+    not; the plan still waits on the status itself. Returns the scope.
+    """
+    scope: PlanProgress = yield Msg(
+        "monitor_progress", status, name=name, parent=parent
+    )
+    return scope
