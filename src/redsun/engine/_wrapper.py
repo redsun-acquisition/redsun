@@ -10,9 +10,12 @@ from bluesky.run_engine import (
     RunEngine as BlueskyRunEngine,
 )
 from bluesky.run_engine import RunEngineResult
+from bluesky.utils import IllegalMessageSequence
 from psygnal import Signal
 
 from redsun.aio import get_shared_loop
+
+from ._progress import PlanProgress, ProgressState, depth, empty_state, snapshot
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -110,6 +113,11 @@ class RunEngine(BlueskyRunEngine):
         `f(status_object)` called while waiting for long-running commands
         (trigger, set, kickoff, complete), for example to show progress.
 
+    progress_hook
+        `f(scopes)` called with the open progress scopes of the running plan,
+        parents first, or `None` to clear them. The engine sets its own, which
+        feeds `sig_progress`.
+
     ignore_callback_exceptions
         Boolean, False by default.
 
@@ -137,6 +145,19 @@ class RunEngine(BlueskyRunEngine):
     sig_state_changed = Signal(str, str)
     """The engine's new and old state on every change, named as `state` names them."""
 
+    sig_progress = Signal(tuple)
+    """Every progress scope of the running plan, as a tuple of `ProgressState`,
+    parents before children, whenever one is declared, updated or finished;
+    an empty tuple when none is left."""
+
+    # a resumed plan replays its messages since the last checkpoint, and a
+    # declaration replayed while its scope is still open would be refused
+    _UNCACHEABLE_COMMANDS = [  # noqa: RUF012
+        *BlueskyRunEngine._UNCACHEABLE_COMMANDS,
+        "declare_progress",
+        "update_progress",
+    ]
+
     def __init__(
         self,
         md: dict[str, Any] | None = None,
@@ -154,6 +175,12 @@ class RunEngine(BlueskyRunEngine):
         self._held: dict[str, frozenset[str]] = {}
         # plans lock devices on the engine's thread, views read on the main one
         self._held_guard = Lock()
+        self._progress_scopes: dict[str, PlanProgress] = {}
+        self._progress_listed: tuple[PlanProgress, ...] = ()
+        self._progress_states: dict[PlanProgress, ProgressState] = {}
+        self._progress_hook_active = False
+        self._progress_shown = False
+        self._progress_closing = False
         super().__init__(
             md=md,
             loop=loop or get_shared_loop(),
@@ -171,6 +198,9 @@ class RunEngine(BlueskyRunEngine):
         self.pause_msg = ""
         # bluesky types the hook as None, its default
         self.state_hook = self._on_state_change  # type: ignore[assignment]
+        self.progress_hook: Callable[[list[PlanProgress] | None], None] | None = (
+            self._report_scopes
+        )
 
         # register custom commands
         self._command_registry.update(
@@ -178,6 +208,8 @@ class RunEngine(BlueskyRunEngine):
                 "wait_for_actions": self._wait_for_actions,
                 "lock": self._lock,
                 "unlock": self._unlock,
+                "declare_progress": self._declare_progress,
+                "update_progress": self._update_progress,
             }
         )
 
@@ -265,7 +297,117 @@ class RunEngine(BlueskyRunEngine):
         """
         if new == "idle":
             self._release_locks()
+            self._close_progress()
         self.sig_state_changed.emit(new, old)
+
+    async def _declare_progress(self, msg: Msg) -> PlanProgress:
+        """Open the progress scope a `declare_progress` message names.
+
+        Raises
+        ------
+        IllegalMessageSequence
+            If the scope is already open, or its parent is not.
+        """
+        name = msg.kwargs["name"]
+        if name in self._progress_scopes:
+            raise IllegalMessageSequence(
+                f"A progress scope named {name!r} is already open."
+            )
+        parent_name = msg.kwargs.get("parent")
+        parent = None
+        if parent_name is not None:
+            parent = self._progress_scopes.get(parent_name)
+            if parent is None:
+                raise IllegalMessageSequence(
+                    f"Parent progress scope {parent_name!r} does not exist. "
+                    "It must be declared before its children."
+                )
+        scope = PlanProgress(name, parent=parent)
+        self._progress_scopes[name] = scope
+        self._rebuild_progress_hook()
+        return scope
+
+    async def _update_progress(self, msg: Msg) -> None:
+        """Update, or finish with `done=True`, the scope an `update_progress` names.
+
+        Raises
+        ------
+        IllegalMessageSequence
+            If no scope of that name is open.
+        """
+        name = msg.kwargs["name"]
+        scope = self._progress_scopes.get(name)
+        if scope is None:
+            raise IllegalMessageSequence(
+                f"No progress scope named {name!r} is open. "
+                "Use 'declare_progress' first."
+            )
+        if msg.kwargs.get("done", False):
+            scope.finish()
+            del self._progress_scopes[name]
+            self._rebuild_progress_hook()
+            return
+        scope._notify(
+            current=msg.kwargs.get("current"),
+            initial=msg.kwargs.get("initial"),
+            target=msg.kwargs.get("target"),
+            unit=msg.kwargs.get("unit", "unit"),
+            precision=msg.kwargs.get("precision"),
+            fraction=msg.kwargs.get("fraction"),
+            time_elapsed=msg.kwargs.get("time_elapsed"),
+            time_remaining=msg.kwargs.get("time_remaining"),
+        )
+
+    def _rebuild_progress_hook(self) -> None:
+        """Hand `progress_hook` the open scopes, parents first, clearing it before."""
+        if self.progress_hook is None:
+            return
+        active = sorted(
+            (scope for scope in self._progress_scopes.values() if not scope.done),
+            key=depth,
+        )
+        if self._progress_hook_active:
+            self.progress_hook(None)
+        self._progress_hook_active = bool(active)
+        if active:
+            self.progress_hook(active)
+
+    def _report_scopes(self, scopes: list[PlanProgress] | None) -> None:
+        """Follow the scopes the engine lists, and announce them."""
+        self._progress_listed = tuple(scopes or ())
+        for scope in self._progress_listed:
+            if scope not in self._progress_states:
+                self._progress_states[scope] = empty_state(scope)
+                scope.watch(partial(self._on_progress_update, scope))
+        self._announce_progress()
+
+    def _on_progress_update(self, scope: PlanProgress, **update: Any) -> None:
+        self._progress_states[scope] = snapshot(scope, update)
+        self._announce_progress()
+
+    def _announce_progress(self) -> None:
+        if self._progress_closing:
+            return
+        states = tuple(self._progress_states[scope] for scope in self._progress_listed)
+        self._progress_shown = bool(states)
+        self.sig_progress.emit(states)
+
+    def _close_progress(self) -> None:
+        """Finish every scope a plan left open, and announce that none is left."""
+        self._progress_closing = True
+        try:
+            for scope in self._progress_scopes.values():
+                if not scope.done:
+                    scope.finish()
+        finally:
+            self._progress_closing = False
+        self._progress_scopes.clear()
+        self._progress_states.clear()
+        self._progress_listed = ()
+        self._progress_hook_active = False
+        if self._progress_shown:
+            self._progress_shown = False
+            self.sig_progress.emit(())
 
     def _release_locks(self) -> None:
         with self._held_guard:

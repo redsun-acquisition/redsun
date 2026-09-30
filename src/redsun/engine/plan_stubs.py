@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
     from redsun.engine.actions import SRLatch
 
+    from ._progress import PlanProgress
+
     T = TypeVar("T")
 
 SIXTY_FPS: Final[float] = 1.0 / 60.0
@@ -141,3 +143,55 @@ def lock_wrapper(plan: MsgGenerator[T], *devices: HasName) -> MsgGenerator[T]:
 
     result: T = yield from bpp.finalize_wrapper(locked(), unlock(token))
     return result
+
+
+def declare_progress(
+    name: str, *, parent: str | None = None
+) -> MsgGenerator[PlanProgress]:
+    """Open a progress scope named *name*, nested under *parent* when given.
+
+    Returns the scope. A view shows it while the plan runs, and the engine
+    finishes it when the plan ends.
+    """
+    scope: PlanProgress = yield Msg("declare_progress", name=name, parent=parent)
+    return scope
+
+
+def update_progress(
+    name: str,
+    *,
+    current: Any = None,
+    initial: Any = None,
+    target: Any = None,
+    unit: str = "unit",
+    precision: int | None = None,
+    fraction: float | None = None,
+    time_elapsed: float | None = None,
+    time_remaining: float | None = None,
+    done: bool = False,
+) -> MsgGenerator[None]:
+    """Report how far the scope *name* has got, or finish it with *done*.
+
+    Parameters
+    ----------
+    current, initial, target
+        Where the scope is, started and ends, in *unit*; *target* left out
+        when the end is not known.
+    fraction
+        How far the scope has got, from 0 to 1, in place of the three above.
+    precision
+        Decimals to show the numbers with.
+    """
+    yield Msg(
+        "update_progress",
+        name=name,
+        current=current,
+        initial=initial,
+        target=target,
+        unit=unit,
+        precision=precision,
+        fraction=fraction,
+        time_elapsed=time_elapsed,
+        time_remaining=time_remaining,
+        done=done,
+    )
