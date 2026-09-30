@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, cast
@@ -174,6 +175,28 @@ def test_a_hook_runs_at_the_point_its_attribute_names(
     app = build(App)
     installed = cast("Styler", app.hooks[QtHook.CONFIGURE_APPLICATION])
     assert installed.seen == [qapp]
+
+
+def test_the_installed_hook_points_are_logged_one_per_line(
+    qapp: QApplication,
+    build: Callable[..., QtSession],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log each hook point with a provider on a line of its own."""
+
+    class App(QtSession):
+        configure_application: AsHook[Styler]
+        configure_main_view: AsHook[Brander]
+
+    caplog.set_level(logging.DEBUG, logger="redsun")
+    build(App)
+
+    messages = [record.getMessage() for record in caplog.records]
+    first = messages.index("Hooks installed at:")
+    assert messages[first + 1 : first + 3] == [
+        "  - configure_application",
+        "  - configure_main_view",
+    ]
 
 
 def test_a_provider_may_inherit_the_protocol_of_its_point(

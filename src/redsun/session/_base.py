@@ -480,9 +480,10 @@ class Session(BuildableSession):
             sources = self._sources()
             if len(sources) > 1:
                 logger.debug(
-                    f"Reading configuration from {len(sources)} sources, in order: "
-                    f"{', '.join(label(source) for source in sources)}"
+                    f"Reading configuration from {len(sources)} sources, in order:"
                 )
+                for number, source in enumerate(sources, start=1):
+                    logger.debug(f"  {number}. {label(source)}")
             self._merged = load(sources)
             self._file = validate_session(sources, self._merged)
         return self._file
@@ -686,7 +687,12 @@ class Session(BuildableSession):
         """Merge the sources, install the hooks, read the declarations, open the logs."""
         installed.cache_clear()
         config = self._configuration()
-        logger.debug("Hooks installed at: %s", ", ".join(self.hooks) or "no points")
+        if self.hooks:
+            logger.debug("Hooks installed at:")
+            for point in self.hooks:
+                logger.debug("  - %s", point)
+        else:
+            logger.debug("No hooks installed")
         self._set_configuration(config, self.name)
         self._declarations = read(type(self), config, self.frontend)
         for declaration in self._declarations.values():
