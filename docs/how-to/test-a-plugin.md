@@ -19,8 +19,10 @@ Add `redsun` with the `testing` extra to the plugin's development
 dependencies:
 
 ```bash
-uv add --dev "redsun[testing]"
+uv add --dev "redsun[testing]" pytest-asyncio
 ```
+
+`pytest-asyncio` runs the `async` tests, such as the service test below.
 
 ## Load them
 
@@ -29,13 +31,17 @@ Load the module as a `pytest` plugin, in `pyproject.toml`:
 ```toml
 [tool.pytest.ini_options]
 addopts = "-p redsun.testing"
+asyncio_mode = "auto"
 ```
 
-From then on every test writes session log files, acquisition files and
-catalogs under its own `tmp_path` instead of the user's directories, and
-drops the `psygnal` emissions it left queued for another thread. Nothing
-loads the module unless a suite asks for it, so these fixtures never reach a
-project that only installs `redsun`.
+From then on every test writes session log files under its own `tmp_path`,
+and so do acquisition files and catalogs a session puts in their default
+location, and every test drops the `psygnal` emissions it left queued for
+another thread. A session whose configuration names its own `storage`
+directory still writes there. The fixtures doing this run for each test, so
+a session built in a fixture scoped to a module or the whole run is not
+covered. Nothing loads the module unless a suite asks for it, so these
+fixtures never reach a project that only installs `redsun`.
 
 The module defines no `qapp` fixture. A session with a window needs a
 `QApplication`: take the `qapp` fixture of `pytest-qt`, or define one.
@@ -71,9 +77,15 @@ file names under `services.transport`:
 --8<-- "docs/examples/plugin_tests.py:service"
 ```
 
-The service is stopped when the test ends, and the EPICS address list it
-added itself to is restored, so the next test starts from the same list. The
-test reads the prefix from the service it gets back.
+The service is stopped when the test ends, its transport is released as
+when a session ends, and the EPICS address list it added itself to is
+restored, so the next test starts from the same list. The test reads the
+prefix from the service it gets back.
+
+Prefer `pv-access` for services started in tests. A Channel Access client
+reads its address list once, the first time the process uses Channel Access,
+so under `channel-access` a service started after that is not found. Start
+every Channel Access service a suite needs before its first client connects.
 
 ## The example in full
 
