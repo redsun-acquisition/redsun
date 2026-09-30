@@ -21,6 +21,7 @@ redsun/
 |   |-- presenter/             plan spec: plan signatures read into widget descriptions
 |   |-- services/              Service: a process or server devices talk to
 |   |-- path_provider.py       SessionPathProvider, session_directory
+|   |-- testing.py             pytest fixtures a plugin's tests load, redsun's too
 |   |-- errors.py              the exceptions a session raises
 |   |-- _config.py             session file loading, merging and validation
 |   |-- _catalog.py            require_tiled, start_catalog
@@ -29,7 +30,7 @@ redsun/
 |   |   `-- qt/                Qt widgets and the built-in LogView
 |   `-- utils/                 descriptor helpers, session_folder (_paths.py)
 |-- tests/
-|   |-- conftest.py            qt marker, qapp, log directory, psygnal queue, build
+|   |-- conftest.py            qt marker, qapp, mock plugin (the rest: redsun.testing)
 |   |-- test_*.py              session tests, one module per subject
 |   |-- mock_bundle/           fake plugin package the session tests discover
 |   |-- configs/               session YAML files the tests load

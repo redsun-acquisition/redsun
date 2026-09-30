@@ -44,6 +44,7 @@ variables it sets, the API and the release notes.
 | keep a setting between runs | [Settings](api/session.md#settings) |
 | choose where files go | [`redsun.path_provider`](api/path_provider.md) |
 | launch or attach to a service | [`redsun.services`](api/services.md) |
+| test a plugin's components and services | [`redsun.testing`](api/testing.md) |
 | log from a component | [`redsun.log`](api/log.md) |
 | catch what a session raises | [`redsun.errors`](api/errors.md) |
 
@@ -81,6 +82,8 @@ Look up a class or a function by the module it is imported from.
     - [`redsun.services`](api/services.md): the servers devices talk to
     - [`redsun.session`](api/session.md): the session, and how components
       are declared
+    - [`redsun.testing`](api/testing.md): `pytest` fixtures for testing a
+      plugin
     - [`redsun.utils`](api/utils.md): general helpers
         - [`redsun.utils.descriptors`](api/utils.md): reading the keys of
           `bluesky` descriptors and readings

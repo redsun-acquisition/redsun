@@ -22,6 +22,7 @@ Learn how to write the parts of a
 - [How to wire components together](wire-components.md)
 - [How to share a value between components](share-a-value.md)
 - [How to package components as a plugin](package-a-plugin.md)
+- [How to test a plugin](test-a-plugin.md)
 - [How to connect a device on demand](connect-a-device-on-demand.md)
 - [How to run a plan from a presenter](run-a-plan.md)
 - [How to write a plan that runs until stopped](write-a-continuous-plan.md)
