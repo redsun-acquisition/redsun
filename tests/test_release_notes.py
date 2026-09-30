@@ -6,7 +6,7 @@ import datetime
 
 import pytest
 
-from scripts.release_notes import extract, insert, section, worded
+from scripts.release_notes import extract, insert, prepare, section, worded
 
 NOTES = """\
 ## What's Changed
@@ -104,3 +104,16 @@ def test_an_entry_drops_the_type_its_section_already_says(
 ) -> None:
     """Drop the commit type and scope from an entry and capitalise a leading letter."""
     assert worded(title) == entry
+
+
+def test_reading_a_version_never_prepared_names_the_prepare_command() -> None:
+    """Refuse a missing section with a message naming the prepare command."""
+    with pytest.raises(LookupError, match=r"release_notes\.py prepare 0\.14\.1"):
+        extract(CHANGELOG, "0.14.1")
+
+
+@pytest.mark.parametrize("version", ["v0.14.1", "0.14", "0.14.1rc1", ""])
+def test_preparing_a_version_not_shaped_x_y_z_is_refused(version: str) -> None:
+    """Refuse a version that is not three dot-separated numbers."""
+    with pytest.raises(ValueError, match="0.14.0"):
+        prepare(version)

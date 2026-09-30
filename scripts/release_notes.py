@@ -25,6 +25,7 @@ ENTRY = re.compile(
 LINK = re.compile(r"^\[[^\]]+\]: https?://")
 TYPE = re.compile(r"^[a-z]+(\([^)]*\))?!?:\s*")
 FINAL_TAG = re.compile(r"^v\d+\.\d+\.\d+$")
+VERSION = re.compile(r"\d+\.\d+\.\d+")
 
 
 def gh(*args: str) -> str:
@@ -95,8 +96,20 @@ def insert(changelog: str, new_section: str, link: str) -> str:
 
 
 def extract(changelog: str, version: str) -> str:
-    """Return the body of *version*'s section in *changelog*, without its heading."""
-    start = changelog.index(f"## [{version}]")
+    """Return the body of *version*'s section in *changelog*, without its heading.
+
+    Raises
+    ------
+    LookupError
+        When *changelog* has no section for *version*.
+    """
+    heading = f"## [{version}]"
+    if heading not in changelog:
+        raise LookupError(
+            f"the changelog has no section for {version}; "
+            f"run `python scripts/release_notes.py prepare {version}` first"
+        )
+    start = changelog.index(heading)
     body_start = changelog.index("\n", start) + 1
     end = changelog.find("\n## [", body_start)
     body = changelog[body_start:] if end == -1 else changelog[body_start:end]
@@ -105,7 +118,15 @@ def extract(changelog: str, version: str) -> str:
 
 
 def prepare(version: str) -> None:
-    """Write *version*'s section and compare link into the changelog."""
+    """Write *version*'s section and compare link into the changelog.
+
+    Raises
+    ------
+    ValueError
+        When *version* is not three dot-separated numbers, such as `0.14.0`.
+    """
+    if not VERSION.fullmatch(version):
+        raise ValueError(f"version must look like 0.14.0, got {version!r}")
     previous = previous_final_tag()
     notes: str = json.loads(
         gh(
@@ -148,12 +169,15 @@ def prepare(version: str) -> None:
 def main() -> None:
     """Run `prepare` or `extract` for the version given."""
     command, version = sys.argv[1], sys.argv[2]
-    if command == "prepare":
-        prepare(version)
-    elif command == "extract":
-        sys.stdout.write(extract(CHANGELOG.read_text(encoding="utf-8"), version))
-    else:
-        sys.exit(f"unknown command {command!r}; expected 'prepare' or 'extract'")
+    try:
+        if command == "prepare":
+            prepare(version)
+        elif command == "extract":
+            sys.stdout.write(extract(CHANGELOG.read_text(encoding="utf-8"), version))
+        else:
+            sys.exit(f"unknown command {command!r}; expected 'prepare' or 'extract'")
+    except (LookupError, ValueError) as error:
+        sys.exit(str(error))
 
 
 if __name__ == "__main__":
