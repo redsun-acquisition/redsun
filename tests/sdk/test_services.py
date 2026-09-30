@@ -67,6 +67,31 @@ LOGURU_ERROR = json.dumps(
 )
 
 
+class RecordingTransport(PVAccess):
+    """PVAccess, recording whether it was released."""
+
+    def __init__(self) -> None:
+        self.released = False
+
+    async def release(self) -> None:
+        self.released = True
+
+
+@pytest.fixture
+def recording_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[RecordingTransport]:
+    """Register a `recording` transport, and check it was released once the test ends.
+
+    A test asks for it before `start_service`, so its teardown runs after the
+    services were stopped.
+    """
+    transport = RecordingTransport()
+    monkeypatch.setitem(TRANSPORTS, "recording", transport)
+    yield transport
+    assert transport.released
+
+
 @pytest.fixture
 def launch(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[..., Service]]:
     """Make stand-in services, restoring the CA address list and stopping them after."""
@@ -368,6 +393,29 @@ def test_a_pva_service_started_in_each_test_answers(
 
     with p4p.Context("pva") as client:
         assert float(client.get("SIM:STARTED", timeout=10.0)) == value
+
+
+def test_a_started_service_releases_its_transport_once_it_stops(
+    recording_transport: RecordingTransport,
+    start_service: StartService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Release a started service's transport after the test, as a session does."""
+    pytest.importorskip("p4p")
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+
+    start_service(
+        "released",
+        Launch(
+            PVA_STAND_IN,
+            args=("--pv", "SIM:RELEASED", "--value", "1.0"),
+            ready=PVA_READY,
+            stop_timeout=0.5,
+        ),
+        transport="recording",
+    )
+
+    assert not recording_transport.released
 
 
 @pytest.mark.parametrize(

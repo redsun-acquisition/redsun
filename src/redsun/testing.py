@@ -15,11 +15,12 @@ from typing import TYPE_CHECKING, Protocol, TypeVar
 import pytest
 from psygnal._queue import QueuedCallback
 
+from redsun.aio import run_coro
 from redsun.log import SERVICE_LOGGER, SessionFileHandler, logger
 from redsun.services import Service
 from redsun.session import Session
 
-from .services._transports import CHANNEL_ACCESS
+from .services._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterator, Sequence
@@ -152,8 +153,9 @@ def start_service(
 ) -> Generator[StartService, None, None]:
     """Return a function starting a declared service, stopped when the test ends.
 
-    The EPICS address lists the service adds itself to are restored once it
-    has stopped.
+    Once the services have stopped, their transports are released and the
+    EPICS address lists they added themselves to are restored, as when a
+    session ends.
     """
     for variable in ADDRESS_LISTS:
         monkeypatch.setenv(variable, os.environ.get(variable, ""))
@@ -171,3 +173,5 @@ def start_service(
     yield start
     for service in reversed(started):
         service.stop()
+    for transport in {service.transport for service in started}:
+        run_coro(TRANSPORTS[transport].release())
