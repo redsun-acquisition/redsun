@@ -1531,6 +1531,29 @@ def test_a_file_and_a_mapping_are_both_sources(tmp_path: Path) -> None:
     assert app.ctrl.gain == 3.0
 
 
+def test_the_sources_read_are_logged_one_per_line(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log each configuration source on a line of its own, in the order read."""
+    shared = tmp_path / "shared.yaml"
+    shared.write_text("session: from-file\n")
+
+    class Mixed(Session):
+        config: ClassVar[list[Any]] = [str(shared), {"session": "from-mapping"}]
+
+        motor: AsDevice[Stage]
+
+    caplog.set_level(logging.DEBUG, logger="redsun")
+    Mixed().build().shutdown()
+
+    messages = [record.getMessage() for record in caplog.records]
+    first = messages.index("Reading configuration from 2 sources, in order:")
+    assert messages[first + 1 : first + 3] == [
+        f"  1. {shared}",
+        "  2. an inline mapping",
+    ]
+
+
 def test_sources_must_agree_on_what_the_session_is() -> None:
     """Refuse configuration sources that name different frontends."""
 
