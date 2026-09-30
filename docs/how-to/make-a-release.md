@@ -21,7 +21,7 @@ the version without its `v`:
 git switch main
 git pull
 git switch -c release/v0.14.1
-python scripts/release_notes.py prepare 0.14.1
+uv run python scripts/release_notes.py prepare 0.14.1
 ```
 
 The script asks GitHub for the pull requests merged since the last final

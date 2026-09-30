@@ -107,7 +107,7 @@ def extract(changelog: str, version: str) -> str:
     if heading not in changelog:
         raise LookupError(
             f"the changelog has no section for {version}; "
-            f"run `python scripts/release_notes.py prepare {version}` first"
+            f"run `uv run python scripts/release_notes.py prepare {version}` first"
         )
     start = changelog.index(heading)
     body_start = changelog.index("\n", start) + 1
