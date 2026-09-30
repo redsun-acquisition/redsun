@@ -5685,8 +5685,8 @@ ready once its process starts.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Protocol the service is reached over, as <code>redsun.services._transports</code>
-names them. The session settles it for every service it holds.</p>
+                <p>Protocol the service is reached over: <code>channel-access</code> or <code>pv-access</code>.
+The session settles it for every service it holds.</p>
               </div>
             </td>
             <td>
@@ -5713,6 +5713,16 @@ names them. The session settles it for every service it holds.</p>
             <td>
               <div class="doc-md-description">
                 <p>If <em>args</em> are given without a <em>module</em>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>transport</em> is not a protocol a session accepts.</p>
               </div>
             </td>
           </tr>
