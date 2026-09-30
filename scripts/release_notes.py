@@ -5,7 +5,8 @@ the last final release, turns them into a Keep a Changelog section, and writes
 it with its compare link into `docs/reference/changelog.md`.
 `extract VERSION` prints that section's body, for the GitHub release.
 
-Both need the `gh` command, logged in, and run from the repository root.
+Both run from the repository root; `prepare` also needs the `gh` command,
+logged in.
 """
 
 from __future__ import annotations
@@ -123,10 +124,16 @@ def prepare(version: str) -> None:
     Raises
     ------
     ValueError
-        When *version* is not three dot-separated numbers, such as `0.14.0`.
+        When *version* is not three dot-separated numbers, such as `0.14.0`,
+        or the changelog already has a section for it.
     """
     if not VERSION.fullmatch(version):
         raise ValueError(f"version must look like 0.14.0, got {version!r}")
+    if f"## [{version}]" in CHANGELOG.read_text(encoding="utf-8"):
+        raise ValueError(
+            f"the changelog already has a section for {version}; "
+            "discard it with `git checkout docs/reference/changelog.md` first"
+        )
     previous = previous_final_tag()
     notes: str = json.loads(
         gh(
