@@ -593,3 +593,9 @@ def test_a_launched_service_reads_its_name_and_prefix_from_the_environment(
     stand_in.stop()
 
     assert "service camera prefix SIM:" in messages(service_log, logging.DEBUG)
+
+
+def test_a_service_given_an_unknown_transport_names_the_known_ones() -> None:
+    """Refuse an unknown transport, naming the ones a session accepts."""
+    with pytest.raises(ValueError, match="'channel-access', 'pv-access'"):
+        Service("misnamed", module=STAND_IN, transport="pv_access")

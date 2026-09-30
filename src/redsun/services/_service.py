@@ -82,13 +82,15 @@ class Service:
     stop_timeout
         Seconds each step of `stop` waits for the process to exit.
     transport
-        Protocol the service is reached over, as `redsun.services._transports`
-        names them. The session settles it for every service it holds.
+        Protocol the service is reached over: `channel-access` or `pv-access`.
+        The session settles it for every service it holds.
 
     Raises
     ------
     TypeError
         If *args* are given without a *module*.
+    ValueError
+        If *transport* is not a protocol a session accepts.
     """
 
     __slots__ = (
@@ -125,6 +127,11 @@ class Service:
             raise TypeError(
                 f"service {name!r} gives args but no module to run; an attached "
                 "service only lends its prefix"
+            )
+        if transport not in TRANSPORTS:
+            known = ", ".join(map(repr, sorted(TRANSPORTS)))
+            raise ValueError(
+                f"service {name!r} names transport {transport!r}; expected one of {known}"
             )
         self.name = name
         self.prefix = prefix

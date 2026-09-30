@@ -107,7 +107,7 @@ tox = [
     "tox-uv-bare>=1.36.0",
 ]
 testing = [
-    "pytest>=9.1.1",
+    "pytest>=8",
 ]
 
 [project.optional-dependencies]
@@ -135,7 +135,7 @@ ome-zarr = [
     "ome-writers[acquire-zarr]>=0.3.2",
 ]
 testing = [
-    "pytest>=9.1.1",
+    "pytest>=8",
 ]
 
 [project.entry-points."redsun.plugins"]

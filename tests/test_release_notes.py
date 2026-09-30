@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 
 from scripts.release_notes import extract, insert, prepare, section, worded
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 NOTES = """\
 ## What's Changed
@@ -34,6 +38,22 @@ Intro.
 
 [0.13.0]: https://github.com/o/r/compare/v0.12.0...v0.13.0
 """
+
+
+def reach_github(*args: str) -> str:
+    """Stand in for every call to GitHub, which a refused preparation never makes."""
+    raise AssertionError("prepare reached GitHub")
+
+
+@pytest.fixture
+def offline_changelog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point `prepare` at a copy of `CHANGELOG` and fail any call it makes to GitHub."""
+    changelog = tmp_path / "changelog.md"
+    changelog.write_text(CHANGELOG, encoding="utf-8")
+    monkeypatch.setattr("scripts.release_notes.CHANGELOG", changelog)
+    monkeypatch.setattr("scripts.release_notes.gh", reach_github)
+    monkeypatch.setattr("scripts.release_notes.previous_final_tag", reach_github)
+    return changelog
 
 
 def test_a_release_section_is_written_above_the_last_and_read_back() -> None:
@@ -113,7 +133,18 @@ def test_reading_a_version_never_prepared_names_the_prepare_command() -> None:
 
 
 @pytest.mark.parametrize("version", ["v0.14.1", "0.14", "0.14.1rc1", ""])
+@pytest.mark.usefixtures("offline_changelog")
 def test_preparing_a_version_not_shaped_x_y_z_is_refused(version: str) -> None:
     """Refuse a version that is not three dot-separated numbers."""
     with pytest.raises(ValueError, match="0.14.0"):
         prepare(version)
+
+
+def test_preparing_a_version_the_changelog_has_is_refused(
+    offline_changelog: Path,
+) -> None:
+    """Refuse to prepare a version again, leaving its section as it was."""
+    with pytest.raises(ValueError, match=r"already has a section for 0\.13\.0"):
+        prepare("0.13.0")
+
+    assert offline_changelog.read_text(encoding="utf-8") == CHANGELOG

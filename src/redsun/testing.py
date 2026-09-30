@@ -23,7 +23,7 @@ from redsun.session import Session
 from .services._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterator, Sequence
+    from collections.abc import Generator, Sequence
     from pathlib import Path
 
     from redsun.session import Launch
@@ -100,7 +100,9 @@ def build() -> Generator[BuildSession, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def log_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+def log_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Generator[Path, None, None]:
     """Write session log files under `tmp_path`, closing any the test left open."""
     monkeypatch.setattr("redsun.log.user_data_dir", lambda *a, **k: str(tmp_path))
     yield tmp_path / "logs"
@@ -133,7 +135,7 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 
 @pytest.fixture(autouse=True)
-def empty_emission_queue() -> Iterator[None]:
+def empty_emission_queue() -> Generator[None, None, None]:
     """Drop every psygnal emission the test left queued for another thread.
 
     Left queued, an emission is delivered by the next test running the event
