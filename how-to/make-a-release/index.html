@@ -4897,10 +4897,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-prepare-the-release" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. Prepare the release
+        Prerequisites
       </span>
     </span>
   </a>
@@ -4908,10 +4908,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-review-and-merge" class="md-nav__link">
+  <a href="#1-write-the-changelog-section" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        2. Review and merge
+        1. Write the changelog section
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-open-the-pull-request-and-merge-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        2. Open the pull request and merge it
       </span>
     </span>
   </a>
@@ -5134,10 +5145,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-prepare-the-release" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        1. Prepare the release
+        Prerequisites
       </span>
     </span>
   </a>
@@ -5145,10 +5156,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-review-and-merge" class="md-nav__link">
+  <a href="#1-write-the-changelog-section" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        2. Review and merge
+        1. Write the changelog section
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-open-the-pull-request-and-merge-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        2. Open the pull request and merge it
       </span>
     </span>
   </a>
@@ -5298,33 +5320,44 @@
 <p>The changelog is written from the pull requests merged since the last
 release, grouped by their <a href="../commits-and-prs/#labels">labels</a>. Nobody edits
 it by hand.</p>
-<h2 id="1-prepare-the-release">1. Prepare the release<a class="headerlink" href="#1-prepare-the-release" title="Permanent link">&para;</a></h2>
-<p>On GitHub, run the <strong>Prepare Release</strong> workflow from the Actions tab, with the
-version without its <code>v</code>, such as <code>0.14.0</code>. It:</p>
-<ol>
-<li>asks GitHub for the pull requests merged since the last final release;</li>
-<li>writes a section for them at the top of <code>docs/reference/changelog.md</code>, with
-   the date and a compare link;</li>
-<li>opens a pull request with that change, on the branch <code>release/v0.14.0</code>.</li>
-</ol>
-<p>A pull request opened by a workflow does not start the other checks. Close
-and reopen it to start them.</p>
-<h2 id="2-review-and-merge">2. Review and merge<a class="headerlink" href="#2-review-and-merge" title="Permanent link">&para;</a></h2>
-<p>Read the new section. A title that reads badly is fixed by renaming the pull
-request it came from, so the changelog and GitHub agree. Then close the
-release pull request, delete its branch <code>release/vX.Y.Z</code>, and run the
-workflow again: it cannot push to a branch that exists. Then merge.</p>
-<h2 id="3-tag">3. Tag<a class="headerlink" href="#3-tag" title="Permanent link">&para;</a></h2>
-<p>Tag the merge commit and push the tag:</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p><code>gh</code> signed in with access to the repository, and a clone of it.</p>
+<h2 id="1-write-the-changelog-section">1. Write the changelog section<a class="headerlink" href="#1-write-the-changelog-section" title="Permanent link">&para;</a></h2>
+<p>On an up-to-date <code>main</code>, make a release branch and write the section, with
+the version without its <code>v</code>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>pull
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.14.0
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.14.0
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>switch<span class="w"> </span>-c<span class="w"> </span>release/v0.14.1
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/release_notes.py<span class="w"> </span>prepare<span class="w"> </span><span class="m">0</span>.14.1
+</span></code></pre></div>
+<p>The script asks GitHub for the pull requests merged since the last final
+release, and writes a section for them at the top of
+<code>docs/reference/changelog.md</code>, with the date and a compare link.</p>
+<p>Read the section. A title that reads badly is fixed by renaming the pull
+request it came from, so the changelog and GitHub agree. Then discard the
+section with <code>git checkout docs/reference/changelog.md</code> and run the script
+again.</p>
+<h2 id="2-open-the-pull-request-and-merge-it">2. Open the pull request and merge it<a class="headerlink" href="#2-open-the-pull-request-and-merge-it" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>release/v0.14.1
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>gh<span class="w"> </span>pr<span class="w"> </span>create<span class="w"> </span>--base<span class="w"> </span>main<span class="w"> </span>--label<span class="w"> </span>skip-changelog<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--title<span class="w"> </span><span class="s2">"docs: add the 0.14.1 changelog"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--body<span class="w"> </span><span class="s2">"Adds the changelog section for 0.14.1."</span>
+</span></code></pre></div>
+<p>The checks start as on any pull request. Merge it once they pass.</p>
+<h2 id="3-tag">3. Tag<a class="headerlink" href="#3-tag" title="Permanent link">&para;</a></h2>
+<p>Tag the merge commit and push the tag:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>switch<span class="w"> </span>main
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>pull
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>git<span class="w"> </span>tag<span class="w"> </span>v0.14.1
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.14.1
 </span></code></pre></div>
 <p>The tag publishes the package to PyPI and the docs, and creates the GitHub
-release, whose notes are the changelog section.</p>
+release, whose notes are the changelog section. For a tag whose version has
+no section, the package build fails with a message naming the <code>prepare</code>
+command, and neither PyPI nor the GitHub release gets anything.</p>
 <h2 id="release-candidates">Release candidates<a class="headerlink" href="#release-candidates" title="Permanent link">&para;</a></h2>
-<p>Tag a candidate <code>v0.14.0rc1</code> without preparing anything. It publishes the
+<p>Tag a candidate <code>v0.14.1rc1</code> without preparing anything. It publishes the
 package, but no GitHub release and no changelog section: the final release's
 section lists every pull request since the previous final release.</p>
 
