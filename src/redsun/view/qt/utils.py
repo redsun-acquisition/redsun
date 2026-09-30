@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 import magicgui.widgets as mgw
@@ -28,6 +28,7 @@ from ._widget_factory import create_param_widget
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
+    from redsun.engine import ProgressState
     from redsun.presenter.plan_spec import PlanSpec
     from redsun.registry import CallbackType
 
@@ -38,6 +39,12 @@ __all__ = [
     "create_param_widget",
     "create_plan_widget",
 ]
+
+_PROGRESS_STEPS = 1000
+"""Steps of a progress bar with a known end."""
+
+_PROGRESS_INDENT = 16
+"""Pixels a progress row is indented per scope it is nested under."""
 
 
 class ActionButton(QtW.QPushButton):
@@ -132,6 +139,13 @@ class PlanWidget:
     The callbacks the plan requires come first, checked and fixed in place; the
     rest can be checked and dragged into a different order.
     """
+
+    progress_group: QtW.QGroupBox | None = None
+    """The "Progress" group of the page, hidden until the plan reports a scope."""
+
+    _progress_rows: dict[str, tuple[QtW.QLabel, QtW.QProgressBar, QtW.QLabel]] = field(
+        default_factory=dict, init=False, repr=False
+    )
 
     def toggle(self, status: bool) -> None:
         """Update the widgets when a continuous plan starts or stops.
@@ -229,6 +243,50 @@ class PlanWidget:
     def attached_callbacks(self) -> list[str]:
         """Names of the checked callbacks the user attached, in order."""
         return _attached(self.callbacks_list)
+
+    def show_progress(self, scopes: Sequence[ProgressState]) -> None:
+        """Show a row for each progress scope of the running plan, in the order given.
+
+        A scope is indented under its parent, and a bar is busy while its
+        scope has no known end. An empty *scopes* hides the group.
+        """
+        group = self.progress_group
+        if group is None:
+            return
+        layout = cast("QtW.QGridLayout", group.layout())
+        current = {scope.name for scope in scopes}
+        for name in [name for name in self._progress_rows if name not in current]:
+            for widget in self._progress_rows.pop(name):
+                layout.removeWidget(widget)
+                # deleteLater waits for the event loop; until then the row
+                # would still be a child of the group
+                widget.setParent(None)
+                widget.deleteLater()
+        depths: dict[str, int] = {}
+        for row, scope in enumerate(scopes):
+            depths[scope.name] = (
+                depths.get(scope.parent, -1) + 1 if scope.parent is not None else 0
+            )
+            if scope.name not in self._progress_rows:
+                name_label = QtW.QLabel(scope.name)
+                name_label.setObjectName("progress-name")
+                bar = QtW.QProgressBar()
+                bar.setTextVisible(False)
+                text_label = QtW.QLabel()
+                text_label.setObjectName("progress-text")
+                self._progress_rows[scope.name] = (name_label, bar, text_label)
+            name_label, bar, text_label = self._progress_rows[scope.name]
+            for column, cell in enumerate((name_label, bar, text_label)):
+                layout.removeWidget(cell)
+                layout.addWidget(cell, row, column)
+            name_label.setIndent(depths[scope.name] * _PROGRESS_INDENT)
+            if scope.fraction is None:
+                bar.setRange(0, 0)
+            else:
+                bar.setRange(0, _PROGRESS_STEPS)
+                bar.setValue(round(scope.fraction * _PROGRESS_STEPS))
+            text_label.setText(_progress_text(scope))
+        group.setHidden(not scopes)
 
 
 def _checked(callbacks_list: QtW.QListWidget | None) -> list[QtW.QListWidgetItem]:
@@ -338,6 +396,34 @@ def _build_params_group(
         params_form.addRow(label_text, native)
 
     return params_group
+
+
+def _format_number(value: float, precision: int | None) -> str:
+    """Return *value* with *precision* decimals, or in its shortest form."""
+    return f"{value:.{precision}f}" if precision is not None else f"{value:g}"
+
+
+def _progress_text(scope: ProgressState) -> str:
+    """Return what a progress row says: a count against its end, a percentage, or a count."""
+    if (
+        scope.fraction is not None
+        and scope.current is not None
+        and scope.target is not None
+    ):
+        text = (
+            f"{_format_number(scope.current, scope.precision)} / "
+            f"{_format_number(scope.target, scope.precision)} {scope.unit}"
+        )
+    elif scope.fraction is not None:
+        text = f"{round(scope.fraction * 100)} %"
+    elif scope.current is not None:
+        text = f"{_format_number(scope.current, scope.precision)} {scope.unit}"
+    else:
+        text = scope.unit
+    if scope.time_remaining is not None:
+        left = f"{scope.time_remaining:.0f} s left"
+        text = f"{text}, {left}" if text else left
+    return text
 
 
 def _build_run_buttons(
@@ -599,6 +685,12 @@ def create_plan_widget(
         action_toggled_callback or (lambda checked, name: None),
     )
 
+    progress_group = QtW.QGroupBox("Progress")
+    progress_layout = QtW.QGridLayout(progress_group)
+    progress_layout.setColumnStretch(1, 1)
+    progress_group.hide()
+    page_layout.addWidget(progress_group)
+
     return PlanWidget(
         spec=spec,
         group_box=page,
@@ -610,6 +702,7 @@ def create_plan_widget(
         actions_group=actions_group,
         action_buttons=action_buttons,
         callbacks_list=callbacks_list,
+        progress_group=progress_group,
     )
 
 
