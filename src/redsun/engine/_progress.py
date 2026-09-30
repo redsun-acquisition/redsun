@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from numbers import Real
@@ -128,10 +129,11 @@ class ProgressState:
 
 
 def number(value: object) -> float | None:
-    """Return *value* as a float, or `None` when it is not a real number."""
+    """Return *value* as a float, or `None` when it is not a finite real number."""
     if isinstance(value, bool) or not isinstance(value, Real):
         return None
-    return float(value)
+    result = float(value)
+    return result if math.isfinite(result) else None
 
 
 def depth(scope: PlanProgress) -> int:
@@ -184,7 +186,9 @@ def snapshot(scope: PlanProgress, update: Mapping[str, Any]) -> ProgressState:
         target=target,
         unit=str(update.get("unit", "unit")),
         precision=precision
-        if isinstance(precision, int) and not isinstance(precision, bool)
+        if isinstance(precision, int)
+        and not isinstance(precision, bool)
+        and precision >= 0
         else None,
         fraction=fraction,
         time_elapsed=number(update.get("time_elapsed")),

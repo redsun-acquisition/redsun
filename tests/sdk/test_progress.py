@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import gc
+import math
+import weakref
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -139,8 +142,21 @@ def test_a_paused_plan_keeps_its_scope_and_resumes(RE: RunEngine) -> None:
         ({"current": 2, "initial": 2, "target": 2}, (2.0, 2.0, 2.0, None)),
         ({"current": 7}, (7.0, None, None, None)),
         ({"current": "seven", "initial": 0, "target": 5}, (None, 0.0, 5.0, None)),
+        ({"current": math.nan, "initial": 0, "target": 5}, (None, 0.0, 5.0, None)),
+        ({"current": 1, "initial": 0, "target": math.inf}, (1.0, 0.0, None, None)),
+        ({"fraction": math.nan}, (None, 0.0, 1.0, None)),
     ],
-    ids=["reported", "computed", "clamped", "no span", "no end", "not a number"],
+    ids=[
+        "reported",
+        "computed",
+        "clamped",
+        "no span",
+        "no end",
+        "not a number",
+        "nan",
+        "infinite",
+        "nan fraction",
+    ],
 )
 def test_a_scope_reports_how_far_it_has_got(
     RE: RunEngine,
@@ -158,3 +174,60 @@ def test_a_scope_reports_how_far_it_has_got(
 
     state = next(scopes[0] for scopes in reversed(seen) if scopes)
     assert (state.current, state.initial, state.target, state.fraction) == expected
+
+
+def test_a_negative_precision_is_dropped(RE: RunEngine) -> None:
+    """Report no precision when the plan passes a negative one."""
+    seen = record(RE)
+
+    def plan() -> MsgGenerator[None]:
+        yield from rps.declare_progress("series")
+        yield from rps.update_progress(
+            "series", current=1, initial=0, target=2, precision=-1
+        )
+
+    RE(plan()).result(timeout=10)
+
+    state = next(scopes[0] for scopes in reversed(seen) if scopes)
+    assert state.precision is None
+
+
+def test_opening_and_closing_a_nested_scope_never_reports_nothing(
+    RE: RunEngine,
+) -> None:
+    """Report an empty tuple only once the last scope has finished."""
+    seen = record(RE)
+
+    def plan() -> MsgGenerator[None]:
+        yield from rps.declare_progress("repeats")
+        for repeat in range(2):
+            yield from rps.declare_progress("series", parent="repeats")
+            yield from rps.update_progress("series", current=1, initial=0, target=1)
+            yield from rps.update_progress("series", done=True)
+            yield from rps.update_progress(
+                "repeats", current=repeat + 1, initial=0, target=2
+            )
+        yield from rps.update_progress("repeats", done=True)
+
+    RE(plan()).result(timeout=10)
+
+    assert [index for index, scopes in enumerate(seen) if not scopes] == [len(seen) - 1]
+
+
+def test_a_finished_scope_is_not_kept_while_the_plan_runs_on(RE: RunEngine) -> None:
+    """Let go of a finished scope while other scopes of the plan are still open."""
+    kept: list[bool] = []
+
+    def plan() -> MsgGenerator[None]:
+        yield from rps.declare_progress("repeats")
+        scope = yield from rps.declare_progress("series", parent="repeats")
+        ref = weakref.ref(scope)
+        del scope
+        yield from rps.update_progress("series", done=True)
+        yield from rps.update_progress("repeats", current=1, initial=0, target=2)
+        gc.collect()
+        kept.append(ref() is not None)
+
+    RE(plan()).result(timeout=10)
+
+    assert kept == [False]

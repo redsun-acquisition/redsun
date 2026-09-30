@@ -143,7 +143,9 @@ class PlanPresenter(Loggable):
         self.plans: dict[str, PlanEntry] = {}
         self.specs: dict[str, PlanSpec] = {}
         self.futures: set[Future[Any]] = set()
+        # --8<-- [start:progress-connect]
         self.engine.sig_progress.connect(self.sig_progress.emit)
+        # --8<-- [end:progress-connect]
 
     def setup(self, providers: Mapping[str, HasPlans]) -> None:
         for component in providers.values():

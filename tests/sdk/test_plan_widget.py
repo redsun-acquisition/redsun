@@ -561,7 +561,7 @@ def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
         (_scope("s", current=37, target=100, fraction=0.37), False, "37 / 100 frames"),
         (_scope("s", fraction=0.42), False, "42 %"),
         (_scope("s", current=412), True, "412 frames"),
-        (_scope("s"), True, "frames"),
+        (_scope("s", unit=""), True, ""),
         (
             _scope("s", current=3.5, target=10, fraction=0.35, precision=1),
             False,

@@ -37,11 +37,17 @@ reports nothing shows no bar.
 ## Show it on the page
 
 The engine announces every open scope on `RunEngine.sig_progress`. The
-presenter owning the engine passes the signal on, connecting
-`self.engine.sig_progress` to a signal of its own:
+presenter owning the engine passes the signal on through a signal of its
+own:
 
 ```{.python}
 --8<-- "docs/examples/continuous_plan.py:progress-relay"
+```
+
+connected in its `__init__`, once it has made the engine:
+
+```{.python}
+--8<-- "docs/examples/continuous_plan.py:progress-connect"
 ```
 
 The view hands what it receives to the page of the plan that is running:
@@ -62,7 +68,7 @@ parent. The group is hidden while no scope is open.
 | --- | --- | --- |
 | a `target`, or a `fraction` | fills up to the end | `37 / 100 frames`, or `42 %` for a fraction |
 | no end, but a `current` | moves back and forth | `412 frames` |
-| nothing reported yet | moves back and forth | the unit |
+| nothing reported yet | moves back and forth | no text |
 
 When the plan passes `time_remaining`, the text ends with `, 12 s left`.
 

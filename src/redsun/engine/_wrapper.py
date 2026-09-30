@@ -373,8 +373,21 @@ class RunEngine(BlueskyRunEngine):
             self.progress_hook(active)
 
     def _report_scopes(self, scopes: list[PlanProgress] | None) -> None:
-        """Follow the scopes the engine lists, and announce them."""
+        """Follow the scopes the engine lists, and announce them.
+
+        The engine clears the list before handing a new one; that clearing is
+        announced only when no scope is left open to follow it.
+        """
         self._progress_listed = tuple(scopes or ())
+        self._progress_states = {
+            scope: state
+            for scope, state in self._progress_states.items()
+            if not scope.done
+        }
+        if scopes is None and any(
+            not scope.done for scope in self._progress_scopes.values()
+        ):
+            return
         for scope in self._progress_listed:
             if scope not in self._progress_states:
                 self._progress_states[scope] = empty_state(scope)
