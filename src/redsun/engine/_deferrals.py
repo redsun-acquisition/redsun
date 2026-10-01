@@ -96,8 +96,13 @@ class Deferrals:
     async def _apply_queued(self) -> None:
         while self._queue:
             apply, done = self._queue.popleft()
+            # a cancelled request is no longer wanted
+            if done.cancelled():
+                continue
             await self._apply(apply)
-            done.set_result(None)
+            # cancelled while it was being applied: nobody waits for the result
+            if not done.done():
+                done.set_result(None)
 
     async def _apply(self, apply: Callable[[], Awaitable[None]]) -> None:
         try:
