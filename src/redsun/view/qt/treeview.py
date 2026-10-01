@@ -10,17 +10,14 @@ The design follows the `ParameterTree` widget of
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 import numpy as np
 from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
 
 if TYPE_CHECKING:
-    from typing import Never
-
     from bluesky.protocols import Descriptor, Reading
-    from event_model import Dtype
 
 __all__ = ["DescriptorTreeView"]
 
@@ -32,10 +29,6 @@ def split_key(key: str) -> tuple[str, str]:
     """
     owner, dash, prop = key.partition("-")
     return (owner, prop) if dash else ("", key)
-
-
-def assert_never(_: Dtype) -> Never:
-    raise AssertionError("Expected code to be unreachable")
 
 
 def _make_value_widget(
@@ -63,30 +56,11 @@ def _make_value_widget(
     parent
         Qt parent for the created widget.
     """
-    if readonly or descriptor.get("dtype") == "array":
-        # convert the initial value to a tuple
-        # that can be more easily rendered as text
-        if isinstance(initial_value, np.ndarray):
-            actual_value = tuple(initial_value.tolist())
-        elif isinstance(initial_value, (list, tuple)):
-            actual_value = tuple(initial_value)
-        else:
-            actual_value = initial_value
-        lbl = QtWidgets.QLabel(parent)
-        lbl.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter
-        )
-        lbl.setContentsMargins(4, 0, 4, 0)
-        if readonly:
-            palette = lbl.palette()
-            palette.setColor(
-                QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(130, 130, 130)
-            )
-            lbl.setPalette(palette)
-        _set_label_text(lbl, actual_value)
-        return lbl
+    if readonly:
+        return _make_label(initial_value, parent, readonly=True)
 
-    dtype = descriptor.get("dtype", "")
+    # not a subscript: a descriptor without a dtype fails in assert_never below
+    dtype = descriptor.get("dtype")
     limits = descriptor.get("limits", {})
     control = limits.get("control", None)
     if control is not None:
@@ -97,6 +71,9 @@ def _make_value_widget(
         high = None
 
     match dtype:
+        case "array":
+            return _make_label(initial_value, parent, readonly=False)
+
         case "integer":
             sb = QtWidgets.QSpinBox(parent)
             sb.setRange(
@@ -163,6 +140,31 @@ def _make_value_widget(
 
         case _:
             assert_never(dtype)
+
+
+def _make_label(
+    value: Any, parent: QtWidgets.QWidget, *, readonly: bool
+) -> QtWidgets.QLabel:
+    """Return a centred label showing *value*, greyed out when *readonly*."""
+    # convert the initial value to a tuple
+    # that can be more easily rendered as text
+    if isinstance(value, np.ndarray):
+        value = tuple(value.tolist())
+    elif isinstance(value, (list, tuple)):
+        value = tuple(value)
+    lbl = QtWidgets.QLabel(parent)
+    lbl.setAlignment(
+        QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter
+    )
+    lbl.setContentsMargins(4, 0, 4, 0)
+    if readonly:
+        palette = lbl.palette()
+        palette.setColor(
+            QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(130, 130, 130)
+        )
+        lbl.setPalette(palette)
+    _set_label_text(lbl, value)
+    return lbl
 
 
 def _set_label_text(
