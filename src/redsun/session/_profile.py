@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal
@@ -53,25 +54,30 @@ def open_profile(
         raise ImportError(
             "profiling a session needs pyinstrument: install redsun[profile]"
         ) from e
-    return SessionProfile(profile, profile_dir, pyinstrument.Profiler())
+    folder = None if profile_dir is None else Path(profile_dir)
+    return SessionProfile(profile, folder, pyinstrument.Profiler())
 
 
+@dataclass(slots=True, eq=False)
 class SessionProfile:
     """A running profile of one session, written as HTML once stopped."""
 
-    __slots__ = ("folder", "kind", "log", "profiler", "started")
+    kind: str
+    """What the session profiles, one of `PROFILE_KINDS`."""
 
-    def __init__(
-        self,
-        kind: str,
-        folder: str | Path | None,
-        profiler: pyinstrument.Profiler,
-    ) -> None:
-        self.kind = kind
-        self.folder = None if folder is None else Path(folder)
-        self.log: SessionFileHandler | None = None
-        self.started = datetime.now().astimezone()
-        self.profiler = profiler
+    folder: Path | None
+    """Folder the profile is written to; `None` for the one beside the logs."""
+
+    profiler: pyinstrument.Profiler
+    """The profiler, started as the profile is made."""
+
+    log: SessionFileHandler | None = None
+    """The run's log file handler, which names the profile once followed."""
+
+    started: datetime = field(default_factory=lambda: datetime.now().astimezone())
+    """When the profile started, naming it when no log file was opened."""
+
+    def __post_init__(self) -> None:
         self.profiler.start()
 
     def follow(self, log: SessionFileHandler) -> None:
