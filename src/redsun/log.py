@@ -203,9 +203,12 @@ class BufferHandler(logging.Handler):
         if service is None:
             self._records.append(record)
         else:
-            self._service_records.setdefault(
-                service, deque(maxlen=self._service_capacity)
-            ).append(record)
+            records = self._service_records.get(service)
+            if records is None:
+                records = self._service_records[service] = deque(
+                    maxlen=self._service_capacity
+                )
+            records.append(record)
         self.sig_record.emit(record)
 
     def clear(self) -> None:
