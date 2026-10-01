@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections import deque
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
+
+from redsun.log import logger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -17,8 +18,6 @@ if TYPE_CHECKING:
     from ._wrapper import RunEngine
 
 __all__ = ["Deferrals"]
-
-logger = logging.getLogger("redsun")
 
 
 class Deferrals:
@@ -107,5 +106,5 @@ class Deferrals:
     async def _apply(self, apply: Callable[[], Awaitable[None]]) -> None:
         try:
             await apply()
-        except Exception:
+        except Exception:  # noqa: BLE001 - one failed change must not stop the queue
             logger.exception("A deferred change failed")

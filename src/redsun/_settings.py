@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
 from platformdirs import user_config_dir
+
+from redsun.log import logger
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -19,8 +20,6 @@ if TYPE_CHECKING:
     """A value the settings file can hold."""
 
 __all__ = ["Settings"]
-
-logger = logging.getLogger("redsun")
 
 
 class Settings:

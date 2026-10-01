@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from event_model import DocumentRouter
+
+from redsun.log import logger
 
 from ._base import ArrayShape, WriterError, merge_attributes
 from ._placement import ZARR, placement
@@ -29,8 +30,6 @@ if TYPE_CHECKING:
     from ._placement import Placement
 
 __all__ = ["Writer"]
-
-logger = logging.getLogger("redsun")
 
 Store = tuple[str, str]
 
