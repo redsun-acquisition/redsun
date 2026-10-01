@@ -1407,37 +1407,31 @@ class Session(BuildableSession):
                 for pname, hint in params.items()
                 if (shape := shape_of(hint)) is not None
             }
-            missing = unanswered(
-                store, {p: h for p, h in params.items() if p not in questions}
+            reason: BaseException | None = self._not_built(
+                store,
+                f"{declaration.name}.setup",
+                {p: h for p, h in params.items() if p not in questions},
             )
-            if missing:
-                absent = self._blamed(hint for _, hint in missing)
-                if not absent:
-                    raise TypeError(
-                        unanswered_message(f"{declaration.name}.setup", missing)
-                    )
-                self._not_set_up[declaration.name] = TypeError(
-                    f"{listed(sorted(absent))} was not built"
-                )
-            else:
+            if reason is None:
                 try:
                     answers = self._answers_for(declaration, questions, built)
                 except NoAnswer as e:
-                    self._not_set_up[declaration.name] = TypeError(str(e))
-                else:
-                    try:
-                        # `as_protocol` cannot take the generic `HasSetup`, which
-                        # mypy refuses as a type form; the class was checked above
-                        ready = cast("HasSetup[...]", instance)
-                        store.inject(setup_call(ready, declaration.name, answers))()
-                        continue
-                    except Exception as e:  # noqa: BLE001 - a setup must not abort the app
-                        self._not_set_up[declaration.name] = e
+                    reason = TypeError(str(e))
+            if reason is None:
+                try:
+                    # `as_protocol` cannot take the generic `HasSetup`, which
+                    # mypy refuses as a type form; the class was checked above
+                    ready = cast("HasSetup[...]", instance)
+                    store.inject(setup_call(ready, declaration.name, answers))()
+                    continue
+                except Exception as e:  # noqa: BLE001 - a setup must not abort the app
+                    reason = e
+            self._not_set_up[declaration.name] = reason
             logger.warning(
                 "Failed to set up %s '%s': %s",
                 declaration.kind,
                 declaration.name,
-                self._not_set_up[declaration.name],
+                reason,
             )
 
     def _answers_for(
@@ -1522,7 +1516,9 @@ class Session(BuildableSession):
                 },
             }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
-            if self._refuse_or_skip(store, declaration, params):
+            reason = self._not_built(store, declaration.name, params)
+            if reason is not None:
+                self._skip(declaration, reason)
                 continue
             try:
                 instance = store.inject(factory(declaration, self._on_built, passed))()
@@ -1539,18 +1535,15 @@ class Session(BuildableSession):
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
 
-    def _refuse_or_skip(
-        self,
-        store: Store,
-        declaration: Declaration,
-        params: Mapping[str, Any],
-    ) -> bool:
-        """Return whether *declaration* is skipped for want of a collaborator.
+    def _not_built(
+        self, store: Store, name: str, params: Mapping[str, Any]
+    ) -> TypeError | None:
+        """Return why *name* goes without a collaborator, `None` when it has all.
 
         A parameter left unanswered by a component this build already failed
-        on is a consequence of that failure, and skipping is what the session
-        does with it. One nothing ever declared is a mistake in the session
-        and still raises.
+        on is a consequence of that failure, and the reason names the
+        components. One nothing ever declared is a mistake in the session and
+        raises.
 
         Raises
         ------
@@ -1559,14 +1552,11 @@ class Session(BuildableSession):
         """
         missing = unanswered(store, params)
         if not missing:
-            return False
+            return None
         absent = self._blamed(hint for _, hint in missing)
         if not absent:
-            raise TypeError(unanswered_message(declaration.name, missing))
-        named = listed(sorted(absent))
-        reason = TypeError(f"{named} was not built")
-        self._skip(declaration, reason)
-        return True
+            raise TypeError(unanswered_message(name, missing))
+        return TypeError(f"{listed(sorted(absent))} was not built")
 
     def _blamed(self, hints: Iterable[object]) -> set[str]:
         """Return the names of failed components that would have answered *hints*.
