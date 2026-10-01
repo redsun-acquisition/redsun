@@ -5385,13 +5385,14 @@ you.</p>
 commit's first line, since the changelog entry is made from it:
 <code>feat(session): add strict sessions</code> is listed under <em>Added</em> as "Add strict
 sessions".</p>
-<p>Split the description into the sections that apply:</p>
-<ul>
-<li><code>## Summary</code>: what the pull request does, in a line or two.</li>
-<li><code>## Changes</code>: one short bullet per change.</li>
-<li><code>## Breaking changes</code>: what existing code must change, if anything.</li>
-<li><code>## Testing</code>: the checks you ran and their result.</li>
-</ul>
+<p>The description is a list of one-line bullets in the imperative, one per
+change a reviewer can see, with no headers:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">-</span><span class="w"> </span>Add <span class="sb">`strict`</span> to the session file
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">-</span><span class="w"> </span>Stop a session whose component fails to build when <span class="sb">`strict`</span> is set
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">-</span><span class="w"> </span>Rename <span class="sb">`MyMotor.go`</span> to <span class="sb">`MyMotor.move`</span>, which existing code must follow
+</span></code></pre></div>
+<p>A change that existing code must follow says so in its bullet. Leave out tests,
+coverage and the checks you ran: CI reports them on the pull request.</p>
 <h2 id="labels">Labels<a class="headerlink" href="#labels" title="Permanent link">&para;</a></h2>
 <p>Every pull request needs one label saying which changelog section it goes in.
 CI refuses a pull request without one.</p>
