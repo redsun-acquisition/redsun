@@ -18,6 +18,8 @@ NOTES = """\
 * feat: add strict sessions by @someone in https://github.com/o/r/pull/140
 ### Changed
 * refactor!: promote the session layer by @someone in https://github.com/o/r/pull/141
+### Fixed
+* chore: bump the actions group by @dependabot[bot] in https://github.com/o/r/pull/142
 
 ## New Contributors
 * @newcomer made their first contribution in https://github.com/o/r/pull/139
@@ -57,7 +59,7 @@ def offline_changelog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_a_release_section_is_written_above_the_last_and_read_back() -> None:
-    """Write a release section above the previous one and read both back."""
+    """Write a release section above the previous one, naming each author, and read both back."""
     new = section("0.14.0", datetime.date(2026, 10, 1), NOTES, breaking={141})
     link = "[0.14.0]: https://github.com/o/r/compare/v0.13.0...v0.14.0"
 
@@ -74,11 +76,15 @@ Intro.
 
 ### Added
 
-- Add strict sessions ([#140](https://github.com/o/r/pull/140))
+- Add strict sessions ([#140](https://github.com/o/r/pull/140)) by [@someone](https://github.com/someone)
 
 ### Changed
 
-- **Breaking:** Promote the session layer ([#141](https://github.com/o/r/pull/141))
+- **Breaking:** Promote the session layer ([#141](https://github.com/o/r/pull/141)) by [@someone](https://github.com/someone)
+
+### Fixed
+
+- Bump the actions group ([#142](https://github.com/o/r/pull/142)) by [@dependabot](https://github.com/apps/dependabot)
 
 ## [0.13.0] - 23-09-2026
 
