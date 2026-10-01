@@ -111,6 +111,7 @@ commas.</p></noscript>
 | `ome-zarr` | `ome-writers` | writing a derived product beside an OME-Zarr image |
 | `tiled` | `tiled` and `ome-tiled` | [keeping a catalog of runs](keep-a-catalog.md) |
 | `testing` | `pytest` | [testing a plugin](test-a-plugin.md), as a development dependency |
+| `profile` | `pyinstrument` and `py-spy` | [profiling a session](profile-a-session.md), as a development dependency |
 
 `redsun` supports PyQt6 and PySide6
 [bindings](../explanation/glossary.md#qt-binding) through `qtpy`. Install one

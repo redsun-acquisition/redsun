@@ -93,6 +93,7 @@ from ._factories import (
 )
 from ._frontend import Frontend
 from ._plugins import installed, load_providers
+from ._profile import open_profile
 from ._protocols import (
     AttachableComponent,
     BuildableSession,
@@ -115,6 +116,7 @@ if TYPE_CHECKING:
     from redsun.services import Service
 
     from ._declarations import Key
+    from ._profile import ProfileKind
     from ._questions import Shape
 
 __all__ = ["BUILD_STEPS", "Session"]
@@ -253,6 +255,7 @@ class Session(BuildableSession):
         "_names",
         "_not_set_up",
         "_path_provider",
+        "_profile",
         "_releases",
         "_report",
         "_services",
@@ -302,6 +305,8 @@ class Session(BuildableSession):
         config: Source | Sequence[Source] | None = None,
         *,
         log_level: int | str | None = None,
+        profile: ProfileKind | None = None,
+        profile_dir: str | Path | None = None,
     ) -> None:
         """Prepare an empty session, to be filled by `build`.
 
@@ -309,7 +314,26 @@ class Session(BuildableSession):
         it, so a caller naming one key changes that key and leaves the rest.
         *log_level*, a `logging` constant or its name, sets the `redsun`
         logger's level; `None` leaves it as it is.
+
+        *profile* records where the session spends its time, with
+        `pyinstrument` from the `profile` extra: `"start"` up to the end of
+        `build`, `"run"` up to `shutdown`. The profile is an HTML file named
+        after the run's log file, under `profiles/<session>` beside the logs,
+        keeping the most recent runs; *profile_dir* puts it in that folder
+        instead and keeps everything. Only the thread the session is made on
+        is sampled: device connections, plans and services show as waits or
+        not at all.
+
+        Raises
+        ------
+        ValueError
+            If *profile* is neither `"start"` nor `"run"`.
+        TypeError
+            If *profile_dir* is given without *profile*.
+        ImportError
+            If *profile* is given and `pyinstrument` is not installed.
         """
+        recording = open_profile(profile, profile_dir)
         if log_level is not None:
             set_level(log_level)
         self._config = config
@@ -353,6 +377,13 @@ class Session(BuildableSession):
         self._shared: dict[Key, str] = {}
         self._shared_values: list[tuple[str, object]] = []
         self._is_built = False
+        self._profile = recording
+        if recording is not None:
+            # started last, so a refused keyword leaves nothing running; its
+            # stop registered first, so it runs last: a run profile holds
+            # every release, and a build that raises still writes its profile
+            recording.start()
+            self.on_release(self._stop_profile)
 
     @classmethod
     def from_config(
@@ -360,6 +391,8 @@ class Session(BuildableSession):
         source: Source | Sequence[Source],
         *,
         log_level: int | str | None = None,
+        profile: ProfileKind | None = None,
+        profile_dir: str | Path | None = None,
     ) -> Self:
         """Return a session described entirely by *source*.
 
@@ -391,7 +424,9 @@ class Session(BuildableSession):
                 [label(s) for s in as_sources(source)],
                 ["session: a session built with from_config must name itself"],
             )
-        session = base_for(cls, config.get("frontend"))(config, log_level=log_level)
+        session = base_for(cls, config.get("frontend"))(
+            config, log_level=log_level, profile=profile, profile_dir=profile_dir
+        )
         return cast("Self", session)
 
     @property
@@ -665,6 +700,8 @@ class Session(BuildableSession):
             self.shutdown()
             raise
         self._is_built = True
+        if self._profile is not None and self._profile.kind == "start":
+            self._stop_profile()
         return self
 
     def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
@@ -737,6 +774,8 @@ class Session(BuildableSession):
         """
         root = path_provider.base_dir
         application = SessionFileHandler(self.name, root=root)
+        if self._profile is not None:
+            self._profile.follow(application)
         handlers: dict[str | None, SessionFileHandler] = {None: application}
         for name, service in self._services.items():
             if service.launched:
@@ -910,6 +949,16 @@ class Session(BuildableSession):
         warning. Yields nothing by default.
         """
         return ()
+
+    def _stop_profile(self) -> None:
+        """Stop the profile and write it, named after this session."""
+        if self._profile is None:
+            return
+        # the configuration may be unreadable; the profile still needs a name
+        session = (self._file.session if self._file is not None else None) or type(
+            self
+        ).__name__
+        self._profile.stop(session)
 
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.

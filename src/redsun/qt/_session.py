@@ -93,6 +93,7 @@ from ._color_scheme import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from contextlib import AbstractContextManager
+    from pathlib import Path
     from types import TracebackType
     from typing import TypeAlias
 
@@ -101,6 +102,7 @@ if TYPE_CHECKING:
     from .._config import Source
     from ..ports import SlotThread
     from ..session._declarations import Declaration
+    from ..session._profile import ProfileKind
     from ..session._protocols import AttachableComponent, NamedComponent
 
 ASK_ON_CLOSE: Final[str] = "ask_on_close"
@@ -281,9 +283,16 @@ class QtSession(DesktopSession[QMainWindow], Session):
         config: Source | Sequence[Source] | None = None,
         *,
         log_level: int | str | None = None,
+        profile: ProfileKind | None = None,
+        profile_dir: str | Path | None = None,
     ) -> None:
-        """Prepare an empty container, to be filled by `build`."""
-        super().__init__(config, log_level=log_level)
+        """Prepare an empty container, to be filled by `build`.
+
+        The keywords are those of [`Session`][redsun.Session].
+        """
+        super().__init__(
+            config, log_level=log_level, profile=profile, profile_dir=profile_dir
+        )
         self._close_guard: CloseGuard | None = None
         self._main_window: QModelMainWindow | None = None
         self._model: Application | None = None

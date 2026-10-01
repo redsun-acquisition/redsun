@@ -1064,3 +1064,12 @@ def test_a_queued_emission_is_delivered_before_the_widgets_are_destroyed(
     assert readout.texts == ["x 1.0"]
     emit_queued()
     assert readout.texts == ["x 1.0"]
+
+
+def test_a_qt_session_writes_its_start_profile(tmp_path: Path) -> None:
+    """Write a start profile for a Qt session, as `MyApp(profile="start")` asks."""
+    app = QtApp(profile="start", profile_dir=tmp_path)
+    app.build()
+    app.shutdown()
+
+    assert len(list(tmp_path.glob("*.html"))) == 1

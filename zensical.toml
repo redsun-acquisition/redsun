@@ -54,6 +54,7 @@ nav = [
             "how-to/run-without-hardware.md",
             "how-to/find-a-missing-component.md",
             "how-to/configure-logging.md",
+            "how-to/profile-a-session.md",
             "how-to/change-a-setting-while-a-plan-runs.md",
             "how-to/save-a-session.md",
         ]},
