@@ -24,7 +24,7 @@ READY_VARIABLE: Final = "REDSUN_SERVICE_READY"
 """Variable holding the text the session waits for, set only when declared."""
 
 LEVEL_VARIABLE: Final = "REDSUN_LOG_LEVEL"
-"""Variable holding the name of the level the session records at."""
+"""Variable holding the number of the level the session records at."""
 
 ATTEMPT_TIMEOUT: Final = 1.0
 """Seconds `ready_when_reachable` waits for each answer, and between failures."""
@@ -65,10 +65,11 @@ def configure_logging() -> None:
     Records of `logging` and, when it is installed, of `loguru` go to
     standard output as JSON, each keeping its level, time, logger name and
     traceback. The level is the one the session records at, `INFO` when no
-    session launched the process. Handlers already installed are replaced, so
-    no record is written twice.
+    session launched the process. The handlers already on the root logger, the
+    `redsun` logger and `loguru` are replaced, so none of their records is
+    written twice.
     """
-    level = os.environ.get(LEVEL_VARIABLE, DEFAULT_LEVEL)
+    level = level_from_environment()
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonLines())
     logging.basicConfig(level=level, handlers=[handler], force=True)
@@ -83,6 +84,18 @@ def configure_logging() -> None:
         return
     loguru_logger.remove()
     loguru_logger.add(sys.stdout, serialize=True, level=level)
+
+
+def level_from_environment() -> int:
+    """Return the level the session records at, `INFO` when none is known.
+
+    The variable holds a number; a level name, in any case, is read too.
+    """
+    value = os.environ.get(LEVEL_VARIABLE, "")
+    if value.isdigit():
+        return int(value)
+    known = logging.getLevelNamesMapping()
+    return known.get(value.upper(), known[DEFAULT_LEVEL])
 
 
 def identity() -> ServiceIdentity | None:

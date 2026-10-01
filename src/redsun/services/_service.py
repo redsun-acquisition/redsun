@@ -66,7 +66,7 @@ ArgValue: TypeAlias = str | int | float | bool | None | list[str | int | float]
 def command_line(args: Sequence[str] | Mapping[str, ArgValue]) -> list[str]:
     """Return *args* as the arguments following the module.
 
-    A list is kept as given. A mapping gives `--key value` for each entry:
+    A list is kept in order, each item as text. A mapping gives `--key value` for each entry:
     `True` gives `--key` alone, `False` and `None` give nothing, and a list
     gives `--key` followed by each item. Keys are used as written.
 
@@ -78,7 +78,7 @@ def command_line(args: Sequence[str] | Mapping[str, ArgValue]) -> list[str]:
     if isinstance(args, str):
         raise TypeError(f"args must be a list or a mapping, not the text {args!r}")
     if not isinstance(args, Mapping):
-        return list(args)
+        return [str(arg) for arg in args]
     line: list[str] = []
     for key, value in args.items():
         if value is None or value is False:
@@ -248,7 +248,9 @@ class Service:
                 "PYTHONUTF8": "1",
                 NAME_VARIABLE: self.name,
                 PREFIX_VARIABLE: self.prefix,
-                LEVEL_VARIABLE: logging.getLevelName(logger.getEffectiveLevel()),
+                # the number, not the name: a level without a standard name
+                # would be unknown to the service's own logging
+                LEVEL_VARIABLE: str(logger.getEffectiveLevel()),
             }
             if self.ready is None:
                 env.pop(READY_VARIABLE, None)

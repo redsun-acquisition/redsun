@@ -100,7 +100,7 @@ A mapping under `args` becomes arguments this way:
 | --- | --- |
 | text or number | `--key value` |
 | `true` | `--key` |
-| `false` or empty | none |
+| `false` or `null` | none |
 | list | `--key` followed by each item |
 
 ```yaml

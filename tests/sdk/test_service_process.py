@@ -134,6 +134,7 @@ async def test_a_service_run_alone_has_no_identity_and_keeps_waiting(
             },
         ),
         (logging.INFO, set()),
+        (15, set()),
     ],
 )
 def test_a_service_logs_at_the_level_its_session_records_at(

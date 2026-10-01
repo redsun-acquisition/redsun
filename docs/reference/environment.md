@@ -18,7 +18,7 @@ and these variables on top of it:
 | `REDSUN_SERVICE_NAME` | the name the service is declared under |
 | `REDSUN_SERVICE_PREFIX` | the `prefix` of the declaration, empty when it has none |
 | `REDSUN_SERVICE_READY` | the `ready` text of the declaration; absent when it has none |
-| `REDSUN_LOG_LEVEL` | the name of the level the session records at, such as `DEBUG` |
+| `REDSUN_LOG_LEVEL` | the number of the level the session records at, such as `10` for `DEBUG` |
 | `PYTHONUTF8` | `1`, so that the service writes UTF-8 |
 
 A Python service reads these through the functions of `redsun.services`

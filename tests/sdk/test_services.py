@@ -611,6 +611,7 @@ def test_a_service_given_an_unknown_transport_names_the_known_ones() -> None:
         ({"verbose": False, "port": None}, []),
         ({"axes": ["x", "y"]}, ["--axes", "x", "y"]),
         (["--adapter", "DahengGalaxy"], ["--adapter", "DahengGalaxy"]),
+        (["--port", 5064], ["--port", "5064"]),
     ],
 )
 def test_arguments_are_given_as_a_list_or_as_options(
