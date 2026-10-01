@@ -171,9 +171,14 @@ class Writer(DocumentRouter):
     def descriptor(self, doc: EventDescriptor) -> None:
         """Record the layout of each derived source this stream describes."""
         run = self._find(doc["run_start"])
-        for source in {product.source for product in self._products.values()}:
-            key = doc["data_keys"].get(source or "")
-            if key is None or source is None:
+        sources = {
+            product.source
+            for product in self._products.values()
+            if product.source is not None
+        }
+        for source in sources:
+            key = doc["data_keys"].get(source)
+            if key is None:
                 continue
             dtype = key.get("dtype_numpy")
             shape = tuple(size for size in key["shape"] if size is not None)

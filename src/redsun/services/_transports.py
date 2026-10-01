@@ -82,7 +82,7 @@ class ChannelAccess:
         A restarted service keeps its port, so the list it is already in needs
         nothing added: a client read it when it first used Channel Access.
         """
-        add_to_env("EPICS_CA_ADDR_LIST", f"127.0.0.1:{self._port(service)}")
+        add_to_env("EPICS_CA_ADDR_LIST", f"{LOOPBACK}:{self._port(service)}")
 
     def attach(self, address: str) -> None:
         """Add *address* to this process's Channel Access address list."""
@@ -178,6 +178,6 @@ def free_udp_port() -> int:
     program can bind it first, and a later call may return it again.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.bind(("127.0.0.1", 0))
+        sock.bind((LOOPBACK, 0))
         port: int = sock.getsockname()[1]
     return port
