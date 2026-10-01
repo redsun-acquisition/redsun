@@ -318,10 +318,7 @@ def _attached(callbacks_list: QtW.QListWidget | None) -> list[str]:
 
 def _build_param_widgets(
     spec: PlanSpec,
-) -> tuple[
-    list[mgw_bases.ValueWidget[Any]],  # device widgets (multiselect or single)
-    list[mgw_bases.ValueWidget[Any]],  # plain parameter widgets
-]:
+) -> tuple[list[mgw_bases.ValueWidget[Any]], list[mgw_bases.ValueWidget[Any]]]:
     """Split *spec*'s parameters into device widgets and plain parameter widgets.
 
     Device widgets cover `Sequence[PDevice]`, `Set[PDevice]`,
@@ -339,8 +336,7 @@ def _build_param_widgets(
             continue
         w = cast("mgw_bases.ValueWidget[Any]", create_param_widget(p))
         # device_proto is set by plan_spec for all PDevice-backed params
-        is_device_param = p.device_proto is not None
-        if is_device_param:
+        if p.device_proto is not None:
             device_widgets.append(w)
         else:
             param_widgets.append(w)
@@ -472,8 +468,13 @@ def _build_actions_group(
     action_toggled_callback: Callable[[bool, str], None],
 ) -> tuple[QtW.QGroupBox | None, dict[str, ActionButton]]:
     """Add the actions group box to *page_layout*, if the plan has actions."""
-    actions_params = [p for p in spec.parameters if p.actions is not None]
-    if not actions_params:
+    actions = [
+        action
+        for p in spec.parameters
+        if p.actions is not None
+        for action in ([p.actions] if isinstance(p.actions, PlanAction) else p.actions)
+    ]
+    if not actions:
         return None, {}
 
     actions_group = QtW.QGroupBox("Actions")
@@ -481,26 +482,18 @@ def _build_actions_group(
     actions_group.setEnabled(False)
 
     action_buttons: dict[str, ActionButton] = {}
-    for p in actions_params:
-        if p.actions is None:
-            continue
-        action_list: list[PlanAction] = (
-            [p.actions] if isinstance(p.actions, PlanAction) else list(p.actions)
-        )
-        for action in action_list:
-            btn = ActionButton(action)
-            if action.toggle_states is not None:
-                btn.toggled.connect(
-                    lambda checked, name=action.name: action_toggled_callback(
-                        checked, name
-                    )
-                )
-            else:
-                btn.clicked.connect(
-                    lambda _, name=action.name: action_clicked_callback(name)
-                )
-            action_buttons[action.name] = btn
-            actions_layout.addWidget(btn)
+    for action in actions:
+        btn = ActionButton(action)
+        if action.toggle_states is not None:
+            btn.toggled.connect(
+                lambda checked, name=action.name: action_toggled_callback(checked, name)
+            )
+        else:
+            btn.clicked.connect(
+                lambda _, name=action.name: action_clicked_callback(name)
+            )
+        action_buttons[action.name] = btn
+        actions_layout.addWidget(btn)
 
     page_layout.addWidget(actions_group)
     return actions_group, action_buttons
