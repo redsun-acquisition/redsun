@@ -118,6 +118,8 @@ class LogView(QtW.QWidget):
         self._service_pending: deque[logging.LogRecord] = deque(
             maxlen=buffer.service_capacity
         )
+        self._services: set[str] = set()
+        self._selected: str | None = None
         for service in buffer.services:
             self._add_service(service)
         self._service_combo.currentIndexChanged.connect(self._on_service_selected)
@@ -194,8 +196,7 @@ class LogView(QtW.QWidget):
     @property
     def service(self) -> str | None:
         """The service the Services tab shows, `None` for every service."""
-        data = self._service_combo.currentData()
-        return None if data is None else str(data)
+        return self._selected
 
     def set_level(self, level: int) -> None:
         """Show only records at or above *level*, redrawing from the buffer."""
@@ -212,6 +213,8 @@ class LogView(QtW.QWidget):
         self.set_level(int(self._level_combo.itemData(index)))
 
     def _on_service_selected(self, index: int) -> None:
+        data = self._service_combo.itemData(index)
+        self._selected = None if data is None else str(data)
         self._render()
 
     def clear(self) -> None:
@@ -258,6 +261,7 @@ class LogView(QtW.QWidget):
 
     def _add_service(self, service: str) -> None:
         """Offer *service* in the selector, and show the Services tab."""
+        self._services.add(service)
         self._service_combo.addItem(service, service)
         self._tabs.setTabVisible(SERVICES_TAB, True)
         capacity = log_buffer().service_capacity * (self._service_combo.count() - 1)
@@ -266,7 +270,7 @@ class LogView(QtW.QWidget):
 
     def _on_record(self, record: logging.LogRecord) -> None:
         service = service_of(record)
-        if service is not None and self._service_combo.findData(service) == -1:
+        if service is not None and service not in self._services:
             self._add_service(service)
         if record.levelno < self._level:
             return
