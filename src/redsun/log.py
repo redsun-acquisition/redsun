@@ -66,14 +66,9 @@ class GlobalFormatter(logging.Formatter):
 
     _format: ClassVar[str] = "[%(asctime)s][%(levelname)s]"
 
-    def __init__(self, datefmt: str) -> None:
-        super().__init__(datefmt=datefmt)
-
     def format(self, record: logging.LogRecord) -> str:
         fmt = self._format
-        message = []
-        message.append(record.getMessage())
-        record.message = " ".join(message)
+        record.message = record.getMessage()
         record.asctime = self.formatTime(record, self.datefmt)
         clsname = getattr(record, "clsname", None)
         if clsname:
