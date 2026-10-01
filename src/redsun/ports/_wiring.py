@@ -170,7 +170,8 @@ def ports(component: object) -> Ports:
         if isinstance(declared, Signal) and not attr.startswith("_"):
             signals[attr] = getattr(component, attr)
         elif marker_of(declared) is not None:
-            slots[port_name(getattr(component, attr))] = getattr(component, attr)
+            method = getattr(component, attr)
+            slots[port_name(method)] = method
 
     for group_name, value in getattr(component, "__dict__", {}).items():
         if isinstance(value, SignalGroup):
