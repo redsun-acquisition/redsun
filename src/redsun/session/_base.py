@@ -378,6 +378,10 @@ class Session(BuildableSession):
         self._shared_values: list[tuple[str, object]] = []
         self._is_built = False
         self._profile = profiler
+        if profiler is not None:
+            # registered first, so it runs last: a run profile holds every
+            # release, and a build that raises still writes its profile
+            self.on_release(self._stop_profile)
 
     @classmethod
     def from_config(
@@ -690,6 +694,8 @@ class Session(BuildableSession):
             self.shutdown()
             raise
         self._is_built = True
+        if self._profile is not None and self._profile.kind == "start":
+            self._stop_profile()
         return self
 
     def open_span(self) -> AbstractContextManager[Callable[[str], None]]:
@@ -762,6 +768,8 @@ class Session(BuildableSession):
         """
         root = path_provider.base_dir
         application = SessionFileHandler(self.name, root=root)
+        if self._profile is not None:
+            self._profile.follow(application)
         handlers: dict[str | None, SessionFileHandler] = {None: application}
         for name, service in self._services.items():
             if service.launched:
@@ -935,6 +943,16 @@ class Session(BuildableSession):
         warning. Yields nothing by default.
         """
         return ()
+
+    def _stop_profile(self) -> None:
+        """Stop the profile and write it, named after this session."""
+        if self._profile is None:
+            return
+        # the configuration may be unreadable; the profile still needs a name
+        session = (self._file.session if self._file is not None else None) or type(
+            self
+        ).__name__
+        self._profile.stop(session)
 
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.
