@@ -66,23 +66,17 @@ controller in the same place: `caproto` can call a function each time
 `Position` is set.
 
 A service that a session starts has to do two more things. It stops when the
-session closes the standard input of the service, and it listens on this
-machine only. Add both below the stage:
-
-```{.python}
---8<-- "docs/tutorials/stage_ioc.py:stop"
-```
+session asks, and it listens on this machine only. Add both below the stage:
 
 ```{.python}
 --8<-- "docs/tutorials/stage_ioc.py:main"
 ```
 
-The first of the last lines reads the
-[prefix](../explanation/glossary.md#prefix) of the process variables, which
-the session hands to the service in `REDSUN_SERVICE_PREFIX`. Run alone, the
-service falls back on `STAGE:`. The session also sets `REDSUN_SERVICE_NAME`,
-and the service watches its standard input only then, so that run alone
-without a terminal it does not stop at once.
+[`identity`][redsun.services.identity] returns the name and
+[prefix](../explanation/glossary.md#prefix) the session gave the service, or
+`None` when the service runs alone; the service then falls back on `STAGE:`.
+[`stop_on_request`][redsun.services.stop_on_request] stops the service as
+++ctrl+c++ would once the session asks, and does nothing when it runs alone.
 
 Try it alone:
 

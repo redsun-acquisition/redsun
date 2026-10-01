@@ -3,10 +3,32 @@
 A session declares services with `AsService` and makes a `Service` for
 each. A launched service is a child process the session starts and stops; an
 attached one already runs elsewhere and only lends its devices their prefix.
+A service process takes part in a session through the functions here: its
+identity, readiness, logging, and when to stop.
 """
 
 from __future__ import annotations
 
+from ._process import (
+    ServiceIdentity,
+    configure_logging,
+    identity,
+    ready,
+    ready_when_reachable,
+    stop_on_request,
+    wait_for_stop,
+)
 from ._service import STARTUP_TIMEOUT, STOP_TIMEOUT, Service
 
-__all__ = ["STARTUP_TIMEOUT", "STOP_TIMEOUT", "Service"]
+__all__ = [
+    "STARTUP_TIMEOUT",
+    "STOP_TIMEOUT",
+    "Service",
+    "ServiceIdentity",
+    "configure_logging",
+    "identity",
+    "ready",
+    "ready_when_reachable",
+    "stop_on_request",
+    "wait_for_stop",
+]

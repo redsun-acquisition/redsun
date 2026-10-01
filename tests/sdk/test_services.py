@@ -12,7 +12,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -599,3 +599,73 @@ def test_a_service_given_an_unknown_transport_names_the_known_ones() -> None:
     """Refuse an unknown transport, naming the ones a session accepts."""
     with pytest.raises(ValueError, match="'channel-access', 'pv-access'"):
         Service("misnamed", module=STAND_IN, transport="pv_access")
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"adapter": "DahengGalaxy"}, ["--adapter", "DahengGalaxy"]),
+        ({"exposure": 0.5, "binning": 2}, ["--exposure", "0.5", "--binning", "2"]),
+        ({"count": 0}, ["--count", "0"]),
+        ({"verbose": True}, ["--verbose"]),
+        ({"verbose": False, "port": None}, []),
+        ({"axes": ["x", "y"]}, ["--axes", "x", "y"]),
+        (["--adapter", "DahengGalaxy"], ["--adapter", "DahengGalaxy"]),
+        (["--port", 5064], ["--port", "5064"]),
+    ],
+)
+def test_arguments_are_given_as_a_list_or_as_options(
+    args: list[str] | dict[str, Any], expected: list[str]
+) -> None:
+    """Turn a mapping of options into command-line arguments, and keep a list as given."""
+    assert Service("camera", module="mylab.camera", args=args).args == expected
+
+
+def test_arguments_given_as_text_are_refused() -> None:
+    """Refuse arguments written as one piece of text."""
+    with pytest.raises(TypeError, match="a list or a mapping"):
+        Service("camera", module="mylab.camera", args="--port COM4")
+
+
+@pytest.mark.parametrize(
+    ("transport", "listed", "other"),
+    [
+        (CHANNEL_ACCESS, "EPICS_CA_ADDR_LIST", "EPICS_PVA_ADDR_LIST"),
+        (PV_ACCESS, "EPICS_PVA_ADDR_LIST", "EPICS_CA_ADDR_LIST"),
+    ],
+)
+def test_an_attached_service_adds_its_address_to_its_transports_list_once(
+    transport: str, listed: str, other: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """List an attached service's address once, in its own transport's list, however often it starts."""
+    monkeypatch.setenv(listed, "")
+    monkeypatch.setenv(other, "")
+    beamline = Service(
+        "beamline", prefix="BL01:", address="10.0.0.5", transport=transport
+    )
+
+    beamline.start()
+    beamline.start()
+
+    assert os.environ[listed].split() == ["10.0.0.5"]
+    assert os.environ[other] == ""
+
+
+def test_an_address_for_a_launched_service_is_refused() -> None:
+    """Refuse an address for a service the session launches."""
+    with pytest.raises(TypeError, match="an address and a module"):
+        Service("camera", module="mylab.camera", address="10.0.0.5")
+
+
+def test_starting_a_running_service_launches_no_second_process(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Leave a running service as it is when it is started again."""
+    stand_in = launch()
+
+    stand_in.start()
+    stand_in.start()
+    stand_in.stop()
+
+    started = [m for m in messages(service_log, logging.INFO) if m.endswith("started")]
+    assert started == ["Service 'stand-in' started"]

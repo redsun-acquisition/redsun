@@ -194,6 +194,8 @@ disable_error_code = ["misc"]
 
 [tool.coverage.run]
 source = ["redsun"]
+# services under test run as child processes; their code is measured there
+patch = ["subprocess"]
 omit = [
     "tests/conftest.py",
     "src/redsun/view/**",
@@ -283,6 +285,7 @@ commands = [
 # https://coverage.readthedocs.io/en/latest/config.html
 [tool.coverage.report]
 exclude_lines = [
+    "pragma: no cover",
     "@abstractmethod",
     "if TYPE_CHECKING:",
     "@overload",

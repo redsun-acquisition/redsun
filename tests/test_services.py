@@ -240,7 +240,12 @@ def test_a_service_from_a_plugin_takes_its_module_and_readiness_line(
     app.read_configuration()
 
     ioc = app.services["ioc"]
-    assert (ioc.module, ioc.ready, ioc.prefix) == (STAND_IN, READY, "SIM:")
+    assert (ioc.module, ioc.ready, ioc.prefix, ioc.args) == (
+        STAND_IN,
+        READY,
+        "SIM:",
+        ["--say", "from the manifest"],
+    )
 
 
 @pytest.mark.parametrize(
@@ -673,3 +678,37 @@ def test_a_renamed_service_is_reached_by_its_attribute() -> None:
     app.read_configuration()
 
     assert app.motors is app.services["stage_ioc"]
+
+
+def test_a_session_file_gives_arguments_as_options() -> None:
+    """Launch a service with the options its session file entry maps."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {
+                "ioc": {"module": STAND_IN, "args": {"say": "hello", "verbose": True}}
+            }
+        }
+
+    app = App()
+    app.read_configuration()
+
+    assert app.services["ioc"].args == ["--say", "hello", "--verbose"]
+
+
+def test_an_attached_service_takes_its_address_from_the_declaration_or_the_file() -> (
+    None
+):
+    """Give an attached service the address its marker or its file entry names."""
+
+    class App(Session):
+        config: ClassVar[dict[str, Any]] = {
+            "services": {"beamline": {"prefix": "BL01:", "address": "10.0.0.5"}}
+        }
+        motors: Annotated[AsService, Attach("MOT:", address="10.0.0.6")]
+
+    app = App()
+    app.read_configuration()
+
+    assert app.services["beamline"].address == "10.0.0.5"
+    assert app.services["motors"].address == "10.0.0.6"

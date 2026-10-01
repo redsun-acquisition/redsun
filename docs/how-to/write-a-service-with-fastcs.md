@@ -53,13 +53,19 @@ it holds.
 
 - `FastCS` serves the controller over the transports it is given, here
   PVAccess.
-- The session tells the service its
-  [prefix](../explanation/glossary.md#prefix) through the environment
-  variable `REDSUN_SERVICE_PREFIX`, and the controller is served under it.
-- The service prints a line when it is ready, and stops when its standard
-  input closes, as every service a session launches must. It watches its
-  standard input only when a session launched it, which sets
-  `REDSUN_SERVICE_NAME`, so that it also runs on its own without a terminal.
+- [`identity`][redsun.services.identity] gives the
+  [prefix](../explanation/glossary.md#prefix) the session declared, and the
+  controller is served under it. Run alone, the service falls back on
+  `STAGE:`.
+- [`wait_for_stop`][redsun.services.wait_for_stop] returns when the session
+  asks the service to stop, as every service a session launches must. Run
+  alone, the service waits until ++ctrl+c++.
+- If serving fails first, the service raises what made it fail, and the
+  session logs it.
+- [`configure_logging`][redsun.services.configure_logging] sends the records
+  of `fastcs` to the session at the level the session records at. Do not call
+  `fastcs.logging.configure_logging` after it: that replaces the output with
+  coloured text, which the session reads as `DEBUG` lines.
 - Run alone, the service listens on every network interface of the machine.
   Launched by a session, it listens on `127.0.0.1` only, since the session
   sets `EPICS_PVAS_INTF_ADDR_LIST`; see
@@ -72,14 +78,11 @@ it holds.
 ## Say when it is ready
 
 `fastcs` prints no line of its own when it starts to serve, so the service
-finds out by asking. Any server of that name can answer, which is one more
-reason for a prefix of its own. It asks for the record in which `fastcs` lists the
-attributes of the controller, until it gets an answer. If serving has failed
-meanwhile, it raises what made it fail:
-
-```{.python}
---8<-- "docs/examples/stage_fastcs.py:ready"
-```
+finds out by asking.
+[`ready_when_reachable`][redsun.services.ready_when_reachable] asks for the
+record in which `fastcs` lists the attributes of the controller until it gets
+an answer, then prints the ready text the declaration gives. Any server of
+that name can answer, which is one more reason for a prefix of its own.
 
 ## Point a device at it
 
@@ -108,8 +111,8 @@ records:
 --8<-- "docs/examples/device_fastcs.py:declare"
 ```
 
-[`Launch`][redsun.Launch] names the module and the line it prints when it is
-ready. `config` names the
+[`Launch`][redsun.Launch] names the module and the line the session waits
+for; the service prints it through `ready_when_reachable`. `config` names the
 [transport](../explanation/glossary.md#transport): every service of a session
 speaks the same protocol, which is Channel Access unless the session says
 otherwise.
@@ -127,7 +130,7 @@ Services started: 1/1
 ## Quiet the type checker
 
 `fastcs` ships no `py.typed` file, so a type checker cannot see its types.
-`mypy` reports the import, and that of `p4p`:
+`mypy` reports the import:
 
 ```text
 Skipping analyzing "fastcs.controllers": module is installed, but missing
@@ -145,7 +148,7 @@ with the name of your module in the second entry:
 
 ```toml
 [[tool.mypy.overrides]]
-module = ["fastcs.*", "p4p.*"]
+module = ["fastcs.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

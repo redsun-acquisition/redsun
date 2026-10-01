@@ -14,6 +14,8 @@ from pydantic import AfterValidator, BaseModel, ValidationError
 
 from redsun.services import STOP_TIMEOUT
 
+from .services._service import ArgValue
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -87,8 +89,8 @@ class ServiceEntry(BaseModel, extra="forbid", use_attribute_docstrings=True):
     module: str
     """Module run as `python -m <module>`."""
 
-    args: list[str] = []
-    """Arguments after the module."""
+    args: list[str] | dict[str, ArgValue] = []
+    """Arguments after the module: a list, or options mapped to their values."""
 
     ready: str | None = None
     """Line the service prints once it serves."""

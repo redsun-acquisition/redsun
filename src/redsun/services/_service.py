@@ -9,13 +9,15 @@ import subprocess
 import sys
 import threading
 from collections import deque
+from collections.abc import Mapping
 from datetime import datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from psygnal import Signal
 
 from redsun.log import SERVICE_LOGGER
 
+from ._process import LEVEL_VARIABLE, NAME_VARIABLE, PREFIX_VARIABLE, READY_VARIABLE
 from ._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
@@ -57,6 +59,40 @@ PVXS_LEVELS: Final = {
 }
 
 
+ArgValue: TypeAlias = str | int | float | bool | None | list[str | int | float]
+"""A value of one option in an `args` mapping."""
+
+
+def command_line(args: Sequence[str] | Mapping[str, ArgValue]) -> list[str]:
+    """Return *args* as the arguments following the module.
+
+    A list is kept in order, each item as text. A mapping gives `--key value` for each entry:
+    `True` gives `--key` alone, `False` and `None` give nothing, and a list
+    gives `--key` followed by each item. Keys are used as written.
+
+    Raises
+    ------
+    TypeError
+        If *args* is text rather than a list or a mapping.
+    """
+    if isinstance(args, str):
+        raise TypeError(f"args must be a list or a mapping, not the text {args!r}")
+    if not isinstance(args, Mapping):
+        return [str(arg) for arg in args]
+    line: list[str] = []
+    for key, value in args.items():
+        if value is None or value is False:
+            continue
+        line.append(f"--{key}")
+        if value is True:
+            continue
+        if isinstance(value, list):
+            line.extend(str(item) for item in value)
+        else:
+            line.append(str(value))
+    return line
+
+
 class Service:
     """A server devices talk to, and its process if the session owns it.
 
@@ -75,7 +111,8 @@ class Service:
     module
         Module to run. `None` attaches to a service that is already running.
     args
-        Command-line arguments following the module.
+        Arguments following the module: a list, or a mapping of option names
+        to values, which `--` is put before.
     ready
         Text of the output line marking the service ready. `None` counts it
         ready once its process starts.
@@ -84,11 +121,16 @@ class Service:
     transport
         Protocol the service is reached over: `channel-access` or `pv-access`.
         The session settles it for every service it holds.
+    address
+        Where an attached service answers, added to this process's address
+        list when it starts. `None` keeps the list as the environment gives
+        it.
 
     Raises
     ------
     TypeError
-        If *args* are given without a *module*.
+        If *args* are given without a *module*, or as text, or an *address*
+        with a *module*.
     ValueError
         If *transport* is not a protocol a session accepts.
     """
@@ -101,6 +143,7 @@ class Service:
         "_settled",
         "_stopping",
         "_tail",
+        "address",
         "args",
         "module",
         "name",
@@ -118,15 +161,21 @@ class Service:
         name: str,
         prefix: str = "",
         module: str | None = None,
-        args: Sequence[str] = (),
+        args: Sequence[str] | Mapping[str, ArgValue] = (),
         ready: str | None = None,
         stop_timeout: float = STOP_TIMEOUT,
         transport: str = CHANNEL_ACCESS,
+        address: str | None = None,
     ) -> None:
         if args and module is None:
             raise TypeError(
                 f"service {name!r} gives args but no module to run; an attached "
                 "service only lends its prefix"
+            )
+        if address is not None and module is not None:
+            raise TypeError(
+                f"service {name!r} gives an address and a module; a launched "
+                "service's address is the session's to choose"
             )
         if transport not in TRANSPORTS:
             known = ", ".join(map(repr, sorted(TRANSPORTS)))
@@ -135,8 +184,9 @@ class Service:
             )
         self.name = name
         self.prefix = prefix
+        self.address = address
         self.module = module
-        self.args = list(args)
+        self.args = command_line(args)
         self.ready = ready
         self.stop_timeout = stop_timeout
         self.transport = transport
@@ -166,11 +216,13 @@ class Service:
         transport gives it the environment it is reached on and tells this
         process where to look, so devices find it among several local
         services. What a transport reserves lasts for every start in this
-        process. It also reads `REDSUN_SERVICE_NAME` and
-        `REDSUN_SERVICE_PREFIX` from its environment, so a module serving
-        several sessions needs no arguments to name its channels. The process
+        process. The process learns its name, prefix, ready text and the
+        level this session records at through the functions of
+        `redsun.services`, so a module serving several sessions needs no
+        arguments for them. The process
         writes UTF-8, and each output line is logged as `service_record`
-        rebuilds it.
+        rebuilds it. An attached service only adds its address to this
+        process's list, if it names one.
 
         Raises
         ------
@@ -180,7 +232,11 @@ class Service:
         RuntimeError
             If the process exits before it is ready.
         """
-        if self.module is None or self.running:
+        if self.module is None:
+            if self.address is not None:
+                TRANSPORTS[self.transport].attach(self.address)
+            return
+        if self.running:
             return
         transport = TRANSPORTS[self.transport]
         with launch_lock:
@@ -190,9 +246,16 @@ class Service:
                 **os.environ,
                 **reserved,
                 "PYTHONUTF8": "1",
-                "REDSUN_SERVICE_NAME": self.name,
-                "REDSUN_SERVICE_PREFIX": self.prefix,
+                NAME_VARIABLE: self.name,
+                PREFIX_VARIABLE: self.prefix,
+                # the number, not the name: a level without a standard name
+                # would be unknown to the service's own logging
+                LEVEL_VARIABLE: str(logger.getEffectiveLevel()),
             }
+            if self.ready is None:
+                env.pop(READY_VARIABLE, None)
+            else:
+                env[READY_VARIABLE] = self.ready
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
