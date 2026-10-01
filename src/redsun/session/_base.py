@@ -363,7 +363,7 @@ class Session(BuildableSession):
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
-        self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
+        self._links: list[tuple[SignalInstance, Callable[..., None]]] = []
         self._connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
         # subscription by identity: clear_sub needs the object back
@@ -1192,7 +1192,7 @@ class Session(BuildableSession):
                 "device signal, then the slot it reaches"
             )
 
-    def _connect(self, signal: SignalInstance, slot: Callable[..., Any]) -> None:
+    def _connect(self, signal: SignalInstance, slot: Callable[..., None]) -> None:
         thread = self._affinity(slot)
         link = Connection(
             publisher=self._label(owner_of(signal)),
@@ -1210,7 +1210,7 @@ class Session(BuildableSession):
         self._connections.append(link)
         logger.debug(f"Connected {link}")
 
-    def _subscribe(self, signal: SignalR[Any], slot: Callable[..., Any]) -> None:
+    def _subscribe(self, signal: SignalR[Any], slot: Callable[..., None]) -> None:
         # ophyd-async calls a subscriber on whatever thread produced the
         # reading, so the reading goes through a psygnal signal to reach the
         # thread the slot asks for
@@ -1265,7 +1265,7 @@ class Session(BuildableSession):
                 e.component,
             )
             return
-        self._connect(cast("SignalInstance", signal), cast("Callable[..., Any]", slot))
+        self._connect(cast("SignalInstance", signal), cast("Callable[..., None]", slot))
 
     def _resolve_port(self, path: str, kind: str) -> object:
         """Look up the signal or slot a `component.port` path names."""
