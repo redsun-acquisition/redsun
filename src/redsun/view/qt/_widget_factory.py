@@ -18,7 +18,7 @@ falling back silently.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TypeAlias, get_args
+from typing import TypeAlias, get_args
 
 from magicgui import widgets as mgw
 from magicgui.types import Undefined
@@ -43,28 +43,24 @@ def _is_multiselect_device(p: ParamDescription) -> bool:
 
 
 def _is_singleselect_device(p: ParamDescription) -> bool:
-    """Return true for single PDevice parameters with a choices list."""
+    """Return true for single PDevice parameters."""
     return isdevice(p.annotation)
 
 
 def _is_literal_choices(p: ParamDescription) -> bool:
-    """Return true for parameters whose choices come from a Literal annotation."""
-    return (
-        p.choices is not None
-        and not isdevice(p.annotation)
-        and not isdevicesequence(p.annotation)
-        and not isdeviceset(p.annotation)
-    )
+    """Return true for parameters with choices.
+
+    Device parameters carry choices too, and match an earlier entry.
+    """
+    return p.choices is not None
 
 
 def _is_non_device_sequence(p: ParamDescription) -> bool:
-    """Return true for Sequence[T] parameters where T is not a PDevice type."""
-    return (
-        issequence(p.annotation)
-        and not isdevicesequence(p.annotation)
-        and not isdeviceset(p.annotation)
-        and not isinstance(p.annotation, (str, bytes))
-    )
+    """Return true for Sequence[T] parameters.
+
+    Device sequences match an earlier entry.
+    """
+    return issequence(p.annotation)
 
 
 def _always(p: ParamDescription) -> bool:
@@ -114,13 +110,8 @@ def _make_literal_combobox(p: ParamDescription) -> mgw.Widget:
 
 def _make_list_edit(p: ParamDescription) -> mgw.Widget:
     """Return a ListEdit for non-device Sequence[T] parameters."""
-    actual_annotation: type[Any] = Any
-    args: tuple[type[Any], ...] = get_args(p.annotation)
-    arg = args[0] if args else None
-    if arg is not None:
-        actual_annotation = list[arg]  # type: ignore[valid-type]
-    else:
-        actual_annotation = list
+    args = get_args(p.annotation)
+    actual_annotation = list[args[0]] if args else list  # type: ignore[valid-type]
     return mgw.ListEdit(
         label=p.name,
         annotation=actual_annotation,
@@ -133,7 +124,6 @@ def _make_generic(p: ParamDescription) -> mgw.Widget:
 
     Raises TypeError or ValueError if `magicgui` does not support it.
     """
-    options: dict[str, Any] = {}
     # a parameter with no default gets magicgui's sentinel rather than None:
     # a widget that cannot hold None, such as the CheckBox built for a bool,
     # raises on being handed one
@@ -142,7 +132,6 @@ def _make_generic(p: ParamDescription) -> mgw.Widget:
         name=p.name,
         param_kind=p.kind.name,
         value=p.default if p.has_default else Undefined,
-        options=options,
     )
 
 
@@ -159,26 +148,10 @@ _WIDGET_FACTORY_MAP: list[tuple[_WidgetPredicate, _WidgetFactory]] = [
 ]
 
 
-def _try_factory_entry(
-    predicate: _WidgetPredicate,
-    factory: _WidgetFactory,
-    param: ParamDescription,
-) -> mgw.Widget | None:
-    """Call the factory if the predicate matches.
-
-    Only the predicate is guarded: a factory raising is a bug and propagates.
-    """
-    try:
-        matched = predicate(param)
-    except Exception:  # noqa: BLE001 - a failing predicate means "no match", never a crash
-        return None
-    if matched:
-        return factory(param)
-    return None
-
-
 def create_param_widget(param: ParamDescription) -> mgw.Widget:
     """Create a `magicgui` widget for *param*.
+
+    Only the predicates are guarded: a factory raising is a bug and propagates.
 
     Raises
     ------
@@ -186,9 +159,12 @@ def create_param_widget(param: ParamDescription) -> mgw.Widget:
         If every entry in `_WIDGET_FACTORY_MAP` fails.
     """
     for predicate, factory in _WIDGET_FACTORY_MAP:
-        widget = _try_factory_entry(predicate, factory, param)
-        if widget is not None:
-            return widget
+        try:
+            matched = predicate(param)
+        except Exception:  # noqa: BLE001, S112 - a failing predicate means "no match", never a crash
+            continue
+        if matched:
+            return factory(param)
     raise RuntimeError(
         f"No widget factory matched parameter {param.name!r} "
         f"(annotation: {param.annotation!r}). "
