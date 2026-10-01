@@ -29,7 +29,7 @@ from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
-from ._factories import resolved
+from ._factories import constructor, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
@@ -427,8 +427,7 @@ def check_questions(cls: type, where: str) -> None:
         Naming the parameter or shared value and what to write instead, or a
         `DevicesOf` marker on the wrong shape.
     """
-    label = f"the constructor of {cls.__qualname__}"
-    for pname, param in resolved(cls, label).parameters.items():
+    for pname, param in constructor(cls).parameters.items():
         if pname == "name" or devices_protocol(param.annotation) is not None:
             continue
         if shape_of(param.annotation) is not None:
@@ -812,22 +811,21 @@ def from_config(
                         named.source,
                     )
                 continue
-            refused: Exception | None
+            refused: Exception | None = None
             try:
                 target = resolve(entry.plugin_name, entry.plugin_id, section_name)
             except PluginError as e:
                 target, refused = object, e
-            else:
-                if target is None:
-                    target, refused = (
-                        object,
-                        PluginError(
-                            f"{where} names no plugin, and the session declares no "
-                            f"component {cfg_key!r}"
-                        ),
-                    )
-                else:
-                    refused = refusal(target, kind, where, frontend)
+            if target is None:
+                target, refused = (
+                    object,
+                    PluginError(
+                        f"{where} names no plugin, and the session declares no "
+                        f"component {cfg_key!r}"
+                    ),
+                )
+            elif refused is None:
+                refused = refusal(target, kind, where, frontend)
             found[cfg_key] = Declaration(
                 target, cfg_key, kind, keywords(entry), refusal=refused
             )
@@ -845,14 +843,14 @@ def hints(cls: type) -> dict[str, Any]:
     NameError
         If a class declares an annotation that cannot be resolved at runtime.
     """
-    resolved: dict[str, Any] = {}
+    found: dict[str, Any] = {}
     # resolving the whole MRO in one call fails for every class when a single
     # one annotates a name imported only under TYPE_CHECKING
     for klass in reversed(cls.__mro__):
         if not getattr(klass, "__annotations__", None):
             continue
         try:
-            resolved.update(get_type_hints(klass, include_extras=True))
+            found.update(get_type_hints(klass, include_extras=True))
         except NameError as e:
             if e.name in globals():
                 raise
@@ -862,7 +860,7 @@ def hints(cls: type) -> dict[str, Any]:
                 "component declarations must import the names it annotates "
                 "outside 'if TYPE_CHECKING'."
             ) from e
-    return resolved
+    return found
 
 
 def split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
