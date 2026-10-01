@@ -66,7 +66,13 @@ class Run:
     layouts: dict[str, ArrayShape] = field(default_factory=dict)
     stores: dict[str, Store] = field(default_factory=dict)
     open: dict[Path, Open] = field(default_factory=dict)
-    unplaced: set[str] = field(default_factory=set)
+    placements: dict[tuple[str, str, str], Placement | None] = field(
+        default_factory=dict
+    )
+    """Where a product goes against a store, by product, URI and mimetype.
+
+    `None` where nothing can write it.
+    """
 
 
 class Writer(DocumentRouter):
@@ -263,14 +269,17 @@ class Writer(DocumentRouter):
         known = self._in(product, run)
         assert known is not None
         _, (uri, mimetype) = known
-        if data_key in run.unplaced:
-            return None
-        placed = placement(uri, mimetype, data_key)
+        # decided once per store: placing reads the store's metadata, and a
+        # product split between two places partway through would be lost
+        where = (data_key, uri, mimetype)
+        if where not in run.placements:
+            run.placements[where] = placement(uri, mimetype, data_key)
+            if run.placements[where] is None:
+                logger.warning(
+                    f"{data_key!r} is not written: no writer for {mimetype!r} at {uri}."
+                )
+        placed = run.placements[where]
         if placed is None:
-            logger.warning(
-                f"{data_key!r} is not written: no writer for {mimetype!r} at {uri}."
-            )
-            run.unplaced.add(data_key)
             return None
         if not placed.streamed and whole is None:
             raise WriterError(
@@ -304,7 +313,7 @@ class Writer(DocumentRouter):
             self._finish(run.open.popitem()[1], run)
         run.layouts.clear()
         run.stores.clear()
-        run.unplaced.clear()
+        run.placements.clear()
 
     def _finish(self, opened: Open, run: Run) -> None:
         """Close *opened* and write both metadata mappings on each product."""
