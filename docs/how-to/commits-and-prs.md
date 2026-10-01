@@ -45,12 +45,17 @@ commit's first line, since the changelog entry is made from it:
 `feat(session): add strict sessions` is listed under *Added* as "Add strict
 sessions".
 
-Split the description into the sections that apply:
+The description is a list of one-line bullets in the imperative, one per
+change a reviewer can see, with no headers:
 
-- `## Summary`: what the pull request does, in a line or two.
-- `## Changes`: one short bullet per change.
-- `## Breaking changes`: what existing code must change, if anything.
-- `## Testing`: the checks you ran and their result.
+```markdown
+- Add `strict` to the session file
+- Stop a session whose component fails to build when `strict` is set
+- Rename `MyMotor.go` to `MyMotor.move`, which existing code must follow
+```
+
+A change that existing code must follow says so in its bullet. Leave out tests,
+coverage and the checks you ran: CI reports them on the pull request.
 
 ## Labels
 
