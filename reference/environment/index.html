@@ -5329,11 +5329,23 @@ and these variables on top of it:</p>
 <td>the <code>prefix</code> of the declaration, empty when it has none</td>
 </tr>
 <tr>
+<td><code>REDSUN_SERVICE_READY</code></td>
+<td>the <code>ready</code> text of the declaration; absent when it has none</td>
+</tr>
+<tr>
+<td><code>REDSUN_LOG_LEVEL</code></td>
+<td>the number of the level the session records at, such as <code>10</code> for <code>DEBUG</code></td>
+</tr>
+<tr>
 <td><code>PYTHONUTF8</code></td>
 <td><code>1</code>, so that the service writes UTF-8</td>
 </tr>
 </tbody>
 </table>
+<p>A Python service reads these through the functions of <code>redsun.services</code>
+rather than from the environment: <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;identity&lt;/span&gt;" href="../api/services/#redsun.services.identity"><code>identity</code></a>,
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;ready&lt;/span&gt;" href="../api/services/#redsun.services.ready"><code>ready</code></a> and
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;configure_logging&lt;/span&gt;" href="../api/services/#redsun.services.configure_logging"><code>configure_logging</code></a>.</p>
 <p>With the transport <code>channel-access</code>:</p>
 <table>
 <thead>
@@ -5396,6 +5408,8 @@ after it.</p>
 </tr>
 </tbody>
 </table>
+<p>An attached service declared with an <code>address</code> adds that address to the same
+list, once.</p>
 <p>A session leaves <code>EPICS_CA_AUTO_ADDR_LIST</code> and <code>EPICS_PVA_AUTO_ADDR_LIST</code> as
 they are. Unless you set them to <code>NO</code>, a device also searches the network the
 machine is on, and a server there that answers to the same name can be the

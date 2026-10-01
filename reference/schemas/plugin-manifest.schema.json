@@ -10,13 +10,55 @@
           "type": "string"
         },
         "args": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            }
+          ],
           "default": [],
-          "description": "Arguments after the module.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Args",
-          "type": "array"
+          "description": "Arguments after the module: a list, or options mapped to their values.",
+          "title": "Args"
         },
         "ready": {
           "anyOf": [

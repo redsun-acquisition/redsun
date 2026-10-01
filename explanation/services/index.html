@@ -5665,10 +5665,15 @@ component brings what its own service speaks, <code>caproto</code> or <code>p4p<
 and <code>ophyd-async[ca]</code> or <code>ophyd-async[pva]</code> for the device side; see
 <a href="../../how-to/write-a-service/">Write a service</a>.</p>
 <h2 id="what-a-launched-service-is-told">What a launched service is told<a class="headerlink" href="#what-a-launched-service-is-told" title="Permanent link">&para;</a></h2>
-<p>Besides its transport's variables, a launched process reads its name and prefix
-from its environment, as <code>REDSUN_SERVICE_NAME</code> and <code>REDSUN_SERVICE_PREFIX</code>.</p>
-<p>A module serving several sessions names its channels from these rather than
-taking arguments for them.</p>
+<p>Besides its transport's variables, a launched process is told its name and
+prefix, the ready text of its declaration, and the level the session records
+at. A Python service reads them through the functions of <code>redsun.services</code>:
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;identity&lt;/span&gt;" href="../../reference/api/services/#redsun.services.identity"><code>identity</code></a>,
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;ready&lt;/span&gt;" href="../../reference/api/services/#redsun.services.ready"><code>ready</code></a> and
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;configure_logging&lt;/span&gt;" href="../../reference/api/services/#redsun.services.configure_logging"><code>configure_logging</code></a>.
+<a href="../../reference/environment/">Environment variables</a> lists how they travel.</p>
+<p>A module serving several sessions names its channels from its identity rather
+than taking arguments for it.</p>
 <h2 id="a-service-exiting">A service exiting<a class="headerlink" href="#a-service-exiting" title="Permanent link">&para;</a></h2>
 <p>A launched service that exits unasked is logged at <code>ERROR</code> with its exit code
 and last lines of output, and emits

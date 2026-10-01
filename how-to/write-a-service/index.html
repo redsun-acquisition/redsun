@@ -5472,43 +5472,38 @@ device side.</p>
 <h2 id="write-the-ioc">Write the <abbr title="Input/output controller. The EPICS server program that owns hardware and offers its values.">IOC</abbr><a class="headerlink" href="#write-the-ioc" title="Permanent link">&para;</a></h2>
 <p>Besides serving its
 <a href="../../explanation/glossary/#process-variable">process variables</a>, a service
-that <code>redsun</code> launches must print a line when it is ready, stop when its
-standard input closes, and listen only on the local machine:</p>
+that <code>redsun</code> launches must print a line when it is ready, stop when the
+session asks, and listen only on the local machine:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># mylab/iocs/camera.py</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">caproto.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">PVGroup</span><span class="p">,</span> <span class="n">ioc_arg_parser</span><span class="p">,</span> <span class="n">pvproperty</span><span class="p">,</span> <span class="n">run</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.services</span><span class="w"> </span><span class="kn">import</span> <span class="n">stop_on_request</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">caproto.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">PVGroup</span><span class="p">,</span> <span class="n">ioc_arg_parser</span><span class="p">,</span> <span class="n">pvproperty</span><span class="p">,</span> <span class="n">run</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">Camera</span><span class="p">(</span><span class="n">PVGroup</span><span class="p">):</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">exposure</span> <span class="o">=</span> <span class="n">pvproperty</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"Exposure"</span><span class="p">)</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">stop_when_stdin_closes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">signal</span><span class="o">.</span><span class="n">raise_signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">)</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">Camera</span><span class="p">(</span><span class="n">PVGroup</span><span class="p">):</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">exposure</span> <span class="o">=</span> <span class="n">pvproperty</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"Exposure"</span><span class="p">)</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">options</span><span class="p">,</span> <span class="n">run_options</span> <span class="o">=</span> <span class="n">ioc_arg_parser</span><span class="p">(</span><span class="n">default_prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">"camera"</span><span class="p">)</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="k">if</span> <span class="s2">"REDSUN_SERVICE_NAME"</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stop_when_stdin_closes</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="n">run</span><span class="p">(</span><span class="n">Camera</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">pvdb</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">run_options</span><span class="p">,</span> <span class="s2">"interfaces"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"127.0.0.1"</span><span class="p">]})</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">options</span><span class="p">,</span> <span class="n">run_options</span> <span class="o">=</span> <span class="n">ioc_arg_parser</span><span class="p">(</span><span class="n">default_prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">"camera"</span><span class="p">)</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">stop_on_request</span><span class="p">()</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">run</span><span class="p">(</span><span class="n">Camera</span><span class="p">(</span><span class="o">**</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">pvdb</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="o">**</span><span class="n">run_options</span><span class="p">,</span> <span class="s2">"interfaces"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"127.0.0.1"</span><span class="p">]})</span>
 </span></code></pre></div>
 <ul>
 <li><code>caproto</code> prints <code>Server startup complete.</code> once it serves. The session
   waits for that line.</li>
 <li>Closing standard input is how a session asks a service to stop, on every
-  platform. The watcher raises <code>SIGINT</code>, so the service shuts down as it would
-  on Ctrl+C. Use a daemon thread for it.</li>
-<li>Start the watcher only when a session launched the service, which sets
-  <code>REDSUN_SERVICE_NAME</code>. Run on its own without a terminal, in the
-  background, under a service manager or in a container run without <code>-i</code>, a
-  service has its standard input closed from the start, and the watcher would
-  stop it at once.</li>
+  platform. <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;stop_on_request&lt;/span&gt;" href="../../reference/api/services/#redsun.services.stop_on_request"><code>stop_on_request</code></a> turns that
+  request into <code>SIGINT</code>, so the service shuts down as it would on Ctrl+C.
+  It does nothing when no session launched the service: run on its own
+  without a terminal, a service may have its standard input closed from the
+  start. A service built on <code>asyncio</code> awaits
+  <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;wait_for_stop&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-async&quot;&gt;&lt;code&gt;async&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/services/#redsun.services.wait_for_stop"><code>wait_for_stop</code></a> instead.</li>
 <li>If the session crashes, nobody reads the service's output any more, and
   printing raises. Clean up before printing, or do not print.</li>
 <li><code>127.0.0.1</code> keeps a launched service off the network.</li>
@@ -5534,27 +5529,41 @@ and the session attaches to it.</p>
 </span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>            <span class="s2">"mylab.iocs.camera"</span><span class="p">,</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>            <span class="n">ready</span><span class="o">=</span><span class="s2">"Server startup complete."</span><span class="p">,</span>
 </span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>            <span class="n">prefix</span><span class="o">=</span><span class="s2">"CAM:"</span><span class="p">,</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>            <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="s2">"--prefix"</span><span class="p">,</span> <span class="s2">"CAM:"</span><span class="p">],</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>            <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">"prefix"</span><span class="p">:</span> <span class="s2">"CAM:"</span><span class="p">},</span>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>            <span class="n">stop_timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="p">),</span>
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    <span class="p">]</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="n">beamline</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsService</span><span class="p">,</span> <span class="n">Attach</span><span class="p">(</span><span class="s2">"BL01:"</span><span class="p">)]</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="n">beamline</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsService</span><span class="p">,</span> <span class="n">Attach</span><span class="p">(</span><span class="s2">"BL01:"</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="s2">"10.0.0.5"</span><span class="p">)]</span>
 </span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>    <span class="n">camera</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">AsDevice</span><span class="p">[</span><span class="n">MyCamera</span><span class="p">],</span> <span class="n">Declare</span><span class="p">(</span><span class="n">service</span><span class="o">=</span><span class="s2">"camera_ioc"</span><span class="p">)]</span>
 </span></code></pre></div>
 <p><code>prefix</code> is what the devices of the service receive. <code>args</code> is what the
 process is started with, and is how this <abbr title="Input/output controller. The EPICS server program that owns hardware and offers its values.">IOC</abbr> learns the same prefix: an <abbr title="Input/output controller. The EPICS server program that owns hardware and offers its values.">IOC</abbr>
-that reads <code>REDSUN_SERVICE_PREFIX</code> needs no <code>args</code> for it.</p>
+that calls <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;identity&lt;/span&gt;" href="../../reference/api/services/#redsun.services.identity"><code>identity</code></a> needs no <code>args</code> for it.
+<code>args</code> is a list, or a mapping of options: <code>--</code> is put before each name,
+<code>true</code> passes the option alone, <code>false</code> leaves it out, and a list passes each
+item after it. The <a href="../../reference/session-file/">session file reference</a>
+has the table.</p>
 <p><code>ready</code> is text the session waits for in the output of the service: the
 first line containing it marks the service ready, so give text an error
 message would not contain. Without <code>ready</code>, the session does not wait, and
 connects the devices of a service that may not serve yet.</p>
+<p>A service that prints no line of its own once it serves calls
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;ready&lt;/span&gt;" href="../../reference/api/services/#redsun.services.ready"><code>ready</code></a>, which prints the text the declaration gives,
+so the text is written in one place. A PVAccess service can call
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;ready_when_reachable&lt;/span&gt;
+
+
+  &lt;span class=&quot;doc doc-labels&quot;&gt;
+      &lt;small class=&quot;doc doc-label doc-label-async&quot;&gt;&lt;code&gt;async&lt;/code&gt;&lt;/small&gt;
+  &lt;/span&gt;" href="../../reference/api/services/#redsun.services.ready_when_reachable"><code>ready_when_reachable</code></a> with one of its
+own process variables instead: it prints the text once that variable answers.</p>
 <p><code>Launch</code> is a service the session starts and stops. <code>Attach</code> is one already
 running elsewhere: nothing starts or stops, and its devices only get its
-<a href="../../explanation/glossary/#prefix">prefix</a>. Its devices find it through the
-address list of your environment, <code>EPICS_CA_ADDR_LIST</code> or
-<code>EPICS_PVA_ADDR_LIST</code>, and by searching the network unless
-<code>EPICS_CA_AUTO_ADDR_LIST</code> or <code>EPICS_PVA_AUTO_ADDR_LIST</code> is <code>NO</code>. The session
-keeps what the list holds; see
+<a href="../../explanation/glossary/#prefix">prefix</a>. Its devices find it by
+searching the network, and through the address list of your environment.
+When the search does not reach it, on another subnet for instance, give its
+<code>address</code>: the session adds it to the address list of its transport before
+any device connects. See
 <a href="../../reference/environment/">Environment variables</a>.</p>
 <p>The device gets the service's prefix as its <code>prefix</code> argument, so giving the
 device a <code>prefix</code> of its own is refused. A device whose service did not start
@@ -5631,10 +5640,14 @@ configuration is read. The transport holds for every device of the session, so
 no device speaks both.
 <a href="../../explanation/services/#one-transport-per-session">Services</a> says what a
 session does for each transport.</p>
-<p>A launched process also reads its name and prefix from its environment, so a
-module serving several sessions needs no arguments for them:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">prefix</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"REDSUN_SERVICE_PREFIX"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"REDSUN_SERVICE_NAME"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+<p>A launched process learns its name and prefix from
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;identity&lt;/span&gt;" href="../../reference/api/services/#redsun.services.identity"><code>identity</code></a>, so a module serving several sessions
+needs no arguments for them. It returns <code>None</code> when no session launched the
+process:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.services</span><span class="w"> </span><span class="kn">import</span> <span class="n">identity</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">me</span> <span class="o">=</span> <span class="n">identity</span><span class="p">()</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">prefix</span> <span class="o">=</span> <span class="n">me</span><span class="o">.</span><span class="n">prefix</span> <span class="k">if</span> <span class="n">me</span> <span class="k">else</span> <span class="s2">""</span>
 </span></code></pre></div>
 <h2 id="react-when-it-exits">React when it exits<a class="headerlink" href="#react-when-it-exits" title="Permanent link">&para;</a></h2>
 <p>A launched service that exits by itself sends <code>sig_exited</code> with its name and
@@ -5666,8 +5679,10 @@ connect it:</p>
 service's output.</p>
 <h2 id="log-from-it">Log from it<a class="headerlink" href="#log-from-it" title="Permanent link">&para;</a></h2>
 <p>The service's output is logged under <code>redsun.service.&lt;name&gt;</code>, and written to
-a log file of its own. To keep each record's level instead of logging every
-line at <code>DEBUG</code>, print JSON; see
+a log file of its own. A service calling
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;configure_logging&lt;/span&gt;" href="../../reference/api/services/#redsun.services.configure_logging"><code>configure_logging</code></a> at startup logs at
+the level the session records at, and each record keeps its level instead of
+arriving as a <code>DEBUG</code> line; see
 <a href="../configure-logging/#log-from-a-service">Log from a service</a>.</p>
 
 
