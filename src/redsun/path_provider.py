@@ -31,7 +31,10 @@ __all__ = [
     "session_directory",
 ]
 
-_RESET_PLAN = "unknown"
+PATH_PROVIDER_PORT: Final = "path_provider"
+"""Name the session's path provider is wired under."""
+
+_RESET_PLAN: Final = "unknown"
 
 
 def _base_dir() -> Path:
@@ -58,8 +61,6 @@ class PlanFilenameProvider(FilenameProvider):
         Zero-padding width of the counter, as in `00001` for 5.
     """
 
-    __slots__ = ("_counters", "_max_digits", "_plan")
-
     @property
     def plan(self) -> str:
         """The current plan name."""
@@ -71,7 +72,7 @@ class PlanFilenameProvider(FilenameProvider):
         return self._max_digits
 
     def __init__(self, *, max_digits: int = 5) -> None:
-        self._plan = "unknown"
+        self._plan = _RESET_PLAN
         self._max_digits = max_digits
         self._counters: dict[tuple[str, str], int] = {}
 
@@ -130,15 +131,6 @@ class SessionPathProvider(PathProvider):
 
     sig_base_dir_changed = Signal(Path)
     """Emitted with the new root once `set_base_dir` accepted it."""
-
-    __slots__ = (
-        "_base_dir",
-        "_base_dir_lock",
-        "_filenames",
-        "_now",
-        "_pattern",
-        "_session",
-    )
 
     def __init__(
         self,
@@ -261,7 +253,3 @@ class SessionPathProvider(PathProvider):
         return PathInfo(
             directory_path=directory, filename=self._filenames(datakey_name)
         )
-
-
-PATH_PROVIDER_PORT: Final = "path_provider"
-"""Name the session's path provider is wired under."""
