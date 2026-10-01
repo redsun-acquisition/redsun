@@ -381,11 +381,6 @@ def _logger_for(service: str | None) -> logging.Logger:
     )
 
 
-logger.setLevel(DEFAULT_LEVEL)
-add_handler(logging.StreamHandler(sys.stdout))
-add_handler(BufferHandler())
-
-
 def log_buffer() -> BufferHandler:
     """Return the buffer holding this session's log records.
 
@@ -418,3 +413,8 @@ class Loggable:
     def logger(self) -> logging.LoggerAdapter[logging.Logger]:
         """Logger naming this instance in each record."""
         return ContextualAdapter(logging.getLogger("redsun"), self)
+
+
+logger.setLevel(DEFAULT_LEVEL)
+add_handler(logging.StreamHandler(sys.stdout))
+add_handler(BufferHandler())

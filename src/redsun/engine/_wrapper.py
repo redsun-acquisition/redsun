@@ -34,14 +34,14 @@ if TYPE_CHECKING:
     MDScanIDSource: TypeAlias = Callable[[dict[str, Any]], int | Awaitable[int]]
 
 
-def default_scan_id_source(md: dict[str, Any]) -> int:
-    scan_id: int = md.get("scan_id", 0)
-    return scan_id + 1
-
-
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 R = TypeVar("R")
+
+
+def default_scan_id_source(md: dict[str, Any]) -> int:
+    scan_id: int = md.get("scan_id", 0)
+    return scan_id + 1
 
 
 class RunEngine(BlueskyRunEngine):

@@ -33,6 +33,10 @@ if TYPE_CHECKING:
 
     from psygnal._async import QueueItem
 
+__all__ = ["run_coro"]
+
+R = TypeVar("R")
+
 
 class AwaitableEvent:
     """Resettable event whose `wait` is a coroutine.
@@ -59,9 +63,6 @@ class AwaitableEvent:
     async def wait(self) -> None:
         """Wait until the event is set."""
         await self._event
-
-
-R = TypeVar("R")
 
 
 @cache
@@ -201,6 +202,3 @@ def run_coro(
     """
     future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
     return future if return_future else future.result()
-
-
-__all__ = ["run_coro"]
