@@ -28,22 +28,14 @@ device side.
 
 Besides serving its
 [process variables](../explanation/glossary.md#process-variable), a service
-that `redsun` launches must print a line when it is ready, stop when its
-standard input closes, and listen only on the local machine:
+that `redsun` launches must print a line when it is ready, stop when the
+session asks, and listen only on the local machine:
 
 ```python
 # mylab/iocs/camera.py
-import os
-import signal
-import sys
-import threading
-
 from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
 
-
-def stop_when_stdin_closes() -> None:
-    sys.stdin.read()
-    signal.raise_signal(signal.SIGINT)
+from redsun.services import stop_on_request
 
 
 class Camera(PVGroup):
@@ -52,21 +44,19 @@ class Camera(PVGroup):
 
 if __name__ == "__main__":
     options, run_options = ioc_arg_parser(default_prefix="CAM:", desc="camera")
-    if "REDSUN_SERVICE_NAME" in os.environ:
-        threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
+    stop_on_request()
     run(Camera(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 ```
 
 - `caproto` prints `Server startup complete.` once it serves. The session
   waits for that line.
 - Closing standard input is how a session asks a service to stop, on every
-  platform. The watcher raises `SIGINT`, so the service shuts down as it would
-  on Ctrl+C. Use a daemon thread for it.
-- Start the watcher only when a session launched the service, which sets
-  `REDSUN_SERVICE_NAME`. Run on its own without a terminal, in the
-  background, under a service manager or in a container run without `-i`, a
-  service has its standard input closed from the start, and the watcher would
-  stop it at once.
+  platform. [`stop_on_request`][redsun.services.stop_on_request] turns that
+  request into `SIGINT`, so the service shuts down as it would on Ctrl+C.
+  It does nothing when no session launched the service: run on its own
+  without a terminal, a service may have its standard input closed from the
+  start. A service built on `asyncio` awaits
+  [`wait_for_stop`][redsun.services.wait_for_stop] instead.
 - If the session crashes, nobody reads the service's output any more, and
   printing raises. Clean up before printing, or do not print.
 - `127.0.0.1` keeps a launched service off the network.
@@ -96,30 +86,40 @@ class MyApp(QtSession):
             "mylab.iocs.camera",
             ready="Server startup complete.",
             prefix="CAM:",
-            args=["--prefix", "CAM:"],
+            args={"prefix": "CAM:"},
             stop_timeout=30,
         ),
     ]
-    beamline: Annotated[AsService, Attach("BL01:")]
+    beamline: Annotated[AsService, Attach("BL01:", address="10.0.0.5")]
     camera: Annotated[AsDevice[MyCamera], Declare(service="camera_ioc")]
 ```
 
 `prefix` is what the devices of the service receive. `args` is what the
 process is started with, and is how this IOC learns the same prefix: an IOC
-that reads `REDSUN_SERVICE_PREFIX` needs no `args` for it.
+that calls [`identity`][redsun.services.identity] needs no `args` for it.
+`args` is a list, or a mapping of options: `--` is put before each name,
+`true` passes the option alone, `false` leaves it out, and a list passes each
+item after it. The [session file reference](../reference/session-file.md)
+has the table.
 
 `ready` is text the session waits for in the output of the service: the
 first line containing it marks the service ready, so give text an error
 message would not contain. Without `ready`, the session does not wait, and
 connects the devices of a service that may not serve yet.
 
+A service that prints no line of its own once it serves calls
+[`ready`][redsun.services.ready], which prints the text the declaration gives,
+so the text is written in one place. A PVAccess service can call
+[`ready_when_reachable`][redsun.services.ready_when_reachable] with one of its
+own process variables instead: it prints the text once that variable answers.
+
 `Launch` is a service the session starts and stops. `Attach` is one already
 running elsewhere: nothing starts or stops, and its devices only get its
-[prefix](../explanation/glossary.md#prefix). Its devices find it through the
-address list of your environment, `EPICS_CA_ADDR_LIST` or
-`EPICS_PVA_ADDR_LIST`, and by searching the network unless
-`EPICS_CA_AUTO_ADDR_LIST` or `EPICS_PVA_AUTO_ADDR_LIST` is `NO`. The session
-keeps what the list holds; see
+[prefix](../explanation/glossary.md#prefix). Its devices find it by
+searching the network, and through the address list of your environment.
+When the search does not reach it, on another subnet for instance, give its
+`address`: the session adds it to the address list of its transport before
+any device connects. See
 [Environment variables](../reference/environment.md).
 
 The device gets the service's prefix as its `prefix` argument, so giving the
@@ -220,12 +220,16 @@ no device speaks both.
 [Services](../explanation/services.md#one-transport-per-session) says what a
 session does for each transport.
 
-A launched process also reads its name and prefix from its environment, so a
-module serving several sessions needs no arguments for them:
+A launched process learns its name and prefix from
+[`identity`][redsun.services.identity], so a module serving several sessions
+needs no arguments for them. It returns `None` when no session launched the
+process:
 
 ```python
-prefix = os.environ.get("REDSUN_SERVICE_PREFIX", "")
-name = os.environ.get("REDSUN_SERVICE_NAME", "")
+from redsun.services import identity
+
+me = identity()
+prefix = me.prefix if me else ""
 ```
 
 ## React when it exits
@@ -264,6 +268,8 @@ service's output.
 ## Log from it
 
 The service's output is logged under `redsun.service.<name>`, and written to
-a log file of its own. To keep each record's level instead of logging every
-line at `DEBUG`, print JSON; see
+a log file of its own. A service calling
+[`configure_logging`][redsun.services.configure_logging] at startup logs at
+the level the session records at, and each record keeps its level instead of
+arriving as a `DEBUG` line; see
 [Log from a service](configure-logging.md#log-from-a-service).

@@ -17,7 +17,14 @@ and these variables on top of it:
 | --- | --- |
 | `REDSUN_SERVICE_NAME` | the name the service is declared under |
 | `REDSUN_SERVICE_PREFIX` | the `prefix` of the declaration, empty when it has none |
+| `REDSUN_SERVICE_READY` | the `ready` text of the declaration; absent when it has none |
+| `REDSUN_LOG_LEVEL` | the name of the level the session records at, such as `DEBUG` |
 | `PYTHONUTF8` | `1`, so that the service writes UTF-8 |
+
+A Python service reads these through the functions of `redsun.services`
+rather than from the environment: [`identity`][redsun.services.identity],
+[`ready`][redsun.services.ready] and
+[`configure_logging`][redsun.services.configure_logging].
 
 With the transport `channel-access`:
 
@@ -47,6 +54,9 @@ after it.
 | --- | --- | --- |
 | `channel-access` | `EPICS_CA_ADDR_LIST` | `127.0.0.1:<port>`, once for each launched service |
 | `pv-access` | `EPICS_PVA_ADDR_LIST` | `127.0.0.1`, once |
+
+An attached service declared with an `address` adds that address to the same
+list, once.
 
 A session leaves `EPICS_CA_AUTO_ADDR_LIST` and `EPICS_PVA_AUTO_ADDR_LIST` as
 they are. Unless you set them to `NO`, a device also searches the network the

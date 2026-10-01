@@ -89,9 +89,19 @@ An entry:
 | `plugin_id` | text | none | the id of the service in that manifest |
 | `prefix` | text | none | the prefix given to each device naming the service |
 | `module` | text | none | the module to run; an entry without one is attached to |
-| `args` | list of text | empty | the arguments after the module |
+| `args` | list of text, or mapping | empty | the arguments after the module; a mapping gives `--key value` per option |
 | `ready` | text | none | the line the service prints once it serves |
 | `stop_timeout` | number | `10.0` | seconds each step of stopping waits |
+| `address` | text | none | where an attached service answers, added to the address list of the transport |
+
+A mapping under `args` becomes arguments this way:
+
+| Value | Arguments |
+| --- | --- |
+| text or number | `--key value` |
+| `true` | `--key` |
+| `false` or empty | none |
+| list | `--key` followed by each item |
 
 ```yaml
 services:
@@ -100,8 +110,12 @@ services:
     plugin_name: mylab
     plugin_id: camera-ioc
     prefix: "CAM:"
+    args:
+      exposure: 0.1
+      simulate: true
   beamline:
     prefix: "BL01:"
+    address: 10.0.0.5
 ```
 
 ## Storage

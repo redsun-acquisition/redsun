@@ -45,7 +45,7 @@ An entry of `services`:
 | Key | Type | Default | Holds |
 | --- | --- | --- | --- |
 | `module` | text | required | the module run as `python -m <module>` |
-| `args` | list of text | empty | the arguments after the module |
+| `args` | list of text, or mapping | empty | the arguments after the module; a mapping is read as in the [session file](session-file.md) |
 | `ready` | text | none | the line the service prints once it serves |
 | `stop_timeout` | number | `10.0` | seconds each step of stopping waits |
 

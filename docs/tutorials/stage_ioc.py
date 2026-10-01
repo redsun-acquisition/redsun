@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 # --8<-- [start:imports]
-import os
-import signal
-import sys
-import threading
-
 from caproto.server import PVGroup, ioc_arg_parser, pvproperty, run
+
+from redsun.services import identity, stop_on_request
 
 # --8<-- [end:imports]
 
@@ -19,18 +16,11 @@ class Stage(PVGroup):
 
 
 # --8<-- [end:stage]
-# --8<-- [start:stop]
-def stop_when_stdin_closes() -> None:
-    sys.stdin.read()
-    signal.raise_signal(signal.SIGINT)
-
-
-# --8<-- [end:stop]
 # --8<-- [start:main]
 if __name__ == "__main__":
-    prefix = os.environ.get("REDSUN_SERVICE_PREFIX", "STAGE:")
+    me = identity()
+    prefix = me.prefix if me else "STAGE:"
     options, run_options = ioc_arg_parser(default_prefix=prefix, desc="stage")
-    if "REDSUN_SERVICE_NAME" in os.environ:
-        threading.Thread(target=stop_when_stdin_closes, daemon=True).start()
+    stop_on_request()
     run(Stage(**options).pvdb, **{**run_options, "interfaces": ["127.0.0.1"]})
 # --8<-- [end:main]

@@ -220,11 +220,16 @@ and `ophyd-async[ca]` or `ophyd-async[pva]` for the device side; see
 
 ## What a launched service is told
 
-Besides its transport's variables, a launched process reads its name and prefix
-from its environment, as `REDSUN_SERVICE_NAME` and `REDSUN_SERVICE_PREFIX`.
+Besides its transport's variables, a launched process is told its name and
+prefix, the ready text of its declaration, and the level the session records
+at. A Python service reads them through the functions of `redsun.services`:
+[`identity`][redsun.services.identity],
+[`ready`][redsun.services.ready] and
+[`configure_logging`][redsun.services.configure_logging].
+[Environment variables](../reference/environment.md) lists how they travel.
 
-A module serving several sessions names its channels from these rather than
-taking arguments for them.
+A module serving several sessions names its channels from its identity rather
+than taking arguments for it.
 
 ## A service exiting
 

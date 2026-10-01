@@ -77,44 +77,23 @@ JSON log record keeps its level, time and traceback, under
 `redsun.service.<service>.<its logger>`; any other line, such as a `print`, is
 logged at `DEBUG`. Two JSON layouts are read.
 
-A service using `logging` adds a handler writing one JSON object per record to
-standard output:
+A Python service calls
+[`configure_logging`][redsun.services.configure_logging] once, at startup:
 
 ```python
-import json
-import logging
-import sys
+from redsun.services import configure_logging
 
-
-class JsonLines(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        traceback = self.formatException(record.exc_info) if record.exc_info else None
-        return json.dumps(
-            {
-                "name": record.name,
-                "levelno": record.levelno,
-                "created": record.created,
-                "msg": record.getMessage(),
-                "exc_text": traceback,
-            }
-        )
-
-
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(JsonLines())
-logging.getLogger().addHandler(handler)
+configure_logging()
 ```
 
-A service using `loguru` replaces its console sink with a serializing one:
+Its records of `logging`, and of `loguru` when it is installed, then reach the
+session at the level the session records at, each keeping its level, time,
+logger name and traceback. Started outside a session, the service logs at
+`INFO`.
 
-```python
-import sys
-
-from loguru import logger
-
-logger.remove()
-logger.add(sys.stdout, serialize=True, level="INFO")
-```
+A service not written in Python writes one JSON object per line. Either the
+layout of `loguru` with `serialize=True`, or an object with the fields `name`,
+`levelno`, `created`, `msg` and `exc_text` of a `logging.LogRecord`.
 
 A service's records follow its logger's level, so hiding its `DEBUG` output
 is
@@ -219,4 +198,6 @@ import logging
 logging.getLogger("redsun").propagate = False
 ```
 
-`redsun` never touches the root logger or any logger outside `redsun`.
+In a session, `redsun` never touches the root logger or any logger outside
+`redsun`. `configure_logging` does, since it sets up the whole logging of a
+service process.
