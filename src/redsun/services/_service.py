@@ -16,6 +16,7 @@ from psygnal import Signal
 
 from redsun.log import SERVICE_LOGGER
 
+from ._process import LEVEL_VARIABLE, NAME_VARIABLE, PREFIX_VARIABLE, READY_VARIABLE
 from ._transports import CHANNEL_ACCESS, TRANSPORTS
 
 if TYPE_CHECKING:
@@ -166,9 +167,10 @@ class Service:
         transport gives it the environment it is reached on and tells this
         process where to look, so devices find it among several local
         services. What a transport reserves lasts for every start in this
-        process. It also reads `REDSUN_SERVICE_NAME` and
-        `REDSUN_SERVICE_PREFIX` from its environment, so a module serving
-        several sessions needs no arguments to name its channels. The process
+        process. The process learns its name, prefix, ready text and the
+        level this session records at through the functions of
+        `redsun.services`, so a module serving several sessions needs no
+        arguments for them. The process
         writes UTF-8, and each output line is logged as `service_record`
         rebuilds it.
 
@@ -190,9 +192,14 @@ class Service:
                 **os.environ,
                 **reserved,
                 "PYTHONUTF8": "1",
-                "REDSUN_SERVICE_NAME": self.name,
-                "REDSUN_SERVICE_PREFIX": self.prefix,
+                NAME_VARIABLE: self.name,
+                PREFIX_VARIABLE: self.prefix,
+                LEVEL_VARIABLE: logging.getLevelName(logger.getEffectiveLevel()),
             }
+            if self.ready is None:
+                env.pop(READY_VARIABLE, None)
+            else:
+                env[READY_VARIABLE] = self.ready
         flags = 0
         # an if statement, not an expression: only the statement narrows the
         # platform for a type checker running on another one
