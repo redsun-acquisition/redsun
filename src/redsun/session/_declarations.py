@@ -243,12 +243,20 @@ class Declaration:
     )
 
     def __init__(
-        self, cls: type, name: str, kind: Layer, cfg_kwargs: dict[str, Any]
+        self,
+        cls: type,
+        name: str,
+        kind: Layer,
+        cfg_kwargs: dict[str, Any],
+        *,
+        attribute: str | None = None,
+        source: str | None = None,
+        refusal: Exception | None = None,
     ) -> None:
         self.cls = cls
         self.name = name
-        self.attribute = name
-        self.source = name
+        self.attribute = name if attribute is None else attribute
+        self.source = name if source is None else source
         self.kind = kind
         self.service: str | None = None
         self.autoconnect = True
@@ -257,7 +265,7 @@ class Declaration:
         )
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
-        self.refusal: Exception | None = None
+        self.refusal = refusal
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"
@@ -588,13 +596,15 @@ def read(
                 inline = marker.kwargs
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
-        declaration = Declaration(
-            target, name, kind, {**keywords(section.get(cfg_key)), **inline}
+        declarations[name] = Declaration(
+            target,
+            name,
+            kind,
+            {**keywords(section.get(cfg_key)), **inline},
+            attribute=attr,
+            source=cfg_key,
+            refusal=refused,
         )
-        declaration.attribute = attr
-        declaration.source = cfg_key
-        declaration.refusal = refused
-        declarations[name] = declaration
 
     declarations.update(from_config(config, declarations, frontend))
     refuse_shadowed(cls, declarations)
@@ -818,8 +828,9 @@ def from_config(
                     )
                 else:
                     refused = refusal(target, kind, where, frontend)
-            found[cfg_key] = Declaration(target, cfg_key, kind, keywords(entry))
-            found[cfg_key].refusal = refused
+            found[cfg_key] = Declaration(
+                target, cfg_key, kind, keywords(entry), refusal=refused
+            )
     return found
 
 
