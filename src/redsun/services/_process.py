@@ -137,7 +137,7 @@ async def ready_when_reachable(pv: str) -> None:
                 await asyncio.wait_for(client.get(pv), timeout=ATTEMPT_TIMEOUT)
             except TimeoutError:
                 continue
-            except Exception as error:  # noqa: BLE001
+            except Exception as error:  # noqa: BLE001  # pragma: no cover
                 # the session waits for the ready line, so a failure here
                 # would otherwise show only as its startup timeout
                 logger.warning("%s did not answer, retrying: %s", pv, error)
@@ -178,7 +178,7 @@ def settle_when_stdin_closes(stopped: asyncio.Future[None]) -> None:
     sys.stdin.read()
     try:
         stopped.get_loop().call_soon_threadsafe(settle, stopped)
-    except RuntimeError:
+    except RuntimeError:  # pragma: no cover
         # the loop already closed: nobody waits any more
         pass
 

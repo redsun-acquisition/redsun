@@ -655,3 +655,17 @@ def test_an_address_for_a_launched_service_is_refused() -> None:
     """Refuse an address for a service the session launches."""
     with pytest.raises(TypeError, match="an address and a module"):
         Service("camera", module="mylab.camera", address="10.0.0.5")
+
+
+def test_starting_a_running_service_launches_no_second_process(
+    launch: Callable[..., Service], service_log: pytest.LogCaptureFixture
+) -> None:
+    """Leave a running service as it is when it is started again."""
+    stand_in = launch()
+
+    stand_in.start()
+    stand_in.start()
+    stand_in.stop()
+
+    started = [m for m in messages(service_log, logging.INFO) if m.endswith("started")]
+    assert started == ["Service 'stand-in' started"]

@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from redsun.services import Service, identity, ready, wait_for_stop
-from redsun.services._process import NAME_VARIABLE, READY_VARIABLE
+from redsun.services._process import (
+    LEVEL_VARIABLE,
+    NAME_VARIABLE,
+    READY_VARIABLE,
+    level_from_environment,
+)
 from redsun.services._transports import (
     CHANNEL_ACCESS,
     PV_ACCESS,
@@ -166,17 +171,20 @@ def test_a_service_logs_at_the_level_its_session_records_at(
     ]
 
 
+@pytest.mark.parametrize("options", [(), ("--late",)])
 def test_a_pva_service_is_ready_once_its_pv_answers(
-    monkeypatch: pytest.MonkeyPatch, service_log: pytest.LogCaptureFixture
+    options: tuple[str, ...],
+    monkeypatch: pytest.MonkeyPatch,
+    service_log: pytest.LogCaptureFixture,
 ) -> None:
-    """Count a PVAccess service ready once its own PV answers on the loopback."""
+    """Count a PVAccess service ready once its own PV answers, at once or after it starts late."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
     monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
     monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
     service = Service(
         "reachable",
         module=REACHABLE_STAND_IN,
-        args=["--pv", "REACH:VALUE"],
+        args=["--pv", "REACH:VALUE", *options],
         ready=REACHABLE_READY,
         stop_timeout=5,
         transport=PV_ACCESS,
@@ -190,3 +198,25 @@ def test_a_pva_service_is_ready_once_its_pv_answers(
     info = messages(service_log, logging.INFO)
     assert "Service 'reachable' started" in info
     assert "Service 'reachable' stopped with exit code 0" in info
+
+
+@pytest.mark.parametrize(
+    ("value", "level"),
+    [
+        (None, logging.INFO),
+        ("15", 15),
+        ("debug", logging.DEBUG),
+        ("WARNING", logging.WARNING),
+        ("loud", logging.INFO),
+    ],
+)
+def test_a_service_reads_the_level_as_a_number_or_a_name(
+    value: str | None, level: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Read the session's level as a number or a name in any case, and `INFO` otherwise."""
+    if value is None:
+        monkeypatch.delenv(LEVEL_VARIABLE, raising=False)
+    else:
+        monkeypatch.setenv(LEVEL_VARIABLE, value)
+
+    assert level_from_environment() == level
