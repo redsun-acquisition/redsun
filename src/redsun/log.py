@@ -286,6 +286,17 @@ class SessionFileHandler(RotatingFileHandler):
         """Root the run's files are under."""
         return self._root
 
+    def shouldRollover(self, record: logging.LogRecord) -> bool:
+        """Whether the file has reached `LOG_MAX_BYTES`, by its size alone.
+
+        The file is always one this handler made, so it skips the base
+        class's check that it is a regular file, which costs a file system
+        call per record. A file may pass the limit by one record.
+        """
+        if self.stream is None:
+            self.stream = self._open()
+        return self.stream.tell() >= self.maxBytes
+
     def move(self, root: Path) -> None:
         """Carry the run's files under *root* and keep writing there.
 
