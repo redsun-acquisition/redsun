@@ -413,7 +413,7 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     hooks: list[HookGroup] = []
     """Hook providers, one group per distinct entry."""
 
-    providers: dict[str, Any] = {}
+    providers: dict[str, ComponentEntry] = {}
     """Classes registering values the session hands to components, by name."""
 
     actions: Any = None

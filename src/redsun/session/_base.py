@@ -52,6 +52,7 @@ from redsun.registry import (
 from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
+    ComponentEntry,
     SessionFile,
     Source,
     StorageConfig,
@@ -637,7 +638,7 @@ class Session(BuildableSession):
         # name. Nothing looks a store up by name.
         return Store(self.name)
 
-    def _share(self, store: Store, providers: Mapping[str, Any]) -> None:
+    def _share(self, store: Store, providers: Mapping[str, ComponentEntry]) -> None:
         """Build the shared services this session installs, before any component.
 
         A provider owns no name, no layer and no wiring. It exists to put

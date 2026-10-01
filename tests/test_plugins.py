@@ -348,3 +348,20 @@ def test_a_session_builds_again_after_shutdown(
 
     widget = built(app, "motor_widget", MockMotorView)
     assert widget.readings == {"stage": pytest.approx(4.8)}
+
+
+def test_a_provider_entry_that_is_not_a_mapping_is_refused() -> None:
+    """Refuse a providers entry that is not a mapping, naming it."""
+    with pytest.raises(ConfigurationError, match="providers.services"):
+        Session.from_config(
+            {"session": "lab", "providers": {"services": "mock-services"}}
+        ).build()
+
+
+def test_a_provider_entry_naming_no_plugin_is_logged(
+    caplog: pytest.LogCaptureFixture, build: BuildSession
+) -> None:
+    """Warn about a providers entry that names no plugin, and build without it."""
+    build(Session.from_config({"session": "lab", "providers": {"services": {}}}))
+
+    assert "Provider 'services' names no plugin" in caplog.text

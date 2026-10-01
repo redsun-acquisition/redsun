@@ -53,7 +53,7 @@ def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type 
         raise PluginError(f"cannot import {listed!r}: {e}") from e
 
 
-def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
+def load_providers(providers: Mapping[str, ComponentEntry]) -> dict[str, type]:
     """Return the shared-service classes a `providers` section names, by entry name.
 
     A session assembled from a file gets a plugin's shared services this way,
@@ -62,19 +62,20 @@ def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
     method it marks with `provides` registers a value under the type that
     method returns.
 
-    An entry that does not resolve is logged and left out.
+    An entry that names no plugin, or does not resolve, is logged and left
+    out.
     """
     found: dict[str, type] = {}
     for name, entry in providers.items():
-        if not isinstance(entry, dict):
-            continue
         try:
-            cls = resolve(entry.get("plugin_name"), entry.get("plugin_id"), "providers")
+            cls = resolve(entry.plugin_name, entry.plugin_id, "providers")
         except PluginError as e:
             logger.error("Failed to load provider '%s': %s", name, e)
             continue
-        if cls is not None:
-            found[name] = cls
+        if cls is None:
+            logger.warning("Provider '%s' names no plugin, and is left out", name)
+            continue
+        found[name] = cls
     return found
 
 
