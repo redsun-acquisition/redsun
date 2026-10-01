@@ -21,7 +21,8 @@ from pathlib import Path
 CHANGELOG = Path("docs/reference/changelog.md")
 REPOSITORY = "redsun-acquisition/redsun"
 ENTRY = re.compile(
-    r"^\* (?P<title>.+?) by @\S+ in (?P<url>https://\S+/pull/(?P<number>\d+))$"
+    r"^\* (?P<title>.+?) by @(?P<author>\S+) "
+    r"in (?P<url>https://\S+/pull/(?P<number>\d+))$"
 )
 LINK = re.compile(r"^\[[^\]]+\]: https?://")
 TYPE = re.compile(r"^[a-z]+(\([^)]*\))?!?:\s*")
@@ -62,13 +63,24 @@ def worded(title: str) -> str:
     return summary[:1].upper() + summary[1:]
 
 
+def credited(author: str) -> str:
+    """Return a link to *author*'s GitHub profile, as GitHub names them in notes.
+
+    A bot, such as `dependabot[bot]`, has its profile under `apps/`.
+    """
+    if author.endswith("[bot]"):
+        name = author.removesuffix("[bot]")
+        return f"[@{name}](https://github.com/apps/{name})"
+    return f"[@{author}](https://github.com/{author})"
+
+
 def section(version: str, date: datetime.date, notes: str, breaking: set[int]) -> str:
     """Return the changelog section for *version* from GitHub's *notes*.
 
     Headings and entries are kept; an entry becomes its pull request's title,
-    as `worded`, and its link, marked as breaking when its number is in
-    *breaking*. The contributor lines and the compare link GitHub adds are
-    dropped.
+    as `worded`, its link and its author's, as `credited`, marked as breaking
+    when its number is in *breaking*. The new contributors block and the
+    compare link GitHub adds are dropped.
     """
     lines = [f"## [{version}] - {date:%d-%m-%Y}"]
     for raw in notes.splitlines():
@@ -83,7 +95,8 @@ def section(version: str, date: datetime.date, notes: str, breaking: set[int]) -
             number = int(match["number"])
             marker = "**Breaking:** " if number in breaking else ""
             title = worded(match["title"])
-            lines.append(f"- {marker}{title} ([#{number}]({match['url']}))")
+            author = credited(match["author"])
+            lines.append(f"- {marker}{title} ([#{number}]({match['url']})) by {author}")
     return "\n".join(lines) + "\n"
 
 
