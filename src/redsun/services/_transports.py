@@ -50,6 +50,10 @@ class Transport(Protocol):
         """
         ...
 
+    def attach(self, address: str) -> None:
+        """Tell this process to look for services at *address*, unless it already does."""
+        ...
+
     async def release(self) -> None:
         """Drop what this process caches about services of this transport."""
         ...
@@ -79,6 +83,10 @@ class ChannelAccess:
         nothing added: a client read it when it first used Channel Access.
         """
         add_to_env("EPICS_CA_ADDR_LIST", f"127.0.0.1:{self._port(service)}")
+
+    def attach(self, address: str) -> None:
+        """Add *address* to this process's Channel Access address list."""
+        add_to_env("EPICS_CA_ADDR_LIST", address)
 
     async def release(self) -> None:
         """Close every Channel Access channel this process holds, if it holds any."""
@@ -130,6 +138,10 @@ class PVAccess:
         the servers of its site.
         """
         add_to_env("EPICS_PVA_ADDR_LIST", LOOPBACK)
+
+    def attach(self, address: str) -> None:
+        """Add *address* to this process's PVAccess address list."""
+        add_to_env("EPICS_PVA_ADDR_LIST", address)
 
     async def release(self) -> None:
         """Nothing: a client reaches a restarted service without being told."""

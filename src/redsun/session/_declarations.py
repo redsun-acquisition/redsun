@@ -178,6 +178,10 @@ class Attach:
     prefix: str
     """Prefix given to each device naming the service."""
 
+    _: KW_ONLY
+    address: str | None = None
+    """Where the service answers, when the network search does not find it."""
+
 
 @dataclass(frozen=True)
 class Serves:

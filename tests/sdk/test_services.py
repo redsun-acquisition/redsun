@@ -624,3 +624,33 @@ def test_arguments_given_as_text_are_refused() -> None:
     """Refuse arguments written as one piece of text."""
     with pytest.raises(TypeError, match="a list or a mapping"):
         Service("camera", module="mylab.camera", args="--port COM4")
+
+
+@pytest.mark.parametrize(
+    ("transport", "listed", "other"),
+    [
+        (CHANNEL_ACCESS, "EPICS_CA_ADDR_LIST", "EPICS_PVA_ADDR_LIST"),
+        (PV_ACCESS, "EPICS_PVA_ADDR_LIST", "EPICS_CA_ADDR_LIST"),
+    ],
+)
+def test_an_attached_service_adds_its_address_to_its_transports_list_once(
+    transport: str, listed: str, other: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """List an attached service's address once, in its own transport's list, however often it starts."""
+    monkeypatch.setenv(listed, "")
+    monkeypatch.setenv(other, "")
+    beamline = Service(
+        "beamline", prefix="BL01:", address="10.0.0.5", transport=transport
+    )
+
+    beamline.start()
+    beamline.start()
+
+    assert os.environ[listed].split() == ["10.0.0.5"]
+    assert os.environ[other] == ""
+
+
+def test_an_address_for_a_launched_service_is_refused() -> None:
+    """Refuse an address for a service the session launches."""
+    with pytest.raises(TypeError, match="an address and a module"):
+        Service("camera", module="mylab.camera", address="10.0.0.5")

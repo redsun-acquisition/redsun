@@ -121,11 +121,16 @@ class Service:
     transport
         Protocol the service is reached over: `channel-access` or `pv-access`.
         The session settles it for every service it holds.
+    address
+        Where an attached service answers, added to this process's address
+        list when it starts. `None` keeps the list as the environment gives
+        it.
 
     Raises
     ------
     TypeError
-        If *args* are given without a *module*, or as text.
+        If *args* are given without a *module*, or as text, or an *address*
+        with a *module*.
     ValueError
         If *transport* is not a protocol a session accepts.
     """
@@ -138,6 +143,7 @@ class Service:
         "_settled",
         "_stopping",
         "_tail",
+        "address",
         "args",
         "module",
         "name",
@@ -159,11 +165,17 @@ class Service:
         ready: str | None = None,
         stop_timeout: float = STOP_TIMEOUT,
         transport: str = CHANNEL_ACCESS,
+        address: str | None = None,
     ) -> None:
         if args and module is None:
             raise TypeError(
                 f"service {name!r} gives args but no module to run; an attached "
                 "service only lends its prefix"
+            )
+        if address is not None and module is not None:
+            raise TypeError(
+                f"service {name!r} gives an address and a module; a launched "
+                "service's address is the session's to choose"
             )
         if transport not in TRANSPORTS:
             known = ", ".join(map(repr, sorted(TRANSPORTS)))
@@ -172,6 +184,7 @@ class Service:
             )
         self.name = name
         self.prefix = prefix
+        self.address = address
         self.module = module
         self.args = command_line(args)
         self.ready = ready
@@ -208,7 +221,8 @@ class Service:
         `redsun.services`, so a module serving several sessions needs no
         arguments for them. The process
         writes UTF-8, and each output line is logged as `service_record`
-        rebuilds it.
+        rebuilds it. An attached service only adds its address to this
+        process's list, if it names one.
 
         Raises
         ------
@@ -218,7 +232,11 @@ class Service:
         RuntimeError
             If the process exits before it is ready.
         """
-        if self.module is None or self.running:
+        if self.module is None:
+            if self.address is not None:
+                TRANSPORTS[self.transport].attach(self.address)
+            return
+        if self.running:
             return
         transport = TRANSPORTS[self.transport]
         with launch_lock:
