@@ -135,27 +135,6 @@ logger = logging.getLogger("redsun")
 logging.getLogger("in_n_out").addHandler(logging.NullHandler())
 
 
-def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
-    """Return the keys of *entry* that *cls* would refuse to be built from.
-
-    The constructor's parameters decide this, not the keys the configuration
-    carried. A component serializes every parameter it has, including one
-    that took its default and that no source named, and that key is correct.
-    A constructor taking `**kwargs` accepts anything, so it refuses none.
-    """
-    params = constructor(cls).parameters
-    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
-        return []
-    return sorted(set(entry) - {name for name in params if name != "name"})
-
-
-def silent(step: str) -> None:
-    """Take a build step's name and do nothing with it.
-
-    What a session reports progress to when no hook asked for it.
-    """
-
-
 ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
 """The order the layers are built in, which is the order they may depend in."""
 
@@ -182,6 +161,27 @@ configuration and starting the toolkit's runtime, and reports neither.
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
+
+
+def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
+    """Return the keys of *entry* that *cls* would refuse to be built from.
+
+    The constructor's parameters decide this, not the keys the configuration
+    carried. A component serializes every parameter it has, including one
+    that took its default and that no source named, and that key is correct.
+    A constructor taking `**kwargs` accepts anything, so it refuses none.
+    """
+    params = constructor(cls).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
+        return []
+    return sorted(set(entry) - {name for name in params if name != "name"})
+
+
+def silent(step: str) -> None:
+    """Take a build step's name and do nothing with it.
+
+    What a session reports progress to when no hook asked for it.
+    """
 
 
 @dataclass(frozen=True)
@@ -678,19 +678,20 @@ class Session(BuildableSession):
             # before the runtime that shows it
             with self.open_span() as report:
                 self._report = report
-                for step, run in (
-                    ("services", self.start_services),
-                    ("devices", self.build_devices),
-                    ("connect", self.connect_built_devices),
-                    ("registry", self.open_registry),
-                    ("presenters", self.build_presenters),
-                    ("views", self.build_views),
-                    ("setup", self.setup_components),
-                    ("seal", self.seal),
-                    ("wiring", self.apply_wiring),
-                    ("presentation", self.present),
-                    ("report", self.log_summary),
-                ):
+                steps = (
+                    self.start_services,
+                    self.build_devices,
+                    self.connect_built_devices,
+                    self.open_registry,
+                    self.build_presenters,
+                    self.build_views,
+                    self.setup_components,
+                    self.seal,
+                    self.apply_wiring,
+                    self.present,
+                    self.log_summary,
+                )
+                for step, run in zip(BUILD_STEPS, steps, strict=True):
                     self._report(step)
                     run()
         except Exception as e:
@@ -737,8 +738,9 @@ class Session(BuildableSession):
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
         # read only classes, so a mistake is reported before anything starts
-        self._refuse_component_values(self._components())
-        self._check_layers(self._components())
+        components = self._components()
+        self._refuse_component_values(components)
+        self._check_layers(components)
         self._transport = config.transport or CHANNEL_ACCESS
         self._services = read_services(type(self), config.services, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
@@ -956,10 +958,8 @@ class Session(BuildableSession):
         if self._profile is None:
             return
         # the configuration may be unreadable; the profile still needs a name
-        session = (self._file.session if self._file is not None else None) or type(
-            self
-        ).__name__
-        self._profile.stop(session)
+        name = self._file.session if self._file is not None else None
+        self._profile.stop(name or type(self).__name__)
 
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.
@@ -1219,8 +1219,8 @@ class Session(BuildableSession):
         relay = SignalInstance((object,), name=signal.name)
         relay.connect(slot, thread=thread)
 
-        def forward(reading: Any) -> None:
-            relay.emit(reading)
+        # kept as one object: unsubscribing goes by identity
+        forward = relay.emit
 
         # a device names its signals after itself, as device-signal
         device, _, port = signal.name.partition("-")
