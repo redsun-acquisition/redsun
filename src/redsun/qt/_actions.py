@@ -17,6 +17,10 @@ class ActionError(RuntimeError):
 def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
     """Read the `actions` section of *owner*'s configuration, one per entry.
 
+    Reading imports nothing a session did not already import: a `callback`
+    stays the `module:function` string it was written as, and app-model
+    imports it when the command first runs.
+
     Parameters
     ----------
     raw
@@ -24,10 +28,6 @@ def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
     owner
         How to name the configuration in a refusal, usually the session's own
         name.
-
-    Reading imports nothing a session did not already import: a `callback`
-    stays the `module:function` string it was written as, and app-model
-    imports it when the command first runs.
 
     Raises
     ------
