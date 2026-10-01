@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from functools import cache
 from itertools import product
-from typing import TYPE_CHECKING, Any, TypeVar, cast, get_origin, overload
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast, get_origin, overload
 
 from typing_extensions import get_protocol_members, is_protocol
 
@@ -25,8 +25,11 @@ __all__ = [
 
 P = TypeVar("P")
 
-_PROBE = object()
-_MISSING = object()
+PROBE: Final = object()
+"""The argument passed for every parameter of a probing call."""
+
+MISSING: Final = object()
+"""What `defined` returns for a name no class in the MRO defines."""
 
 
 def is_protocol_class(candidate: object) -> TypeIs[type]:
@@ -55,9 +58,7 @@ def methods(protocol: type) -> frozenset[str]:
     The rest are data members, which only an instance can be asked about.
     """
     return frozenset(
-        name
-        for name in members(protocol)
-        if _call_signature(protocol, name) is not None
+        name for name in members(protocol) if call_signature(protocol, name) is not None
     )
 
 
@@ -88,7 +89,7 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
     instance checks everything.
     """
     cls = candidate if isinstance(candidate, type) else type(candidate)
-    found = list(_signature_problems(cls, protocol))
+    found = list(signature_problems(cls, protocol))
     if not isinstance(candidate, type):
         found.extend(
             f"{name!r} is missing"
@@ -99,31 +100,32 @@ def problems(candidate: type | object, protocol: type) -> list[str]:
 
 
 @cache
-def _signature_problems(cls: type, protocol: type) -> tuple[str, ...]:
+def signature_problems(cls: type, protocol: type) -> tuple[str, ...]:
+    """Return why the methods of *cls* cannot be called as *protocol* calls them."""
     found: list[str] = []
     for name in sorted(methods(protocol)):
-        wanted = _call_signature(protocol, name)
+        wanted = call_signature(protocol, name)
         if wanted is None:
             continue
-        if _defined(cls, name) is _MISSING:
+        if defined(cls, name) is MISSING:
             found.append(f"{name!r} is missing")
             continue
         if not callable(getattr(cls, name)):
             found.append(f"{name!r} is not callable")
             continue
-        got = _call_signature(cls, name)
+        got = call_signature(cls, name)
         if got is None:
             continue
-        reason = _mismatch(wanted, got)
+        reason = mismatch(wanted, got)
         if reason is not None:
             found.append(
-                f"{_rendered(name, got)} cannot be called as "
-                f"{_rendered(name, wanted)}: {reason}"
+                f"{rendered(name, got)} cannot be called as "
+                f"{rendered(name, wanted)}: {reason}"
             )
     return tuple(found)
 
 
-def _rendered(name: str, signature: inspect.Signature) -> str:
+def rendered(name: str, signature: inspect.Signature) -> str:
     """Spell out a call, without the types, which are not what was compared."""
     bare = signature.replace(
         parameters=[
@@ -135,7 +137,7 @@ def _rendered(name: str, signature: inspect.Signature) -> str:
     return f"{name}{bare}"
 
 
-def _defined(owner: type, name: str) -> Any:
+def defined(owner: type, name: str) -> Any:
     """Return *name* as *owner* or one of its bases defines it.
 
     Unlike `inspect.getattr_static`, the metaclass is not searched.
@@ -145,18 +147,18 @@ def _defined(owner: type, name: str) -> Any:
     for klass in owner.__mro__:
         if name in vars(klass):
             return vars(klass)[name]
-    return _MISSING
+    return MISSING
 
 
-def _call_signature(owner: type, name: str) -> inspect.Signature | None:
+def call_signature(owner: type, name: str) -> inspect.Signature | None:
     """How *name* is called on an instance of *owner*, if that is knowable.
 
     `None` for a data member or an unreadable signature. Binding through the
     descriptor protocol drops `self` from a method and leaves a
     `staticmethod` as is.
     """
-    static = _defined(owner, name)
-    if static is _MISSING or isinstance(static, property):
+    static = defined(owner, name)
+    if static is MISSING or isinstance(static, property):
         return None
     bound = static.__get__(object()) if hasattr(static, "__get__") else static
     if not callable(bound):
@@ -167,8 +169,9 @@ def _call_signature(owner: type, name: str) -> inspect.Signature | None:
         return None
 
 
-def _mismatch(wanted: inspect.Signature, got: inspect.Signature) -> str | None:
-    for args, kwargs in _probes(wanted):
+def mismatch(wanted: inspect.Signature, got: inspect.Signature) -> str | None:
+    """Return why *got* refuses a call *wanted* permits, `None` when it refuses none."""
+    for args, kwargs in probes(wanted):
         try:
             got.bind(*args, **kwargs)
         except TypeError as e:
@@ -176,7 +179,7 @@ def _mismatch(wanted: inspect.Signature, got: inspect.Signature) -> str | None:
     return None
 
 
-def _probes(
+def probes(
     wanted: inspect.Signature,
 ) -> Iterator[tuple[list[Any], dict[str, Any]]]:
     """Yield the calls *wanted* permits, which an implementation must accept.
@@ -186,26 +189,35 @@ def _probes(
     """
     seen: list[tuple[list[Any], dict[str, Any]]] = []
     for only_required, positionally in product((False, True), repeat=2):
-        probe = _probe(wanted, only_required, positionally)
-        if probe not in seen:
-            seen.append(probe)
-            yield probe
+        call = probe(wanted, only_required, positionally)
+        if call not in seen:
+            seen.append(call)
+            yield call
 
 
-def _probe(
+def probe(
     wanted: inspect.Signature, only_required: bool, positionally: bool
 ) -> tuple[list[Any], dict[str, Any]]:
+    """Return the arguments of one call *wanted* permits.
+
+    Parameters
+    ----------
+    only_required
+        Leave out every parameter carrying a default.
+    positionally
+        Pass a parameter that can be given either way by position.
+    """
     args: list[Any] = []
     kwargs: dict[str, Any] = {}
     for param in wanted.parameters.values():
         if only_required and param.default is not param.empty:
             continue
         if param.kind is param.VAR_POSITIONAL or param.kind is param.POSITIONAL_ONLY:
-            args.append(_PROBE)
+            args.append(PROBE)
         elif param.kind is param.VAR_KEYWORD:
-            kwargs["_probe"] = _PROBE
+            kwargs["_probe"] = PROBE
         elif param.kind is param.KEYWORD_ONLY or not positionally:
-            kwargs[param.name] = _PROBE
+            kwargs[param.name] = PROBE
         else:
-            args.append(_PROBE)
+            args.append(PROBE)
     return args, kwargs
