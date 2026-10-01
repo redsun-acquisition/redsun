@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from itertools import groupby
+from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -327,15 +329,18 @@ class LogView(QtW.QWidget):
         cursor = QtGui.QTextCursor(document)
         cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
         cursor.beginEditBlock()
-        for record in records:
-            if record.levelno not in formats:
+        # records of one level in a row go in as one piece of text: each line
+        # break in it still starts a block of its own
+        for level, run in groupby(records, attrgetter("levelno")):
+            if level not in formats:
                 char_format = QtGui.QTextCharFormat()
-                color = colors.get(record.levelno, colors[logging.INFO])
+                color = colors.get(level, colors[logging.INFO])
                 char_format.setForeground(QtGui.QBrush(QtGui.QColor(color)))
-                formats[record.levelno] = char_format
+                formats[level] = char_format
             if not document.isEmpty():
                 cursor.insertBlock()
-            cursor.insertText(self._formatter.format(record), formats[record.levelno])
+            text = "\n".join(self._formatter.format(record) for record in run)
+            cursor.insertText(text, formats[level])
         cursor.endEditBlock()
         if following:
             bar.setValue(bar.maximum())
