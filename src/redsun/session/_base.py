@@ -1963,11 +1963,15 @@ class Session(BuildableSession):
         put a component to use.
         """
         declarations = [d for d in self._components() if d.instance is not None]
-        wanted = {
-            optional_arg(hint) or hint
-            for declaration in declarations
-            for hint in self._asked_for(declaration)
+        asked = {
+            d.name: [optional_arg(hint) or hint for hint in self._asked_for(d)]
+            for d in declarations
         }
+        wanted = {hint for hints in asked.values() for hint in hints}
+        by_type: dict[Any, Declaration] = {
+            d.cls: d for d in declarations if self._class_counts[d.cls] == 1
+        }
+        by_type.update({d.key: d for d in declarations})
         used = self._used(declarations, wanted)
         for declaration in declarations:
             provided = shared_keys(declaration.cls)
@@ -1979,9 +1983,12 @@ class Session(BuildableSession):
                         method,
                         getattr(key, "__name__", key),
                     )
-            self._warn_double_route(declaration, declarations)
-            requires = list(self._asked_for(declaration))
-            if not provided and not requires and declaration.name not in used:
+            self._warn_double_route(declaration, asked[declaration.name], by_type)
+            if (
+                not provided
+                and not asked[declaration.name]
+                and declaration.name not in used
+            ):
                 logger.warning(
                     "%r shares nothing, asks for nothing and is wired to nothing; "
                     "it is built and reachable, and does nothing",
@@ -2001,7 +2008,10 @@ class Session(BuildableSession):
         ]
 
     def _warn_double_route(
-        self, declaration: Declaration, declarations: list[Declaration]
+        self,
+        declaration: Declaration,
+        asked: list[Any],
+        by_type: Mapping[Any, Declaration],
     ) -> None:
         """Report a component that both holds another and publishes to it.
 
@@ -2009,20 +2019,16 @@ class Session(BuildableSession):
         twice. Which method a component calls is not knowable here, so a pair
         using each route for something different is named once and legally.
 
-        Holding a value a component shares is not holding the component.
+        Parameters
+        ----------
+        asked
+            Every type *declaration* asks for.
+        by_type
+            The components, by their key and by a class no other declares.
+            Holding a value a component shares is not holding the component.
         """
-        by_type: dict[Any, Declaration] = {
-            d.cls: d for d in declarations if self._class_counts[d.cls] == 1
-        }
-        by_type.update({d.key: d for d in declarations})
-        held = {
-            by_type[asked].name
-            for asked in (
-                optional_arg(hint) or hint for hint in self._asked_for(declaration)
-            )
-            if asked in by_type
-        }
-        for connection in self.connections:
+        held = {by_type[hint].name for hint in asked if hint in by_type}
+        for connection in self._connections:
             if connection.publisher == declaration.name and connection.consumer in held:
                 logger.warning(
                     "%r holds %r and is also connected to it; a bundle reaches a "
@@ -2038,10 +2044,10 @@ class Session(BuildableSession):
         one is built from counts, by its key or by its class, and a router
         counts when something asks for the callback catalogue.
         """
-        names = {c.publisher for c in self.connections}
+        names = {c.publisher for c in self._connections}
         if CallbackCatalogue in wanted:
             names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
-        names |= {c.consumer for c in self.connections}
+        names |= {c.consumer for c in self._connections}
         names |= self._answered
         names |= {
             declaration.name
