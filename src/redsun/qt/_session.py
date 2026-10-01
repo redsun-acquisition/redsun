@@ -741,14 +741,10 @@ class CloseGuard(QObject):
 
     def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
         """Refuse a close the session does not confirm."""
-        session = self._session()
-        if obj is None or event is None:
+        if obj is None or event is None or event.type() != QEvent.Type.Close:
             return False
-        if (
-            event.type() == QEvent.Type.Close
-            and session is not None
-            and not session._confirm_close()
-        ):
+        session = self._session()
+        if session is not None and not session._confirm_close():
             event.ignore()
             return True
         return super().eventFilter(obj, event)
