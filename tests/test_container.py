@@ -1998,3 +1998,50 @@ def test_an_entry_under_the_name_of_a_renamed_component_is_reported(
     assert "presenters.ctrl" in caplog.text
     assert "'stage_ctrl'" in caplog.text
     app.shutdown()
+
+
+class FailsOnce:
+    """Presenter that cannot be made the first time, and can afterwards."""
+
+    attempts = 0
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        type(self).attempts += 1
+        if type(self).attempts == 1:
+            raise ValueError("not yet")
+
+
+class WorksOnce(Stage):
+    """Device that can be made the first time, and not afterwards."""
+
+    attempts = 0
+
+    def __init__(self, name: str) -> None:
+        type(self).attempts += 1
+        if type(self).attempts > 1:
+            raise ValueError("no longer")
+        super().__init__(name)
+
+
+def test_a_session_built_again_starts_from_nothing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Build a session a second time from nothing, keeping no component or failure of the first."""
+
+    class Twice(Session):
+        stage: AsDevice[WorksOnce]
+        flaky: AsPresenter[FailsOnce]
+
+    app = Twice()
+    app.build()
+    app.shutdown()
+    caplog.clear()
+    app.build()
+
+    try:
+        assert "stage" not in app.devices
+        assert set(app.presenters) == {"flaky"}
+        assert "Not built: flaky" not in caplog.text
+    finally:
+        app.shutdown()

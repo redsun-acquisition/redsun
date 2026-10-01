@@ -969,17 +969,23 @@ class Session(BuildableSession):
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
         Calling it a second time, or on a session that was never built, runs
-        nothing: a release is dropped as it runs.
+        nothing: a release is dropped as it runs. What the build made is
+        forgotten, so the session can be built again.
         """
         self._is_built = False
         self.disconnect_all()
         self._releases.close()
         self._hooks = None
+        # a session built again starts from nothing the last build made
+        self._devices.clear()
+        self._failed.clear()
+        self._answered.clear()
         self._callbacks.clear()
         self._not_set_up.clear()
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
+        self._shared_values.clear()
         logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
