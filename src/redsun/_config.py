@@ -62,9 +62,7 @@ __all__ = [
     "validate_session",
 ]
 
-COMPONENT_SECTIONS: frozenset[str] = frozenset(
-    {"services", "devices", "presenters", "views"}
-)
+COMPONENT_SECTIONS: Final = frozenset({"services", "devices", "presenters", "views"})
 """The configuration sections whose entries are a component's constructor call."""
 
 SCHEMA_VERSIONS: Final = (1.0,)
@@ -78,7 +76,7 @@ EMPTY_AS_MAPPING: Final = frozenset(
 )
 """Sections a file may write empty, read as an empty mapping."""
 
-IDENTITY_KEYS: tuple[str, ...] = ("schema_version", "frontend")
+IDENTITY_KEYS: Final = ("schema_version", "frontend")
 """Keys naming what kind of session this is, which every layered source must agree on.
 
 On every other key a later source overrides an earlier one. `session` is not
@@ -160,8 +158,10 @@ def merge_config(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any
         elif key in COMPONENT_SECTIONS:
             for shadowed in current.keys() & value.keys():
                 logger.debug(
-                    f"Component '{shadowed}' in '{key}' is taken from a later "
-                    f"configuration source, replacing the entry under it"
+                    "Component '%s' in '%s' is taken from a later configuration "
+                    "source, replacing the entry under it",
+                    shadowed,
+                    key,
                 )
             # an entry is a constructor's keyword arguments, not a tree of
             # settings, so the last source naming a component owns them all
@@ -458,8 +458,10 @@ class SessionFile(BaseModel, extra="forbid", use_attribute_docstrings=True):
     @classmethod
     def registered_frontend(cls, value: str | None) -> str | None:
         """Refuse a frontend no installed package registers."""
+        if value is None:
+            return None
         known = frontends()
-        if value is not None and value not in known:
+        if value not in known:
             listed = ", ".join(repr(name) for name in sorted(known)) or "none"
             # a ValueError, since pydantic reports no other at the key's location
             raise ValueError(f"asks for frontend {value!r}; registered: {listed}")
