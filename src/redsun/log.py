@@ -98,17 +98,17 @@ class GlobalFormatter(logging.Formatter):
 
 
 class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
-    """Adapter adding an object's class name and name to each record.
+    """Adapter adding an object's class name and name to each record it logs.
 
     Parameters
     ----------
-    logger: logging.Logger
-        Logger instance to wrap.
-    obj: Any
-        The object to add context to.
+    obj
+        The object whose class name, and `name` attribute if it has one, each
+        record carries.
     """
 
     logger: logging.Logger
+    """The wrapped logger."""
 
     def __init__(self, logger: logging.Logger, obj: Any) -> None:
         super().__init__(logger, {"obj": obj})
