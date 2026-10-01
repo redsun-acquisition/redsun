@@ -196,30 +196,24 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
     """
     if isinstance(widget, QtWidgets.QLabel):
         _set_label_text(widget, value)
-    elif isinstance(widget, QtWidgets.QSpinBox):
-        widget.blockSignals(True)
-        if isinstance(value, (int, float)):
-            widget.setValue(int(value))
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QDoubleSpinBox):
-        widget.blockSignals(True)
-        if isinstance(value, (int, float)):
-            widget.setValue(float(value))
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QComboBox):
-        widget.blockSignals(True)
-        # boolean combobox stores bool data; string combobox stores text
-        if isinstance(value, bool) or widget.itemData(0) is True:
-            idx = widget.findData(bool(value))
-        else:
-            idx = widget.findText(str(value) if value is not None else "")
-        if idx >= 0:
-            widget.setCurrentIndex(idx)
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QLineEdit):
-        widget.blockSignals(True)
-        widget.setText(str(value) if value is not None else "")
-        widget.blockSignals(False)
+        return
+    with QtCore.QSignalBlocker(widget):
+        if isinstance(widget, QtWidgets.QSpinBox):
+            if isinstance(value, (int, float)):
+                widget.setValue(int(value))
+        elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+            if isinstance(value, (int, float)):
+                widget.setValue(float(value))
+        elif isinstance(widget, QtWidgets.QComboBox):
+            # boolean combobox stores bool data; string combobox stores text
+            if isinstance(value, bool) or widget.itemData(0) is True:
+                idx = widget.findData(bool(value))
+            else:
+                idx = widget.findText(str(value) if value is not None else "")
+            if idx >= 0:
+                widget.setCurrentIndex(idx)
+        elif isinstance(widget, QtWidgets.QLineEdit):
+            widget.setText(str(value) if value is not None else "")
 
 
 class DescriptorTreeView(QtWidgets.QTreeWidget):

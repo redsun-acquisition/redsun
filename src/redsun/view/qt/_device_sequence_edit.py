@@ -166,9 +166,8 @@ class _CheckboxListWidget(QtW.QWidget):
         """Set checked state, suppressing intermediate signals."""
         name_set = set(names)
         for name, cb in self._checkboxes.items():
-            cb.blockSignals(True)
-            cb.setChecked(name in name_set)
-            cb.blockSignals(False)
+            with QtCore.QSignalBlocker(cb):
+                cb.setChecked(name in name_set)
         self._update_count_label()
         self.selection_changed.emit(self.get_value())
 

@@ -84,9 +84,8 @@ class ActionButton(QtW.QPushButton):
         For an action that ended by itself: unchecking the button any other
         way reads as the user asking the action to end.
         """
-        self.blockSignals(True)
-        self.setChecked(False)
-        self.blockSignals(False)
+        with QtCore.QSignalBlocker(self):
+            self.setChecked(False)
         self._update_text(False)
 
     def _update_text(self, checked: bool) -> None:
