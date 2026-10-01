@@ -146,6 +146,7 @@ class PlanWidget:
     _progress_rows: dict[str, tuple[QtW.QLabel, QtW.QProgressBar, QtW.QLabel]] = field(
         default_factory=dict, init=False, repr=False
     )
+    _progress_order: list[str] = field(default_factory=list, init=False, repr=False)
 
     def toggle(self, status: bool) -> None:
         """Update the widgets when a continuous plan starts or stops.
@@ -262,6 +263,11 @@ class PlanWidget:
                 # would still be a child of the group
                 widget.setParent(None)
                 widget.deleteLater()
+        order = [scope.name for scope in scopes]
+        # an update to the same scopes only changes values: placing the rows
+        # again is needed only when the scopes or their order changed
+        placed = order == self._progress_order
+        self._progress_order[:] = order
         depths: dict[str, int] = {}
         for row, scope in enumerate(scopes):
             depths[scope.name] = (
@@ -276,9 +282,10 @@ class PlanWidget:
                 text_label.setObjectName("progress-text")
                 self._progress_rows[scope.name] = (name_label, bar, text_label)
             name_label, bar, text_label = self._progress_rows[scope.name]
-            for column, cell in enumerate((name_label, bar, text_label)):
-                layout.removeWidget(cell)
-                layout.addWidget(cell, row, column)
+            if not placed:
+                for column, cell in enumerate((name_label, bar, text_label)):
+                    layout.removeWidget(cell)
+                    layout.addWidget(cell, row, column)
             name_label.setIndent(depths[scope.name] * _PROGRESS_INDENT)
             if scope.fraction is None:
                 bar.setRange(0, 0)
