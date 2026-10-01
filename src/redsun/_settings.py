@@ -73,9 +73,13 @@ class Settings:
         TypeError
             If *value* is not JSON-serializable.
         """
-        self._values[key] = value
+        values = {**self._values, key: value}
+        # serialized before it is kept, so a value refused leaves nothing behind
+        text = json.dumps(values, indent=2)
+        self._values = values
         # now, so a session that crashes later keeps what the user chose
-        self._write()
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(text, encoding="utf-8")
 
     def __contains__(self, key: str) -> bool:
         """Whether *key* has been set."""
@@ -87,10 +91,6 @@ class Settings:
 
     def __repr__(self) -> str:
         return f"Settings({str(self._path)!r}, {len(self._values)} keys)"
-
-    def _write(self) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(self._values, indent=2), encoding="utf-8")
 
 
 def read(path: Path) -> dict[str, JsonValue]:
