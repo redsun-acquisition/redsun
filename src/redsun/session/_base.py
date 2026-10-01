@@ -115,6 +115,7 @@ if TYPE_CHECKING:
     from redsun.ports import Link, SlotThread
     from redsun.services import Service
 
+    from ..ports._wiring import SlotCallable
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
@@ -363,7 +364,7 @@ class Session(BuildableSession):
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
-        self._links: list[tuple[SignalInstance, Callable[..., None]]] = []
+        self._links: list[tuple[SignalInstance, SlotCallable]] = []
         self._connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
         # subscription by identity: clear_sub needs the object back
@@ -1171,7 +1172,7 @@ class Session(BuildableSession):
             or self.frontend.thread_of(consumer)
         )
 
-    def _link(self, signal: object, slot: Callable[..., Any]) -> None:
+    def _link(self, signal: object, slot: SlotCallable) -> None:
         """Make one link, unless an end of it belongs to a component that failed.
 
         Raises
@@ -1192,7 +1193,7 @@ class Session(BuildableSession):
                 "device signal, then the slot it reaches"
             )
 
-    def _connect(self, signal: SignalInstance, slot: Callable[..., None]) -> None:
+    def _connect(self, signal: SignalInstance, slot: SlotCallable) -> None:
         thread = self._affinity(slot)
         link = Connection(
             publisher=self._label(owner_of(signal)),
@@ -1210,7 +1211,7 @@ class Session(BuildableSession):
         self._connections.append(link)
         logger.debug(f"Connected {link}")
 
-    def _subscribe(self, signal: SignalR[Any], slot: Callable[..., None]) -> None:
+    def _subscribe(self, signal: SignalR[Any], slot: SlotCallable) -> None:
         # ophyd-async calls a subscriber on whatever thread produced the
         # reading, so the reading goes through a psygnal signal to reach the
         # thread the slot asks for
@@ -1265,7 +1266,7 @@ class Session(BuildableSession):
                 e.component,
             )
             return
-        self._connect(cast("SignalInstance", signal), cast("Callable[..., None]", slot))
+        self._connect(cast("SignalInstance", signal), cast("SlotCallable", slot))
 
     def _resolve_port(self, path: str, kind: str) -> object:
         """Look up the signal or slot a `component.port` path names."""
