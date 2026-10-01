@@ -11,13 +11,21 @@ import pytest
 
 from redsun.services import Service, identity, ready, wait_for_stop
 from redsun.services._process import NAME_VARIABLE, READY_VARIABLE
-from redsun.services._transports import CHANNEL_ACCESS, TRANSPORTS, ChannelAccess
+from redsun.services._transports import (
+    CHANNEL_ACCESS,
+    PV_ACCESS,
+    TRANSPORTS,
+    ChannelAccess,
+    PVAccess,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
 PROCESS_STAND_IN = "mock_pkg.service.process_stand_in"
 PROCESS_READY = "process stand-in ready"
+REACHABLE_STAND_IN = "mock_pkg.service.reachable_stand_in"
+REACHABLE_READY = "reachable stand-in ready"
 MOCK_PACKAGES = str(Path(__file__).parents[1] / "launchable")
 
 
@@ -155,3 +163,29 @@ def test_a_service_logs_at_the_level_its_session_records_at(
     assert [(r.name, r.levelno) for r in tree] == [
         ("redsun.service.camera.redsun.stand_in", logging.INFO)
     ]
+
+
+def test_a_pva_service_is_ready_once_its_pv_answers(
+    monkeypatch: pytest.MonkeyPatch, service_log: pytest.LogCaptureFixture
+) -> None:
+    """Count a PVAccess service ready once its own PV answers on the loopback."""
+    monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
+    monkeypatch.setenv("EPICS_PVA_ADDR_LIST", "")
+    monkeypatch.setitem(TRANSPORTS, PV_ACCESS, PVAccess())
+    service = Service(
+        "reachable",
+        module=REACHABLE_STAND_IN,
+        args=["--pv", "REACH:VALUE"],
+        ready=REACHABLE_READY,
+        stop_timeout=5,
+        transport=PV_ACCESS,
+    )
+
+    try:
+        service.start()
+    finally:
+        service.stop()
+
+    info = messages(service_log, logging.INFO)
+    assert "Service 'reachable' started" in info
+    assert "Service 'reachable' stopped with exit code 0" in info

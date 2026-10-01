@@ -12,6 +12,8 @@ from typing import Final
 
 from redsun.log import DEFAULT_LEVEL, logger
 
+from ._transports import LOOPBACK
+
 NAME_VARIABLE: Final = "REDSUN_SERVICE_NAME"
 """Variable holding the name a session declares a launched service under."""
 
@@ -23,6 +25,9 @@ READY_VARIABLE: Final = "REDSUN_SERVICE_READY"
 
 LEVEL_VARIABLE: Final = "REDSUN_LOG_LEVEL"
 """Variable holding the name of the level the session records at."""
+
+ATTEMPT_TIMEOUT: Final = 1.0
+"""Seconds `ready_when_reachable` waits for each answer, and between failures."""
 
 
 @dataclass(frozen=True)
@@ -101,6 +106,32 @@ def ready() -> None:
     text = os.environ.get(READY_VARIABLE)
     if text is not None:
         print(text, flush=True)
+
+
+async def ready_when_reachable(pv: str) -> None:
+    """Call [`ready`][redsun.services.ready] once *pv* answers over PVAccess.
+
+    For a server that prints no line of its own once it serves. *pv* is
+    looked for on the loopback, where a launched service listens; it needs
+    `p4p`, which a service serving PVAccess already has. A failed attempt
+    other than a timeout is logged as a warning and retried.
+    """
+    from p4p.client.asyncio import Context  # noqa: PLC0415
+
+    with Context("pva", conf={"EPICS_PVA_ADDR_LIST": LOOPBACK}) as client:
+        while True:
+            try:
+                await asyncio.wait_for(client.get(pv), timeout=ATTEMPT_TIMEOUT)
+            except TimeoutError:
+                continue
+            except Exception as error:  # noqa: BLE001
+                # the session waits for the ready line, so a failure here
+                # would otherwise show only as its startup timeout
+                logger.warning("%s did not answer, retrying: %s", pv, error)
+                await asyncio.sleep(ATTEMPT_TIMEOUT)
+                continue
+            break
+    ready()
 
 
 async def wait_for_stop() -> None:

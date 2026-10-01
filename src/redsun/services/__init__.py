@@ -14,6 +14,7 @@ from ._process import (
     configure_logging,
     identity,
     ready,
+    ready_when_reachable,
     stop_on_request,
     wait_for_stop,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "configure_logging",
     "identity",
     "ready",
+    "ready_when_reachable",
     "stop_on_request",
     "wait_for_stop",
 ]
