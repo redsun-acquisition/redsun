@@ -234,18 +234,13 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         Initial readings for the same keys; only `reading["value"]` is read.
     parent
         Parent widget.
-
-    Signals
-    -------
-    sig_property_changed : Signal[str, str, Any]
-        Emitted when the user commits an edit, which stays pending until
-        `set_value` or `revert` settles it.
-        - str: object name
-        - str: property name
-        - Any: new value
     """
 
     sig_property_changed = Signal(str, str, object)
+    """Emitted with the object name, property name and new value of a committed edit.
+
+    The edit stays pending until `set_value` or `revert` settles it.
+    """
 
     def __init__(
         self,
@@ -263,12 +258,12 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.setColumnCount(2)
         self.setHeaderLabels(["Setting", "Value"])
         self.setHeaderHidden(True)
-        _hdr = self.header()
-        if _hdr is not None:
-            _hdr.setSectionResizeMode(
+        header = self.header()
+        if header is not None:
+            header.setSectionResizeMode(
                 0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
             )
-            _hdr.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.setRootIsDecorated(False)
         self.setIndentation(12)
         self.setAlternatingRowColors(True)
@@ -368,14 +363,6 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         return item
 
     def _build(self) -> None:
-        """Populate the tree."""
-        self.clear()
-        self._widgets.clear()
-        self._build_from_keys()
-        self.expandAll()
-        self.resizeColumnToContents(0)
-
-    def _build_from_keys(self) -> None:
         """Build the tree from each key's device name and property path."""
         owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
         groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
@@ -394,3 +381,5 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
                     groups[(owner, group)] = self._make_group_item(group, parent)
                 parent = groups[(owner, group)]
             self._add_leaf(parent, full_key, prop, desc, readonly)
+        self.expandAll()
+        self.resizeColumnToContents(0)
