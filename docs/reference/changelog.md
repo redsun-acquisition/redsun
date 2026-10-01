@@ -15,6 +15,12 @@ a migration guide such as [How to migrate from 0.13](../how-to/migrate-from-0.13
 shows how to move code across it.
 Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 
+## [0.14.3] - 01-10-2026
+
+### Added
+
+- Add service process functions, args mapping and Attach address ([#153](https://github.com/redsun-acquisition/redsun/pull/153))
+
 ## [0.14.2] - 30-09-2026
 
 ### Added
@@ -45,3 +51,4 @@ Releases up to 0.13.2 are in the [previous changelog](previous-changelog.md).
 [0.14.0]: https://github.com/redsun-acquisition/redsun/compare/v0.13.2...v0.14.0
 [0.14.1]: https://github.com/redsun-acquisition/redsun/compare/v0.14.0...v0.14.1
 [0.14.2]: https://github.com/redsun-acquisition/redsun/compare/v0.14.1...v0.14.2
+[0.14.3]: https://github.com/redsun-acquisition/redsun/compare/v0.14.2...v0.14.3
