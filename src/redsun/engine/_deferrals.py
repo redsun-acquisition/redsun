@@ -106,5 +106,6 @@ class Deferrals:
     async def _apply(self, apply: Callable[[], Awaitable[None]]) -> None:
         try:
             await apply()
-        except Exception:  # noqa: BLE001 - one failed change must not stop the queue
+        # one failed change must not stop the queue
+        except Exception:  # noqa: BLE001
             logger.exception("A deferred change failed")
