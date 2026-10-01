@@ -4,7 +4,7 @@
 a `PlanSpec` describing its parameters, from which a view builds the controls
 of the plan.
 
-`_ANN_HANDLER_MAP` lists `(predicate, handler)` pairs turning annotations into
+`_fields_from_annotation` turns a `Literal` or device annotation into
 `ParamDescription` fields (choices, `device_proto`, `multiselect`).
 """
 
@@ -29,7 +29,6 @@ from typing import (
     get_origin,
 )
 
-from ophyd_async.core import Device as OADevice
 from typing_extensions import Format, evaluate_forward_ref, get_annotations
 
 from redsun.engine.actions import PlanAction
@@ -43,6 +42,8 @@ from redsun.presenter.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+
+    from ophyd_async.core import Device as OADevice
 
 
 class UnresolvableAnnotationError(TypeError):
@@ -93,16 +94,6 @@ class ParamKind(IntEnum):
 
     VAR_KEYWORD = 4
     """Any number of values given by name, as `**kwargs`."""
-
-
-# Mapping from inspect.Parameter.kind to our ParamKind
-_PARAM_KIND_MAP: dict[Any, ParamKind] = {
-    Parameter.POSITIONAL_ONLY: ParamKind.POSITIONAL_ONLY,
-    Parameter.POSITIONAL_OR_KEYWORD: ParamKind.POSITIONAL_OR_KEYWORD,
-    Parameter.VAR_POSITIONAL: ParamKind.VAR_POSITIONAL,
-    Parameter.KEYWORD_ONLY: ParamKind.KEYWORD_ONLY,
-    Parameter.VAR_KEYWORD: ParamKind.VAR_KEYWORD,
-}
 
 
 @dataclass
@@ -173,110 +164,34 @@ class _FieldsFromAnnotation(NamedTuple):
     device_proto: type[Any] | None = None
 
 
-def _handle_literal(
+def _fields_from_annotation(
     ann: Any,
-    _: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation:
-    return _FieldsFromAnnotation(choices=list(get_args(ann)))
-
-
-def _device_fields(
-    proto: Any,
+    kind: ParamKind,
     devices: cabc.Mapping[str, OADevice],
-    multiselect: bool,
 ) -> _FieldsFromAnnotation:
-    """Offer the devices matching *proto* as choices, keyed by their name."""
-    matching = [key for key, obj in devices.items() if isinstance(obj, proto)]
+    """Return the choices a `Literal` or device annotation offers.
+
+    A device annotation offers the names of the devices matching it. Any other
+    annotation, one no device matches, or one that raises while inspected
+    gives empty fields.
+    """
+    try:
+        if get_origin(ann) is Literal:
+            return _FieldsFromAnnotation(choices=list(get_args(ann)))
+        if isdeviceset(ann) or isdevicesequence(ann):
+            proto, multiselect = get_args(ann)[0], True
+        elif isdevice(ann):
+            proto, multiselect = ann, kind is ParamKind.VAR_POSITIONAL
+        else:
+            return _FieldsFromAnnotation()
+        matching = [key for key, obj in devices.items() if isinstance(obj, proto)]
+    except Exception:  # noqa: BLE001 - an annotation that cannot be inspected offers no choices, never a crash
+        return _FieldsFromAnnotation()
     if not matching:
         return _FieldsFromAnnotation()
     return _FieldsFromAnnotation(
-        choices=matching,
-        multiselect=multiselect,
-        device_proto=proto,
+        choices=matching, multiselect=multiselect, device_proto=proto
     )
-
-
-def _handle_device_collection(
-    ann: Any,
-    devices: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation:
-    return _device_fields(get_args(ann)[0], devices, multiselect=True)
-
-
-def _handle_device(
-    ann: Any,
-    devices: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation:
-    return _device_fields(ann, devices, multiselect=False)
-
-
-def _handle_var_positional_device(
-    ann: Any,
-    devices: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation:
-    return _device_fields(ann, devices, multiselect=True)
-
-
-_AnnHandler = cabc.Callable[[Any, cabc.Mapping[str, OADevice]], _FieldsFromAnnotation]
-_AnnPredicate = cabc.Callable[[Any, ParamKind], bool]
-
-#: `(predicate, handler)` pairs, tried in order; the first match wins.
-_ANN_HANDLER_MAP: list[tuple[_AnnPredicate, _AnnHandler]] = [
-    (
-        # get_origin returns Literal at runtime, which mypy cannot prove
-        lambda ann, _: get_origin(ann) is Literal,  # type: ignore[comparison-overlap]
-        _handle_literal,
-    ),
-    (
-        lambda ann, _: isdeviceset(ann),
-        _handle_device_collection,
-    ),
-    (
-        lambda ann, _: isdevicesequence(ann),
-        _handle_device_collection,
-    ),
-    (
-        lambda ann, kind: kind is ParamKind.VAR_POSITIONAL and isdevice(ann),
-        _handle_var_positional_device,
-    ),
-    (
-        lambda ann, _: isdevice(ann),
-        _handle_device,
-    ),
-]
-
-
-def _try_dispatch_entry(
-    predicate: _AnnPredicate,
-    handler: _AnnHandler,
-    ann: Any,
-    kind: ParamKind,
-    devices: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation | None:
-    """Try one `(predicate, handler)` entry; return `None` if it raises."""
-    try:
-        if predicate(ann, kind):
-            return handler(ann, devices)
-        return None
-    except Exception:  # noqa: BLE001 - a failing predicate means "no match", never a crash
-        return None
-
-
-def _dispatch_annotation(
-    ann: Any,
-    kind: ParamKind,
-    devices: cabc.Mapping[str, OADevice],
-) -> _FieldsFromAnnotation:
-    """Walk `_ANN_HANDLER_MAP` and call the first matching handler.
-
-    An entry whose predicate or handler raises is skipped; an annotation no
-    entry matches gives empty fields.
-    """
-    for predicate, handler in _ANN_HANDLER_MAP:
-        result = _try_dispatch_entry(predicate, handler, ann, kind, devices)
-        if result is not None:
-            return result
-    return _FieldsFromAnnotation()
 
 
 def _extract_action_meta(
@@ -389,8 +304,8 @@ def _is_renderable(ann: Any) -> bool:
     if _safe_issubclass(ann, enum.Enum):
         return True
     # a sequence of anything but devices is an editable list of its element
-    # type; a device sequence is handled by the dispatch table, which offers
-    # the matching device names as choices instead
+    # type; a device sequence is handled by _fields_from_annotation, which
+    # offers the matching device names as choices instead
     return issequence(ann) and not isdevicesequence(ann) and not isdeviceset(ann)
 
 
@@ -446,8 +361,6 @@ def create_plan_spec(
     UnresolvableAnnotationError
         If an annotation names something missing at runtime, or no view can
         build a control for it.
-    RuntimeError
-        On an unexpected `inspect.Parameter.kind`.
     ValueError
         If *plan* declares two actions of one name.
     """
@@ -501,15 +414,13 @@ def create_plan_spec(
 
         actions_meta = _extract_action_meta(param, ann)
 
-        pkind = _PARAM_KIND_MAP.get(param.kind)
-        if pkind is None:
-            raise RuntimeError(f"Unexpected parameter kind: {param.kind!r}")
+        pkind = ParamKind(param.kind)
 
         # Action parameters never get a widget, so they skip dispatch
         if actions_meta is not None:
             fields = _FieldsFromAnnotation()
         else:
-            fields = _dispatch_annotation(ann, pkind, devices)
+            fields = _fields_from_annotation(ann, pkind, devices)
 
         # refuse now: failing here is clearer than a broken control or a
         # crash once the plan runs
