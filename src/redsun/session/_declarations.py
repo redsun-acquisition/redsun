@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from .._config import ComponentEntry, SessionFile
+    from ..services._service import ArgValue
     from ._protocols import NamedComponent
 
 logger = logging.getLogger("redsun")
@@ -163,8 +164,8 @@ class Launch:
     prefix: str | None = None
     """Prefix given to each device naming the service."""
 
-    args: Sequence[str] | None = None
-    """Command-line arguments following the module."""
+    args: Sequence[str] | Mapping[str, ArgValue] | None = None
+    """Command-line arguments following the module, as a list or as options."""
 
     stop_timeout: float | None = None
     """Seconds each step of stopping waits for the process to exit."""

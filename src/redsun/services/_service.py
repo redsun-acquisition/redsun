@@ -9,8 +9,9 @@ import subprocess
 import sys
 import threading
 from collections import deque
+from collections.abc import Mapping
 from datetime import datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from psygnal import Signal
 
@@ -58,6 +59,40 @@ PVXS_LEVELS: Final = {
 }
 
 
+ArgValue: TypeAlias = str | int | float | bool | None | list[str | int | float]
+"""A value of one option in an `args` mapping."""
+
+
+def command_line(args: Sequence[str] | Mapping[str, ArgValue]) -> list[str]:
+    """Return *args* as the arguments following the module.
+
+    A list is kept as given. A mapping gives `--key value` for each entry:
+    `True` gives `--key` alone, `False` and `None` give nothing, and a list
+    gives `--key` followed by each item. Keys are used as written.
+
+    Raises
+    ------
+    TypeError
+        If *args* is text rather than a list or a mapping.
+    """
+    if isinstance(args, str):
+        raise TypeError(f"args must be a list or a mapping, not the text {args!r}")
+    if not isinstance(args, Mapping):
+        return list(args)
+    line: list[str] = []
+    for key, value in args.items():
+        if value is None or value is False:
+            continue
+        line.append(f"--{key}")
+        if value is True:
+            continue
+        if isinstance(value, list):
+            line.extend(str(item) for item in value)
+        else:
+            line.append(str(value))
+    return line
+
+
 class Service:
     """A server devices talk to, and its process if the session owns it.
 
@@ -76,7 +111,8 @@ class Service:
     module
         Module to run. `None` attaches to a service that is already running.
     args
-        Command-line arguments following the module.
+        Arguments following the module: a list, or a mapping of option names
+        to values, which `--` is put before.
     ready
         Text of the output line marking the service ready. `None` counts it
         ready once its process starts.
@@ -89,7 +125,7 @@ class Service:
     Raises
     ------
     TypeError
-        If *args* are given without a *module*.
+        If *args* are given without a *module*, or as text.
     ValueError
         If *transport* is not a protocol a session accepts.
     """
@@ -119,7 +155,7 @@ class Service:
         name: str,
         prefix: str = "",
         module: str | None = None,
-        args: Sequence[str] = (),
+        args: Sequence[str] | Mapping[str, ArgValue] = (),
         ready: str | None = None,
         stop_timeout: float = STOP_TIMEOUT,
         transport: str = CHANNEL_ACCESS,
@@ -137,7 +173,7 @@ class Service:
         self.name = name
         self.prefix = prefix
         self.module = module
-        self.args = list(args)
+        self.args = command_line(args)
         self.ready = ready
         self.stop_timeout = stop_timeout
         self.transport = transport

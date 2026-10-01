@@ -12,7 +12,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -599,3 +599,28 @@ def test_a_service_given_an_unknown_transport_names_the_known_ones() -> None:
     """Refuse an unknown transport, naming the ones a session accepts."""
     with pytest.raises(ValueError, match="'channel-access', 'pv-access'"):
         Service("misnamed", module=STAND_IN, transport="pv_access")
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"adapter": "DahengGalaxy"}, ["--adapter", "DahengGalaxy"]),
+        ({"exposure": 0.5, "binning": 2}, ["--exposure", "0.5", "--binning", "2"]),
+        ({"count": 0}, ["--count", "0"]),
+        ({"verbose": True}, ["--verbose"]),
+        ({"verbose": False, "port": None}, []),
+        ({"axes": ["x", "y"]}, ["--axes", "x", "y"]),
+        (["--adapter", "DahengGalaxy"], ["--adapter", "DahengGalaxy"]),
+    ],
+)
+def test_arguments_are_given_as_a_list_or_as_options(
+    args: list[str] | dict[str, Any], expected: list[str]
+) -> None:
+    """Turn a mapping of options into command-line arguments, and keep a list as given."""
+    assert Service("camera", module="mylab.camera", args=args).args == expected
+
+
+def test_arguments_given_as_text_are_refused() -> None:
+    """Refuse arguments written as one piece of text."""
+    with pytest.raises(TypeError, match="a list or a mapping"):
+        Service("camera", module="mylab.camera", args="--port COM4")
