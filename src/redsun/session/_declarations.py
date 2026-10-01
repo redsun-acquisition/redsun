@@ -569,7 +569,11 @@ def read(
     declarations: dict[str, Declaration] = {}
 
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or is_hook(hint) or is_service(hint):
+        if (
+            attr.startswith("_")
+            or is_marked(hint, Hook)
+            or is_marked(hint, ServiceMark)
+        ):
             continue
         target, metadata, kind = split(hint)
         if kind is None:
@@ -577,16 +581,11 @@ def read(
             continue
         refused = refusal(target, kind, f"{cls.__qualname__}.{attr}", frontend)
 
+        cfg_key, name = names_of(attr, metadata)
         inline: dict[str, Any] = {}
-        cfg_key = attr
-        name = attr
         for marker in metadata:
             if isinstance(marker, Declare):
                 inline = marker.kwargs
-            elif isinstance(marker, FromConfig):
-                cfg_key = marker.key
-            elif isinstance(marker, Alias):
-                name = marker.name
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
         declaration = Declaration(
@@ -606,11 +605,11 @@ def service_attributes(cls: type) -> dict[str, str]:
     """Return the attribute each service *cls* annotates is declared under, by name."""
     found: dict[str, str] = {}
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_service(hint):
+        if attr.startswith("_") or not is_marked(hint, ServiceMark):
             continue
         _, metadata, _ = split(hint)
-        names = [marker.name for marker in metadata if isinstance(marker, Alias)]
-        found[names[-1] if names else attr] = attr
+        _, name = names_of(attr, metadata)
+        found[name] = attr
     return found
 
 
@@ -637,20 +636,15 @@ def read_services(
     found: dict[str, Service] = {}
     read_keys: set[str] = set()
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_service(hint):
+        if attr.startswith("_") or not is_marked(hint, ServiceMark):
             continue
         _, metadata, _ = split(hint)
         where = f"{cls.__qualname__}.{attr}"
+        cfg_key, name = names_of(attr, metadata)
         given: Launch | Attach | None = None
-        cfg_key = attr
-        name = attr
         for marker in metadata:
             if isinstance(marker, (Launch, Attach)):
                 given = marker
-            elif isinstance(marker, FromConfig):
-                cfg_key = marker.key
-            elif isinstance(marker, Alias):
-                name = marker.name
             elif isinstance(marker, Declare):
                 raise TypeError(
                     f"{where} declares a service with Declare; describe it with "
@@ -699,7 +693,7 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
     """
     found: dict[str, HookDeclaration] = {}
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_hook(hint):
+        if attr.startswith("_") or not is_marked(hint, Hook):
             continue
         target, metadata, _ = split(hint)
         where = f"{cls.__qualname__}.{attr}"
@@ -870,18 +864,26 @@ def split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
     return target, markers, layers[0] if layers else None
 
 
-def is_hook(hint: Any) -> bool:
-    """Return whether *hint* is annotated as a hook implementation."""
-    if get_origin(hint) is not Annotated:
-        return False
-    return any(isinstance(m, Hook) for m in get_args(hint)[1:])
+def names_of(attr: str, metadata: Iterable[object]) -> tuple[str, str]:
+    """Return the configuration key and the name of what *attr* declares.
+
+    Both are *attr* unless a `FromConfig` or an `Alias` marker says otherwise,
+    the last of each winning.
+    """
+    cfg_key = name = attr
+    for marker in metadata:
+        if isinstance(marker, FromConfig):
+            cfg_key = marker.key
+        elif isinstance(marker, Alias):
+            name = marker.name
+    return cfg_key, name
 
 
-def is_service(hint: Any) -> bool:
-    """Return whether *hint* is annotated as a service."""
+def is_marked(hint: Any, marker: type) -> bool:
+    """Return whether *hint* is annotated with an instance of *marker*."""
     if get_origin(hint) is not Annotated:
         return False
-    return any(isinstance(m, ServiceMark) for m in get_args(hint)[1:])
+    return any(isinstance(m, marker) for m in get_args(hint)[1:])
 
 
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:
