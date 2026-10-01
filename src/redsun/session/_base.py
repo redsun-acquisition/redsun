@@ -1289,9 +1289,15 @@ class Session(BuildableSession):
                 e.component,
             )
             return
-        self._connect(cast("SignalInstance", signal), cast("SlotCallable", slot))
+        self._connect(signal, slot)
 
-    def _resolve_port(self, path: str, kind: str) -> object:
+    @overload
+    def _resolve_port(self, path: str, kind: Literal["signal"]) -> SignalInstance: ...
+    @overload
+    def _resolve_port(self, path: str, kind: Literal["slot"]) -> SlotCallable: ...
+    def _resolve_port(
+        self, path: str, kind: Literal["signal", "slot"]
+    ) -> SignalInstance | SlotCallable:
         """Look up the signal or slot a `component.port` path names."""
         component_name, _, port = path.partition(".")
         if not component_name or not port or "." in port:
