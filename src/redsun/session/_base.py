@@ -104,7 +104,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from ._questions import NoAnswer, answer, optional_arg, shape_of
+from ._questions import NoAnswer, answer, optional_arg, shape_of, without_none
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -1626,7 +1626,7 @@ class Session(BuildableSession):
             if not issubclass(declaration.cls, HasSetup):
                 continue
             for pname, hint in get_setup_params(declaration.cls).items():
-                wanted = optional_arg(hint) or hint
+                wanted = without_none(hint)
                 where = f"its {pname!r} parameter"
                 if wanted == CallbackCatalogue:
                     for router in routers:
@@ -1653,7 +1653,7 @@ class Session(BuildableSession):
             for pname, hint in injectable(
                 declaration.cls, declaration.cfg_kwargs
             ).items():
-                wanted = optional_arg(hint) or hint
+                wanted = without_none(hint)
                 target = by_type.get(wanted)
                 if wanted == CallbackCatalogue:
                     raise TypeError(
@@ -1969,7 +1969,7 @@ class Session(BuildableSession):
         """
         declarations = [d for d in self._components() if d.instance is not None]
         asked = {
-            d.name: [optional_arg(hint) or hint for hint in self._asked_for(d)]
+            d.name: [without_none(hint) for hint in self._asked_for(d)]
             for d in declarations
         }
         wanted = {hint for hints in asked.values() for hint in hints}

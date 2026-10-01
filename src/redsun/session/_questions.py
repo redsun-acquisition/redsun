@@ -20,6 +20,7 @@ __all__ = [
     "is_union",
     "optional_arg",
     "shape_of",
+    "without_none",
 ]
 
 Shape = Literal["one", "maybe", "every"]
@@ -40,6 +41,11 @@ def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
         return None
     args = [arg for arg in get_args(hint) if arg is not type(None)]
     return args[0] if len(args) == 1 else None
+
+
+def without_none(hint: TypeForm[Any]) -> TypeForm[Any]:
+    """Return `X` for `X | None`, and *hint* itself for anything else."""
+    return optional_arg(hint) or hint
 
 
 def is_protocol_union(hint: TypeForm[Any]) -> bool:
