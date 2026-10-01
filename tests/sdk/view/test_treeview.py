@@ -16,11 +16,13 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.qt
 
 
-def edited_tree() -> tuple[DescriptorTreeView, list[tuple[str, str, Any]]]:
-    """Return a tree whose gain the user has just changed from 1 to 100, and what it sent."""
+def edited_tree(
+    key: str = "cam-gain",
+) -> tuple[DescriptorTreeView, list[tuple[str, str, Any]]]:
+    """Return a tree whose *key* the user has just changed from 1 to 100, and what it sent."""
     view = DescriptorTreeView(
-        {"cam-gain": {"dtype": "integer", "source": "cam", "shape": []}},
-        {"cam-gain": {"value": 1, "timestamp": 0.0}},
+        {key: {"dtype": "integer", "source": "cam", "shape": []}},
+        {key: {"value": 1, "timestamp": 0.0}},
     )
     sent: list[tuple[str, str, Any]] = []
     view.sig_property_changed.connect(lambda *args: sent.append(args))
@@ -151,3 +153,12 @@ def test_a_value_changing_with_no_edit_pending_is_shown(qapp: QApplication) -> N
     view.set_value("cam-missing", 3)
 
     assert shown(view) == 7
+
+
+def test_an_edit_to_a_setting_with_no_owner_is_sent_with_no_owner(
+    qapp: QApplication,
+) -> None:
+    """Send an edit to a key with no device part with an empty owner, as the tree files it."""
+    _, sent = edited_tree("gain")
+
+    assert sent == [("", "gain", 100)]

@@ -25,6 +25,15 @@ if TYPE_CHECKING:
 __all__ = ["DescriptorTreeView"]
 
 
+def split_key(key: str) -> tuple[str, str]:
+    """Return *key*'s device and property: `cam-gain` gives `cam` and `gain`.
+
+    A key with no `-` belongs to no device, and gives an empty device name.
+    """
+    owner, dash, prop = key.partition("-")
+    return (owner, prop) if dash else ("", key)
+
+
 def assert_never(_: Dtype) -> Never:
     raise AssertionError("Expected code to be unreachable")
 
@@ -310,8 +319,8 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
-        owner, property = key.split("-", 1)
-        self.sig_property_changed.emit(owner, property, value)
+        owner, prop = split_key(key)
+        self.sig_property_changed.emit(owner, prop, value)
 
     def _add_leaf(
         self,
@@ -375,7 +384,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
         groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
         for full_key, desc in self._descriptors.items():
-            owner, prop = full_key.split("-", 1) if "-" in full_key else ("", full_key)
+            owner, prop = split_key(full_key)
             source = desc.get("source", "")
             readonly = source.split("://", 1)[-1] == "readonly" or source.endswith(
                 ":readonly"
