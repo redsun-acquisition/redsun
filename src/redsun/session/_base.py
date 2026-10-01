@@ -389,6 +389,8 @@ class Session(BuildableSession):
         source: Source | Sequence[Source],
         *,
         log_level: int | str | None = None,
+        profile: ProfileKind | None = None,
+        profile_dir: str | Path | None = None,
     ) -> Self:
         """Return a session described entirely by *source*.
 
@@ -420,7 +422,9 @@ class Session(BuildableSession):
                 [label(s) for s in as_sources(source)],
                 ["session: a session built with from_config must name itself"],
             )
-        session = base_for(cls, config.get("frontend"))(config, log_level=log_level)
+        session = base_for(cls, config.get("frontend"))(
+            config, log_level=log_level, profile=profile, profile_dir=profile_dir
+        )
         return cast("Self", session)
 
     @property

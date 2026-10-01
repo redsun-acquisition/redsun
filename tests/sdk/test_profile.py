@@ -168,3 +168,14 @@ def test_a_profile_that_cannot_be_written_is_logged_and_the_session_runs(
         r.levelno == logging.ERROR and "profile" in r.getMessage()
         for r in caplog.records
     )
+
+
+def test_a_session_from_a_file_takes_its_profile(tmp_path: Path) -> None:
+    """Write the profile of a session made with `from_config`."""
+    app = Session.from_config(
+        {"session": "from-file"}, profile="start", profile_dir=tmp_path
+    )
+    app.build()
+    app.shutdown()
+
+    assert len(profiles(tmp_path)) == 1
