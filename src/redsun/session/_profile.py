@@ -69,7 +69,7 @@ class SessionProfile:
     """Folder the profile is written to; `None` for the one beside the logs."""
 
     profiler: pyinstrument.Profiler
-    """The profiler, started as the profile is made."""
+    """The profiler; `start` starts it."""
 
     log: SessionFileHandler | None = None
     """The run's log file handler, which names the profile once followed."""
@@ -77,7 +77,8 @@ class SessionProfile:
     started: datetime = field(default_factory=lambda: datetime.now().astimezone())
     """When the profile started, naming it when no log file was opened."""
 
-    def __post_init__(self) -> None:
+    def start(self) -> None:
+        """Start sampling the thread this is called on."""
         self.profiler.start()
 
     def follow(self, log: SessionFileHandler) -> None:
@@ -103,16 +104,18 @@ class SessionProfile:
     def stop(self, session: str) -> None:
         """Stop profiling and write the profile, once.
 
-        A failure to write is logged rather than raised.
+        A failure to stop or to write is logged rather than raised.
         """
         if not self.profiler.is_running:
             return
-        self.profiler.stop()
         path = self.target(session)
         try:
+            self.profiler.stop()
             path.parent.mkdir(parents=True, exist_ok=True)
             self.profiler.write_html(path, timeline=True)
-        except OSError as e:
+        except Exception as e:  # noqa: BLE001
+            # a profile is a diagnostic: failing to make one must not end or
+            # fail the session it describes
             logger.error("Could not write the profile to %s: %s", path, e)
             return
         logger.info("Profile written to %s", path)

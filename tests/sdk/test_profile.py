@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
+import pyinstrument
 import pytest
 
 from redsun import AsPresenter, BuildError, ConfigurationError, Session
@@ -179,3 +180,36 @@ def test_a_session_from_a_file_takes_its_profile(tmp_path: Path) -> None:
     app.shutdown()
 
     assert len(profiles(tmp_path)) == 1
+
+
+def test_a_refused_log_level_leaves_no_profiler_running(tmp_path: Path) -> None:
+    """Start no profiler when the session is refused, so the next one can profile."""
+    with pytest.raises(ValueError):
+        Empty(log_level="verbose", profile="run", profile_dir=tmp_path)
+
+    app = Profiled(profile="start", profile_dir=tmp_path).build()
+    app.shutdown()
+
+
+@pytest.mark.parametrize("method", ["stop", "write_html"])
+def test_a_profiler_that_fails_is_logged_and_the_build_goes_on(
+    method: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log a profiler that fails to stop or to write, and still build and shut down."""
+    real = getattr(pyinstrument.Profiler, method)
+
+    def failing(profiler: pyinstrument.Profiler, *args: Any, **kwargs: Any) -> Any:
+        real(profiler, *args, **kwargs)
+        raise RuntimeError("the profiler failed")
+
+    monkeypatch.setattr(pyinstrument.Profiler, method, failing)
+    app = Profiled(profile="start", profile_dir=tmp_path).build()
+    app.shutdown()
+
+    assert any(
+        r.levelno == logging.ERROR and "the profiler failed" in r.getMessage()
+        for r in caplog.records
+    )

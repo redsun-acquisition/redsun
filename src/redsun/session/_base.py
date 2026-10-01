@@ -333,7 +333,7 @@ class Session(BuildableSession):
         ImportError
             If *profile* is given and `pyinstrument` is not installed.
         """
-        profiler = open_profile(profile, profile_dir)
+        recording = open_profile(profile, profile_dir)
         if log_level is not None:
             set_level(log_level)
         self._config = config
@@ -377,10 +377,12 @@ class Session(BuildableSession):
         self._shared: dict[Key, str] = {}
         self._shared_values: list[tuple[str, object]] = []
         self._is_built = False
-        self._profile = profiler
-        if profiler is not None:
-            # registered first, so it runs last: a run profile holds every
-            # release, and a build that raises still writes its profile
+        self._profile = recording
+        if recording is not None:
+            # started last, so a refused keyword leaves nothing running; its
+            # stop registered first, so it runs last: a run profile holds
+            # every release, and a build that raises still writes its profile
+            recording.start()
             self.on_release(self._stop_profile)
 
     @classmethod
