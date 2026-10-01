@@ -396,6 +396,9 @@ def service_record(service: str, line: str) -> logging.LogRecord:
             uid=pvxs["name"],
         )
         return logging.makeLogRecord(fields)
+    # a JSON record is an object; any other line would only fail to parse
+    if not line.startswith("{"):
+        return logging.makeLogRecord(fields)
     try:
         data = json.loads(line)
         if "record" in data:
