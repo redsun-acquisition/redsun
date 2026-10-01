@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 import sys
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
@@ -243,6 +244,7 @@ class Session(BuildableSession):
         "_built_components",
         "_callbacks",
         "_catalog",
+        "_class_counts",
         "_config",
         "_connections",
         "_declarations",
@@ -347,6 +349,7 @@ class Session(BuildableSession):
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
+        self._class_counts: Counter[type] = Counter()
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
         self._transport = CHANNEL_ACCESS
@@ -738,6 +741,7 @@ class Session(BuildableSession):
         for declaration in self._declarations.values():
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
+        self._count_classes()
         # read only classes, so a mistake is reported before anything starts
         components = self._components()
         self._refuse_component_values(components)
@@ -767,6 +771,18 @@ class Session(BuildableSession):
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(self.hooks.values()):
             self._register_teardown(hook)
+
+    def _count_classes(self) -> None:
+        """Count the components declaring each class, naming those declared twice."""
+        components = self._components()
+        self._class_counts = Counter(d.cls for d in components)
+        for cls, count in self._class_counts.items():
+            if count > 1:
+                logger.debug(
+                    "%s is declared as %s; it can only be injected by name",
+                    cls.__name__,
+                    ", ".join(d.name for d in components if d.cls is cls),
+                )
 
     def _open_logs(self, path_provider: SessionPathProvider) -> None:
         """Write this run's records to the session's log files, under its root.
@@ -1526,7 +1542,7 @@ class Session(BuildableSession):
                 self._skip(declaration, unwrapped(e))
                 continue
             store.register_provider(constant(instance), type_hint=declaration.key)
-            if self._is_unique(declaration):
+            if self._class_counts[declaration.cls] == 1:
                 store.register_provider(constant(instance), type_hint=declaration.cls)
             shared = register_shared(
                 store, instance, declaration.cls, declaration.name, self._shared
@@ -1573,7 +1589,10 @@ class Session(BuildableSession):
             if declaration.name in self._failed
             and (
                 declaration.key in wanted
-                or (declaration.cls in wanted and self._is_unique(declaration))
+                or (
+                    declaration.cls in wanted
+                    and self._class_counts[declaration.cls] == 1
+                )
                 or wanted & set(shared_keys(declaration.cls).values())
             )
         }
@@ -1596,7 +1615,7 @@ class Session(BuildableSession):
         TypeError
             If a component takes a value a later layer owns.
         """
-        by_type = owners(declarations)
+        by_type = owners(declarations, self._class_counts)
         routers = [d for d in declarations if issubclass(d.cls, DocumentRouter)]
         for declaration in declarations:
             if not issubclass(declaration.cls, HasSetup):
@@ -1623,7 +1642,7 @@ class Session(BuildableSession):
         TypeError
             Naming the parameter and the component that owns what it asks for.
         """
-        by_type = owners(declarations)
+        by_type = owners(declarations, self._class_counts)
         by_type.update({d.key: d for d in declarations})
         for declaration in declarations:
             for pname, hint in injectable(
@@ -1681,17 +1700,6 @@ class Session(BuildableSession):
             self.frontend.check_placement(
                 attachable, attachable.placement, f"view {declaration.name!r}"
             )
-
-    def _is_unique(self, declaration: Declaration) -> bool:
-        others = [d for d in self._components() if d.cls is declaration.cls]
-        if len(others) == 1:
-            return True
-        logger.debug(
-            "%s is declared as %s; it can only be injected by name",
-            declaration.cls.__name__,
-            ", ".join(d.name for d in others),
-        )
-        return False
 
     def start_services(self) -> None:
         """Start the launched services together, and attach to the rest.
@@ -2003,9 +2011,8 @@ class Session(BuildableSession):
 
         Holding a value a component shares is not holding the component.
         """
-        classes = [d.cls for d in declarations]
         by_type: dict[Any, Declaration] = {
-            d.cls: d for d in declarations if classes.count(d.cls) == 1
+            d.cls: d for d in declarations if self._class_counts[d.cls] == 1
         }
         by_type.update({d.key: d for d in declarations})
         held = {
@@ -2096,16 +2103,13 @@ def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> Non
 
 
 def owners(
-    declarations: list[Declaration],
+    declarations: list[Declaration], counts: Mapping[type, int]
 ) -> dict[Any, Declaration]:
     """Return every type naming a component, by the declaration answering it.
 
-    A class declared twice is left out: nothing can be injected by it, so no
-    edge can name it.
+    A class *counts* finds declared twice is left out: nothing can be injected
+    by it, so no edge can name it.
     """
-    counts: dict[type, int] = {}
-    for declaration in declarations:
-        counts[declaration.cls] = counts.get(declaration.cls, 0) + 1
     found: dict[Any, Declaration] = {}
     for declaration in declarations:
         if counts[declaration.cls] == 1:
