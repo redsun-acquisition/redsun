@@ -89,7 +89,6 @@ from ._factories import (
     factory,
     get_setup_params,
     injectable,
-    optional_arg,
     provider,
     setup_call,
 )
@@ -105,7 +104,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from ._questions import NoAnswer, answer, shape_of
+from ._questions import NoAnswer, answer, optional_arg, shape_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable

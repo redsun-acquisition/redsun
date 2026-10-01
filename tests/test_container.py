@@ -44,7 +44,8 @@ from redsun.aio import run_coro
 from redsun.ports import WiringError
 from redsun.session import Layer
 from redsun.session._declarations import accepts_name, check
-from redsun.session._factories import injectable, optional_arg, synthesize
+from redsun.session._factories import injectable, synthesize
+from redsun.session._questions import optional_arg
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

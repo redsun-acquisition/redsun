@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import inspect
-from types import UnionType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Union,
-    get_args,
-    get_origin,
-)
+from typing import TYPE_CHECKING, Any
 
 from ..injection._census import devices_protocol
+from ._questions import is_union
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -26,7 +20,6 @@ __all__ = [
     "factory",
     "get_setup_params",
     "injectable",
-    "optional_arg",
     "provider",
     "resolved",
     "setup_call",
@@ -200,19 +193,6 @@ def supplied(deps: Mapping[str, Any], optional: set[str]) -> dict[str, Any]:
         for pname, value in deps.items()
         if value is not None or pname not in optional
     }
-
-
-def optional_arg(hint: TypeForm[Any]) -> TypeForm[Any] | None:
-    """Return `X` for `X | None`, or `None` for anything else."""
-    if not is_union(hint):
-        return None
-    args = [arg for arg in get_args(hint) if arg is not type(None)]
-    return args[0] if len(args) == 1 else None
-
-
-def is_union(hint: TypeForm[Any]) -> bool:
-    """Return whether *hint* is a union, written as `X | Y` or `Union[X, Y]`."""
-    return get_origin(hint) in (Union, UnionType)
 
 
 def factory(
