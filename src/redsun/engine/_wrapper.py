@@ -14,6 +14,7 @@ from bluesky.utils import IllegalMessageSequence
 from psygnal import Signal
 
 from redsun.aio import get_shared_loop
+from redsun.engine.actions import SRLatch
 from redsun.log import logger
 
 from ._progress import PlanProgress, ProgressState, depth, empty_state, snapshot
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
 
     from bluesky.protocols import Status
     from bluesky.utils import Msg, Subscribers
-
-    from redsun.engine.actions import SRLatch
 
     Preprocessor: TypeAlias = Callable[
         [Iterable[Msg], Callable[[Msg], Msg | None]], Iterable[Msg]
@@ -529,17 +528,12 @@ class RunEngine(BlueskyRunEngine):
         interval: float | None = msg.kwargs.get("poll_interval", None)
         wait_for: Literal["set", "reset"] = msg.kwargs.get("wait_for", "set")
 
-        # Create a mapping to track which task corresponds to which latch
-        if wait_for == "set":
-            latch_tasks = {
-                asyncio.create_task(latch.wait_for_set(), name=name)
-                for name, latch in latch_map.items()
-            }
-        else:
-            latch_tasks = {
-                asyncio.create_task(latch.wait_for_reset(), name=name)
-                for name, latch in latch_map.items()
-            }
+        wait = SRLatch.wait_for_set if wait_for == "set" else SRLatch.wait_for_reset
+        # each task is named after its latch, so a finished task names the latch
+        latch_tasks = {
+            asyncio.create_task(wait(latch), name=name)
+            for name, latch in latch_map.items()
+        }
 
         try:
             done, _ = await asyncio.wait(
