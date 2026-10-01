@@ -1,7 +1,7 @@
 """Checkbox list widget for `Sequence[PDevice]` and `Set[PDevice]` parameters.
 
 `DeviceSequenceEdit` subclasses `magicgui.widgets.bases.ValueWidget` and is
-backed by a Qt `_CheckboxListWidget`. Its backend, `_QCheckboxBackend`,
+backed by a Qt `CheckboxListWidget`. Its backend, `QCheckboxBackend`,
 implements `ValueWidgetProtocol`, so `magicgui` containers accept the widget
 as is, without `_explicitly_hidden` or `_LabeledWidget` errors.
 
@@ -27,19 +27,19 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class _QCheckboxBackend(QBaseValueWidget):
+class QCheckboxBackend(QBaseValueWidget):
     """Qt backend for `DeviceSequenceEdit`.
 
-    Wraps `_CheckboxListWidget` and satisfies `ValueWidgetProtocol`, so
+    Wraps `CheckboxListWidget` and satisfies `ValueWidgetProtocol`, so
     `magicgui` containers accept it like any widget.
     """
 
-    _qwidget: _CheckboxListWidget
+    _qwidget: CheckboxListWidget
 
     def __init__(self, parent: QtW.QWidget | None = None, **kwargs: Any) -> None:
         choices: list[str] = kwargs.pop("choices", [])
         super().__init__(
-            _CheckboxListWidget,
+            CheckboxListWidget,
             "get_value",
             "set_value",
             "selection_changed",
@@ -99,7 +99,7 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         label: str | None = None,
     ) -> None:
         super().__init__(
-            widget_type=_QCheckboxBackend,
+            widget_type=QCheckboxBackend,
             name=name,
             label=label,
             backend_kwargs={"choices": choices or []},
@@ -116,7 +116,7 @@ class DeviceSequenceEdit(ValueWidget[list[str]]):
         self._widget._mgui_set_value(value)
 
 
-class _CheckboxListWidget(QtW.QWidget):
+class CheckboxListWidget(QtW.QWidget):
     """Vertical stack of `QCheckBox` widgets plus a count label.
 
     Choices are supplied after construction through `set_choices`, since

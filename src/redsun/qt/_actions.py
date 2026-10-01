@@ -58,7 +58,7 @@ def action_from_entry(entry: object, position: int) -> Action[..., Any]:
             f"actions entry at position {position} must be a mapping, got "
             f"{type(entry).__name__}"
         )
-    fields: dict[str, Any] = {str(key): value for key, value in entry.items()}
+    fields = {str(key): value for key, value in entry.items()}
     declared = fields.get("id")
     named = repr(declared) if isinstance(declared, str) else f"at position {position}"
     unknown = sorted(key for key in fields if key not in Action.model_fields)

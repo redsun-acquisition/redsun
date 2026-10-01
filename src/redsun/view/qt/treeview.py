@@ -245,7 +245,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         - Any: new value
     """
 
-    sig_property_changed: Signal = Signal(str, str, object)
+    sig_property_changed = Signal(str, str, object)
 
     def __init__(
         self,

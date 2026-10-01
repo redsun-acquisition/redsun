@@ -20,7 +20,7 @@ from redsun.log import (
 )
 from redsun.qt import QtSession
 from redsun.view.qt import _log_view
-from redsun.view.qt._log_view import _ON_DARK, _ON_LIGHT
+from redsun.view.qt._log_view import ON_DARK, ON_LIGHT
 from redsun.view.qt.builtins import LogView
 
 if TYPE_CHECKING:
@@ -133,7 +133,7 @@ def test_a_burst_is_drawn_a_batch_at_a_time(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Draw at most one batch of records per tick."""
-    monkeypatch.setattr(_log_view, "_BATCH_SIZE", 10)
+    monkeypatch.setattr(_log_view, "BATCH_SIZE", 10)
     view = make_view()
 
     for i in range(25):
@@ -245,12 +245,12 @@ def test_the_services_tab_appears_once_a_service_logs(
 ) -> None:
     """Show the services tab only once a service logs."""
     view = make_view()
-    assert not view._tabs.isTabVisible(_log_view._SERVICES_TAB)
+    assert not view._tabs.isTabVisible(_log_view.SERVICES_TAB)
 
     _service("cam").warning("frame dropped")
     _draw_pending(view)
 
-    assert view._tabs.isTabVisible(_log_view._SERVICES_TAB)
+    assert view._tabs.isTabVisible(_log_view.SERVICES_TAB)
     assert "frame dropped" in view._service_console.toPlainText()
     assert "frame dropped" not in view._console.toPlainText()
 
@@ -320,7 +320,7 @@ def test_clear_empties_only_the_tab_shown(
     _service("cam").warning("waiting from the camera")
     consoles = {"application": view._console, "services": view._service_console}
     kept = "services" if shown == "application" else "application"
-    view._tabs.setCurrentIndex(0 if shown == "application" else _log_view._SERVICES_TAB)
+    view._tabs.setCurrentIndex(0 if shown == "application" else _log_view.SERVICES_TAB)
 
     view.clear()
     _draw_pending(view)
@@ -358,7 +358,7 @@ def test_save_copies_the_services_log_file_rather_than_the_buffer(
         _service("cam").warning("logged before the buffer dropped it")
         view = make_view()
         log_buffer().clear()
-        view._tabs.setCurrentIndex(_log_view._SERVICES_TAB)
+        view._tabs.setCurrentIndex(_log_view.SERVICES_TAB)
         view._service_combo.setCurrentIndex(view._service_combo.findData("cam"))
         target = tmp_path / "session.log"
 
@@ -460,7 +460,7 @@ def _repaint(view: LogView, background: str) -> None:
 
 @pytest.mark.parametrize(
     ("background", "expected"),
-    [("#ffffff", _ON_LIGHT), ("#1e1e1e", _ON_DARK)],
+    [("#ffffff", ON_LIGHT), ("#1e1e1e", ON_DARK)],
 )
 def test_the_colours_follow_the_console_background(
     background: str,
@@ -490,13 +490,13 @@ def test_a_palette_change_redraws_what_is_on_screen(
     _repaint(view, "#ffffff")
     logs.error("the detector answered nothing")
     _draw_pending(view)
-    assert _ON_LIGHT[logging.ERROR] in _rendered(view)
+    assert ON_LIGHT[logging.ERROR] in _rendered(view)
 
     _repaint(view, "#1e1e1e")
 
     html = _rendered(view)
-    assert _ON_DARK[logging.ERROR] in html
-    assert _ON_LIGHT[logging.ERROR] not in html
+    assert ON_DARK[logging.ERROR] in html
+    assert ON_LIGHT[logging.ERROR] not in html
 
 
 def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
