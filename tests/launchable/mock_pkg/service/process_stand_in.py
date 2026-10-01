@@ -1,25 +1,42 @@
 """A service built on the functions `redsun.services` gives a service process.
 
-Run as `python -m mock_pkg.service.process_stand_in`. It prints what the
-session told it, prints the declared ready text, and exits 0 once asked to
-stop: by awaiting the request, or with `--blocking` through `SIGINT`, as a
-blocking server does.
+Run as `python -m mock_pkg.service.process_stand_in`. It logs its level and
+one line at `DEBUG` through `logging` and `loguru`, and one through the
+`redsun` logger tree. It prints what the session told it, prints the declared
+ready text, and exits 0 once asked to stop: by awaiting the request, or with
+`--blocking` through `SIGINT`, as a blocking server does.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import sys
 import time
 
-from redsun.services import identity, ready, stop_on_request, wait_for_stop
+from loguru import logger as loguru_logger
+
+from redsun.services import (
+    configure_logging,
+    identity,
+    ready,
+    stop_on_request,
+    wait_for_stop,
+)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--blocking", action="store_true")
     options = parser.parse_args()
+
+    configure_logging()
+    log = logging.getLogger("stand_in")
+    log.info("level %s", logging.getLevelName(log.getEffectiveLevel()))
+    log.debug("stdlib debug")
+    loguru_logger.debug("loguru debug")
+    logging.getLogger("redsun.stand_in").info("from the redsun tree")
 
     print(f"identity {identity()}", flush=True)
     if options.blocking:

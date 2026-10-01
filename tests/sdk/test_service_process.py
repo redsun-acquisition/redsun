@@ -113,3 +113,45 @@ async def test_a_service_run_alone_has_no_identity_and_keeps_waiting(
     assert identity() is None
     with pytest.raises(TimeoutError):
         await asyncio.wait_for(wait_for_stop(), timeout=0.2)
+
+
+@pytest.mark.parametrize(
+    ("level", "debug"),
+    [
+        (
+            logging.DEBUG,
+            {
+                ("redsun.service.camera.stand_in", "stdlib debug"),
+                ("redsun.service.camera.__main__", "loguru debug"),
+            },
+        ),
+        (logging.INFO, set()),
+    ],
+)
+def test_a_service_logs_at_the_level_its_session_records_at(
+    level: int,
+    debug: set[tuple[str, str]],
+    launch: Callable[..., Service],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Pass the session's level to a service, whose records keep their level and logger, once each."""
+    caplog.set_level(level, logger="redsun")
+    service = launch()
+
+    service.start()
+    service.stop()
+
+    own = {"redsun.service.camera.stand_in", "redsun.service.camera.__main__"}
+    records = [r for r in caplog.records if r.name in own]
+    assert {
+        (r.name, r.getMessage()) for r in records if r.levelno == logging.DEBUG
+    } == debug
+    info = [(r.name, r.getMessage()) for r in records if r.levelno == logging.INFO]
+    assert (
+        "redsun.service.camera.stand_in",
+        f"level {logging.getLevelName(level)}",
+    ) in info
+    tree = [r for r in caplog.records if "from the redsun tree" in r.getMessage()]
+    assert [(r.name, r.levelno) for r in tree] == [
+        ("redsun.service.camera.redsun.stand_in", logging.INFO)
+    ]

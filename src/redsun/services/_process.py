@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 import signal
 import sys
 import threading
 from dataclasses import dataclass
 from typing import Final
+
+from redsun.log import DEFAULT_LEVEL, logger
 
 NAME_VARIABLE: Final = "REDSUN_SERVICE_NAME"
 """Variable holding the name a session declares a launched service under."""
@@ -30,6 +34,50 @@ class ServiceIdentity:
 
     prefix: str
     """Prefix given to each device naming the service; empty when none."""
+
+
+class JsonLines(logging.Formatter):
+    """Format a record as the JSON object a session rebuilds into a record."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Return *record* as one line of JSON."""
+        return json.dumps(
+            {
+                "name": record.name,
+                "levelno": record.levelno,
+                "created": record.created,
+                "msg": record.getMessage(),
+                "exc_text": (
+                    self.formatException(record.exc_info) if record.exc_info else None
+                ),
+            }
+        )
+
+
+def configure_logging() -> None:
+    """Log at the session's level, in lines the session rebuilds into records.
+
+    Records of `logging` and, when it is installed, of `loguru` go to
+    standard output as JSON, each keeping its level, time, logger name and
+    traceback. The level is the one the session records at, `INFO` when no
+    session launched the process. Handlers already installed are replaced, so
+    no record is written twice.
+    """
+    level = os.environ.get(LEVEL_VARIABLE, DEFAULT_LEVEL)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(JsonLines())
+    logging.basicConfig(level=level, handlers=[handler], force=True)
+    # importing redsun gives its logger a plain stdout handler, which would
+    # write each of its records a second time, as text
+    for installed in list(logger.handlers):
+        logger.removeHandler(installed)
+    logger.setLevel(level)
+    try:
+        from loguru import logger as loguru_logger  # noqa: PLC0415
+    except ImportError:
+        return
+    loguru_logger.remove()
+    loguru_logger.add(sys.stdout, serialize=True, level=level)
 
 
 def identity() -> ServiceIdentity | None:
