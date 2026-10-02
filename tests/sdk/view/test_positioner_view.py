@@ -89,6 +89,16 @@ def type_into(edit: QtWidgets.QLineEdit, text: str) -> None:
             QtWidgets.QApplication.sendEvent(edit, event)
 
 
+def shown_names(view: PositionerView) -> list[str]:
+    """Return the names of the saved positions *view* shows."""
+    edits = [
+        e
+        for e in view.findChildren(QtWidgets.QLineEdit)
+        if e.objectName().startswith("saved:")
+    ]
+    return [e.text() for e in sorted(edits, key=lambda e: e.objectName())]
+
+
 def test_each_device_gets_a_group_whose_requests_the_view_sends(
     parent: QtWidgets.QWidget, settings: Settings
 ) -> None:
@@ -173,3 +183,104 @@ def test_the_repeat_interval_defaults_to_the_keyword(
     view = make_view(settings, parent, repeat_interval=80)
 
     assert child(view, QLabeledSlider).value() == 80
+
+
+def test_a_saved_position_outlives_the_view_and_moves_its_device(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Save readbacks, rename the entry, find it in a new view and go there."""
+    view = make_view(settings, parent)
+    view.update_readback("stage", "x", 12.5)
+    child(group(view, "stage"), QtWidgets.QPushButton, "save").click()
+    type_into(child(view, QtWidgets.QLineEdit, "saved:0"), "sample A")
+
+    again = make_view(settings, parent)
+    targets: list[object] = []
+    again.sig_move_to.connect(lambda *args: targets.append(args))
+    child(again, QtWidgets.QPushButton, "saved-go:0").click()
+
+    assert shown_names(again) == ["sample A"]
+    assert targets == [("stage", {"x": 12.5, "theta": 0.0})]
+
+
+def test_a_removed_position_is_gone_from_the_settings(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Remove an entry from the view and from the settings."""
+    view = make_view(settings, parent)
+    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+
+    child(view, QtWidgets.QPushButton, "saved-remove:0").click()
+
+    assert shown_names(view) == []
+    assert settings.get("positioner.saved_positions") == []
+
+
+def test_an_entry_for_an_absent_device_is_kept_but_not_shown(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Hide an entry whose device the session lacks, and keep it stored."""
+    absent: dict[str, Any] = {"name": "old", "device": "gone", "positions": {"a": 1.0}}
+    settings.set("positioner.saved_positions", [absent])
+    view = make_view(settings, parent)
+
+    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+
+    assert shown_names(view) == ["focus 1"]
+    assert settings.get("positioner.saved_positions")[0] == absent
+
+
+def test_an_entry_moves_only_the_axes_its_device_still_has(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Leave out of a go-to the axes the device no longer has."""
+    entry: dict[str, Any] = {
+        "name": "old",
+        "device": "stage",
+        "positions": {"x": 1.0, "z": 2.0},
+    }
+    settings.set("positioner.saved_positions", [entry])
+    view = make_view(settings, parent)
+    targets: list[object] = []
+    view.sig_move_to.connect(lambda *args: targets.append(args))
+
+    child(view, QtWidgets.QPushButton, "saved-go:0").click()
+
+    assert targets == [("stage", {"x": 1.0})]
+
+
+def test_malformed_entries_are_skipped_with_a_warning(
+    parent: QtWidgets.QWidget, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip entries that are not well formed, warn, and show the rest."""
+    good: dict[str, Any] = {
+        "name": "ok",
+        "device": "focus",
+        "positions": {"focus": 1.0},
+    }
+    settings.set(
+        "positioner.saved_positions",
+        [
+            good,
+            {"name": 3},
+            "text",
+            {"name": "x", "device": "stage", "positions": {"x": "a"}},
+        ],  # mixed on purpose: what a hand-edited settings file may hold
+    )
+
+    view = make_view(settings, parent)
+
+    assert shown_names(view) == ["ok"]
+    assert "Skipping 3 saved positions" in caplog.text
+
+
+def test_a_locked_device_cannot_go_to_its_saved_positions(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Disable the go button of the saved positions of a locked device."""
+    view = make_view(settings, parent)
+    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+
+    view.set_locked(frozenset({"focus"}))
+
+    assert not child(view, QtWidgets.QPushButton, "saved-go:0").isEnabled()

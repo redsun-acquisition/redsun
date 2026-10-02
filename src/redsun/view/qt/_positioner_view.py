@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 from psygnal import Signal
 from qtpy import QtCore
@@ -32,6 +32,44 @@ REPEAT_INTERVAL_RANGE = (10, 300)
 
 REPEAT_INTERVAL_TICK = 50
 """Milliseconds between two ticks of the repeat interval slider."""
+
+
+class SavedPosition(TypedDict):
+    """A device's positions, saved under a name."""
+
+    name: str
+    """Name shown and edited in the view."""
+
+    device: str
+    """Device the positions belong to."""
+
+    positions: dict[str, float]
+    """Position of each axis, by axis name."""
+
+
+def saved_positions(stored: object) -> tuple[list[SavedPosition], int]:
+    """Return the well-formed entries in *stored*, and how many were not."""
+    entries: list[SavedPosition] = []
+    items = stored if isinstance(stored, list) else []
+    for item in items:
+        if (
+            isinstance(item, dict)
+            and isinstance(item.get("name"), str)
+            and isinstance(item.get("device"), str)
+            and isinstance(item.get("positions"), dict)
+            and all(
+                isinstance(axis, str) and isinstance(value, (int, float))
+                for axis, value in item["positions"].items()
+            )
+        ):
+            entries.append(
+                SavedPosition(
+                    name=item["name"],
+                    device=item["device"],
+                    positions={a: float(v) for a, v in item["positions"].items()},
+                )
+            )
+    return entries, len(items) - len(entries)
 
 
 class PositionerView(QtW.QWidget, Loggable):
@@ -85,6 +123,8 @@ class PositionerView(QtW.QWidget, Loggable):
         self._settings: Settings | None = None
         self._tree: DescriptorTreeView | None = None
         self._configuration = QtW.QVBoxLayout()
+        self._entries: list[SavedPosition] = []
+        self._entry_buttons: dict[str, list[QtW.QPushButton]] = {}
 
         self._interval = QLabeledSlider(QtCore.Qt.Orientation.Horizontal, self)
         self._interval.setRange(*REPEAT_INTERVAL_RANGE)
@@ -94,6 +134,9 @@ class PositionerView(QtW.QWidget, Loggable):
 
         self._devices = QtW.QVBoxLayout()
         self._saved = QCollapsible("Saved positions", self)
+        self._entry_list = QtW.QWidget(self)
+        self._entry_layout = QtW.QVBoxLayout(self._entry_list)
+        self._saved.addWidget(self._entry_list)
         motors = QtW.QWidget(self)
         motors_layout = QtW.QVBoxLayout(motors)
         motors_layout.addLayout(self._devices)
@@ -146,6 +189,16 @@ class PositionerView(QtW.QWidget, Loggable):
             self._configuration.addWidget(
                 QtW.QLabel("No axis has a configuration.", self)
             )
+        for group in self._groups.values():
+            group.sig_save.connect(self._save)
+        self._entries, skipped = saved_positions(
+            settings.get(self._key("saved_positions"), [])
+        )
+        if skipped:
+            self.logger.warning(
+                f"Skipping {skipped} saved positions that are not well formed"
+            )
+        self._show_entries()
 
     @slot
     def update_readback(self, device: str, axis: str, value: float) -> None:
@@ -174,9 +227,89 @@ class PositionerView(QtW.QWidget, Loggable):
         self._locked = names
         for device, group in self._groups.items():
             group.set_locked(device in names)
+        self._lock_entries()
 
     def _key(self, setting: str) -> str:
         return f"{self.name}.{setting}"
+
+    def _save(self, device: str) -> None:
+        taken = {entry["name"] for entry in self._entries}
+        number = 1
+        while f"{device} {number}" in taken:
+            number += 1
+        self._entries.append(
+            SavedPosition(
+                name=f"{device} {number}",
+                device=device,
+                positions=self._groups[device].positions(),
+            )
+        )
+        self._store()
+
+    def _rename(self, entry: SavedPosition, name: str) -> None:
+        entry["name"] = name
+        self._store()
+
+    def _remove(self, entry: SavedPosition) -> None:
+        self._entries.remove(entry)
+        self._store()
+
+    def _go(self, entry: SavedPosition) -> None:
+        axes = self._groups[entry["device"]].positions()
+        positions = {a: v for a, v in entry["positions"].items() if a in axes}
+        self.sig_move_to.emit(entry["device"], positions)
+
+    def _store(self) -> None:
+        if self._settings is not None:
+            self._settings.set(
+                self._key("saved_positions"),
+                [
+                    {
+                        "name": entry["name"],
+                        "device": entry["device"],
+                        "positions": dict(entry["positions"].items()),
+                    }
+                    for entry in self._entries
+                ],
+            )
+        self._show_entries()
+
+    def _show_entries(self) -> None:
+        while (item := self._entry_layout.takeAt(0)) is not None:
+            if (widget := item.widget()) is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+        self._entry_buttons = {}
+        shown = [entry for entry in self._entries if entry["device"] in self._groups]
+        for index, entry in enumerate(shown):
+            row = QtW.QWidget(self._entry_list)
+            name = QtW.QLineEdit(entry["name"], row)
+            name.setObjectName(f"saved:{index}")
+            name.editingFinished.connect(
+                lambda e=entry, n=name: self._rename(e, n.text())
+            )
+            summary = "  ".join(f"{a} {v:g}" for a, v in entry["positions"].items())
+            go = QtW.QPushButton("Go", row)
+            go.setObjectName(f"saved-go:{index}")
+            go.clicked.connect(lambda _=False, e=entry: self._go(e))
+            remove = QtW.QPushButton("x", row)
+            remove.setObjectName(f"saved-remove:{index}")
+            remove.setToolTip("Remove this saved position")
+            remove.clicked.connect(lambda _=False, e=entry: self._remove(e))
+            layout = QtW.QHBoxLayout(row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(name)
+            layout.addWidget(QtW.QLabel(f"{entry['device']}  {summary}", row))
+            layout.addWidget(go)
+            layout.addWidget(remove)
+            self._entry_layout.addWidget(row)
+            self._entry_buttons.setdefault(entry["device"], []).append(go)
+        self._lock_entries()
+
+    def _lock_entries(self) -> None:
+        for device, buttons in self._entry_buttons.items():
+            for button in buttons:
+                button.setEnabled(device not in self._locked)
 
     def _configure(self, owner: str, prop: str, value: Any) -> None:
         self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
