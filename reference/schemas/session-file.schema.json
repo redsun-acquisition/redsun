@@ -357,7 +357,9 @@
       ]
     },
     "providers": {
-      "additionalProperties": true,
+      "additionalProperties": {
+        "$ref": "#/$defs/ComponentEntry"
+      },
       "default": {},
       "description": "Classes registering values the session hands to components, by name.",
       "title": "Providers",

@@ -4856,6 +4856,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.treeview.DescriptorTreeView.sig_property_changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;sig_property_changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.treeview.DescriptorTreeView.set_value" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6124,6 +6135,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#redsun.view.qt.treeview.DescriptorTreeView.sig_property_changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;sig_property_changed
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.view.qt.treeview.DescriptorTreeView.set_value" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -7084,6 +7106,7 @@ unchecks or moves a callback.</p>
     <div class="doc doc-contents ">
 
         <p>Create a <code>magicgui</code> widget for <em>param</em>.</p>
+<p>Only the predicates are guarded: a factory raising is a bug and propagates.</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -7101,7 +7124,7 @@ unchecks or moves a callback.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If every entry in <code>_WIDGET_FACTORY_MAP</code> fails.</p>
+                <p>If every entry in <code>WIDGET_FACTORY_MAP</code> fails.</p>
               </div>
             </td>
           </tr>
@@ -7801,16 +7824,6 @@ under <code>cam</code>.</p>
     </table>
 
 
-<details class="signals" open>
-  <summary>Signals</summary>
-  <p>sig_property_changed : Signal[str, str, Any]
-    Emitted when the user commits an edit, which stays pending until
-    <code>set_value</code> or <code>revert</code> settles it.
-    - str: object name
-    - str: property name
-    - Any: new value</p>
-</details>
-
 
 
 
@@ -7827,6 +7840,32 @@ under <code>cam</code>.</p>
 
 
 
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="redsun.view.qt.treeview.DescriptorTreeView.sig_property_changed" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">sig_property_changed</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#redsun.view.qt.treeview.DescriptorTreeView.sig_property_changed" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">sig_property_changed</span> <span class="o">=</span> <span class="n">Signal</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">)</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Emitted with the object name, property name and new value of a committed edit.</p>
+<p>The edit stays pending until <code>set_value</code> or <code>revert</code> settles it.</p>
+
+    </div>
+
+</div>
 
 
 

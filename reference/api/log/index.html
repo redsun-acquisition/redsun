@@ -4439,6 +4439,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.log.SessionFileHandler.shouldRollover" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;shouldRollover
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.log.SessionFileHandler.move" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5732,6 +5743,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#redsun.log.SessionFileHandler.shouldRollover" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;shouldRollover
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#redsun.log.SessionFileHandler.move" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6679,6 +6701,29 @@ run.</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="redsun.log.SessionFileHandler.shouldRollover" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">shouldRollover</span>
+
+
+<a href="#redsun.log.SessionFileHandler.shouldRollover" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">shouldRollover</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="n">LogRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Whether the file has reached <code>LOG_MAX_BYTES</code>, by its size alone.</p>
+<p>The file is always one this handler made, so it skips the base
+class's check that it is a regular file, which costs a file system
+call per record. A file may pass the limit by one record.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 

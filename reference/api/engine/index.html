@@ -7172,7 +7172,7 @@
 
         <p>Runs plans and emits documents without blocking the calling thread.</p>
 <p>Wraps <code>bluesky.run_engine.RunEngine</code>: <code>__call__</code> runs the plan on a
-separate thread and returns a concurrent.futures.Future of its result.</p>
+separate thread and returns a <code>concurrent.futures.Future</code> of its result.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -7196,7 +7196,7 @@ separate thread and returns a concurrent.futures.Future of its result.</p>
             <td>
               <div class="doc-md-description">
                 <p>Metadata store, a <code>dict</code> by default. Any object with <code>__getitem__</code>,
-<code>__setitem__</code> and <code>clear</code> works, such as historydict.HistoryDict,
+<code>__setitem__</code> and <code>clear</code> works, such as <code>historydict.HistoryDict</code>,
 which persists history in a sqlite file.</p>
               </div>
             </td>
@@ -7230,7 +7230,7 @@ which persists history in a sqlite file.</p>
             <td>
               <div class="doc-md-description">
                 <p>Generator functions modifying a plan's messages, such as the
-<code>bluesky.plans</code> functions ending in 'wrapper'. <code>[f, g]</code> applies as
+<code>bluesky.plans</code> functions ending in <code>wrapper</code>. <code>[f, g]</code> applies as
 <code>f(g(plan))</code>.</p>
               </div>
             </td>
@@ -7264,7 +7264,7 @@ value is ignored.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Like md_validator, raises for invalid metadata; otherwise returns the
+                <p>Like <code>md_validator</code>, raises for invalid metadata; otherwise returns the
 normalized metadata.</p>
               </div>
             </td>
@@ -7281,8 +7281,8 @@ normalized metadata.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Function, possibly async, returning the next scan_id. By default
-scan_id increments by 1.</p>
+                <p>Function, possibly async, returning the next <code>scan_id</code>. By default
+<code>scan_id</code> increments by 1.</p>
               </div>
             </td>
             <td>
@@ -7298,7 +7298,7 @@ scan_id increments by 1.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>What the Future <code>__call__</code> returns holds: a <code>RunEngineResult</code>
+                <p>What the future <code>__call__</code> returns holds: a <code>RunEngineResult</code>
 describing the run if <code>True</code>, a tuple of uids if <code>False</code>.</p>
               </div>
             </td>
@@ -7336,8 +7336,8 @@ describing the run if <code>True</code>, a tuple of uids if <code>False</code>.<
             </td>
             <td>
               <div class="doc-md-description">
-                <p>False by default. True adds an event stream recording interruptions
-(pauses, suspensions).</p>
+                <p><code>False</code> by default. <code>True</code> adds an event stream recording
+interruptions (pauses, suspensions).</p>
               </div>
             </td>
           </tr>
@@ -7366,11 +7366,10 @@ that suspend and resume execution.</p>
           <tr class="doc-section-item">
             <td><code><span title="redsun.engine.RunEngine.preprocessors">preprocessors</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The preprocessors described above.</p>
+                <p>The list of preprocessors described above.</p>
               </div>
             </td>
           </tr>
@@ -7381,7 +7380,7 @@ that suspend and resume execution.</p>
             <td>
               <div class="doc-md-description">
                 <p><code>f(msg)</code> called with every <code>bluesky.Msg</code> before it is processed,
-for logging or debugging. None by default.</p>
+for logging or debugging. <code>None</code> by default.</p>
               </div>
             </td>
           </tr>
@@ -7391,8 +7390,8 @@ for logging or debugging. None by default.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p><code>f(new_state, old_state)</code> called on every state change. None by
-default.</p>
+                <p><code>f(new_state, old_state)</code> called on every state change. The engine
+sets its own, which feeds <code>sig_state_changed</code>.</p>
               </div>
             </td>
           </tr>
@@ -7426,18 +7425,18 @@ feeds <code>sig_progress</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Boolean, False by default.</p>
+                <p><code>False</code> by default.</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td><code><span title="redsun.engine.RunEngine.loop">loop</span></code></td>
             <td>
-                  <code>asyncio event loop</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>e.g., <code>asyncio.get_event_loop()</code> or <code>asyncio.new_event_loop()</code></p>
+                <p>The event loop plans run on, such as one from
+<code>asyncio.new_event_loop()</code>.</p>
               </div>
             </td>
           </tr>
@@ -7448,7 +7447,7 @@ feeds <code>sig_progress</code>.</p>
             <td>
               <div class="doc-md-description">
                 <p>Maximum stack depth, preventing calls to the RunEngine from inside a
-function, which breaks introspection. None by default; 2 suits the
+function, which breaks introspection. <code>None</code> by default; 2 suits the
 Python interpreter and 11 <code>IPython</code> (tested on 5.1.0).</p>
               </div>
             </td>
@@ -7456,13 +7455,12 @@ Python interpreter and 11 <code>IPython</code> (tested on 5.1.0).</p>
           <tr class="doc-section-item">
             <td><code><span title="redsun.engine.RunEngine.pause_msg">pause_msg</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>Message printed when a run is interrupted, with instructions for
-changing the RunEngine's state. <code>bluesky.run_engine.PAUSE_MSG</code> by
-default.</p>
+changing the RunEngine's state. Empty here; <code>bluesky</code> defaults to
+<code>bluesky.run_engine.PAUSE_MSG</code>.</p>
               </div>
             </td>
           </tr>
@@ -7472,7 +7470,7 @@ default.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The list of commands available to Msg.</p>
+                <p>The list of commands a <code>Msg</code> can name.</p>
               </div>
             </td>
           </tr>
@@ -8355,55 +8353,9 @@ A fraction given alone is passed on as <code>current</code>, with <code>initial<
 
     <div class="doc doc-contents ">
 
-        <p>Register a custom command in the given run engine.</p>
-<p>Unlike <code>RunEngine.register_command</code>, binds the command to <em>engine</em>.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>engine</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RunEngine&lt;/span&gt; (&lt;code&gt;redsun.engine._wrapper.RunEngine&lt;/code&gt;)" href="./#redsun.engine.RunEngine">RunEngine</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The run engine to register the command in.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>command</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-external" title="&lt;code&gt;collections.abc.Callable&lt;/code&gt;" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;RunEngine&lt;/span&gt; (&lt;code&gt;redsun.engine._wrapper.RunEngine&lt;/code&gt;)" href="./#redsun.engine.RunEngine">RunEngine</a>, <a class="autorefs autorefs-external" title="&lt;code&gt;bluesky.utils.Msg&lt;/code&gt;" href="https://blueskyproject.io/bluesky/main/generated/bluesky.utils.Msg.html#bluesky.utils.Msg">Msg</a>], <a class="autorefs autorefs-external" title="&lt;code&gt;typing.Any&lt;/code&gt;" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The command, taking a <code>RunEngine</code> and a <code>Msg</code>.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>Register <em>command</em> in <em>engine</em>, under the command's <code>__name__</code>.</p>
+<p>Unlike <code>RunEngine.register_command</code>, binds the command to <em>engine</em>: it is
+called with the engine first, then the <code>Msg</code>.</p>
 
 
     </div>

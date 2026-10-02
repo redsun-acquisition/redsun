@@ -5521,7 +5521,7 @@ the map key (between the first and second hyphens) and the property key
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The input key to parse, expected to be in the form <code>{name}-{map_prefix}-{key}</code>.</p>
+                <p>The key to parse, in the form <code>{name}-{map_prefix}-{property}</code>.</p>
               </div>
             </td>
             <td>
@@ -5542,6 +5542,30 @@ the map key (between the first and second hyphens) and the property key
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <em>input</em> has fewer than three parts, or its second part is not
+<em>map_prefix</em>.</p>
+              </div>
             </td>
           </tr>
       </tbody>

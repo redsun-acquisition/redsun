@@ -6217,7 +6217,7 @@
 <p><code>create_plan_spec</code> inspects a <code>bluesky</code> <code>MsgGenerator</code> function and returns
 a <code>PlanSpec</code> describing its parameters, from which a view builds the controls
 of the plan.</p>
-<p><code>_ANN_HANDLER_MAP</code> lists <code>(predicate, handler)</code> pairs turning annotations into
+<p><code>_fields_from_annotation</code> turns a <code>Literal</code> or device annotation into
 <code>ParamDescription</code> fields (choices, <code>device_proto</code>, <code>multiselect</code>).</p>
 
 
@@ -6625,16 +6625,6 @@ with an <code>OADevice</code> subtype.</p>
               <div class="doc-md-description">
                 <p>If an annotation names something missing at runtime, or no view can
 build a control for it.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>On an unexpected <code>inspect.Parameter.kind</code>.</p>
               </div>
             </td>
           </tr>
