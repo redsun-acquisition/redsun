@@ -190,6 +190,19 @@ def test_go_to_refuses_a_target_outside_the_limits(
     assert "-5" in field.toolTip()
 
 
+def test_arrow_keys_do_not_step_a_locked_device(group: PositionerGroup) -> None:
+    """Ignore Left and Right on a row of a locked device."""
+    steps: list[float] = []
+    group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
+    row = child(group, QtWidgets.QLabel, "readback:x").parentWidget()
+    assert row is not None
+
+    group.set_locked(True)
+    press(row, QtCore.Qt.Key.Key_Right)
+
+    assert steps == []
+
+
 def test_the_repeat_interval_reaches_every_step_button(group: PositionerGroup) -> None:
     """Repeat every step button of the device at the interval set."""
     group.set_repeat_interval(120)

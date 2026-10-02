@@ -156,8 +156,10 @@ class AxisRow(QtW.QWidget):
             widget.setEnabled(enabled)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent | None) -> None:
-        """Step with Left and Right while the row has focus."""
-        if event is not None and event.key() == QtCore.Qt.Key.Key_Left:
+        """Step with Left and Right while the row has focus and is not locked."""
+        if event is not None and not self.buttons[0].isEnabled():
+            super().keyPressEvent(event)
+        elif event is not None and event.key() == QtCore.Qt.Key.Key_Left:
             self.sig_step.emit(-self.step_size())
         elif event is not None and event.key() == QtCore.Qt.Key.Key_Right:
             self.sig_step.emit(self.step_size())
