@@ -13,6 +13,7 @@ Components must not build their own loop or install a backend.
 from __future__ import annotations
 
 import asyncio
+import inspect
 from functools import cache
 from threading import Thread
 from typing import TYPE_CHECKING, TypeVar, overload
@@ -27,9 +28,9 @@ from psygnal._async import AsyncioBackend, _AsyncBackend
 from redsun.log import Loggable
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Awaitable
     from concurrent.futures import Future
-    from typing import Any, Literal
+    from typing import Literal
 
     from psygnal._async import QueueItem
 
@@ -182,23 +183,67 @@ def set_async_backend() -> CulsansAsyncioBackend:
 
 @overload
 def run_coro(
-    coro: Coroutine[Any, Any, R], return_future: Literal[False] = ...
+    awaitable: Awaitable[R],
+    return_future: Literal[False] = False,
+    *,
+    timeout: float | None = None,
 ) -> R: ...
 @overload
+def run_coro(awaitable: Awaitable[R], return_future: Literal[True]) -> Future[R]: ...
 def run_coro(
-    coro: Coroutine[Any, Any, R], return_future: Literal[True] = ...
-) -> Future[R]: ...
-def run_coro(
-    coro: Coroutine[Any, Any, R], return_future: bool = False
+    awaitable: Awaitable[R],
+    return_future: bool = False,
+    *,
+    timeout: float | None = None,
 ) -> R | Future[R]:
-    """Run a coroutine in the background event loop and return its result.
+    """Run *awaitable* on the shared loop and return its result.
+
+    With *return_future*, return the `Future` at once instead of waiting; that
+    is safe from any thread, the shared loop's own included. A wait that ends
+    without a result, on *timeout* or when the waiting thread is interrupted,
+    cancels *awaitable*.
 
     Parameters
     ----------
-    coro
-        The coroutine to run.
-    return_future
-        Return the `Future` instead of waiting for the result.
+    timeout
+        Seconds to wait; `None` waits until it completes.
+
+    Raises
+    ------
+    RuntimeError
+        If called on the shared loop's thread without *return_future*, where
+        waiting would block the loop that has to run *awaitable*.
+    TimeoutError
+        If *timeout* passes first.
     """
-    future = asyncio.run_coroutine_threadsafe(coro, get_shared_loop())
-    return future if return_future else future.result()
+    loop = get_shared_loop()
+    if not return_future and on_shared_loop():
+        if inspect.iscoroutine(awaitable):
+            # never scheduled: closing it avoids "coroutine was never awaited"
+            awaitable.close()
+        raise RuntimeError(
+            "run_coro was called on the shared loop's thread, where waiting "
+            "would block it; await the coroutine, or pass return_future=True"
+        )
+    future = asyncio.run_coroutine_threadsafe(coroutine_of(awaitable), loop)
+    if return_future:
+        return future
+    try:
+        return future.result(timeout)
+    except BaseException:
+        # a timeout or an interrupt: nobody waits for the result any more
+        future.cancel()
+        raise
+
+
+def on_shared_loop() -> bool:
+    """Return whether the calling thread is the one running the shared loop."""
+    try:
+        return asyncio.get_running_loop() is get_shared_loop()
+    except RuntimeError:
+        return False
+
+
+async def coroutine_of(awaitable: Awaitable[R]) -> R:
+    """Return what *awaitable* gives, as a coroutine the loop can schedule."""
+    return await awaitable

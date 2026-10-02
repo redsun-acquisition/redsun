@@ -29,11 +29,19 @@ from redsun.aio import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
     from psygnal._async import QueueItem, SupportedBackend
 
 TIMEOUT = 10.0
+
+
+class Awaitable3:
+    """Awaitable that is not a coroutine, standing in for a device status."""
+
+    def __await__(self) -> Generator[Any, None, int]:
+        """Give 3 once awaited."""
+        return asyncio.sleep(0, result=3).__await__()
 
 
 def drain_state(
@@ -525,3 +533,39 @@ def test_run_coro_propagates_exceptions() -> None:
 
     with pytest.raises(ValueError, match="out of range"):
         run_coro(boom())
+
+
+def test_run_coro_returns_the_result_of_any_awaitable() -> None:
+    """Return the result of an awaitable that is not a coroutine, as a status is."""
+    assert run_coro(Awaitable3()) == 3
+
+
+def test_run_coro_on_the_shared_loop_refuses_to_wait_but_returns_a_future() -> None:
+    """Refuse a blocking call on the shared loop's thread, and allow a future there."""
+
+    async def wait_from_the_loop() -> None:
+        run_coro(asyncio.sleep(0))
+
+    async def future_from_the_loop() -> int:
+        return await asyncio.wrap_future(run_coro(asyncio.sleep(0, result=1), True))
+
+    with pytest.raises(RuntimeError, match="shared loop's thread"):
+        run_coro(wait_from_the_loop(), return_future=True).result(timeout=TIMEOUT)
+    assert run_coro(future_from_the_loop(), return_future=True).result(TIMEOUT) == 1
+
+
+def test_a_timed_out_call_is_cancelled_on_the_loop() -> None:
+    """Raise TimeoutError and cancel the coroutine when the wait runs out."""
+    cancelled = threading.Event()
+
+    async def slow() -> None:
+        try:
+            await asyncio.sleep(TIMEOUT)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    with pytest.raises(TimeoutError):
+        run_coro(slow(), timeout=0.05)
+
+    assert cancelled.wait(TIMEOUT)
