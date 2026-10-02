@@ -991,7 +991,6 @@ class Session(BuildableSession):
         self.disconnect_all()
         self._releases.close()
         self._hooks = None
-        # a session built again starts from nothing the last build made
         self._devices.clear()
         self._failed.clear()
         self._answered.clear()

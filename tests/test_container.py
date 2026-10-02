@@ -73,6 +73,30 @@ class Stage(StandardReadable):
         super().__init__(name=name)
 
 
+class FailsOnce:
+    """Presenter that cannot be made the first time, and can afterwards."""
+
+    attempts = 0
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        type(self).attempts += 1
+        if type(self).attempts == 1:
+            raise ValueError("not yet")
+
+
+class WorksOnce(Stage):
+    """Device that can be made the first time, and not afterwards."""
+
+    attempts = 0
+
+    def __init__(self, name: str) -> None:
+        type(self).attempts += 1
+        if type(self).attempts > 1:
+            raise ValueError("no longer")
+        super().__init__(name)
+
+
 class Ctrl:
     """Presenter sharing two values derived from its devices."""
 
@@ -2001,30 +2025,6 @@ def test_an_entry_under_the_name_of_a_renamed_component_is_reported(
     app.shutdown()
 
 
-class FailsOnce:
-    """Presenter that cannot be made the first time, and can afterwards."""
-
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        type(self).attempts += 1
-        if type(self).attempts == 1:
-            raise ValueError("not yet")
-
-
-class WorksOnce(Stage):
-    """Device that can be made the first time, and not afterwards."""
-
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
-        type(self).attempts += 1
-        if type(self).attempts > 1:
-            raise ValueError("no longer")
-        super().__init__(name)
-
-
 def test_a_session_built_again_starts_from_nothing(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -2034,6 +2034,7 @@ def test_a_session_built_again_starts_from_nothing(
         stage: AsDevice[WorksOnce]
         flaky: AsPresenter[FailsOnce]
 
+    FailsOnce.attempts = WorksOnce.attempts = 0
     app = Twice()
     app.build()
     app.shutdown()
