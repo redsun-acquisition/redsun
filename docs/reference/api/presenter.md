@@ -4,6 +4,28 @@ icon: lucide/code
 
 # redsun.presenter
 
+## Positioner
+
+::: redsun.presenter.PositionerPresenter
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.AxisInfo
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.DescribesAxes
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.Axis
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.find_axes
+    options:
+      show_root_heading: true
+
 ## Plan specification
 
 ::: redsun.presenter.plan_spec
