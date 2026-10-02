@@ -16,6 +16,7 @@ from psygnal import Signal
 from redsun.aio import run_coro
 from redsun.log import Loggable
 from redsun.ports import slot
+from redsun.registry import DeviceMapping  # noqa: TC001
 
 from ._axes import find_axes
 
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
 
     from bluesky.protocols import Reading
     from event_model import DataKey
-
-    from redsun.registry import DeviceMapping
 
     from ._axes import Axis
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence  # noqa: TC003
 from typing import TYPE_CHECKING, TypedDict
 
 from psygnal import Signal
@@ -11,17 +12,16 @@ from superqt import QCollapsible, QLabeledSlider
 
 from redsun.log import Loggable
 from redsun.ports import slot
+from redsun.presenter import DescribesAxes  # noqa: TC001
 from redsun.qt import Dock
 
+from ..._settings import Settings  # noqa: TC001
 from ._positioner_group import PositionerGroup
 from .treeview import DescriptorTreeView
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from typing import Any
 
-    from redsun import Settings
-    from redsun.presenter import DescribesAxes
     from redsun.view import Placement
 
 DEFAULT_STEPS = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
