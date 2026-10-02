@@ -8,7 +8,7 @@ from __future__ import annotations
 from ophyd_async.epics.demo import DemoMotor
 from ophyd_async.epics.motor import Motor
 
-from redsun.presenter import Axis
+from redsun.utils.devices import Axis
 
 record: Axis = Motor("MOTOR:")
 demo: Axis = DemoMotor("DEMO:")

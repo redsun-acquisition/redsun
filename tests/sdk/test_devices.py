@@ -1,10 +1,11 @@
-"""Tests for finding the axes of a device."""
+"""Tests for reading the axes, limits and configuration of a device."""
 
 from __future__ import annotations
 
+import pytest
 from ophyd_async.core import soft_signal_rw
 
-from redsun.presenter import find_axes
+from redsun.utils.devices import find_axes, limits
 from tests.sdk.mocks import SoftAxis, Stage, TwinStage
 
 
@@ -42,3 +43,32 @@ async def test_axes_sharing_a_name_are_keyed_by_their_path() -> None:
 def test_a_signal_is_never_an_axis() -> None:
     """Find no axis in a signal, though a writable signal can be moved."""
     assert find_axes(soft_signal_rw(float, 0.0, name="exposure")) == {}
+
+
+@pytest.mark.parametrize(
+    ("descriptor", "expected"),
+    [
+        pytest.param(
+            {"limits": {"control": {"low": -1.0, "high": 2.0}}},
+            (-1.0, 2.0),
+            id="control",
+        ),
+        pytest.param(
+            {"limits": {"display": {"low": 0.0, "high": 9.0}}}, (0.0, 9.0), id="display"
+        ),
+        pytest.param(
+            {"limits": {"control": {"low": 0.0, "high": 0.0}}},
+            (None, None),
+            id="epics-none",
+        ),
+        pytest.param(
+            {"limits": {"control": {"high": 5.0}}}, (None, 5.0), id="one-bound"
+        ),
+        pytest.param({}, (None, None), id="no-limits"),
+    ],
+)
+def test_limits_are_read_from_a_descriptor(
+    descriptor: dict[str, object], expected: tuple[float | None, float | None]
+) -> None:
+    """Read control limits, else display ones, and count a 0-0 pair as none."""
+    assert limits(descriptor) == expected

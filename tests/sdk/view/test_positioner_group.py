@@ -7,7 +7,7 @@ from typing import TypeVar
 import pytest
 from qtpy import QtCore, QtGui, QtWidgets
 
-from redsun.presenter import AxisInfo
+from redsun.utils.devices import AxisInfo
 from redsun.view.qt.builtins import PositionerGroup
 
 pytestmark = pytest.mark.qt

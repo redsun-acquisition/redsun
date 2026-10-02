@@ -9,7 +9,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from superqt import QLabeledSlider
 
 from redsun import Settings
-from redsun.presenter import AxisInfo
+from redsun.utils.devices import AxisInfo
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
 

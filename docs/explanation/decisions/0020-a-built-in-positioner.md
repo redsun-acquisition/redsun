@@ -39,13 +39,15 @@ the plugin id `positioner`.
   written through the presenter. A signal a device does not declare as
   configuration is not looked for by attribute name.
 - The links between the two components are their whole interface, so either
-  can be replaced. `find_axes` and `PositionerGroup` are public for
-  components of your own.
+  can be replaced. `PositionerGroup` is public for components of your own.
+- Reading a device goes in `redsun.utils.devices`, apart from the
+  presenter: finding its axes, describing an axis, its limits and its
+  configuration with what can be written. Any component can use them.
 
 ## Consequences
 
-- The names of both components, their signals and slots, `find_axes`,
-  `Axis`, `AxisInfo`, `DescribesAxes` and `PositionerGroup` are public API.
+- The names of both components, their signals and slots, `DescribesAxes`,
+  `PositionerGroup` and the helpers of `redsun.utils.devices` are public API.
 - A device's own behaviour stays in the device: its `MovableLogic` decides
   the tolerance of a move, what stopping does and how long a move may take.
 - A device shows a setting in the Configuration tab by declaring it

@@ -4,54 +4,33 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from bluesky.protocols import HasHints, Stoppable
-from ophyd_async.core import (
-    AsyncConfigurable,
-    AsyncReadable,
-    Device,
-    SignalRW,
-    walk_config_signals,
-)
+from bluesky.protocols import Stoppable
+from ophyd_async.core import AsyncConfigurable
 from psygnal import Signal
 
 from redsun.aio import run_coro
 from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.registry import DeviceMapping  # noqa: TC001
-
-from ._axes import find_axes
+from redsun.utils.devices import (
+    AxisInfo,
+    Configuration,
+    describe_axis,
+    find_axes,
+    read_configuration,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Mapping
 
     from bluesky.protocols import Reading
     from event_model import DataKey
+    from ophyd_async.core import SignalRW
 
-    from ._axes import Axis
-
-
-@dataclass(frozen=True, slots=True)
-class AxisInfo:
-    """What a view shows of an axis before its first readback arrives."""
-
-    position: float
-    """Readback when the presenter started."""
-
-    units: str | None
-    """Engineering units of the axis, from its descriptor."""
-
-    precision: int | None
-    """Decimals the descriptor asks for."""
-
-    limits: tuple[float | None, float | None] = (None, None)
-    """Lowest and highest position the descriptor allows; `None` for no bound."""
-
-    stoppable: bool = False
-    """Whether the axis can be stopped."""
+    from redsun.utils.devices import Axis
 
 
 @runtime_checkable
@@ -137,12 +116,7 @@ class PositionerPresenter(Loggable):
             self.logger.debug(f"Skipping a step of {device}, still moving")
             return
 
-        async def step() -> None:
-            movable = self._axes[device][axis]
-            self.logger.info(f"Moving {device} {axis} by {delta}")
-            await movable.set((await movable.locate())["readback"] + delta)
-
-        await self._run(device, self._stops[device], step)
+        await self._run(device, self._stops[device], self._step, axis, delta)
 
     @slot
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
@@ -156,13 +130,7 @@ class PositionerPresenter(Loggable):
         KeyError
             If the presenter does not hold *device*.
         """
-
-        async def go() -> None:
-            for axis, position in positions.items():
-                self.logger.info(f"Moving {device} {axis} to {position}")
-                await self._axes[device][axis].set(position)
-
-        await self._run(device, self._stops[device], go)
+        await self._run(device, self._stops[device], self._go, positions)
 
     @slot
     async def stop(self, device: str) -> None:
@@ -218,7 +186,11 @@ class PositionerPresenter(Loggable):
         run_coro(self._unfollow())
 
     async def _run(
-        self, device: str, stops: int, motion: Callable[[], Awaitable[None]]
+        self,
+        device: str,
+        stops: int,
+        motion: Callable[..., Awaitable[None]],
+        *args: Any,
     ) -> None:
         async with self._locks[device]:
             if self._stops[device] != stops:
@@ -226,7 +198,7 @@ class PositionerPresenter(Loggable):
                 return
             self.sig_moving.emit(device, True)
             try:
-                await motion()
+                await motion(device, *args)
             except BaseException as error:
                 # a stopped move ends with the device's error, or a cancelled
                 # status; either way it ended as asked, not as a failure
@@ -240,81 +212,58 @@ class PositionerPresenter(Loggable):
             finally:
                 self.sig_moving.emit(device, False)
 
+    async def _step(self, device: str, axis: str, delta: float) -> None:
+        movable = self._axes[device][axis]
+        self.logger.info(f"Moving {device} {axis} by {delta}")
+        await movable.set((await movable.locate())["readback"] + delta)
+
+    async def _go(self, device: str, positions: Mapping[str, float]) -> None:
+        for axis, position in positions.items():
+            self.logger.info(f"Moving {device} {axis} to {position}")
+            await self._axes[device][axis].set(position)
+
     async def _follow(self) -> dict[str, dict[str, AxisInfo]]:
+        found = [
+            (device, name, axis)
+            for device, axes in self._axes.items()
+            for name, axis in axes.items()
+        ]
+        followed = await asyncio.gather(*(self._follow_axis(*item) for item in found))
         info: dict[str, dict[str, AxisInfo]] = {}
         descriptors, readings = self._configuration
-        for device, axes in list(self._axes.items()):
-            info[device] = {}
-            for name, axis in list(axes.items()):
-                try:
-                    info[device][name] = await self._describe(axis)
-                except Exception as error:  # noqa: BLE001
-                    self.logger.warning(f"Leaving out {device} {name}: {error}")
-                    del axes[name]
-                    continue
-                callback = partial(self._relay, device, name)
-                axis.subscribe(callback)
-                self._callbacks.append((axis, callback))
-                if not isinstance(axis, AsyncConfigurable):
-                    continue
-                writable = {
-                    signal.name: signal
-                    for signal in (
-                        await walk_config_signals(axis)
-                        if isinstance(axis, Device)
-                        else {}
-                    ).values()
-                }
-                for key, descriptor in (await axis.describe_configuration()).items():
-                    if key in writable:
-                        self._writable[key] = writable[key]
-                        descriptors[key] = descriptor
-                    else:
-                        descriptors[key] = {
-                            **descriptor,
-                            "source": f"{descriptor['source']}:readonly",
-                        }
-                readings.update(await axis.read_configuration())
-            if not axes:
-                del self._axes[device]
-                del info[device]
+        for (device, name, _), (axis_info, configuration) in zip(
+            found, followed, strict=True
+        ):
+            if axis_info is None:
+                del self._axes[device][name]
+                continue
+            info.setdefault(device, {})[name] = axis_info
+            if configuration is not None:
+                descriptors.update(configuration.descriptors)
+                readings.update(configuration.readings)
+                self._writable.update(configuration.writable)
+        self._axes = {device: axes for device, axes in self._axes.items() if axes}
         return info
+
+    async def _follow_axis(
+        self, device: str, name: str, axis: Axis
+    ) -> tuple[AxisInfo | None, Configuration | None]:
+        try:
+            info = await describe_axis(axis)
+        except Exception as error:  # noqa: BLE001
+            self.logger.warning(f"Leaving out {device} {name}: {error}")
+            return None, None
+        callback = partial(self._relay, device, name)
+        axis.subscribe(callback)
+        self._callbacks.append((axis, callback))
+        if not isinstance(axis, AsyncConfigurable):
+            return info, None
+        return info, await read_configuration(axis)
 
     async def _unfollow(self) -> None:
         for axis, callback in self._callbacks:
             axis.clear_sub(callback)
         self._callbacks.clear()
-
-    @staticmethod
-    async def _describe(axis: Axis) -> AxisInfo:
-        position = (await axis.locate())["readback"]
-        if isinstance(position, bool) or not isinstance(position, (int, float)):
-            raise TypeError(f"its position {position!r} is not a number")
-        descriptor: dict[str, Any] = {}
-        if isinstance(axis, AsyncReadable):
-            described = await axis.describe()
-            fields = axis.hints.get("fields", []) if isinstance(axis, HasHints) else []
-            key = (
-                fields[0]
-                if fields
-                else next(iter(described))
-                if len(described) == 1
-                else None
-            )
-            descriptor = dict(described.get(key, {})) if key is not None else {}
-        bounds = descriptor.get("limits", {})
-        bounds = bounds.get("control") or bounds.get("display") or {}
-        low, high = bounds.get("low"), bounds.get("high")
-        # EPICS reports limits of 0 and 0 for an axis that has none
-        if low is not None and high is not None and low >= high:
-            low = high = None
-        return AxisInfo(
-            position=float(position),
-            units=descriptor.get("units"),
-            precision=descriptor.get("precision"),
-            limits=(low, high),
-            stoppable=isinstance(axis, Stoppable),
-        )
 
     def _relay(self, device: str, axis: str, reading: dict[str, Reading[Any]]) -> None:
         value = next(iter(reading.values()))["value"]

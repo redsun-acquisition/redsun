@@ -33,7 +33,7 @@ Each axis is shown under its attribute name. This stage has two axes, `x` and
 ```
 
 Axes are found by what they can do, never by their names, so the view makes
-no assumption about which axis is which. [`find_axes`][redsun.presenter.find_axes]
+no assumption about which axis is which. [`find_axes`][redsun.utils.devices.find_axes]
 returns what the positioner finds for a device.
 
 ## Declare the positioner in a session file

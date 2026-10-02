@@ -14,7 +14,8 @@ from ophyd_async.core import (
     soft_signal_rw,
 )
 
-from redsun.presenter import AxisInfo, DescribesAxes, PositionerPresenter
+from redsun.presenter import DescribesAxes, PositionerPresenter
+from redsun.utils.devices import AxisInfo
 from tests.sdk.mocks import LimitedAxis, MockDetector, SoftAxis, Stage
 
 if TYPE_CHECKING:
