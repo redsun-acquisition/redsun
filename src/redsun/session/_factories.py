@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import sys
 from typing import TYPE_CHECKING, Any
@@ -72,42 +73,54 @@ def constructor(cls: type) -> inspect.Signature:
 def resolved(target: Any, label: str) -> inspect.Signature:
     """Return the signature of *target*, with its annotations resolved.
 
+    The generated constructor of a dataclass carries the fields of its
+    bases, so each field is resolved in the module of the class declaring it,
+    not in the module of *target*.
+
     Raises
     ------
     TypeError
         If an annotation names something that does not exist at runtime.
     """
     try:
+        if dataclasses.is_dataclass(target) and isinstance(target, type):
+            signature = inspect.signature(target)
+            return signature.replace(
+                parameters=[
+                    param.replace(annotation=field_type(target, param))
+                    for param in signature.parameters.values()
+                ]
+            )
         return inspect.signature(target, eval_str=True)
-    except NameError as first:
-        error = first
-    if isinstance(target, type):
-        # a dataclass subclass's generated __init__ carries the fields of its
-        # bases, whose annotations name types imported by the bases' modules
-        try:
-            return inspect.signature(target, eval_str=True, globals=namespace(target))
-        except NameError as second:
-            error = second
-    raise TypeError(
-        f"cannot read {label}: {error.name!r} is "
-        "not available at runtime. A type a component is injected by must "
-        "be imported outside 'if TYPE_CHECKING', because the graph "
-        "evaluates the annotation."
-    ) from error
+    except NameError as error:
+        raise TypeError(
+            f"cannot read {label}: {error.name!r} is "
+            "not available at runtime. A type a component is injected by must "
+            "be imported outside 'if TYPE_CHECKING', because the graph "
+            "evaluates the annotation."
+        ) from error
 
 
-def namespace(cls: type) -> dict[str, Any]:
-    """Return the globals of the modules declaring *cls* and its bases.
+def field_type(cls: type, param: inspect.Parameter) -> Any:
+    """Return the annotation of *param*, evaluated where its field is declared.
 
-    A module nearer *cls* in its method resolution order wins a name two
-    modules define.
+    Raises
+    ------
+    NameError
+        If the annotation names something its module does not define.
     """
-    merged: dict[str, Any] = {}
-    for base in reversed(cls.__mro__):
-        module = sys.modules.get(base.__module__)
-        if module is not None:
-            merged.update(vars(module))
-    return merged
+    annotation = param.annotation
+    if not isinstance(annotation, str):
+        return annotation
+    for owner in cls.__mro__:
+        if param.name in vars(owner).get("__annotations__", {}):
+            module = sys.modules[owner.__module__]
+            return eval(annotation, vars(module), dict(vars(owner)))
+    # a parameter of a constructor written by hand, not of a field
+    init = next(
+        vars(owner)["__init__"] for owner in cls.__mro__ if "__init__" in vars(owner)
+    )
+    return eval(annotation, getattr(init, "__globals__", {}))
 
 
 def injectable(
