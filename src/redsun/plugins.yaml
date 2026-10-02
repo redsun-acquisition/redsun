@@ -1,2 +1,5 @@
+presenters:
+  positioner: "redsun.presenter:PositionerPresenter"
 views:
   logs: "redsun.view.qt.builtins:LogView"
+  positioner: "redsun.view.qt.builtins:PositionerView"
