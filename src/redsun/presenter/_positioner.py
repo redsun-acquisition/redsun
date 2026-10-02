@@ -9,7 +9,13 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from bluesky.protocols import HasHints, Stoppable
-from ophyd_async.core import AsyncConfigurable, AsyncReadable, Device, SignalRW
+from ophyd_async.core import (
+    AsyncConfigurable,
+    AsyncReadable,
+    Device,
+    SignalRW,
+    walk_config_signals,
+)
 from psygnal import Signal
 
 from redsun.aio import run_coro
@@ -46,17 +52,6 @@ class AxisInfo:
 
     stoppable: bool = False
     """Whether the axis can be stopped."""
-
-
-def writable_signals(device: Device) -> dict[str, SignalRW[Any]]:
-    """Return every writable signal under *device*, by signal name."""
-    found: dict[str, SignalRW[Any]] = {}
-    for _, child in device.children():
-        if isinstance(child, SignalRW):
-            found[child.name] = child
-        else:
-            found.update(writable_signals(child))
-    return found
 
 
 @runtime_checkable
@@ -262,7 +257,14 @@ class PositionerPresenter(Loggable):
                 self._callbacks.append((axis, callback))
                 if not isinstance(axis, AsyncConfigurable):
                     continue
-                writable = writable_signals(axis) if isinstance(axis, Device) else {}
+                writable = {
+                    signal.name: signal
+                    for signal in (
+                        await walk_config_signals(axis)
+                        if isinstance(axis, Device)
+                        else {}
+                    ).values()
+                }
                 for key, descriptor in (await axis.describe_configuration()).items():
                     if key in writable:
                         self._writable[key] = writable[key]
