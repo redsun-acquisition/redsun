@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, TypeGuard
 
 from psygnal import Signal
 from qtpy import QtCore
@@ -14,14 +14,12 @@ from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.presenter import DescribesAxes  # noqa: TC001
 from redsun.qt import Dock
+from redsun.view.qt.treeview import DescriptorTreeView
 
 from ..._settings import Settings  # noqa: TC001
 from ._positioner_group import PositionerGroup
-from .treeview import DescriptorTreeView
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from redsun.view import Placement
 
 DEFAULT_STEPS = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
@@ -47,28 +45,34 @@ class SavedPosition(TypedDict):
     """Position of each axis, by axis name."""
 
 
+def is_saved_position(item: object) -> TypeGuard[dict[str, Any]]:
+    """Tell whether *item* is a well-formed saved position."""
+    return (
+        isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and isinstance(item.get("device"), str)
+        and isinstance(item.get("positions"), dict)
+        and all(
+            isinstance(axis, str)
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            for axis, value in item["positions"].items()
+        )
+    )
+
+
 def saved_positions(stored: object) -> tuple[list[SavedPosition], int]:
     """Return the well-formed entries in *stored*, and how many were not."""
-    entries: list[SavedPosition] = []
     items = stored if isinstance(stored, list) else []
-    for item in items:
-        if (
-            isinstance(item, dict)
-            and isinstance(item.get("name"), str)
-            and isinstance(item.get("device"), str)
-            and isinstance(item.get("positions"), dict)
-            and all(
-                isinstance(axis, str) and isinstance(value, (int, float))
-                for axis, value in item["positions"].items()
-            )
-        ):
-            entries.append(
-                SavedPosition(
-                    name=item["name"],
-                    device=item["device"],
-                    positions={a: float(v) for a, v in item["positions"].items()},
-                )
-            )
+    entries = [
+        SavedPosition(
+            name=item["name"],
+            device=item["device"],
+            positions={axis: float(v) for axis, v in item["positions"].items()},
+        )
+        for item in items
+        if is_saved_position(item)
+    ]
     return entries, len(items) - len(entries)
 
 
@@ -124,7 +128,7 @@ class PositionerView(QtW.QWidget, Loggable):
         self._tree: DescriptorTreeView | None = None
         self._configuration = QtW.QVBoxLayout()
         self._entries: list[SavedPosition] = []
-        self._entry_buttons: dict[str, list[QtW.QPushButton]] = {}
+        self._entry_buttons: list[tuple[str, QtW.QPushButton]] = []
 
         self._interval = QLabeledSlider(QtCore.Qt.Orientation.Horizontal, self)
         self._interval.setRange(*REPEAT_INTERVAL_RANGE)
@@ -279,37 +283,43 @@ class PositionerView(QtW.QWidget, Loggable):
             if (widget := item.widget()) is not None:
                 widget.setParent(None)
                 widget.deleteLater()
-        self._entry_buttons = {}
         shown = [entry for entry in self._entries if entry["device"] in self._groups]
+        self._entry_buttons = []
         for index, entry in enumerate(shown):
-            row = QtW.QWidget(self._entry_list)
-            name = QtW.QLineEdit(entry["name"], row)
-            name.setObjectName(f"saved:{index}")
-            name.editingFinished.connect(
-                lambda e=entry, n=name: self._rename(e, n.text())
-            )
-            summary = "  ".join(f"{a} {v:g}" for a, v in entry["positions"].items())
-            go = QtW.QPushButton("Go", row)
-            go.setObjectName(f"saved-go:{index}")
-            go.clicked.connect(lambda _=False, e=entry: self._go(e))
-            remove = QtW.QPushButton("x", row)
-            remove.setObjectName(f"saved-remove:{index}")
-            remove.setToolTip("Remove this saved position")
-            remove.clicked.connect(lambda _=False, e=entry: self._remove(e))
-            layout = QtW.QHBoxLayout(row)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.addWidget(name)
-            layout.addWidget(QtW.QLabel(f"{entry['device']}  {summary}", row))
-            layout.addWidget(go)
-            layout.addWidget(remove)
+            row, go = self._entry_row(index, entry)
             self._entry_layout.addWidget(row)
-            self._entry_buttons.setdefault(entry["device"], []).append(go)
+            self._entry_buttons.append((entry["device"], go))
         self._lock_entries()
 
+    def _entry_row(
+        self, index: int, entry: SavedPosition
+    ) -> tuple[QtW.QWidget, QtW.QPushButton]:
+        row = QtW.QWidget(self._entry_list)
+        name = QtW.QLineEdit(entry["name"], row)
+        name.setObjectName(f"saved:{index}")
+        name.editingFinished.connect(lambda: self._rename(entry, name.text()))
+        summary = "  ".join(f"{a} {v:g}" for a, v in entry["positions"].items())
+        go = QtW.QPushButton("Go", row)
+        go.setObjectName(f"saved-go:{index}")
+        go.clicked.connect(lambda: self._go(entry))
+        remove = QtW.QPushButton("x", row)
+        remove.setObjectName(f"saved-remove:{index}")
+        remove.setToolTip("Remove this saved position")
+        remove.clicked.connect(lambda: self._remove(entry))
+        layout = QtW.QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        for widget in (
+            name,
+            QtW.QLabel(f"{entry['device']}  {summary}", row),
+            go,
+            remove,
+        ):
+            layout.addWidget(widget)
+        return row, go
+
     def _lock_entries(self) -> None:
-        for device, buttons in self._entry_buttons.items():
-            for button in buttons:
-                button.setEnabled(device not in self._locked)
+        for device, button in self._entry_buttons:
+            button.setEnabled(device not in self._locked)
 
     def _configure(self, owner: str, prop: str, value: Any) -> None:
         self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)

@@ -11,7 +11,7 @@ from qtpy import QtWidgets as QtW
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
-    from redsun.presenter import AxisInfo
+    from redsun.utils.devices import AxisInfo
 
 DEFAULT_PRECISION = 2
 """Decimals shown for an axis whose descriptor gives no precision."""
@@ -105,6 +105,7 @@ class AxisRow(QtW.QWidget):
         self.go_button = QtW.QPushButton("Go", self)
         self.go_button.setObjectName(f"go:{axis}")
         self.go_button.clicked.connect(self.go)
+        self.controls = (*self.buttons, self.box, self.target, self.go_button)
 
         grid = QtW.QGridLayout(self)
         grid.setContentsMargins(0, 0, 0, 0)
@@ -149,11 +150,6 @@ class AxisRow(QtW.QWidget):
         """Show *value* as the readback."""
         self.position = value
         self.readback.setText(self.format(value))
-
-    def set_enabled_controls(self, enabled: bool) -> None:
-        """Enable or disable everything but the readback."""
-        for widget in (*self.buttons, self.box, self.target, self.go_button):
-            widget.setEnabled(enabled)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent | None) -> None:
         """Step with Left and Right while the row has focus and is not locked."""
@@ -224,6 +220,10 @@ class PositionerGroup(QtW.QGroupBox):
         layout = QtW.QVBoxLayout(self)
         layout.addLayout(header)
 
+        self._controls: list[QtW.QWidget] = [self._save]
+        if self._stop is not None:
+            self._controls.append(self._stop)
+        self._step_buttons: list[QtW.QPushButton] = []
         self._rows: dict[str, AxisRow] = {}
         for axis, info in axes.items():
             row = AxisRow(axis, info, steps, repeat_delay, repeat_interval, self)
@@ -234,6 +234,8 @@ class PositionerGroup(QtW.QGroupBox):
                 lambda value, a=axis: self.sig_move_to.emit(device, {a: value})
             )
             self._rows[axis] = row
+            self._controls.extend(row.controls)
+            self._step_buttons.extend(row.buttons)
             layout.addWidget(row)
 
     def set_readback(self, axis: str, value: float) -> None:
@@ -259,14 +261,10 @@ class PositionerGroup(QtW.QGroupBox):
 
     def set_locked(self, locked: bool) -> None:
         """Disable the controls while *locked*; readbacks keep updating."""
-        for row in self._rows.values():
-            row.set_enabled_controls(not locked)
-        self._save.setEnabled(not locked)
-        if self._stop is not None:
-            self._stop.setEnabled(not locked)
+        for widget in self._controls:
+            widget.setEnabled(not locked)
 
     def set_repeat_interval(self, milliseconds: int) -> None:
         """Repeat every step button at *milliseconds* while held."""
-        for row in self._rows.values():
-            for button in row.buttons:
-                button.setAutoRepeatInterval(milliseconds)
+        for button in self._step_buttons:
+            button.setAutoRepeatInterval(milliseconds)
