@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 __all__ = ["ArrayShape", "Stream", "WriterError"]
 
-_AXIS_NAMES: Final = ("t", "c", "z", "y", "x")
+AXIS_NAMES: Final = ("t", "c", "z", "y", "x")
 
 
 class WriterError(RuntimeError):
@@ -130,9 +130,9 @@ def axis_names(ndim: int) -> tuple[str, ...]:
 
     Names are taken from the end of `t, c, z, y, x`, the order NGFF requires.
     """
-    if not 2 <= ndim <= len(_AXIS_NAMES):
+    if not 2 <= ndim <= len(AXIS_NAMES):
         raise WriterError(
             f"an array of {ndim} dimensions cannot be written; "
-            f"between 2 and {len(_AXIS_NAMES)} are supported"
+            f"between 2 and {len(AXIS_NAMES)} are supported"
         )
-    return _AXIS_NAMES[-ndim:]
+    return AXIS_NAMES[-ndim:]

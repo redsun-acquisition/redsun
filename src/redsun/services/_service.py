@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final, TypeAlias
 
 from psygnal import Signal
 
-from redsun.log import SERVICE_LOGGER
+from redsun.log import SERVICE_LOGGER, logger
 
 from ._process import LEVEL_VARIABLE, NAME_VARIABLE, PREFIX_VARIABLE, READY_VARIABLE
 from ._transports import CHANNEL_ACCESS, TRANSPORTS
@@ -23,8 +23,6 @@ from ._transports import CHANNEL_ACCESS, TRANSPORTS
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
-
-logger = logging.getLogger("redsun")
 
 STARTUP_TIMEOUT: Final = 15.0
 """Seconds a launched service has to print its readiness line."""
@@ -395,6 +393,9 @@ def service_record(service: str, line: str) -> logging.LogRecord:
             created=stamp.timestamp(),
             uid=pvxs["name"],
         )
+        return logging.makeLogRecord(fields)
+    # a JSON record is an object; any other line would only fail to parse
+    if not line.startswith("{"):
         return logging.makeLogRecord(fields)
     try:
         data = json.loads(line)

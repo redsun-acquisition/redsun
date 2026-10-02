@@ -91,8 +91,7 @@ def describe(
     task: list[asyncio.Task[dict[str, Descriptor]]] = yield from bps.wait_for(
         [_describe]
     )
-    result = task[0].result()
-    return result
+    return task[0].result()
 
 
 def describe_collect(
@@ -108,9 +107,7 @@ def describe_collect(
     task: list[
         asyncio.Task[dict[str, Descriptor] | dict[str, dict[str, Descriptor]]]
     ] = yield from bps.wait_for([_describe_collect])
-    result = task[0].result()
-
-    return result
+    return task[0].result()
 
 
 def lock(*devices: HasName) -> MsgGenerator[str]:

@@ -14,7 +14,6 @@ actions the user triggers while it runs.
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
 from enum import StrEnum
@@ -25,6 +24,7 @@ from psygnal import Signal
 
 from redsun.aio import AwaitableEvent
 from redsun.engine.plan_stubs import SIXTY_FPS, wait_for_actions
+from redsun.log import logger
 from redsun.ports import slot
 
 if TYPE_CHECKING:
@@ -33,8 +33,6 @@ if TYPE_CHECKING:
     from bluesky.utils import MsgGenerator
 
 F = TypeVar("F", bound="Callable[..., Any]")
-
-logger = logging.getLogger("redsun")
 
 
 class SRLatch:

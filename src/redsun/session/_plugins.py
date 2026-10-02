@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 from functools import cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from redsun.errors import PluginError
 
-from .._manifest import PluginManifest, ServiceEntry, discover, import_class
+from .._manifest import PluginManifest, discover, import_class
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -20,6 +20,8 @@ __all__ = [
     "resolve",
     "service_entry",
 ]
+
+T = TypeVar("T")
 
 logger = logging.getLogger("redsun")
 
@@ -46,14 +48,14 @@ def resolve(plugin_name: str | None, plugin_id: str | None, group: str) -> type 
     """
     if plugin_name is None or plugin_id is None:
         return None
-    listed = str(manifest_item(plugin_name, plugin_id, group))
+    path = class_path(plugin_name, plugin_id, group)
     try:
-        return import_class(listed)
+        return import_class(path)
     except (ImportError, TypeError) as e:
-        raise PluginError(f"cannot import {listed!r}: {e}") from e
+        raise PluginError(f"cannot import {path!r}: {e}") from e
 
 
-def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
+def load_providers(providers: Mapping[str, ComponentEntry]) -> dict[str, type]:
     """Return the shared-service classes a `providers` section names, by entry name.
 
     A session assembled from a file gets a plugin's shared services this way,
@@ -62,19 +64,20 @@ def load_providers(providers: Mapping[str, Any]) -> dict[str, type]:
     method it marks with `provides` registers a value under the type that
     method returns.
 
-    An entry that does not resolve is logged and left out.
+    An entry that names no plugin, or does not resolve, is logged and left
+    out.
     """
     found: dict[str, type] = {}
     for name, entry in providers.items():
-        if not isinstance(entry, dict):
-            continue
         try:
-            cls = resolve(entry.get("plugin_name"), entry.get("plugin_id"), "providers")
+            cls = resolve(entry.plugin_name, entry.plugin_id, "providers")
         except PluginError as e:
             logger.error("Failed to load provider '%s': %s", name, e)
             continue
-        if cls is not None:
-            found[name] = cls
+        if cls is None:
+            logger.warning("Provider '%s' names no plugin, and is left out", name)
+            continue
+        found[name] = cls
     return found
 
 
@@ -93,8 +96,8 @@ def service_entry(entry: ComponentEntry) -> dict[str, Any]:
     own = dict(entry.model_extra or {})
     if entry.plugin_name is None or entry.plugin_id is None:
         return own
-    listed = manifest_item(entry.plugin_name, entry.plugin_id, "services")
-    assert isinstance(listed, ServiceEntry)
+    services = manifest(entry.plugin_name).services
+    listed = listed_item(services, entry.plugin_name, entry.plugin_id, "services")
     return {**listed.model_dump(exclude_none=True), **own}
 
 
@@ -128,15 +131,28 @@ def manifest(plugin_name: str) -> PluginManifest:
     return found[plugin_name]
 
 
-def manifest_item(plugin_name: str, plugin_id: str, group: str) -> str | ServiceEntry:
-    """Return what *plugin_name*'s manifest lists as *plugin_id* under *group*.
+def class_path(plugin_name: str, plugin_id: str, group: str) -> str:
+    """Return the class path *plugin_name*'s manifest lists as *plugin_id* under *group*.
 
     Raises
     ------
     PluginError
         If the plugin is not installed, or its manifest has no such entry.
     """
-    items: dict[str, str | ServiceEntry] = getattr(manifest(plugin_name), group)
+    paths: dict[str, str] = getattr(manifest(plugin_name), group)
+    return listed_item(paths, plugin_name, plugin_id, group)
+
+
+def listed_item(
+    items: Mapping[str, T], plugin_name: str, plugin_id: str, group: str
+) -> T:
+    """Return *plugin_id* from the *group* section of *plugin_name*'s manifest.
+
+    Raises
+    ------
+    PluginError
+        If *items* has no such entry.
+    """
     if plugin_id not in items:
         known = ", ".join(sorted(items)) or "none"
         raise PluginError(

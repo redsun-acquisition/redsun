@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from itertools import groupby
+from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
 __all__ = ["LogView"]
 
-_LEVELS: tuple[tuple[str, int], ...] = (
+LEVELS = (
     ("DEBUG", logging.DEBUG),
     ("INFO", logging.INFO),
     ("WARNING", logging.WARNING),
@@ -28,7 +30,7 @@ _LEVELS: tuple[tuple[str, int], ...] = (
 
 # TODO: the level colours are fixed, two sets picked by background lightness;
 # a palette with its own colours for log levels could supply them instead
-_ON_LIGHT: dict[int, str] = {
+ON_LIGHT = {
     logging.DEBUG: "#5c5c5c",
     logging.INFO: "#0b3d91",
     logging.WARNING: "#8a4b00",
@@ -37,7 +39,7 @@ _ON_LIGHT: dict[int, str] = {
 }
 """Level colours for a light console, each at least 6:1 against white."""
 
-_ON_DARK: dict[int, str] = {
+ON_DARK = {
     logging.DEBUG: "#b0b0b0",
     logging.INFO: "#9ecbff",
     logging.WARNING: "#ffb95c",
@@ -46,19 +48,19 @@ _ON_DARK: dict[int, str] = {
 }
 """Level colours for a dark console, each at least 6:1 against near-black."""
 
-_MID_LIGHTNESS = 128
+MID_LIGHTNESS = 128
 """Above this the console background counts as light."""
 
-_BATCH_INTERVAL_MS = 100
+BATCH_INTERVAL_MS = 100
 """How often records that arrived since the last batch are drawn."""
 
-_BATCH_SIZE = 2_000
+BATCH_SIZE = 2_000
 """The most records one batch draws on each console; the rest wait for the next."""
 
-_SERVICES_TAB = 1
+SERVICES_TAB = 1
 """Index of the Services tab."""
 
-_ALL_SERVICES = "All services"
+ALL_SERVICES = "All services"
 """Selector entry showing the records of every service."""
 
 
@@ -100,7 +102,7 @@ class LogView(QtW.QWidget):
         self._console = self._make_console(buffer.capacity)
         self._service_console = self._make_console(buffer.service_capacity)
         self._service_combo = QtW.QComboBox(self)
-        self._service_combo.addItem(_ALL_SERVICES, None)
+        self._service_combo.addItem(ALL_SERVICES, None)
         services_page = QtW.QWidget(self)
         services_layout = QtW.QVBoxLayout(services_page)
         services_layout.setContentsMargins(0, 0, 0, 0)
@@ -109,19 +111,21 @@ class LogView(QtW.QWidget):
         self._tabs = QtW.QTabWidget(self)
         self._tabs.addTab(self._console, "Application")
         self._tabs.addTab(services_page, "Services")
-        self._tabs.setTabVisible(_SERVICES_TAB, False)
+        self._tabs.setTabVisible(SERVICES_TAB, False)
         # only the newest records can end up on screen, so a burst larger than
         # the buffer never queues more than a console would keep
         self._pending: deque[logging.LogRecord] = deque(maxlen=buffer.capacity)
         self._service_pending: deque[logging.LogRecord] = deque(
             maxlen=buffer.service_capacity
         )
+        self._services: set[str] = set()
+        self._selected: str | None = None
         for service in buffer.services:
             self._add_service(service)
         self._service_combo.currentIndexChanged.connect(self._on_service_selected)
 
         self._level_combo = QtW.QComboBox(self)
-        for label, level in _LEVELS:
+        for label, level in LEVELS:
             self._level_combo.addItem(label, level)
         self._level_combo.setCurrentIndex(self._level_combo.findData(self._level))
         self._level_combo.currentIndexChanged.connect(self._on_level_selected)
@@ -151,7 +155,7 @@ class LogView(QtW.QWidget):
         self.setLayout(root)
 
         self._batch_timer = QtCore.QTimer(self)
-        self._batch_timer.setInterval(_BATCH_INTERVAL_MS)
+        self._batch_timer.setInterval(BATCH_INTERVAL_MS)
         self._batch_timer.timeout.connect(self._draw_batch)
 
         self._render()
@@ -192,8 +196,7 @@ class LogView(QtW.QWidget):
     @property
     def service(self) -> str | None:
         """The service the Services tab shows, `None` for every service."""
-        data = self._service_combo.currentData()
-        return None if data is None else str(data)
+        return self._selected
 
     def set_level(self, level: int) -> None:
         """Show only records at or above *level*, redrawing from the buffer."""
@@ -210,6 +213,8 @@ class LogView(QtW.QWidget):
         self.set_level(int(self._level_combo.itemData(index)))
 
     def _on_service_selected(self, index: int) -> None:
+        data = self._service_combo.itemData(index)
+        self._selected = None if data is None else str(data)
         self._render()
 
     def clear(self) -> None:
@@ -218,7 +223,7 @@ class LogView(QtW.QWidget):
         The buffer is untouched, so `Save logs...` still writes everything and
         changing the level brings records back.
         """
-        if self._tabs.currentIndex() == _SERVICES_TAB:
+        if self._tabs.currentIndex() == SERVICES_TAB:
             self._service_pending.clear()
             self._service_console.clear()
         else:
@@ -234,7 +239,7 @@ class LogView(QtW.QWidget):
         included, and from the buffer otherwise.
         """
         buffer = log_buffer()
-        if self._tabs.currentIndex() != _SERVICES_TAB:
+        if self._tabs.currentIndex() != SERVICES_TAB:
             sources: list[tuple[str | None, Iterable[logging.LogRecord]]] = [
                 (None, buffer.records)
             ]
@@ -256,15 +261,16 @@ class LogView(QtW.QWidget):
 
     def _add_service(self, service: str) -> None:
         """Offer *service* in the selector, and show the Services tab."""
+        self._services.add(service)
         self._service_combo.addItem(service, service)
-        self._tabs.setTabVisible(_SERVICES_TAB, True)
+        self._tabs.setTabVisible(SERVICES_TAB, True)
         capacity = log_buffer().service_capacity * (self._service_combo.count() - 1)
         self._service_console.setMaximumBlockCount(capacity)
         self._service_pending = deque(self._service_pending, maxlen=capacity)
 
     def _on_record(self, record: logging.LogRecord) -> None:
         service = service_of(record)
-        if service is not None and self._service_combo.findData(service) == -1:
+        if service is not None and service not in self._services:
             self._add_service(service)
         if record.levelno < self._level:
             return
@@ -282,7 +288,7 @@ class LogView(QtW.QWidget):
             (self._pending, self._console),
             (self._service_pending, self._service_console),
         ):
-            count = min(_BATCH_SIZE, len(pending))
+            count = min(BATCH_SIZE, len(pending))
             self._write(console, [pending.popleft() for _ in range(count)])
         if not (self._pending or self._service_pending):
             self._batch_timer.stop()
@@ -310,7 +316,7 @@ class LogView(QtW.QWidget):
     def colors(self) -> dict[int, str]:
         """The level colours in use, chosen from the console's background."""
         base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
-        return _ON_LIGHT if base.lightness() >= _MID_LIGHTNESS else _ON_DARK
+        return ON_LIGHT if base.lightness() >= MID_LIGHTNESS else ON_DARK
 
     def _write(
         self, console: QtW.QPlainTextEdit, records: Iterable[logging.LogRecord]
@@ -327,15 +333,18 @@ class LogView(QtW.QWidget):
         cursor = QtGui.QTextCursor(document)
         cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
         cursor.beginEditBlock()
-        for record in records:
-            if record.levelno not in formats:
+        # records of one level in a row go in as one piece of text: each line
+        # break in it still starts a block of its own
+        for level, run in groupby(records, attrgetter("levelno")):
+            if level not in formats:
                 char_format = QtGui.QTextCharFormat()
-                color = colors.get(record.levelno, colors[logging.INFO])
+                color = colors.get(level, colors[logging.INFO])
                 char_format.setForeground(QtGui.QBrush(QtGui.QColor(color)))
-                formats[record.levelno] = char_format
+                formats[level] = char_format
             if not document.isEmpty():
                 cursor.insertBlock()
-            cursor.insertText(self._formatter.format(record), formats[record.levelno])
+            text = "\n".join(self._formatter.format(record) for record in run)
+            cursor.insertText(text, formats[level])
         cursor.endEditBlock()
         if following:
             bar.setValue(bar.maximum())

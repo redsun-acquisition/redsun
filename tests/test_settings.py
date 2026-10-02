@@ -76,10 +76,17 @@ def test_a_file_holding_something_other_than_an_object_is_ignored(
 
 
 def test_a_value_the_file_cannot_hold_is_refused(tmp_path: Path) -> None:
-    """Refuse to set a value JSON cannot hold."""
+    """Refuse a value JSON cannot hold, keeping what was set before and after it."""
+    settings = Settings(tmp_path / "settings.json")
+    settings.set("window", "saved")
+
     with pytest.raises(TypeError):
         # a type checker refuses it too; this pins the refusal for untyped callers
-        Settings(tmp_path / "settings.json").set("window", object())  # type: ignore[arg-type]
+        settings.set("window", object())  # type: ignore[arg-type]
+    settings.set("theme", "dark")
+
+    assert settings.get("window") == "saved"
+    assert Settings(tmp_path / "settings.json").get("theme") == "dark"
 
 
 def test_a_session_opens_its_own_only_once_it_is_built(

@@ -66,14 +66,9 @@ class GlobalFormatter(logging.Formatter):
 
     _format: ClassVar[str] = "[%(asctime)s][%(levelname)s]"
 
-    def __init__(self, datefmt: str) -> None:
-        super().__init__(datefmt=datefmt)
-
     def format(self, record: logging.LogRecord) -> str:
         fmt = self._format
-        message = []
-        message.append(record.getMessage())
-        record.message = " ".join(message)
+        record.message = record.getMessage()
         record.asctime = self.formatTime(record, self.datefmt)
         clsname = getattr(record, "clsname", None)
         if clsname:
@@ -103,17 +98,17 @@ class GlobalFormatter(logging.Formatter):
 
 
 class ContextualAdapter(logging.LoggerAdapter[logging.Logger]):
-    """Adapter adding an object's class name and name to each record.
+    """Adapter adding an object's class name and name to each record it logs.
 
     Parameters
     ----------
-    logger: logging.Logger
-        Logger instance to wrap.
-    obj: Any
-        The object to add context to.
+    obj
+        The object whose class name, and `name` attribute if it has one, each
+        record carries.
     """
 
     logger: logging.Logger
+    """The wrapped logger."""
 
     def __init__(self, logger: logging.Logger, obj: Any) -> None:
         super().__init__(logger, {"obj": obj})
@@ -203,9 +198,12 @@ class BufferHandler(logging.Handler):
         if service is None:
             self._records.append(record)
         else:
-            self._service_records.setdefault(
-                service, deque(maxlen=self._service_capacity)
-            ).append(record)
+            records = self._service_records.get(service)
+            if records is None:
+                records = self._service_records[service] = deque(
+                    maxlen=self._service_capacity
+                )
+            records.append(record)
         self.sig_record.emit(record)
 
     def clear(self) -> None:
@@ -285,6 +283,17 @@ class SessionFileHandler(RotatingFileHandler):
     def root(self) -> Path:
         """Root the run's files are under."""
         return self._root
+
+    def shouldRollover(self, record: logging.LogRecord) -> bool:
+        """Whether the file has reached `LOG_MAX_BYTES`, by its size alone.
+
+        The file is always one this handler made, so it skips the base
+        class's check that it is a regular file, which costs a file system
+        call per record. A file may pass the limit by one record.
+        """
+        if self.stream is None:
+            self.stream = self._open()
+        return self.stream.tell() >= self.maxBytes
 
     def move(self, root: Path) -> None:
         """Carry the run's files under *root* and keep writing there.
@@ -372,11 +381,6 @@ def _logger_for(service: str | None) -> logging.Logger:
     )
 
 
-logger.setLevel(DEFAULT_LEVEL)
-add_handler(logging.StreamHandler(sys.stdout))
-add_handler(BufferHandler())
-
-
 def log_buffer() -> BufferHandler:
     """Return the buffer holding this session's log records.
 
@@ -409,3 +413,8 @@ class Loggable:
     def logger(self) -> logging.LoggerAdapter[logging.Logger]:
         """Logger naming this instance in each record."""
         return ContextualAdapter(logging.getLogger("redsun"), self)
+
+
+logger.setLevel(DEFAULT_LEVEL)
+add_handler(logging.StreamHandler(sys.stdout))
+add_handler(BufferHandler())

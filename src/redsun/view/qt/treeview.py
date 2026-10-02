@@ -10,23 +10,25 @@ The design follows the `ParameterTree` widget of
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, assert_never
 
 import numpy as np
 from psygnal import Signal
 from qtpy import QtCore, QtGui, QtWidgets
 
 if TYPE_CHECKING:
-    from typing import Never
-
     from bluesky.protocols import Descriptor, Reading
-    from event_model import Dtype
 
 __all__ = ["DescriptorTreeView"]
 
 
-def assert_never(_: Dtype) -> Never:
-    raise AssertionError("Expected code to be unreachable")
+def _split_key(key: str) -> tuple[str, str]:
+    """Return *key*'s device and property: `cam-gain` gives `cam` and `gain`.
+
+    A key with no `-` belongs to no device, and gives an empty device name.
+    """
+    owner, dash, prop = key.partition("-")
+    return (owner, prop) if dash else ("", key)
 
 
 def _make_value_widget(
@@ -54,30 +56,11 @@ def _make_value_widget(
     parent
         Qt parent for the created widget.
     """
-    if readonly or descriptor.get("dtype") == "array":
-        # convert the initial value to a tuple
-        # that can be more easily rendered as text
-        if isinstance(initial_value, np.ndarray):
-            actual_value = tuple(initial_value.tolist())
-        elif isinstance(initial_value, (list, tuple)):
-            actual_value = tuple(initial_value)
-        else:
-            actual_value = initial_value
-        lbl = QtWidgets.QLabel(parent)
-        lbl.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter
-        )
-        lbl.setContentsMargins(4, 0, 4, 0)
-        if readonly:
-            palette = lbl.palette()
-            palette.setColor(
-                QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(130, 130, 130)
-            )
-            lbl.setPalette(palette)
-        _set_label_text(lbl, actual_value)
-        return lbl
+    if readonly:
+        return _make_label(initial_value, parent, readonly=True)
 
-    dtype = descriptor.get("dtype", "")
+    # not a subscript: a descriptor without a dtype fails in assert_never below
+    dtype = descriptor.get("dtype")
     limits = descriptor.get("limits", {})
     control = limits.get("control", None)
     if control is not None:
@@ -88,6 +71,9 @@ def _make_value_widget(
         high = None
 
     match dtype:
+        case "array":
+            return _make_label(initial_value, parent, readonly=False)
+
         case "integer":
             sb = QtWidgets.QSpinBox(parent)
             sb.setRange(
@@ -156,6 +142,31 @@ def _make_value_widget(
             assert_never(dtype)
 
 
+def _make_label(
+    value: Any, parent: QtWidgets.QWidget, *, readonly: bool
+) -> QtWidgets.QLabel:
+    """Return a centred label showing *value*, greyed out when *readonly*."""
+    # convert the initial value to a tuple
+    # that can be more easily rendered as text
+    if isinstance(value, np.ndarray):
+        value = tuple(value.tolist())
+    elif isinstance(value, (list, tuple)):
+        value = tuple(value)
+    lbl = QtWidgets.QLabel(parent)
+    lbl.setAlignment(
+        QtCore.Qt.AlignmentFlag.AlignCenter | QtCore.Qt.AlignmentFlag.AlignVCenter
+    )
+    lbl.setContentsMargins(4, 0, 4, 0)
+    if readonly:
+        palette = lbl.palette()
+        palette.setColor(
+            QtGui.QPalette.ColorRole.WindowText, QtGui.QColor(130, 130, 130)
+        )
+        lbl.setPalette(palette)
+    _set_label_text(lbl, value)
+    return lbl
+
+
 def _set_label_text(
     label: QtWidgets.QLabel,
     value: Any,
@@ -187,30 +198,24 @@ def _update_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
     """
     if isinstance(widget, QtWidgets.QLabel):
         _set_label_text(widget, value)
-    elif isinstance(widget, QtWidgets.QSpinBox):
-        widget.blockSignals(True)
-        if isinstance(value, (int, float)):
-            widget.setValue(int(value))
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QDoubleSpinBox):
-        widget.blockSignals(True)
-        if isinstance(value, (int, float)):
-            widget.setValue(float(value))
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QComboBox):
-        widget.blockSignals(True)
-        # boolean combobox stores bool data; string combobox stores text
-        if isinstance(value, bool) or widget.itemData(0) is True:
-            idx = widget.findData(bool(value))
-        else:
-            idx = widget.findText(str(value) if value is not None else "")
-        if idx >= 0:
-            widget.setCurrentIndex(idx)
-        widget.blockSignals(False)
-    elif isinstance(widget, QtWidgets.QLineEdit):
-        widget.blockSignals(True)
-        widget.setText(str(value) if value is not None else "")
-        widget.blockSignals(False)
+        return
+    with QtCore.QSignalBlocker(widget):
+        if isinstance(widget, QtWidgets.QSpinBox):
+            if isinstance(value, (int, float)):
+                widget.setValue(int(value))
+        elif isinstance(widget, QtWidgets.QDoubleSpinBox):
+            if isinstance(value, (int, float)):
+                widget.setValue(float(value))
+        elif isinstance(widget, QtWidgets.QComboBox):
+            # boolean combobox stores bool data; string combobox stores text
+            if isinstance(value, bool) or widget.itemData(0) is True:
+                idx = widget.findData(bool(value))
+            else:
+                idx = widget.findText(str(value) if value is not None else "")
+            if idx >= 0:
+                widget.setCurrentIndex(idx)
+        elif isinstance(widget, QtWidgets.QLineEdit):
+            widget.setText(str(value) if value is not None else "")
 
 
 class DescriptorTreeView(QtWidgets.QTreeWidget):
@@ -229,18 +234,13 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         Initial readings for the same keys; only `reading["value"]` is read.
     parent
         Parent widget.
-
-    Signals
-    -------
-    sig_property_changed : Signal[str, str, Any]
-        Emitted when the user commits an edit, which stays pending until
-        `set_value` or `revert` settles it.
-        - str: object name
-        - str: property name
-        - Any: new value
     """
 
-    sig_property_changed: Signal = Signal(str, str, object)
+    sig_property_changed = Signal(str, str, object)
+    """Emitted with the object name, property name and new value of a committed edit.
+
+    The edit stays pending until `set_value` or `revert` settles it.
+    """
 
     def __init__(
         self,
@@ -258,12 +258,12 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.setColumnCount(2)
         self.setHeaderLabels(["Setting", "Value"])
         self.setHeaderHidden(True)
-        _hdr = self.header()
-        if _hdr is not None:
-            _hdr.setSectionResizeMode(
+        header = self.header()
+        if header is not None:
+            header.setSectionResizeMode(
                 0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents
             )
-            _hdr.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.setRootIsDecorated(False)
         self.setIndentation(12)
         self.setAlternatingRowColors(True)
@@ -310,8 +310,8 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
-        owner, property = key.split("-", 1)
-        self.sig_property_changed.emit(owner, property, value)
+        owner, prop = _split_key(key)
+        self.sig_property_changed.emit(owner, prop, value)
 
     def _add_leaf(
         self,
@@ -363,19 +363,11 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         return item
 
     def _build(self) -> None:
-        """Populate the tree."""
-        self.clear()
-        self._widgets.clear()
-        self._build_from_keys()
-        self.expandAll()
-        self.resizeColumnToContents(0)
-
-    def _build_from_keys(self) -> None:
         """Build the tree from each key's device name and property path."""
         owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
         groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
         for full_key, desc in self._descriptors.items():
-            owner, prop = full_key.split("-", 1) if "-" in full_key else ("", full_key)
+            owner, prop = _split_key(full_key)
             source = desc.get("source", "")
             readonly = source.split("://", 1)[-1] == "readonly" or source.endswith(
                 ":readonly"
@@ -389,3 +381,5 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
                     groups[(owner, group)] = self._make_group_item(group, parent)
                 parent = groups[(owner, group)]
             self._add_leaf(parent, full_key, prop, desc, readonly)
+        self.expandAll()
+        self.resizeColumnToContents(0)

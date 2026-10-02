@@ -612,6 +612,36 @@ def test_a_nested_scope_is_indented_and_a_finished_one_removed() -> None:
     assert widget.progress_group.isHidden()
 
 
+def test_progress_rows_follow_the_order_of_the_scopes() -> None:
+    """Keep a row per scope in the order given, and update values in place."""
+    widget = create_plan_widget(_simple_spec())
+    assert widget.progress_group is not None
+    layout = widget.progress_group.layout()
+    assert isinstance(layout, QtW.QGridLayout)
+
+    def rows() -> list[tuple[str, str]]:
+        """Return each row's name and text, top to bottom."""
+        found = []
+        for row in range(layout.rowCount()):
+            name, text = layout.itemAtPosition(row, 0), layout.itemAtPosition(row, 2)
+            if name is None or text is None:
+                continue
+            name_label, text_label = name.widget(), text.widget()
+            assert isinstance(name_label, QtW.QLabel)
+            assert isinstance(text_label, QtW.QLabel)
+            found.append((name_label.text(), text_label.text()))
+        return found
+
+    first = _scope("first", current=1, target=4, fraction=0.25)
+    second = _scope("second", current=2, target=4, fraction=0.5)
+    widget.show_progress((first, second))
+    widget.show_progress((second, first))
+    assert rows() == [("second", "2 / 4 frames"), ("first", "1 / 4 frames")]
+
+    widget.show_progress((second, _scope("first", current=3, target=4, fraction=0.75)))
+    assert rows() == [("second", "2 / 4 frames"), ("first", "3 / 4 frames")]
+
+
 def test_a_new_page_hides_its_progress() -> None:
     """Hide the progress group of a page whose plan has reported nothing."""
     widget = create_plan_widget(_simple_spec())

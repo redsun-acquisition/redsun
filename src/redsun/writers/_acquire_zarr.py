@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from ._base import ArrayShape
 
-_SPATIAL = frozenset({"z", "y", "x"})
+SPATIAL: Final = frozenset({"z", "y", "x"})
 
 
 class Stream:
@@ -85,11 +85,11 @@ def array_settings(
     array = az.ArraySettings()
     array.output_key = data_key
     array.is_ngff = is_ngff
-    array.data_type = _data_type(layout.dtype)
+    array.data_type = data_type(layout.dtype)
     array.dimensions = [
         az.Dimension(
             name=name,
-            kind=_kind(name),
+            kind=kind(name),
             array_size_px=0 if index == 0 else size,
             chunk_size_px=1 if index == 0 else size,
             shard_size_chunks=1,
@@ -101,16 +101,16 @@ def array_settings(
     return array
 
 
-def _kind(name: str) -> az.DimensionType:
+def kind(name: str) -> az.DimensionType:
     """Return the dimension type of NGFF axis *name*."""
-    if name in _SPATIAL:
+    if name in SPATIAL:
         return az.DimensionType.SPACE
     if name == "c":
         return az.DimensionType.CHANNEL
     return az.DimensionType.TIME
 
 
-def _data_type(dtype: np.dtype[Any]) -> az.DataType:
+def data_type(dtype: np.dtype[Any]) -> az.DataType:
     """Return the data type matching *dtype*."""
     match np.dtype(dtype).name:
         case "uint8":

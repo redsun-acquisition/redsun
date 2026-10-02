@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import logging
 import sys
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
@@ -52,6 +53,7 @@ from redsun.registry import (
 from .. import _structural
 from .._catalog import require_tiled, start_catalog
 from .._config import (
+    ComponentEntry,
     SessionFile,
     Source,
     StorageConfig,
@@ -87,7 +89,6 @@ from ._factories import (
     factory,
     get_setup_params,
     injectable,
-    optional_arg,
     provider,
     setup_call,
 )
@@ -103,7 +104,7 @@ from ._protocols import (
     NamedComponent,
     Serializable,
 )
-from ._questions import NoAnswer, answer, shape_of
+from ._questions import NoAnswer, answer, optional_arg, shape_of, without_none
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -115,6 +116,7 @@ if TYPE_CHECKING:
     from redsun.ports import Link, SlotThread
     from redsun.services import Service
 
+    from ..ports._wiring import SlotCallable
     from ._declarations import Key
     from ._profile import ProfileKind
     from ._questions import Shape
@@ -132,27 +134,6 @@ logger = logging.getLogger("redsun")
 # the injector logs a traceback of a refused component before reraising it,
 # which the session reports itself; without a handler that reaches stderr
 logging.getLogger("in_n_out").addHandler(logging.NullHandler())
-
-
-def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
-    """Return the keys of *entry* that *cls* would refuse to be built from.
-
-    The constructor's parameters decide this, not the keys the configuration
-    carried. A component serializes every parameter it has, including one
-    that took its default and that no source named, and that key is correct.
-    A constructor taking `**kwargs` accepts anything, so it refuses none.
-    """
-    params = constructor(cls).parameters
-    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
-        return []
-    return sorted(set(entry) - {name for name in params if name != "name"})
-
-
-def silent(step: str) -> None:
-    """Take a build step's name and do nothing with it.
-
-    What a session reports progress to when no hook asked for it.
-    """
 
 
 ORDER: Final[dict[Layer, int]] = {Layer.DEVICE: 0, Layer.PRESENTER: 1, Layer.VIEW: 2}
@@ -181,6 +162,27 @@ configuration and starting the toolkit's runtime, and reports neither.
 
 CONNECT_TIMEOUT: Final = 10.0
 """Seconds the build waits for each device it connects."""
+
+
+def unaccepted(cls: type, entry: Mapping[str, object]) -> list[str]:
+    """Return the keys of *entry* that *cls* would refuse to be built from.
+
+    The constructor's parameters decide this, not the keys the configuration
+    carried. A component serializes every parameter it has, including one
+    that took its default and that no source named, and that key is correct.
+    A constructor taking `**kwargs` accepts anything, so it refuses none.
+    """
+    params = constructor(cls).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in params.values()):
+        return []
+    return sorted(set(entry) - {name for name in params if name != "name"})
+
+
+def silent(step: str) -> None:
+    """Take a build step's name and do nothing with it.
+
+    What a session reports progress to when no hook asked for it.
+    """
 
 
 @dataclass(frozen=True)
@@ -241,6 +243,7 @@ class Session(BuildableSession):
         "_built_components",
         "_callbacks",
         "_catalog",
+        "_class_counts",
         "_config",
         "_connections",
         "_declarations",
@@ -345,6 +348,7 @@ class Session(BuildableSession):
         self._report: Callable[[str], None] = silent
         self._releases = ExitStack()
         self._declarations: dict[str, Declaration] = {}
+        self._class_counts: Counter[type] = Counter()
         self._services: dict[str, Service] = {}
         self._failed_services: dict[str, BaseException] = {}
         self._transport = CHANNEL_ACCESS
@@ -363,7 +367,7 @@ class Session(BuildableSession):
         # a component whose setup could not run: kept, and named in the report
         self._not_set_up: dict[str, BaseException] = {}
         self._names: dict[int, str] = {}
-        self._links: list[tuple[SignalInstance, Callable[..., Any]]] = []
+        self._links: list[tuple[SignalInstance, SlotCallable]] = []
         self._connections: list[Connection] = []
         # the forwarding function is held because ophyd-async releases a
         # subscription by identity: clear_sub needs the object back
@@ -636,7 +640,7 @@ class Session(BuildableSession):
         # name. Nothing looks a store up by name.
         return Store(self.name)
 
-    def _share(self, store: Store, providers: Mapping[str, Any]) -> None:
+    def _share(self, store: Store, providers: Mapping[str, ComponentEntry]) -> None:
         """Build the shared services this session installs, before any component.
 
         A provider owns no name, no layer and no wiring. It exists to put
@@ -677,19 +681,20 @@ class Session(BuildableSession):
             # before the runtime that shows it
             with self.open_span() as report:
                 self._report = report
-                for step, run in (
-                    ("services", self.start_services),
-                    ("devices", self.build_devices),
-                    ("connect", self.connect_built_devices),
-                    ("registry", self.open_registry),
-                    ("presenters", self.build_presenters),
-                    ("views", self.build_views),
-                    ("setup", self.setup_components),
-                    ("seal", self.seal),
-                    ("wiring", self.apply_wiring),
-                    ("presentation", self.present),
-                    ("report", self.log_summary),
-                ):
+                steps = (
+                    self.start_services,
+                    self.build_devices,
+                    self.connect_built_devices,
+                    self.open_registry,
+                    self.build_presenters,
+                    self.build_views,
+                    self.setup_components,
+                    self.seal,
+                    self.apply_wiring,
+                    self.present,
+                    self.log_summary,
+                )
+                for step, run in zip(BUILD_STEPS, steps, strict=True):
                     self._report(step)
                     run()
         except Exception as e:
@@ -735,9 +740,11 @@ class Session(BuildableSession):
         for declaration in self._declarations.values():
             if declaration.refusal is not None:
                 self._skip(declaration, declaration.refusal)
+        self._count_classes()
         # read only classes, so a mistake is reported before anything starts
-        self._refuse_component_values(self._components())
-        self._check_layers(self._components())
+        components = self._components()
+        self._refuse_component_values(components)
+        self._check_layers(components)
         self._transport = config.transport or CHANNEL_ACCESS
         self._services = read_services(type(self), config.services, self._transport)
         clash = sorted(self._services.keys() & self._declarations.keys())
@@ -763,6 +770,18 @@ class Session(BuildableSession):
         # registered after the logs, so a provider's teardown is still logged
         for hook in distinct(self.hooks.values()):
             self._register_teardown(hook)
+
+    def _count_classes(self) -> None:
+        """Count the components declaring each class, naming those declared twice."""
+        components = self._components()
+        self._class_counts = Counter(d.cls for d in components)
+        for cls, count in self._class_counts.items():
+            if count > 1:
+                logger.debug(
+                    "%s is declared as %s; it can only be injected by name",
+                    cls.__name__,
+                    ", ".join(d.name for d in components if d.cls is cls),
+                )
 
     def _open_logs(self, path_provider: SessionPathProvider) -> None:
         """Write this run's records to the session's log files, under its root.
@@ -955,10 +974,8 @@ class Session(BuildableSession):
         if self._profile is None:
             return
         # the configuration may be unreadable; the profile still needs a name
-        session = (self._file.session if self._file is not None else None) or type(
-            self
-        ).__name__
-        self._profile.stop(session)
+        name = self._file.session if self._file is not None else None
+        self._profile.stop(name or type(self).__name__)
 
     def shutdown(self) -> None:
         """Run every registered release, in the reverse of the order taken.
@@ -967,17 +984,22 @@ class Session(BuildableSession):
         already finalizing. The releases follow: the `shutdown` method of
         every component that has one, then whatever a toolkit put in place.
         Calling it a second time, or on a session that was never built, runs
-        nothing: a release is dropped as it runs.
+        nothing: a release is dropped as it runs. What the build made is
+        forgotten, so the session can be built again.
         """
         self._is_built = False
         self.disconnect_all()
         self._releases.close()
         self._hooks = None
+        self._devices.clear()
+        self._failed.clear()
+        self._answered.clear()
         self._callbacks.clear()
         self._not_set_up.clear()
         self._built_components.clear()
         self._names.clear()
         self._shared.clear()
+        self._shared_values.clear()
         logger.info("Session shut down")
 
     def serialize(self) -> dict[str, Any]:
@@ -1171,7 +1193,7 @@ class Session(BuildableSession):
             or self.frontend.thread_of(consumer)
         )
 
-    def _link(self, signal: object, slot: Callable[..., Any]) -> None:
+    def _link(self, signal: object, slot: SlotCallable) -> None:
         """Make one link, unless an end of it belongs to a component that failed.
 
         Raises
@@ -1192,7 +1214,7 @@ class Session(BuildableSession):
                 "device signal, then the slot it reaches"
             )
 
-    def _connect(self, signal: SignalInstance, slot: Callable[..., Any]) -> None:
+    def _connect(self, signal: SignalInstance, slot: SlotCallable) -> None:
         thread = self._affinity(slot)
         link = Connection(
             publisher=self._label(owner_of(signal)),
@@ -1210,7 +1232,7 @@ class Session(BuildableSession):
         self._connections.append(link)
         logger.debug(f"Connected {link}")
 
-    def _subscribe(self, signal: SignalR[Any], slot: Callable[..., Any]) -> None:
+    def _subscribe(self, signal: SignalR[Any], slot: SlotCallable) -> None:
         # ophyd-async calls a subscriber on whatever thread produced the
         # reading, so the reading goes through a psygnal signal to reach the
         # thread the slot asks for
@@ -1218,8 +1240,8 @@ class Session(BuildableSession):
         relay = SignalInstance((object,), name=signal.name)
         relay.connect(slot, thread=thread)
 
-        def forward(reading: Any) -> None:
-            relay.emit(reading)
+        # kept as one object: unsubscribing goes by identity
+        forward = relay.emit
 
         # a device names its signals after itself, as device-signal
         device, _, port = signal.name.partition("-")
@@ -1265,9 +1287,15 @@ class Session(BuildableSession):
                 e.component,
             )
             return
-        self._connect(cast("SignalInstance", signal), cast("Callable[..., Any]", slot))
+        self._connect(signal, slot)
 
-    def _resolve_port(self, path: str, kind: str) -> object:
+    @overload
+    def _resolve_port(self, path: str, kind: Literal["signal"]) -> SignalInstance: ...
+    @overload
+    def _resolve_port(self, path: str, kind: Literal["slot"]) -> SlotCallable: ...
+    def _resolve_port(
+        self, path: str, kind: Literal["signal", "slot"]
+    ) -> SignalInstance | SlotCallable:
         """Look up the signal or slot a `component.port` path names."""
         component_name, _, port = path.partition(".")
         if not component_name or not port or "." in port:
@@ -1399,37 +1427,31 @@ class Session(BuildableSession):
                 for pname, hint in params.items()
                 if (shape := shape_of(hint)) is not None
             }
-            missing = unanswered(
-                store, {p: h for p, h in params.items() if p not in questions}
+            reason: BaseException | None = self._not_built(
+                store,
+                f"{declaration.name}.setup",
+                {p: h for p, h in params.items() if p not in questions},
             )
-            if missing:
-                absent = self._blamed(hint for _, hint in missing)
-                if not absent:
-                    raise TypeError(
-                        unanswered_message(f"{declaration.name}.setup", missing)
-                    )
-                self._not_set_up[declaration.name] = TypeError(
-                    f"{listed(sorted(absent))} was not built"
-                )
-            else:
+            if reason is None:
                 try:
                     answers = self._answers_for(declaration, questions, built)
                 except NoAnswer as e:
-                    self._not_set_up[declaration.name] = TypeError(str(e))
-                else:
-                    try:
-                        # `as_protocol` cannot take the generic `HasSetup`, which
-                        # mypy refuses as a type form; the class was checked above
-                        ready = cast("HasSetup[...]", instance)
-                        store.inject(setup_call(ready, declaration.name, answers))()
-                        continue
-                    except Exception as e:  # noqa: BLE001 - a setup must not abort the app
-                        self._not_set_up[declaration.name] = e
+                    reason = TypeError(str(e))
+            if reason is None:
+                try:
+                    # `as_protocol` cannot take the generic `HasSetup`, which
+                    # mypy refuses as a type form; the class was checked above
+                    ready = cast("HasSetup[...]", instance)
+                    store.inject(setup_call(ready, declaration.name, answers))()
+                    continue
+                except Exception as e:  # noqa: BLE001 - a setup must not abort the app
+                    reason = e
+            self._not_set_up[declaration.name] = reason
             logger.warning(
                 "Failed to set up %s '%s': %s",
                 declaration.kind,
                 declaration.name,
-                self._not_set_up[declaration.name],
+                reason,
             )
 
     def _answers_for(
@@ -1514,7 +1536,9 @@ class Session(BuildableSession):
                 },
             }
             params = injectable(declaration.cls, declaration.cfg_kwargs, passed=passed)
-            if self._refuse_or_skip(store, declaration, params):
+            reason = self._not_built(store, declaration.name, params)
+            if reason is not None:
+                self._skip(declaration, reason)
                 continue
             try:
                 instance = store.inject(factory(declaration, self._on_built, passed))()
@@ -1522,7 +1546,7 @@ class Session(BuildableSession):
                 self._skip(declaration, unwrapped(e))
                 continue
             store.register_provider(constant(instance), type_hint=declaration.key)
-            if self._is_unique(declaration):
+            if self._class_counts[declaration.cls] == 1:
                 store.register_provider(constant(instance), type_hint=declaration.cls)
             shared = register_shared(
                 store, instance, declaration.cls, declaration.name, self._shared
@@ -1531,18 +1555,15 @@ class Session(BuildableSession):
             if isinstance(instance, DocumentRouter):
                 self._callbacks[declaration.name] = instance
 
-    def _refuse_or_skip(
-        self,
-        store: Store,
-        declaration: Declaration,
-        params: Mapping[str, Any],
-    ) -> bool:
-        """Return whether *declaration* is skipped for want of a collaborator.
+    def _not_built(
+        self, store: Store, name: str, params: Mapping[str, Any]
+    ) -> TypeError | None:
+        """Return why *name* goes without a collaborator, `None` when it has all.
 
         A parameter left unanswered by a component this build already failed
-        on is a consequence of that failure, and skipping is what the session
-        does with it. One nothing ever declared is a mistake in the session
-        and still raises.
+        on is a consequence of that failure, and the reason names the
+        components. One nothing ever declared is a mistake in the session and
+        raises.
 
         Raises
         ------
@@ -1551,14 +1572,11 @@ class Session(BuildableSession):
         """
         missing = unanswered(store, params)
         if not missing:
-            return False
+            return None
         absent = self._blamed(hint for _, hint in missing)
         if not absent:
-            raise TypeError(unanswered_message(declaration.name, missing))
-        named = listed(sorted(absent))
-        reason = TypeError(f"{named} was not built")
-        self._skip(declaration, reason)
-        return True
+            raise TypeError(unanswered_message(name, missing))
+        return TypeError(f"{listed(sorted(absent))} was not built")
 
     def _blamed(self, hints: Iterable[object]) -> set[str]:
         """Return the names of failed components that would have answered *hints*.
@@ -1575,7 +1593,10 @@ class Session(BuildableSession):
             if declaration.name in self._failed
             and (
                 declaration.key in wanted
-                or (declaration.cls in wanted and self._is_unique(declaration))
+                or (
+                    declaration.cls in wanted
+                    and self._class_counts[declaration.cls] == 1
+                )
                 or wanted & set(shared_keys(declaration.cls).values())
             )
         }
@@ -1598,13 +1619,13 @@ class Session(BuildableSession):
         TypeError
             If a component takes a value a later layer owns.
         """
-        by_type = owners(declarations)
+        by_type = owners(declarations, self._class_counts)
         routers = [d for d in declarations if issubclass(d.cls, DocumentRouter)]
         for declaration in declarations:
             if not issubclass(declaration.cls, HasSetup):
                 continue
             for pname, hint in get_setup_params(declaration.cls).items():
-                wanted = optional_arg(hint) or hint
+                wanted = without_none(hint)
                 where = f"its {pname!r} parameter"
                 if wanted == CallbackCatalogue:
                     for router in routers:
@@ -1625,13 +1646,13 @@ class Session(BuildableSession):
         TypeError
             Naming the parameter and the component that owns what it asks for.
         """
-        by_type = owners(declarations)
+        by_type = owners(declarations, self._class_counts)
         by_type.update({d.key: d for d in declarations})
         for declaration in declarations:
             for pname, hint in injectable(
                 declaration.cls, declaration.cfg_kwargs
             ).items():
-                wanted = optional_arg(hint) or hint
+                wanted = without_none(hint)
                 target = by_type.get(wanted)
                 if wanted == CallbackCatalogue:
                     raise TypeError(
@@ -1683,17 +1704,6 @@ class Session(BuildableSession):
             self.frontend.check_placement(
                 attachable, attachable.placement, f"view {declaration.name!r}"
             )
-
-    def _is_unique(self, declaration: Declaration) -> bool:
-        others = [d for d in self._components() if d.cls is declaration.cls]
-        if len(others) == 1:
-            return True
-        logger.debug(
-            "%s is declared as %s; it can only be injected by name",
-            declaration.cls.__name__,
-            ", ".join(d.name for d in others),
-        )
-        return False
 
     def start_services(self) -> None:
         """Start the launched services together, and attach to the rest.
@@ -1957,11 +1967,15 @@ class Session(BuildableSession):
         put a component to use.
         """
         declarations = [d for d in self._components() if d.instance is not None]
-        wanted = {
-            optional_arg(hint) or hint
-            for declaration in declarations
-            for hint in self._asked_for(declaration)
+        asked = {
+            d.name: [without_none(hint) for hint in self._asked_for(d)]
+            for d in declarations
         }
+        wanted = {hint for hints in asked.values() for hint in hints}
+        by_type: dict[Any, Declaration] = {
+            d.cls: d for d in declarations if self._class_counts[d.cls] == 1
+        }
+        by_type.update({d.key: d for d in declarations})
         used = self._used(declarations, wanted)
         for declaration in declarations:
             provided = shared_keys(declaration.cls)
@@ -1973,9 +1987,12 @@ class Session(BuildableSession):
                         method,
                         getattr(key, "__name__", key),
                     )
-            self._warn_double_route(declaration, declarations)
-            requires = list(self._asked_for(declaration))
-            if not provided and not requires and declaration.name not in used:
+            self._warn_double_route(declaration, asked[declaration.name], by_type)
+            if (
+                not provided
+                and not asked[declaration.name]
+                and declaration.name not in used
+            ):
                 logger.warning(
                     "%r shares nothing, asks for nothing and is wired to nothing; "
                     "it is built and reachable, and does nothing",
@@ -1995,7 +2012,10 @@ class Session(BuildableSession):
         ]
 
     def _warn_double_route(
-        self, declaration: Declaration, declarations: list[Declaration]
+        self,
+        declaration: Declaration,
+        asked: list[Any],
+        by_type: Mapping[Any, Declaration],
     ) -> None:
         """Report a component that both holds another and publishes to it.
 
@@ -2003,21 +2023,16 @@ class Session(BuildableSession):
         twice. Which method a component calls is not knowable here, so a pair
         using each route for something different is named once and legally.
 
-        Holding a value a component shares is not holding the component.
+        Parameters
+        ----------
+        asked
+            Every type *declaration* asks for.
+        by_type
+            The components, by their key and by a class no other declares.
+            Holding a value a component shares is not holding the component.
         """
-        classes = [d.cls for d in declarations]
-        by_type: dict[Any, Declaration] = {
-            d.cls: d for d in declarations if classes.count(d.cls) == 1
-        }
-        by_type.update({d.key: d for d in declarations})
-        held = {
-            by_type[asked].name
-            for asked in (
-                optional_arg(hint) or hint for hint in self._asked_for(declaration)
-            )
-            if asked in by_type
-        }
-        for connection in self.connections:
+        held = {by_type[hint].name for hint in asked if hint in by_type}
+        for connection in self._connections:
             if connection.publisher == declaration.name and connection.consumer in held:
                 logger.warning(
                     "%r holds %r and is also connected to it; a bundle reaches a "
@@ -2033,10 +2048,10 @@ class Session(BuildableSession):
         one is built from counts, by its key or by its class, and a router
         counts when something asks for the callback catalogue.
         """
-        names = {c.publisher for c in self.connections}
+        names = {c.publisher for c in self._connections}
         if CallbackCatalogue in wanted:
             names |= {d.name for d in declarations if issubclass(d.cls, DocumentRouter)}
-        names |= {c.consumer for c in self.connections}
+        names |= {c.consumer for c in self._connections}
         names |= self._answered
         names |= {
             declaration.name
@@ -2098,16 +2113,13 @@ def refuse_unanswered(store: Store, name: str, params: Mapping[str, Any]) -> Non
 
 
 def owners(
-    declarations: list[Declaration],
+    declarations: list[Declaration], counts: Mapping[type, int]
 ) -> dict[Any, Declaration]:
     """Return every type naming a component, by the declaration answering it.
 
-    A class declared twice is left out: nothing can be injected by it, so no
-    edge can name it.
+    A class *counts* finds declared twice is left out: nothing can be injected
+    by it, so no edge can name it.
     """
-    counts: dict[type, int] = {}
-    for declaration in declarations:
-        counts[declaration.cls] = counts.get(declaration.cls, 0) + 1
     found: dict[Any, Declaration] = {}
     for declaration in declarations:
         if counts[declaration.cls] == 1:

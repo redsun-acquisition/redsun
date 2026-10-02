@@ -35,110 +35,90 @@ if TYPE_CHECKING:
     MDScanIDSource: TypeAlias = Callable[[dict[str, Any]], int | Awaitable[int]]
 
 
-def default_scan_id_source(md: dict[str, Any]) -> int:
-    scan_id: int = md.get("scan_id", 0)
-    return scan_id + 1
-
-
 __all__ = ["RunEngine", "RunEngineResult", "register_bound_command"]
 
 R = TypeVar("R")
+
+
+def default_scan_id_source(md: dict[str, Any]) -> int:
+    scan_id: int = md.get("scan_id", 0)
+    return scan_id + 1
 
 
 class RunEngine(BlueskyRunEngine):
     """Runs plans and emits documents without blocking the calling thread.
 
     Wraps `bluesky.run_engine.RunEngine`: `__call__` runs the plan on a
-    separate thread and returns a concurrent.futures.Future of its result.
+    separate thread and returns a `concurrent.futures.Future` of its result.
 
     Parameters
     ----------
     md
         Metadata store, a `dict` by default. Any object with `__getitem__`,
-        `__setitem__` and `clear` works, such as historydict.HistoryDict,
+        `__setitem__` and `clear` works, such as `historydict.HistoryDict`,
         which persists history in a sqlite file.
-
-    loop: asyncio.AbstractEventLoop, optional
+    loop
         Event loop plans run on. Defaults to the shared background loop.
-
     preprocessors
         Generator functions modifying a plan's messages, such as the
-        `bluesky.plans` functions ending in 'wrapper'. `[f, g]` applies as
+        `bluesky.plans` functions ending in `wrapper`. `[f, g]` applies as
         `f(g(plan))`.
-
     md_validator
         Raises to prevent a run whose metadata it finds invalid; its return
         value is ignored.
-
     md_normalizer
-        Like md_validator, raises for invalid metadata; otherwise returns the
+        Like `md_validator`, raises for invalid metadata; otherwise returns the
         normalized metadata.
-
     scan_id_source
-        Function, possibly async, returning the next scan_id. By default
-        scan_id increments by 1.
-
+        Function, possibly async, returning the next `scan_id`. By default
+        `scan_id` increments by 1.
     call_returns_result
-        What the Future `__call__` returns holds: a `RunEngineResult`
+        What the future `__call__` returns holds: a `RunEngineResult`
         describing the run if `True`, a tuple of uids if `False`.
-
 
     Attributes
     ----------
     md
         The metadata store described above.
-
     record_interruptions
-        False by default. True adds an event stream recording interruptions
-        (pauses, suspensions).
-
+        `False` by default. `True` adds an event stream recording
+        interruptions (pauses, suspensions).
     state
         One of `idle`, `running`, `pausing`, `paused`, `halting`,
         `stopping`, `aborting`, `suspending` and `panicked`.
-
     suspenders
         Read-only collection of `bluesky.suspenders.SuspenderBase` objects
         that suspend and resume execution.
-
-    preprocessors : list
-        The preprocessors described above.
-
+    preprocessors
+        The list of preprocessors described above.
     msg_hook
         `f(msg)` called with every `bluesky.Msg` before it is processed,
-        for logging or debugging. None by default.
-
+        for logging or debugging. `None` by default.
     state_hook
-        `f(new_state, old_state)` called on every state change. None by
-        default.
-
+        `f(new_state, old_state)` called on every state change. The engine
+        sets its own, which feeds `sig_state_changed`.
     waiting_hook
         `f(status_object)` called while waiting for long-running commands
         (trigger, set, kickoff, complete), for example to show progress.
-
     progress_hook
         `f(scopes)` called with the open progress scopes of the running plan,
         parents first, or `None` to clear them. The engine sets its own, which
         feeds `sig_progress`.
-
     ignore_callback_exceptions
-        Boolean, False by default.
-
-    loop : asyncio event loop
-        e.g., `asyncio.get_event_loop()` or `asyncio.new_event_loop()`
-
+        `False` by default.
+    loop
+        The event loop plans run on, such as one from
+        `asyncio.new_event_loop()`.
     max_depth
         Maximum stack depth, preventing calls to the RunEngine from inside a
-        function, which breaks introspection. None by default; 2 suits the
+        function, which breaks introspection. `None` by default; 2 suits the
         Python interpreter and 11 `IPython` (tested on 5.1.0).
-
-    pause_msg : str
+    pause_msg
         Message printed when a run is interrupted, with instructions for
-        changing the RunEngine's state. `bluesky.run_engine.PAUSE_MSG` by
-        default.
-
-    commands:
-        The list of commands available to Msg.
-
+        changing the RunEngine's state. Empty here; `bluesky` defaults to
+        `bluesky.run_engine.PAUSE_MSG`.
+    commands
+        The list of commands a `Msg` can name.
     """
 
     sig_locks_changed = Signal(frozenset)
@@ -529,17 +509,14 @@ class RunEngine(BlueskyRunEngine):
         interval: float | None = msg.kwargs.get("poll_interval", None)
         wait_for: Literal["set", "reset"] = msg.kwargs.get("wait_for", "set")
 
-        # Create a mapping to track which task corresponds to which latch
-        if wait_for == "set":
-            latch_tasks = {
-                asyncio.create_task(latch.wait_for_set(), name=name)
-                for name, latch in latch_map.items()
-            }
-        else:
-            latch_tasks = {
-                asyncio.create_task(latch.wait_for_reset(), name=name)
-                for name, latch in latch_map.items()
-            }
+        # each task is named after its latch, so a finished task names the latch
+        latch_tasks = {
+            asyncio.create_task(
+                latch.wait_for_set() if wait_for == "set" else latch.wait_for_reset(),
+                name=name,
+            )
+            for name, latch in latch_map.items()
+        }
 
         try:
             done, _ = await asyncio.wait(
@@ -567,16 +544,10 @@ def register_bound_command(
     engine: RunEngine,
     command: Callable[[RunEngine, Msg], Any],
 ) -> None:
-    """Register a custom command in the given run engine.
+    """Register *command* in *engine*, under the command's `__name__`.
 
-    Unlike `RunEngine.register_command`, binds the command to *engine*.
-
-    Parameters
-    ----------
-    engine: RunEngine
-        The run engine to register the command in.
-    command: Callable[[RunEngine, Msg], Any]
-        The command, taking a `RunEngine` and a `Msg`.
+    Unlike `RunEngine.register_command`, binds the command to *engine*: it is
+    called with the engine first, then the `Msg`.
     """
     bound_command = partial(command, engine)
     command_name = command.__name__

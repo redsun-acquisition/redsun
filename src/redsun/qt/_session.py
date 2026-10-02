@@ -129,6 +129,17 @@ Area: TypeAlias = Literal["left", "right", "top", "bottom"]
 
 T = TypeVar("T", bound=QObject)
 
+AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
+    "left": QtNamespace.DockWidgetArea.LeftDockWidgetArea,
+    "right": QtNamespace.DockWidgetArea.RightDockWidgetArea,
+    "top": QtNamespace.DockWidgetArea.TopDockWidgetArea,
+    "bottom": QtNamespace.DockWidgetArea.BottomDockWidgetArea,
+}
+"""The Qt dock area of each edge a `Dock` can name."""
+
+EDGES: Final = {area: edge for edge, area in AREAS.items()}
+"""The edge each Qt dock area stands for."""
+
 
 @dataclass(frozen=True)
 class Dock(Placement):
@@ -432,7 +443,7 @@ class QtSession(DesktopSession[QMainWindow], Session):
         )
 
     def present(self) -> None:
-        """Make the window, put every view where it asks to be, and dress it.
+        """Put every view where it asks to be in the window, and ready the window to show.
 
         A view that failed to build and asked for a dock or the centre is
         replaced there by a widget naming it and the reason. When any
@@ -484,25 +495,25 @@ class QtSession(DesktopSession[QMainWindow], Session):
         nothing saved and keeps the layout its views asked for. Each dock the
         saved layout keeps away from the edge its placement asks for is logged.
         """
-        for key, restore in (
-            ("window.geometry", self.main_window.restoreGeometry),
-            ("window.state", self.main_window.restoreState),
-        ):
-            saved = self.settings.get(key)
-            if isinstance(saved, str):
-                restore(QByteArray(base64.b64decode(saved)))
-        if isinstance(self.settings.get("window.state"), str):
+        geometry = self.settings.get("window.geometry")
+        if isinstance(geometry, str):
+            self.main_window.restoreGeometry(QByteArray(base64.b64decode(geometry)))
+        state = self.settings.get("window.state")
+        if isinstance(state, str):
+            self.main_window.restoreState(QByteArray(base64.b64decode(state)))
             self._log_moved_docks()
 
     def _log_moved_docks(self) -> None:
         """Log each dock that is not on the edge its placement asks for."""
-        edges = {area: edge for edge, area in AREAS.items()}
         for name, view in self.views.items():
             placement = view.placement
-            dock = self.main_window.findChild(QDockWidget, name)
-            if not isinstance(placement, Dock) or dock is None:
+            if not isinstance(placement, Dock):
                 continue
-            edge = edges.get(self.main_window.dockWidgetArea(dock))
+            # pyside6 annotates the result as optional and pyqt6 does not
+            dock: QDockWidget | None = self.main_window.findChild(QDockWidget, name)
+            if dock is None:
+                continue
+            edge = EDGES.get(self.main_window.dockWidgetArea(dock))
             if edge != placement.area:
                 logger.info(
                     "Dock %r stays %s, where it was left, not on the %s its "
@@ -730,14 +741,10 @@ class CloseGuard(QObject):
 
     def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
         """Refuse a close the session does not confirm."""
-        session = self._session()
-        if obj is None or event is None:
+        if obj is None or event is None or event.type() != QEvent.Type.Close:
             return False
-        if (
-            event.type() == QEvent.Type.Close
-            and session is not None
-            and not session._confirm_close()
-        ):
+        session = self._session()
+        if session is not None and not session._confirm_close():
             event.ignore()
             return True
         return super().eventFilter(obj, event)
@@ -751,14 +758,6 @@ def encoded(state: QByteArray) -> str:
 def application() -> QApplication:
     """Return the running application, or start the one this session needs."""
     return cast("QApplication", QApplication.instance() or QApplication(sys.argv))
-
-
-AREAS: Final[dict[Area, QtNamespace.DockWidgetArea]] = {
-    "left": QtNamespace.DockWidgetArea.LeftDockWidgetArea,
-    "right": QtNamespace.DockWidgetArea.RightDockWidgetArea,
-    "top": QtNamespace.DockWidgetArea.TopDockWidgetArea,
-    "bottom": QtNamespace.DockWidgetArea.BottomDockWidgetArea,
-}
 
 
 def attach(window: QMainWindow, views: Mapping[str, AttachableComponent]) -> None:

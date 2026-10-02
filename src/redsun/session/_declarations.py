@@ -29,7 +29,7 @@ from .._structural import protocol_of
 from ..injection._census import devices_protocol
 from ..injection._provides import shared_keys
 from ..services._transports import CHANNEL_ACCESS
-from ._factories import resolved
+from ._factories import constructor, resolved
 from ._frontend import Frontend
 from ._plugins import resolve, service_entry
 from ._questions import is_protocol_union, shape_of
@@ -243,12 +243,20 @@ class Declaration:
     )
 
     def __init__(
-        self, cls: type, name: str, kind: Layer, cfg_kwargs: dict[str, Any]
+        self,
+        cls: type,
+        name: str,
+        kind: Layer,
+        cfg_kwargs: dict[str, Any],
+        *,
+        attribute: str | None = None,
+        source: str | None = None,
+        refusal: Exception | None = None,
     ) -> None:
         self.cls = cls
         self.name = name
-        self.attribute = name
-        self.source = name
+        self.attribute = name if attribute is None else attribute
+        self.source = name if source is None else source
         self.kind = kind
         self.service: str | None = None
         self.autoconnect = True
@@ -257,7 +265,7 @@ class Declaration:
         )
         self.key: Key = NewType(name, cls)
         self.instance: Device | NamedComponent | None = None
-        self.refusal: Exception | None = None
+        self.refusal = refusal
 
     def __repr__(self) -> str:
         state = "built" if self.instance is not None else "pending"
@@ -419,8 +427,7 @@ def check_questions(cls: type, where: str) -> None:
         Naming the parameter or shared value and what to write instead, or a
         `DevicesOf` marker on the wrong shape.
     """
-    label = f"the constructor of {cls.__qualname__}"
-    for pname, param in resolved(cls, label).parameters.items():
+    for pname, param in constructor(cls).parameters.items():
         if pname == "name" or devices_protocol(param.annotation) is not None:
             continue
         if shape_of(param.annotation) is not None:
@@ -569,7 +576,11 @@ def read(
     declarations: dict[str, Declaration] = {}
 
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or is_hook(hint) or is_service(hint):
+        if (
+            attr.startswith("_")
+            or is_marked(hint, Hook)
+            or is_marked(hint, ServiceMark)
+        ):
             continue
         target, metadata, kind = split(hint)
         if kind is None:
@@ -577,25 +588,22 @@ def read(
             continue
         refused = refusal(target, kind, f"{cls.__qualname__}.{attr}", frontend)
 
+        cfg_key, name = names_of(attr, metadata)
         inline: dict[str, Any] = {}
-        cfg_key = attr
-        name = attr
         for marker in metadata:
             if isinstance(marker, Declare):
                 inline = marker.kwargs
-            elif isinstance(marker, FromConfig):
-                cfg_key = marker.key
-            elif isinstance(marker, Alias):
-                name = marker.name
 
         section: Mapping[str, ComponentEntry] = getattr(config, kind.section)
-        declaration = Declaration(
-            target, name, kind, {**keywords(section.get(cfg_key)), **inline}
+        declarations[name] = Declaration(
+            target,
+            name,
+            kind,
+            {**keywords(section.get(cfg_key)), **inline},
+            attribute=attr,
+            source=cfg_key,
+            refusal=refused,
         )
-        declaration.attribute = attr
-        declaration.source = cfg_key
-        declaration.refusal = refused
-        declarations[name] = declaration
 
     declarations.update(from_config(config, declarations, frontend))
     refuse_shadowed(cls, declarations)
@@ -606,11 +614,11 @@ def service_attributes(cls: type) -> dict[str, str]:
     """Return the attribute each service *cls* annotates is declared under, by name."""
     found: dict[str, str] = {}
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_service(hint):
+        if attr.startswith("_") or not is_marked(hint, ServiceMark):
             continue
         _, metadata, _ = split(hint)
-        names = [marker.name for marker in metadata if isinstance(marker, Alias)]
-        found[names[-1] if names else attr] = attr
+        _, name = names_of(attr, metadata)
+        found[name] = attr
     return found
 
 
@@ -637,20 +645,15 @@ def read_services(
     found: dict[str, Service] = {}
     read_keys: set[str] = set()
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_service(hint):
+        if attr.startswith("_") or not is_marked(hint, ServiceMark):
             continue
         _, metadata, _ = split(hint)
         where = f"{cls.__qualname__}.{attr}"
+        cfg_key, name = names_of(attr, metadata)
         given: Launch | Attach | None = None
-        cfg_key = attr
-        name = attr
         for marker in metadata:
             if isinstance(marker, (Launch, Attach)):
                 given = marker
-            elif isinstance(marker, FromConfig):
-                cfg_key = marker.key
-            elif isinstance(marker, Alias):
-                name = marker.name
             elif isinstance(marker, Declare):
                 raise TypeError(
                     f"{where} declares a service with Declare; describe it with "
@@ -699,7 +702,7 @@ def read_hooks(cls: type, points: Mapping[str, type]) -> dict[str, HookDeclarati
     """
     found: dict[str, HookDeclaration] = {}
     for attr, hint in hints(cls).items():
-        if attr.startswith("_") or not is_hook(hint):
+        if attr.startswith("_") or not is_marked(hint, Hook):
             continue
         target, metadata, _ = split(hint)
         where = f"{cls.__qualname__}.{attr}"
@@ -808,24 +811,24 @@ def from_config(
                         named.source,
                     )
                 continue
-            refused: Exception | None
+            refused: Exception | None = None
             try:
                 target = resolve(entry.plugin_name, entry.plugin_id, section_name)
             except PluginError as e:
                 target, refused = object, e
-            else:
-                if target is None:
-                    target, refused = (
-                        object,
-                        PluginError(
-                            f"{where} names no plugin, and the session declares no "
-                            f"component {cfg_key!r}"
-                        ),
-                    )
-                else:
-                    refused = refusal(target, kind, where, frontend)
-            found[cfg_key] = Declaration(target, cfg_key, kind, keywords(entry))
-            found[cfg_key].refusal = refused
+            if target is None:
+                target, refused = (
+                    object,
+                    PluginError(
+                        f"{where} names no plugin, and the session declares no "
+                        f"component {cfg_key!r}"
+                    ),
+                )
+            elif refused is None:
+                refused = refusal(target, kind, where, frontend)
+            found[cfg_key] = Declaration(
+                target, cfg_key, kind, keywords(entry), refusal=refused
+            )
     return found
 
 
@@ -840,14 +843,14 @@ def hints(cls: type) -> dict[str, Any]:
     NameError
         If a class declares an annotation that cannot be resolved at runtime.
     """
-    resolved: dict[str, Any] = {}
+    found: dict[str, Any] = {}
     # resolving the whole MRO in one call fails for every class when a single
     # one annotates a name imported only under TYPE_CHECKING
     for klass in reversed(cls.__mro__):
         if not getattr(klass, "__annotations__", None):
             continue
         try:
-            resolved.update(get_type_hints(klass, include_extras=True))
+            found.update(get_type_hints(klass, include_extras=True))
         except NameError as e:
             if e.name in globals():
                 raise
@@ -857,7 +860,7 @@ def hints(cls: type) -> dict[str, Any]:
                 "component declarations must import the names it annotates "
                 "outside 'if TYPE_CHECKING'."
             ) from e
-    return resolved
+    return found
 
 
 def split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
@@ -870,18 +873,26 @@ def split(hint: Any) -> tuple[Any, tuple[Any, ...], Layer | None]:
     return target, markers, layers[0] if layers else None
 
 
-def is_hook(hint: Any) -> bool:
-    """Return whether *hint* is annotated as a hook implementation."""
-    if get_origin(hint) is not Annotated:
-        return False
-    return any(isinstance(m, Hook) for m in get_args(hint)[1:])
+def names_of(attr: str, metadata: Iterable[object]) -> tuple[str, str]:
+    """Return the configuration key and the name of what *attr* declares.
+
+    Both are *attr* unless a `FromConfig` or an `Alias` marker says otherwise,
+    the last of each winning.
+    """
+    cfg_key = name = attr
+    for marker in metadata:
+        if isinstance(marker, FromConfig):
+            cfg_key = marker.key
+        elif isinstance(marker, Alias):
+            name = marker.name
+    return cfg_key, name
 
 
-def is_service(hint: Any) -> bool:
-    """Return whether *hint* is annotated as a service."""
+def is_marked(hint: Any, marker: type) -> bool:
+    """Return whether *hint* is annotated with an instance of *marker*."""
     if get_origin(hint) is not Annotated:
         return False
-    return any(isinstance(m, ServiceMark) for m in get_args(hint)[1:])
+    return any(isinstance(m, marker) for m in get_args(hint)[1:])
 
 
 def keywords(entry: ComponentEntry | None) -> dict[str, Any]:

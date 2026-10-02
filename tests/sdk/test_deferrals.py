@@ -173,3 +173,25 @@ def test_a_change_left_by_a_halted_plan_is_applied_once_idle(
 
     applied.result(timeout=5)
     assert recorder.order == ["applied"]
+
+
+def test_a_cancelled_change_is_dropped_and_the_next_still_applied(
+    RE: RunEngine,
+    running: Callable[[Recorder], None],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Drop a change whose request was cancelled, and apply the one queued after it."""
+    deferrals = Deferrals(RE)
+    recorder = Recorder()
+    running(recorder)
+
+    async def dropped() -> None:
+        recorder.order.append("dropped")
+
+    deferrals.request(dropped).cancel()
+    deferrals.request(recorder.apply)
+
+    assert recorder.future is not None
+    recorder.future.result(timeout=5)
+    assert recorder.order == ["first", "applied", "second"]
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]

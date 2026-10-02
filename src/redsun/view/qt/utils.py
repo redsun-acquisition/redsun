@@ -84,9 +84,8 @@ class ActionButton(QtW.QPushButton):
         For an action that ended by itself: unchecking the button any other
         way reads as the user asking the action to end.
         """
-        self.blockSignals(True)
-        self.setChecked(False)
-        self.blockSignals(False)
+        with QtCore.QSignalBlocker(self):
+            self.setChecked(False)
         self._update_text(False)
 
     def _update_text(self, checked: bool) -> None:
@@ -146,6 +145,7 @@ class PlanWidget:
     _progress_rows: dict[str, tuple[QtW.QLabel, QtW.QProgressBar, QtW.QLabel]] = field(
         default_factory=dict, init=False, repr=False
     )
+    _progress_order: list[str] = field(default_factory=list, init=False, repr=False)
 
     def toggle(self, status: bool) -> None:
         """Update the widgets when a continuous plan starts or stops.
@@ -262,6 +262,11 @@ class PlanWidget:
                 # would still be a child of the group
                 widget.setParent(None)
                 widget.deleteLater()
+        order = [scope.name for scope in scopes]
+        # an update to the same scopes only changes values: placing the rows
+        # again is needed only when the scopes or their order changed
+        placed = order == self._progress_order
+        self._progress_order[:] = order
         depths: dict[str, int] = {}
         for row, scope in enumerate(scopes):
             depths[scope.name] = (
@@ -276,9 +281,10 @@ class PlanWidget:
                 text_label.setObjectName("progress-text")
                 self._progress_rows[scope.name] = (name_label, bar, text_label)
             name_label, bar, text_label = self._progress_rows[scope.name]
-            for column, cell in enumerate((name_label, bar, text_label)):
-                layout.removeWidget(cell)
-                layout.addWidget(cell, row, column)
+            if not placed:
+                for column, cell in enumerate((name_label, bar, text_label)):
+                    layout.removeWidget(cell)
+                    layout.addWidget(cell, row, column)
             name_label.setIndent(depths[scope.name] * _PROGRESS_INDENT)
             if scope.fraction is None:
                 bar.setRange(0, 0)
@@ -312,10 +318,7 @@ def _attached(callbacks_list: QtW.QListWidget | None) -> list[str]:
 
 def _build_param_widgets(
     spec: PlanSpec,
-) -> tuple[
-    list[mgw_bases.ValueWidget[Any]],  # device widgets (multiselect or single)
-    list[mgw_bases.ValueWidget[Any]],  # plain parameter widgets
-]:
+) -> tuple[list[mgw_bases.ValueWidget[Any]], list[mgw_bases.ValueWidget[Any]]]:
     """Split *spec*'s parameters into device widgets and plain parameter widgets.
 
     Device widgets cover `Sequence[PDevice]`, `Set[PDevice]`,
@@ -333,8 +336,7 @@ def _build_param_widgets(
             continue
         w = cast("mgw_bases.ValueWidget[Any]", create_param_widget(p))
         # device_proto is set by plan_spec for all PDevice-backed params
-        is_device_param = p.device_proto is not None
-        if is_device_param:
+        if p.device_proto is not None:
             device_widgets.append(w)
         else:
             param_widgets.append(w)
@@ -466,8 +468,13 @@ def _build_actions_group(
     action_toggled_callback: Callable[[bool, str], None],
 ) -> tuple[QtW.QGroupBox | None, dict[str, ActionButton]]:
     """Add the actions group box to *page_layout*, if the plan has actions."""
-    actions_params = [p for p in spec.parameters if p.actions is not None]
-    if not actions_params:
+    actions = [
+        action
+        for p in spec.parameters
+        if p.actions is not None
+        for action in ([p.actions] if isinstance(p.actions, PlanAction) else p.actions)
+    ]
+    if not actions:
         return None, {}
 
     actions_group = QtW.QGroupBox("Actions")
@@ -475,26 +482,18 @@ def _build_actions_group(
     actions_group.setEnabled(False)
 
     action_buttons: dict[str, ActionButton] = {}
-    for p in actions_params:
-        if p.actions is None:
-            continue
-        action_list: list[PlanAction] = (
-            [p.actions] if isinstance(p.actions, PlanAction) else list(p.actions)
-        )
-        for action in action_list:
-            btn = ActionButton(action)
-            if action.toggle_states is not None:
-                btn.toggled.connect(
-                    lambda checked, name=action.name: action_toggled_callback(
-                        checked, name
-                    )
-                )
-            else:
-                btn.clicked.connect(
-                    lambda _, name=action.name: action_clicked_callback(name)
-                )
-            action_buttons[action.name] = btn
-            actions_layout.addWidget(btn)
+    for action in actions:
+        btn = ActionButton(action)
+        if action.toggle_states is not None:
+            btn.toggled.connect(
+                lambda checked, name=action.name: action_toggled_callback(checked, name)
+            )
+        else:
+            btn.clicked.connect(
+                lambda _, name=action.name: action_clicked_callback(name)
+            )
+        action_buttons[action.name] = btn
+        actions_layout.addWidget(btn)
 
     page_layout.addWidget(actions_group)
     return actions_group, action_buttons

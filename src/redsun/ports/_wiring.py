@@ -15,7 +15,7 @@ from typing import (
 from psygnal import Signal, SignalGroup
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
     from threading import Thread
     from typing import TypeAlias
 
@@ -48,7 +48,10 @@ SLOT_THREAD_ATTR = "__redsun_slot_thread__"
 SlotThread: TypeAlias = "Literal['main', 'current'] | Thread | None"
 """Thread a slot is delivered on, as accepted by `psygnal`."""
 
-Link: TypeAlias = "tuple[SignalInstance | SignalR[Any], Callable[..., Any]]"
+SlotCallable: TypeAlias = "Callable[..., None] | Callable[..., Awaitable[None]]"
+"""What a signal calls: a function returning nothing, or a coroutine function."""
+
+Link: TypeAlias = "tuple[SignalInstance | SignalR[Any], SlotCallable]"
 """A signal and the slot it reaches, as a session's `wire` yields it."""
 
 
@@ -167,7 +170,8 @@ def ports(component: object) -> Ports:
         if isinstance(declared, Signal) and not attr.startswith("_"):
             signals[attr] = getattr(component, attr)
         elif marker_of(declared) is not None:
-            slots[port_name(getattr(component, attr))] = getattr(component, attr)
+            method = getattr(component, attr)
+            slots[port_name(method)] = method
 
     for group_name, value in getattr(component, "__dict__", {}).items():
         if isinstance(value, SignalGroup):

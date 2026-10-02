@@ -17,6 +17,10 @@ class ActionError(RuntimeError):
 def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
     """Read the `actions` section of *owner*'s configuration, one per entry.
 
+    Reading imports nothing a session did not already import: a `callback`
+    stays the `module:function` string it was written as, and app-model
+    imports it when the command first runs.
+
     Parameters
     ----------
     raw
@@ -24,10 +28,6 @@ def read_actions(raw: object, owner: str) -> list[Action[..., Any]]:
     owner
         How to name the configuration in a refusal, usually the session's own
         name.
-
-    Reading imports nothing a session did not already import: a `callback`
-    stays the `module:function` string it was written as, and app-model
-    imports it when the command first runs.
 
     Raises
     ------
@@ -58,7 +58,7 @@ def action_from_entry(entry: object, position: int) -> Action[..., Any]:
             f"actions entry at position {position} must be a mapping, got "
             f"{type(entry).__name__}"
         )
-    fields: dict[str, Any] = {str(key): value for key, value in entry.items()}
+    fields = {str(key): value for key, value in entry.items()}
     declared = fields.get("id")
     named = repr(declared) if isinstance(declared, str) else f"at position {position}"
     unknown = sorted(key for key in fields if key not in Action.model_fields)
