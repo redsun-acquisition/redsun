@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -21,7 +20,7 @@ from redsun.registry import DeviceMapping  # noqa: TC001
 from ._axes import find_axes
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Mapping
+    from collections.abc import Awaitable, Callable, Mapping
 
     from bluesky.protocols import Reading
     from event_model import DataKey
@@ -111,8 +110,6 @@ class PositionerPresenter(Loggable):
             for device, item in devices.items()
             if (include is None or device in include) and (axes := find_axes(item))
         }
-        self._locks = {device: asyncio.Lock() for device in self._axes}
-        self._stopping: set[str] = set()
         self._writable: dict[str, SignalRW[Any]] = {}
         self._configuration: tuple[dict[str, DataKey], dict[str, Reading[Any]]] = (
             {},
@@ -122,6 +119,8 @@ class PositionerPresenter(Loggable):
             tuple[Axis, Callable[[dict[str, Reading[Any]]], None]]
         ] = []
         self._info = run_coro(self._follow())
+        self._locks = {device: asyncio.Lock() for device in self._axes}
+        self._stops = dict.fromkeys(self._axes, 0)
 
     def axes(self) -> dict[str, dict[str, AxisInfo]]:
         """Return the axes of each device, by axis name, by device name."""
@@ -142,33 +141,40 @@ class PositionerPresenter(Loggable):
         if self._locks[device].locked():
             self.logger.debug(f"Skipping a step of {device}, still moving")
             return
-        async with self._moving(device):
+
+        async def step() -> None:
             movable = self._axes[device][axis]
             self.logger.info(f"Moving {device} {axis} by {delta}")
             await movable.set((await movable.locate())["readback"] + delta)
+
+        await self._run(device, self._stops[device], step)
 
     @slot
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
         """Move the axes of *device* in *positions* there, one after another.
 
-        Waits for a move of *device* already running.
+        Waits for a move of *device* already running, and is dropped if
+        *device* is stopped meanwhile.
 
         Raises
         ------
         KeyError
             If the presenter does not hold *device*.
         """
-        async with self._moving(device):
+
+        async def go() -> None:
             for axis, position in positions.items():
                 self.logger.info(f"Moving {device} {axis} to {position}")
                 await self._axes[device][axis].set(position)
+
+        await self._run(device, self._stops[device], go)
 
     @slot
     async def stop(self, device: str) -> None:
         """Stop every stoppable axis of *device*, ending a move it is making.
 
         Does not wait for the move, and a move ended this way is not reported
-        as failed.
+        as failed. A go-to waiting for *device* is dropped.
 
         Raises
         ------
@@ -178,9 +184,8 @@ class PositionerPresenter(Loggable):
         axes = [
             axis for axis in self._axes[device].values() if isinstance(axis, Stoppable)
         ]
+        self._stops[device] += 1
         self.logger.info(f"Stopping {device}")
-        if self._locks[device].locked():
-            self._stopping.add(device)
         for axis in axes:
             result = axis.stop(success=False)
             if inspect.isawaitable(result):
@@ -217,16 +222,20 @@ class PositionerPresenter(Loggable):
         """Stop following the axes."""
         run_coro(self._unfollow())
 
-    @asynccontextmanager
-    async def _moving(self, device: str) -> AsyncGenerator[None, None]:
+    async def _run(
+        self, device: str, stops: int, motion: Callable[[], Awaitable[None]]
+    ) -> None:
         async with self._locks[device]:
+            if self._stops[device] != stops:
+                self.logger.info(f"Not moving {device}: stopped while waiting")
+                return
             self.sig_moving.emit(device, True)
             try:
-                yield
+                await motion()
             except BaseException as error:
-                # stopping cancels the move's status, which its awaiter sees
-                # as a CancelledError; that ends the move as asked, not a failure
-                if device in self._stopping:
+                # a stopped move ends with the device's error, or a cancelled
+                # status; either way it ended as asked, not as a failure
+                if self._stops[device] != stops:
                     self.logger.info(f"Stopped {device}")
                 elif isinstance(error, Exception):
                     self.logger.exception(f"Moving {device} failed")
@@ -234,16 +243,20 @@ class PositionerPresenter(Loggable):
                 else:
                     raise
             finally:
-                self._stopping.discard(device)
                 self.sig_moving.emit(device, False)
 
     async def _follow(self) -> dict[str, dict[str, AxisInfo]]:
         info: dict[str, dict[str, AxisInfo]] = {}
         descriptors, readings = self._configuration
-        for device, axes in self._axes.items():
+        for device, axes in list(self._axes.items()):
             info[device] = {}
-            for name, axis in axes.items():
-                info[device][name] = await self._describe(axis)
+            for name, axis in list(axes.items()):
+                try:
+                    info[device][name] = await self._describe(axis)
+                except Exception as error:  # noqa: BLE001
+                    self.logger.warning(f"Leaving out {device} {name}: {error}")
+                    del axes[name]
+                    continue
                 callback = partial(self._relay, device, name)
                 axis.subscribe(callback)
                 self._callbacks.append((axis, callback))
@@ -260,6 +273,9 @@ class PositionerPresenter(Loggable):
                             "source": f"{descriptor['source']}:readonly",
                         }
                 readings.update(await axis.read_configuration())
+            if not axes:
+                del self._axes[device]
+                del info[device]
         return info
 
     async def _unfollow(self) -> None:
@@ -270,6 +286,8 @@ class PositionerPresenter(Loggable):
     @staticmethod
     async def _describe(axis: Axis) -> AxisInfo:
         position = (await axis.locate())["readback"]
+        if isinstance(position, bool) or not isinstance(position, (int, float)):
+            raise TypeError(f"its position {position!r} is not a number")
         descriptor: dict[str, Any] = {}
         if isinstance(axis, AsyncReadable):
             described = await axis.describe()

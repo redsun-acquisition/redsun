@@ -6,12 +6,33 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
+from ophyd_async.core import (
+    MovableLogic,
+    StandardMovable,
+    StandardReadable,
+    StandardReadableFormat,
+    soft_signal_rw,
+)
 
 from redsun.presenter import AxisInfo, DescribesAxes, PositionerPresenter
 from tests.sdk.mocks import LimitedAxis, MockDetector, SoftAxis, Stage
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+
+class FilterWheel(StandardReadable, StandardMovable[str]):
+    """An axis whose position is the name of a filter."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables(StandardReadableFormat.HINTED_SIGNAL):
+            self.position = soft_signal_rw(str, "red")
+        super().__init__(name=name)
+
+    @property
+    def movable_logic(self) -> MovableLogic[str]:
+        """Setpoint and readback of the wheel, which are one signal."""
+        return MovableLogic(setpoint=self.position, readback=self.position)
 
 
 @pytest.fixture
@@ -146,6 +167,38 @@ async def test_stop_ends_a_move_without_a_failure(
     assert failures == []
     assert states[-1] == ("stage", False)
     assert await position(stage.axis["x"]) == pytest.approx(0.0)
+
+
+async def test_stop_also_ends_a_go_to_waiting_for_the_device(
+    presenter: PositionerPresenter, stage: Stage
+) -> None:
+    """Drop a go-to queued behind the move a stop ends."""
+    stage.axis["x"].logic.gate = asyncio.Event()
+    moving = asyncio.create_task(presenter.move_to("stage", {"x": 5.0}))
+    await asyncio.sleep(0.05)
+    waiting = asyncio.create_task(presenter.move_to("stage", {"theta": 9.0}))
+    await asyncio.sleep(0.05)
+
+    await presenter.stop("stage")
+    await asyncio.wait_for(asyncio.gather(moving, waiting), 2.0)
+
+    assert await position(stage.axis["theta"]) == pytest.approx(0.0)
+
+
+async def test_an_axis_without_a_numeric_position_is_left_out(
+    stage: Stage, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Leave out, with a warning, an axis whose position is not a number."""
+    wheel = FilterWheel("wheel")
+    await wheel.connect(mock=False)
+
+    positioner = PositionerPresenter(
+        "positioner", devices={"stage": stage, "wheel": wheel}
+    )
+
+    assert set(positioner.axes()) == {"stage"}
+    assert "wheel" in caplog.text
+    positioner.shutdown()
 
 
 async def test_the_configuration_marks_what_cannot_be_written(
