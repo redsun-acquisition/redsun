@@ -19,6 +19,8 @@ from .mocks import MockDetector
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from bluesky.utils import MsgGenerator
+
 
 def test_engine_wrapper_construction(RE: RunEngine) -> None:
     """Start an engine with no context managers and an empty pause message."""
@@ -62,10 +64,16 @@ def test_each_plan_runs_on_a_thread_that_ends_with_it(
 ) -> None:
     """Run each plan on its own thread that ends when the plan does."""
     before = _engine_threads()
+    during: list[threading.Thread] = []
 
-    fut = RE(count([detector], num=1))
-    (worker,) = _engine_threads() - before
-    wait([fut])
+    def plan() -> MsgGenerator[Any]:
+        # looked for while the plan runs: a short plan can end, and its thread
+        # with it, before the caller gets to look
+        during.extend(_engine_threads() - before)
+        return (yield from count([detector], num=1))
+
+    wait([RE(plan())])
+    (worker,) = during
     worker.join(timeout=5)
 
     assert not worker.is_alive()
