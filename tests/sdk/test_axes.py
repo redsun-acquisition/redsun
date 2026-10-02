@@ -13,7 +13,11 @@ async def test_the_axes_of_a_device_are_its_movable_descendants() -> None:
     stage = Stage("stage")
     await stage.connect(mock=False)
 
-    assert find_axes(stage) == {"x": stage.axis["x"], "theta": stage.axis["theta"]}
+    axes = find_axes(stage)
+
+    assert set(axes) == {"x", "theta"}
+    assert axes["x"] is stage.axis["x"]
+    assert axes["theta"] is stage.axis["theta"]
 
 
 async def test_a_device_that_moves_itself_is_its_one_axis() -> None:
@@ -21,7 +25,10 @@ async def test_a_device_that_moves_itself_is_its_one_axis() -> None:
     axis = SoftAxis("focus")
     await axis.connect(mock=False)
 
-    assert find_axes(axis) == {"focus": axis}
+    axes = find_axes(axis)
+
+    assert list(axes) == ["focus"]
+    assert axes["focus"] is axis
 
 
 async def test_axes_sharing_a_name_are_keyed_by_their_path() -> None:

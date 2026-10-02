@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypeGuard, runtime_checkable
 
-from bluesky.protocols import Reading, Subscribable
+from bluesky.protocols import Subscribable
 from ophyd_async.core import AsyncLocatable, Signal
 
 if TYPE_CHECKING:
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
-class Axis(AsyncLocatable[float], Subscribable[dict[str, Reading[Any]]], Protocol):
+class Axis(AsyncLocatable[float], Subscribable[float], Protocol):
     """Something `set` moves, `locate` reports and `subscribe` follows."""
 
 
