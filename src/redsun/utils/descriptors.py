@@ -40,7 +40,7 @@ def parse_key(key: str) -> tuple[str, str]:
         ) from None
 
 
-def parse_map_key(key: str, map_prefix: str) -> tuple[str, str, str]:
+def parse_map_key(input: str, map_prefix: str) -> tuple[str, str, str]:
     """Split a descriptor or reading key of a [`DeviceMap`][ophyd_async.core.DeviceMap] into its parts.
 
     Returns `(name, map_key, key)`: the device name (before the first hyphen),
@@ -49,21 +49,21 @@ def parse_map_key(key: str, map_prefix: str) -> tuple[str, str, str]:
 
     Parameters
     ----------
-    key
-        The key to parse, expected to be in the form `{name}-{map_prefix}-{key}`.
+    input
+        The key to parse, in the form `{name}-{map_prefix}-{property}`.
     map_prefix
         The prefix used in the key to identify the map (e.g. "axis").
 
     Raises
     ------
     ValueError
-        If *key* has fewer than three parts, or its second part is not
+        If *input* has fewer than three parts, or its second part is not
         *map_prefix*.
     """
-    parts = key.split("-", 2)
+    parts = input.split("-", 2)
     if len(parts) != 3 or parts[1] != map_prefix:
         raise ValueError(
-            f"Input {key!r} does not conform to the expected "
+            f"Input {input!r} does not conform to the expected "
             f"'{{name}}-{map_prefix}-{{key}}' format."
         )
     return parts[0], parts[1], parts[2]
