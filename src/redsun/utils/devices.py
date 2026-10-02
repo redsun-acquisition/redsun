@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from collections import Counter
 from dataclasses import dataclass
+from numbers import Real
 from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, cast, runtime_checkable
 
 from bluesky.protocols import HasHints, Stoppable, Subscribable
@@ -62,10 +63,13 @@ class AxisInfo:
     """Lowest and highest position the descriptor allows; `None` for no bound."""
 
     stoppable: bool = False
-    """Whether the axis can be stopped."""
+    """Whether the axis can be stopped, by itself or through its device."""
+
+    key: str | None = None
+    """Data key of the readback in the readings the axis reports."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Configuration:
     """A device's configuration, and which of its signals can be written."""
 
@@ -139,7 +143,8 @@ async def describe_axis(axis: Axis) -> AxisInfo:
     """Return where *axis* stands and what its readback descriptor says.
 
     The descriptor is the entry of the axis' first hint, or its only entry;
-    an axis that is not readable has none.
+    an axis that is not readable has none. Units that are not text, and a
+    precision that is not a whole number of at least 0, are left out.
 
     Raises
     ------
@@ -150,22 +155,31 @@ async def describe_axis(axis: Axis) -> AxisInfo:
         location, described = await asyncio.gather(axis.locate(), axis.describe())
     else:
         location, described = await axis.locate(), {}
-    position = location["readback"]
-    if isinstance(position, bool) or not isinstance(position, (int, float)):
+    # typed as a float, but a device may report anything
+    position: object = location["readback"]
+    if isinstance(position, bool) or not isinstance(position, Real):
         raise TypeError(f"its position {position!r} is not a number")
     hinted = axis.hints.get("fields", []) if isinstance(axis, HasHints) else []
     if hinted:
-        descriptor: Mapping[str, Any] = described.get(hinted[0], {})
+        key: str | None = hinted[0]
     elif len(described) == 1:
-        descriptor = next(iter(described.values()))
+        key = next(iter(described))
     else:
-        descriptor = {}
+        key = None
+    descriptor: Mapping[str, Any] = described.get(key, {}) if key is not None else {}
+    units = descriptor.get("units")
+    precision = descriptor.get("precision")
     return AxisInfo(
         position=float(position),
-        units=descriptor.get("units"),
-        precision=descriptor.get("precision"),
+        units=units if isinstance(units, str) else None,
+        precision=precision
+        if isinstance(precision, int)
+        and not isinstance(precision, bool)
+        and precision >= 0
+        else None,
         limits=limits(descriptor),
         stoppable=isinstance(axis, Stoppable),
+        key=key,
     )
 
 

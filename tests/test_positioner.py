@@ -89,7 +89,7 @@ def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
     session = build(TaggedLab)
 
     assert session.positioner.tag == "left"
-    assert set(session.positioner.axes()) == {"stage"}
+    assert set(session.positioner.axes) == {"stage"}
 
 
 def test_the_built_ins_are_declared_from_a_session_file(

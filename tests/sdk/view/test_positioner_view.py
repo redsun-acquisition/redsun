@@ -10,7 +10,7 @@ from superqt import QLabeledSlider
 
 from redsun import Settings
 from redsun.presenter import DescribesAxes
-from redsun.utils.devices import AxisInfo
+from redsun.utils.devices import AxisInfo, Configuration
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
 
@@ -48,19 +48,18 @@ class CustomView(PositionerView):
 class Positioner:
     """Describes two devices, as a positioner presenter would."""
 
-    def axes(self) -> dict[str, dict[str, AxisInfo]]:
-        return AXES
-
-    def configuration(self) -> tuple[dict[str, Any], dict[str, Any]]:
-        descriptors = {
+    axes = AXES
+    configuration = Configuration(
+        descriptors={
             "stage-axis-x-velocity": {
                 "source": "soft://v",
                 "dtype": "number",
                 "shape": [],
-            },
-        }
-        readings = {"stage-axis-x-velocity": {"value": 1.0, "timestamp": 0.0}}
-        return descriptors, readings
+            }
+        },
+        readings={"stage-axis-x-velocity": {"value": 1.0, "timestamp": 0.0}},
+        writable={},
+    )
 
 
 @pytest.fixture

@@ -177,7 +177,7 @@ class PositionerView(QtW.QWidget, Loggable):
         stored = settings.get(self._key("repeat_interval"))
         if isinstance(stored, int):
             self._interval.setValue(stored)
-        for device, axes in positioner.axes().items():
+        for device, axes in positioner.axes.items():
             group = self.group_class(
                 device,
                 axes,
@@ -192,7 +192,8 @@ class PositionerView(QtW.QWidget, Loggable):
             self._groups[device] = group
             self._devices.addWidget(group)
         self._interval.valueChanged.connect(self._set_repeat_interval)
-        descriptors, readings = positioner.configuration()
+        descriptors = positioner.configuration.descriptors
+        readings = positioner.configuration.readings
         if descriptors:
             self._tree = DescriptorTreeView(descriptors, readings, self)
             self._tree.sig_property_changed.connect(self._configure)
