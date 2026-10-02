@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -46,17 +47,13 @@ class DescribesAxes(Protocol):
         ...
 
 
+@dataclass(eq=False)
 class PositionerPresenter(Loggable):
     """Move the axes of devices by hand, one move at a time per device.
 
     Every device with at least one axis is kept, or only those named in
-    *include*. Each axis is followed from the start, and its readbacks are
+    `include`. Each axis is followed from the start, and its readbacks are
     relayed on `sig_readback`.
-
-    Parameters
-    ----------
-    include
-        Names of the devices to keep; `None` keeps every device with an axis.
     """
 
     sig_readback = Signal(str, str, float)
@@ -71,18 +68,23 @@ class PositionerPresenter(Loggable):
     sig_configuration = Signal(str, object)
     """Key and value of a configuration signal, read back after a write."""
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        devices: DeviceMapping,
-        include: list[str] | None = None,
-    ) -> None:
-        self.name = name
+    name: str
+    """Name of the presenter in its session."""
+
+    _: KW_ONLY
+
+    devices: DeviceMapping = field(repr=False)
+    """Devices of the session, searched for axes."""
+
+    include: list[str] | None = None
+    """Names of the devices to keep; `None` keeps every device with an axis."""
+
+    def __post_init__(self) -> None:
         self._axes = {
             device: axes
-            for device, item in devices.items()
-            if (include is None or device in include) and (axes := find_axes(item))
+            for device, item in self.devices.items()
+            if (self.include is None or device in self.include)
+            and (axes := find_axes(item))
         }
         self._writable: dict[str, SignalRW[Any]] = {}
         self._configuration: tuple[dict[str, DataKey], dict[str, Reading[Any]]] = (
