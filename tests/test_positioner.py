@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import time
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, ClassVar
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
 from qtpy import QtCore, QtWidgets
 
-from redsun import AsDevice, AsPresenter, AsView, Link
+from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.presenter import PositionerPresenter
 from redsun.qt import QtSession
 from redsun.view.qt.builtins import PositionerView
@@ -19,6 +20,20 @@ if TYPE_CHECKING:
     from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
+
+
+@dataclass(eq=False, kw_only=True)
+class TaggedPositioner(PositionerPresenter):
+    """A positioner with a field of its own, declared in a module of its own."""
+
+    tag: str = ""
+
+
+class TaggedLab(QtSession):
+    config: ClassVar[dict[str, Any]] = {"session": "positioner-tagged"}
+
+    stage: AsDevice[Stage]
+    positioner: Annotated[AsPresenter[TaggedPositioner], Declare(tag="left")]
 
 
 class Lab(QtSession):
@@ -65,6 +80,16 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     plus.pressed.emit()
 
     wait_for(lambda: label.text() == "1.000")
+
+
+def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
+    qapp: QtWidgets.QApplication, config_home: Any, build: BuildSession
+) -> None:
+    """Build a dataclass subclass whose inherited fields name types its module lacks."""
+    session = build(TaggedLab)
+
+    assert session.positioner.tag == "left"
+    assert set(session.positioner.axes()) == {"stage"}
 
 
 def test_the_built_ins_are_declared_from_a_session_file(

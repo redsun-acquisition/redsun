@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from typing import TYPE_CHECKING, Any
 
 from ..injection._census import devices_protocol
@@ -78,13 +79,35 @@ def resolved(target: Any, label: str) -> inspect.Signature:
     """
     try:
         return inspect.signature(target, eval_str=True)
-    except NameError as e:
-        raise TypeError(
-            f"cannot read {label}: {e.name!r} is "
-            "not available at runtime. A type a component is injected by must "
-            "be imported outside 'if TYPE_CHECKING', because the graph "
-            "evaluates the annotation."
-        ) from e
+    except NameError as first:
+        error = first
+    if isinstance(target, type):
+        # a dataclass subclass's generated __init__ carries the fields of its
+        # bases, whose annotations name types imported by the bases' modules
+        try:
+            return inspect.signature(target, eval_str=True, globals=namespace(target))
+        except NameError as second:
+            error = second
+    raise TypeError(
+        f"cannot read {label}: {error.name!r} is "
+        "not available at runtime. A type a component is injected by must "
+        "be imported outside 'if TYPE_CHECKING', because the graph "
+        "evaluates the annotation."
+    ) from error
+
+
+def namespace(cls: type) -> dict[str, Any]:
+    """Return the globals of the modules declaring *cls* and its bases.
+
+    A module nearer *cls* in its method resolution order wins a name two
+    modules define.
+    """
+    merged: dict[str, Any] = {}
+    for base in reversed(cls.__mro__):
+        module = sys.modules.get(base.__module__)
+        if module is not None:
+            merged.update(vars(module))
+    return merged
 
 
 def injectable(
