@@ -86,9 +86,10 @@ The same links, from `wire()`:
 --8<-- "docs/examples/positioner.py:wire"
 ```
 
-A plan that locks a device disables that device's controls while it runs.
-The engine is not a session component, so this link is made in `wire()`, from
-the presenter that holds the engine:
+A plan that locks a device disables that device's controls while it runs,
+`Stop` included: stop the plan instead, and the engine stops every device the
+plan moved. The engine is not a session component, so this link is made in
+`wire()`, from the presenter that holds the engine:
 
 ```{.python}
 --8<-- "docs/examples/positioner.py:wire-locks"
