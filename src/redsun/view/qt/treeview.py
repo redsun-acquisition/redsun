@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 __all__ = ["DescriptorTreeView"]
 
 
-def split_key(key: str) -> tuple[str, str]:
+def _split_key(key: str) -> tuple[str, str]:
     """Return *key*'s device and property: `cam-gain` gives `cam` and `gain`.
 
     A key with no `-` belongs to no device, and gives an empty device name.
@@ -310,7 +310,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         """Handle a change from any editor widget."""
         self._pending[key] = self._readings.get(key)
         self._readings[key] = value
-        owner, prop = split_key(key)
+        owner, prop = _split_key(key)
         self.sig_property_changed.emit(owner, prop, value)
 
     def _add_leaf(
@@ -367,7 +367,7 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         owners: dict[str, QtWidgets.QTreeWidgetItem] = {}
         groups: dict[tuple[str, str], QtWidgets.QTreeWidgetItem] = {}
         for full_key, desc in self._descriptors.items():
-            owner, prop = split_key(full_key)
+            owner, prop = _split_key(full_key)
             source = desc.get("source", "")
             readonly = source.split("://", 1)[-1] == "readonly" or source.endswith(
                 ":readonly"
