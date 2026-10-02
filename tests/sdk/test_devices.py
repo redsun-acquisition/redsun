@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pytest
@@ -43,10 +43,11 @@ class Float32Axis(SoftAxis):
     async def locate(self) -> Location[float]:
         """Return the position as numpy float32 values."""
         location = await super().locate()
-        return {
+        reported: Any = {
             "setpoint": np.float32(location["setpoint"]),
             "readback": np.float32(location["readback"]),
         }
+        return cast("Location[float]", reported)
 
 
 class OuterAxis(SoftAxis):
