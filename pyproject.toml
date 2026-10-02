@@ -67,6 +67,7 @@ qt-common = [
     "app-model>=0.5.1",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
+    "superqt>=0.8.2",
 ]
 
 pyqt = [
@@ -120,6 +121,7 @@ qt-common = [
     "app-model>=0.5.1",
     "magicgui>=0.10.2",
     "qtpy>=2.4.3",
+    "superqt>=0.8.2",
 ]
 pyqt = [
     "redsun[qt-common]",
