@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003
-from typing import TYPE_CHECKING, Any, TypedDict, TypeGuard
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, TypeGuard
 
 from psygnal import Signal
 from qtpy import QtCore
@@ -97,6 +97,9 @@ class PositionerView(QtW.QWidget, Loggable):
 
     placement: Placement = Dock("right")
 
+    group_class: ClassVar[type[PositionerGroup]] = PositionerGroup
+    """Widget built for each device; a subclass may name a subclass of its own."""
+
     sig_move = Signal(str, str, float)
     """Device, axis and step, when a step button is pressed or repeats."""
 
@@ -157,11 +160,16 @@ class PositionerView(QtW.QWidget, Loggable):
         configuration = QtW.QWidget(self)
         configuration.setLayout(self._configuration)
 
-        tabs = QtW.QTabWidget(self)
-        tabs.addTab(scroll, "Motors")
-        tabs.addTab(configuration, "Configuration")
-        tabs.addTab(advanced, "Advanced")
-        QtW.QVBoxLayout(self).addWidget(tabs)
+        self._tabs = QtW.QTabWidget(self)
+        self._tabs.addTab(scroll, "Motors")
+        self._tabs.addTab(configuration, "Configuration")
+        self._tabs.addTab(advanced, "Advanced")
+        QtW.QVBoxLayout(self).addWidget(self._tabs)
+
+    @property
+    def tabs(self) -> QtW.QTabWidget:
+        """The Motors, Configuration and Advanced tabs, to which a subclass may add."""
+        return self._tabs
 
     def setup(self, positioner: DescribesAxes, settings: Settings) -> None:
         """Build a group per device *positioner* describes, and read *settings*."""
@@ -170,7 +178,7 @@ class PositionerView(QtW.QWidget, Loggable):
         if isinstance(stored, int):
             self._interval.setValue(stored)
         for device, axes in positioner.axes().items():
-            group = PositionerGroup(
+            group = self.group_class(
                 device,
                 axes,
                 steps=self._steps,

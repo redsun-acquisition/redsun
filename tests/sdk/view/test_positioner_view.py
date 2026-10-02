@@ -9,6 +9,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from superqt import QLabeledSlider
 
 from redsun import Settings
+from redsun.presenter import DescribesAxes
 from redsun.utils.devices import AxisInfo
 from redsun.view.qt.builtins import PositionerGroup, PositionerView
 from redsun.view.qt.treeview import DescriptorTreeView
@@ -24,6 +25,24 @@ AXES = {
     "stage": {"x": AxisInfo(0.0, "um", 3), "theta": AxisInfo(0.0, "deg", 1)},
     "focus": {"focus": AxisInfo(52.1, "um", 2)},
 }
+
+
+class MarkedGroup(PositionerGroup):
+    """A group with a button of its own."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.extra = QtWidgets.QPushButton("Home", self)
+
+
+class CustomView(PositionerView):
+    """A positioner view with its own groups and a tab of its own."""
+
+    group_class = MarkedGroup
+
+    def setup(self, positioner: DescribesAxes, settings: Settings) -> None:
+        super().setup(positioner, settings)
+        self.tabs.addTab(QtWidgets.QLabel("notes"), "Notes")
 
 
 class Positioner:
@@ -174,6 +193,20 @@ def test_a_configuration_edit_is_sent_on(
 
     assert sent == [("stage-axis-x-velocity", 2.0)]
     assert stops == ["stage"]
+
+
+def test_a_subclass_chooses_its_groups_and_adds_a_tab(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Build the subclass' group for each device and keep the tab it adds."""
+    view = CustomView("positioner", parent)
+    view.setup(Positioner(), settings)
+
+    groups = view.findChildren(PositionerGroup)
+    assert len(groups) == 2
+    assert all(isinstance(g, MarkedGroup) for g in groups)
+    labels = [view.tabs.tabText(i) for i in range(view.tabs.count())]
+    assert labels == ["Motors", "Configuration", "Advanced", "Notes"]
 
 
 def test_the_repeat_interval_defaults_to_the_keyword(
