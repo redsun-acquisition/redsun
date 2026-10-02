@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from bluesky.protocols import Location, Reading
     from event_model import DataKey
+    from ophyd_async.core import TimeoutCalculator
 
 
 class MockDetector(StandardReadable):
@@ -68,7 +69,7 @@ class GatedLogic(MovableLogic[float]):
         if self.refuse is not None:
             raise RuntimeError(self.refuse)
 
-    async def move(self, new_position: float, timeout: Any) -> None:
+    async def move(self, new_position: float, timeout: TimeoutCalculator) -> None:
         """Wait for `gate`, when it is set, then write the setpoint."""
         if self.gate is not None:
             await self.gate.wait()
@@ -137,7 +138,7 @@ class LaggingLogic(MovableLogic[float]):
     set_readback: Callable[[float], None] | None = None
     lag: float = 0.004
 
-    async def move(self, new_position: float, timeout: Any) -> None:
+    async def move(self, new_position: float, timeout: TimeoutCalculator) -> None:
         """Write the setpoint, then a readback `lag` short of it."""
         await self.setpoint.set(new_position)
         if self.set_readback is not None:

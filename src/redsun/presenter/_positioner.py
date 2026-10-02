@@ -7,7 +7,7 @@ import dataclasses
 import math
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Concatenate, ParamSpec, Protocol, runtime_checkable
 
 from bluesky.protocols import Stoppable
 from bluesky.utils import maybe_await
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from bluesky.protocols import Reading
 
     from redsun.utils.devices import Axis
+
+P = ParamSpec("P")
 
 
 @runtime_checkable
@@ -103,7 +105,7 @@ class PositionerPresenter(Loggable):
         self._configuration = Configuration(descriptors={}, readings={}, writable={})
         self._owners: dict[str, str] = {}
         self._callbacks: list[
-            tuple[Axis, Callable[[dict[str, Reading[Any]]], None]]
+            tuple[Axis, Callable[[dict[str, Reading[float]]], None]]
         ] = []
         self._held: frozenset[str] = frozenset()
         self._from_setpoint: set[str] = set()
@@ -192,7 +194,7 @@ class PositionerPresenter(Loggable):
         KeyError
             If the presenter does not hold *device*.
         """
-        targets: list[Any] = [
+        targets: list[Stoppable] = [
             axis for axis in self._axes[device].values() if isinstance(axis, Stoppable)
         ]
         whole: object = self.devices.get(device)
@@ -224,7 +226,7 @@ class PositionerPresenter(Loggable):
         self._held = names
 
     @slot
-    async def configure(self, key: str, value: Any) -> None:
+    async def configure(self, key: str, value: object) -> None:
         """Write *value* to the configuration signal *key*, then report it.
 
         `sig_configuration` carries what the signal reads back, also after a
@@ -262,7 +264,11 @@ class PositionerPresenter(Loggable):
         await self._unfollow()
 
     async def _run(
-        self, device: str, motion: Callable[..., Awaitable[None]], *args: Any
+        self,
+        device: str,
+        motion: Callable[Concatenate[str, int, P], Awaitable[None]],
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> None:
         stops = self._stops[device]
         async with self._locks[device]:
@@ -274,7 +280,7 @@ class PositionerPresenter(Loggable):
                 return
             self.sig_moving.emit(device, True)
             try:
-                await motion(device, stops, *args)
+                await motion(device, stops, *args, **kwargs)
             except BaseException as error:
                 task = asyncio.current_task()
                 if task is not None and task.cancelling():
@@ -355,7 +361,7 @@ class PositionerPresenter(Loggable):
     async def _follow_axis(
         self, device: str, name: str, axis: Axis
     ) -> tuple[AxisInfo | None, Configuration | None]:
-        subscribed: Callable[[dict[str, Reading[Any]]], None] | None = None
+        subscribed: Callable[[dict[str, Reading[float]]], None] | None = None
         try:
             async with asyncio.timeout(self.timeout):
                 info = await describe_axis(axis)
@@ -381,7 +387,11 @@ class PositionerPresenter(Loggable):
         self._callbacks.clear()
 
     def _relay(
-        self, device: str, axis: str, key: str | None, reading: dict[str, Reading[Any]]
+        self,
+        device: str,
+        axis: str,
+        key: str | None,
+        reading: dict[str, Reading[float]],
     ) -> None:
         # a callback that raises would reach whatever set the device's signal
         try:

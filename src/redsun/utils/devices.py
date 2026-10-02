@@ -10,7 +10,7 @@ import asyncio
 from collections import Counter
 from dataclasses import dataclass
 from numbers import Real
-from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, runtime_checkable
 
 from bluesky.protocols import HasHints, Stoppable, Subscribable
 from ophyd_async.core import (
@@ -193,9 +193,7 @@ async def read_configuration(device: AsyncConfigurable) -> Configuration:
     marked: dict[str, DataKey] = {
         key: descriptor
         if key in writable
-        else cast(
-            "DataKey", {**descriptor, "source": f"{descriptor['source']}:readonly"}
-        )
+        else descriptor | {"source": f"{descriptor['source']}:readonly"}
         for key, descriptor in descriptors.items()
     }
     return Configuration(

@@ -229,7 +229,7 @@ class PositionerView(QtW.QWidget, Loggable):
         self._groups[device].set_failed(message)
 
     @slot
-    def update_configuration(self, key: str, value: Any) -> None:
+    def update_configuration(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
         if self._tree is not None:
             self._tree.set_value(key, value)
@@ -330,7 +330,7 @@ class PositionerView(QtW.QWidget, Loggable):
         for device, button in self._entry_buttons:
             button.setEnabled(device not in self._locked)
 
-    def _configure(self, owner: str, prop: str, value: Any) -> None:
+    def _configure(self, owner: str, prop: str, value: object) -> None:
         self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
 
     def _set_repeat_interval(self, milliseconds: int) -> None:

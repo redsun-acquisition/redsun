@@ -17,6 +17,9 @@ from redsun.view.qt.builtins import PositionerView
 from tests.sdk.mocks import Stage
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
     from redsun.testing import BuildSession
 
 pytestmark = pytest.mark.qt
@@ -57,7 +60,7 @@ class Lab(QtSession):
         )
 
 
-def wait_for(condition: Any, timeout: float = 5.0) -> None:
+def wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
     """Process Qt events until *condition* holds, or fail after *timeout*."""
     end = time.monotonic() + timeout
     while not condition():
@@ -67,7 +70,7 @@ def wait_for(condition: Any, timeout: float = 5.0) -> None:
 
 
 def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
-    qapp: QtWidgets.QApplication, config_home: Any, build: BuildSession
+    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
 ) -> None:
     """Step an axis from the view and show the stage's new readback."""
     session = build(Lab)
@@ -83,7 +86,7 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
 
 
 def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
-    qapp: QtWidgets.QApplication, config_home: Any, build: BuildSession
+    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
 ) -> None:
     """Build a dataclass subclass whose inherited fields name types its module lacks."""
     session = build(TaggedLab)
@@ -93,7 +96,7 @@ def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(
 
 
 def test_the_built_ins_are_declared_from_a_session_file(
-    qapp: QtWidgets.QApplication, config_home: Any, build: BuildSession
+    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
 ) -> None:
     """Build the positioner pair by plugin id from a session file."""
     session = build(
