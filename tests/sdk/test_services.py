@@ -549,7 +549,9 @@ def test_arguments_without_a_module_are_refused() -> None:
 
 
 def test_a_service_ends_when_the_process_that_launched_it_dies(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Clean up and exit a service once the process that launched it dies."""
     monkeypatch.setenv("PYTHONPATH", MOCK_PACKAGES)
@@ -576,10 +578,10 @@ def test_a_service_ends_when_the_process_that_launched_it_dies(
         parent.kill()
         parent.wait()
 
-    deadline = time.monotonic() + 10
-    while not marker.exists() and time.monotonic() < deadline:
-        time.sleep(0.05)
-    assert marker.read_text() == "cleaned up"
+    # the file exists a moment before its text is written: wait for the text
+    assert wait_until(
+        lambda: marker.exists() and marker.read_text() == "cleaned up", timeout=10
+    )
 
 
 def test_a_launched_service_reads_its_name_and_prefix_from_the_environment(
