@@ -16,6 +16,7 @@ EXAMPLES = [
     "console_frontend",
     "continuous_plan",
     "positioner",
+    "positioner_custom",
 ]
 
 

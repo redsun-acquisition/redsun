@@ -122,13 +122,59 @@ configuration, such as the acceleration of an EPICS motor record, is not
 shown. Declare it `StandardReadableFormat.CONFIG_SIGNAL` in a subclass of the
 device to show it.
 
-## Replace one half
+## Customize the positioner
+
+### Change what a move does
+
+The presenter is a dataclass. Subclass it, with `kw_only=True` and
+`eq=False` as the base has, to add a field and change a slot. A slot you
+override is marked with [`slot`][redsun.slot] again, or it can no longer be
+wired:
+
+```{.python}
+--8<-- "docs/examples/positioner_custom.py:presenter"
+```
+
+The new field is set like any other constructor keyword:
+
+```{.python}
+--8<-- "docs/examples/positioner_custom.py:declare"
+```
+
+The slots `move`, `move_to`, `stop` and `configure`, and the methods `axes`
+and `configuration`, are the ones to override, calling `super()`. Methods
+with a leading underscore may change.
+
+### Change the view
+
+[`group_class`][redsun.view.qt.builtins.PositionerView.group_class] is the
+widget built for each device, and
+[`tabs`][redsun.view.qt.builtins.PositionerView.tabs] holds the Motors,
+Configuration and Advanced tabs. A subclass can replace the first and add to
+the second:
+
+```{.python}
+--8<-- "docs/examples/positioner_custom.py:view"
+```
+
+A subclass can also set its own `placement`, or override a slot such as
+`set_failed`, marked with `slot` again.
+
+### Replace one half
 
 The links above are the whole contract between the two components. A
 presenter of your own with the same slots and signals works with the built-in
 view, and a view of your own works with the built-in presenter.
 [`PositionerGroup`][redsun.view.qt.builtins.PositionerGroup] is the group of
-one device, ready to place in a view of your own.
+one device, ready to place in a view of your own, and the helpers of
+[`redsun.utils.devices`][redsun.utils.devices] read the axes, limits and
+configuration of any device.
+
+??? example "The customized session in full"
+
+    ```{.python}
+    --8<-- "docs/examples/positioner_custom.py"
+    ```
 
 ## The example in full
 

@@ -48,6 +48,9 @@ the plugin id `positioner`.
 
 - The names of both components, their signals and slots, `DescribesAxes`,
   `PositionerGroup` and the helpers of `redsun.utils.devices` are public API.
+- Both components can be subclassed: the presenter is a dataclass whose
+  public slots are overridden, and the view takes a `group_class` and
+  exposes its `tabs`. Their private methods are not promised to subclasses.
 - A device's own behaviour stays in the device: its `MovableLogic` decides
   the tolerance of a move, what stopping does and how long a move may take.
 - A device shows a setting in the Configuration tab by declaring it
