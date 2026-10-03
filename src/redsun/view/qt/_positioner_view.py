@@ -17,7 +17,7 @@ from redsun.qt import Dock
 from redsun.view.qt.treeview import DescriptorTreeView
 
 from ..._settings import Settings  # noqa: TC001
-from ._positioner_group import PositionerGroup, tool_button
+from ._positioner_group import PositionerGroup, StepBox, tool_button
 
 if TYPE_CHECKING:
     from redsun.view import Placement
@@ -133,6 +133,10 @@ class PositionerView(QtW.QWidget, Loggable):
         Advanced tab; kept between 10 and 300.
     steps
         Step sizes offered in each axis' step box.
+    step_box
+        `"combobox"` lists the sizes in *steps*; `"spinbox"` takes any size
+        from the smallest to the largest of them, starting from the default
+        one, and its arrows move it by decades.
     undo_delay
         Milliseconds Undo is offered after a saved position is removed.
     """
@@ -163,11 +167,13 @@ class PositionerView(QtW.QWidget, Loggable):
         repeat_delay: int = 400,
         repeat_interval: int = 50,
         steps: Sequence[float] = DEFAULT_STEPS,
+        step_box: StepBox = "combobox",
         undo_delay: int = 5000,
     ) -> None:
         super().__init__(parent)
         self.name = name
         self._repeat_delay = repeat_delay
+        self._step_box: StepBox = step_box
         self._steps = tuple(steps)
         self._groups: dict[str, PositionerGroup] = {}
         self._locked: frozenset[str] = frozenset()
@@ -249,6 +255,7 @@ class PositionerView(QtW.QWidget, Loggable):
                 steps=self._steps,
                 repeat_delay=self._repeat_delay,
                 repeat_interval=self._interval.value(),
+                step_box=self._step_box,
                 parent=self,
             )
             group.sig_move.connect(self.sig_move.emit)

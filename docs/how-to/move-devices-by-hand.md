@@ -84,8 +84,10 @@ presenters:
 The view takes `repeat_delay`, the milliseconds a step button is held before
 it repeats (400 by default); `repeat_interval`, the milliseconds between two
 repeated steps (50 by default); `steps`, the step sizes offered for each
-axis (`0.001` to `1000` by decades); and `undo_delay`, the milliseconds Undo
-is offered after a saved position is removed (5000 by default). Once a repeat
+axis (`0.001` to `1000` by decades); `step_box`, `combobox` (the default) to
+list those sizes or `spinbox` to take any size from the smallest to the
+largest, its arrows moving it by decades; and `undo_delay`, the milliseconds
+Undo is offered after a saved position is removed (5000 by default). Once a repeat
 interval is set in the Advanced tab, it replaces `repeat_interval` in later
 sessions.
 

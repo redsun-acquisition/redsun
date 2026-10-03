@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from decimal import Decimal
+from typing import TYPE_CHECKING, Literal, get_args
 
 from psygnal import Signal
 from qtpy import QtCore, QtGui
@@ -18,6 +19,9 @@ DEFAULT_PRECISION = 2
 
 LIMIT = 1e9
 """Largest step or target magnitude the controls accept."""
+
+StepBox = Literal["combobox", "spinbox"]
+"""The control choosing an axis' step size: a list of sizes, or a number box."""
 
 
 def number_validator(
@@ -67,6 +71,7 @@ class AxisRow(QtW.QWidget):
         steps: Sequence[float],
         repeat_delay: int,
         repeat_interval: int,
+        step_box: StepBox,
         parent: QtW.QWidget,
     ) -> None:
         super().__init__(parent)
@@ -108,23 +113,45 @@ class AxisRow(QtW.QWidget):
             )
             self.buttons.append(button)
 
-        self.box = QtW.QComboBox(self)
+        centre = QtCore.Qt.AlignmentFlag.AlignCenter
+        self.box: QtW.QComboBox | QtW.QDoubleSpinBox
+        if step_box == "spinbox":
+            self.box = QtW.QDoubleSpinBox(self)
+            self.box.setLocale(QtCore.QLocale.c())
+            decimals = max(
+                0,
+                *(
+                    -int(Decimal(repr(step)).normalize().as_tuple().exponent)
+                    for step in steps
+                ),
+            )
+            self.box.setDecimals(decimals)
+            self.box.setRange(min(steps), max(steps))
+            self.box.setStepType(QtW.QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
+            self.box.setValue(self.step)
+            self.box.setAlignment(centre)
+            # its hint makes room for the widest size in range beside its arrows
+            self.box.setFixedWidth(self.box.sizeHint().width())
+        else:
+            self.box = QtW.QComboBox(self)
+            self.box.setEditable(True)
+            self.box.setInsertPolicy(QtW.QComboBox.InsertPolicy.NoInsert)
+            self.box.addItems([f"{step:g}" for step in steps])
+            for index in range(self.box.count()):
+                self.box.setItemData(
+                    index, centre, QtCore.Qt.ItemDataRole.TextAlignmentRole
+                )
+            self.box.setCurrentIndex(self.box.findText(f"{self.step:g}"))
+            self.box.setValidator(number_validator(0.0, LIMIT, self.box))
+            if (edit := self.box.lineEdit()) is not None:
+                edit.setAlignment(centre)
+            # the box would otherwise claim room for its arrow and frame at
+            # their widest, more than a narrow dock has; a fixed width, unlike
+            # an ignored size policy, still reserves its column in the grid
+            self.box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 32)
         self.box.setObjectName(f"step:{axis}")
         self.box.setAccessibleName(f"{axis} step size")
         self.box.setToolTip("Step size")
-        self.box.setEditable(True)
-        self.box.setInsertPolicy(QtW.QComboBox.InsertPolicy.NoInsert)
-        self.box.setSizeAdjustPolicy(
-            QtW.QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
-        )
-        self.box.setMinimumContentsLength(5)
-        # the box would otherwise claim room for its arrow and frame at their
-        # widest, more than a narrow dock has; a fixed width, unlike an ignored
-        # size policy, still reserves its column in the grid
-        self.box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 24)
-        self.box.addItems([f"{step:g}" for step in steps])
-        self.box.setCurrentIndex(self.box.findText(f"{self.step:g}"))
-        self.box.setValidator(number_validator(0.0, LIMIT, self.box))
 
         self.target = QtW.QLineEdit(self.format_value(info.position), self)
         self.target.setObjectName(f"goto:{axis}")
@@ -178,6 +205,8 @@ class AxisRow(QtW.QWidget):
 
     def step_size(self) -> float:
         """Return the step in the box, or the last valid one if it holds none."""
+        if isinstance(self.box, QtW.QDoubleSpinBox):
+            return self.box.value()
         try:
             step = float(self.box.currentText())
         except ValueError:
@@ -266,11 +295,15 @@ class PositionerGroup(QtW.QGroupBox):
         Milliseconds a step button is held before its step repeats.
     repeat_interval
         Milliseconds between two repeated steps.
+    step_box
+        `"combobox"` lists the sizes in *steps*; `"spinbox"` takes any size
+        from the smallest to the largest of them, starting from the default
+        one, and its arrows move it by decades.
 
     Raises
     ------
     ValueError
-        If *steps* is empty.
+        If *steps* is empty, or *step_box* is neither choice.
     """
 
     sig_move = Signal(str, str, float)
@@ -293,10 +326,13 @@ class PositionerGroup(QtW.QGroupBox):
         steps: Sequence[float],
         repeat_delay: int,
         repeat_interval: int,
+        step_box: StepBox = "combobox",
         parent: QtW.QWidget | None = None,
     ) -> None:
         if not steps:
             raise ValueError("steps holds no step size")
+        if step_box not in get_args(StepBox):
+            raise ValueError(f"step_box {step_box!r} is not one of {get_args(StepBox)}")
         super().__init__(device, parent)
         layout = QtW.QVBoxLayout(self)
         header = QtW.QHBoxLayout()
@@ -324,7 +360,9 @@ class PositionerGroup(QtW.QGroupBox):
         self._step_buttons: list[QtW.QToolButton] = []
         self._rows: dict[str, AxisRow] = {}
         for axis, info in axes.items():
-            row = AxisRow(axis, info, steps, repeat_delay, repeat_interval, self)
+            row = AxisRow(
+                axis, info, steps, repeat_delay, repeat_interval, step_box, self
+            )
             row.sig_step.connect(
                 lambda delta, a=axis: self.sig_move.emit(device, a, delta)
             )

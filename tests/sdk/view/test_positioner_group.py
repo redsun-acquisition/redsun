@@ -28,6 +28,18 @@ def group(qapp: QtWidgets.QApplication) -> PositionerGroup:
     )
 
 
+def spin_group(qapp: QtWidgets.QApplication) -> PositionerGroup:
+    """Return a group whose step boxes are spin boxes."""
+    return PositionerGroup(
+        "stage",
+        AXES,
+        steps=(0.001, 0.1, 1.0, 10.0),
+        repeat_delay=100,
+        repeat_interval=50,
+        step_box="spinbox",
+    )
+
+
 def child(parent: QtCore.QObject, kind: type[T], name: str) -> T:
     """Return the child of *parent* of type *kind* named *name*."""
     found = parent.findChild(kind, name)
@@ -328,3 +340,65 @@ def test_no_control_of_a_row_covers_another(group: PositionerGroup) -> None:
                 left.objectName(),
                 right.objectName(),
             )
+
+
+def test_the_step_box_centres_its_size(group: PositionerGroup) -> None:
+    """Centre the step size in the step box and in the sizes it lists."""
+    box = child(group, QtWidgets.QComboBox, "step:x")
+    edit = box.lineEdit()
+    assert edit is not None
+    centred = QtCore.Qt.AlignmentFlag.AlignHCenter
+
+    assert edit.alignment() & centred
+    assert all(
+        box.itemData(index, QtCore.Qt.ItemDataRole.TextAlignmentRole) & centred
+        for index in range(box.count())
+    )
+
+
+def test_a_spin_box_steps_by_the_size_it_holds(qapp: QtWidgets.QApplication) -> None:
+    """Step by the size typed in a spin box, starting from the default size."""
+    group = spin_group(qapp)
+    steps: list[float] = []
+    group.sig_move.connect(lambda device, axis, delta: steps.append(delta))
+    box = child(group, QtWidgets.QDoubleSpinBox, "step:x")
+    plus = child(group, QtWidgets.QAbstractButton, "plus:x")
+
+    plus.pressed.emit()
+    box.setValue(0.25)
+    plus.pressed.emit()
+
+    assert steps == [1.0, 0.25]
+    assert box.alignment() & QtCore.Qt.AlignmentFlag.AlignHCenter
+
+
+@pytest.mark.parametrize(
+    ("typed", "kept", "shown"),
+    [
+        pytest.param(0.001, 0.001, "0.001", id="smallest"),
+        pytest.param(0.0001, 0.001, "0.001", id="below"),
+        pytest.param(50.0, 10.0, "10.000", id="above"),
+    ],
+)
+def test_a_spin_box_keeps_to_the_steps_offered(
+    qapp: QtWidgets.QApplication, typed: float, kept: float, shown: str
+) -> None:
+    """Keep a spin box between the smallest and largest step, written with a dot."""
+    box = child(spin_group(qapp), QtWidgets.QDoubleSpinBox, "step:x")
+
+    box.setValue(typed)
+
+    assert (box.value(), box.text()) == (kept, shown)
+
+
+def test_an_unknown_step_box_is_refused(qapp: QtWidgets.QApplication) -> None:
+    """Refuse a step box that is neither a combo box nor a spin box."""
+    with pytest.raises(ValueError, match="step_box"):
+        PositionerGroup(
+            "a",
+            AXES,
+            steps=(1.0,),
+            repeat_delay=1,
+            repeat_interval=1,
+            step_box="slider",  # type: ignore[arg-type]
+        )

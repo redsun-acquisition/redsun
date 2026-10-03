@@ -560,3 +560,19 @@ def test_the_view_asks_for_room_to_show_its_groups_whole(
     bar = child(view, QtWidgets.QScrollArea).horizontalScrollBar()
     assert bar is not None
     assert not bar.isVisible()
+
+
+def test_the_view_passes_its_step_box_to_every_group(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Give every group the kind of step box the view was made with."""
+    view = PositionerView("positioner", parent, step_box="spinbox")
+    view.setup(Positioner(), settings)
+
+    boxes = [
+        type(w)
+        for w in view.findChildren(QtWidgets.QWidget)
+        if w.objectName().startswith("step:")
+    ]
+
+    assert boxes == [QtWidgets.QDoubleSpinBox] * 3
