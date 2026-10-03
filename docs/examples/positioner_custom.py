@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping  # noqa: TC003
+from collections.abc import Iterator  # noqa: TC003
 from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Annotated, Any, ClassVar
@@ -17,7 +17,7 @@ from ophyd_async.core import (
 )
 from qtpy.QtWidgets import QLabel, QPushButton
 
-from redsun import AsDevice, AsPresenter, AsView, Declare, Link, Settings, slot
+from redsun import AsDevice, AsPresenter, AsView, Declare, Link, Settings
 from redsun.presenter import (
     DescribesAxes,
     PositionerPresenter,
@@ -51,14 +51,11 @@ class MyStage(StandardReadable):
 class KeepOutPositioner(PositionerPresenter):
     keep_out: dict[str, tuple[float, float]] = field(default_factory=dict)
 
-    @slot
-    async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
-        for axis, target in positions.items():
-            zone = self.keep_out.get(f"{device}.{axis}")
-            if zone is not None and zone[0] <= target <= zone[1]:
-                self.sig_failed.emit(device, f"{axis} {target} is in a keep-out zone")
-                return
-        await super().move_to(device, positions)
+    def check(self, device: str, axis: str, target: float) -> None:
+        super().check(device, axis, target)
+        zone = self.keep_out.get(f"{device}.{axis}")
+        if zone is not None and zone[0] <= target <= zone[1]:
+            raise ValueError(f"{axis} {target} is in a keep-out zone")
 
 
 # --8<-- [end:presenter]

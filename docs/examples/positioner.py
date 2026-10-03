@@ -75,6 +75,7 @@ class MyApp(QtSession):
         # --8<-- [end:wire]
         # --8<-- [start:wire-locks]
         yield self.ctrl.engine.sig_locks_changed, self.positioner_view.set_locked
+        yield self.ctrl.engine.sig_locks_changed, self.positioner.set_locked
         # --8<-- [end:wire-locks]
 
 

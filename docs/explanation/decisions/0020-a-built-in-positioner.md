@@ -38,8 +38,14 @@ the plugin id `positioner`.
 - The configuration of every axis is shown in a `DescriptorTreeView` and
   written through the presenter. A signal a device does not declare as
   configuration is not looked for by attribute name.
-- The links between the two components are their whole interface, so either
-  can be replaced. `PositionerGroup` is public for components of your own.
+- Every target passes the presenter's `check`, a step's as well as a
+  go-to's: a target must be a finite number within the axis' limits, and a
+  subclass refuses more by overriding it. A step starts from the setpoint,
+  and from the readback after a stop or a failure.
+- A plan's locks reach the presenter as well as the view: a held device takes
+  no hand move, waiting go-to or configuration write.
+- The links between the two components, with the `DescribesAxes` protocol
+  the view asks for, are their whole interface, so either can be replaced. `PositionerGroup` is public for components of your own.
 - Reading a device goes in `redsun.utils.devices`, apart from the
   presenter: finding its axes, describing an axis, its limits and its
   configuration with what can be written. Any component can use them.

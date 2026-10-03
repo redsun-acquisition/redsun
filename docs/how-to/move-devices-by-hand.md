@@ -25,8 +25,9 @@ is not a signal. The search stops at each axis it finds, so the signals of an
 axis are never shown as axes. A device that is itself movable is its own
 single axis.
 
-Each axis is shown under its attribute name. This stage has two axes, `x` and
-`y`:
+Each axis is shown under its attribute name, or under its dotted path, such
+as `left.x`, when two axes of one device share a name. This stage has two
+axes, `x` and `y`:
 
 ```{.python}
 --8<-- "docs/examples/positioner.py:device"
@@ -35,6 +36,11 @@ Each axis is shown under its attribute name. This stage has two axes, `x` and
 Axes are found by what they can do, never by their names, so the view makes
 no assumption about which axis is which. [`find_axes`][redsun.utils.devices.find_axes]
 returns what the positioner finds for a device.
+
+The positioner describes and follows every axis when it is built. An axis
+whose position is not a number, whose configuration cannot be read, or that
+does not answer within `timeout` seconds (10 by default) is left out with a
+warning, and the other axes are kept.
 
 ## Declare the positioner in a session file
 
@@ -63,7 +69,8 @@ wiring:
 ```
 
 The presenter takes every device with at least one axis. To show only some of
-them, list them under `include`:
+them, list them under `include`; a name that is not a device of the session
+is reported with a warning:
 
 ```yaml
 presenters:
@@ -76,7 +83,12 @@ presenters:
 The view takes `repeat_delay`, the milliseconds a step button is held before
 it repeats (400 by default); `repeat_interval`, the milliseconds between two
 repeated steps (50 by default); and `steps`, the step sizes offered for each
-axis (`0.001` to `1000` by decades).
+axis (`0.001` to `1000` by decades). Once a repeat interval is set in the
+Advanced tab, it replaces `repeat_interval` in later sessions.
+
+A session holds one positioner presenter: the view asks for it in `setup`,
+and two would leave the view with two answers, so it would not be built. Use
+`include` on the one presenter to choose its devices.
 
 ## Declare it in Python
 
@@ -87,9 +99,11 @@ The same links, from `wire()`:
 ```
 
 A plan that locks a device disables that device's controls while it runs,
-`Stop` included: stop the plan instead, and the engine stops every device the
-plan moved. The engine is not a session component, so this link is made in
-`wire()`, from the presenter that holds the engine:
+`Stop` and its configuration included, and the presenter refuses moves and
+configuration writes for it, a go-to already waiting included. To stop the
+device, stop the plan: the engine stops every device the plan moved. The
+engine is not a session component, so these links are made in `wire()`, from
+the presenter that holds the engine:
 
 ```{.python}
 --8<-- "docs/examples/positioner.py:wire-locks"
@@ -98,38 +112,48 @@ plan moved. The engine is not a session component, so this link is made in
 ## Use the view
 
 - The Motors tab has a group per device and a row per axis. `-` and `+` step
-  the axis by the size chosen beside them; held, they repeat. With the row
-  focused, Left and Right do the same.
-- "go to" sends the axis to the position typed, on Enter or with `Go`. When
-  the device reports limits, a position outside them is refused.
-- `Stop` appears for a device with an axis that can be stopped, and stops it.
-- "moving" and "failed" show the state of each device; the tooltip of
-  "failed" holds the error.
+  the axis by the size chosen beside them; held, they repeat. With the row or
+  a step button focused, Left and Right do the same. A step starts from the
+  setpoint, so steps add up exactly, and from the readback after a stop or a
+  failure.
+- The field beside `Go` shows where the axis is until you type a target;
+  Enter or `Go` sends the axis there. A target that is not a number, or that
+  falls outside the limits the device reports, is not sent, and the group says
+  why.
+- `Stop` appears for a device that can be stopped, and stops the device and
+  each of its axes at once; one that fails to stop is reported without
+  keeping the others from stopping.
+- "moving" and "failed" show the state of each device, with the error after
+  "failed".
 - `Save` keeps where a device stands, under a name you can edit, in the
-  Saved positions section. `Go` on an entry moves that device back there.
+  Saved positions section. `Go` on an entry moves that device back there,
+  passing the same checks as a typed target.
 - The Configuration tab shows each axis' configuration, such as `velocity`,
   and writes the entries that can be written.
 - The Advanced tab sets the repeat interval, between 10 and 300 ms.
 
 Saved positions and the repeat interval are kept in the session's
-[`Settings`][redsun.Settings], one file per session on each machine.
+[`Settings`][redsun.Settings], one file per session on each machine, under keys
+named after the view: a view renamed in the session file starts with none.
 
 ## Show a setting a device does not declare
 
-The Configuration tab shows what a device returns from
-`describe_configuration()`. A signal the device does not declare as
+The Configuration tab shows what each axis returns from
+`describe_configuration()`. A signal the axis does not declare as
 configuration, such as the acceleration of an EPICS motor record, is not
 shown. Declare it `StandardReadableFormat.CONFIG_SIGNAL` in a subclass of the
-device to show it.
+axis' class to show it.
 
 ## Customize the positioner
 
 ### Change what a move does
 
-The presenter is a dataclass. Subclass it, with `kw_only=True` and
-`eq=False` as the base has, to add a field and change a slot. A slot you
-override is marked with [`slot`][redsun.slot] again, or it can no longer be
-wired:
+The presenter is a dataclass. Subclass it as one, with `eq=False` as the base
+has, and `kw_only=True` so that your fields are keyword arguments like the
+base's `devices` and `include`. Every target, of a step or a go-to, passes
+[`check`][redsun.presenter.PositionerPresenter.check] before it is sent, so a
+subclass refusing more targets overrides `check` and calls `super().check`
+first:
 
 ```{.python}
 --8<-- "docs/examples/positioner_custom.py:presenter"
@@ -141,9 +165,11 @@ The new field is set like any other constructor keyword:
 --8<-- "docs/examples/positioner_custom.py:declare"
 ```
 
-The slots `move`, `move_to`, `stop` and `configure`, and the methods `axes`
-and `configuration`, are the ones to override, calling `super()`. Methods
-with a leading underscore may change.
+`check`, the slots `move`, `move_to`, `stop`, `configure` and `set_locked`,
+and the properties `axes` and `configuration` are the ones to override,
+calling `super()`. A slot you override is marked with [`slot`][redsun.slot]
+again, or it can no longer be wired. Methods with a leading underscore may
+change.
 
 ### Change the view
 
@@ -162,9 +188,12 @@ A subclass can also set its own `placement`, or override a slot such as
 
 ### Replace one half
 
-The links above are the whole contract between the two components. A
-presenter of your own with the same slots and signals works with the built-in
-view, and a view of your own works with the built-in presenter.
+The links above, and the
+[`DescribesAxes`][redsun.presenter.DescribesAxes] protocol the view asks for
+in `setup`, are the whole contract between the two components. A presenter
+of your own with the same slots, signals and the `axes` and `configuration`
+properties works with the built-in view, and a view of your own works with the
+built-in presenter.
 [`PositionerGroup`][redsun.view.qt.builtins.PositionerGroup] is the group of
 one device, ready to place in a view of your own, and the helpers of
 [`redsun.utils.devices`][redsun.utils.devices] read the axes, limits and
