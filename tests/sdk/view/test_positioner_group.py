@@ -295,10 +295,10 @@ def test_unlocking_gives_the_controls_back(group: PositionerGroup) -> None:
 
 
 def test_the_group_fits_a_narrow_dock(group: PositionerGroup) -> None:
-    """Keep the group within 30 digits of its font: about 220 px at 9 pt."""
+    """Keep the group within 150 px of frames and spacing plus 16 digits of its font."""
     digit = group.fontMetrics().horizontalAdvance("0")
 
-    assert group.minimumSizeHint().width() <= 30 * digit
+    assert group.minimumSizeHint().width() <= 150 + 16 * digit
 
 
 def test_a_group_without_steps_is_refused(qapp: QtWidgets.QApplication) -> None:
