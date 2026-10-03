@@ -232,7 +232,13 @@ class PositionerPresenter(Loggable):
         # nothing there, so the move in flight is cancelled here as well
         running = self._running.get(device)
         if running is not None and running is not asyncio.current_task():
-            running.cancel()
+            loop = running.get_loop()
+            if loop is asyncio.get_running_loop():
+                running.cancel()
+            else:
+                # a task cancelled from another thread while it runs is
+                # cancelled again once it returns, after it handled the stop
+                loop.call_soon_threadsafe(running.cancel)
         failures = [result for result in results if isinstance(result, BaseException)]
         for failure in failures:
             self.logger.error(f"Stopping {device} failed: {failure!r}")
