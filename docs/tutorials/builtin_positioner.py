@@ -59,7 +59,7 @@ from redsun.presenter.plan_spec import (
     resolve_arguments,
 )
 from redsun.qt import Central, Dock, QtSession
-from redsun.view.qt.builtins import PositionerView  # noqa: TC001
+from redsun.view.qt.builtins import PositionerView
 from redsun.view.qt.utils import PlanWidget, create_plan_widget
 
 
@@ -107,6 +107,12 @@ class HasPosition(Protocol):
 class Camera(Readable[Any], Triggerable, Protocol): ...
 
 
+# --8<-- [start:view]
+class StagePositioner(PositionerView):
+    placement: Placement = Dock("left")
+
+
+# --8<-- [end:view]
 class StagePlans:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -276,7 +282,7 @@ class FirstSession(QtSession):
     scan_plans: AsPresenter[ScanPlans]
     # --8<-- [start:declare]
     positioner: AsPresenter[PositionerPresenter]
-    positioner_view: AsView[PositionerView]
+    positioner_view: AsView[StagePositioner]
     # --8<-- [end:declare]
     plan_view: AsView[PlanView]
     image_view: AsView[ImageView]

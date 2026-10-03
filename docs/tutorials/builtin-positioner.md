@@ -50,7 +50,16 @@ Delete them as well.
 
 ## 2. Declare the positioner
 
-Add the presenter and the view to the session, below `scan_plans`:
+The positioner's view docks on the right of the window, where the plan
+controls already are. Where a view sits is set by its class, so the one thing
+you write is a subclass that changes only its `placement`, to the left of the
+window, which is free. Add it below `ScanPlans`:
+
+```{.python}
+--8<-- "docs/tutorials/builtin_positioner.py:view"
+```
+
+Add the presenter and your view to the session, below `scan_plans`:
 
 ```{.python}
 --8<-- "docs/tutorials/builtin_positioner.py:declare"
@@ -105,7 +114,12 @@ Services started: 1/1
 Session built: 4/4 devices, 5/5 presenters, 3/3 views
 ```
 
-The positioner is docked on the right of the window, with a group for each of
+![The window with the positioner docked on the left, a group for each of the
+three stages, the plan controls on the right](images/builtin-positioner.png)
+
+Compare it with the window of the
+[last tutorial](device-service.md#4-run-it): the row of nudge buttons at the
+bottom is gone, and the positioner on the left has a group for each of
 `stage`, `fast_stage` and `remote_stage`. Each group shows where
 its stage is, `-` and `+` buttons with a step size beside them, and a field
 to type a position to go to. Hold `+`: the stage keeps stepping until you let
@@ -130,7 +144,7 @@ lists the configuration a stage declares; yours declare none, so it says so.
 
 The session of the last tutorial, with the nudge presenter and view replaced
 by the positioner `redsun` ships: a presenter and a view you declared and
-wired, and did not write.
+wired, and did not write, apart from the line saying where the view sits.
 
 ## Next steps
 

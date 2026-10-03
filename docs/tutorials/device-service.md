@@ -145,6 +145,9 @@ the stages has a row for `remote_stage`, and the plan widgets of `walk` and
 **Run**: its position counts up, in a program that is not the one drawing the
 window.
 
+![The window of the last tutorial, with a third row in the view of the stages,
+for remote_stage](images/device-service.png)
+
 !!! note "Two messages you can ignore"
 
     Channel Access may print one or both of these messages, which look like

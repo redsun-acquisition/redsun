@@ -64,6 +64,16 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (900, 640),
         "plan_view:snap",
     ),
+    Path("docs/tutorials/device_service.py"): (
+        Path("docs/tutorials/images/device-service.png"),
+        (900, 640),
+        None,
+    ),
+    Path("docs/tutorials/builtin_positioner.py"): (
+        Path("docs/tutorials/images/builtin-positioner.png"),
+        (1000, 720),
+        None,
+    ),
     Path("docs/examples/positioner.py"): (
         Path("docs/how-to/images/positioner.png"),
         (460, 560),
