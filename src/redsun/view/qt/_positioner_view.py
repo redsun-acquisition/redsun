@@ -227,6 +227,13 @@ class PositionerView(QtW.QWidget, Loggable):
         self._groups[device].set_readback(axis, value)
 
     @slot
+    def update_limits(
+        self, device: str, axis: str, low: float | None, high: float | None
+    ) -> None:
+        """Take targets for *axis* of *device* from *low* to *high* only."""
+        self._groups[device].set_limits(axis, low, high)
+
+    @slot
     def set_moving(self, device: str, moving: bool) -> None:
         """Show whether *device* moves."""
         self._groups[device].set_moving(moving)

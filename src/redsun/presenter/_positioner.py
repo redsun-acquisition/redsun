@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Concatenate, ParamSpec, Protocol, runtime_chec
 
 from bluesky.protocols import Stoppable
 from bluesky.utils import maybe_await
-from ophyd_async.core import AsyncConfigurable
+from ophyd_async.core import AsyncConfigurable, AsyncReadable
 from psygnal import Signal
 
 from redsun.aio import run_coro
@@ -23,6 +23,7 @@ from redsun.utils.devices import (
     Configuration,
     describe_axis,
     find_axes,
+    limits,
     read_configuration,
 )
 
@@ -63,7 +64,9 @@ class PositionerPresenter(Loggable):
     A step starts from the setpoint, so steps add up exactly, and from the
     readback after a stop or a failure, when the setpoint no longer says
     where the axis is. Every target passes
-    [`check`][redsun.presenter.PositionerPresenter.check] before it is sent.
+    [`check`][redsun.presenter.PositionerPresenter.check] before it is sent,
+    against limits read again from the axis just before, and after each
+    configuration write to its device; a change is reported on `sig_limits`.
     """
 
     sig_readback = Signal(str, str, float)
@@ -77,6 +80,9 @@ class PositionerPresenter(Loggable):
 
     sig_configuration = Signal(str, object)
     """Key and value of a configuration signal, read back after a write."""
+
+    sig_limits = Signal(str, str, object, object)
+    """Device, axis, and its new low and high limits; `None` for no bound."""
 
     name: str
     """Name of the presenter in its session."""
@@ -257,6 +263,12 @@ class PositionerPresenter(Loggable):
             self.logger.exception(f"Reading {key} back failed")
             return
         self.sig_configuration.emit(key, current)
+        device = self._owners[key]
+        for axis in self._axes[device]:
+            try:
+                await self._read_limits(device, axis)
+            except Exception:
+                self.logger.exception(f"Reading the limits of {device} {axis} failed")
 
     def shutdown(self) -> None:
         """Stop the devices still moving, then stop following the axes."""
@@ -332,9 +344,21 @@ class PositionerPresenter(Loggable):
     async def _set(self, device: str, stops: int, axis: str, target: float) -> None:
         if self._stops[device] != stops:
             raise RuntimeError(f"{device} was stopped")
+        await self._read_limits(device, axis)
         self.check(device, axis, target)
         self.logger.info(f"Moving {device} {axis} to {target}")
         await self._axes[device][axis].set(target)
+
+    async def _read_limits(self, device: str, axis: str) -> None:
+        item = self._axes[device][axis]
+        info = self._info[device][axis]
+        if info.key is None or not isinstance(item, AsyncReadable):
+            return
+        described = await item.describe()
+        new = limits(described.get(info.key, {}))
+        if new != info.limits:
+            self._info[device][axis] = dataclasses.replace(info, limits=new)
+            self.sig_limits.emit(device, axis, *new)
 
     async def _follow(self) -> dict[str, dict[str, AxisInfo]]:
         found = [

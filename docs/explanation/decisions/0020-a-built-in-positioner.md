@@ -34,7 +34,9 @@ the plugin id `positioner`.
   button for stoppable axes, and saved positions kept in the session's
   settings.
 - Limits come from the readback descriptor's `limits`, when a device reports
-  them.
+  them. The presenter reads them again before each target is checked and
+  after each configuration write to the device, since an offset or a limit
+  written elsewhere moves them; a change reaches the view on `sig_limits`.
 - The configuration of every axis is shown in a `DescriptorTreeView` and
   written through the presenter. A signal a device does not declare as
   configuration is not looked for by attribute name.

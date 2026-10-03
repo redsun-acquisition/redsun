@@ -101,13 +101,21 @@ class SoftAxis(StandardReadable, StandardMovable[float]):
 
 
 class LimitedAxis(SoftAxis):
-    """A soft axis whose readback descriptor reports travel limits."""
+    """A soft axis with limits of -5 and 5, shifted by its writable `offset`."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
+            self.offset = soft_signal_rw(float, 0.0, units="um")
+        super().__init__(name)
 
     async def describe(self) -> dict[str, DataKey]:
-        """Describe the axis, with limits of -5 and 5 on every entry."""
+        """Describe the axis, with its limits on every entry."""
         described = await super().describe()
+        offset = await self.offset.get_value()
         for descriptor in described.values():
-            descriptor["limits"] = {"control": {"low": -5.0, "high": 5.0}}
+            descriptor["limits"] = {
+                "control": {"low": offset - 5.0, "high": offset + 5.0}
+            }
         return described
 
 

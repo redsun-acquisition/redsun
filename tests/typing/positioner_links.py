@@ -22,6 +22,7 @@ class Lab(Session):
         yield self.positioner.sig_readback, self.positioner_view.update_readback
         yield self.positioner.sig_moving, self.positioner_view.set_moving
         yield self.positioner.sig_failed, self.positioner_view.set_failed
+        yield self.positioner.sig_limits, self.positioner_view.update_limits
         yield self.positioner_view.sig_stop, self.positioner.stop
         yield self.positioner_view.sig_configure, self.positioner.configure
         yield (

@@ -97,6 +97,7 @@ class MyApp(QtSession):
         yield self.positioner.sig_readback, self.positioner_view.update_readback
         yield self.positioner.sig_moving, self.positioner_view.set_moving
         yield self.positioner.sig_failed, self.positioner_view.set_failed
+        yield self.positioner.sig_limits, self.positioner_view.update_limits
         yield (
             self.positioner.sig_configuration,
             self.positioner_view.update_configuration,

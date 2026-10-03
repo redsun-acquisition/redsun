@@ -426,3 +426,19 @@ def test_a_lock_holds_when_the_saved_positions_are_rebuilt(
 
     assert not child(view, QtWidgets.QAbstractButton, "saved-go:0").isEnabled()
     assert child(view, QtWidgets.QAbstractButton, "saved-go:1").isEnabled()
+
+
+def test_new_limits_bound_the_targets_typed(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Refuse a typed target outside limits the device reports after the start."""
+    view = make_view(settings, parent)
+    targets: list[object] = []
+    view.sig_move_to.connect(lambda *args: targets.append(args))
+    field = child(group(view, "focus"), QtWidgets.QLineEdit, "goto:focus")
+
+    view.update_limits("focus", "focus", 0.0, 10.0)
+    type_into(field, "50")
+    type_into(field, "5")
+
+    assert targets == [("focus", {"focus": 5.0})]

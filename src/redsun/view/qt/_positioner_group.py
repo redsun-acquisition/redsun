@@ -75,7 +75,6 @@ class AxisRow(QtW.QWidget):
         self.axis = axis
         self.decimals = DEFAULT_PRECISION if info.precision is None else info.precision
         self.position = info.position
-        self.low, self.high = info.limits
         self.step = 1.0 if 1.0 in steps else steps[0]
 
         self.readback = QtW.QLabel(self.format_value(info.position), self)
@@ -133,14 +132,9 @@ class AxisRow(QtW.QWidget):
         self.target.setObjectName(f"goto:{axis}")
         self.target.setAccessibleName(f"{axis} target")
         self.target.setMinimumWidth(self.fontMetrics().horizontalAdvance("0" * 6))
-        self.target.setValidator(
-            number_validator(
-                -LIMIT if self.low is None else self.low,
-                LIMIT if self.high is None else self.high,
-                self.target,
-            )
-        )
-        self.target.setToolTip(f"Target, {self.range_text()}")
+        self.validator = number_validator(-LIMIT, LIMIT, self.target)
+        self.target.setValidator(self.validator)
+        self.set_limits(*info.limits)
         self.target.returnPressed.connect(self.go)
         self.go_button = tool_button("Go", f"Go {axis} to target", self)
         self.go_button.setFixedWidth(self.fontMetrics().horizontalAdvance("Go") + 16)
@@ -168,6 +162,13 @@ class AxisRow(QtW.QWidget):
     def format_value(self, value: float) -> str:
         """Return *value* with this axis' decimals."""
         return f"{value:.{self.decimals}f}"
+
+    def set_limits(self, low: float | None, high: float | None) -> None:
+        """Take targets from *low* to *high* only; `None` for no bound."""
+        self.low, self.high = low, high
+        self.validator.setBottom(-LIMIT if low is None else low)
+        self.validator.setTop(LIMIT if high is None else high)
+        self.target.setToolTip(f"Target, {self.range_text()}")
 
     def range_text(self) -> str:
         """Return the targets this axis takes, in words."""
@@ -346,6 +347,10 @@ class PositionerGroup(QtW.QGroupBox):
     def set_readback(self, axis: str, value: float) -> None:
         """Show *value* as the readback of *axis*."""
         self._rows[axis].show_position(value)
+
+    def set_limits(self, axis: str, low: float | None, high: float | None) -> None:
+        """Take targets for *axis* from *low* to *high* only; `None` for no bound."""
+        self._rows[axis].set_limits(low, high)
 
     def set_moving(self, moving: bool) -> None:
         """Show that the device moves; a failure stays shown until the next move."""

@@ -65,6 +65,7 @@ wiring:
   positioner.sig_readback: positioner_view.update_readback
   positioner.sig_moving: positioner_view.set_moving
   positioner.sig_failed: positioner_view.set_failed
+  positioner.sig_limits: positioner_view.update_limits
   positioner.sig_configuration: positioner_view.update_configuration
 ```
 
@@ -119,7 +120,8 @@ the presenter that holds the engine:
 - The field beside `Go` shows where the axis is until you type a target;
   Enter or `Go` sends the axis there. A target that is not a number, or that
   falls outside the limits the device reports, is not sent, and the group says
-  why.
+  why. The limits are read again before each move and after each
+  configuration write, so a changed offset moves them too.
 - `Stop` appears for a device that can be stopped, and stops the device and
   each of its axes at once; one that fails to stop is reported without
   keeping the others from stopping.

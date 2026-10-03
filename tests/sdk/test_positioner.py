@@ -272,6 +272,42 @@ async def test_limits_come_from_the_readback_descriptor() -> None:
     positioner.shutdown()
 
 
+async def test_limits_follow_a_configuration_write() -> None:
+    """Report and apply the limits a configuration write moves."""
+    axis = LimitedAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+    seen: list[tuple[str, str, float | None, float | None]] = []
+    positioner.sig_limits.connect(lambda *args: seen.append(args))
+
+    await positioner.configure(axis.offset.name, 10.0)
+    await positioner.move_to("focus", {"focus": 12.0})
+
+    assert seen == [("focus", "focus", 5.0, 15.0)]
+    assert positioner.axes["focus"]["focus"].limits == (5.0, 15.0)
+    assert await position(axis) == pytest.approx(12.0)
+    positioner.shutdown()
+
+
+async def test_limits_changed_on_the_device_hold_at_the_next_move() -> None:
+    """Refuse a target inside the old limits once the device has moved them."""
+    axis = LimitedAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+    seen: list[tuple[str, str, float | None, float | None]] = []
+    positioner.sig_limits.connect(lambda *args: seen.append(args))
+    failures: list[tuple[str, str]] = []
+    positioner.sig_failed.connect(lambda *args: failures.append(args))
+
+    await axis.offset.set(10.0)
+    await positioner.move_to("focus", {"focus": 3.0})
+
+    assert await position(axis) == pytest.approx(0.0)
+    assert seen == [("focus", "focus", 5.0, 15.0)]
+    assert [device for device, _ in failures] == ["focus"]
+    positioner.shutdown()
+
+
 async def test_steps_add_up_on_the_setpoint_and_restart_from_the_readback_after_a_stop() -> (
     None
 ):
