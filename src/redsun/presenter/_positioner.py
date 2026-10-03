@@ -44,6 +44,11 @@ if TYPE_CHECKING:
 P = ParamSpec("P")
 
 
+def label(device: str, axis: str) -> str:
+    """Return how messages name *axis* of *device*: once when they are one."""
+    return device if axis == device else f"{device} {axis}"
+
+
 @runtime_checkable
 class DescribesAxes(Protocol):
     """A component describing the axes it moves."""
@@ -274,7 +279,9 @@ class PositionerPresenter(Loggable):
             try:
                 await self._read_limits(device, axis)
             except Exception:
-                self.logger.exception(f"Reading the limits of {device} {axis} failed")
+                self.logger.exception(
+                    f"Reading the limits of {label(device, axis)} failed"
+                )
 
     def shutdown(self) -> None:
         """Stop the devices still moving, then stop following the axes."""
@@ -357,7 +364,7 @@ class PositionerPresenter(Loggable):
             await self._read_limits(device, axis)
         try:
             self.check(device, axis, target)
-            self.logger.info(f"Moving {device} {axis} to {target}")
+            self.logger.info(f"Moving {label(device, axis)} to {target}")
             await item.set(target)
         except Exception:
             # limits changed since they were read may be why, and the next
@@ -445,7 +452,7 @@ class PositionerPresenter(Loggable):
                         )
                         signal.subscribe_reading(self._relay_configuration)
         except Exception as error:  # noqa: BLE001
-            self.logger.warning(f"Leaving out {device} {name}: {error!r}")
+            self.logger.warning(f"Leaving out {label(device, name)}: {error!r}")
             for unsubscribe in unsubscribers:
                 unsubscribe()
             return None, None
@@ -470,7 +477,9 @@ class PositionerPresenter(Loggable):
             value = (entry or next(iter(reading.values())))["value"]
             self.sig_readback.emit(device, axis, float(value))
         except Exception:
-            self.logger.exception(f"Relaying a readback of {device} {axis} failed")
+            self.logger.exception(
+                f"Relaying a readback of {label(device, axis)} failed"
+            )
 
     def _relay_configuration(self, reading: dict[str, Reading[object]]) -> None:
         try:

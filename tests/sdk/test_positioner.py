@@ -606,3 +606,17 @@ async def test_a_refusal_on_old_limits_reads_the_new_ones() -> None:
     assert refused_at == pytest.approx(0.0)
     assert await position(axis) == pytest.approx(12.0)
     positioner.shutdown()
+
+
+async def test_a_device_that_is_its_own_axis_is_named_once(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log a move of a device that is its own axis under its name alone."""
+    axis = SoftAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+
+    await positioner.move_to("focus", {"focus": 2.0})
+
+    assert "Moving focus to 2.0" in caplog.text
+    positioner.shutdown()
