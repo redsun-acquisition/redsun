@@ -119,11 +119,9 @@ class AxisRow(QtW.QWidget):
         )
         self.box.setMinimumContentsLength(5)
         # the box would otherwise claim room for its arrow and frame at their
-        # widest, more than a narrow dock has
-        self.box.setSizePolicy(
-            QtW.QSizePolicy.Policy.Ignored, QtW.QSizePolicy.Policy.Fixed
-        )
-        self.box.setMinimumWidth(self.fontMetrics().horizontalAdvance("0.001") + 24)
+        # widest, more than a narrow dock has; a fixed width, unlike an ignored
+        # size policy, still reserves its column in the grid
+        self.box.setFixedWidth(self.fontMetrics().horizontalAdvance("0.001") + 24)
         self.box.addItems([f"{step:g}" for step in steps])
         self.box.setCurrentIndex(self.box.findText(f"{self.step:g}"))
         self.box.setValidator(number_validator(0.0, LIMIT, self.box))

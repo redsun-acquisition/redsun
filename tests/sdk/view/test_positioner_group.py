@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
 from typing import TypeVar
 
 import pytest
@@ -311,3 +312,19 @@ def test_a_group_without_steps_is_refused(qapp: QtWidgets.QApplication) -> None:
             repeat_delay=1,
             repeat_interval=1,
         )
+
+
+def test_no_control_of_a_row_covers_another(group: PositionerGroup) -> None:
+    """Lay out the controls of each row side by side, never over each other."""
+    group.resize(group.minimumSizeHint())
+    group.show()
+    QtWidgets.QApplication.processEvents()
+    for axis in ("x", "theta"):
+        names = (f"minus:{axis}", f"step:{axis}", f"plus:{axis}", f"goto:{axis}")
+        controls = [child(group, QtWidgets.QWidget, name) for name in names]
+
+        for left, right in pairwise(controls):
+            assert left.geometry().right() < right.geometry().left(), (
+                left.objectName(),
+                right.objectName(),
+            )
