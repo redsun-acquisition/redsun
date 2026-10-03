@@ -5366,17 +5366,20 @@ pyqt = [
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 pyside = [
     { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 qt-common = [
     { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 testing = [
     { name = "pytest" },
@@ -5416,6 +5419,7 @@ dev = [
     { name = "pytest-env" },
     { name = "qtpy" },
     { name = "ruff" },
+    { name = "superqt" },
     { name = "tiled", extra = ["client", "server"], marker = "python_full_version < '3.14'" },
     { name = "tox-uv-bare" },
     { name = "types-pyyaml" },
@@ -5448,17 +5452,20 @@ pyqt = [
     { name = "magicgui" },
     { name = "pyqt6" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 pyside = [
     { name = "app-model" },
     { name = "magicgui" },
     { name = "pyside6" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 qt-common = [
     { name = "app-model" },
     { name = "magicgui" },
     { name = "qtpy" },
+    { name = "superqt" },
 ]
 testing = [
     { name = "pytest" },
@@ -5501,6 +5508,9 @@ requires-dist = [
     { name = "qtpy", marker = "extra == 'pyqt'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'pyside'", specifier = ">=2.4.3" },
     { name = "qtpy", marker = "extra == 'qt-common'", specifier = ">=2.4.3" },
+    { name = "superqt", marker = "extra == 'pyqt'", specifier = ">=0.8.2" },
+    { name = "superqt", marker = "extra == 'pyside'", specifier = ">=0.8.2" },
+    { name = "superqt", marker = "extra == 'qt-common'", specifier = ">=0.8.2" },
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14' and extra == 'tiled'", specifier = ">=0.2.18" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
@@ -5532,6 +5542,7 @@ dev = [
     { name = "pytest-env", specifier = ">=1.7.1" },
     { name = "qtpy", specifier = ">=2.4.3" },
     { name = "ruff", specifier = ">=0.16.9" },
+    { name = "superqt", specifier = ">=0.8.2" },
     { name = "tiled", extras = ["client", "server"], marker = "python_full_version < '3.14'", specifier = ">=0.2.18" },
     { name = "tox-uv-bare", specifier = ">=1.36.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906" },
@@ -5562,17 +5573,20 @@ pyqt = [
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyqt6", specifier = ">=6.11.0" },
     { name = "qtpy", specifier = ">=2.4.3" },
+    { name = "superqt", specifier = ">=0.8.2" },
 ]
 pyside = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "pyside6", specifier = ">=6.11.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
+    { name = "superqt", specifier = ">=0.8.2" },
 ]
 qt-common = [
     { name = "app-model", specifier = ">=0.5.1" },
     { name = "magicgui", specifier = ">=0.10.2" },
     { name = "qtpy", specifier = ">=2.4.3" },
+    { name = "superqt", specifier = ">=0.8.2" },
 ]
 testing = [{ name = "pytest", specifier = ">=8" }]
 tiled = [

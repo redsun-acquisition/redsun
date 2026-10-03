@@ -28,3 +28,4 @@ never edited; a later one replaces it.
 - [17. Questions read from the annotation](0017-questions-read-from-the-annotation.md)
 - [18. Wire yields links](0018-wire-yields-links.md)
 - [19. Copy plan progress from bluesky](0019-copy-plan-progress-from-bluesky.md)
+- [20. A built-in positioner](0020-a-built-in-positioner.md)

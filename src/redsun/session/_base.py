@@ -1711,8 +1711,9 @@ class Session(BuildableSession):
         The step takes as long as the slowest service. A service that does not
         start is logged, and devices naming it are skipped. Each stop is a
         release, so `shutdown` stops services after every component, the last
-        declared first, then drops what the transport caches about them so a
-        rebuilt session reconnects at once.
+        declared first. Before that it closes what the transport holds open
+        to them, so no connection is cut under it and a rebuilt session
+        reconnects at once.
 
         A session whose configuration sets `mock` starts none: its devices
         connect to simulated backends, which reach no service.
@@ -1724,7 +1725,6 @@ class Session(BuildableSession):
         if self._configuration().mock:
             logger.info("Services not started: the session is mocked")
             return
-        self.on_release(lambda: run_coro(TRANSPORTS[self._transport].release()))
         with ThreadPoolExecutor(len(self._services), "service-start") as pool:
             starts = {
                 name: pool.submit(service.start)
@@ -1737,6 +1737,8 @@ class Session(BuildableSession):
                 logger.error("Failed to start service '%s': %s", name, error)
             elif self._services[name].launched:
                 self.on_release(self._services[name].stop)
+        # releases run last first, so the channels close before any service stops
+        self.on_release(lambda: run_coro(TRANSPORTS[self._transport].release()))
         launched = sum(service.launched for service in self._services.values())
         attached = len(self._services) - launched
         started = launched - len(self._failed_services)

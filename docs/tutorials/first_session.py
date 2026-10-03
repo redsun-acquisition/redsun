@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterator  # noqa: TC003
+from functools import cached_property
 
 from bluesky.protocols import Reading  # noqa: TC002
-from ophyd_async.core import StandardReadable, soft_signal_rw
+from ophyd_async.core import (
+    MovableLogic,
+    StandardMovable,
+    StandardReadable,
+    soft_signal_rw,
+)
 from psygnal import Signal
 from qtpy.QtWidgets import (
     QFormLayout,
@@ -27,11 +33,15 @@ from redsun.qt import Dock, QtSession
 
 
 # --8<-- [start:device]
-class MyStage(StandardReadable):
+class MyStage(StandardReadable, StandardMovable[float]):
     def __init__(self, name: str = "", *, units: str = "mm") -> None:
         with self.add_children_as_readables():
             self.position = soft_signal_rw(float, units=units)
         super().__init__(name=name)
+
+    @cached_property
+    def movable_logic(self) -> MovableLogic[float]:
+        return MovableLogic(setpoint=self.position, readback=self.position)
 
 
 # --8<-- [end:device]
@@ -72,8 +82,7 @@ class StageView(QWidget):
 
     @slot
     def show_reading(self, reading: dict[str, Reading[float]]) -> None:
-        for signal, entry in reading.items():
-            stage = signal.removesuffix("-position")
+        for stage, entry in reading.items():
             if stage not in self.labels:
                 self.add_row(stage)
             self.labels[stage].setText(f"position: {entry['value']}")

@@ -1,0 +1,5 @@
+session: first-session
+
+views:
+  positioner_view:
+    steps: [0.1, 0.5, 1.0]

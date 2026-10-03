@@ -1,10 +1,10 @@
-"""The session built in the "Acquiring images" tutorial."""
+"""The session built in the "Reusing the built-in positioner" tutorial."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping  # noqa: TC003
 from functools import cached_property
-from typing import Any, Protocol, runtime_checkable
+from typing import Annotated, Any, Protocol, runtime_checkable
 from urllib.parse import urlsplit
 from urllib.request import url2pathname
 
@@ -12,7 +12,7 @@ import bluesky.plan_stubs as bps
 import bluesky.plans as bp
 import h5py
 import numpy as np
-from bluesky.protocols import Readable, Reading, Triggerable
+from bluesky.protocols import Readable, Triggerable
 from bluesky.utils import MsgGenerator  # noqa: TC002
 from event_model import DocumentRouter, StreamResource
 from ophyd_async.core import (
@@ -22,14 +22,13 @@ from ophyd_async.core import (
     StandardReadable,
     soft_signal_rw,
 )
+from ophyd_async.epics.core import EpicsDevice, PvSuffix
 from ophyd_async.sim import SimBlobDetector  # noqa: TC002
 from psygnal import Signal
 from qtpy.QtGui import QImage, QPixmap
 from qtpy.QtWidgets import (
     QComboBox,
-    QFormLayout,
     QLabel,
-    QPushButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -38,24 +37,29 @@ from qtpy.QtWidgets import (
 from redsun import (
     AsDevice,
     AsPresenter,
+    AsService,
     AsView,
     CallbackType,
+    Declare,
     DeviceMapping,
     DevicesOf,
     HasPlans,
+    Launch,
     Link,
     Placement,
     PlanEntry,
     slot,
 )
 from redsun.engine import RunEngine
+from redsun.presenter import PositionerPresenter  # noqa: TC001
 from redsun.presenter.plan_spec import (
     PlanSpec,
     collect_arguments,
     create_plan_spec,
     resolve_arguments,
 )
-from redsun.qt import Dock, QtSession
+from redsun.qt import Central, Dock, QtSession
+from redsun.view.qt.builtins import PositionerView
 from redsun.view.qt.utils import PlanWidget, create_plan_widget
 
 
@@ -82,57 +86,33 @@ class FastStage(StandardReadable, StandardMovable[float]):
         return MovableLogic(setpoint=self.position, readback=self.position)
 
 
+# --8<-- [start:remote]
+class RemoteStage(EpicsDevice, StandardMovable[float]):
+    position: Annotated[SignalRW[float], PvSuffix("Position")]
+
+    @cached_property
+    def movable_logic(self) -> MovableLogic[float]:
+        return MovableLogic(setpoint=self.position, readback=self.position)
+
+
+# --8<-- [end:remote]
+
+
 @runtime_checkable
 class HasPosition(Protocol):
     position: SignalRW[float]
 
 
-# --8<-- [start:camera]
 @runtime_checkable
 class Camera(Readable[Any], Triggerable, Protocol): ...
 
 
-# --8<-- [end:camera]
-
-
-class StagePresenter:
-    def __init__(
-        self, name: str, *, stages: DevicesOf[HasPosition], step: float = 1.0
-    ) -> None:
-        self.name = name
-        self.stages = stages
-        self.step = step
-
-    @slot
-    async def nudge(self, stage: str) -> None:
-        position = await self.stages[stage].position.get_value()
-        await self.stages[stage].position.set(position + self.step)
-
-
-class StageView(QWidget):
+# --8<-- [start:view]
+class StagePositioner(PositionerView):
     placement: Placement = Dock("left")
-    sig_nudge = Signal(str)
-
-    def __init__(self, name: str, parent: QWidget) -> None:
-        super().__init__(parent)
-        self.name = name
-        self.rows = QFormLayout(self)
-        self.labels: dict[str, QLabel] = {}
-
-    def add_row(self, stage: str) -> None:
-        button = QPushButton(f"Nudge {stage}")
-        button.clicked.connect(lambda: self.sig_nudge.emit(stage))
-        self.labels[stage] = QLabel()
-        self.rows.addRow(button, self.labels[stage])
-
-    @slot
-    def show_reading(self, reading: dict[str, Reading[float]]) -> None:
-        for stage, entry in reading.items():
-            if stage not in self.labels:
-                self.add_row(stage)
-            self.labels[stage].setText(f"position: {entry['value']}")
 
 
+# --8<-- [end:view]
 class StagePlans:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -217,7 +197,6 @@ class PlanView(QWidget):
         self.setEnabled(True)
 
 
-# --8<-- [start:camera_ctrl]
 class CameraPresenter(DocumentRouter):
     sig_frame = Signal(object)
 
@@ -247,12 +226,8 @@ class CameraPresenter(DocumentRouter):
             self.written = None
 
 
-# --8<-- [end:camera_ctrl]
-
-
-# --8<-- [start:image_view]
 class ImageView(QWidget):
-    placement: Placement = Dock("right")
+    placement: Placement = Central()
 
     def __init__(self, name: str, parent: QWidget) -> None:
         super().__init__(parent)
@@ -272,27 +247,61 @@ class ImageView(QWidget):
         self.image.setPixmap(QPixmap.fromImage(image.copy()))
 
 
-# --8<-- [end:image_view]
+class ScanPlans:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def scan(
+        self,
+        stage: HasPosition,
+        camera: Camera,
+        start: float = 0.0,
+        stop: float = 5.0,
+        points: int = 6,
+    ) -> MsgGenerator[Any]:
+        return (yield from bp.scan([camera], stage.position, start, stop, points))
+
+    def plan_map(self) -> Mapping[str, PlanEntry]:
+        return {"scan": {"plan": self.scan}}
 
 
 # --8<-- [start:session]
 class FirstSession(QtSession):
-    config = "session.yaml"
+    config = "builtin_positioner.yaml"
+    stage_ioc: Annotated[
+        AsService,
+        Launch("stage_ioc", ready="Server startup complete.", prefix="STAGE:"),
+    ]
     stage: AsDevice[MyStage]
     fast_stage: AsDevice[FastStage]
+    remote_stage: Annotated[AsDevice[RemoteStage], Declare(service="stage_ioc")]
     camera: AsDevice[SimBlobDetector]
-    stage_ctrl: AsPresenter[StagePresenter]
     stage_plans: AsPresenter[StagePlans]
     plan_ctrl: AsPresenter[PlanPresenter]
     camera_ctrl: AsPresenter[CameraPresenter]
-    stage_view: AsView[StageView]
+    scan_plans: AsPresenter[ScanPlans]
+    # --8<-- [start:declare]
+    positioner: AsPresenter[PositionerPresenter]
+    positioner_view: AsView[StagePositioner]
+    # --8<-- [end:declare]
     plan_view: AsView[PlanView]
     image_view: AsView[ImageView]
 
     def wire(self) -> Iterator[Link]:
-        yield self.stage_view.sig_nudge, self.stage_ctrl.nudge
-        yield self.stage.position, self.stage_view.show_reading
-        yield self.fast_stage.position, self.stage_view.show_reading
+        # --8<-- [start:wire]
+        yield self.positioner_view.sig_move, self.positioner.move
+        yield self.positioner_view.sig_move_to, self.positioner.move_to
+        yield self.positioner_view.sig_stop, self.positioner.stop
+        yield self.positioner_view.sig_configure, self.positioner.configure
+        yield self.positioner.sig_readback, self.positioner_view.update_readback
+        yield self.positioner.sig_moving, self.positioner_view.set_moving
+        yield self.positioner.sig_failed, self.positioner_view.set_failed
+        yield self.positioner.sig_limits, self.positioner_view.update_limits
+        yield (
+            self.positioner.sig_configuration,
+            self.positioner_view.update_configuration,
+        )
+        # --8<-- [end:wire]
         yield self.plan_view.sig_run, self.plan_ctrl.run
         yield self.plan_ctrl.sig_finished, self.plan_view.on_finished
         yield self.plan_ctrl.sig_started, self.path_provider.set_plan

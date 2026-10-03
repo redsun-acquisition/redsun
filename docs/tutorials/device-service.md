@@ -102,7 +102,9 @@ process variable of the service:
 ```
 
 The device names only the end of the process variable, `Position`. The
-beginning, the prefix, comes from the service it is declared with.
+beginning, the prefix, comes from the service it is declared with. Like the
+other stages it is a `StandardMovable`, whose one process variable is both its
+setpoint and its readback.
 
 ## 3. Declare the service
 
@@ -143,6 +145,9 @@ the stages has a row for `remote_stage`, and the plan widgets of `walk` and
 **Run**: its position counts up, in a program that is not the one drawing the
 window.
 
+![The window of the last tutorial, with a third row in the view of the stages,
+for remote_stage](images/device-service.png)
+
 !!! note "Two messages you can ignore"
 
     Channel Access may print one or both of these messages, which look like
@@ -161,8 +166,9 @@ window.
     shares the announcements of servers between the programs of one machine,
     and without it a program takes longer to notice that a server has
     started again. The second says that the connection to the service
-    closed. It is expected when you close the window. At any other time it
-    means that the service went away.
+    closed while the session still used it: the service went away. Closing
+    the window does not print it, since the session closes its connections
+    before it stops the service.
 
 !!! warning "One message you should not ignore"
 
@@ -209,6 +215,9 @@ This is the last tutorial.
 
 ## Next steps
 
+- [Reusing the built-in positioner](builtin-positioner.md) is the next
+  tutorial: it replaces the nudge presenter and view with the positioner
+  `redsun` ships.
 - [How to write a service with
   FastCS](../how-to/write-a-service-with-fastcs.md) serves a stage with another
   library, over another protocol.

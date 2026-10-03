@@ -35,3 +35,11 @@ icon: lucide/code
 ::: redsun.view.qt.builtins.LogView
     options:
       show_root_heading: true
+
+::: redsun.view.qt.builtins.PositionerView
+    options:
+      show_root_heading: true
+
+::: redsun.view.qt.builtins.PositionerGroup
+    options:
+      show_root_heading: true
