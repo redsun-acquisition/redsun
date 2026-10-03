@@ -333,7 +333,7 @@ class PositionerGroup(QtW.QGroupBox):
             row.sig_go.connect(
                 lambda value, a=axis: self.sig_move_to.emit(device, {a: value})
             )
-            row.sig_refused.connect(self._state.setText)
+            row.sig_refused.connect(self.show_message)
             self._rows[axis] = row
             self._controls.extend(row.controls)
             self._step_buttons.extend(row.buttons)
@@ -359,6 +359,11 @@ class PositionerGroup(QtW.QGroupBox):
             self._state.setToolTip("")
         elif self._state.text() == "moving":
             self._state.setText("")
+
+    def show_message(self, message: str) -> None:
+        """Show *message* in the state line until the next move."""
+        self._state.setText(message)
+        self._state.setToolTip(message)
 
     def set_failed(self, message: str) -> None:
         """Show that the last move failed, and why."""

@@ -378,12 +378,15 @@ class PositionerPresenter(Loggable):
             if axis_info is None:
                 del self._axes[device][name]
                 continue
-            info.setdefault(device, {})[name] = axis_info
             if configuration is not None:
+                axis_info = dataclasses.replace(
+                    axis_info, configuration=tuple(configuration.descriptors)
+                )
                 self._configuration.descriptors.update(configuration.descriptors)
                 self._configuration.readings.update(configuration.readings)
                 self._configuration.writable.update(configuration.writable)
                 self._owners.update(dict.fromkeys(configuration.descriptors, device))
+            info.setdefault(device, {})[name] = axis_info
         self._axes = {device: axes for device, axes in self._axes.items() if axes}
         stoppable = {
             device

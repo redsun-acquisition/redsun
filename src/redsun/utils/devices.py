@@ -68,6 +68,9 @@ class AxisInfo:
     key: str | None = None
     """Data key of the readback in the readings the axis reports."""
 
+    configuration: tuple[str, ...] = ()
+    """Keys of the axis' configuration entries."""
+
 
 @dataclass(slots=True)
 class Configuration:

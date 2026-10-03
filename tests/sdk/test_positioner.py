@@ -103,6 +103,10 @@ async def test_the_axes_are_described_and_followed(
     assert isinstance(presenter, DescribesAxes)
     assert set(presenter.axes["stage"]) == {"x", "theta"}
     assert (x.position, x.units, x.precision, x.stoppable) == (0.0, "um", 3, True)
+    assert set(x.configuration) == {
+        stage.axis["x"].velocity.name,
+        stage.axis["x"].resolution.name,
+    }
     assert ("stage", "x", 2.5) in seen
 
 

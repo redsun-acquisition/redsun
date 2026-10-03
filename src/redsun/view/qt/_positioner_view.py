@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, TypeGuard
+from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, TypedDict, TypeGuard
 
 from psygnal import Signal
 from qtpy import QtCore
@@ -44,6 +44,9 @@ class SavedPosition(TypedDict):
     positions: dict[str, float]
     """Position of each axis, by axis name."""
 
+    context: NotRequired[dict[str, float]]
+    """Configuration values in the units of an axis' position, when saved."""
+
 
 def is_saved_position(item: object) -> TypeGuard[dict[str, Any]]:
     """Tell whether *item* is a well-formed saved position."""
@@ -61,18 +64,34 @@ def is_saved_position(item: object) -> TypeGuard[dict[str, Any]]:
     )
 
 
+def numbers(values: object) -> dict[str, float]:
+    """Return the entries of *values* that are numbers, by key."""
+    if not isinstance(values, dict):
+        return {}
+    return {
+        key: float(value)
+        for key, value in values.items()
+        if isinstance(key, str)
+        and isinstance(value, (int, float))
+        and not isinstance(value, bool)
+    }
+
+
 def saved_positions(stored: object) -> tuple[list[SavedPosition], int]:
     """Return the well-formed entries in *stored*, and how many were not."""
     items = stored if isinstance(stored, list) else []
-    entries = [
-        SavedPosition(
+    entries: list[SavedPosition] = []
+    for item in items:
+        if not is_saved_position(item):
+            continue
+        entry = SavedPosition(
             name=item["name"],
             device=item["device"],
-            positions={axis: float(v) for axis, v in item["positions"].items()},
+            positions=numbers(item["positions"]),
         )
-        for item in items
-        if is_saved_position(item)
-    ]
+        if "context" in item:
+            entry["context"] = numbers(item["context"])
+        entries.append(entry)
     return entries, len(items) - len(entries)
 
 
@@ -135,6 +154,9 @@ class PositionerView(QtW.QWidget, Loggable):
         self._configuration = QtW.QVBoxLayout()
         self._entries: list[SavedPosition] = []
         self._entry_buttons: list[tuple[str, QtW.QToolButton]] = []
+        self._values: dict[str, object] = {}
+        self._context_keys: dict[str, list[str]] = {}
+        self._confirming: SavedPosition | None = None
 
         self._interval = QLabeledSlider(QtCore.Qt.Orientation.Horizontal, self)
         self._interval.setRange(*REPEAT_INTERVAL_RANGE)
@@ -199,6 +221,19 @@ class PositionerView(QtW.QWidget, Loggable):
         self._interval.sliderReleased.connect(self._store_repeat_interval)
         descriptors = positioner.configuration.descriptors
         readings = positioner.configuration.readings
+        self._values = {key: reading["value"] for key, reading in readings.items()}
+        # an offset or a resolution in position units changes where a saved
+        # position puts the axis
+        self._context_keys = {
+            device: [
+                key
+                for info in axes.values()
+                if info.units is not None
+                for key in info.configuration
+                if key in descriptors and descriptors[key].get("units") == info.units
+            ]
+            for device, axes in positioner.axes.items()
+        }
         if descriptors:
             self._tree = DescriptorTreeView(descriptors, readings, self)
             self._tree.sig_property_changed.connect(self._configure)
@@ -246,6 +281,7 @@ class PositionerView(QtW.QWidget, Loggable):
     @slot
     def update_configuration(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
+        self._values[key] = value
         if self._tree is not None:
             self._tree.set_value(key, value)
 
@@ -272,6 +308,9 @@ class PositionerView(QtW.QWidget, Loggable):
                 name=f"{device} {number}",
                 device=device,
                 positions=self._groups[device].positions,
+                context=numbers(
+                    {key: self._values.get(key) for key in self._context_keys[device]}
+                ),
             )
         )
         self._store()
@@ -295,8 +334,22 @@ class PositionerView(QtW.QWidget, Loggable):
             self.logger.warning(
                 f"{entry['name']}: {entry['device']} has no axis {', '.join(missing)}"
             )
-        if positions:
-            self.sig_move_to.emit(entry["device"], positions)
+        if not positions:
+            return
+        changed = [
+            key
+            for key, value in entry.get("context", {}).items()
+            if self._values.get(key, value) != value
+        ]
+        if changed and self._confirming is not entry:
+            self._confirming = entry
+            self._groups[entry["device"]].show_message(
+                f"{entry['name']}: {', '.join(changed)} changed since it was saved;"
+                " Go again to move"
+            )
+            return
+        self._confirming = None
+        self.sig_move_to.emit(entry["device"], positions)
 
     def _store(self) -> None:
         self._write()
@@ -311,6 +364,11 @@ class PositionerView(QtW.QWidget, Loggable):
                         "name": entry["name"],
                         "device": entry["device"],
                         "positions": dict(entry["positions"].items()),
+                        **(
+                            {"context": dict(entry["context"].items())}
+                            if "context" in entry
+                            else {}
+                        ),
                     }
                     for entry in self._entries
                 ],

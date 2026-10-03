@@ -62,6 +62,30 @@ class Positioner:
     )
 
 
+class OffsetPositioner:
+    """Describes a stage whose axis has an offset, in the units of its position."""
+
+    def __init__(self, offset: float = 0.0) -> None:
+        keys = ("stage-axis-x-offset", "stage-axis-x-velocity")
+        self.axes = {"stage": {"x": AxisInfo(0.0, "um", 3, configuration=keys)}}
+        self.configuration = Configuration(
+            descriptors={
+                key: {
+                    "source": "soft://",
+                    "dtype": "number",
+                    "shape": [],
+                    "units": units,
+                }
+                for key, units in zip(keys, ("um", "um/s"), strict=True)
+            },
+            readings={
+                keys[0]: {"value": offset, "timestamp": 0.0},
+                keys[1]: {"value": 1.0, "timestamp": 0.0},
+            },
+            writable={},
+        )
+
+
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(tmp_path / "session.json")
@@ -442,3 +466,44 @@ def test_new_limits_bound_the_targets_typed(
     type_into(field, "5")
 
     assert targets == [("focus", {"focus": 5.0})]
+
+
+def test_a_saved_position_asks_twice_once_its_offset_changed(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Move on a second Go when a value in the axis' units changed since saving."""
+    view = PositionerView("positioner", parent)
+    view.setup(OffsetPositioner(), settings)
+    targets: list[object] = []
+    view.sig_move_to.connect(lambda *args: targets.append(args))
+    child(group(view, "stage"), QtWidgets.QAbstractButton, "save").click()
+    go = child(view, QtWidgets.QAbstractButton, "saved-go:0")
+
+    view.update_configuration("stage-axis-x-velocity", 2.0)
+    go.click()
+    moved_at_once = len(targets)
+    view.update_configuration("stage-axis-x-offset", 3.0)
+    go.click()
+    warning = child(group(view, "stage"), QtWidgets.QLabel, "state").text()
+    go.click()
+
+    assert moved_at_once == 1
+    assert "stage-axis-x-offset" in warning
+    assert targets == [("stage", {"x": 0.0})] * 2
+
+
+def test_a_saved_position_keeps_its_offset_between_sessions(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Warn in a later session about an offset changed since the position was saved."""
+    first = PositionerView("positioner", parent)
+    first.setup(OffsetPositioner(), settings)
+    child(group(first, "stage"), QtWidgets.QAbstractButton, "save").click()
+    later = PositionerView("positioner", parent)
+    later.setup(OffsetPositioner(offset=3.0), settings)
+    targets: list[object] = []
+    later.sig_move_to.connect(lambda *args: targets.append(args))
+
+    child(later, QtWidgets.QAbstractButton, "saved-go:0").click()
+
+    assert targets == []
