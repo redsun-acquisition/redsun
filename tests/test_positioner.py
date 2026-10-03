@@ -76,7 +76,7 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
     session = build(Lab)
     view = session.positioner_view
     label = view.findChild(QtWidgets.QLabel, "readback:x")
-    plus = view.findChild(QtWidgets.QPushButton, "plus:x")
+    plus = view.findChild(QtWidgets.QAbstractButton, "plus:x")
     assert label is not None
     assert plus is not None
 

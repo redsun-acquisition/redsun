@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 from qtpy import QtCore, QtGui, QtWidgets
-from superqt import QLabeledSlider
+from superqt import QCollapsible, QLabeledSlider
 
 from redsun import Settings
 from redsun.presenter import DescribesAxes
@@ -144,11 +144,15 @@ def test_slots_reach_the_group_of_their_device(
     view.set_failed("stage", "out of range")
     view.set_locked(frozenset({"focus"}))
 
-    assert group(view, "stage").positions()["x"] == 4.0
+    assert group(view, "stage").positions["x"] == 4.0
     assert child(group(view, "focus"), QtWidgets.QLabel, "state").text() == "moving"
-    assert child(group(view, "stage"), QtWidgets.QLabel, "state").text() == "failed"
-    assert not child(group(view, "focus"), QtWidgets.QPushButton, "save").isEnabled()
-    assert child(group(view, "stage"), QtWidgets.QPushButton, "save").isEnabled()
+    assert child(group(view, "stage"), QtWidgets.QLabel, "state").text() == (
+        "failed: out of range"
+    )
+    assert not child(
+        group(view, "focus"), QtWidgets.QAbstractButton, "save"
+    ).isEnabled()
+    assert child(group(view, "stage"), QtWidgets.QAbstractButton, "save").isEnabled()
 
 
 @pytest.mark.parametrize(
@@ -168,7 +172,7 @@ def test_a_typed_repeat_interval_stays_in_range_and_is_kept(
 
     type_into(child(slider, QtWidgets.QLineEdit), typed)
 
-    plus = child(group(view, "stage"), QtWidgets.QPushButton, "plus:x")
+    plus = child(group(view, "stage"), QtWidgets.QAbstractButton, "plus:x")
     assert slider.value() == expected
     assert plus.autoRepeatInterval() == expected
     assert child(make_view(settings, parent), QLabeledSlider).value() == expected
@@ -223,13 +227,13 @@ def test_a_saved_position_outlives_the_view_and_moves_its_device(
     """Save readbacks, rename the entry, find it in a new view and go there."""
     view = make_view(settings, parent)
     view.update_readback("stage", "x", 12.5)
-    child(group(view, "stage"), QtWidgets.QPushButton, "save").click()
+    child(group(view, "stage"), QtWidgets.QAbstractButton, "save").click()
     type_into(child(view, QtWidgets.QLineEdit, "saved:0"), "sample A")
 
     again = make_view(settings, parent)
     targets: list[object] = []
     again.sig_move_to.connect(lambda *args: targets.append(args))
-    child(again, QtWidgets.QPushButton, "saved-go:0").click()
+    child(again, QtWidgets.QAbstractButton, "saved-go:0").click()
 
     assert shown_names(again) == ["sample A"]
     assert targets == [("stage", {"x": 12.5, "theta": 0.0})]
@@ -240,9 +244,9 @@ def test_a_removed_position_is_gone_from_the_settings(
 ) -> None:
     """Remove an entry from the view and from the settings."""
     view = make_view(settings, parent)
-    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
 
-    child(view, QtWidgets.QPushButton, "saved-remove:0").click()
+    child(view, QtWidgets.QAbstractButton, "saved-remove:0").click()
 
     assert shown_names(view) == []
     assert settings.get("positioner.saved_positions") == []
@@ -256,7 +260,7 @@ def test_an_entry_for_an_absent_device_is_kept_but_not_shown(
     settings.set("positioner.saved_positions", [absent])
     view = make_view(settings, parent)
 
-    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
 
     assert shown_names(view) == ["focus 1"]
     assert settings.get("positioner.saved_positions")[0] == absent
@@ -276,7 +280,7 @@ def test_an_entry_moves_only_the_axes_its_device_still_has(
     targets: list[object] = []
     view.sig_move_to.connect(lambda *args: targets.append(args))
 
-    child(view, QtWidgets.QPushButton, "saved-go:0").click()
+    child(view, QtWidgets.QAbstractButton, "saved-go:0").click()
 
     assert targets == [("stage", {"x": 1.0})]
 
@@ -311,8 +315,85 @@ def test_a_locked_device_cannot_go_to_its_saved_positions(
 ) -> None:
     """Disable the go button of the saved positions of a locked device."""
     view = make_view(settings, parent)
-    child(group(view, "focus"), QtWidgets.QPushButton, "save").click()
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
 
     view.set_locked(frozenset({"focus"}))
 
-    assert not child(view, QtWidgets.QPushButton, "saved-go:0").isEnabled()
+    assert not child(view, QtWidgets.QAbstractButton, "saved-go:0").isEnabled()
+
+
+def test_saving_opens_the_saved_positions(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Open the saved positions when a position is saved."""
+    view = make_view(settings, parent)
+
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
+
+    assert child(view, QCollapsible).isExpanded()
+
+
+def test_a_saved_entry_without_axes_left_moves_nothing(
+    parent: QtWidgets.QWidget, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Send no go-to for an entry none of whose axes the device still has."""
+    gone: dict[str, Any] = {"name": "old", "device": "stage", "positions": {"z": 1.0}}
+    settings.set("positioner.saved_positions", [gone])
+    view = make_view(settings, parent)
+    targets: list[object] = []
+    view.sig_move_to.connect(lambda *args: targets.append(args))
+
+    child(view, QtWidgets.QAbstractButton, "saved-go:0").click()
+
+    assert targets == []
+    assert "no axis z" in caplog.text
+
+
+def test_saved_positions_that_are_not_a_list_are_reported(
+    parent: QtWidgets.QWidget, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Warn when the stored saved positions are not a list."""
+    settings.set("positioner.saved_positions", {"not": "a list"})
+
+    make_view(settings, parent)
+
+    assert "not a list" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected"),
+    [pytest.param(True, 50, id="bool"), pytest.param(1000, 300, id="too-long")],
+)
+def test_a_stored_repeat_interval_is_checked(
+    parent: QtWidgets.QWidget, settings: Settings, stored: int, expected: int
+) -> None:
+    """Ignore a stored interval that is not a number, and clamp one too long."""
+    settings.set("positioner.repeat_interval", stored)
+
+    assert child(make_view(settings, parent), QLabeledSlider).value() == expected
+
+
+def test_a_locked_device_cannot_be_configured_until_released(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Disable the configuration rows of a locked device, and enable them after."""
+    view = make_view(settings, parent)
+    tree = child(view, DescriptorTreeView)
+    editors = [w for w in tree.findChildren(QtWidgets.QWidget) if w.isEnabled()]
+
+    view.set_locked(frozenset({"stage"}))
+    locked = [w for w in editors if not w.isEnabled()]
+    view.set_locked(frozenset())
+
+    assert locked
+    assert all(w.isEnabled() for w in editors)
+
+
+def test_the_view_fits_a_narrow_dock(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Keep the view within 26 digits of its font: about 190 px at 9 pt."""
+    view = make_view(settings, parent)
+    digit = view.fontMetrics().horizontalAdvance("0")
+
+    assert view.minimumSizeHint().width() <= 26 * digit

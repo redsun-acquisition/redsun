@@ -17,7 +17,7 @@ from redsun.qt import Dock
 from redsun.view.qt.treeview import DescriptorTreeView
 
 from ..._settings import Settings  # noqa: TC001
-from ._positioner_group import PositionerGroup
+from ._positioner_group import PositionerGroup, tool_button
 
 if TYPE_CHECKING:
     from redsun.view import Placement
@@ -81,8 +81,10 @@ class PositionerView(QtW.QWidget, Loggable):
 
     The Motors tab holds one [`PositionerGroup`][redsun.view.qt.builtins.PositionerGroup]
     per device the positioner describes, and the saved positions. The
-    Advanced tab sets the repeat interval of held step buttons, which the
-    session's settings keep.
+    Configuration tab shows and edits the configuration of every axis. The
+    Advanced tab sets the repeat interval of held step buttons. The session's
+    settings keep the saved positions and the repeat interval, under keys
+    named after this view.
 
     Parameters
     ----------
@@ -96,12 +98,13 @@ class PositionerView(QtW.QWidget, Loggable):
     """
 
     placement: Placement = Dock("right")
+    """Where the view sits in the main window."""
 
     group_class: ClassVar[type[PositionerGroup]] = PositionerGroup
     """Widget built for each device; a subclass may name a subclass of its own."""
 
     sig_move = Signal(str, str, float)
-    """Device, axis and step, when a step button is pressed or repeats."""
+    """Device, axis and step, when a step button is pressed or repeats, or an arrow key steps."""
 
     sig_move_to = Signal(str, dict)
     """Device and the positions to go to, by axis."""
@@ -131,7 +134,7 @@ class PositionerView(QtW.QWidget, Loggable):
         self._tree: DescriptorTreeView | None = None
         self._configuration = QtW.QVBoxLayout()
         self._entries: list[SavedPosition] = []
-        self._entry_buttons: list[tuple[str, QtW.QPushButton]] = []
+        self._entry_buttons: list[tuple[str, QtW.QToolButton]] = []
 
         self._interval = QLabeledSlider(QtCore.Qt.Orientation.Horizontal, self)
         self._interval.setRange(*REPEAT_INTERVAL_RANGE)
@@ -155,6 +158,7 @@ class PositionerView(QtW.QWidget, Loggable):
 
         advanced = QtW.QWidget(self)
         form = QtW.QFormLayout(advanced)
+        form.setRowWrapPolicy(QtW.QFormLayout.RowWrapPolicy.WrapAllRows)
         form.addRow("Repeat interval (ms)", self._interval)
 
         configuration = QtW.QWidget(self)
@@ -175,7 +179,7 @@ class PositionerView(QtW.QWidget, Loggable):
         """Build a group per device *positioner* describes, and read *settings*."""
         self._settings = settings
         stored = settings.get(self._key("repeat_interval"))
-        if isinstance(stored, int):
+        if isinstance(stored, int) and not isinstance(stored, bool):
             self._interval.setValue(stored)
         for device, axes in positioner.axes.items():
             group = self.group_class(
@@ -192,6 +196,7 @@ class PositionerView(QtW.QWidget, Loggable):
             self._groups[device] = group
             self._devices.addWidget(group)
         self._interval.valueChanged.connect(self._set_repeat_interval)
+        self._interval.sliderReleased.connect(self._store_repeat_interval)
         descriptors = positioner.configuration.descriptors
         readings = positioner.configuration.readings
         if descriptors:
@@ -204,9 +209,12 @@ class PositionerView(QtW.QWidget, Loggable):
             )
         for group in self._groups.values():
             group.sig_save.connect(self._save)
-        self._entries, skipped = saved_positions(
-            settings.get(self._key("saved_positions"), [])
-        )
+        stored_positions = settings.get(self._key("saved_positions"), [])
+        if not isinstance(stored_positions, list):
+            self.logger.warning(
+                "Ignoring saved positions that are not a list; the next save replaces them"
+            )
+        self._entries, skipped = saved_positions(stored_positions)
         if skipped:
             self.logger.warning(
                 f"Skipping {skipped} saved positions that are not well formed"
@@ -240,6 +248,8 @@ class PositionerView(QtW.QWidget, Loggable):
         self._locked = names
         for device, group in self._groups.items():
             group.set_locked(device in names)
+            if self._tree is not None:
+                self._tree.set_enabled(device, device not in names)
         self._lock_entries()
 
     def _key(self, setting: str) -> str:
@@ -254,25 +264,38 @@ class PositionerView(QtW.QWidget, Loggable):
             SavedPosition(
                 name=f"{device} {number}",
                 device=device,
-                positions=self._groups[device].positions(),
+                positions=self._groups[device].positions,
             )
         )
         self._store()
+        self._saved.expand()
 
     def _rename(self, entry: SavedPosition, name: str) -> None:
+        if name == entry["name"]:
+            return
         entry["name"] = name
-        self._store()
+        self._write()
 
     def _remove(self, entry: SavedPosition) -> None:
         self._entries.remove(entry)
         self._store()
 
     def _go(self, entry: SavedPosition) -> None:
-        axes = self._groups[entry["device"]].positions()
+        axes = self._groups[entry["device"]].positions
         positions = {a: v for a, v in entry["positions"].items() if a in axes}
-        self.sig_move_to.emit(entry["device"], positions)
+        missing = sorted(set(entry["positions"]) - set(positions))
+        if missing:
+            self.logger.warning(
+                f"{entry['name']}: {entry['device']} has no axis {', '.join(missing)}"
+            )
+        if positions:
+            self.sig_move_to.emit(entry["device"], positions)
 
     def _store(self) -> None:
+        self._write()
+        self._show_entries()
+
+    def _write(self) -> None:
         if self._settings is not None:
             self._settings.set(
                 self._key("saved_positions"),
@@ -285,7 +308,6 @@ class PositionerView(QtW.QWidget, Loggable):
                     for entry in self._entries
                 ],
             )
-        self._show_entries()
 
     def _show_entries(self) -> None:
         while (item := self._entry_layout.takeAt(0)) is not None:
@@ -302,28 +324,29 @@ class PositionerView(QtW.QWidget, Loggable):
 
     def _entry_row(
         self, index: int, entry: SavedPosition
-    ) -> tuple[QtW.QWidget, QtW.QPushButton]:
+    ) -> tuple[QtW.QWidget, QtW.QToolButton]:
         row = QtW.QWidget(self._entry_list)
         name = QtW.QLineEdit(entry["name"], row)
         name.setObjectName(f"saved:{index}")
+        name.setAccessibleName("Saved position name")
         name.editingFinished.connect(lambda: self._rename(entry, name.text()))
         summary = "  ".join(f"{a} {v:g}" for a, v in entry["positions"].items())
-        go = QtW.QPushButton("Go", row)
+        go = tool_button("Go", f"Go to {entry['name']}", row)
         go.setObjectName(f"saved-go:{index}")
+        go.setToolTip(f"Move {entry['device']} to {summary}")
         go.clicked.connect(lambda: self._go(entry))
-        remove = QtW.QPushButton("x", row)
+        remove = tool_button("x", f"Remove {entry['name']}", row)
         remove.setObjectName(f"saved-remove:{index}")
-        remove.setToolTip("Remove this saved position")
         remove.clicked.connect(lambda: self._remove(entry))
-        layout = QtW.QHBoxLayout(row)
+        details = QtW.QLabel(f"{entry['device']}  {summary}", row)
+        details.setWordWrap(True)
+        layout = QtW.QGridLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        for widget in (
-            name,
-            QtW.QLabel(f"{entry['device']}  {summary}", row),
-            go,
-            remove,
-        ):
-            layout.addWidget(widget)
+        layout.addWidget(name, 0, 0)
+        layout.addWidget(go, 0, 1)
+        layout.addWidget(remove, 0, 2)
+        layout.addWidget(details, 1, 0, 1, 3)
+        layout.setColumnStretch(0, 1)
         return row, go
 
     def _lock_entries(self) -> None:
@@ -336,5 +359,10 @@ class PositionerView(QtW.QWidget, Loggable):
     def _set_repeat_interval(self, milliseconds: int) -> None:
         for group in self._groups.values():
             group.set_repeat_interval(milliseconds)
+        # dragging the slider would write the settings file at every tick
+        if not self._interval.isSliderDown():
+            self._store_repeat_interval()
+
+    def _store_repeat_interval(self) -> None:
         if self._settings is not None:
-            self._settings.set(self._key("repeat_interval"), milliseconds)
+            self._settings.set(self._key("repeat_interval"), self._interval.value())

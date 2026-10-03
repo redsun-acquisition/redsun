@@ -67,6 +67,9 @@ class HomingGroup(PositionerGroup):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.home = QPushButton("Home", self)
+        layout = self.layout()
+        if layout is not None:
+            layout.addWidget(self.home)
 
 
 class MyPositionerView(PositionerView):
