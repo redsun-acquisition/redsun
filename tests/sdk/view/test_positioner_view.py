@@ -507,3 +507,40 @@ def test_a_saved_position_keeps_its_offset_between_sessions(
     child(later, QtWidgets.QAbstractButton, "saved-go:0").click()
 
     assert targets == []
+
+
+def test_a_removed_position_comes_back_with_undo(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Restore a removed saved position, in place and in the settings, on Undo."""
+    view = make_view(settings, parent)
+    save = child(group(view, "focus"), QtWidgets.QAbstractButton, "save")
+    save.click()
+    save.click()
+
+    child(view, QtWidgets.QAbstractButton, "saved-remove:0").click()
+    removed = shown_names(view)
+    child(view, QtWidgets.QAbstractButton, "saved-undo").click()
+
+    assert removed == ["focus 2"]
+    assert shown_names(view) == ["focus 1", "focus 2"]
+    assert shown_names(make_view(settings, parent)) == ["focus 1", "focus 2"]
+
+
+def test_undo_is_offered_only_for_a_while(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Hide Undo once the delay after a removal has passed."""
+    view = PositionerView("positioner", parent, undo_delay=1)
+    view.setup(Positioner(), settings)
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
+    undo = child(view, QtWidgets.QAbstractButton, "saved-undo")
+
+    child(view, QtWidgets.QAbstractButton, "saved-remove:0").click()
+    offered = undo.isVisibleTo(view)
+    deadline = QtCore.QDeadlineTimer(2000)
+    while undo.isVisibleTo(view) and not deadline.hasExpired():
+        QtWidgets.QApplication.processEvents()
+
+    assert offered
+    assert not undo.isVisibleTo(view)

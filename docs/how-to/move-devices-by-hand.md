@@ -83,9 +83,11 @@ presenters:
 
 The view takes `repeat_delay`, the milliseconds a step button is held before
 it repeats (400 by default); `repeat_interval`, the milliseconds between two
-repeated steps (50 by default); and `steps`, the step sizes offered for each
-axis (`0.001` to `1000` by decades). Once a repeat interval is set in the
-Advanced tab, it replaces `repeat_interval` in later sessions.
+repeated steps (50 by default); `steps`, the step sizes offered for each
+axis (`0.001` to `1000` by decades); and `undo_delay`, the milliseconds Undo
+is offered after a saved position is removed (5000 by default). Once a repeat
+interval is set in the Advanced tab, it replaces `repeat_interval` in later
+sessions.
 
 A session holds one positioner presenter: the view asks for it in `setup`,
 and two would leave the view with two answers, so it would not be built. Use
@@ -129,7 +131,11 @@ the presenter that holds the engine:
   "failed".
 - `Save` keeps where a device stands, under a name you can edit, in the
   Saved positions section. `Go` on an entry moves that device back there,
-  passing the same checks as a typed target.
+  passing the same checks as a typed target. A saved position also keeps the
+  configuration values in the units of the axis' position, such as an
+  offset; when one has changed since, the first `Go` names it and the second
+  moves. `x` removes an entry, and `Undo` brings it back for a few seconds
+  after.
 - The Configuration tab shows each axis' configuration, such as `velocity`,
   and writes the entries that can be written. A value changed on the device
   by anything else is shown as it changes.

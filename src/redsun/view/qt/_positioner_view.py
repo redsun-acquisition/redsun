@@ -114,6 +114,8 @@ class PositionerView(QtW.QWidget, Loggable):
         Advanced tab; kept between 10 and 300.
     steps
         Step sizes offered in each axis' step box.
+    undo_delay
+        Milliseconds Undo is offered after a saved position is removed.
     """
 
     placement: Placement = Dock("right")
@@ -142,6 +144,7 @@ class PositionerView(QtW.QWidget, Loggable):
         repeat_delay: int = 400,
         repeat_interval: int = 50,
         steps: Sequence[float] = DEFAULT_STEPS,
+        undo_delay: int = 5000,
     ) -> None:
         super().__init__(parent)
         self.name = name
@@ -157,6 +160,7 @@ class PositionerView(QtW.QWidget, Loggable):
         self._values: dict[str, object] = {}
         self._context_keys: dict[str, list[str]] = {}
         self._confirming: SavedPosition | None = None
+        self._removed: tuple[int, SavedPosition] | None = None
 
         self._interval = QLabeledSlider(QtCore.Qt.Orientation.Horizontal, self)
         self._interval.setRange(*REPEAT_INTERVAL_RANGE)
@@ -166,8 +170,24 @@ class PositionerView(QtW.QWidget, Loggable):
 
         self._devices = QtW.QVBoxLayout()
         self._saved = QCollapsible("Saved positions", self)
+        self._undo_row = QtW.QWidget(self)
+        self._undo_label = QtW.QLabel(self._undo_row)
+        self._undo_label.setWordWrap(True)
+        undo = tool_button("Undo", "Undo the removal", self._undo_row)
+        undo.setObjectName("saved-undo")
+        undo.clicked.connect(self._undo)
+        undo_layout = QtW.QHBoxLayout(self._undo_row)
+        undo_layout.setContentsMargins(0, 0, 0, 0)
+        undo_layout.addWidget(self._undo_label, 1)
+        undo_layout.addWidget(undo)
+        self._undo_row.hide()
+        self._undo_timer = QtCore.QTimer(self)
+        self._undo_timer.setSingleShot(True)
+        self._undo_timer.setInterval(undo_delay)
+        self._undo_timer.timeout.connect(self._undo_row.hide)
         self._entry_list = QtW.QWidget(self)
         self._entry_layout = QtW.QVBoxLayout(self._entry_list)
+        self._saved.addWidget(self._undo_row)
         self._saved.addWidget(self._entry_list)
         motors = QtW.QWidget(self)
         motors_layout = QtW.QVBoxLayout(motors)
@@ -323,8 +343,21 @@ class PositionerView(QtW.QWidget, Loggable):
         self._write()
 
     def _remove(self, entry: SavedPosition) -> None:
+        self._removed = (self._entries.index(entry), entry)
         self._entries.remove(entry)
         self._store()
+        self._undo_label.setText(f"Removed {entry['name']}")
+        self._undo_row.show()
+        self._undo_timer.start()
+
+    def _undo(self) -> None:
+        self._undo_timer.stop()
+        self._undo_row.hide()
+        if self._removed is not None:
+            index, entry = self._removed
+            self._removed = None
+            self._entries.insert(index, entry)
+            self._store()
 
     def _go(self, entry: SavedPosition) -> None:
         axes = self._groups[entry["device"]].positions
