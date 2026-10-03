@@ -22,6 +22,7 @@ nav = [
         "tutorials/scan-plan.md",
         "tutorials/window-layout.md",
         "tutorials/device-service.md",
+        "tutorials/builtin-positioner.md",
     ]},
     { "How-to Guides" = [
         "how-to/index.md",

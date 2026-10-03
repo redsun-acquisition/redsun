@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping  # noqa: TC003
+from functools import cached_property
 from typing import Any, Protocol, runtime_checkable
 from urllib.parse import urlsplit
 from urllib.request import url2pathname
@@ -14,7 +15,13 @@ import numpy as np
 from bluesky.protocols import Readable, Reading, Triggerable
 from bluesky.utils import MsgGenerator  # noqa: TC002
 from event_model import DocumentRouter, StreamResource
-from ophyd_async.core import SignalRW, StandardReadable, soft_signal_rw
+from ophyd_async.core import (
+    MovableLogic,
+    SignalRW,
+    StandardMovable,
+    StandardReadable,
+    soft_signal_rw,
+)
 from ophyd_async.sim import SimBlobDetector  # noqa: TC002
 from psygnal import Signal
 from qtpy.QtGui import QImage, QPixmap
@@ -52,19 +59,27 @@ from redsun.qt import Dock, QtSession
 from redsun.view.qt.utils import PlanWidget, create_plan_widget
 
 
-class MyStage(StandardReadable):
+class MyStage(StandardReadable, StandardMovable[float]):
     def __init__(self, name: str = "", *, units: str = "mm") -> None:
         with self.add_children_as_readables():
             self.position = soft_signal_rw(float, units=units)
         super().__init__(name=name)
 
+    @cached_property
+    def movable_logic(self) -> MovableLogic[float]:
+        return MovableLogic(setpoint=self.position, readback=self.position)
 
-class FastStage(StandardReadable):
+
+class FastStage(StandardReadable, StandardMovable[float]):
     def __init__(self, name: str = "", *, units: str = "mm") -> None:
         with self.add_children_as_readables():
             self.position = soft_signal_rw(float, initial_value=5.0, units=units)
             self.speed = soft_signal_rw(float, initial_value=10.0)
         super().__init__(name=name)
+
+    @cached_property
+    def movable_logic(self) -> MovableLogic[float]:
+        return MovableLogic(setpoint=self.position, readback=self.position)
 
 
 @runtime_checkable
@@ -108,8 +123,7 @@ class StageView(QWidget):
 
     @slot
     def show_reading(self, reading: dict[str, Reading[float]]) -> None:
-        for signal, entry in reading.items():
-            stage = signal.removesuffix("-position")
+        for stage, entry in reading.items():
             if stage not in self.labels:
                 self.add_row(stage)
             self.labels[stage].setText(f"position: {entry['value']}")

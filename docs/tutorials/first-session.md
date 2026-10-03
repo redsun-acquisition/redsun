@@ -26,9 +26,15 @@ with these imports:
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import cached_property
 
 from bluesky.protocols import Reading
-from ophyd_async.core import StandardReadable, soft_signal_rw
+from ophyd_async.core import (
+    MovableLogic,
+    StandardMovable,
+    StandardReadable,
+    soft_signal_rw,
+)
 from psygnal import Signal
 from qtpy.QtWidgets import QFormLayout, QLabel, QPushButton, QWidget
 
@@ -52,6 +58,25 @@ position in memory. Add it below the imports:
 [device signal](../explanation/glossary.md#device-signal) that keeps its value
 in memory.
 
+With `StandardReadable` alone the stage would be a value you can read and
+write. [`StandardMovable`][ophyd_async.core.StandardMovable] makes it
+something that moves. `movable_logic` names the signal written to move it,
+the setpoint, and the one that says where it is, the readback; this stage has
+one signal for both. In return the stage itself answers what every motor in
+`ophyd-async` answers:
+
+- `set` moves it, and finishes when the move does;
+- `locate` says where it was sent and where it is;
+- `stop` stops it, and `subscribe` follows its position.
+
+Code written for those methods, rather than for an attribute called
+`position`, works with this stage and with any real motor in its place:
+`bluesky` plans that move a device, and the positioner `redsun` offers, which
+[the last tutorial](builtin-positioner.md) uses without changing the stage.
+
+A movable device reads its readback under its own name, so the position of
+`stage` is read as `stage`.
+
 ## 2. The view
 
 A [view](../explanation/glossary.md#view) is what the user sees. Add this one
@@ -67,7 +92,7 @@ and a label:
 sends with the name of a stage when its button is pressed. `show_reading` is a
 [slot](../explanation/glossary.md#slot), which something else can trigger. It
 receives a reading: the value of a device signal, under the name of that
-signal.
+signal, which for the position of a stage is the name of the stage.
 
 You never call the constructor yourself: the session does. It gives every
 view its `name` and its `parent`, and every component keeps its name.
@@ -155,7 +180,9 @@ sends the press of a button to it.
 ```
 
 The view knows nothing about the presenter, and the presenter knows nothing
-about the view. The session is what joins them.
+about the view. The session is what joins them. A presenter and a view written
+to be joined this way are called a
+[stack](../explanation/glossary.md#stack).
 
 Run the script again:
 

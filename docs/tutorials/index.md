@@ -4,7 +4,7 @@ icon: lucide/graduation-cap
 
 # Tutorials
 
-Eight tutorials that build one application, step by step. New users start
+Nine tutorials that build one application, step by step. New users start
 here, and follow them in order: each adds to the script of the one before.
 
 | Tutorial | You end with |
@@ -17,5 +17,6 @@ here, and follow them in order: each adds to the script of the one before.
 | [Scanning a stage with the camera](scan-plan.md) | a scan that takes a frame at each position of a stage |
 | [Arranging the window](window-layout.md) | the image in the centre of the window, the stages below it |
 | [Putting a device behind a service](device-service.md) | a third stage, in a program of its own |
+| [Reusing the built-in positioner](builtin-positioner.md) | the stages moved by the positioner `redsun` ships |
 
 None of the tutorials needs hardware.

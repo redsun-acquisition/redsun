@@ -102,7 +102,9 @@ process variable of the service:
 ```
 
 The device names only the end of the process variable, `Position`. The
-beginning, the prefix, comes from the service it is declared with.
+beginning, the prefix, comes from the service it is declared with. Like the
+other stages it is a `StandardMovable`, whose one process variable is both its
+setpoint and its readback.
 
 ## 3. Declare the service
 
@@ -209,6 +211,9 @@ This is the last tutorial.
 
 ## Next steps
 
+- [Reusing the built-in positioner](builtin-positioner.md) is the next
+  tutorial: it replaces the nudge presenter and view with the positioner
+  `redsun` ships.
 - [How to write a service with
   FastCS](../how-to/write-a-service-with-fastcs.md) serves a stage with another
   library, over another protocol.
