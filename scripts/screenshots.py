@@ -64,6 +64,16 @@ SCREENSHOTS: dict[Path, tuple[Path, tuple[int, int], str | None]] = {
         (900, 640),
         "plan_view:snap",
     ),
+    Path("docs/examples/positioner.py"): (
+        Path("docs/how-to/images/positioner.png"),
+        (460, 560),
+        None,
+    ),
+    Path("docs/examples/log_view.py"): (
+        Path("docs/how-to/images/log-view.png"),
+        (820, 360),
+        None,
+    ),
 }
 """Each example script, with where its picture is written, the size of the
 window, and the plan run before the picture, if any, as `view:plan`."""

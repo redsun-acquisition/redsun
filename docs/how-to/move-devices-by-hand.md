@@ -114,6 +114,9 @@ the presenter that holds the engine:
 
 ## Use the view
 
+![The positioner view of the example session: a group for the stage, with a
+row for each of its axes x and y](images/positioner.png)
+
 - The Motors tab has a group per device and a row per axis. `-` and `+` step
   the axis by the size chosen beside them; held, they repeat. With the row or
   a step button focused, Left and Right do the same. A step starts from the
