@@ -95,6 +95,25 @@ def saved_positions(stored: object) -> tuple[list[SavedPosition], int]:
     return entries, len(items) - len(entries)
 
 
+class GroupScrollArea(QtW.QScrollArea):
+    """A scroll area asking for the width its content needs to be shown whole."""
+
+    def sizeHint(self) -> QtCore.QSize:
+        """Ask for the content's minimum width, beside the vertical scroll bar."""
+        hint = super().sizeHint()
+        content, bar = self.widget(), self.verticalScrollBar()
+        if content is None or bar is None:
+            return hint
+        # the base class remembers the content's size from when it was set,
+        # before the groups were added
+        width = (
+            content.minimumSizeHint().width()
+            + bar.sizeHint().width()
+            + 2 * self.frameWidth()
+        )
+        return QtCore.QSize(max(hint.width(), width), hint.height())
+
+
 class PositionerView(QtW.QWidget, Loggable):
     """Move devices by hand: a row per axis, grouped by device.
 
@@ -194,9 +213,9 @@ class PositionerView(QtW.QWidget, Loggable):
         motors_layout.addLayout(self._devices)
         motors_layout.addWidget(self._saved)
         motors_layout.addStretch(1)
-        scroll = QtW.QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(motors)
+        self._scroll = GroupScrollArea(self)
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setWidget(motors)
 
         advanced = QtW.QWidget(self)
         form = QtW.QFormLayout(advanced)
@@ -207,7 +226,7 @@ class PositionerView(QtW.QWidget, Loggable):
         configuration.setLayout(self._configuration)
 
         self._tabs = QtW.QTabWidget(self)
-        self._tabs.addTab(scroll, "Motors")
+        self._tabs.addTab(self._scroll, "Motors")
         self._tabs.addTab(configuration, "Configuration")
         self._tabs.addTab(advanced, "Advanced")
         QtW.QVBoxLayout(self).addWidget(self._tabs)
@@ -275,6 +294,8 @@ class PositionerView(QtW.QWidget, Loggable):
                 f"Skipping {skipped} saved positions that are not well formed"
             )
         self._show_entries()
+        # the window sizes the view from hints it kept from before the groups
+        self._scroll.updateGeometry()
 
     @slot
     def update_readback(self, device: str, axis: str, value: float) -> None:

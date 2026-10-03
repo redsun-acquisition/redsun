@@ -544,3 +544,19 @@ def test_undo_is_offered_only_for_a_while(
 
     assert offered
     assert not undo.isVisibleTo(view)
+
+
+def test_the_view_asks_for_room_to_show_its_groups_whole(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Show the groups without a sideways scroll bar at the size the view asks for."""
+    view = make_view(settings, parent)
+    parent.show()
+    QtWidgets.QApplication.processEvents()
+    parent.resize(view.sizeHint())
+    view.resize(view.sizeHint())
+    QtWidgets.QApplication.processEvents()
+
+    bar = child(view, QtWidgets.QScrollArea).horizontalScrollBar()
+    assert bar is not None
+    assert not bar.isVisible()
