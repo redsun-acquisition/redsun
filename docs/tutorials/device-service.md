@@ -166,8 +166,9 @@ for remote_stage](images/device-service.png)
     shares the announcements of servers between the programs of one machine,
     and without it a program takes longer to notice that a server has
     started again. The second says that the connection to the service
-    closed. It is expected when you close the window. At any other time it
-    means that the service went away.
+    closed while the session still used it: the service went away. Closing
+    the window does not print it, since the session closes its connections
+    before it stops the service.
 
 !!! warning "One message you should not ignore"
 
