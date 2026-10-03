@@ -257,9 +257,29 @@ async def test_a_configuration_write_reports_what_the_signal_reads(
     key = stage.axis["x"].velocity.name
 
     await presenter.configure(key, 2.5)
+    written = seen[-1]
+    seen.clear()
     await presenter.configure(key, "fast")
 
-    assert seen == [(key, 2.5), (key, 2.5)]
+    assert (written, seen) == ((key, 2.5), [(key, 2.5)])
+
+
+async def test_a_configuration_change_made_elsewhere_is_reported_until_shutdown(
+    presenter: PositionerPresenter, stage: Stage
+) -> None:
+    """Report configuration values changed on the device, until shut down."""
+    seen: list[tuple[str, object]] = []
+    presenter.sig_configuration.connect(lambda *args: seen.append(args))
+    axis = stage.axis["x"]
+
+    await axis.velocity.set(3.0)
+    axis.set_resolution(0.5)
+    reported = list(seen)
+    presenter.shutdown()
+    await axis.velocity.set(4.0)
+
+    assert reported == [(axis.velocity.name, 3.0), (axis.resolution.name, 0.5)]
+    assert seen == reported
 
 
 async def test_limits_come_from_the_readback_descriptor() -> None:
@@ -524,3 +544,21 @@ async def test_an_unknown_device_or_key_is_refused(
     """Raise `KeyError` for a device the presenter does not hold, or a key it cannot write."""
     with pytest.raises(KeyError):
         await call(presenter, stage)
+
+
+async def test_a_failing_receiver_does_not_reach_the_device(
+    presenter: PositionerPresenter, stage: Stage, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Log a receiver that raises on a readback or a configuration change."""
+
+    def fail(*args: object) -> None:
+        raise RuntimeError("receiver broke")
+
+    presenter.sig_readback.connect(fail)
+    presenter.sig_configuration.connect(fail)
+
+    await stage.axis["x"].set(1.0)
+    await stage.axis["x"].velocity.set(3.0)
+
+    assert "Relaying a readback" in caplog.text
+    assert "Relaying a configuration value" in caplog.text

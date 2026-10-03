@@ -131,7 +131,8 @@ the presenter that holds the engine:
   Saved positions section. `Go` on an entry moves that device back there,
   passing the same checks as a typed target.
 - The Configuration tab shows each axis' configuration, such as `velocity`,
-  and writes the entries that can be written.
+  and writes the entries that can be written. A value changed on the device
+  by anything else is shown as it changes.
 - The Advanced tab sets the repeat interval, between 10 and 300 ms.
 
 Saved positions and the repeat interval are kept in the session's

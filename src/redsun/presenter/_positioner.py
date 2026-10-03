@@ -11,7 +11,13 @@ from typing import TYPE_CHECKING, Concatenate, ParamSpec, Protocol, runtime_chec
 
 from bluesky.protocols import Stoppable
 from bluesky.utils import maybe_await
-from ophyd_async.core import AsyncConfigurable, AsyncReadable
+from ophyd_async.core import (
+    AsyncConfigurable,
+    AsyncReadable,
+    Device,
+    SignalR,
+    walk_devices,
+)
 from psygnal import Signal
 
 from redsun.aio import run_coro
@@ -79,7 +85,7 @@ class PositionerPresenter(Loggable):
     """Device, and why a move or a stop failed."""
 
     sig_configuration = Signal(str, object)
-    """Key and value of a configuration signal, read back after a write."""
+    """Key and value of a configuration signal, whenever it changes and after a write."""
 
     sig_limits = Signal(str, str, object, object)
     """Device, axis, and its new low and high limits; `None` for no bound."""
@@ -110,9 +116,7 @@ class PositionerPresenter(Loggable):
         }
         self._configuration = Configuration(descriptors={}, readings={}, writable={})
         self._owners: dict[str, str] = {}
-        self._callbacks: list[
-            tuple[Axis, Callable[[dict[str, Reading[float]]], None]]
-        ] = []
+        self._unsubscribers: list[Callable[[], None]] = []
         self._held: frozenset[str] = frozenset()
         self._from_setpoint: set[str] = set()
         self._running: dict[str, asyncio.Task[object]] = {}
@@ -399,30 +403,43 @@ class PositionerPresenter(Loggable):
     async def _follow_axis(
         self, device: str, name: str, axis: Axis
     ) -> tuple[AxisInfo | None, Configuration | None]:
-        subscribed: Callable[[dict[str, Reading[float]]], None] | None = None
+        unsubscribers: list[Callable[[], None]] = []
         try:
             async with asyncio.timeout(self.timeout):
                 info = await describe_axis(axis)
-                subscribed = partial(self._relay, device, name, info.key)
-                self._callbacks.append((axis, subscribed))
-                axis.subscribe(subscribed)
+                relay = partial(self._relay, device, name, info.key)
+                unsubscribers.append(partial(axis.clear_sub, relay))
+                axis.subscribe(relay)
                 configuration = (
                     await read_configuration(axis)
                     if isinstance(axis, AsyncConfigurable)
                     else None
                 )
+                children = (
+                    walk_devices(axis).values() if isinstance(axis, Device) else ()
+                )
+                for signal in children:
+                    if (
+                        configuration is not None
+                        and isinstance(signal, SignalR)
+                        and signal.name in configuration.readings
+                    ):
+                        unsubscribers.append(
+                            partial(signal.clear_sub, self._relay_configuration)
+                        )
+                        signal.subscribe_reading(self._relay_configuration)
         except Exception as error:  # noqa: BLE001
             self.logger.warning(f"Leaving out {device} {name}: {error!r}")
-            if subscribed is not None:
-                self._callbacks.remove((axis, subscribed))
-                axis.clear_sub(subscribed)
+            for unsubscribe in unsubscribers:
+                unsubscribe()
             return None, None
+        self._unsubscribers.extend(unsubscribers)
         return info, configuration
 
     async def _unfollow(self) -> None:
-        for axis, callback in self._callbacks:
-            axis.clear_sub(callback)
-        self._callbacks.clear()
+        for unsubscribe in self._unsubscribers:
+            unsubscribe()
+        self._unsubscribers.clear()
 
     def _relay(
         self,
@@ -438,3 +455,10 @@ class PositionerPresenter(Loggable):
             self.sig_readback.emit(device, axis, float(value))
         except Exception:
             self.logger.exception(f"Relaying a readback of {device} {axis} failed")
+
+    def _relay_configuration(self, reading: dict[str, Reading[object]]) -> None:
+        try:
+            for key, entry in reading.items():
+                self.sig_configuration.emit(key, entry["value"])
+        except Exception:
+            self.logger.exception("Relaying a configuration value failed")
