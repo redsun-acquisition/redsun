@@ -35,7 +35,13 @@ from redsun import (
 )
 from redsun.aio import run_coro
 from redsun.services import _service
-from redsun.services._transports import PV_ACCESS, TRANSPORTS, PVAccess
+from redsun.services._transports import (
+    CHANNEL_ACCESS,
+    PV_ACCESS,
+    TRANSPORTS,
+    ChannelAccess,
+    PVAccess,
+)
 from redsun.session import _base as session_base
 
 if TYPE_CHECKING:
@@ -330,6 +336,28 @@ def test_services_start_before_devices_and_stop_after_shutdown(
     assert camera.exposure.source == "ca://SIM:Exposure"
     assert (was_running, app.stand_in.running) == (True, False)
     assert marker.read_text() == "cleaned up"
+
+
+def test_channels_close_while_the_services_still_run(
+    build: BuildSession, launchable: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Close this process's channels before stopping the services they reach."""
+    running: list[bool] = []
+
+    class Recorded(ChannelAccess):
+        async def release(self) -> None:
+            running.append(app.stand_in.running)
+            await super().release()
+
+    monkeypatch.setitem(TRANSPORTS, CHANNEL_ACCESS, Recorded())
+
+    class App(Session):
+        stand_in: Annotated[AsService, Launch(STAND_IN, ready=READY)]
+
+    app = build(App)
+    app.shutdown()
+
+    assert running == [True]
 
 
 def test_a_build_that_raises_stops_the_services_it_started(launchable: None) -> None:
