@@ -78,7 +78,11 @@ class Settings:
         self._values = values
         # now, so a session that crashes later keeps what the user chose
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(text, encoding="utf-8")
+        # written beside it and swapped in, so a write cut short leaves the
+        # previous file whole
+        temp = self._path.with_name(f"{self._path.name}.tmp")
+        temp.write_text(text, encoding="utf-8")
+        temp.replace(self._path)
 
     def __contains__(self, key: str) -> bool:
         """Whether *key* has been set."""
