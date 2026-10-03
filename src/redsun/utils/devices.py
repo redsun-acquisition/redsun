@@ -19,6 +19,7 @@ from ophyd_async.core import (
     Device,
     Signal,
     SignalRW,
+    StandardMovable,
     walk_rw_signals,
 )
 
@@ -145,8 +146,9 @@ def limits(descriptor: Mapping[str, Any]) -> tuple[float | None, float | None]:
 async def describe_axis(axis: Axis) -> AxisInfo:
     """Return where *axis* stands and what its readback descriptor says.
 
-    The descriptor is the entry of the axis' first hint, or its only entry;
-    an axis that is not readable has none. Units that are not text, and a
+    The descriptor is the entry of the readback a `StandardMovable` names,
+    otherwise of the axis' first hint, or its only entry; an axis that is not
+    readable has none. Units that are not text, and a
     precision that is not a whole number of at least 0, are left out.
 
     Raises
@@ -163,8 +165,10 @@ async def describe_axis(axis: Axis) -> AxisInfo:
     if isinstance(position, bool) or not isinstance(position, Real):
         raise TypeError(f"its position {position!r} is not a number")
     hinted = axis.hints.get("fields", []) if isinstance(axis, HasHints) else []
-    if hinted:
-        key: str | None = hinted[0]
+    if isinstance(axis, StandardMovable):
+        key: str | None = axis.movable_logic.readback.name
+    elif hinted:
+        key = hinted[0]
     elif len(described) == 1:
         key = next(iter(described))
     else:

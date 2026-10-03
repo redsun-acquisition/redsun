@@ -37,6 +37,21 @@ class ThermalAxis(StandardReadable, StandardMovable[float]):
         return MovableLogic(setpoint=self.position, readback=self.position)
 
 
+class TwoHintAxis(StandardReadable, StandardMovable[float]):
+    """An axis hinting a temperature before the position it moves."""
+
+    def __init__(self, name: str = "") -> None:
+        with self.add_children_as_readables(StandardReadableFormat.HINTED_SIGNAL):
+            self.temperature = soft_signal_rw(float, 21.0, units="C")
+            self.position = soft_signal_rw(float, 0.0, units="um")
+        super().__init__(name=name)
+
+    @property
+    def movable_logic(self) -> MovableLogic[float]:
+        """Setpoint and readback of the axis, which are its position."""
+        return MovableLogic(setpoint=self.position, readback=self.position)
+
+
 class Float32Axis(SoftAxis):
     """A soft axis reporting its position as a numpy float32."""
 
@@ -172,3 +187,13 @@ async def test_a_numpy_position_is_a_number() -> None:
     info = await describe_axis(axis)
 
     assert info.position == pytest.approx(0.0)
+
+
+async def test_a_movable_axis_is_described_by_its_readback_not_its_first_hint() -> None:
+    """Take the key and units of the readback a movable axis names."""
+    axis = TwoHintAxis("stage")
+    await axis.connect(mock=False)
+
+    info = await describe_axis(axis)
+
+    assert (info.key, info.units) == (axis.position.name, "um")
