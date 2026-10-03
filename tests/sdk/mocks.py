@@ -76,6 +76,20 @@ class GatedLogic(MovableLogic[float]):
         await self.setpoint.set(new_position)
 
 
+@dataclass
+class LimitedLogic(GatedLogic):
+    """Move logic refusing targets more than 5 from `offset`, as a motor record does."""
+
+    offset: SignalRW[float] | None = None
+
+    async def check_move(self, new_position: float) -> None:
+        """Refuse a target outside the limits the offset sets."""
+        await super().check_move(new_position)
+        offset = 0.0 if self.offset is None else await self.offset.get_value()
+        if abs(new_position - offset) > 5.0:
+            raise ValueError(f"{new_position} is outside the limits")
+
+
 class SoftAxis(StandardReadable, StandardMovable[float]):
     """An axis whose position is one soft signal, read back as written.
 
@@ -107,6 +121,9 @@ class LimitedAxis(SoftAxis):
         with self.add_children_as_readables(StandardReadableFormat.CONFIG_SIGNAL):
             self.offset = soft_signal_rw(float, 0.0, units="um")
         super().__init__(name)
+        self.logic = LimitedLogic(
+            setpoint=self.position, readback=self.position, offset=self.offset
+        )
 
     async def describe(self) -> dict[str, DataKey]:
         """Describe the axis, with its limits on every entry."""

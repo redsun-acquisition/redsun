@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import math
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Concatenate, ParamSpec, Protocol, runtime_checkable
 
-from bluesky.protocols import Stoppable
+from bluesky.protocols import Checkable, Stoppable
 from bluesky.utils import maybe_await
 from ophyd_async.core import (
     AsyncConfigurable,
@@ -70,9 +71,10 @@ class PositionerPresenter(Loggable):
     A step starts from the setpoint, so steps add up exactly, and from the
     readback after a stop or a failure, when the setpoint no longer says
     where the axis is. Every target passes
-    [`check`][redsun.presenter.PositionerPresenter.check] before it is sent,
-    against limits read again from the axis just before, and after each
-    configuration write to its device; a change is reported on `sig_limits`.
+    [`check`][redsun.presenter.PositionerPresenter.check] before it is sent.
+    The limits of an axis are read again after each configuration write to
+    its device and after a move that is refused or fails, and before each move
+    of an axis that is not `Checkable`; a change is reported on `sig_limits`.
     """
 
     sig_readback = Signal(str, str, float)
@@ -146,7 +148,7 @@ class PositionerPresenter(Loggable):
         """Refuse *target* for *axis* of *device*, or return.
 
         A target that is not a finite number, or that falls outside the limits
-        the axis reports, is refused. A subclass refusing more calls
+        the axis last reported, is refused. A subclass refusing more calls
         `super().check` first.
 
         Raises
@@ -348,10 +350,21 @@ class PositionerPresenter(Loggable):
     async def _set(self, device: str, stops: int, axis: str, target: float) -> None:
         if self._stops[device] != stops:
             raise RuntimeError(f"{device} was stopped")
-        await self._read_limits(device, axis)
-        self.check(device, axis, target)
-        self.logger.info(f"Moving {device} {axis} to {target}")
-        await self._axes[device][axis].set(target)
+        item = self._axes[device][axis]
+        # an axis that checks its own targets reads its limits as it moves,
+        # so reading them here would cost every step a round trip
+        if not isinstance(item, Checkable):
+            await self._read_limits(device, axis)
+        try:
+            self.check(device, axis, target)
+            self.logger.info(f"Moving {device} {axis} to {target}")
+            await item.set(target)
+        except Exception:
+            # limits changed since they were read may be why, and the next
+            # check and the view should have the new ones
+            with contextlib.suppress(Exception):
+                await self._read_limits(device, axis)
+            raise
 
     async def _read_limits(self, device: str, axis: str) -> None:
         item = self._axes[device][axis]

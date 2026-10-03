@@ -33,10 +33,17 @@ the plugin id `positioner`.
   repeating while held, step size, go-to, and per device its state, a Stop
   button for stoppable axes, and saved positions kept in the session's
   settings.
+- The readback of a `StandardMovable` is the signal its `movable_logic`
+  names; hints are read only for other axes, whose first hinted field is
+  taken as the readback.
 - Limits come from the readback descriptor's `limits`, when a device reports
-  them. The presenter reads them again before each target is checked and
-  after each configuration write to the device, since an offset or a limit
-  written elsewhere moves them; a change reaches the view on `sig_limits`.
+  them. An offset or a limit written elsewhere moves them, so the presenter
+  reads them again after each configuration write to the device and after a
+  move that is refused or fails; a change reaches the view on `sig_limits`.
+  An axis that is not `Checkable` has them read before each move as well. A
+  `Checkable` axis checks its targets when it moves, as the EPICS motor
+  does against its soft limits, so reading them first would only cost each
+  step a round trip.
 - The configuration of every axis is shown in a `DescriptorTreeView` and
   written through the presenter. A signal a device does not declare as
   configuration is not looked for by attribute name.

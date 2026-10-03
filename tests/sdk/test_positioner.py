@@ -13,6 +13,7 @@ from ophyd_async.core import (
     StandardMovable,
     StandardReadable,
     StandardReadableFormat,
+    set_mock_attr,
     soft_signal_rw,
 )
 
@@ -31,6 +32,8 @@ from tests.sdk.mocks import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Generator
+
+    from event_model import DataKey
 
 
 class FilterWheel(StandardReadable, StandardMovable[str]):
@@ -566,3 +569,40 @@ async def test_a_failing_receiver_does_not_reach_the_device(
 
     assert "Relaying a readback" in caplog.text
     assert "Relaying a configuration value" in caplog.text
+
+
+async def test_an_axis_checking_its_own_targets_is_not_described_per_step() -> None:
+    """Leave the limits of each step to an axis that checks its own targets."""
+    axis = LimitedAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+    describe = axis.describe
+    calls: list[None] = []
+
+    async def counted() -> dict[str, DataKey]:
+        calls.append(None)
+        return await describe()
+
+    set_mock_attr(axis, "describe", counted)
+    for _ in range(3):
+        await positioner.move("focus", "focus", 1.0)
+
+    assert await position(axis) == pytest.approx(3.0)
+    assert calls == []
+    positioner.shutdown()
+
+
+async def test_a_refusal_on_old_limits_reads_the_new_ones() -> None:
+    """Take a target the device's new limits allow on the try after a refusal."""
+    axis = LimitedAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+
+    await axis.offset.set(10.0)
+    await positioner.move_to("focus", {"focus": 12.0})
+    refused_at = await position(axis)
+    await positioner.move_to("focus", {"focus": 12.0})
+
+    assert refused_at == pytest.approx(0.0)
+    assert await position(axis) == pytest.approx(12.0)
+    positioner.shutdown()
