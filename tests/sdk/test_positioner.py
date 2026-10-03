@@ -30,7 +30,7 @@ from tests.sdk.mocks import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Awaitable, Callable, Generator
 
 
 class FilterWheel(StandardReadable, StandardMovable[str]):
@@ -70,6 +70,18 @@ def presenter(stage: Stage) -> Generator[PositionerPresenter, None, None]:
     positioner = PositionerPresenter("positioner", devices={"stage": stage})
     yield positioner
     positioner.shutdown()
+
+
+async def started(presenter: PositionerPresenter, device: str) -> None:
+    """Wait until *device* starts moving."""
+    moving = asyncio.Event()
+
+    def note(name: str, now: bool) -> None:
+        if now and name == device:
+            moving.set()
+
+    presenter.sig_moving.connect(note)
+    await asyncio.wait_for(moving.wait(), 2.0)
 
 
 async def position(axis: SoftAxis) -> float:
@@ -115,11 +127,11 @@ async def test_a_step_asked_while_the_device_moves_is_skipped(
     gate = asyncio.Event()
     stage.axis["x"].logic.gate = gate
     first = asyncio.create_task(presenter.move("stage", "x", 1.0))
-    await asyncio.sleep(0.05)
+    await started(presenter, "stage")
 
     await presenter.move("stage", "x", 1.0)
     going = asyncio.create_task(presenter.move_to("stage", {"theta": 4.0}))
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0)
     assert not going.done()
     gate.set()
     await asyncio.gather(first, going)
@@ -180,7 +192,7 @@ async def test_stop_ends_a_move_without_a_failure(
     presenter.sig_failed.connect(lambda *args: failures.append(args))
     presenter.sig_moving.connect(lambda *args: states.append(args))
     moving = asyncio.create_task(presenter.move("stage", "x", 1.0))
-    await asyncio.sleep(0.05)
+    await started(presenter, "stage")
 
     await presenter.stop("stage")
     await asyncio.wait_for(moving, 2.0)
@@ -196,9 +208,9 @@ async def test_stop_also_ends_a_go_to_waiting_for_the_device(
     """Drop a go-to queued behind the move a stop ends."""
     stage.axis["x"].logic.gate = asyncio.Event()
     moving = asyncio.create_task(presenter.move_to("stage", {"x": 5.0}))
-    await asyncio.sleep(0.05)
+    await started(presenter, "stage")
     waiting = asyncio.create_task(presenter.move_to("stage", {"theta": 9.0}))
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0)
 
     await presenter.stop("stage")
     await asyncio.wait_for(asyncio.gather(moving, waiting), 2.0)
@@ -299,7 +311,7 @@ async def test_stop_reaches_every_axis_when_one_fails() -> None:
     positioner.sig_failed.connect(lambda *args: failures.append(args))
     stage.axis["x"].logic.gate = asyncio.Event()
     moving = asyncio.create_task(positioner.move("stage", "x", 1.0))
-    await asyncio.sleep(0.05)
+    await started(positioner, "stage")
 
     await positioner.stop("stage")
     await asyncio.wait_for(moving, 2.0)
@@ -316,7 +328,7 @@ async def test_stop_ends_a_go_to_between_its_axes() -> None:
     await stage.connect(mock=False)
     positioner = PositionerPresenter("positioner", devices={"quiet": stage})
     going = asyncio.create_task(positioner.move_to("quiet", {"a": 1.0, "b": 2.0}))
-    await asyncio.sleep(0.05)
+    await started(positioner, "quiet")
 
     await positioner.stop("quiet")
     await asyncio.wait_for(going, 2.0)
@@ -427,9 +439,9 @@ async def test_a_go_to_waiting_when_a_plan_takes_the_device_is_dropped(
     gate = asyncio.Event()
     stage.axis["x"].logic.gate = gate
     moving = asyncio.create_task(presenter.move_to("stage", {"x": 1.0}))
-    await asyncio.sleep(0.05)
+    await started(presenter, "stage")
     waiting = asyncio.create_task(presenter.move_to("stage", {"theta": 9.0}))
-    await asyncio.sleep(0.05)
+    await asyncio.sleep(0)
 
     presenter.set_locked(frozenset({"stage"}))
     gate.set()
@@ -445,7 +457,7 @@ async def test_shutdown_stops_a_running_move_and_the_readbacks(stage: Stage) -> 
     positioner.sig_readback.connect(lambda device, axis, value: seen.append(value))
     stage.axis["x"].logic.gate = asyncio.Event()
     moving = asyncio.create_task(positioner.move("stage", "x", 1.0))
-    await asyncio.sleep(0.05)
+    await started(positioner, "stage")
 
     await asyncio.to_thread(positioner.shutdown)
     await asyncio.wait_for(moving, 2.0)
@@ -455,7 +467,24 @@ async def test_shutdown_stops_a_running_move_and_the_readbacks(stage: Stage) -> 
     assert 4.0 not in seen
 
 
-def test_a_device_it_does_not_hold_is_refused(presenter: PositionerPresenter) -> None:
-    """Raise `KeyError` for a device the presenter does not hold."""
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(lambda p, stage: p.move("absent", "x", 1.0), id="move"),
+        pytest.param(lambda p, stage: p.move_to("absent", {"x": 1.0}), id="move-to"),
+        pytest.param(lambda p, stage: p.stop("absent"), id="stop"),
+        pytest.param(lambda p, stage: p.configure("absent-key", 1.0), id="unknown-key"),
+        pytest.param(
+            lambda p, stage: p.configure(stage.axis["x"].resolution.name, 1.0),
+            id="read-only-key",
+        ),
+    ],
+)
+async def test_an_unknown_device_or_key_is_refused(
+    presenter: PositionerPresenter,
+    stage: Stage,
+    call: Callable[[PositionerPresenter, Stage], Awaitable[None]],
+) -> None:
+    """Raise `KeyError` for a device the presenter does not hold, or a key it cannot write."""
     with pytest.raises(KeyError):
-        asyncio.run(presenter.move("absent", "x", 1.0))
+        await call(presenter, stage)

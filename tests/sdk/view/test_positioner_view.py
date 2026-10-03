@@ -397,3 +397,32 @@ def test_the_view_fits_a_narrow_dock(
     digit = view.fontMetrics().horizontalAdvance("0")
 
     assert view.minimumSizeHint().width() <= 26 * digit
+
+
+def test_a_name_freed_by_a_removal_is_used_again(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Name a new saved position after the lowest number no entry uses."""
+    view = make_view(settings, parent)
+    save = child(group(view, "focus"), QtWidgets.QAbstractButton, "save")
+    save.click()
+    save.click()
+
+    child(view, QtWidgets.QAbstractButton, "saved-remove:0").click()
+    save.click()
+
+    assert shown_names(view) == ["focus 2", "focus 1"]
+
+
+def test_a_lock_holds_when_the_saved_positions_are_rebuilt(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Keep a locked device's saved Go disabled after another entry is added."""
+    view = make_view(settings, parent)
+    child(group(view, "focus"), QtWidgets.QAbstractButton, "save").click()
+    view.set_locked(frozenset({"focus"}))
+
+    child(group(view, "stage"), QtWidgets.QAbstractButton, "save").click()
+
+    assert not child(view, QtWidgets.QAbstractButton, "saved-go:0").isEnabled()
+    assert child(view, QtWidgets.QAbstractButton, "saved-go:1").isEnabled()
