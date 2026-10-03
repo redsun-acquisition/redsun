@@ -109,6 +109,7 @@ class PositionerPresenter(Loggable):
         ] = []
         self._held: frozenset[str] = frozenset()
         self._from_setpoint: set[str] = set()
+        self._running: dict[str, asyncio.Task[object]] = {}
         try:
             self._info = run_coro(self._follow())
         except BaseException:
@@ -210,6 +211,11 @@ class PositionerPresenter(Loggable):
             *(maybe_await(target.stop(success=False)) for target in targets),
             return_exceptions=True,
         )
+        # a stop that reaches a device before its move status exists cancels
+        # nothing there, so the move in flight is cancelled here as well
+        running = self._running.get(device)
+        if running is not None and running is not asyncio.current_task():
+            running.cancel()
         failures = [result for result in results if isinstance(result, BaseException)]
         for failure in failures:
             self.logger.error(f"Stopping {device} failed: {failure!r}")
@@ -279,16 +285,23 @@ class PositionerPresenter(Loggable):
                 self.logger.info(f"Not moving {device}: a plan holds it")
                 return
             self.sig_moving.emit(device, True)
+            task = asyncio.current_task()
+            if task is not None:
+                self._running[device] = task
             try:
                 await motion(device, stops, *args, **kwargs)
             except BaseException as error:
-                task = asyncio.current_task()
-                if task is not None and task.cancelling():
+                stopped = self._stops[device] != stops
+                # a stop cancels the move it ends; a cancellation from anyone
+                # else, or one more than the stop sent, goes on up
+                if (
+                    task is not None
+                    and task.cancelling()
+                    and (not stopped or task.uncancel())
+                ):
                     raise
-                # a stopped move ends with the device's error, or a cancelled
-                # status; either way it ended as asked, not as a failure
                 self._from_setpoint.discard(device)
-                if self._stops[device] != stops:
+                if stopped:
                     self.logger.info(f"Stopped {device}")
                 elif isinstance(error, Exception):
                     self.logger.exception(f"Moving {device} failed")
@@ -298,6 +311,7 @@ class PositionerPresenter(Loggable):
             else:
                 self._from_setpoint.add(device)
             finally:
+                self._running.pop(device, None)
                 self.sig_moving.emit(device, False)
 
     async def _step(self, device: str, stops: int, axis: str, delta: float) -> None:
