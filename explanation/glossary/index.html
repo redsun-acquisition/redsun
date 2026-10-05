@@ -243,6 +243,8 @@
       
         
       
+        
+      
     
     
     
@@ -497,6 +499,8 @@
       
         
           
+        
+      
         
       
         
@@ -802,6 +806,35 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/builtin-positioner/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-move" viewBox="0 0 24 24"><path d="M12 2v20M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Reusing the built-in positioner
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -991,6 +1024,8 @@
   
     
     
+      
+        
       
         
       
@@ -1340,6 +1375,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/move-devices-by-hand/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-move" viewBox="0 0 24 24"><path d="M12 2v20M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to move devices by hand
 
     
   </span>
@@ -2982,6 +3046,8 @@
       
         
       
+        
+      
     
     
     
@@ -3538,6 +3604,33 @@
     
   
   19. Copy plan progress from bluesky
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0020-a-built-in-positioner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  20. A built-in positioner
 
     
   </span>
@@ -4232,6 +4325,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Slot
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Stack
       </span>
     </span>
   </a>
@@ -6293,6 +6397,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Stack
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#streamresource" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -6664,6 +6779,12 @@ named <code>sig_snake_case</code>. A value of a device is a
 <p>A slot is a method marked with <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-function&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-function-name&quot;&gt;slot&lt;/span&gt;" href="../../reference/api/ports/#redsun.slot"><code>slot</code></a>, which lets other
 components connect to it. Its name and arguments are public, since others
 rely on them.</p>
+<h3 id="stack">Stack<a class="headerlink" href="#stack" title="Permanent link">&para;</a></h3>
+<p>A stack is a <a href="#presenter">presenter</a> and a <a href="#view">view</a> written to work
+together: the signals of each match the slots of the other. The session still
+builds them as two components and joins them by <a href="#wiring">wiring</a>, so either
+can be replaced by one with the same ports. <code>redsun</code> ships one, the
+positioner, made of <code>PositionerPresenter</code> and <code>PositionerView</code>.</p>
 <h3 id="streamresource">StreamResource<a class="headerlink" href="#streamresource" title="Permanent link">&para;</a></h3>
 <p>A <code>StreamResource</code> is a <a href="#document">document</a> that names a file or a data
 store written by a device or its <a href="#service">service</a>, so that whoever reads

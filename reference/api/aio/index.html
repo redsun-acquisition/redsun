@@ -243,6 +243,8 @@
       
         
       
+        
+      
     
     
     
@@ -497,6 +499,8 @@
       
         
           
+        
+      
         
       
         
@@ -802,6 +806,35 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/builtin-positioner/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-move" viewBox="0 0 24 24"><path d="M12 2v20M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Reusing the built-in positioner
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -991,6 +1024,8 @@
   
     
     
+      
+        
       
         
       
@@ -1340,6 +1375,35 @@
     
   
   How to run a plan from a presenter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../how-to/move-devices-by-hand/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-move" viewBox="0 0 24 24"><path d="M12 2v20M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to move devices by hand
 
     
   </span>
@@ -2982,6 +3046,8 @@
       
         
       
+        
+      
     
     
     
@@ -3550,6 +3616,33 @@
 
                 
               
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../explanation/decisions/0020-a-built-in-positioner/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  20. A built-in positioner
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
             </ul>
           </nav>
         
@@ -4028,10 +4121,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#running-coroutines" class="md-nav__link">
+  <a href="#running-and-cancelling-coroutines" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Running coroutines
+        Running and cancelling coroutines
       </span>
     </span>
   </a>
@@ -4054,6 +4147,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;run_coro
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.aio.cancel_task" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;cancel_task
       </span>
     </span>
   </a>
@@ -5217,10 +5321,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#running-coroutines" class="md-nav__link">
+  <a href="#running-and-cancelling-coroutines" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Running coroutines
+        Running and cancelling coroutines
       </span>
     </span>
   </a>
@@ -5243,6 +5347,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;run_coro
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#redsun.aio.cancel_task" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;cancel_task
       </span>
     </span>
   </a>
@@ -5399,7 +5514,7 @@
 <h1 id="redsunaio">redsun.aio<a class="headerlink" href="#redsunaio" title="Permanent link">&para;</a></h1>
 <p>Design rationale:
 <a href="../../../explanation/decisions/0005-culsans-psygnal-async-backend/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 0005</a>.</p>
-<h2 id="running-coroutines">Running coroutines<a class="headerlink" href="#running-coroutines" title="Permanent link">&para;</a></h2>
+<h2 id="running-and-cancelling-coroutines">Running and cancelling coroutines<a class="headerlink" href="#running-and-cancelling-coroutines" title="Permanent link">&para;</a></h2>
 
 
 <div class="doc doc-object doc-module">
@@ -5413,8 +5528,9 @@
 <p><code>redsun</code> runs one background <code>asyncio</code> event loop per process. Device I/O and
 coroutines connected to <code>psygnal</code> signals run there, off the emitting GUI
 thread.</p>
-<p><code>run_coro</code> is for general use: synchronous code, such as a presenter method or
-a Qt slot, runs a coroutine on the loop with it and gets the result. The rest
+<p><code>run_coro</code> and <code>cancel_task</code> are for general use. Synchronous code, such as a
+presenter method or a Qt slot, runs a coroutine on the loop with <code>run_coro</code> and
+gets the result; <code>cancel_task</code> stops a task from whichever thread holds it. The rest
 of the module is set up by the container at startup and torn down at shutdown.
 Components must not build their own loop or install a backend.</p>
 
@@ -5537,6 +5653,28 @@ waiting would block the loop that has to run <em>awaitable</em>.</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="redsun.aio.cancel_task" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">cancel_task</span>
+
+
+<a href="#redsun.aio.cancel_task" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="language-python doc-signature highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">cancel_task</span><span class="p">(</span><span class="n">task</span><span class="p">:</span> <span class="n">Future</span><span class="p">[</span><span class="n">R</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</span></code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Cancel <em>task</em> from any thread.</p>
+<p>The cancellation is handed to the task's loop and reaches the task the
+next time it waits, or not at all if it has finished by then.</p>
 
 
     </div>

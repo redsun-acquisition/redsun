@@ -73,6 +73,9 @@
         <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0019-copy-plan-progress-from-bluesky/</loc>
       </url>
       <url>
+        <loc>https://redsun-acquisition.github.io/redsun/explanation/decisions/0020-a-built-in-positioner/</loc>
+      </url>
+      <url>
         <loc>https://redsun-acquisition.github.io/redsun/explanation/derived-products/</loc>
       </url>
       <url>
@@ -155,6 +158,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/migrate-from-0.13/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/how-to/move-devices-by-hand/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/how-to/package-a-plugin/</loc>
@@ -302,6 +308,9 @@
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/acquire-images/</loc>
+      </url>
+      <url>
+        <loc>https://redsun-acquisition.github.io/redsun/tutorials/builtin-positioner/</loc>
       </url>
       <url>
         <loc>https://redsun-acquisition.github.io/redsun/tutorials/device-protocols/</loc>
