@@ -4,8 +4,9 @@
 coroutines connected to `psygnal` signals run there, off the emitting GUI
 thread.
 
-`run_coro` is for general use: synchronous code, such as a presenter method or
-a Qt slot, runs a coroutine on the loop with it and gets the result. The rest
+`run_coro` and `cancel_task` are for general use. Synchronous code, such as a
+presenter method or a Qt slot, runs a coroutine on the loop with `run_coro` and
+gets the result; `cancel_task` stops a task from whichever thread holds it. The rest
 of the module is set up by the container at startup and torn down at shutdown.
 Components must not build their own loop or install a backend.
 """
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
     from psygnal._async import QueueItem
 
-__all__ = ["run_coro"]
+__all__ = ["cancel_task", "run_coro"]
 
 R = TypeVar("R")
 
@@ -234,6 +235,17 @@ def run_coro(
         # a timeout or an interrupt: nobody waits for the result any more
         future.cancel()
         raise
+
+
+def cancel_task(task: asyncio.Future[R]) -> None:
+    """Cancel *task* from any thread.
+
+    The cancellation is handed to the task's loop and reaches the task the
+    next time it waits, or not at all if it has finished by then.
+    """
+    # a task cancelled from another thread while it runs is cancelled again
+    # once it returns, after it finished its work
+    task.get_loop().call_soon_threadsafe(task.cancel)
 
 
 def on_shared_loop() -> bool:

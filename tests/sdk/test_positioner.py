@@ -24,6 +24,7 @@ from tests.sdk.mocks import (
     LaggingAxis,
     LimitedAxis,
     MockDetector,
+    PlainStatusAxis,
     QuietStage,
     SoftAxis,
     Stage,
@@ -619,4 +620,37 @@ async def test_a_device_that_is_its_own_axis_is_named_once(
     await positioner.move_to("focus", {"focus": 2.0})
 
     assert "Moving focus to 2.0" in caplog.text
+    positioner.shutdown()
+
+
+async def test_cancelling_the_slot_cancels_the_move(
+    presenter: PositionerPresenter, stage: Stage
+) -> None:
+    """Pass a cancellation of the slot on, leaving the axis where it was."""
+    gate = asyncio.Event()
+    stage.axis["x"].logic.gate = gate
+    moving = asyncio.create_task(presenter.move("stage", "x", 1.0))
+    await started(presenter, "stage")
+
+    moving.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await moving
+    gate.set()
+    await asyncio.sleep(0.05)
+
+    assert await position(stage.axis["x"]) == pytest.approx(0.0)
+
+
+async def test_a_move_whose_status_is_not_from_ophyd_async_is_refused() -> None:
+    """Report a move whose `set` returns another kind of status, saying why."""
+    axis = PlainStatusAxis("focus")
+    await axis.connect(mock=False)
+    positioner = PositionerPresenter("positioner", devices={"focus": axis})
+    failures: list[tuple[str, str]] = []
+    positioner.sig_failed.connect(lambda *args: failures.append(args))
+
+    await positioner.move_to("focus", {"focus": 1.0})
+
+    assert len(failures) == 1
+    assert "not an ophyd-async status" in failures[0][1]
     positioner.shutdown()

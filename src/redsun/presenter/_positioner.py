@@ -8,20 +8,22 @@ import dataclasses
 import math
 from dataclasses import KW_ONLY, dataclass, field
 from functools import partial
-from typing import TYPE_CHECKING, Concatenate, ParamSpec, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from bluesky.protocols import Checkable, Stoppable
 from bluesky.utils import maybe_await
 from ophyd_async.core import (
     AsyncConfigurable,
     AsyncReadable,
+    AsyncStatus,
     Device,
     SignalR,
+    WatchableAsyncStatus,
     walk_devices,
 )
 from psygnal import Signal
 
-from redsun.aio import run_coro
+from redsun.aio import cancel_task, run_coro
 from redsun.log import Loggable
 from redsun.ports import slot
 from redsun.registry import DeviceMapping  # noqa: TC001
@@ -40,8 +42,6 @@ if TYPE_CHECKING:
     from bluesky.protocols import Reading
 
     from redsun.utils.devices import Axis
-
-P = ParamSpec("P")
 
 
 def label(device: str, axis: str) -> str:
@@ -126,7 +126,7 @@ class PositionerPresenter(Loggable):
         self._unsubscribers: list[Callable[[], None]] = []
         self._held: frozenset[str] = frozenset()
         self._from_setpoint: set[str] = set()
-        self._running: dict[str, asyncio.Task[object]] = {}
+        self._moves: dict[str, asyncio.Task[None]] = {}
         try:
             self._info = run_coro(self._follow())
         except BaseException:
@@ -182,7 +182,17 @@ class PositionerPresenter(Loggable):
         if self._locks[device].locked():
             self.logger.debug(f"Skipping a step of {device}, still moving")
             return
-        await self._run(device, self._step, axis, delta)
+
+        async def targets() -> dict[str, float]:
+            location = await self._axes[device][axis].locate()
+            start = (
+                location["setpoint"]
+                if device in self._from_setpoint
+                else location["readback"]
+            )
+            return {axis: start + delta}
+
+        await self._run(device, targets)
 
     @slot
     async def move_to(self, device: str, positions: Mapping[str, float]) -> None:
@@ -196,7 +206,11 @@ class PositionerPresenter(Loggable):
         KeyError
             If the presenter does not hold *device*.
         """
-        await self._run(device, self._go, positions)
+
+        async def targets() -> Mapping[str, float]:
+            return positions
+
+        await self._run(device, targets)
 
     @slot
     async def stop(self, device: str) -> None:
@@ -228,17 +242,11 @@ class PositionerPresenter(Loggable):
             *(maybe_await(target.stop(success=False)) for target in targets),
             return_exceptions=True,
         )
-        # a stop that reaches a device before its move status exists cancels
-        # nothing there, so the move in flight is cancelled here as well
-        running = self._running.get(device)
-        if running is not None and running is not asyncio.current_task():
-            loop = running.get_loop()
-            if loop is asyncio.get_running_loop():
-                running.cancel()
-            else:
-                # a task cancelled from another thread while it runs is
-                # cancelled again once it returns, after it handled the stop
-                loop.call_soon_threadsafe(running.cancel)
+        # a stop that reaches a device before its move has started cancels
+        # nothing there, so the move it was asked for is cancelled as well
+        move = self._moves.get(device)
+        if move is not None:
+            cancel_task(move)
         failures = [result for result in results if isinstance(result, BaseException)]
         for failure in failures:
             self.logger.error(f"Stopping {device} failed: {failure!r}")
@@ -301,11 +309,7 @@ class PositionerPresenter(Loggable):
         await self._unfollow()
 
     async def _run(
-        self,
-        device: str,
-        motion: Callable[Concatenate[str, int, P], Awaitable[None]],
-        *args: P.args,
-        **kwargs: P.kwargs,
+        self, device: str, targets: Callable[[], Awaitable[Mapping[str, float]]]
     ) -> None:
         stops = self._stops[device]
         async with self._locks[device]:
@@ -316,53 +320,28 @@ class PositionerPresenter(Loggable):
                 self.logger.info(f"Not moving {device}: a plan holds it")
                 return
             self.sig_moving.emit(device, True)
-            task = asyncio.current_task()
-            if task is not None:
-                self._running[device] = task
+            failed = False
             try:
-                await motion(device, stops, *args, **kwargs)
-            except BaseException as error:
-                stopped = self._stops[device] != stops
-                # a stop cancels the move it ends; a cancellation from anyone
-                # else, or one more than the stop sent, goes on up
-                if (
-                    task is not None
-                    and task.cancelling()
-                    and (not stopped or task.uncancel())
-                ):
-                    raise
-                self._from_setpoint.discard(device)
-                if stopped:
-                    self.logger.info(f"Stopped {device}")
-                elif isinstance(error, Exception):
+                for axis, target in (await targets()).items():
+                    if self._stops[device] != stops:
+                        break
+                    await self._set(device, axis, target)
+            except Exception as error:
+                failed = True
+                if self._stops[device] == stops:
                     self.logger.exception(f"Moving {device} failed")
                     self.sig_failed.emit(device, str(error) or type(error).__name__)
-                else:
-                    raise
+            finally:
+                self.sig_moving.emit(device, False)
+            stopped = self._stops[device] != stops
+            if stopped:
+                self.logger.info(f"Stopped {device}")
+            if failed or stopped:
+                self._from_setpoint.discard(device)
             else:
                 self._from_setpoint.add(device)
-            finally:
-                self._running.pop(device, None)
-                self.sig_moving.emit(device, False)
 
-    async def _step(self, device: str, stops: int, axis: str, delta: float) -> None:
-        location = await self._axes[device][axis].locate()
-        start = (
-            location["setpoint"]
-            if device in self._from_setpoint
-            else location["readback"]
-        )
-        await self._set(device, stops, axis, start + delta)
-
-    async def _go(
-        self, device: str, stops: int, positions: Mapping[str, float]
-    ) -> None:
-        for axis, position in positions.items():
-            await self._set(device, stops, axis, position)
-
-    async def _set(self, device: str, stops: int, axis: str, target: float) -> None:
-        if self._stops[device] != stops:
-            raise RuntimeError(f"{device} was stopped")
+    async def _set(self, device: str, axis: str, target: float) -> None:
         item = self._axes[device][axis]
         # an axis that checks its own targets reads its limits as it moves,
         # so reading them here would cost every step a round trip
@@ -371,7 +350,24 @@ class PositionerPresenter(Loggable):
         try:
             self.check(device, axis, target)
             self.logger.info(f"Moving {label(device, axis)} to {target}")
-            await item.set(target)
+            status = item.set(target)
+            if not isinstance(status, AsyncStatus | WatchableAsyncStatus):
+                raise TypeError(
+                    f"{label(device, axis)}: set returned "
+                    f"{type(status).__name__}, not an ophyd-async status"
+                )
+            self._moves[device] = status.task
+            try:
+                # waiting on the task rather than awaiting it lets a stop cancel
+                # the move alone; leaving the block early cancels the move
+                async with status:
+                    await asyncio.wait({status.task})
+            finally:
+                del self._moves[device]
+            if status.task.cancelled():
+                raise RuntimeError(f"{label(device, axis)} was cancelled")
+            if (error := status.exception()) is not None:
+                raise error
         except Exception:
             # limits changed since they were read may be why, and the next
             # check and the view should have the new ones

@@ -23,6 +23,7 @@ from redsun import aio
 from redsun.aio import (
     AwaitableEvent,
     CulsansAsyncioBackend,
+    cancel_task,
     get_shared_loop,
     run_coro,
     set_async_backend,
@@ -569,3 +570,40 @@ def test_a_timed_out_call_is_cancelled_on_the_loop() -> None:
         run_coro(slow(), timeout=0.05)
 
     assert cancelled.wait(TIMEOUT)
+
+
+async def test_cancel_task_from_another_thread_spares_a_task_that_finishes_its_step() -> (
+    None
+):
+    """Leave a task finished when another thread cancels it while it runs."""
+    entered, release = threading.Event(), threading.Event()
+
+    async def work() -> str:
+        entered.set()
+        # holds this loop's thread, so the cancel arrives mid-step
+        release.wait(2.0)
+        return "done"
+
+    def cancel_then_release() -> None:
+        entered.wait(2.0)
+        cancel_task(task)
+        release.set()
+
+    task = asyncio.create_task(work())
+    thread = threading.Thread(target=cancel_then_release)
+    thread.start()
+    result = await task
+    thread.join()
+
+    assert result == "done"
+
+
+async def test_cancel_task_cancels_a_waiting_task_of_the_calling_loop() -> None:
+    """Cancel a waiting task of the loop that asks for it."""
+    task = asyncio.create_task(asyncio.Event().wait())
+    await asyncio.sleep(0)
+
+    cancel_task(task)
+
+    with pytest.raises(asyncio.CancelledError):
+        await task

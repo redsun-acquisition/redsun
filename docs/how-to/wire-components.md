@@ -204,7 +204,10 @@ It is delivered differently from a plain method:
 - an error inside it is logged, and later emissions are still delivered.
 
 If you need the emitter to wait, connect a plain method that calls
-`run_coro(...)` from `redsun.aio` instead.
+`run_coro(...)` from `redsun.aio` instead. To stop a task such a slot started,
+for instance from a stop button, use `cancel_task(task)` from `redsun.aio`: called
+from another thread, it waits for the task to pause rather than cancelling it
+while it runs.
 
 Every session installs the async backend `psygnal` needs for coroutine slots
 when it is built, and removes it at shutdown.

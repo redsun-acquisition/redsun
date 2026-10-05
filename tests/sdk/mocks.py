@@ -265,3 +265,26 @@ class HangingAxis(SoftAxis):
         """Wait forever."""
         await asyncio.Event().wait()
         raise AssertionError("unreachable")
+
+
+class PlainStatus:
+    """A finished bluesky status that is not an ophyd-async one."""
+
+    done = True
+    success = True
+
+    def add_callback(self, callback: Callable[[PlainStatus], None]) -> None:
+        """Call *callback* at once, the status being finished."""
+        callback(self)
+
+    def exception(self, timeout: float | None = 0.0) -> BaseException | None:
+        """Report no error."""
+        return None
+
+
+class PlainStatusAxis(SoftAxis):
+    """A soft axis whose `set` returns a status not made by ophyd-async."""
+
+    def set(self, value: float, timeout: object = None) -> PlainStatus:  # type: ignore[override]
+        """Return a finished status without moving."""
+        return PlainStatus()
