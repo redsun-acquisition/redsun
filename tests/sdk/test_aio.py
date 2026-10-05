@@ -18,6 +18,7 @@ from bluesky.run_engine import _ensure_event_loop_running
 from culsans import QueueShutDown
 from psygnal import Signal, get_async_backend
 from psygnal._async import AsyncioBackend, _AsyncBackend, clear_async_backend
+from psygnal._weak_callback import weak_callback
 
 from redsun import aio
 from redsun.aio import (
@@ -368,31 +369,30 @@ def test_unexpected_drain_failure_is_logged(
     assert record.exc_info is not None
 
 
-def test_dead_weak_callback_is_skipped(backend: CulsansAsyncioBackend) -> None:
-    """Skip a slot whose owner was collected and keep delivering to live slots."""
-    delivered = threading.Event()
+def test_dead_weak_callback_is_skipped(
+    backend: CulsansAsyncioBackend, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Skip a queued slot whose owner was collected and keep delivering to live slots."""
+    alive = threading.Event()
 
     class Presenter:
         async def move(self, motor: str, axis: str, position: float) -> None:
-            delivered.set()
-
-    emitter, presenter = Emitter(), Presenter()
-    emitter.sig_motor_move.connect(presenter.move)
-    del presenter
-    gc.collect()
-
-    emitter.sig_motor_move.emit("stage", "x", 1.0)
-    assert not delivered.wait(0.3)
-
-    # the drain is still consuming after dereference() returned None
-    alive = threading.Event()
+            alive.set()
 
     async def on_move(motor: str, axis: str, position: float) -> None:
         alive.set()
 
-    emitter.sig_motor_move.connect(on_move)
-    emitter.sig_motor_move.emit("stage", "x", 2.0)
+    presenter = Presenter()
+    dead = weak_callback(presenter.move)
+    del presenter
+    gc.collect()
+    assert dead.dereference() is None
+
+    backend.put((dead, ("stage", "x", 1.0)))
+    backend.put((weak_callback(on_move), ("stage", "x", 2.0)))
+
     assert alive.wait(TIMEOUT)
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
 @pytest.mark.parametrize("run", [1, 2])
@@ -448,13 +448,16 @@ def test_backend_buffers_items_put_before_the_drain_runs() -> None:
     async def on_move(motor: str, axis: str, position: float) -> None:
         delivered.set()
 
+    loop_free = threading.Event()
+    # the drain starts on the shared loop, so a held loop keeps it from running
+    get_shared_loop().call_soon_threadsafe(loop_free.wait, TIMEOUT)
     set_async_backend()
     emitter = Emitter()
     emitter.sig_motor_move.connect(on_move)
 
-    # no wait on `running` - the queue must hold the item until the drain
-    # is scheduled on the shared loop
     emitter.sig_motor_move.emit("stage", "x", 1.0)
+    loop_free.set()
+
     assert delivered.wait(TIMEOUT)
 
 

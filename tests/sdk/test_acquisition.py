@@ -13,6 +13,7 @@ from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 
 from redsun import HasActions
+from redsun.aio import get_shared_loop
 from redsun.engine.actions import ActionManager
 from redsun.path_provider import SessionPathProvider
 from redsun.presenter import AcquisitionPresenter, DescribesPlans
@@ -239,9 +240,14 @@ def test_a_stop_right_after_launch_stops_the_plan(
 ) -> None:
     """Stop a plan asked to stop before the engine has started it."""
     seen, ended = record(presenter)
+    loop_free = threading.Event()
+    # the engine enters its running state on the shared loop, so a held
+    # loop keeps the plan launched but not started
+    get_shared_loop().call_soon_threadsafe(loop_free.wait, 10)
 
     presenter.launch("hold", {})
     presenter.stop()
+    loop_free.set()
 
     assert ended.wait(10)
     assert seen == [("started", "hold"), ("done", "hold")]
