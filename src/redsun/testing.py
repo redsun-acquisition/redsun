@@ -82,6 +82,8 @@ def build() -> Generator[BuildSession, None, None]:
     It takes a session class, made with the configuration given and laid over
     what the class declares, or a session already made. Sessions are shut
     down in reverse order; one the test shut down itself runs nothing again.
+    A shutdown that raises does not stop the others: the first error is
+    raised once every session has been shut down.
     """
     built: list[Session] = []
 
@@ -96,8 +98,14 @@ def build() -> Generator[BuildSession, None, None]:
         return session
 
     yield build_one
+    errors: list[Exception] = []
     for session in reversed(built):
-        session.shutdown()
+        try:
+            session.shutdown()
+        except Exception as e:  # noqa: BLE001 - raised once every session is shut down
+            errors.append(e)
+    if errors:
+        raise errors[0]
 
 
 @pytest.fixture(autouse=True)
