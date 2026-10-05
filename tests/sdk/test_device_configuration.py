@@ -83,3 +83,12 @@ async def test_a_failing_receiver_does_not_reach_the_device(
     await axis.velocity.set(3.0)
 
     assert "Relaying a configuration value" in caplog.text
+
+
+async def test_each_key_is_filed_under_its_owner(axis: SoftAxis) -> None:
+    """Record the owner of every key, whatever the device's own name."""
+    configuration = DeviceConfiguration("lights")
+
+    await configuration.add("focus-488", axis)
+
+    assert set(configuration.configuration.owners.values()) == {"focus-488"}

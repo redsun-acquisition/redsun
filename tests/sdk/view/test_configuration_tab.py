@@ -61,3 +61,27 @@ def test_an_empty_configuration_says_so(qapp: QtWidgets.QApplication) -> None:
     assert row is not None
     assert row.text(0) == "No device has a configuration."
     assert not row.flags() & QtCore.Qt.ItemFlag.ItemIsSelectable
+
+
+def test_an_owner_named_with_a_dash_is_kept_whole(
+    qapp: QtWidgets.QApplication,
+) -> None:
+    """Group and lock the rows of an owner whose name holds a dash."""
+    key = "laser-488-wavelength"
+    tab = ConfigurationTab(
+        Configuration(
+            descriptors={key: {"source": "soft://w", "dtype": "integer", "shape": []}},
+            readings={key: {"value": 488, "timestamp": 0.0}},
+            writable={},
+            owners={key: "laser-488"},
+        )
+    )
+    row = tab.topLevelItem(0)
+    editors = [w for w in tab.findChildren(QtWidgets.QWidget) if w.isEnabled()]
+
+    tab.set_locked(frozenset({"laser-488"}))
+    locked = [w for w in editors if not w.isEnabled()]
+
+    assert row is not None
+    assert row.text(0) == "laser-488"
+    assert locked

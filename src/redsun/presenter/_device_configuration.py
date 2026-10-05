@@ -33,7 +33,6 @@ class DeviceConfiguration(Loggable):
         """Hold no device yet; *name* names the owner in log records."""
         self.name = name
         self._configuration = Configuration(descriptors={}, readings={}, writable={})
-        self._owners: dict[str, str] = {}
         self._held: frozenset[str] = frozenset()
         self._unsubscribers: list[Callable[[], None]] = []
 
@@ -61,7 +60,9 @@ class DeviceConfiguration(Loggable):
         self._configuration.descriptors.update(configuration.descriptors)
         self._configuration.readings.update(configuration.readings)
         self._configuration.writable.update(configuration.writable)
-        self._owners.update(dict.fromkeys(configuration.descriptors, owner))
+        self._configuration.owners.update(
+            dict.fromkeys(configuration.descriptors, owner)
+        )
         return configuration
 
     async def configure(self, key: str, value: object) -> str:
@@ -76,7 +77,7 @@ class DeviceConfiguration(Loggable):
             If *key* names no writable configuration signal.
         """
         signal = self._configuration.writable[key]
-        owner = self._owners[key]
+        owner = self._configuration.owners[key]
         if owner in self._held:
             self.logger.warning(f"Not setting {key}: a plan holds {owner}")
         else:

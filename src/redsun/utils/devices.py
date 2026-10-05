@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from numbers import Real
 from typing import TYPE_CHECKING, Any, Protocol, TypeGuard, runtime_checkable
 
@@ -96,6 +96,9 @@ class Configuration:
 
     writable: dict[str, SignalRW[Any]]
     """The writable signals among them, by key."""
+
+    owners: dict[str, str] = field(default_factory=dict)
+    """Name of the device each key belongs to; empty when not known."""
 
 
 def is_axis(item: object) -> TypeGuard[Axis]:
