@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
 import pytest
+from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
-from ophyd_async.core import AsyncReadable
 
 from redsun import HasActions
 from redsun.engine.actions import ActionManager
@@ -66,7 +66,7 @@ class Plans:
         self.running.set()
         yield from bps.sleep(30)
 
-    def read(self, device: AsyncReadable) -> MsgGenerator[None]:
+    def read(self, device: Readable[Any]) -> MsgGenerator[None]:
         """Read one device."""
         yield from bps.rd(device)
 

@@ -106,6 +106,7 @@ engine(my_plan(*args, **kwargs))
 ::: redsun.presenter.utils
     options:
       members:
+        - device_class
         - get_choice_list
         - isdevice
         - isdevicesequence

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 import pytest
+from bluesky.protocols import Readable
 from bluesky.utils import MsgGenerator
 from magicgui import widgets as mgw
 from ophyd_async.core import (
@@ -789,3 +790,30 @@ class TestCreateParamWidget:
         p = _param("snap", PlanAction, actions=PlanAction(name="snap"))
         w = create_param_widget(p)
         assert isinstance(w, mgw.LineEdit)
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        pytest.param(Readable[Any], id="single"),
+        pytest.param(Sequence[Readable[Any]], id="sequence"),
+    ],
+)
+def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
+    annotation: Any, one_detector: dict[str, _MockDetector]
+) -> None:
+    """Offer and resolve the devices of a protocol written with type arguments."""
+
+    def plan(dets: Any) -> MsgGenerator[None]:
+        yield from ()
+
+    plan.__annotations__["dets"] = annotation
+
+    spec = create_plan_spec(plan, one_detector)
+    resolved = resolve_arguments(spec, {"dets": ["cam"]}, one_detector)
+
+    assert spec.parameters[0].choices == ["cam"]
+    assert spec.parameters[0].device_proto is Readable
+    assert one_detector["cam"] in (
+        resolved["dets"] if isinstance(resolved["dets"], list) else [resolved["dets"]]
+    )

@@ -13,6 +13,7 @@ from typing import Any, TypeVar, get_args, get_origin
 from ophyd_async.core import Device as OADevice
 
 __all__ = [
+    "device_class",
     "get_choice_list",
     "isdevice",
     "isdevicesequence",
@@ -44,12 +45,26 @@ def get_choice_list(
     ]
 
 
+def device_class(ann: Any) -> Any:
+    """Return what devices are checked against for *ann*: its origin when it has type arguments.
+
+    `Readable[Any]` gives `Readable`, since `isinstance` takes no type
+    arguments; any other annotation is returned unchanged.
+    """
+    origin = get_origin(ann)
+    return origin if origin is not None and _is_device_annotation(origin) else ann
+
+
 def _is_device_annotation(ann: Any) -> bool:
     """Return True if *ann* is a [`Device`][ophyd_async.core.Device] subclass or a `@runtime_checkable Protocol`.
 
-    Any `@runtime_checkable` Protocol is accepted; each device is checked
-    later with `isinstance(device, proto)`.
+    Any `@runtime_checkable` Protocol is accepted, with or without type
+    arguments; each device is checked later with `isinstance` against the
+    class without them.
     """
+    origin = get_origin(ann)
+    if origin is not None:
+        ann = origin
     try:
         if issubclass(ann, OADevice):
             return True
