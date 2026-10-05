@@ -14,6 +14,16 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Lights
+
+::: redsun.presenter.LightPresenter
+    options:
+      show_root_heading: true
+
+::: redsun.presenter.DescribesLights
+    options:
+      show_root_heading: true
+
 ## Shared parts
 
 ::: redsun.presenter.DeviceConfiguration
