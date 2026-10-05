@@ -37,6 +37,10 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+::: redsun.view.qt.builtins.AcquisitionView
+    options:
+      show_root_heading: true
+
 ::: redsun.view.qt.builtins.LightView
     options:
       show_root_heading: true

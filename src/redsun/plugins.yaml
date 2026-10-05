@@ -3,6 +3,7 @@ presenters:
   lights: "redsun.presenter:LightPresenter"
   positioner: "redsun.presenter:PositionerPresenter"
 views:
+  acquisition: "redsun.view.qt.builtins:AcquisitionView"
   lights: "redsun.view.qt.builtins:LightView"
   logs: "redsun.view.qt.builtins:LogView"
   positioner: "redsun.view.qt.builtins:PositionerView"
