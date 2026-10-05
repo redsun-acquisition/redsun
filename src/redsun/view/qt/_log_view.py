@@ -76,7 +76,7 @@ class LogView(QtW.QWidget):
     `Clear log window` and `Save logs...` act on the tab and service shown.
 
     Records are coloured by level, with one palette for light and one for dark
-    backgrounds, chosen from the console's background and redrawn when the
+    backgrounds, chosen from the view's background and redrawn when the
     palette changes.
 
     New records are drawn in batches, so a burst does not stall the window, and
@@ -173,7 +173,7 @@ class LogView(QtW.QWidget):
         return console
 
     def changeEvent(self, event: QtCore.QEvent | None) -> None:
-        """Redraw in the colours of the palette the console now carries."""
+        """Redraw in the colours of the palette just applied."""
         if event is not None:
             super().changeEvent(event)
             if event.type() == QtCore.QEvent.Type.PaletteChange:
@@ -314,8 +314,9 @@ class LogView(QtW.QWidget):
 
     @property
     def colors(self) -> dict[int, str]:
-        """The level colours in use, chosen from the console's background."""
-        base = self._console.palette().color(QtGui.QPalette.ColorRole.Base)
+        """The level colours in use, chosen from the view's background."""
+        # the consoles receive a new palette only after the view is told of it
+        base = self.palette().color(QtGui.QPalette.ColorRole.Base)
         return ON_LIGHT if base.lightness() >= MID_LIGHTNESS else ON_DARK
 
     def _write(

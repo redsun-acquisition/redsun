@@ -450,12 +450,16 @@ def test_choosing_a_level_in_the_selector_filters_the_console(
     assert "an info line" not in text
 
 
+def _with_base(palette: QtGui.QPalette, background: str) -> QtGui.QPalette:
+    """Return a copy of *palette* whose `Base` colour is *background*."""
+    changed = QtGui.QPalette(palette)
+    changed.setColor(QtGui.QPalette.ColorRole.Base, QtGui.QColor(background))
+    return changed
+
+
 def _repaint(view: LogView, background: str) -> None:
-    """Give the console a *background* and let it react to the new palette."""
-    palette = view._console.palette()
-    palette.setColor(QtGui.QPalette.ColorRole.Base, QtGui.QColor(background))
-    view._console.setPalette(palette)
-    view.changeEvent(QtCore.QEvent(QtCore.QEvent.Type.PaletteChange))
+    """Give the view a palette with a *background*."""
+    view.setPalette(_with_base(view.palette(), background))
 
 
 @pytest.mark.parametrize(
@@ -483,20 +487,25 @@ def _rendered(view: LogView) -> str:
 
 
 def test_a_palette_change_redraws_what_is_on_screen(
-    make_view: Callable[[], LogView], logs: logging.Logger
+    qapp: QApplication, make_view: Callable[[], LogView], logs: logging.Logger
 ) -> None:
-    """Redraw the shown records in the new colours when the palette changes."""
-    view = make_view()
-    _repaint(view, "#ffffff")
-    logs.error("the detector answered nothing")
-    _draw_pending(view)
-    assert ON_LIGHT[logging.ERROR] in _rendered(view)
+    """Redraw the shown records in the colours of the application palette applied."""
+    original = QtGui.QPalette(qapp.palette())
+    try:
+        qapp.setPalette(_with_base(original, "#ffffff"))
+        view = make_view()
+        logs.error("the detector answered nothing")
+        _draw_pending(view)
+        assert ON_LIGHT[logging.ERROR] in _rendered(view)
 
-    _repaint(view, "#1e1e1e")
+        qapp.setPalette(_with_base(original, "#1e1e1e"))
+        qapp.processEvents()
 
-    html = _rendered(view)
-    assert ON_DARK[logging.ERROR] in html
-    assert ON_LIGHT[logging.ERROR] not in html
+        html = _rendered(view)
+        assert ON_DARK[logging.ERROR] in html
+        assert ON_LIGHT[logging.ERROR] not in html
+    finally:
+        qapp.setPalette(original)
 
 
 def test_a_qt_session_docks_the_built_in_view_at_the_bottom(
