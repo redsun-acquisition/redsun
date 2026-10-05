@@ -12,13 +12,13 @@
         <meta name="author" content="Jacopo Abramo">
       
       
-        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/package-a-plugin/">
+        <link rel="canonical" href="https://redsun-acquisition.github.io/redsun/how-to/switch-and-dim-lights/">
       
       
-        <link rel="prev" href="../share-a-value/">
+        <link rel="prev" href="../move-devices-by-hand/">
       
       
-        <link rel="next" href="../test-a-plugin/">
+        <link rel="next" href="../write-a-continuous-plan/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>How to package components as a plugin - Redsun</title>
+        <title>How to switch and dim lights - Redsun</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#how-to-package-components-as-a-plugin" class="md-skip">
+        <a href="#how-to-switch-and-dim-lights" class="md-skip">
           Skip to content
         </a>
       
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              How to package components as a plugin
+              How to switch and dim lights
             
           </span>
         </div>
@@ -1290,38 +1290,10 @@
                   
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73zM12 22V12"/><path d="M3.29 7 12 12l8.71-5M7.5 4.27l9 5.15"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-  How to package components as a plugin
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../package-a-plugin/" class="md-nav__link">
         
   
   
@@ -1338,126 +1310,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Prerequisites
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lay-out-the-package" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Lay out the package
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#write-the-manifest" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Write the manifest
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#register-the-entry-point" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Register the entry point
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-it" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Install it
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#name-the-components-in-a-session-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Name the components in a session file
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#share-a-value-from-the-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Share a value from the plugin
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#list-a-service" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        List a service
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#read-a-failure" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Read a failure
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1583,10 +1435,38 @@
                   
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../switch-and-dim-lights/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-lightbulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  How to switch and dim lights
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1603,6 +1483,115 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Prerequisites
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-makes-a-device-a-light" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What makes a device a light
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#declare-it-in-a-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Declare it in a session file
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#declare-it-in-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Declare it in Python
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-the-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Use the view
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hold-the-lights-during-a-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Hold the lights during a plan
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customize-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Customize it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-example-in-full" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The example in full
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -5456,10 +5445,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#lay-out-the-package" class="md-nav__link">
+  <a href="#what-makes-a-device-a-light" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Lay out the package
+        What makes a device a light
       </span>
     </span>
   </a>
@@ -5467,10 +5456,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#write-the-manifest" class="md-nav__link">
+  <a href="#declare-it-in-a-session-file" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Write the manifest
+        Declare it in a session file
       </span>
     </span>
   </a>
@@ -5478,10 +5467,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#register-the-entry-point" class="md-nav__link">
+  <a href="#declare-it-in-python" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Register the entry point
+        Declare it in Python
       </span>
     </span>
   </a>
@@ -5489,10 +5478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#install-it" class="md-nav__link">
+  <a href="#use-the-view" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Install it
+        Use the view
       </span>
     </span>
   </a>
@@ -5500,10 +5489,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#name-the-components-in-a-session-file" class="md-nav__link">
+  <a href="#hold-the-lights-during-a-plan" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Name the components in a session file
+        Hold the lights during a plan
       </span>
     </span>
   </a>
@@ -5511,10 +5500,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#share-a-value-from-the-plugin" class="md-nav__link">
+  <a href="#customize-it" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Share a value from the plugin
+        Customize it
       </span>
     </span>
   </a>
@@ -5522,21 +5511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#list-a-service" class="md-nav__link">
+  <a href="#the-example-in-full" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        List a service
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#read-a-failure" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Read a failure
+        The example in full
       </span>
     </span>
   </a>
@@ -5686,123 +5664,214 @@
   
 
 
-<h1 id="how-to-package-components-as-a-plugin">How to package components as a plugin<a class="headerlink" href="#how-to-package-components-as-a-plugin" title="Permanent link">&para;</a></h1>
-<p>Ship devices, presenters and views in an installable package, so a
-<a href="../../explanation/glossary/#session-file">session file</a> can name them without
-any Python. <a href="../../explanation/plugins/">How plugins provide components</a>
-explains what a <a href="../../explanation/glossary/#plugin">plugin</a> is and how a
-session finds one.</p>
+<h1 id="how-to-switch-and-dim-lights">How to switch and dim lights<a class="headerlink" href="#how-to-switch-and-dim-lights" title="Permanent link">&para;</a></h1>
+<p>Add the built-in light stack to a session: a presenter that switches your
+light sources on and off and sets their intensity, and a view with a group per
+light. <a href="../../explanation/decisions/0021-a-built-in-light-stack/"><abbr title="Architecture Decision Record. A numbered page recording one decision and the reasons for it.">ADR</abbr> 21</a>
+explains the design.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>Components that already work when a session class declares them. See
-<a href="../write-a-component/">Write a component</a>.</p>
-<h2 id="lay-out-the-package">Lay out the package<a class="headerlink" href="#lay-out-the-package" title="Permanent link">&para;</a></h2>
-<p>Put the components in modules of an ordinary package, with a manifest file
-beside them. The package depends on <code>redsun</code>, and on what its components
-import:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mylab/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>|-- pyproject.toml
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>`-- src/mylab/
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    |-- __init__.py
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    |-- redsun.yaml
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    |-- devices.py
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    |-- presenters.py
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    `-- views.py
+<p>Devices with an <code>enabled</code> signal, and an <code>intensity</code> signal for those you dim.
+The Python blocks below are parts of one script; the whole script is at the
+end.</p>
+<h2 id="what-makes-a-device-a-light">What makes a device a light<a class="headerlink" href="#what-makes-a-device-a-light" title="Permanent link">&para;</a></h2>
+<p>A device is a light when its <code>enabled</code> is a boolean signal it can write. When
+it also has an <code>intensity</code>, a numeric signal it can write, it is dimmable; a
+light without one is switched on and off only. A device whose <code>enabled</code> is not
+a boolean signal, such as a detector with an <code>enabled</code> counter, is not taken.</p>
+<p>The wavelength and other details are not part of this contract. Declare them
+as configuration, with <code>StandardReadableFormat.CONFIG_SIGNAL</code>, and they appear
+in the view's Configuration tab:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">LimitedBackend</span><span class="p">(</span><span class="n">SoftSignalBackend</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="sd">"""Keeps a value in memory and reports limits, as a hardware record does."""</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_datakey</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataKey</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="n">key</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_datakey</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n">key</span><span class="p">[</span><span class="s2">"limits"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"control"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"low"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">}}</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="k">return</span> <span class="n">key</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLaser</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">():</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="n">SignalRW</span><span class="p">(</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                <span class="n">LimitedBackend</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mW"</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>            <span class="p">)</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">(</span><span class="n">StandardReadableFormat</span><span class="o">.</span><span class="n">CONFIG_SIGNAL</span><span class="p">):</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="mi">488</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"nm"</span><span class="p">)</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLed</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">():</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
 </span></code></pre></div>
-<h2 id="write-the-manifest">Write the manifest<a class="headerlink" href="#write-the-manifest" title="Permanent link">&para;</a></h2>
-<p>List each class under its group, by an id of your choice, as
-<code>module:ClassName</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># yaml-language-server: $schema=https://redsun-acquisition.github.io/redsun/reference/schemas/plugin-manifest.schema.json</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">devices</span><span class="p">:</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">motor</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.devices:MyMotor"</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">controller</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.presenters:MyController"</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">motor-view</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.views:MyView"</span>
+<p>An intensity whose descriptor reports limits, as an <abbr title="A set of tools for controlling instruments over a network.">EPICS</abbr> record does, gets a
+slider as well as a number field. The <code>LimitedBackend</code> above stands in for
+such a device; a soft signal reports no limits, and a light whose intensity
+has none gets the number field alone.</p>
+<h2 id="declare-it-in-a-session-file">Declare it in a session file<a class="headerlink" href="#declare-it-in-a-session-file" title="Permanent link">&para;</a></h2>
+<p>Both components are built into <code>redsun</code>, under the plugin id <code>lights</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">presenters</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">lights</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">views</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">lights_view</span><span class="p">:</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redsun</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nt">wiring</span><span class="p">:</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">lights_view.sig_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights.set_enabled</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">lights_view.sig_intensity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights.set_intensity</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">lights_view.sig_configure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights.configure</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">lights.sig_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights_view.update_enabled</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">lights.sig_intensity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights_view.update_intensity</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nt">lights.sig_failed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights_view.set_failed</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">lights.sig_configuration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lights_view.update_configuration</span>
 </span></code></pre></div>
-<p>The first line lets an editor with a YAML language server check the file as
-you type. <a href="../../reference/plugin-manifest/">Plugin manifest</a> lists every key.</p>
-<h2 id="register-the-entry-point">Register the entry point<a class="headerlink" href="#register-the-entry-point" title="Permanent link">&para;</a></h2>
-<p>In <code>pyproject.toml</code>, register the manifest in the <code>redsun.plugins</code> group. The
-value is the path of the manifest inside the package:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[project.entry-points.</span><span class="s2">"redsun.plugins"</span><span class="k">]</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">mylab</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"redsun.yaml"</span>
+<p>The presenter takes every light of the session, or only those named under
+<code>include</code>. A light that cannot be read within <code>timeout</code> seconds (10 by
+default) when the session starts is left out with a warning.</p>
+<h2 id="declare-it-in-python">Declare it in Python<a class="headerlink" href="#declare-it-in-python" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"session"</span><span class="p">:</span> <span class="s2">"my-lab"</span><span class="p">}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">laser</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyLaser</span><span class="p">]</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">led</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyLed</span><span class="p">]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">lights</span><span class="p">:</span> <span class="n">AsPresenter</span><span class="p">[</span><span class="n">LightPresenter</span><span class="p">]</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">lights_view</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">LightView</span><span class="p">]</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Link</span><span class="p">]:</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_enabled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_enabled</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_intensity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_intensity</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_configure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">configure</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_enabled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_enabled</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_intensity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_intensity</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_failed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">set_failed</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_configuration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_configuration</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>    <span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
-<p>The session looks for the manifest in the package whose import name is the
-entry point's name, with each <code>-</code> read as <code>_</code>. So <code>mylab</code> finds <code>mylab</code>, and
-<code>my-lab</code> would look for a package <code>my_lab</code>. The entry point's name is also the
-<code>plugin_name</code> a session file uses. Leave the <code>name</code> key out of the manifest,
-or give it the entry point's name: a manifest naming itself otherwise is
-skipped.</p>
-<p>The manifest must be in the built package. <code>hatchling</code> includes every file
-under the package folder; other build tools may need it listed as package
-data. To check, build a wheel and look for <code>mylab/redsun.yaml</code> in it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>build<span class="w"> </span>--wheel
+<h2 id="use-the-view">Use the view<a class="headerlink" href="#use-the-view" title="Permanent link">&para;</a></h2>
+<p><img alt="The light view of the example session: a laser with its on/off button,
+slider and intensity field, and an LED that is on" src="../images/lights.png" /></p>
+<ul>
+<li>The button of each light says whether it is on, as the light reads back. A
+  click asks for the other state, and the button changes when the light
+  confirms it.</li>
+<li>The slider and the number field show the intensity the light reads back,
+  except while you drag the slider or type in the field. The intensity is
+  written when you let the slider go, when you press Enter or leave the field
+  after changing it, and at each step of the field's arrows or the slider's
+  keys. Leaving the field unchanged writes nothing.</li>
+<li>With "Write while dragging" ticked in the Advanced tab, the intensity is also
+  written during a drag, at most every 100 ms. The view's
+  <code>write_while_dragging</code> keyword sets the default; once ticked or cleared in the
+  tab, the choice is kept in the session's <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;Settings&lt;/span&gt;" href="../../reference/api/session/#redsun.Settings"><code>Settings</code></a> and
+  wins over the keyword.</li>
+<li>When intensities are asked for faster than the light answers, only the
+  newest is written after the one in progress.</li>
+<li>A value outside the limits, an intensity for a light without one, or a write
+  that fails is shown in the light's group, after "failed".</li>
+<li>The Configuration tab shows each light's configuration, such as its
+  wavelength, and writes the entries that can be written.</li>
+</ul>
+<h2 id="hold-the-lights-during-a-plan">Hold the lights during a plan<a class="headerlink" href="#hold-the-lights-during-a-plan" title="Permanent link">&para;</a></h2>
+<p>A plan that locks a light disables its controls, and the presenter refuses
+writes to it. The engine is not a session component, so these links are made
+in <code>wire()</code>, from the presenter that holds the engine:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">set_locked</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrl</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">sig_locks_changed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_locked</span>
 </span></code></pre></div>
-<h2 id="install-it">Install it<a class="headerlink" href="#install-it" title="Permanent link">&para;</a></h2>
-<p>Install the package into the environment that runs the session, for example
-as an editable dependency of your session's project:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>add<span class="w"> </span>--editable<span class="w"> </span>../mylab
+<h2 id="customize-it">Customize it<a class="headerlink" href="#customize-it" title="Permanent link">&para;</a></h2>
+<p>The view takes a <code>group_class</code> for the widget built per light, and its <code>tabs</code>
+property holds the Lights, Configuration and Advanced tabs, to which a
+subclass may add. A stack of your own that reads and writes device
+configuration can use the same parts the light stack and the positioner do:
+<a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;DeviceConfiguration&lt;/span&gt;" href="../../reference/api/presenter/#redsun.presenter.DeviceConfiguration"><code>DeviceConfiguration</code></a> in the
+presenter and <a class="autorefs autorefs-internal" title="&lt;code class=&quot;doc-symbol doc-symbol-heading doc-symbol-class&quot;&gt;&lt;/code&gt;            &lt;span class=&quot;doc doc-object-name doc-class-name&quot;&gt;ConfigurationTab&lt;/span&gt;" href="../../reference/api/view/#redsun.view.qt.treeview.ConfigurationTab"><code>ConfigurationTab</code></a>
+in the view.</p>
+<h2 id="the-example-in-full">The example in full<a class="headerlink" href="#the-example-in-full" title="Permanent link">&para;</a></h2>
+<details class="example">
+<summary>The whole script</summary>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="sd">"""A session switching and dimming two lights with the built-in light stack."""</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>  <span class="c1"># noqa: TC003</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ophyd_async.core</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">SignalRW</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="n">SoftSignalBackend</span><span class="p">,</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">StandardReadable</span><span class="p">,</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">StandardReadableFormat</span><span class="p">,</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">soft_signal_rw</span><span class="p">,</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">)</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsDevice</span><span class="p">,</span> <span class="n">AsPresenter</span><span class="p">,</span> <span class="n">AsView</span><span class="p">,</span> <span class="n">Link</span>  <span class="c1"># noqa: TC001</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.presenter</span><span class="w"> </span><span class="kn">import</span> <span class="n">LightPresenter</span>  <span class="c1"># noqa: TC001</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtSession</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.view.qt.builtins</span><span class="w"> </span><span class="kn">import</span> <span class="n">LightView</span>  <span class="c1"># noqa: TC001</span>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">event_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataKey</span>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="k">class</span><span class="w"> </span><span class="nc">LimitedBackend</span><span class="p">(</span><span class="n">SoftSignalBackend</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">    </span><span class="sd">"""Keeps a value in memory and reports limits, as a hardware record does."""</span>
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_datakey</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataKey</span><span class="p">:</span>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>        <span class="n">key</span> <span class="o">=</span> <span class="k">await</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_datakey</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>        <span class="n">key</span><span class="p">[</span><span class="s2">"limits"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"control"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"low"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"high"</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">}}</span>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>        <span class="k">return</span> <span class="n">key</span>
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLaser</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">():</span>
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="n">SignalRW</span><span class="p">(</span>
+</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>                <span class="n">LimitedBackend</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"mW"</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-4-40"><a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a>            <span class="p">)</span>
+</span><span id="__span-4-41"><a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">(</span><span class="n">StandardReadableFormat</span><span class="o">.</span><span class="n">CONFIG_SIGNAL</span><span class="p">):</span>
+</span><span id="__span-4-42"><a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="mi">488</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s2">"nm"</span><span class="p">)</span>
+</span><span id="__span-4-43"><a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+</span><span id="__span-4-44"><a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a>
+</span><span id="__span-4-45"><a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a>
+</span><span id="__span-4-46"><a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyLed</span><span class="p">(</span><span class="n">StandardReadable</span><span class="p">):</span>
+</span><span id="__span-4-47"><a id="__codelineno-4-47" name="__codelineno-4-47" href="#__codelineno-4-47"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-4-48"><a id="__codelineno-4-48" name="__codelineno-4-48" href="#__codelineno-4-48"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_children_as_readables</span><span class="p">():</span>
+</span><span id="__span-4-49"><a id="__codelineno-4-49" name="__codelineno-4-49" href="#__codelineno-4-49"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span> <span class="o">=</span> <span class="n">soft_signal_rw</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-4-50"><a id="__codelineno-4-50" name="__codelineno-4-50" href="#__codelineno-4-50"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+</span><span id="__span-4-51"><a id="__codelineno-4-51" name="__codelineno-4-51" href="#__codelineno-4-51"></a>
+</span><span id="__span-4-52"><a id="__codelineno-4-52" name="__codelineno-4-52" href="#__codelineno-4-52"></a>
+</span><span id="__span-4-53"><a id="__codelineno-4-53" name="__codelineno-4-53" href="#__codelineno-4-53"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyApp</span><span class="p">(</span><span class="n">QtSession</span><span class="p">):</span>
+</span><span id="__span-4-54"><a id="__codelineno-4-54" name="__codelineno-4-54" href="#__codelineno-4-54"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"session"</span><span class="p">:</span> <span class="s2">"my-lab"</span><span class="p">}</span>
+</span><span id="__span-4-55"><a id="__codelineno-4-55" name="__codelineno-4-55" href="#__codelineno-4-55"></a>
+</span><span id="__span-4-56"><a id="__codelineno-4-56" name="__codelineno-4-56" href="#__codelineno-4-56"></a>    <span class="n">laser</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyLaser</span><span class="p">]</span>
+</span><span id="__span-4-57"><a id="__codelineno-4-57" name="__codelineno-4-57" href="#__codelineno-4-57"></a>    <span class="n">led</span><span class="p">:</span> <span class="n">AsDevice</span><span class="p">[</span><span class="n">MyLed</span><span class="p">]</span>
+</span><span id="__span-4-58"><a id="__codelineno-4-58" name="__codelineno-4-58" href="#__codelineno-4-58"></a>    <span class="n">lights</span><span class="p">:</span> <span class="n">AsPresenter</span><span class="p">[</span><span class="n">LightPresenter</span><span class="p">]</span>
+</span><span id="__span-4-59"><a id="__codelineno-4-59" name="__codelineno-4-59" href="#__codelineno-4-59"></a>    <span class="n">lights_view</span><span class="p">:</span> <span class="n">AsView</span><span class="p">[</span><span class="n">LightView</span><span class="p">]</span>
+</span><span id="__span-4-60"><a id="__codelineno-4-60" name="__codelineno-4-60" href="#__codelineno-4-60"></a>
+</span><span id="__span-4-61"><a id="__codelineno-4-61" name="__codelineno-4-61" href="#__codelineno-4-61"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">wire</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Link</span><span class="p">]:</span>
+</span><span id="__span-4-62"><a id="__codelineno-4-62" name="__codelineno-4-62" href="#__codelineno-4-62"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_enabled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_enabled</span>
+</span><span id="__span-4-63"><a id="__codelineno-4-63" name="__codelineno-4-63" href="#__codelineno-4-63"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_intensity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">set_intensity</span>
+</span><span id="__span-4-64"><a id="__codelineno-4-64" name="__codelineno-4-64" href="#__codelineno-4-64"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">sig_configure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">configure</span>
+</span><span id="__span-4-65"><a id="__codelineno-4-65" name="__codelineno-4-65" href="#__codelineno-4-65"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_enabled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_enabled</span>
+</span><span id="__span-4-66"><a id="__codelineno-4-66" name="__codelineno-4-66" href="#__codelineno-4-66"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_intensity</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_intensity</span>
+</span><span id="__span-4-67"><a id="__codelineno-4-67" name="__codelineno-4-67" href="#__codelineno-4-67"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_failed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">set_failed</span>
+</span><span id="__span-4-68"><a id="__codelineno-4-68" name="__codelineno-4-68" href="#__codelineno-4-68"></a>        <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights</span><span class="o">.</span><span class="n">sig_configuration</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lights_view</span><span class="o">.</span><span class="n">update_configuration</span>
+</span><span id="__span-4-69"><a id="__codelineno-4-69" name="__codelineno-4-69" href="#__codelineno-4-69"></a>
+</span><span id="__span-4-70"><a id="__codelineno-4-70" name="__codelineno-4-70" href="#__codelineno-4-70"></a>
+</span><span id="__span-4-71"><a id="__codelineno-4-71" name="__codelineno-4-71" href="#__codelineno-4-71"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="__span-4-72"><a id="__codelineno-4-72" name="__codelineno-4-72" href="#__codelineno-4-72"></a>    <span class="n">MyApp</span><span class="p">()</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </span></code></pre></div>
-<p>An editable install reads the entry points once. After changing them, install
-the package again:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--reinstall-package<span class="w"> </span>mylab
-</span></code></pre></div>
-<h2 id="name-the-components-in-a-session-file">Name the components in a session file<a class="headerlink" href="#name-the-components-in-a-session-file" title="Permanent link">&para;</a></h2>
-<p>Each entry takes <code>plugin_name</code> and <code>plugin_id</code>. Every other key is passed to
-the constructor, so here <code>MyMotor</code> takes <code>units</code> and <code>MyController</code> takes
-<code>step</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-lab</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">frontend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qt</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">devices</span><span class="p">:</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">x</span><span class="p">:</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">motor</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">units</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">um</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">presenters</span><span class="p">:</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">ctrl</span><span class="p">:</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">controller</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="nt">step</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="nt">views</span><span class="p">:</span>
-</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span><span class="nt">panel</span><span class="p">:</span>
-</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">    </span><span class="nt">plugin_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mylab</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">    </span><span class="nt">plugin_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">motor-view</span>
-</span></code></pre></div>
-<p>Build the session from the file:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">redsun.qt</span><span class="w"> </span><span class="kn">import</span> <span class="n">QtSession</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">QtSession</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="s2">"session.yaml"</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-</span></code></pre></div>
-<p>A session class can also name the file in <code>config</code> and declare some of the
-components itself; an entry with the same name as a declaration configures it
-and needs no <code>plugin_name</code>. See
-<a href="../../explanation/plugins/#components-from-a-file-and-from-a-class">Components from a file and from a class</a>.</p>
-<h2 id="share-a-value-from-the-plugin">Share a value from the plugin<a class="headerlink" href="#share-a-value-from-the-plugin" title="Permanent link">&para;</a></h2>
-<p>List a provider class under <code>providers</code>, and name it in the session file as
-<a href="../share-a-value/#share-a-value-no-component-owns">Share a value</a> shows:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># mylab/redsun.yaml</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">providers</span><span class="p">:</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">calibration</span><span class="p">:</span><span class="w"> </span><span class="s">"mylab.providers:MyCalibration"</span>
-</span></code></pre></div>
-<p>Other keys of the session file's entry are not passed to the provider.</p>
-<h2 id="list-a-service">List a service<a class="headerlink" href="#list-a-service" title="Permanent link">&para;</a></h2>
-<p>A plugin can list a service a session launches, under <code>services</code> in its
-manifest. See <a href="../write-a-service/#declare-it">Write a service</a>.</p>
-<h2 id="read-a-failure">Read a failure<a class="headerlink" href="#read-a-failure" title="Permanent link">&para;</a></h2>
-<p>A manifest that does not validate is left out whole, and the log names the
-file and each problem. An entry that does not resolve is left out on its own,
-and the build summary lists it under <code>Not built</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>[29-09-26|08:42:44][ERROR]: Failed to build view 'panel': plugin 'mylab' declares no view 'motor-viwe'. Its views: motor-view
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>[29-09-26|08:42:44][WARNING]: Session built: 1/1 devices, 1/1 presenters, 0/1 views
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Not built: panel (view)
-</span></code></pre></div>
-<p><a href="../find-a-missing-component/">How to find out why a component is missing</a>
-covers reading the log, and making the session stop instead.</p>
+</details>
 
 
 
@@ -5845,7 +5914,7 @@ covers reading the log, and making the session stop instead.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../share-a-value/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How to share a value between components">
+          <a href="../move-devices-by-hand/" class="md-footer__link md-footer__link--prev" aria-label="Previous: How to move devices by hand">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -5855,20 +5924,20 @@ covers reading the log, and making the session stop instead.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                How to share a value between components
+                How to move devices by hand
               </div>
             </div>
           </a>
         
         
           
-          <a href="../test-a-plugin/" class="md-footer__link md-footer__link--next" aria-label="Next: How to test a plugin">
+          <a href="../write-a-continuous-plan/" class="md-footer__link md-footer__link--next" aria-label="Next: How to write a plan that runs until stopped">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                How to test a plugin
+                How to write a plan that runs until stopped
               </div>
             </div>
             <div class="md-footer__button md-icon">
