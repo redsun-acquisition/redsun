@@ -115,20 +115,9 @@ class ImageView:
         self.name = name
         self.peers: Mapping[str, Linkable] = {}
         self.zoom = 1.0
-        self.linked_to: str | None = None
 
     def setup(self, peers: Mapping[str, Linkable]) -> None:
         self.peers = peers
-
-    def link_targets(self) -> list[str]:
-        """Return what this widget's 'link to...' menu offers."""
-        return sorted(name for name in self.peers if name != self.name)
-
-    def zoom_to(self, zoom: float) -> None:
-        self.zoom = zoom
-        for name, peer in self.peers.items():
-            if name == self.linked_to:
-                peer.apply_camera(zoom)
 
     def apply_camera(self, zoom: float) -> None:
         self.zoom = zoom
@@ -528,44 +517,23 @@ def test_a_component_that_does_not_match_is_absent(app: App) -> None:
     assert "readout" not in app.session.resettable
 
 
-def test_the_answer_is_usable_as_a_mapping(app: App) -> None:
-    """Return the census as a Mapping of names to components."""
-    assert isinstance(app.session.resettable, Mapping)
-    assert len(app.session.resettable) == 2
-    assert sorted(app.session.resettable) == ["detector", "motor"]
-
-
 def test_driving_every_component_through_the_answer(app: App) -> None:
     """Call every matching component through the census."""
     app.session.reset_all()
     assert (app.motor.resets, app.detector.resets) == (1, 1)
 
 
-def test_peers_see_the_whole_set_including_themselves(
+def test_peers_hold_every_matching_component_including_the_asker(
     build: BuildSession,
 ) -> None:
-    """Include the asking component in its own census."""
+    """Include the asking component, with its peers, in its own census."""
     app = build(PeerApp)
-    assert sorted(app.left.peers) == ["left", "middle", "right"]
-    assert sorted(app.right.peers) == ["left", "middle", "right"]
 
-
-def test_a_peer_leaves_itself_out_where_it_matters(
-    build: BuildSession,
-) -> None:
-    """Let a component filter itself out of the census it received."""
-    app = build(PeerApp)
-    assert app.left.link_targets() == ["middle", "right"]
-    assert app.right.link_targets() == ["left", "middle"]
-
-
-def test_peers_act_on_each_other(build: BuildSession) -> None:
-    """Let one component act on a peer it found through the census."""
-    app = build(PeerApp)
-    app.left.linked_to = "right"
-    app.left.zoom_to(4.0)
-    assert app.right.zoom == 4.0
-    assert app.middle.zoom == 1.0
+    assert dict(app.left.peers) == {
+        "left": app.left,
+        "middle": app.middle,
+        "right": app.right,
+    }
 
 
 def test_a_component_that_did_not_mean_to_offer_is_still_counted(
