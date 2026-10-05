@@ -76,23 +76,19 @@ class Stage(StandardReadable):
 class FailsOnce:
     """Presenter that cannot be made the first time, and can afterwards."""
 
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, attempts: list[str]) -> None:
         self.name = name
-        type(self).attempts += 1
-        if type(self).attempts == 1:
+        attempts.append(name)
+        if len(attempts) == 1:
             raise ValueError("not yet")
 
 
 class WorksOnce(Stage):
     """Device that can be made the first time, and not afterwards."""
 
-    attempts = 0
-
-    def __init__(self, name: str) -> None:
-        type(self).attempts += 1
-        if type(self).attempts > 1:
+    def __init__(self, name: str, attempts: list[str]) -> None:
+        attempts.append(name)
+        if len(attempts) > 1:
             raise ValueError("no longer")
         super().__init__(name)
 
@@ -233,17 +229,11 @@ class Tunable:
         self.readings = readings
 
 
-teardown_order: list[str] = []
-
-
 class Recorder:
     """Presenter nothing depends on."""
 
     def __init__(self, name: str) -> None:
         self.name = name
-
-    def shutdown(self) -> None:
-        teardown_order.append(self.name)
 
 
 class Dependent:
@@ -256,8 +246,31 @@ class Dependent:
     def setup(self, other: Recorder) -> None:
         self.other = other
 
+
+class ClosingRecorder:
+    """Presenter nothing depends on, noting its shutdown."""
+
+    def __init__(self, name: str, teardowns: list[str]) -> None:
+        self.name = name
+        self.teardowns = teardowns
+
     def shutdown(self) -> None:
-        teardown_order.append(self.name)
+        self.teardowns.append(self.name)
+
+
+class ClosingDependent:
+    """Presenter taking `ClosingRecorder` once every component exists, noting its shutdown."""
+
+    def __init__(self, name: str, teardowns: list[str]) -> None:
+        self.name = name
+        self.teardowns = teardowns
+        self.other: ClosingRecorder | None = None
+
+    def setup(self, other: ClosingRecorder) -> None:
+        self.other = other
+
+    def shutdown(self) -> None:
+        self.teardowns.append(self.name)
 
 
 class Idle:
@@ -268,8 +281,8 @@ class Idle:
 
 
 class OrderedApp(Session):
-    second: Annotated[AsPresenter[Dependent], Alias("second")]
-    first: Annotated[AsPresenter[Recorder], Alias("first")]
+    second: Annotated[AsPresenter[ClosingDependent], Alias("second")]
+    first: Annotated[AsPresenter[ClosingRecorder], Alias("first")]
 
 
 class App(Session):
@@ -531,7 +544,8 @@ class BadApp(Session):
 class VariadicDevice(Device):
     """A device whose constructor would also fail the name check."""
 
-    def __init__(self, *args: object) -> None: ...
+    def __init__(self, *args: object) -> None:
+        super().__init__()
 
 
 class Stray:
@@ -937,15 +951,12 @@ class DependsOnBrokenApp(Session):
     ok: AsPresenter[Recorder]
 
 
-STEP_ORDER: list[str] = []
-
-
 class Marker:
     """A presenter that records when the build reached its layer."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, steps: list[str]) -> None:
         self.name = name
-        STEP_ORDER.append("built the presenter")
+        steps.append("built the presenter")
 
 
 class SteppedApp(Session):
@@ -953,11 +964,15 @@ class SteppedApp(Session):
 
     ctrl: AsPresenter[Marker]
 
+    def __init__(self, steps: list[str], config: Mapping[str, Any]) -> None:
+        super().__init__(config)
+        self.steps = steps
+
     def start_runtime(self) -> None:
-        STEP_ORDER.append("runtime")
+        self.steps.append("runtime")
 
     def present(self) -> None:
-        STEP_ORDER.append("presentation")
+        self.steps.append("presentation")
 
 
 class Unmakeable:
@@ -1069,10 +1084,15 @@ def test_the_container_itself_is_not_injectable() -> None:
 
 def test_shutdown_finalizes_components_in_reverse_declaration_order() -> None:
     """Shut components down in the reverse of their declaration order."""
-    teardown_order.clear()
-    container = OrderedApp().build()
-    container.shutdown()
-    assert teardown_order == ["first", "second"]
+    teardowns: list[str] = []
+    config = {
+        "presenters": {
+            "first": {"teardowns": teardowns},
+            "second": {"teardowns": teardowns},
+        }
+    }
+    OrderedApp(config).build().shutdown()
+    assert teardowns == ["first", "second"]
 
 
 def test_component_shutdown_runs_without_being_asked(app: App) -> None:
@@ -1355,7 +1375,9 @@ def test_a_component_another_is_built_from_is_not_reported(
 ) -> None:
     """Do not report a component that another component is built from."""
 
-    class WithAnIdlePeer(OrderedApp):
+    class WithAnIdlePeer(Session):
+        second: Annotated[AsPresenter[Dependent], Alias("second")]
+        first: Annotated[AsPresenter[Recorder], Alias("first")]
         idle: AsPresenter[Idle]
 
     build(WithAnIdlePeer)
@@ -1736,13 +1758,12 @@ def test_the_closing_line_names_what_is_missing(
 
 def test_a_session_fills_the_toolkit_steps_rather_than_wrapping_the_build() -> None:
     """Run the runtime step before the components and the presentation step after."""
-    STEP_ORDER.clear()
-    app = SteppedApp().build()
+    steps: list[str] = []
+    app = SteppedApp(steps, {"presenters": {"ctrl": {"steps": steps}}}).build()
     try:
-        assert STEP_ORDER == ["runtime", "built the presenter", "presentation"]
+        assert steps == ["runtime", "built the presenter", "presentation"]
     finally:
         app.shutdown()
-        STEP_ORDER.clear()
 
 
 def test_a_session_missing_a_step_cannot_be_constructed() -> None:
@@ -2044,8 +2065,11 @@ def test_a_session_built_again_starts_from_nothing(
         stage: AsDevice[WorksOnce]
         flaky: AsPresenter[FailsOnce]
 
-    FailsOnce.attempts = WorksOnce.attempts = 0
-    app = Twice()
+    config = {
+        "devices": {"stage": {"attempts": []}},
+        "presenters": {"flaky": {"attempts": []}},
+    }
+    app = Twice(config)
     app.build()
     app.shutdown()
     caplog.clear()
