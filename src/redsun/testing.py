@@ -1,8 +1,9 @@
 """Pytest fixtures for testing components, sessions and services.
 
 A suite loads them with `-p redsun.testing`, in `addopts` or on the command
-line. Loading them makes every test write session logs, acquisition data and
-catalogs under its `tmp_path`, and drop the psygnal emissions it left queued.
+line. Loading them makes every test keep session settings, session logs,
+acquisition data and catalogs under its `tmp_path`, and drop the `psygnal`
+emissions it left queued.
 The module defines no `qapp`, so it combines with `pytest-qt`.
 """
 
@@ -125,7 +126,7 @@ def data_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return root
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Keep saved session settings under `tmp_path`."""
     monkeypatch.setattr(
