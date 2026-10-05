@@ -8,7 +8,7 @@ from typing import TypeVar
 import pytest
 from qtpy import QtCore, QtGui, QtWidgets
 
-from redsun.utils.devices import AxisInfo
+from redsun.utils.devices import AxisInfo, Readback
 from redsun.view.qt.builtins import PositionerGroup
 
 pytestmark = pytest.mark.qt
@@ -16,8 +16,8 @@ pytestmark = pytest.mark.qt
 T = TypeVar("T", bound=QtCore.QObject)
 
 AXES = {
-    "x": AxisInfo(position=12.345, units="um", precision=3, stoppable=True),
-    "theta": AxisInfo(position=0.5, units=None, precision=None),
+    "x": AxisInfo(Readback(12.345, "um", 3), stoppable=True),
+    "theta": AxisInfo(Readback(0.5)),
 }
 
 
@@ -159,14 +159,14 @@ def test_stop_is_offered_only_for_a_stoppable_device(
     """Show Stop for a device with a stoppable axis, and emit it when clicked."""
     stoppable = PositionerGroup(
         "a",
-        {"x": AxisInfo(0.0, None, None, stoppable=True)},
+        {"x": AxisInfo(Readback(0.0), stoppable=True)},
         steps=(1.0,),
         repeat_delay=100,
         repeat_interval=50,
     )
     plain = PositionerGroup(
         "b",
-        {"x": AxisInfo(0.0, None, None)},
+        {"x": AxisInfo(Readback(0.0))},
         steps=(1.0,),
         repeat_delay=100,
         repeat_interval=50,
@@ -186,7 +186,7 @@ def test_go_to_refuses_a_target_outside_the_limits(
     """Send a target inside the axis' limits and drop one outside them."""
     limited = PositionerGroup(
         "a",
-        {"x": AxisInfo(0.0, "um", 2, limits=(-5.0, 5.0))},
+        {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
         steps=(1.0,),
         repeat_delay=100,
         repeat_interval=50,
@@ -284,7 +284,7 @@ def test_a_refused_target_says_why(qapp: QtWidgets.QApplication) -> None:
     """Show why a target outside the limits was not sent."""
     limited = PositionerGroup(
         "a",
-        {"x": AxisInfo(0.0, "um", 2, limits=(-5.0, 5.0))},
+        {"x": AxisInfo(Readback(0.0, "um", 2, (-5.0, 5.0)))},
         steps=(1.0,),
         repeat_delay=100,
         repeat_interval=50,
@@ -319,7 +319,7 @@ def test_a_group_without_steps_is_refused(qapp: QtWidgets.QApplication) -> None:
     with pytest.raises(ValueError, match="no step size"):
         PositionerGroup(
             "a",
-            {"x": AxisInfo(0.0, None, None)},
+            {"x": AxisInfo(Readback(0.0))},
             steps=(),
             repeat_delay=1,
             repeat_interval=1,

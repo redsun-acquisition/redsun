@@ -161,7 +161,8 @@ class LightPresenter(Loggable):
         if not dimmable(light):
             self._refuse(device, "it has no intensity")
             return
-        low, high = self._info[device].limits
+        info = self._info[device].intensity
+        low, high = (None, None) if info is None else info.limits
         if (
             not math.isfinite(value)
             or (low is not None and value < low)

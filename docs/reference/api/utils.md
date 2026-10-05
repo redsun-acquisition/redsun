@@ -24,6 +24,8 @@ icon: lucide/code
         - Light
         - DimmableLight
         - LightInfo
+        - Readback
+        - readback
         - is_light
         - dimmable
         - describe_light

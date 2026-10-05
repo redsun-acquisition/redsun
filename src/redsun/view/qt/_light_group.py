@@ -67,10 +67,15 @@ class LightGroup(QtW.QGroupBox):
 
         self._slider: QtW.QSlider | None = None
         self._field: QtW.QDoubleSpinBox | None = None
-        if info.intensity is not None:
-            decimals = DEFAULT_PRECISION if info.precision is None else info.precision
+        intensity = info.intensity
+        if intensity is not None:
+            decimals = (
+                DEFAULT_PRECISION
+                if intensity.precision is None
+                else intensity.precision
+            )
             row = QtW.QHBoxLayout()
-            low, high = info.limits
+            low, high = intensity.limits
             if low is not None and high is not None:
                 # the slider steps more coarsely than the field when the range
                 # in steps of the last decimal would not fit in Qt's integers
@@ -83,7 +88,7 @@ class LightGroup(QtW.QGroupBox):
                 self._slider.setRange(
                     round(low * self._scale), round(high * self._scale)
                 )
-                self._slider.setValue(round(info.intensity * self._scale))
+                self._slider.setValue(round(intensity.value * self._scale))
                 self._slider.valueChanged.connect(self._slider_moved)
                 self._slider.sliderReleased.connect(self._slider_released)
                 row.addWidget(self._slider, 1)
@@ -97,13 +102,13 @@ class LightGroup(QtW.QGroupBox):
                 -LIMIT if low is None else low, LIMIT if high is None else high
             )
             self._field.setKeyboardTracking(False)
-            self._field.setValue(info.intensity)
+            self._field.setValue(intensity.value)
             self._field.valueChanged.connect(self._field_changed)
             self._field.editingFinished.connect(self._field_done)
             if (edit := self._field.lineEdit()) is not None:
                 edit.textEdited.connect(self._start_editing)
             row.addWidget(self._field)
-            row.addWidget(QtW.QLabel(info.units or "", self))
+            row.addWidget(QtW.QLabel(intensity.units or "", self))
             layout.addLayout(row)
             self._controls.append(self._field)
             self._timer = QtCore.QTimer(self)

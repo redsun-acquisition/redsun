@@ -87,7 +87,9 @@ async def test_lights_are_described_and_followed(
     await laser.intensity.set(42.0)
 
     assert isinstance(presenter, DescribesLights)
-    assert presenter.lights["laser"].limits == (0.0, 100.0)
+    laser_intensity = presenter.lights["laser"].intensity
+    assert laser_intensity is not None
+    assert laser_intensity.limits == (0.0, 100.0)
     assert presenter.lights["led"].intensity is None
     assert ("laser", True) in states
     assert ("laser", 42.0) in levels
@@ -292,5 +294,7 @@ async def test_a_whole_number_intensity_is_written_whole_and_without_limits() ->
 
     value = await lamp.intensity.get_value()
     assert (value, type(value)) == (1_000_000, int)
-    assert presenter.lights["lamp"].precision == 0
+    lamp_intensity = presenter.lights["lamp"].intensity
+    assert lamp_intensity is not None
+    assert lamp_intensity.precision == 0
     presenter.shutdown()

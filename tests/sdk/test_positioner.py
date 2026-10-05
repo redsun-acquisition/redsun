@@ -18,6 +18,7 @@ from ophyd_async.core import (
 )
 
 from redsun.presenter import DescribesAxes, PositionerPresenter
+from redsun.utils.devices import Readback
 from tests.sdk.mocks import (
     BrokenConfigAxis,
     HangingAxis,
@@ -106,7 +107,7 @@ async def test_the_axes_are_described_and_followed(
 
     assert isinstance(presenter, DescribesAxes)
     assert set(presenter.axes["stage"]) == {"x", "theta"}
-    assert (x.position, x.units, x.precision, x.stoppable) == (0.0, "um", 3, True)
+    assert (x.readback, x.stoppable) == (Readback(0.0, "um", 3), True)
     assert set(x.configuration) == {
         stage.axis["x"].velocity.name,
         stage.axis["x"].resolution.name,
@@ -296,7 +297,7 @@ async def test_limits_come_from_the_readback_descriptor() -> None:
     await axis.connect(mock=False)
     positioner = PositionerPresenter("positioner", devices={"focus": axis})
 
-    assert positioner.axes["focus"]["focus"].limits == (-5.0, 5.0)
+    assert positioner.axes["focus"]["focus"].readback.limits == (-5.0, 5.0)
     positioner.shutdown()
 
 
@@ -312,7 +313,7 @@ async def test_limits_follow_a_configuration_write() -> None:
     await positioner.move_to("focus", {"focus": 12.0})
 
     assert seen == [("focus", "focus", 5.0, 15.0)]
-    assert positioner.axes["focus"]["focus"].limits == (5.0, 15.0)
+    assert positioner.axes["focus"]["focus"].readback.limits == (5.0, 15.0)
     assert await position(axis) == pytest.approx(12.0)
     positioner.shutdown()
 

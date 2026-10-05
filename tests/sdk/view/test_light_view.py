@@ -8,7 +8,7 @@ import pytest
 from qtpy import QtCore, QtWidgets
 
 from redsun import Settings
-from redsun.utils.devices import Configuration, LightInfo
+from redsun.utils.devices import Configuration, LightInfo, Readback
 from redsun.view.qt.builtins import LightGroup, LightView
 
 if TYPE_CHECKING:
@@ -19,9 +19,9 @@ pytestmark = pytest.mark.qt
 T = TypeVar("T", bound=QtCore.QObject)
 
 LIGHTS = {
-    "laser": LightInfo(False, 10.0, "mW", 1, (0.0, 100.0)),
+    "laser": LightInfo(False, Readback(10.0, "mW", 1, (0.0, 100.0))),
     "led": LightInfo(True),
-    "lamp": LightInfo(False, 5.0, "%", 0),
+    "lamp": LightInfo(False, Readback(5.0, "%", 0)),
 }
 
 
@@ -238,7 +238,7 @@ def test_a_fine_precision_over_a_wide_range_still_builds(
     """Build the slider of an intensity with many decimals over a wide range."""
     light = LightGroup(
         "laser",
-        LightInfo(False, 1.0, "mW", 9, (0.0, 5000.0)),
+        LightInfo(False, Readback(1.0, "mW", 9, (0.0, 5000.0))),
         write_while_dragging=False,
     )
 

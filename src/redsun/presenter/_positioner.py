@@ -162,7 +162,7 @@ class PositionerPresenter(Loggable):
         """
         if not math.isfinite(target):
             raise ValueError(f"{axis} target {target} is not a finite number")
-        low, high = self._info[device][axis].limits
+        low, high = self._info[device][axis].readback.limits
         if (low is not None and target < low) or (high is not None and target > high):
             raise ValueError(f"{axis} target {target:g} is outside {low} to {high}")
 
@@ -368,8 +368,10 @@ class PositionerPresenter(Loggable):
             return
         described = await item.describe()
         new = limits(described.get(info.key, {}))
-        if new != info.limits:
-            self._info[device][axis] = dataclasses.replace(info, limits=new)
+        if new != info.readback.limits:
+            self._info[device][axis] = dataclasses.replace(
+                info, readback=dataclasses.replace(info.readback, limits=new)
+            )
             self.sig_limits.emit(device, axis, *new)
 
     async def _follow(self) -> dict[str, dict[str, AxisInfo]]:

@@ -274,9 +274,10 @@ class PositionerView(QtW.QWidget, Loggable):
             device: [
                 key
                 for info in axes.values()
-                if info.units is not None
+                if info.readback.units is not None
                 for key in info.configuration
-                if key in descriptors and descriptors[key].get("units") == info.units
+                if key in descriptors
+                and descriptors[key].get("units") == info.readback.units
             ]
             for device, axes in positioner.axes.items()
         }

@@ -16,11 +16,13 @@ from ophyd_async.core import (
 
 from redsun.utils.devices import (
     LightInfo,
+    Readback,
     describe_axis,
     describe_light,
     find_axes,
     is_light,
     limits,
+    readback,
 )
 from tests.sdk.mocks import DimmerLight, SoftAxis, SoftLight, Stage, TwinStage
 
@@ -182,7 +184,7 @@ async def test_an_axis_is_described_by_its_hinted_entry() -> None:
 
     info = await describe_axis(axis)
 
-    assert (info.units, info.precision) == ("um", None)
+    assert (info.readback.units, info.readback.precision) == ("um", None)
     assert info.key == axis.position.name
 
 
@@ -193,7 +195,7 @@ async def test_a_numpy_position_is_a_number() -> None:
 
     info = await describe_axis(axis)
 
-    assert info.position == pytest.approx(0.0)
+    assert info.readback.value == pytest.approx(0.0)
 
 
 async def test_a_movable_axis_is_described_by_its_readback_not_its_first_hint() -> None:
@@ -203,7 +205,7 @@ async def test_a_movable_axis_is_described_by_its_readback_not_its_first_hint() 
 
     info = await describe_axis(axis)
 
-    assert (info.key, info.units) == (axis.position.name, "um")
+    assert (info.key, info.readback.units) == (axis.position.name, "um")
 
 
 async def test_a_light_is_described_from_its_signals() -> None:
@@ -214,7 +216,7 @@ async def test_a_light_is_described_from_its_signals() -> None:
 
     info = await describe_light(light)
 
-    assert info == LightInfo(True, 10.0, "mW", 1, (0.0, 100.0))
+    assert info == LightInfo(True, Readback(10.0, "mW", 1, (0.0, 100.0)))
 
 
 async def test_a_light_without_intensity_is_on_or_off_only() -> None:
@@ -239,3 +241,26 @@ async def test_an_enabled_attribute_that_is_not_a_bool_signal_is_no_light() -> N
     await led.connect(mock=False)
 
     assert (is_light(shutter), is_light(led)) == (False, True)
+
+
+@pytest.mark.parametrize(
+    ("descriptor", "expected"),
+    [
+        pytest.param(
+            {
+                "units": "um",
+                "precision": 3,
+                "limits": {"control": {"low": -1.0, "high": 2.0}},
+            },
+            Readback(1.5, "um", 3, (-1.0, 2.0)),
+            id="all",
+        ),
+        pytest.param({"units": 5, "precision": -1}, Readback(1.5), id="malformed"),
+        pytest.param({"precision": True}, Readback(1.5), id="bool-precision"),
+    ],
+)
+def test_a_readback_keeps_what_its_descriptor_states_well(
+    descriptor: dict[str, object], expected: Readback
+) -> None:
+    """Keep text units, a whole precision of at least 0, and limits, from a descriptor."""
+    assert readback(1.5, descriptor) == expected

@@ -7,6 +7,7 @@ through attribute names, so they apply to any device.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from collections import Counter
 from dataclasses import dataclass, field
 from numbers import Real
@@ -37,6 +38,7 @@ __all__ = [
     "DimmableLight",
     "Light",
     "LightInfo",
+    "Readback",
     "describe_axis",
     "describe_light",
     "dimmable",
@@ -44,6 +46,7 @@ __all__ = [
     "is_light",
     "limits",
     "read_configuration",
+    "readback",
     "walk_axes",
 ]
 
@@ -59,20 +62,28 @@ class Axis(AsyncLocatable[float], Subscribable[float], Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class AxisInfo:
-    """What a view shows of an axis before its first readback arrives."""
+class Readback:
+    """A number as a device reads it back, with what its descriptor says of it."""
 
-    position: float
-    """Readback when the axis was described."""
+    value: float
+    """The value read."""
 
-    units: str | None
-    """Engineering units of the axis, from its descriptor."""
+    units: str | None = None
+    """Engineering units, from the descriptor."""
 
-    precision: int | None
+    precision: int | None = None
     """Decimals the descriptor asks for."""
 
     limits: tuple[float | None, float | None] = (None, None)
-    """Lowest and highest position the descriptor allows; `None` for no bound."""
+    """Lowest and highest value the descriptor allows; `None` for no bound."""
+
+
+@dataclass(frozen=True, slots=True)
+class AxisInfo:
+    """What a view shows of an axis before its next readback arrives."""
+
+    readback: Readback
+    """Position when the axis was described, with its units, precision and limits."""
 
     stoppable: bool = False
     """Whether the axis can be stopped, by itself or through its device."""
@@ -142,6 +153,26 @@ def find_axes(device: Device) -> dict[str, Axis]:
     }
 
 
+def readback(value: float, descriptor: Mapping[str, Any]) -> Readback:
+    """Return *value* with the units, precision and limits *descriptor* gives.
+
+    Units that are not text, and a precision that is not a whole number of at
+    least 0, are left out.
+    """
+    units = descriptor.get("units")
+    precision = descriptor.get("precision")
+    return Readback(
+        value=value,
+        units=units if isinstance(units, str) else None,
+        precision=precision
+        if isinstance(precision, int)
+        and not isinstance(precision, bool)
+        and precision >= 0
+        else None,
+        limits=limits(descriptor),
+    )
+
+
 def limits(descriptor: Mapping[str, Any]) -> tuple[float | None, float | None]:
     """Return the lowest and highest value *descriptor* allows; `None` for no bound.
 
@@ -188,17 +219,8 @@ async def describe_axis(axis: Axis) -> AxisInfo:
     else:
         key = None
     descriptor: Mapping[str, Any] = described.get(key, {}) if key is not None else {}
-    units = descriptor.get("units")
-    precision = descriptor.get("precision")
     return AxisInfo(
-        position=float(position),
-        units=units if isinstance(units, str) else None,
-        precision=precision
-        if isinstance(precision, int)
-        and not isinstance(precision, bool)
-        and precision >= 0
-        else None,
-        limits=limits(descriptor),
+        readback=readback(float(position), descriptor),
         stoppable=isinstance(axis, Stoppable),
         key=key,
     )
@@ -246,22 +268,14 @@ class DimmableLight(Light, Protocol):
 
 @dataclass(frozen=True, slots=True)
 class LightInfo:
-    """What a view shows of a light before its first readback arrives."""
+    """What a view shows of a light before its next readback arrives."""
 
     enabled: bool
     """Whether the light was on when described."""
 
-    intensity: float | None = None
-    """Intensity when described; `None` for a light that has none."""
-
-    units: str | None = None
-    """Units of the intensity, from its descriptor."""
-
-    precision: int | None = None
-    """Decimals the intensity's descriptor asks for."""
-
-    limits: tuple[float | None, float | None] = (None, None)
-    """Lowest and highest intensity the descriptor allows; `None` for no bound."""
+    intensity: Readback | None = None
+    """Intensity when described, with its units, precision and limits; `None` for a
+    light that has none."""
 
 
 def is_light(item: object) -> TypeGuard[Light]:
@@ -289,19 +303,7 @@ async def describe_light(light: Light) -> LightInfo:
     value, described = await asyncio.gather(
         light.intensity.get_value(), light.intensity.describe()
     )
-    descriptor: Mapping[str, Any] = described.get(light.intensity.name, {})
-    units = descriptor.get("units")
-    precision = descriptor.get("precision")
-    return LightInfo(
-        enabled=bool(enabled),
-        intensity=float(value),
-        units=units if isinstance(units, str) else None,
-        precision=0
-        if whole
-        else precision
-        if isinstance(precision, int)
-        and not isinstance(precision, bool)
-        and precision >= 0
-        else None,
-        limits=limits(descriptor),
-    )
+    intensity = readback(float(value), described.get(light.intensity.name, {}))
+    if whole:
+        intensity = dataclasses.replace(intensity, precision=0)
+    return LightInfo(enabled=bool(enabled), intensity=intensity)
