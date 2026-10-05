@@ -362,7 +362,8 @@ def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
 
     presenter.shutdown()
     cleaned = plans.cleaned.is_set()
-    reported = ended.is_set()
+    # the future's callbacks may run just after the wait in shutdown returns
+    reported = ended.wait(0.1)
 
     assert cleaned
     assert not reported
