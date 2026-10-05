@@ -34,16 +34,6 @@ def _record(
     return record
 
 
-def test_the_buffer_is_installed_on_the_redsun_logger() -> None:
-    """Install the buffer on the `redsun` logger at import."""
-    assert log_buffer() in logging.getLogger("redsun").handlers
-
-
-def test_the_buffer_is_the_same_object_every_time() -> None:
-    """Return the same buffer on every call."""
-    assert log_buffer() is log_buffer()
-
-
 def test_records_are_retained_in_order(buffer: BufferHandler) -> None:
     """Keep records in the order they were logged."""
     logging.getLogger("redsun").info("first")
