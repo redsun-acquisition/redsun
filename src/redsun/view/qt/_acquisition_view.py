@@ -135,6 +135,8 @@ class AcquisitionView(QtW.QWidget, Loggable):
             empty = QtW.QLabel("No plans are offered.", self)
             empty.setObjectName("no-plans")
             self._stack.addWidget(empty)
+        if acquisition.base_dir is not None:
+            self.update_base_dir(acquisition.base_dir)
         self._settings = settings
         stored = settings.get(self._key("plan"))
         if isinstance(stored, str) and stored in self.plan_widgets:

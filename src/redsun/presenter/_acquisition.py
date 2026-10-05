@@ -55,6 +55,11 @@ class DescribesPlans(Protocol):
         """The document callbacks each plan runs with, by plan name."""
         ...
 
+    @property
+    def base_dir(self) -> Path | None:
+        """The directory runs write under; `None` before it is known."""
+        ...
+
 
 class AbortFilter(logging.Filter):
     """Drop the record `bluesky` logs for an abort the presenter asked for."""
@@ -169,6 +174,11 @@ class AcquisitionPresenter(Loggable):
             plan: tuple(entry.get("callbacks", ()))
             for plan, entry in self._entries.items()
         }
+
+    @property
+    def base_dir(self) -> Path | None:
+        """The directory runs write under; `None` before `setup`."""
+        return None if self._paths is None else self._paths.base_dir
 
     @slot
     def launch(

@@ -289,3 +289,10 @@ def test_shutdown_aborts_a_running_plan_without_a_failure(
     presenter.shutdown()
 
     assert [kind for kind, *_ in seen] == ["started"]
+
+
+def test_the_base_directory_is_described(
+    presenter: AcquisitionPresenter, paths: RecordedPaths
+) -> None:
+    """Describe the directory runs write under before any change is reported."""
+    assert presenter.base_dir == paths.base_dir

@@ -51,6 +51,7 @@ class Acquisition:
             for name in names
         }
         self.callbacks: Mapping[str, CallbackType] = {}
+        self.base_dir: Path | None = None
         self.plan_callbacks: Mapping[str, Sequence[CallbackType]] = {
             name: () for name in names
         }
@@ -204,3 +205,15 @@ def test_the_run_button_of_a_running_plan_stops_it(
     run_button(view, "rest").click()
 
     assert asked == ["stop"]
+
+
+def test_the_base_directory_is_shown_from_the_start(
+    parent: QtWidgets.QWidget, settings: Settings, tmp_path: Path
+) -> None:
+    """Show the directory runs write under as soon as the view is set up."""
+    acquisition = Acquisition()
+    acquisition.base_dir = tmp_path
+
+    view = make_view(settings, parent, acquisition)
+
+    assert child(view, QtWidgets.QLineEdit, "base-dir").text() == str(tmp_path)
