@@ -17,7 +17,7 @@ from redsun.presenter.plan_spec import (
     ParamDescription,
     ParamKind,
     PlanSpec,
-    _is_renderable,
+    UnresolvableAnnotationError,
     create_plan_spec,
 )
 from redsun.view.qt._widget_factory import create_param_widget
@@ -559,7 +559,18 @@ def test_the_gate_agrees_with_the_widget_factory(annotation: Any) -> None:
     else:
         renderable = True
 
-    assert _is_renderable(annotation) is renderable
+    def plan(x: object) -> MsgGenerator[None]:
+        yield from ()
+
+    plan.__annotations__["x"] = annotation
+    try:
+        create_plan_spec(plan, {})
+    except UnresolvableAnnotationError:
+        accepted = False
+    else:
+        accepted = True
+
+    assert accepted is renderable
 
 
 @pytest.mark.parametrize(
