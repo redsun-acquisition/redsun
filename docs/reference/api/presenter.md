@@ -14,6 +14,12 @@ icon: lucide/code
     options:
       show_root_heading: true
 
+## Shared parts
+
+::: redsun.presenter.DeviceConfiguration
+    options:
+      show_root_heading: true
+
 ## Plan specification
 
 ::: redsun.presenter.plan_spec
