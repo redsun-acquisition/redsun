@@ -437,13 +437,20 @@ class TestPlanWidgetControlAPI:
     def test_toggle_off_releases_a_plan_that_ended_while_paused(self) -> None:
         """Reset the run and pause buttons, calling nothing, when a paused plan ends."""
         toggled: list[bool] = []
-        pw = create_plan_widget(_pausable_spec(), toggle_callback=toggled.append)
+        paused: list[bool] = []
+        pw = create_plan_widget(
+            _pausable_spec(),
+            toggle_callback=toggled.append,
+            pause_callback=paused.append,
+        )
         assert pw.pause_button is not None
         pw.run_button.click()
+        pw.toggle(True)
         pw.pause_button.click()
         pw.pause(True)
         pw.toggle(False)
         assert toggled == [True]
+        assert paused == [True]
         assert not pw.run_button.isChecked()
         assert pw.run_button.isEnabled()
         assert not pw.pause_button.isChecked()

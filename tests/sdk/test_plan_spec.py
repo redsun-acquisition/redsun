@@ -595,7 +595,7 @@ class TestCollectArguments:
             _param("b", kind=ParamKind.POSITIONAL_OR_KEYWORD),
             _param("c", kind=ParamKind.POSITIONAL_OR_KEYWORD),
         )
-        args, _ = collect_arguments(spec, {"a": 1, "b": 2, "c": 3})
+        args, _ = collect_arguments(spec, {"c": 3, "a": 1, "b": 2})
         assert args == (1, 2, 3)
 
 
@@ -793,14 +793,14 @@ class TestCreateParamWidget:
 
 
 @pytest.mark.parametrize(
-    "annotation",
+    ("annotation", "listed"),
     [
-        pytest.param(Readable[Any], id="single"),
-        pytest.param(Sequence[Readable[Any]], id="sequence"),
+        pytest.param(Readable[Any], False, id="single"),
+        pytest.param(Sequence[Readable[Any]], True, id="sequence"),
     ],
 )
 def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
-    annotation: Any, one_detector: dict[str, _MockDetector]
+    annotation: Any, listed: bool, one_detector: dict[str, _MockDetector]
 ) -> None:
     """Offer and resolve the devices of a protocol written with type arguments."""
 
@@ -814,6 +814,5 @@ def test_a_protocol_given_type_arguments_offers_and_resolves_its_devices(
 
     assert spec.parameters[0].choices == ["cam"]
     assert spec.parameters[0].device_proto is Readable
-    assert one_detector["cam"] in (
-        resolved["dets"] if isinstance(resolved["dets"], list) else [resolved["dets"]]
-    )
+    camera = one_detector["cam"]
+    assert resolved["dets"] == ([camera] if listed else camera)
