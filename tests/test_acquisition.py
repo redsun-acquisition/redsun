@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
-from qtpy import QtCore, QtWidgets
+from qtpy import QtWidgets
 
 from docs.examples.acquisition import MyApp
 from redsun import AsPresenter, Link, Session
@@ -73,18 +72,12 @@ def test_a_session_with_two_acquisition_presenters_is_refused(
         TwoRunners().build()
 
 
-def wait_for(condition: Callable[[], bool], timeout: float = 10.0) -> None:
-    """Process Qt events until *condition* holds, or fail after *timeout*."""
-    end = time.monotonic() + timeout
-    while not condition():
-        assert time.monotonic() < end, "condition not met in time"
-        QtCore.QCoreApplication.processEvents()
-        time.sleep(0.01)
-
-
 @pytest.mark.qt
 def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication,
+    config_home: Path,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Run a plan from the view and see it move the motor and end."""
     session = build(MyApp, {"mock": True, "strict": True})
@@ -98,7 +91,7 @@ def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
         "walk", {"motor": "motor", "steps": 3, "size": 1.0}, ()
     )
     # the view hears of the end on the main thread, after the presenter reports it
-    wait_for(lambda: bool(ended) and chooser.isEnabled())
+    assert wait_until(lambda: bool(ended) and chooser.isEnabled())
 
     assert ended == ["walk"]
     assert run_coro(session.motor.position.get_value()) == 3.0

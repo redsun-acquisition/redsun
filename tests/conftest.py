@@ -18,6 +18,7 @@ from unittest import mock
 
 import pytest
 from psygnal.qt import start_emitting_from_queue
+from qtpy.QtCore import QCoreApplication
 from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:
@@ -37,8 +38,10 @@ _MOCK_PKG_DIR = Path(__file__).parent / "mock_bundle"
 def wait_until() -> Callable[..., bool]:
     """Return a poll that holds until `predicate` is true or `timeout` runs out.
 
-    For a thread or a process that offers nothing to wait on. Where an event,
-    a future or a task exists, wait on that instead.
+    Qt events are processed between checks, so a signal queued to the main
+    thread is delivered while the poll waits. For a thread or a process that
+    offers nothing to wait on. Where an event, a future or a task exists, wait
+    on that instead.
     """
 
     def poll(predicate: Callable[[], bool], timeout: float = 10.0) -> bool:
@@ -46,6 +49,7 @@ def wait_until() -> Callable[..., bool]:
         while time.perf_counter() < deadline:
             if predicate():
                 return True
+            QCoreApplication.processEvents()
             time.sleep(0.005)
         return predicate()
 

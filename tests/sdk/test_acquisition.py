@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-import time
 from typing import TYPE_CHECKING, Any
 
 import bluesky.plan_stubs as bps
@@ -145,16 +144,6 @@ def presenter(
     acquisition.setup({"plans": plans, "unreadable": Unreadable()}, {}, paths)
     yield acquisition
     acquisition.shutdown()
-
-
-def wait_until(condition: Callable[[], bool], timeout: float = 5) -> bool:
-    """Return whether *condition* holds within *timeout* seconds."""
-    deadline = time.monotonic() + timeout
-    while not condition():
-        if time.monotonic() > deadline:
-            return False
-        time.sleep(0.01)
-    return True
 
 
 def record(
@@ -362,7 +351,9 @@ def test_shutdown_aborts_a_running_plan_after_its_cleanup_without_a_report(
 
 
 def test_resuming_before_the_pause_is_reached_withdraws_it(
-    presenter: AcquisitionPresenter, plans: Plans
+    presenter: AcquisitionPresenter,
+    plans: Plans,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Withdraw a pause no checkpoint has reached, and report the plan done when stopped."""
     seen, ended = record(presenter)
@@ -371,7 +362,9 @@ def test_resuming_before_the_pause_is_reached_withdraws_it(
 
     presenter.pause()
     presenter.resume()
-    withdrawn = wait_until(lambda: not presenter.engine().deferred_pause_requested)
+    withdrawn = wait_until(
+        lambda: not presenter.engine().deferred_pause_requested, timeout=5
+    )
     presenter.stop()
 
     assert ended.wait(10)

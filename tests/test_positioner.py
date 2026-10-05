@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 import pytest
-from qtpy import QtCore, QtWidgets
+from qtpy import QtWidgets
 
 from redsun import AsDevice, AsPresenter, AsView, Declare, Link
 from redsun.presenter import PositionerPresenter
@@ -61,17 +60,11 @@ class Lab(QtSession):
         )
 
 
-def wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
-    """Process Qt events until *condition* holds, or fail after *timeout*."""
-    end = time.monotonic() + timeout
-    while not condition():
-        assert time.monotonic() < end, "condition not met in time"
-        QtCore.QCoreApplication.processEvents()
-        time.sleep(0.01)
-
-
 def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication,
+    config_home: Path,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Step an axis from the view and show the stage's new readback."""
     session = build(Lab)
@@ -83,7 +76,7 @@ def test_a_step_from_the_view_moves_the_stage_and_comes_back_as_a_readback(
 
     plus.pressed.emit()
 
-    wait_for(lambda: label.text() == "1.000")
+    assert wait_until(lambda: label.text() == "1.000")
 
 
 def test_a_subclass_of_the_presenter_is_built_with_its_own_fields(

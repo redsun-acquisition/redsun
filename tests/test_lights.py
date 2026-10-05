@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
-from qtpy import QtCore, QtWidgets
+from qtpy import QtWidgets
 
 from redsun import AsDevice, AsPresenter, AsView, Link
 from redsun.presenter import LightPresenter
@@ -42,17 +41,11 @@ class LightLab(QtSession):
         yield self.lights.sig_configuration, self.lights_view.update_configuration
 
 
-def wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
-    """Process Qt events until *condition* holds, or fail after *timeout*."""
-    end = time.monotonic() + timeout
-    while not condition():
-        assert time.monotonic() < end, "condition not met in time"
-        QtCore.QCoreApplication.processEvents()
-        time.sleep(0.01)
-
-
 def test_a_light_switched_from_the_view_comes_back_switched_on(
-    qapp: QtWidgets.QApplication, config_home: Path, build: BuildSession
+    qapp: QtWidgets.QApplication,
+    config_home: Path,
+    build: BuildSession,
+    wait_until: Callable[..., bool],
 ) -> None:
     """Switch a light on from the view and show the state it reads back."""
     session = build(LightLab)
@@ -66,4 +59,4 @@ def test_a_light_switched_from_the_view_comes_back_switched_on(
 
     toggle.click()
 
-    wait_for(toggle.isChecked)
+    assert wait_until(toggle.isChecked)
