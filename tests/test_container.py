@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import gc
-import inspect
 import logging
 import weakref
 from collections.abc import Mapping
@@ -43,9 +42,6 @@ from redsun import (
 from redsun.aio import run_coro
 from redsun.ports import WiringError
 from redsun.session import Layer
-from redsun.session._declarations import accepts_name, check
-from redsun.session._factories import injectable, synthesize
-from redsun.session._questions import optional_arg
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -569,7 +565,8 @@ class VariadicName:
 
 
 class KeywordName:
-    def __init__(self, *, name: str) -> None: ...
+    def __init__(self, *, name: str) -> None:
+        self.name = name
 
 
 class PositionalName:
@@ -1024,6 +1021,25 @@ class MisfiledApp(Session):
     stage_ctrl: Annotated[AsPresenter[Ctrl], Alias("ctrl")]
 
 
+def declaring(target: object, layer: Layer) -> type[Session]:
+    """Return a session on `Toy` declaring *target* in *layer* under the name `thing`."""
+    hint = Annotated[target, layer]  # type: ignore[valid-type]
+    return type(
+        "Declaring", (Session,), {"__annotations__": {"thing": hint}, "frontend": Toy}
+    )
+
+
+def asking(hint: object) -> type:
+    """Return a presenter class whose constructor asks for a `value` of type *hint*."""
+
+    def __init__(self: Any, name: str, *, value: Any) -> None:
+        self.name = name
+        self.value = value
+
+    __init__.__annotations__["value"] = hint
+    return type("Asking", (), {"__init__": __init__})
+
+
 def test_build_resolves_every_declaration(app: App) -> None:
     """Build every declared component and device and set each on its attribute."""
     assert app.is_built
@@ -1188,39 +1204,60 @@ def test_unannotated_parameter_is_refused() -> None:
 
 
 @pytest.mark.parametrize(
-    ("target", "declared"),
+    ("target", "layer"),
     [
         (Stage, Layer.DEVICE),
         (Ctrl, Layer.PRESENTER),
-        (Widget, Layer.VIEW),
+        (PydanticCtrl, Layer.PRESENTER),
+        (KeywordName, Layer.PRESENTER),
+        (Attached, Layer.VIEW),
     ],
 )
-def test_a_class_may_be_declared_in_the_layer_it_belongs_to(
-    target: type, declared: Layer
+def test_a_class_declared_in_the_layer_it_belongs_to_is_built(
+    target: type, layer: Layer, build: BuildSession
 ) -> None:
-    """Accept a device, presenter or view class declared in its own layer."""
-    assert check(target, declared, "somewhere") is target
+    """Build a class declared in its own layer, a keyword-only name and a view the frontend attaches included."""
+    app = build(declaring(target, layer))
+
+    assert "thing" in getattr(app, layer.section)
 
 
 @pytest.mark.parametrize(
-    ("target", "declared", "match"),
+    ("target", "layer", "match"),
     [
         (Stage, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Stage, Layer.VIEW, "is an 'ophyd_async.core.Device'"),
         (VariadicDevice, Layer.PRESENTER, "is an 'ophyd_async.core.Device'"),
         (Ctrl, Layer.DEVICE, "does not subclass 'ophyd_async.core.Device'"),
         (int, Layer.PRESENTER, "does not take 'name'"),
-        ("not a type", Layer.VIEW, "is not a class"),
+        (VariadicName, Layer.PRESENTER, "does not take 'name'"),
         (Ctrl, Layer.VIEW, "declares no 'placement'"),
         (Widget, Layer.PRESENTER, "declares a 'placement'"),
+        (Stray, Layer.VIEW, "does not attach"),
+        (Unattachable, Layer.VIEW, "needs a Attachable"),
     ],
 )
-def test_a_class_declared_in_the_wrong_layer_is_refused(
-    target: object, declared: Layer, match: str
+def test_a_class_declared_in_the_wrong_layer_is_refused_at_declaration(
+    target: type,
+    layer: Layer,
+    match: str,
+    build: BuildSession,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Refuse a class declared in a layer it does not belong to, naming the reason."""
-    with pytest.raises(TypeError, match=match):
-        check(target, declared, "somewhere")
+    """Refuse at declaration a class declared in a layer it does not belong to."""
+    app = build(declaring(target, layer))
+
+    assert "thing" not in getattr(app, layer.section)
+    # the declaration check names the attribute, the check of the built
+    # instance names the component
+    assert "Declaring.thing" in caplog.text
+    assert match in caplog.text
+
+
+def test_a_declaration_naming_no_class_is_refused() -> None:
+    """Refuse a declaration whose type is not a class."""
+    with pytest.raises(TypeError, match="is not a class"):
+        declaring(int | None, Layer.VIEW)().build()
 
 
 @pytest.mark.parametrize(
@@ -1259,21 +1296,6 @@ def test_a_frontend_refuses_what_it_cannot_attach(
 
 
 @pytest.mark.parametrize(
-    ("target", "match"),
-    [
-        (Stray, "does not attach"),
-        (Unattachable, "needs a Attachable"),
-    ],
-)
-def test_a_view_is_refused_at_declaration_for_its_placement(
-    target: type, match: str
-) -> None:
-    """Refuse a view class at declaration when the frontend cannot attach it."""
-    with pytest.raises(TypeError, match=match):
-        check(target, Layer.VIEW, "somewhere", Toy)
-
-
-@pytest.mark.parametrize(
     ("app", "protocol"),
     [(NamelessApp, "NamedComponent"), (NamelessViewApp, "AttachableComponent")],
 )
@@ -1294,17 +1316,10 @@ def test_a_component_that_drops_its_name_is_skipped(
     assert "Traceback" not in capsys.readouterr().err
 
 
-def test_a_view_the_frontend_attaches_is_accepted_at_declaration() -> None:
-    """Accept a view class at declaration when the frontend attaches its placement."""
-    assert check(Attached, Layer.VIEW, "somewhere", Toy) is Attached
-
-
 def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
     build: BuildSession, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Skip a view whose placement, read from the built instance, is not attachable."""
-    assert check(Deferred, Layer.VIEW, "somewhere", Toy) is Deferred
-
     app = build(DeferredApp)
 
     assert "stray" not in app.views
@@ -1403,42 +1418,27 @@ def test_a_forgotten_layer_is_reported(
 
 
 @pytest.mark.parametrize(
-    ("hint", "expected"),
+    ("hint", "optional"),
     [
-        (int | None, int),
-        (Readings | None, Readings),
-        (int, None),
-        (int | str, None),
-        (int | str | None, None),
+        (int | None, True),
+        (Readings | None, True),
+        (int, False),
+        (int | str, False),
+        (int | str | None, False),
     ],
 )
-def test_optional_arg(hint: Any, expected: Any) -> None:
-    """Return the inner type of `X | None`, and None for any other hint."""
-    assert optional_arg(hint) is expected
+def test_only_an_optional_parameter_may_go_unanswered(
+    hint: object, optional: bool, build: BuildSession
+) -> None:
+    """Pass `None` for an `X | None` nothing provides, and refuse any other such hint."""
+    session = declaring(asking(hint), Layer.PRESENTER)
 
-
-def test_injectable_excludes_name_and_config_kwargs() -> None:
-    """Leave the name and configured kwargs out of the injectable parameters."""
-    assert set(injectable(Ctrl, {})) == {"devices", "gain"}
-    assert set(injectable(Ctrl, {"gain": 1.0})) == {"devices"}
-
-
-def test_synthesize_agrees_with_both_introspection_routes() -> None:
-    """Give the synthesized function a signature and annotations that agree."""
-
-    def make(**deps: Any) -> Any:
-        return deps
-
-    synthesize(make, {"a": int, "b": str}, Readings, "build_thing")
-
-    signature = inspect.signature(make)
-    assert make.__name__ == "build_thing"
-    assert list(signature.parameters) == ["a", "b"]
-    assert all(
-        p.kind is inspect.Parameter.KEYWORD_ONLY for p in signature.parameters.values()
-    )
-    assert make.__annotations__ == {"a": int, "b": str, "return": Readings}
-    assert signature.return_annotation is Readings
+    if optional:
+        presenter = cast("Any", build(session).presenters["thing"])
+        assert presenter.value is None
+    else:
+        with pytest.raises(TypeError, match="which nothing in the session provides"):
+            session().build()
 
 
 def test_a_keyword_only_component_is_built() -> None:
@@ -1447,21 +1447,6 @@ def test_a_keyword_only_component_is_built() -> None:
     assert app.ctrl.name == "ctrl"
     assert app.ctrl.gain == 7.5
     assert dict(app.ctrl.devices) == {"motor": app.motor}
-
-
-def test_the_two_constructor_shapes_are_read_alike() -> None:
-    """Read the same injectable parameters from a pydantic model and a plain class."""
-    assert injectable(PydanticCtrl, {}) == injectable(Ctrl, {})
-    assert injectable(PydanticCtrl, {"gain": 1.0}) == injectable(Ctrl, {"gain": 1.0})
-
-
-@pytest.mark.parametrize(
-    ("cls", "accepted"),
-    [(Ctrl, True), (PydanticCtrl, True), (KeywordName, True), (VariadicName, False)],
-)
-def test_a_name_that_cannot_be_passed_is_refused(cls: type, accepted: bool) -> None:
-    """Accept a class whose name a keyword can fill, and refuse one taking `*args`."""
-    assert accepts_name(cls) is accepted
 
 
 def test_a_name_only_a_position_can_fill_is_skipped(
