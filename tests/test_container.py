@@ -2065,7 +2065,7 @@ def test_a_session_built_again_starts_from_nothing(
         stage: AsDevice[WorksOnce]
         flaky: AsPresenter[FailsOnce]
 
-    config = {
+    config: dict[str, Any] = {
         "devices": {"stage": {"attempts": []}},
         "presenters": {"flaky": {"attempts": []}},
     }
