@@ -40,6 +40,7 @@ nav = [
             "how-to/test-a-plugin.md",
             "how-to/connect-a-device-on-demand.md",
             "how-to/run-a-plan.md",
+            "how-to/run-plans-from-the-window.md",
             "how-to/move-devices-by-hand.md",
             "how-to/switch-and-dim-lights.md",
             "how-to/write-a-continuous-plan.md",
@@ -117,6 +118,7 @@ nav = [
                 "explanation/decisions/0019-copy-plan-progress-from-bluesky.md",
                 "explanation/decisions/0020-a-built-in-positioner.md",
                 "explanation/decisions/0021-a-built-in-light-stack.md",
+                "explanation/decisions/0022-a-built-in-acquisition-stack.md",
         ]},
     ]},
     { "Reference" = [

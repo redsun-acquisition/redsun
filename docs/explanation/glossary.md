@@ -310,9 +310,10 @@ rely on them.
 A stack is a [presenter](#presenter) and a [view](#view) written to work
 together: the signals of each match the slots of the other. The session still
 builds them as two components and joins them by [wiring](#wiring), so either
-can be replaced by one with the same ports. `redsun` ships two: the
-positioner, made of `PositionerPresenter` and `PositionerView`, and the light
-stack, made of `LightPresenter` and `LightView`.
+can be replaced by one with the same ports. `redsun` ships three: the
+positioner (`PositionerPresenter`, `PositionerView`), the light stack
+(`LightPresenter`, `LightView`) and the acquisition stack
+(`AcquisitionPresenter`, `AcquisitionView`).
 
 ### StreamResource
 

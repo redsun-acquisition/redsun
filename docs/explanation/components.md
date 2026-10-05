@@ -97,6 +97,21 @@ returns what the constructor built. Two components cannot share the same type:
 a type names one value. [Share a value](../how-to/share-a-value.md) shows the
 details, including optional values.
 
+### Using a protocol without importing redsun
+
+The session checks a component against a protocol by its members: their
+names, and for methods their signatures. It never asks which module the
+protocol came from. A plugin can therefore satisfy a protocol without naming
+it, or copy the protocol's definition into its own code so that its type
+checker sees it, with no dependency on `redsun` for that.
+
+Whether a copy is enough depends on the types its members name. `Axis`, `Light`, `HasPlans`,
+`DescribesAxes` and `DescribesLights` name only `ophyd-async`, `bluesky` or
+built-in types, and copy whole. `HasActions` names `ActionManager` and
+`DescribesPlans` names `PlanSpec`, so a component using them works with those
+`redsun` classes. A shared value is found by its exact type, so asking for a
+`RunEngine` or `Deferrals` needs `redsun`'s classes.
+
 ## Devices
 
 A [device](glossary.md#device) is an [`ophyd-async`](glossary.md#ophyd-async)
