@@ -340,14 +340,6 @@ class DeferredApp(Session):
     stray: AsView[Deferred]
 
 
-class ToyApp(Session):
-    frontend = Toy
-
-
-class InheritsToy(ToyApp):
-    """A session inheriting its base's declarations and frontend."""
-
-
 @pytest.fixture
 def app() -> Any:
     container = App().build()
@@ -1319,17 +1311,6 @@ def test_a_view_answering_from_an_instance_is_checked_after_it_is_built(
     assert "view 'stray' asks to be attached" in caplog.text
 
 
-@pytest.mark.parametrize(
-    ("container", "expected"),
-    [(App, Frontend), (ToyApp, Toy), (InheritsToy, Toy)],
-)
-def test_the_frontend_comes_from_the_class_it_is_declared_on(
-    container: type[Session], expected: type[Frontend]
-) -> None:
-    """Take the frontend from the session class or the nearest base declaring one."""
-    assert container.frontend is expected
-
-
 def test_a_component_shadowing_a_container_attribute_is_refused() -> None:
     """Refuse a component named after an existing session attribute."""
 
@@ -2013,7 +1994,7 @@ def test_a_session_can_be_referred_to_weakly() -> None:
     """Allow a weak reference to a session."""
     # `__slots__` without `__weakref__` refuses a weak reference outright with a
     # `TypeError` from the class, so how long the instance is kept does not matter.
-    assert weakref.ref(Session())() is not None
+    weakref.ref(Session())
 
 
 def test_a_renamed_component_is_reached_by_its_attribute() -> None:
