@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 import pytest
 from bluesky.protocols import Movable
@@ -270,13 +270,15 @@ class TakesAnother:
 
 
 class Watched(Session):
-    started: ClassVar[bool] = False
-
     camera: AsPresenter[Camera]
     ctrl: AsPresenter[TakesAnother]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = False
+
     def start_services(self) -> None:
-        type(self).started = True
+        self.started = True
         super().start_services()
 
 
@@ -369,9 +371,10 @@ def test_a_constructor_taking_another_component_stops_the_session_before_it_star
     None
 ):
     """Refuse a constructor taking another component before any service starts."""
+    watched = Watched()
     with pytest.raises(
         TypeError, match="'ctrl' takes 'camera' in its 'camera' parameter"
     ):
-        Watched().build()
+        watched.build()
 
-    assert not Watched.started
+    assert not watched.started
