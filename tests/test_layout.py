@@ -32,7 +32,7 @@ class Panel(QWidget):
 
 
 class Charts(Panel):
-    pass
+    placement: Placement = Dock("right")
 
 
 class LayoutApp(QtSession):
@@ -64,13 +64,13 @@ def test_a_layout_saved_by_one_run_is_restored_by_the_next(
 ) -> None:
     """Restore in the next run the dock layout one run saved."""
     first = build(LayoutApp)
-    first.main_window.addDockWidget(RIGHT, _dock(first, "charts"))
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
     first.save_layout()
     first.shutdown()
 
     second = build(LayoutApp)
 
-    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is RIGHT
+    assert second.main_window.dockWidgetArea(_dock(second, "charts")) is LEFT
     assert second.main_window.dockWidgetArea(_dock(second, "panel")) is LEFT
 
 
@@ -82,13 +82,13 @@ def test_a_dock_kept_away_from_its_placement_is_logged(
 ) -> None:
     """Log each dock the saved layout keeps away from the edge its placement asks for."""
     first = build(LayoutApp)
-    first.main_window.addDockWidget(RIGHT, _dock(first, "charts"))
+    first.main_window.addDockWidget(LEFT, _dock(first, "charts"))
     first.save_layout()
     first.shutdown()
 
     build(LayoutApp)
 
-    assert "'charts' stays on the right, where it was left" in caplog.text
+    assert "'charts' stays on the left, where it was left" in caplog.text
     assert "'panel'" not in caplog.text
 
 
@@ -98,7 +98,8 @@ def test_a_session_this_user_has_never_run_keeps_what_its_views_asked_for(
     """Keep the docks where the views asked when no layout was saved."""
     app = build(LayoutApp)
 
-    assert app.main_window.dockWidgetArea(_dock(app, "charts")) is LEFT
+    assert app.main_window.dockWidgetArea(_dock(app, "charts")) is RIGHT
+    assert app.main_window.dockWidgetArea(_dock(app, "panel")) is LEFT
 
 
 def test_the_layout_goes_to_the_settings_file_as_text(

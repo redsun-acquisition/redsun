@@ -128,10 +128,14 @@ def test_shared_value_crosses_from_presenter_to_view(configured: ConfiguredApp) 
 def test_wiring_section_is_applied(configured: ConfiguredApp) -> None:
     """Connect the ports the wiring section names once every component exists."""
     links = configured.connections
+    widget = built(configured, "motor_widget", MockMotorView)
+
+    built(configured, "motor_ctrl", MockMotorPresenter).sig_moved.emit("x", 2.0)
 
     assert [
         (c.publisher, c.publisher_port, c.consumer, c.consumer_port) for c in links
     ] == [("motor_ctrl", "sig_moved", "motor_widget", "refresh")]
+    assert widget.refreshed == ("x", 2.0)
 
 
 def test_annotation_and_config_describe_one_component(
