@@ -71,14 +71,23 @@ class Splash:
 
 
 class Founder:
-    """Serves `create_application` by handing back the running one."""
+    """Serves `create_application` by handing back the application it was given."""
 
-    seen: ClassVar[list[list[str]]] = []
+    def __init__(self, app: QApplication) -> None:
+        self.app = app
+        self.seen: list[list[str]] = []
 
     def create_application(self, argv: list[str]) -> QApplication:
-        """Record *argv* and return the application the test session owns."""
-        type(self).seen.append(argv)
-        return cast("QApplication", QApplication.instance())
+        """Record *argv* and return the application given at construction."""
+        self.seen.append(argv)
+        return self.app
+
+
+class Forgetful:
+    """Serves `create_application` but returns nothing, as a missing `return` would."""
+
+    def create_application(self, argv: list[str]) -> None:
+        """Return nothing."""
 
 
 class Heir(ConfiguresApplication[QApplication]):
@@ -148,7 +157,6 @@ def _reset() -> Iterator[None]:
     Splash.entered = 0
     Splash.exited = 0
     Splash.steps = []
-    Founder.seen = []
     CLOSED.clear()
     yield
 
@@ -430,11 +438,32 @@ def test_create_application_is_consulted_only_with_none_running(
     """Call the `create_application` hook only when no QApplication is running."""
 
     class App(QtSession):
-        create_application: AsHook[Founder]
+        configure_application: AsHook[Styler]
 
-    App().build().shutdown()
-    assert Founder.seen == []
+    founding = {"provider": f"{__name__}:Founder", "kwargs": {"app": qapp}}
+    config = {"hooks": {"create_application": founding}}
+    first = build(App, config)
+    unused = cast("Founder", first.hooks[QtHook.CREATE_APPLICATION])
+    first.shutdown()
 
     monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
-    build(App)
-    assert Founder.seen == [sys.argv]
+    second = build(App, config)
+    founder = cast("Founder", second.hooks[QtHook.CREATE_APPLICATION])
+    styler = cast("Styler", second.hooks[QtHook.CONFIGURE_APPLICATION])
+
+    assert unused.seen == []
+    assert founder.seen == [sys.argv]
+    assert styler.seen == [qapp]
+
+
+def test_a_create_application_hook_returning_nothing_is_refused(
+    qapp: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Refuse to build when the `create_application` hook returns no QApplication."""
+
+    class App(QtSession):
+        create_application: AsHook[Forgetful]
+
+    monkeypatch.setattr(QApplication, "instance", staticmethod(lambda: None))
+    with pytest.raises(HookError, match="'Forgetful' at 'create_application'"):
+        App().build()

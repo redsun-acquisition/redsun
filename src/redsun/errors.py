@@ -48,7 +48,7 @@ class ConfigurationInUse(OSError):
 
 
 class HookError(RuntimeError):
-    """Raised when a `hooks` configuration entry cannot be turned into a provider."""
+    """Raised when a hook provider cannot be built or does not serve its hook point."""
 
 
 class PluginError(RuntimeError):
