@@ -31,7 +31,8 @@ plugin.
   session shuts down is reported neither way, and the shutdown waits for its
   cleanup.
 - The view shows a plan running only on `sig_plan_started`, which the
-  presenter emits once the plan is accepted and before the engine has it.
+  presenter emits once the engine has started the plan. A pause or a stop
+  asked for before then is applied as soon as the plan starts.
 - The presenter relays the actions of every component holding an
   `ActionManager` (`HasActions`) through one signal.
 - The presenter names each run's files through the session's path provider,
