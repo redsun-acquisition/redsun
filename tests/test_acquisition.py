@@ -91,12 +91,16 @@ def test_a_plan_launched_from_the_view_moves_the_motor_and_ends(
     chooser = session.acquisition_view.findChild(QtWidgets.QComboBox, "plans")
     assert chooser is not None
 
+    ended: list[str] = []
+    session.acquisition.sig_plan_done.connect(ended.append)
+
     session.acquisition_view.sig_launch.emit(
         "walk", {"motor": "motor", "steps": 3, "size": 1.0}, ()
     )
+    wait_for(lambda: bool(ended))
 
-    wait_for(lambda: not chooser.isEnabled())
-    wait_for(chooser.isEnabled)
+    assert ended == ["walk"]
+    assert chooser.isEnabled()
     assert run_coro(session.motor.position.get_value()) == 3.0
 
 

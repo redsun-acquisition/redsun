@@ -16,7 +16,7 @@ from redsun import HasActions
 from redsun.engine.actions import ActionManager
 from redsun.path_provider import SessionPathProvider
 from redsun.presenter import AcquisitionPresenter, DescribesPlans
-from tests.sdk.mocks import MockDetector
+from tests.sdk.mocks import MockDetector, QuietAxis
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping
@@ -139,7 +139,9 @@ def paths(tmp_path: Path) -> RecordedPaths:
 def presenter(
     plans: Plans, paths: RecordedPaths, detector: MockDetector
 ) -> Generator[AcquisitionPresenter, None, None]:
-    acquisition = AcquisitionPresenter("acquisition", devices={"det1": detector})
+    acquisition = AcquisitionPresenter(
+        "acquisition", devices={"det1": detector, "plain": QuietAxis("plain")}
+    )
     acquisition.setup({"plans": plans, "unreadable": Unreadable()}, {}, paths)
     yield acquisition
     acquisition.shutdown()
@@ -202,16 +204,18 @@ def test_a_plan_that_raises_is_reported_failed(
     assert "'broken' failed" in caplog.text
 
 
-def test_values_naming_an_unknown_device_are_reported_and_not_run(
-    presenter: AcquisitionPresenter,
+@pytest.mark.parametrize("value", ["ghost", "plain", 3])
+def test_values_the_plan_cannot_take_are_reported_and_not_run(
+    presenter: AcquisitionPresenter, value: object, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Fail a launch whose values name no device of the session, without starting it."""
+    """Fail, with a warning and no traceback, a launch naming no device, a device of the wrong kind, or no name."""
     seen, ended = record(presenter)
 
-    presenter.launch("read", {"device": "ghost"})
+    presenter.launch("read", {"device": value})
 
     assert ended.wait(10)
     assert [kind for kind, *_ in seen] == ["failed"]
+    assert [r.exc_info for r in caplog.records if r.levelname != "DEBUG"] == [None]
 
 
 def test_a_launch_while_a_plan_runs_is_refused(
@@ -228,6 +232,34 @@ def test_a_launch_while_a_plan_runs_is_refused(
     assert ended.wait(10)
     assert seen == [("started", "hold"), ("done", "hold")]
     assert "not launched" in caplog.text
+
+
+def test_a_stop_right_after_launch_stops_the_plan(
+    presenter: AcquisitionPresenter,
+) -> None:
+    """Stop a plan asked to stop before the engine has started it."""
+    seen, ended = record(presenter)
+
+    presenter.launch("hold", {})
+    presenter.stop()
+
+    assert ended.wait(10)
+    assert seen == [("started", "hold"), ("done", "hold")]
+
+
+def test_pause_resume_and_stop_with_no_plan_running_are_ignored(
+    presenter: AcquisitionPresenter,
+) -> None:
+    """Ignore pause, resume and stop once the plan has ended."""
+    seen, ended = record(presenter)
+    presenter.launch("rest", {})
+    assert ended.wait(10)
+
+    presenter.pause()
+    presenter.resume()
+    presenter.stop()
+
+    assert seen == [("started", "rest"), ("done", "rest")]
 
 
 def test_a_paused_plan_reports_nothing_until_it_is_stopped(

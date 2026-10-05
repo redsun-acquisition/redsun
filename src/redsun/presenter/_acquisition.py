@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence  # noqa: TC003
+import threading
+from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from concurrent.futures import wait
 from dataclasses import KW_ONLY, dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -83,7 +85,7 @@ class AcquisitionPresenter(Loggable):
     """
 
     sig_plan_started = Signal(str)
-    """Plan, as it is handed to the engine."""
+    """Plan, once the engine has started it."""
 
     sig_plan_done = Signal(str)
     """Plan, once it has finished or been stopped."""
@@ -116,6 +118,7 @@ class AcquisitionPresenter(Loggable):
         self._deferrals = Deferrals(self._engine)
         self._engine.sig_locks_changed.connect(self.sig_locks_changed.emit)
         self._engine.sig_progress.connect(self.sig_progress.emit)
+        self._engine.sig_state_changed.connect(self._on_state_changed)
         self._entries: dict[str, PlanEntry] = {}
         self._specs: dict[str, PlanSpec] = {}
         self._callbacks: dict[str, CallbackType] = {}
@@ -125,6 +128,7 @@ class AcquisitionPresenter(Loggable):
         self._running: str | None = None
         self._error: BaseException | None = None
         self._closed = False
+        self._on_start: Callable[[], None] | None = None
 
     @provides
     def engine(self) -> RunEngine:
@@ -191,9 +195,6 @@ class AcquisitionPresenter(Loggable):
         Refused, with a warning, while another plan runs. Values that cannot
         be turned into the plan's arguments are reported on `sig_plan_failed`.
         """
-        if self._futures or self._engine.state != "idle":
-            self.logger.warning(f"A plan is running; {plan!r} not launched")
-            return
         entry, spec = self._entries[plan], self._specs[plan]
         try:
             self._check_devices(spec, values)
@@ -205,22 +206,36 @@ class AcquisitionPresenter(Loggable):
                 *entry.get("callbacks", ()),
                 *(self._callbacks[name] for name in attached),
             ]
+        except ValueError as error:
+            self.logger.warning(f"Not launching {plan!r}: {error}")
+            self.sig_plan_failed.emit(plan, str(error))
+            return
         except Exception as error:
             self.logger.exception(f"Launching {plan!r} failed")
             self.sig_plan_failed.emit(plan, str(error) or type(error).__name__)
+            return
+        if self._futures or self._engine.state != "idle":
+            self.logger.warning(f"A plan is running; {plan!r} not launched")
             return
         if self._paths is not None:
             self._paths.set_plan(plan)
         self._running = plan
         self.logger.info(f"Launching {plan!r}")
-        # before the engine has it, so a plan ending at once is still seen to start
-        self.sig_plan_started.emit(plan)
         self._track(self._engine(entry["plan"](*args, **kwargs), subs))
 
     @slot
     def pause(self) -> None:
         """Pause the running plan at its next checkpoint."""
-        self._engine.request_pause(defer=True)
+        if self._when_started(self.pause):
+            return
+        if self._engine.state != "running":
+            self.logger.debug("No plan to pause")
+            return
+        try:
+            self._engine.request_pause(defer=True)
+        # bluesky's TransitionError, raised when the plan ended since the check
+        except RuntimeError as error:
+            self.logger.warning(f"Not pausing: {error}")
 
     @slot
     def resume(self) -> None:
@@ -233,6 +248,8 @@ class AcquisitionPresenter(Loggable):
     @slot
     def stop(self) -> None:
         """Stop the running or paused plan, which ends as done."""
+        if self._when_started(self.stop, replace=True):
+            return
         if self._engine.state == "idle":
             self.logger.debug("No plan to stop")
             return
@@ -280,21 +297,48 @@ class AcquisitionPresenter(Loggable):
         for parameter in spec.parameters:
             if parameter.device_proto is None or parameter.name not in values:
                 continue
+            proto = parameter.device_proto
             value = values[parameter.name]
-            names = [value] if isinstance(value, str) else [str(v) for v in value]
-            missing = [name for name in names if name not in self.devices]
-            if missing:
-                raise ValueError(f"no device named {', '.join(missing)}")
+            many = isinstance(value, (Sequence, AbstractSet)) and not isinstance(
+                value, str
+            )
+            for name in map(str, value if many else [value]):
+                if name not in self.devices:
+                    raise ValueError(f"no device named {name!r}")
+                if not isinstance(self.devices[name], proto):
+                    raise ValueError(f"{name!r} is not a {proto.__name__}")  # noqa: TRY004
+
+    def _when_started(
+        self, action: Callable[[], None], *, replace: bool = False
+    ) -> bool:
+        """Keep *action* for when the launched plan starts; whether it was kept."""
+        if self._running is None or self._engine.state != "idle":
+            return False
+        if replace or self._on_start is None:
+            self._on_start = action
+        return True
+
+    def _on_state_changed(self, new: str, old: str) -> None:
+        if (old, new) != ("idle", "running"):
+            return
+        plan, action, self._on_start = self._running, self._on_start, None
+        # a plan another component runs on the shared engine is not reported
+        if plan is None:
+            return
+        self.sig_plan_started.emit(plan)
+        if action is not None:
+            # on the engine's thread, which a pause request would block
+            threading.Thread(target=action, daemon=True).start()
 
     def _track(self, future: Future[Any]) -> None:
         self._futures.add(future)
         future.add_done_callback(self._on_future_done)
 
     def _on_future_done(self, future: Future[Any]) -> None:
+        error = future.exception()
         self._futures.discard(future)
         if self._closed:
             return
-        error = future.exception()
         # a pause or a stop also ends the run's future with an interruption
         if error is not None and not isinstance(
             error, (RunEngineInterrupted, RequestStop, RequestAbort)
@@ -303,8 +347,11 @@ class AcquisitionPresenter(Loggable):
         # a paused plan has not ended: resuming makes a new future
         if self._futures or self._engine.state == "paused":
             return
-        plan, self._running = self._running or "", None
+        plan, self._running, self._on_start = self._running, None, None
         failure, self._error = self._error, None
+        # the other future of a stop has already reported the end
+        if plan is None:
+            return
         if self._paths is not None:
             self._paths.reset_plan()
         if failure is None:
