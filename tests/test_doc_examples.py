@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from qtpy.QtWidgets import QApplication
 
 EXAMPLES = [
+    "acquisition",
     "acquisition_files",
     "connect_on_demand",
     "console_frontend",

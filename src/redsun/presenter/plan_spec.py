@@ -33,6 +33,7 @@ from typing_extensions import Format, evaluate_forward_ref, get_annotations
 
 from redsun.engine.actions import PlanAction
 from redsun.presenter.utils import (
+    device_class,
     get_choice_list,
     isdevice,
     isdevicesequence,
@@ -179,9 +180,9 @@ def _fields_from_annotation(
         if get_origin(ann) is Literal:
             return _FieldsFromAnnotation(choices=list(get_args(ann)))
         if isdeviceset(ann) or isdevicesequence(ann):
-            proto, multiselect = get_args(ann)[0], True
+            proto, multiselect = device_class(get_args(ann)[0]), True
         elif isdevice(ann):
-            proto, multiselect = ann, kind is ParamKind.VAR_POSITIONAL
+            proto, multiselect = device_class(ann), kind is ParamKind.VAR_POSITIONAL
         else:
             return _FieldsFromAnnotation()
         matching = [key for key, obj in devices.items() if isinstance(obj, proto)]
