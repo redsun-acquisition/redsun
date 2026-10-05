@@ -543,7 +543,15 @@ def test_the_container_builds_its_own_window(
     central = window.centralWidget()
     assert central is not None
     assert central.objectName() == "canvas"
-    assert app.build().main_window is window
+
+
+def test_building_again_keeps_the_window(
+    qapp: QApplication, build: BuildSession
+) -> None:
+    """Keep the same main window when a built session is built again."""
+    app = build(QtApp)
+
+    assert app.build().main_window is app.main_window
 
 
 def test_no_toolkit_object_exists_before_the_build(
@@ -907,12 +915,14 @@ def test_cancelling_the_prompt_keeps_the_session_open(
     monkeypatch: pytest.MonkeyPatch,
     build: BuildSession,
 ) -> None:
-    """Keep a changed session open when the close prompt is cancelled."""
+    """Keep a changed session open, and its window visible, when the prompt is cancelled."""
     session = build(PromptApp)
     session.tunable.step = 5.0
+    session.main_window.show()
     _press(monkeypatch, QMessageBox.StandardButton.Cancel)
 
     assert not session.main_window.close()
+    assert session.main_window.isVisible()
 
 
 def test_discarding_closes_without_writing(
@@ -1005,22 +1015,6 @@ def test_a_hook_answers_the_close_in_place_of_the_prompt(
     assert shown == []
 
 
-def test_a_refused_close_leaves_the_window_open(
-    qapp: QApplication,
-    config_home: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    build: BuildSession,
-) -> None:
-    """Keep the window open when the close prompt is cancelled."""
-    session = build(PromptApp)
-    session.tunable.step = 5.0
-    session.main_window.show()
-    _press(monkeypatch, QMessageBox.StandardButton.Cancel)
-
-    assert not session.main_window.close()
-    assert session.main_window.isVisible()
-
-
 def test_a_dock_on_an_unknown_edge_is_refused() -> None:
     """Refuse a dock on an edge Qt has no area for, naming the edges it has."""
     with pytest.raises(ValueError, match="'bottm'.*left, right, top, bottom"):
@@ -1049,10 +1043,10 @@ def test_the_status_bar_counts_the_components_that_failed(
     assert [b.text() for b in bar.findChildren(QPushButton)] == ["2 components failed"]
 
 
-def test_a_view_slot_runs_on_the_main_thread_unless_it_says_otherwise(
+def test_a_view_slot_runs_on_the_main_thread(
     qapp: QApplication, build: BuildSession
 ) -> None:
-    """Connect a view slot to run on the main thread by default."""
+    """Connect a view slot to run on the main thread."""
     session = build(Wired)
 
     assert [link.thread for link in session.connections] == ["main"]
