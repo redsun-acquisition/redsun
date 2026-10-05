@@ -347,35 +347,45 @@ def test_a_watchable_status_fills_its_scope(RE: RunEngine) -> None:
 def test_a_plain_status_keeps_a_busy_scope_until_done(RE: RunEngine) -> None:
     """Keep a scope with no end while a silent move runs, and drop it after."""
     seen = record(RE)
+    shown: list[tuple[ProgressState, ...]] = []
 
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
             PlainMover(name="stage"), 1.0, wait=False, group="move"
         )
         yield from rps.monitor_progress("move", status)
+        shown.append(seen[-1])
         yield from bps.wait(group="move")
+        shown.append(seen[-1])
 
     RE(plan()).result(timeout=10)
 
-    assert seen[0][0].fraction is None
-    assert seen[-1] == ()
+    moving, moved = shown
+    assert [state.name for state in moving] == ["move"]
+    assert moving[0].fraction is None
+    assert moved == ()
 
 
 def test_a_failed_status_closes_its_scope(RE: RunEngine) -> None:
     """Drop the scope of a move that fails, and let the plan's wait raise."""
     seen = record(RE)
 
+    shown: list[tuple[ProgressState, ...]] = []
+
     def plan() -> MsgGenerator[None]:
         status = yield from bps.abs_set(
             PlainMover(name="stage"), 99, wait=False, group="move"
         )
         yield from rps.monitor_progress("move", status)
-        yield from bps.wait(group="move")
+        try:
+            yield from bps.wait(group="move")
+        finally:
+            shown.append(seen[-1])
 
     with pytest.raises(FailedStatus):
         RE(plan()).result(timeout=10)
 
-    assert seen[-1] == ()
+    assert shown == [()]
 
 
 def test_a_status_done_before_it_is_passed_closes_its_scope_at_once(

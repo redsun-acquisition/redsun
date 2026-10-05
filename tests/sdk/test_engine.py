@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
 import threading
@@ -242,20 +243,31 @@ def test_the_engine_announces_each_state_change(RE: RunEngine) -> None:
 def test_stopping_a_paused_plan_runs_its_cleanup_off_the_caller_thread(
     RE: RunEngine,
 ) -> None:
-    """Run a paused plan's cleanup off the caller thread when stopped."""
-    cleanup_thread: list[str] = []
+    """Return from `stop` while a paused plan's cleanup is still running."""
+    returned = asyncio.Event()
+    waited: list[bool] = []
+
+    async def wait_for_the_caller() -> None:
+        try:
+            await asyncio.wait_for(returned.wait(), timeout=5)
+        except TimeoutError:
+            waited.append(False)
+        else:
+            waited.append(True)
 
     def plan() -> Any:
         try:
             yield from bps.checkpoint()
             yield from bps.pause()
         finally:
-            cleanup_thread.append(threading.current_thread().name)
+            yield from bps.wait_for([wait_for_the_caller])
 
     with pytest.raises(RunEngineInterrupted):
         RE(plan()).result(timeout=5)
 
-    RE.stop().result(timeout=5)
+    stopping = RE.stop()
+    RE.loop.call_soon_threadsafe(returned.set)
+    stopping.result(timeout=10)
 
-    assert cleanup_thread != [threading.current_thread().name]
+    assert waited == [True]
     assert RE.state == "idle"
