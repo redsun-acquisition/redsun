@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TypeVar
-
 import pytest
 from qtpy import QtCore, QtWidgets
 
@@ -11,8 +9,6 @@ from redsun.utils.devices import Configuration
 from redsun.view.qt.treeview import ConfigurationTab, DescriptorTreeView
 
 pytestmark = pytest.mark.qt
-
-T = TypeVar("T", bound=QtCore.QObject)
 
 CONFIGURATION = Configuration(
     descriptors={
@@ -31,20 +27,13 @@ CONFIGURATION = Configuration(
 )
 
 
-def child(parent: QtCore.QObject, kind: type[T]) -> T:
-    """Return the child of *parent* of type *kind*."""
-    found = parent.findChild(kind)
-    assert found is not None
-    return found
-
-
 def test_an_edit_is_sent_under_its_key(qapp: QtWidgets.QApplication) -> None:
     """Send an edit of the tree as the full key and the new value."""
     tab = ConfigurationTab(CONFIGURATION)
     sent: list[tuple[str, object]] = []
     tab.sig_configure.connect(lambda *args: sent.append(args))
 
-    child(tab, DescriptorTreeView).sig_property_changed.emit("led", "power", 2.0)
+    tab.sig_property_changed.emit("led", "power", 2.0)
 
     assert sent == [("led-power", 2.0)]
 
@@ -67,5 +56,9 @@ def test_a_held_owner_cannot_be_edited_until_released(
 def test_an_empty_configuration_says_so(qapp: QtWidgets.QApplication) -> None:
     """Say there is no configuration when no device has one."""
     tab = ConfigurationTab(Configuration(descriptors={}, readings={}, writable={}))
+    row = tab.topLevelItem(0)
 
-    assert child(tab, QtWidgets.QLabel).text() == "No device has a configuration."
+    assert isinstance(tab, DescriptorTreeView)
+    assert row is not None
+    assert row.text(0) == "No device has a configuration."
+    assert not row.flags() & QtCore.Qt.ItemFlag.ItemIsSelectable

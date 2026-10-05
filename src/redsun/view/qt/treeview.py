@@ -399,10 +399,10 @@ class DescriptorTreeView(QtWidgets.QTreeWidget):
         self.resizeColumnToContents(0)
 
 
-class ConfigurationTab(QtWidgets.QWidget):
+class ConfigurationTab(DescriptorTreeView):
     """The configuration of a set of devices, shown and edited in a tree.
 
-    Says "No device has a configuration." when there is none.
+    With no configuration at all, the tree holds one row saying so.
     """
 
     sig_configure = Signal(str, object)
@@ -411,30 +411,23 @@ class ConfigurationTab(QtWidgets.QWidget):
     def __init__(
         self, configuration: Configuration, parent: QtWidgets.QWidget | None = None
     ) -> None:
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        super().__init__(configuration.descriptors, configuration.readings, parent)
         self._owners = {_split_key(key)[0] for key in configuration.descriptors}
-        self._tree: DescriptorTreeView | None = None
-        if configuration.descriptors:
-            self._tree = DescriptorTreeView(
-                configuration.descriptors, configuration.readings, self
-            )
-            self._tree.sig_property_changed.connect(self._configure)
-            layout.addWidget(self._tree)
-        else:
-            layout.addWidget(QtWidgets.QLabel("No device has a configuration.", self))
+        self.sig_property_changed.connect(self._configure)
+        if not configuration.descriptors:
+            row = QtWidgets.QTreeWidgetItem(["No device has a configuration."])
+            row.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
+            self.addTopLevelItem(row)
+            row.setFirstColumnSpanned(True)
 
     def update_value(self, key: str, value: object) -> None:
         """Show *value*, read back from the configuration signal *key*."""
-        if self._tree is not None:
-            self._tree.set_value(key, value)
+        self.set_value(key, value)
 
     def set_locked(self, names: frozenset[str]) -> None:
         """Disable the rows of the owners in *names*, and enable the rest."""
-        if self._tree is not None:
-            for owner in self._owners:
-                self._tree.set_enabled(owner, owner not in names)
+        for owner in self._owners:
+            self.set_enabled(owner, owner not in names)
 
     def _configure(self, owner: str, prop: str, value: object) -> None:
         self.sig_configure.emit(f"{owner}-{prop}" if owner else prop, value)
