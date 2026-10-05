@@ -27,7 +27,9 @@ plugin.
   through `provides`, so any component asks for them in `setup` by type.
 - A plan that raises is logged with its traceback and reported on
   `sig_plan_failed`; the view shows the message on the plan's page until it
-  runs again. A stopped or aborted plan is reported as done.
+  runs again. A stopped plan is reported as done; a plan aborted when the
+  session shuts down is reported neither way, and the shutdown waits for its
+  cleanup.
 - The view shows a plan running only on `sig_plan_started`, which the
   presenter emits once the plan is accepted and before the engine has it.
 - The presenter relays the actions of every component holding an
@@ -40,8 +42,8 @@ plugin.
 
 ## Consequences
 
-- A session holds one acquisition presenter: a second would share a second
-  `RunEngine`, which the session refuses.
+- A session holds one acquisition presenter: two would both share a
+  `RunEngine`, and the session refuses two components sharing one type.
 - A session writes twelve links for this stack. Shortening the wiring of the
   built-in stacks is left to a later decision.
 - A plugin's own plan presenter and view can be replaced by these, its plans
