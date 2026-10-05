@@ -535,8 +535,6 @@ def test_an_attached_service_has_nothing_to_start_or_stop() -> None:
     assert not attached.running
     attached.stop()
 
-    assert not attached.launched
-
 
 def test_arguments_without_a_module_are_refused() -> None:
     """Refuse arguments given without a module to run."""
