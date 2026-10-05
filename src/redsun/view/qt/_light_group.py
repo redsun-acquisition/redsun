@@ -114,7 +114,11 @@ class LightGroup(QtW.QGroupBox):
         self._state = QtW.QLabel("", self)
         self._state.setObjectName("state")
         self._state.setWordWrap(True)
+        self._state.hide()
         layout.addWidget(self._state)
+        # a failure stays shown until the user acts on the light again
+        self.sig_enabled.connect(self._clear_failure)
+        self.sig_intensity.connect(self._clear_failure)
 
     def set_enabled(self, on: bool) -> None:
         """Show whether the light is on, as read back, in the button's text as well."""
@@ -132,6 +136,7 @@ class LightGroup(QtW.QGroupBox):
         """Show why the last write failed."""
         self._state.setText(f"failed: {message}")
         self._state.setToolTip(message)
+        self._state.show()
         if self._latest is not None and not self._busy():
             self._show(self._latest)
 
@@ -143,6 +148,9 @@ class LightGroup(QtW.QGroupBox):
     def set_write_while_dragging(self, on: bool) -> None:
         """Write the intensity during a drag as well, at most every 100 ms."""
         self._dragging_writes = on
+
+    def _clear_failure(self, device: str, value: object) -> None:
+        self._state.hide()
 
     def _busy(self) -> bool:
         dragging = self._slider is not None and self._slider.isSliderDown()

@@ -246,3 +246,19 @@ def test_a_fine_precision_over_a_wide_range_still_builds(
 
     assert slider.maximum() < 2**31
     assert child(light, QtWidgets.QDoubleSpinBox, "intensity").decimals() == 9
+
+
+def test_the_state_line_shows_only_while_a_failure_stands(
+    parent: QtWidgets.QWidget, settings: Settings
+) -> None:
+    """Hide the state line until a write fails, and again once the light is used."""
+    view = make_view(settings, parent)
+    laser = group(view, "laser")
+    state = child(laser, QtWidgets.QLabel, "state")
+    hidden_at_first = state.isHidden()
+
+    view.set_failed("laser", "TimeoutError")
+    shown = not state.isHidden()
+    child(laser, QtWidgets.QAbstractButton, "toggle").click()
+
+    assert (hidden_at_first, shown, state.isHidden()) == (True, True, True)
